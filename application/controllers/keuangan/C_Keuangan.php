@@ -28,7 +28,7 @@ class C_Keuangan extends CI_Controller
     {
         $data['page_title']     = 'KARISMA - KEUANGAN';
         $data['kd']             = $this->M_Keuangan->generate_update();
-        $data['updated']        = $this->M_Keuangan->get_last_update();
+        $data['updated']        = $this->M_Keuangan->get_updated_upload();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/coba1.php', $data);
@@ -66,11 +66,11 @@ class C_Keuangan extends CI_Controller
         $gdgid   = $this->input->post('gdgid');
 
         if ($gdgid == 1) {
-            $gudang = 'Gdg.Induk';
+            $gudang = 'Global';
         } else if ($gdgid == 2) {
-            $gudang = 'Gdg.Global';
+            $gudang = 'Gdg. Induk';
         } else if ($gdgid == 3) {
-            $gudang = 'Gdg.Rusak';
+            $gudang = 'Gdg. Rusak';
         }
 
         $data  = array(
@@ -80,21 +80,21 @@ class C_Keuangan extends CI_Controller
             'last_update'   => $date
         );
         $this->M_Keuangan->insertupdate($data);
-        
     }
 
     public function truncateitm($kd)
     {
         $this->M_Keuangan->truncateitm();
         $this->M_Keuangan->deleteupdateed($kd);
-        redirect('keuangan1');
+        redirect('keuangan');
     }
 
-    function get_stock_a()
+    function get_stock_a($id)
     {
-        $list = $this->M_Stockbuffer->get_datatables();
+        $list = $this->M_Stockbuffer->get_datatables($id);
         $data = array();
         $no = $_POST['start'];
+
         foreach ($list as $field) {
             $no++;
             $row = array();
@@ -109,8 +109,8 @@ class C_Keuangan extends CI_Controller
 
         $output = array(
             "draw" => $_POST['draw'],
-            "recordsTotal" => $this->M_Stockbuffer->count_all(),
-            "recordsFiltered" => $this->M_Stockbuffer->count_filtered(),
+            "recordsTotal" => $this->M_Stockbuffer->count_all($id),
+            "recordsFiltered" => $this->M_Stockbuffer->count_filtered($id),
             "data" => $data,
         );
         //output dalam format JSON
@@ -120,23 +120,53 @@ class C_Keuangan extends CI_Controller
     public function gudang($id)
     {
         if ($id == '1') {
-            $data['data_stock'] = $this->M_Keuangan->get();
+
+            $gudangid = $id;
+            $gudang = 'Global';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
 
             $this->load->view('partial/main/header.php', $data);
-            $this->load->view('content/keuangan/body.php', $data);
-            $this->load->view('partial/main/footer.php');
+            $this->load->view('content/keuangan/gudang.php', $data);
+            $this->load->view('partial/main/footergdg.php');
         } else if ($id == '2') {
-            $data['data_stock'] = $this->M_Keuangan->get();
+
+            $gudangid = $id;
+            $gudang = 'Gdg. Induk';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
 
             $this->load->view('partial/main/header.php', $data);
-            $this->load->view('content/keuangan/body.php', $data);
-            $this->load->view('partial/main/footer.php');
+            $this->load->view('content/keuangan/gudang.php', $data);
+            $this->load->view('partial/main/footergdg.php');
         } else if ($id == '3') {
-            $data['data_stock'] = $this->M_Keuangan->get();
+
+            $gudangid = $id;
+            $gudang = 'Gdg. Rusak';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
 
             $this->load->view('partial/main/header.php', $data);
-            $this->load->view('content/keuangan/body.php', $data);
-            $this->load->view('partial/main/footer.php');
+            $this->load->view('content/keuangan/gudang.php', $data);
+            $this->load->view('partial/main/footergdg.php');
         }
+    }
+
+    public function list_stock_minimum($id)
+    {
+
+        $data['page_title']     = 'KARISMA - KEUANGAN';
+        $data['gudangid']       = $id;
+        $data['updated']        = $this->M_Keuangan->get_last_update($id);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/stock_minimum.php', $data);
+        $this->load->view('partial/main/footergdg.php');
     }
 }

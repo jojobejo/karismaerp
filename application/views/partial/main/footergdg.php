@@ -4,7 +4,7 @@
 <script src="<?php echo base_url('assets/plugins/jquery-ui/jquery-ui.min.js') ?>"></script>
 <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
 <script>
-  $.widget.bridge('uibutton', $.ui.button)
+    $.widget.bridge('uibutton', $.ui.button)
 </script>
 <!-- Bootstrap 4 -->
 <script src="<?php echo base_url('assets/plugins/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
@@ -39,51 +39,27 @@
 <!-- AdminLTE App -->
 <script src="<?php echo base_url('assets/dist/js/adminlte.js') ?>"></script>
 
-<script>
-  $(function() {
-    $('#tb_schedule').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
-    $('#tbgudang').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
-    bsCustomFileInput.init();
-  });
-</script>
-
 <script type="text/javascript">
-  var table;
-  $(document).ready(function() {
+    var table;
+    $(document).ready(function() {
 
-    //datatables
-    table = $('#tb_qty').DataTable({
+        //datatables
+        table = $('#tb_qty').DataTable({
 
-      "processing": true,
-      "serverSide": true,
-      "order": [],
-      "ajax": {
-        "url": "<?= base_url('get_data_a') ?>",
-        "type": "POST"
-      },
-      "columnDefs": [{
-        "targets": [0],
-        "orderable": false,
-      }, ],
+            "processing": true,
+            "serverSide": true,
+            "order": [],
+            "ajax": {
+                "url": "<?= base_url('get_data_a/' . $gudangid)  ?>",
+                "type": "POST"
+            },
+            "columnDefs": [{
+                "targets": [0],
+                "orderable": false,
+            }, ],
+        });
+
     });
-
-  });
 </script>
 
 </body>

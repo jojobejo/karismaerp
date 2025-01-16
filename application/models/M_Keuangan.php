@@ -11,6 +11,7 @@ class M_Keuangan extends CI_Model
     //     return $this->db->query("SELECT
     //     c.nama_suplier AS nmsuplier,
     //     b.nm_barang AS nmbarang,
+    //     a.gudang AS nmgudang,
     //     b.satuan AS satuan,
     //     a.qty AS qty,
     //     b.p AS p,
@@ -20,7 +21,7 @@ class M_Keuangan extends CI_Model
     //     FROM tb_dailystock a
     //     JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
     //     JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
-    //     WHERE a.qty > b.qty_min
+    //     WHERE a.qty > b.qty_min AND a.gudang = 'Gdg. Rusak'
     //     ")->result();
     // }
 
@@ -71,14 +72,27 @@ class M_Keuangan extends CI_Model
         date_default_timezone_set('Asia/Jakarta');
         return 'UPD' . date('dmy') . $kd;
     }
-    public function get_last_update()
+    public function get_last_update($id)
     {
         return $this->db->query("SELECT 
         a.kd_update AS kd,
         a.last_update AS lastupdated
-        FROM tb_stock_status a ORDER BY a.id DESC LIMIT 1
+        FROM tb_stock_status a 
+        WHERE a.gudangid = '$id'
+        ORDER BY a.id DESC LIMIT 1
         ")->result();
     }
+
+    public function get_updated_upload()
+    {
+        return $this->db->query("SELECT 
+        a.kd_update AS kd,
+        a.last_update AS lastupdated
+        FROM tb_stock_status a 
+        ORDER BY a.id DESC LIMIT 1
+        ")->result();
+    }
+
     public function deleteupdateed($kd)
     {
         $this->db->where('kd_update', $kd);

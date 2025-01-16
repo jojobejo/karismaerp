@@ -15,10 +15,11 @@ class M_Stockbuffer extends CI_Model
         $this->load->database();
     }
 
-    private function _get_datatables_query()
+    private function _get_datatables_query($where)
     {
 
         $this->db->from($this->table);
+        $this->db->where('idgudang', $where);
 
         $i = 0;
 
@@ -46,25 +47,28 @@ class M_Stockbuffer extends CI_Model
         }
     }
 
-    function get_datatables()
+    function get_datatables($id)
     {
-        $this->_get_datatables_query();
+        $this->_get_datatables_query($id);
         if ($_POST['length'] != -1)
             $this->db->limit($_POST['length'], $_POST['start']);
         $query = $this->db->get();
         return $query->result();
     }
 
-    function count_filtered()
+    function count_filtered($id)
     {
-        $this->_get_datatables_query();
+        $this->_get_datatables_query($id);
         $query = $this->db->get();
         return $query->num_rows();
     }
 
-    public function count_all()
+    public function count_all($id)
     {
         $this->db->from($this->table);
+        if ($id) {
+            $this->db->where('idgudang', $id);
+        }
         return $this->db->count_all_results();
     }
 }

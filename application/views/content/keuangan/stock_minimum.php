@@ -61,9 +61,10 @@
                                         <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
                                     </div>
                                 </div>
-
                             <?php endforeach; ?>
+
                             <h3><?= $gudang ?></h3>
+
                             <table id="tb_qty" class="table table-bordered table-striped">
                                 <thead>
                                     <tr>

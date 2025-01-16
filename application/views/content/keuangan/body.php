@@ -25,14 +25,10 @@
                 <div class="container-fluid">
                     <?php if ($this->session->userdata('lv') == 1) : ?>
                         <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
-
-                        <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Global</a>
-                        <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Induk</a>
+                        <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                        <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
-
-                        <a href="<?= base_url('getdatastockmin') ?>" class="btn btn-warning mb-2">Minimal Stock</a>
                     <?php else : ?>
-                        <a href="<?= base_url('getdatastockmin') ?>" class="btn btn-primary mb-2">Minimal Stock</a>
                     <?php endif; ?>
 
                     <div class="card">

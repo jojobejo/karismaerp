@@ -32,8 +32,8 @@
                                 $now = date('Y-m-d H:i:s'); ?>
                                 <div class="form-group">
                                     <select name="gdgid" id="gdgid" class="form-control">
-                                        <option value="1">Gudang Induk</option>
-                                        <option value="2">Global</option>
+                                        <option value="1">Global</option>
+                                        <option value="2">Gudang Induk</option>
                                         <option value="3">Gudang Rusak</option>
                                     </select>
                                 </div>
