@@ -28,19 +28,19 @@
                         <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
                         <?php if ($gudangid == '1') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
-                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-secondary mb-2">Gudang Global</a>
-                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
-                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                            <a href="<?= base_url('list_stock_minimum/1') ?>" class="btn  btn-secondary mb-2">Stock Minimum Global</a>
+                            <a href="<?= base_url('list_stock_minimum/2') ?>" class="btn  btn-success  mb-2">Stock Minimum Induk</a>
+                            <a href="<?= base_url('list_stock_minimum/3') ?>" class="btn  btn-success  mb-2">Stock Minimum Rusak</a>
                         <?php elseif ($gudangid == '2') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
-                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
-                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-secondary mb-2">Gudang Induk</a>
-                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                            <a href="<?= base_url('list_stock_minimum/1') ?>" class="btn  btn-success  mb-2">Stock Minimum Global</a>
+                            <a href="<?= base_url('list_stock_minimum/2') ?>" class="btn  btn-secondary  mb-2">Stock Minimum Induk</a>
+                            <a href="<?= base_url('list_stock_minimum/3') ?>" class="btn  btn-success  mb-2">Stock Minimum Rusak</a>
                         <?php elseif ($gudangid == '3') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
-                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
-                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
-                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-secondary mb-2">Gudang Rusak</a>
+                            <a href="<?= base_url('list_stock_minimum/1') ?>" class="btn  btn-success  mb-2">Stock Minimum Global</a>
+                            <a href="<?= base_url('list_stock_minimum/2') ?>" class="btn  btn-success  mb-2">Stock Minimum Induk</a>
+                            <a href="<?= base_url('list_stock_minimum/3') ?>" class="btn  btn-secondary  mb-2">Stock Minimum Rusak</a>
                         <?php endif; ?>
                     <?php else : ?>
                     <?php endif; ?>
@@ -57,24 +57,62 @@
                                         <h2>Last Updated : <?= format_indo($date) ?></h2>
                                     </div>
                                     <div class="col">
-                                        <a href="<?= base_url('truncateitm/' . $u->kd) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
-                                        <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
+                                        <a href="<?= base_url('gudang/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">List Stock</a>
                                     </div>
                                 </div>
                             <?php endforeach; ?>
 
                             <h3><?= $gudang ?></h3>
 
-                            <table id="tb_qty" class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <td>Nama Suplier</td>
-                                        <td>Nama Barang</td>
-                                        <td>Satuan</td>
-                                        <td>Qty</td>
-                                    </tr>
-                                </thead>
-                            </table>
+                            <?php if ($gudangid == '1') : ?>
+                                <table id="tbminglobal" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Suplier</td>
+                                            <td>Nama Barang</td>
+                                            <td>Satuan</td>
+                                            <td>Stock</td>
+                                            <td>Minimum</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($stock as $s) : ?>
+                                            <tr>
+                                                <td><?= $s->nmsuplier ?></td>
+                                                <td><?= $s->nmbarang ?></td>
+                                                <td><?= $s->satuan ?></td>
+                                                <td><?= $s->qty ?></td>
+                                                <td><?= $s->qty_min ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php else :  ?>
+                                <table id="tbmingdg" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Suplier</td>
+                                            <td>Nama Barang</td>
+                                            <td>Satuan</td>
+                                            <td>Stock</td>
+                                            <td>Minimum</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($stock as $s) : ?>
+                                            <tr>
+                                                <td><?= $s->nmsuplier ?></td>
+                                                <td><?= $s->nmbarang ?></td>
+                                                <td><?= $s->satuan ?></td>
+                                                <td><?= $s->qty ?></td>
+                                                <td><?= $s->qtymin ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+
+
                         </div>
                     </div>
 

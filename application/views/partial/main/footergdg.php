@@ -41,11 +41,11 @@
 
 <script type="text/javascript">
     var table;
+    var tablegl;
     $(document).ready(function() {
 
         //datatables
         table = $('#tb_qty').DataTable({
-
             "processing": true,
             "serverSide": true,
             "order": [],
@@ -57,6 +57,40 @@
                 "targets": [0],
                 "orderable": false,
             }, ],
+        });
+
+        tablegl = $('#tb_qty_global').DataTable({
+
+            "processing": true,
+            "serverSide": true,
+            "order": [],
+            "ajax": {
+                "url": "<?= base_url('get_data_global')  ?>",
+                "type": "POST"
+            },
+            "columnDefs": [{
+                "targets": [0],
+                "orderable": false,
+            }, ],
+        });
+
+        $('#tbminglobal').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+        $('#tbmingdg').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
         });
 
     });

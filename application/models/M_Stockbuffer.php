@@ -5,7 +5,6 @@ class M_Stockbuffer extends CI_Model
 
 {
 
-    var $table = 'v_stock_a';
     var $column_order = array('nmsuplier', 'nmbarang', 'satuan', 'qty');
     var $column_search = array('nmsuplier', 'nmbarang');
 
@@ -17,9 +16,26 @@ class M_Stockbuffer extends CI_Model
 
     private function _get_datatables_query($where)
     {
+        $subquery = "
+            SELECT
+                c.nama_suplier AS nmsuplier,
+                b.nm_barang AS nmbarang,
+                a.gudang AS nmgudang,
+                b.satuan AS satuan,
+                a.qty AS qty,
+                b.qty_min AS qtymin,
+                CASE
+                    WHEN a.gudang = 'Gdg. Induk' THEN 2
+                    WHEN a.gudang = 'Gdg. Rusak' THEN 3
+                END AS idgudang
+            FROM tb_dailystock a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        ";
 
-        $this->db->from($this->table);
-        $this->db->where('idgudang', $where);
+        $this->db->select('x.nmsuplier, x.nmbarang, x.nmgudang, x.satuan, x.qty, x.qtymin');
+        $this->db->from("($subquery) AS x", null, false);
+        $this->db->where('x.idgudang', $where);
 
         $i = 0;
 
@@ -65,10 +81,27 @@ class M_Stockbuffer extends CI_Model
 
     public function count_all($id)
     {
-        $this->db->from($this->table);
-        if ($id) {
-            $this->db->where('idgudang', $id);
-        }
+        $subquery = "
+            SELECT
+                c.nama_suplier AS nmsuplier,
+                b.nm_barang AS nmbarang,
+                a.gudang AS nmgudang,
+                b.satuan AS satuan,
+                a.qty AS qty,
+                b.qty_min AS qtymin,
+                CASE
+                    WHEN a.gudang = 'Gdg. Induk' THEN 2
+                    WHEN a.gudang = 'Gdg. Rusak' THEN 3
+                END AS idgudang
+            FROM tb_dailystock a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        ";
+
+        $this->db->select('x.nmsuplier, x.nmbarang, x.nmgudang, x.satuan, x.qty, x.qtymin');
+        $this->db->from("($subquery) AS x", null, false);
+        $this->db->where('x.idgudang', $id);
+
         return $this->db->count_all_results();
     }
 }

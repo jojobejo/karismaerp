@@ -9,6 +9,7 @@ class C_Keuangan extends CI_Controller
         parent::__construct();
         $this->load->model('M_Keuangan');
         $this->load->model('M_Stockbuffer');
+        $this->load->model('M_Bufferstockglobal');
         $this->load->helper(array('form', 'url'));
         $this->load->library('upload');
         $this->load->database();
@@ -18,6 +19,7 @@ class C_Keuangan extends CI_Controller
     {
         $data['page_title']     = 'KARISMA - KEUANGAN';
         $data['count_gudang']   = $this->M_Keuangan->get_data_gdg();
+        $data['updated']        = $this->M_Keuangan->get_updated();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/body.php', $data);
@@ -49,9 +51,16 @@ class C_Keuangan extends CI_Controller
                 'qty'           => $row[3]
             ];
         }
-        if (!empty($data)) {
+
+        $gdgid   = $this->input->post('gdgid');
+
+        if (!empty($data) && $gdgid != '1') {
             $this->update_data();
             $this->M_Keuangan->insert_batch($data);
+            $this->session->set_flashdata('message', 'Data imported successfully.');
+        } else if (!empty($data) && $gdgid == '1') {
+            $this->update_data();
+            $this->M_Keuangan->batch_global($data);
             $this->session->set_flashdata('message', 'Data imported successfully.');
         } else {
             $this->session->set_flashdata('message', 'Failed to import data.');
@@ -79,13 +88,15 @@ class C_Keuangan extends CI_Controller
             'gudang'        => $gudang,
             'last_update'   => $date
         );
+
         $this->M_Keuangan->insertupdate($data);
     }
 
-    public function truncateitm($kd)
+    public function truncateitm($kd, $id)
     {
-        $this->M_Keuangan->truncateitm();
+        $this->M_Keuangan->truncateitm($id);
         $this->M_Keuangan->deleteupdateed($kd);
+
         redirect('keuangan');
     }
 
@@ -158,15 +169,76 @@ class C_Keuangan extends CI_Controller
         }
     }
 
+    public function get_data_global()
+    {
+        $list = $this->M_Bufferstockglobal->get_datatables();
+        $data = array();
+        $no = $_POST['start'];
+
+        foreach ($list as $field) {
+            $no++;
+            $row = array();
+
+            $row[] = $field->nmsuplier;
+            $row[] = $field->nmbarang;
+            $row[] = $field->satuan;
+            $row[] = $field->qty;
+
+            $data[] = $row;
+        }
+
+        $output = array(
+            "draw" => $_POST['draw'],
+            "recordsTotal" => $this->M_Bufferstockglobal->count_all(),
+            "recordsFiltered" => $this->M_Bufferstockglobal->count_filtered(),
+            "data" => $data,
+        );
+        //output dalam format JSON
+        echo json_encode($output);
+    }
+
     public function list_stock_minimum($id)
     {
+        if ($id == '1') {
+            $gudangid = $id;
+            $gudang = 'STOCK MINIMUM - Global';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
+            $data['stock']          = $this->M_Keuangan->get_stock_global();
 
-        $data['page_title']     = 'KARISMA - KEUANGAN';
-        $data['gudangid']       = $id;
-        $data['updated']        = $this->M_Keuangan->get_last_update($id);
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/keuangan/stock_minimum.php', $data);
+            $this->load->view('partial/main/footergdg.php');
+        } elseif ($id == '2') {
+            $gudangid = $id;
+            $gudang = 'STOCK MINIMUM - Induk';
+            $gdg    = 'Gdg. Induk';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['gdg']            = $gdg;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
+            $data['stock']          = $this->M_Keuangan->get_stockmin_gdg($gdg);
 
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/keuangan/stock_minimum.php', $data);
-        $this->load->view('partial/main/footergdg.php');
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/keuangan/stock_minimum.php', $data);
+            $this->load->view('partial/main/footergdg.php');
+        } elseif ($id == '3') {
+            $gudangid = $id;
+            $gudang = 'STOCK MINIMUM - Rusak';
+            $gdg    = 'Gdg. Rusak';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['gdg']            = $gdg;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
+            $data['stock']          = $this->M_Keuangan->get_stockmin_gdg($gdg);
+
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/keuangan/stock_minimum.php', $data);
+            $this->load->view('partial/main/footergdg.php');
+        }
     }
 }

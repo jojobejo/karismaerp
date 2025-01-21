@@ -33,6 +33,7 @@
 
                     <div class="card">
                         <div class="card-body">
+                            <h2>Data Daily Stock</h2>
                             <table id="tbgudang" class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
@@ -45,10 +46,37 @@
                                 <tbody>
                                     <?php foreach ($count_gudang as $c) : ?>
                                         <tr>
-                                            <td><?= $c->total_data ?></td>
-                                            <td><?= $c->global ?></td>
-                                            <td><?= $c->induk ?></td>
-                                            <td><?= $c->rusak ?></td>
+                                            <td><?= number_format($c->total_data) ?></td>
+                                            <td><?= number_format($c->global) ?></td>
+                                            <td><?= number_format($c->induk) ?></td>
+                                            <td><?= number_format($c->rusak) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                <thead>
+                                    <tr>
+                                        <td>Nama Gudang</td>
+                                        <td>Last Updated</td>
+                                        <td>#</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($updated as $up) :
+                                        date_default_timezone_set("Asia/Jakarta");
+                                        $date_c = date_create($up->updated);
+                                        $date = date_format($date_c, "Y-m-d H:i:s");
+                                        $id = $up->gdgid;
+                                    ?>
+                                        <tr>
+                                            <td><?= $up->gudang ?></td>
+                                            <td><?= format_indo($date) ?></td>
+                                            <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

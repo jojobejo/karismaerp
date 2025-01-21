@@ -37,7 +37,7 @@ class M_Keuangan extends CI_Model
             SELECT
             (SELECT COUNT(b.kd_barang) FROM tb_dailystock b WHERE b.gudang = 'Gdg. Rusak') AS gdg_rusak,
             (SELECT COUNT(c.kd_barang) FROM tb_dailystock c WHERE c.gudang = 'Gdg. Induk') AS gdg_induk,
-            (SELECT COUNT(d.kd_barang) FROM tb_dailystock d WHERE d.gudang = 'Global') AS gdg_global
+            (SELECT COUNT(d.kd_barang) FROM tb_dailystock_global d WHERE d.gudang = 'Global') AS gdg_global
             FROM tb_dailystock a
         ) AS x
         LIMIT 1
@@ -76,7 +76,8 @@ class M_Keuangan extends CI_Model
     {
         return $this->db->query("SELECT 
         a.kd_update AS kd,
-        a.last_update AS lastupdated
+        a.last_update AS lastupdated,
+        a.gudangid AS gdgid
         FROM tb_stock_status a 
         WHERE a.gudangid = '$id'
         ORDER BY a.id DESC LIMIT 1
@@ -98,12 +99,61 @@ class M_Keuangan extends CI_Model
         $this->db->where('kd_update', $kd);
         return $this->db->delete('tb_stock_status');
     }
-    public function truncateitm()
+    public function truncateitm($id)
     {
-        $this->db->empty_table('tb_dailystock');
+        if ($id == '1') {
+            $this->db->empty_table('tb_dailystock_global');
+        } elseif ($id == '2') {
+            $gdg    = 'Gdg. Induk';
+            $this->db->where('gudang', $gdg);
+            return $this->db->delete('tb_dailystock');
+        } elseif ($id == '3') {
+            $gdg    = 'Gdg. Rusak';
+            $this->db->where('gudang', $gdg);
+            return $this->db->delete('tb_dailystock');
+        }
     }
     public function insert_batch($data)
     {
         $this->db->insert_batch('tb_dailystock', $data);
+    }
+    public function batch_global($data)
+    {
+        $this->db->insert_batch('tb_dailystock_global', $data);
+    }
+    public function get_stock_global()
+    {
+        $this->db->select('b.nama_suplier AS nmsuplier, c.nm_barang AS nmbarang, c.satuan AS satuan, a.qty AS qty, c.qty_min AS qty_min');
+        $this->db->from('tb_dailystock_global a');
+        $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
+        $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
+        $this->db->where('a.qty < c.qty_min');
+        $this->db->group_by('c.nm_barang');
+        $query = $this->db->get();
+        return $query->result();
+    }
+    public function get_stockmin_gdg($gdg)
+    {
+        return $this->db->query("SELECT
+        c.nama_suplier AS nmsuplier,
+        b.nm_barang AS nmbarang,
+        b.satuan AS satuan,
+        a.qty AS qty,
+        b.qty_min AS qtymin
+        FROM tb_dailystock a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        WHERE a.qty < b.qty_min AND a.gudang = '$gdg'
+        ")->result();
+    }
+    public function get_updated()
+    {
+        return $this->db->query("SELECT
+        a.gudangid AS gdgid,
+        a.gudang,
+        a.last_update AS updated
+        FROM tb_stock_status a
+        GROUP BY a.gudang
+        ")->result();
     }
 }

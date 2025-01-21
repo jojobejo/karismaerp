@@ -57,23 +57,36 @@
                                         <h2>Last Updated : <?= format_indo($date) ?></h2>
                                     </div>
                                     <div class="col">
-                                        <a href="<?= base_url('truncateitm/' . $u->kd) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
+                                        <a href="<?= base_url('truncateitm/' . $u->kd . '/' . $u->gdgid) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
                                         <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
                                     </div>
                                 </div>
 
                             <?php endforeach; ?>
                             <h3><?= $gudang ?></h3>
-                            <table id="tb_qty" class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <td>Nama Suplier</td>
-                                        <td>Nama Barang</td>
-                                        <td>Satuan</td>
-                                        <td>Qty</td>
-                                    </tr>
-                                </thead>
-                            </table>
+                            <?php if ($gudang != 'Global') : ?>
+                                <table id="tb_qty" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Suplier</td>
+                                            <td>Nama Barang</td>
+                                            <td>Satuan</td>
+                                            <td>Stock</td>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            <?php else : ?>
+                                <table id="tb_qty_global" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Suplier</td>
+                                            <td>Nama Barang</td>
+                                            <td>Satuan</td>
+                                            <td>Stock</td>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            <?php endif; ?>
                         </div>
                     </div>
 
