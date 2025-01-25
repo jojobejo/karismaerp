@@ -41,6 +41,8 @@ class Auth extends CI_Controller
                         redirect('logistik');
                     } else if ($key->jobdesk == 'ADMINKEU') {
                         redirect('keuangan');
+                    } else if ($key->jobdesk == 'DIREKTUR') {
+                        redirect('dashboard');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

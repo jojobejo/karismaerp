@@ -73,4 +73,6 @@ $route['list_stock_minimum/(:any)'] = 'keuangan/C_Keuangan/list_stock_minimum/$1
 $route['truncateitm/(:any)/(:any)'] = 'keuangan/C_Keuangan/truncateitm/$1/$2';
 
 // COBA
-$route['pagination']                = 'keuangan/C_Coba1';
+$route['pagination']                        = 'keuangan/C_Coba1';
+
+$route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';

@@ -5,8 +5,8 @@ class M_Bufferstockglobal extends CI_Model
 
 {
 
-    var $column_order = array('nmsuplier', 'nmbarang', 'satuan', 'qty');
-    var $column_search = array('nmsuplier', 'nmbarang');
+    var $column_order = array('nama_suplier', 'nm_barang', 'satuan', 'qty', 'qty_box', 'qty_pcs');
+    var $column_search = array('nama_suplier', 'nm_barang');
 
     public function __construct()
     {
@@ -16,7 +16,15 @@ class M_Bufferstockglobal extends CI_Model
 
     private function _get_datatables_query()
     {
-        $this->db->select('b.nama_suplier AS nmsuplier, c.nm_barang AS nmbarang, c.satuan AS satuan, a.qty AS qty');
+        $this->db->select([
+            'b.nama_suplier AS nmsuplier',
+            'c.nm_barang AS nmbarang',
+            'c.satuan AS satuan',
+            'a.qty AS qty',
+            '(c.p * c.l * c.t) AS dimensi',
+            'FLOOR((a.qty / (c.p * c.l * c.t))) AS qty_box',
+            '(a.qty - FLOOR(a.qty / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs'
+        ]);
         $this->db->from('tb_dailystock_global a');
         $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
         $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
@@ -66,7 +74,15 @@ class M_Bufferstockglobal extends CI_Model
 
     public function count_all()
     {
-        $this->db->select('b.nama_suplier AS nmsuplier, c.nm_barang AS nmbarang, c.satuan AS satuan, a.qty AS qty');
+        $this->db->select([
+            'b.nama_suplier AS nmsuplier',
+            'c.nm_barang AS nmbarang',
+            'c.satuan AS satuan',
+            'a.qty AS qty',
+            '(c.p * c.l * c.t) AS dimensi',
+            'FLOOR((a.qty / (c.p * c.l * c.t))) AS qty_box',
+            '(a.qty - FLOOR(a.qty / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs'
+        ]);
         $this->db->from('tb_dailystock_global a');
         $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
         $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');

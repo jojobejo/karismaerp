@@ -42,9 +42,25 @@
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                             <a href="<?= base_url('gudang/3') ?>" class="btn btn-secondary mb-2">Gudang Rusak</a>
                         <?php endif; ?>
+                        <!-- LV-5 & Lv 2,3,4 -->
                     <?php else : ?>
+                        <?php if ($gudangid == '1') : ?>
+                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
+                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-secondary mb-2">Gudang Global</a>
+                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
+                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                        <?php elseif ($gudangid == '2') : ?>
+                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
+                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-secondary mb-2">Gudang Induk</a>
+                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                        <?php elseif ($gudangid == '3') : ?>
+                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
+                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
+                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-secondary mb-2">Gudang Rusak</a>
+                        <?php endif; ?>
                     <?php endif; ?>
-
                     <div class="card">
                         <div class="card-body">
                             <?php foreach ($updated as $u) :
@@ -54,16 +70,35 @@
                             ?>
                                 <div class="row">
                                     <div class="col">
-                                        <h2>Last Updated : <?= format_indo($date) ?></h2>
+                                        <h2>(<?= $gudang ?>) Updated : <?= format_indo($date) ?></h2>
                                     </div>
-                                    <div class="col">
-                                        <a href="<?= base_url('truncateitm/' . $u->kd . '/' . $u->gdgid) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
-                                        <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
+                                    <div class="col-4">
+                                        <?php if ($this->session->userdata('lv') == 1) : ?>
+                                            <a href="<?= base_url('truncateitm/' . $u->kd . '/' . $u->gdgid) ?>" class="btn btn-sm btn-danger btn-block mb-2">Delete Data</a>
+                                            <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
+                                        <?php else : ?>
+                                            <a href="<?= base_url('list_stock_minimum/' . $gudangid) ?>" class="btn btn-sm btn-primary btn-block mb-2">Stock Minimum</a>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
-
                             <?php endforeach; ?>
-                            <h3><?= $gudang ?></h3>
+
+
+                            <?php if ($this->session->userdata('lv') != '1') : ?>
+                                <div class="row">
+                                    <div class="col">
+                                        <a href="<?= base_url('gudang/' . $gudangid . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a>
+                                    </div>
+                                    <div class="col">
+                                        <a href="<?= base_url('gudang/' . $gudangid . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYNGENTA</a>
+                                    </div>
+                                    <div class="col">
+                                        <a href="<?= base_url('gudang/' . $gudangid . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a>
+                                    </div>
+                                </div>
+                            <?php else : ?>
+                            <?php endif; ?>
+
                             <?php if ($gudang != 'Global') : ?>
                                 <table id="tb_qty" class="table table-bordered table-striped">
                                     <thead>
@@ -71,7 +106,9 @@
                                             <td>Nama Suplier</td>
                                             <td>Nama Barang</td>
                                             <td>Satuan</td>
-                                            <td>Stock</td>
+                                            <td>Qty</td>
+                                            <td>Box</td>
+                                            <td>Pcs</td>
                                         </tr>
                                     </thead>
                                 </table>
@@ -82,7 +119,9 @@
                                             <td>Nama Suplier</td>
                                             <td>Nama Barang</td>
                                             <td>Satuan</td>
-                                            <td>Stock</td>
+                                            <td>Qty</td>
+                                            <td>Box</td>
+                                            <td>Pcs</td>
                                         </tr>
                                     </thead>
                                 </table>

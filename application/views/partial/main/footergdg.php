@@ -42,6 +42,11 @@
 <script type="text/javascript">
     var table;
     var tablegl;
+
+    var sup1;
+    var sup2;
+    var sup3;
+
     $(document).ready(function() {
 
         //datatables
@@ -78,7 +83,7 @@
             "paging": true,
             "lengthChange": false,
             "searching": true,
-            "ordering": true,
+            "order": [],
             "info": true,
             "autoWidth": false,
             "responsive": true,
@@ -87,12 +92,31 @@
             "paging": true,
             "lengthChange": false,
             "searching": true,
-            "ordering": true,
+            "order": [],
             "info": true,
             "autoWidth": false,
             "responsive": true,
         });
 
+        $('#tb_qty_by_sup').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+
+        $('#tb_qty_by_sup_global').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
     });
 </script>
 

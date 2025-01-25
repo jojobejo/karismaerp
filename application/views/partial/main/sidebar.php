@@ -7,24 +7,16 @@
     </a>
 
     <!-- Sidebar -->
-    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('dashboardkpi') ?>" class="nav-link">
+              <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
                 <i class="nav-icon fas fa-quran"></i>
                 <p>
-                  Data Zahir
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('dashboardkpi') ?>" class="nav-link">
-                <i class="nav-icon fas fa-quran"></i>
-                <p>
-                  Truk
+                  Daily Stock Product
                 </p>
               </a>
             </li>
@@ -39,7 +31,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
+    <?php elseif ($this->session->userdata('lv') == '5' && $this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">

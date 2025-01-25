@@ -16,26 +16,36 @@ class M_Stockbuffer extends CI_Model
 
     private function _get_datatables_query($where)
     {
-        $subquery = "
-            SELECT
-                c.nama_suplier AS nmsuplier,
-                b.nm_barang AS nmbarang,
-                a.gudang AS nmgudang,
-                b.satuan AS satuan,
-                a.qty AS qty,
-                b.qty_min AS qtymin,
-                CASE
-                    WHEN a.gudang = 'Gdg. Induk' THEN 2
-                    WHEN a.gudang = 'Gdg. Rusak' THEN 3
-                END AS idgudang
+
+        $this->db->select("
+            x.nmsuplier,
+            x.nmbarang,
+            x.nmgudang,
+            x.satuan,
+            x.qty,
+            x.qtymin,
+            x.dimensi,
+            FLOOR(x.qty / x.dimensi) AS qty_box,
+            x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs
+        ");
+        $this->db->from("(SELECT 
+            c.nama_suplier AS nmsuplier,
+            b.nm_barang AS nmbarang,
+            a.gudang AS nmgudang,
+            b.satuan AS satuan,
+            a.qty AS qty,
+            b.qty_min AS qtymin,
+            (b.p * b.l * b.t) AS dimensi,
+            CASE
+                WHEN a.gudang = 'Gdg. Induk' THEN 2
+                WHEN a.gudang = 'Gdg. Rusak' THEN 3
+            END AS idgudang
             FROM tb_dailystock a
             JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
             JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
-        ";
+        ) AS x");
+        $this->db->where("x.idgudang", "$where");
 
-        $this->db->select('x.nmsuplier, x.nmbarang, x.nmgudang, x.satuan, x.qty, x.qtymin');
-        $this->db->from("($subquery) AS x", null, false);
-        $this->db->where('x.idgudang', $where);
 
         $i = 0;
 
@@ -81,26 +91,38 @@ class M_Stockbuffer extends CI_Model
 
     public function count_all($id)
     {
-        $subquery = "
-            SELECT
-                c.nama_suplier AS nmsuplier,
-                b.nm_barang AS nmbarang,
-                a.gudang AS nmgudang,
-                b.satuan AS satuan,
-                a.qty AS qty,
-                b.qty_min AS qtymin,
-                CASE
-                    WHEN a.gudang = 'Gdg. Induk' THEN 2
-                    WHEN a.gudang = 'Gdg. Rusak' THEN 3
-                END AS idgudang
+        $this->db->select("
+            x.nmsuplier,
+            x.nmbarang,
+            x.nmgudang,
+            x.satuan,
+            x.qty,
+            x.qtymin,
+            x.dimensi,
+            FLOOR(x.qty / x.dimensi) AS qty_box,
+            x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs
+        ");
+        $this->db->from("(SELECT 
+            c.nama_suplier AS nmsuplier,
+            b.nm_barang AS nmbarang,
+            a.gudang AS nmgudang,
+            b.satuan AS satuan,
+            a.qty AS qty,
+            b.qty_min AS qtymin,
+            (b.p * b.l * b.t) AS dimensi,
+            CASE
+                WHEN a.gudang = 'Gdg. Induk' THEN 2
+                WHEN a.gudang = 'Gdg. Rusak' THEN 3
+            END AS idgudang
             FROM tb_dailystock a
             JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
             JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
-        ";
+        ) AS x");
+        $this->db->where("x.idgudang", "$id");
 
-        $this->db->select('x.nmsuplier, x.nmbarang, x.nmgudang, x.satuan, x.qty, x.qtymin');
-        $this->db->from("($subquery) AS x", null, false);
-        $this->db->where('x.idgudang', $id);
+        $query = $this->db->get();
+        return $query->result();
+
 
         return $this->db->count_all_results();
     }

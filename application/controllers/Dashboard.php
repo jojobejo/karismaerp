@@ -16,6 +16,12 @@ class Dashboard extends CI_Controller
 
         $lvuser     = $this->session->userdata('lv');
 
+        // LV-1 = ADMIN
+        // LV-2 = karyawan
+        // LV-3 = Kadep
+        // LV-4 = kusus
+        // LV-5 = Direktur
+
         if ($lvuser == '1') {
             $data['page_title'] = 'KARISMA';
             $this->load->view('partial/main/header.php', $data);
@@ -23,9 +29,8 @@ class Dashboard extends CI_Controller
             $this->load->view('partial/main/footer.php');
         } elseif ($lvuser == '5') {
             $data['page_title'] = 'KARISMA';
-            $data['tamu']   = $this->hrd->getdataschedule()->result();
             $this->load->view('partial/main/header.php', $data);
-            $this->load->view('content/list_tamu_dirut.php', $data);
+            $this->load->view('content/dashboard.php', $data);
             $this->load->view('partial/main/footer.php');
         } else {
             $data['page_title'] = 'KARISMA';

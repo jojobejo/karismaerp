@@ -29,61 +29,89 @@
                         <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                     <?php else : ?>
+                        <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                        <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
+                        <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                     <?php endif; ?>
 
                     <div class="card">
                         <div class="card-body">
                             <h2>Data Daily Stock</h2>
-                            <table id="tbgudang" class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <td>Total Data</td>
-                                        <td>Gdg.Global</td>
-                                        <td>Gdg.Induk</td>
-                                        <td>Gdg.Rusak</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($count_gudang as $c) : ?>
+                            <?php if ($this->session->userdata('lv') == 1) : ?>
+                                <table id="tbgudang" class="table table-bordered table-striped">
+                                    <thead>
                                         <tr>
-                                            <td><?= number_format($c->total_data) ?></td>
-                                            <td><?= number_format($c->global) ?></td>
-                                            <td><?= number_format($c->induk) ?></td>
-                                            <td><?= number_format($c->rusak) ?></td>
+                                            <td>Total Data</td>
+                                            <td>Gdg.Global</td>
+                                            <td>Gdg.Induk</td>
+                                            <td>Gdg.Rusak</td>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($count_gudang as $c) : ?>
+                                            <tr>
+                                                <td><?= number_format($c->total_data) ?></td>
+                                                <td><?= number_format($c->global) ?></td>
+                                                <td><?= number_format($c->induk) ?></td>
+                                                <td><?= number_format($c->rusak) ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                            <thead>
+                                                <tr>
+                                                    <td>Nama Gudang</td>
+                                                    <td>Last Updated</td>
+                                                    <td>#</td>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($updated as $up) :
+                                                    date_default_timezone_set("Asia/Jakarta");
+                                                    $date_c = date_create($up->updated);
+                                                    $date = date_format($date_c, "Y-m-d H:i:s");
+                                                    $id = $up->gdgid;
+                                                ?>
+                                                    <tr>
+                                                        <td><?= $up->gudang ?></td>
+                                                        <td><?= format_indo($date) ?></td>
+                                                        <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            <?php elseif ($this->session->userdata('lv') == 5) : ?>
+                                <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Gudang</td>
+                                            <td>Last Updated</td>
+                                            <td>#</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($updated as $up) :
+                                            date_default_timezone_set("Asia/Jakarta");
+                                            $date_c = date_create($up->updated);
+                                            $date = date_format($date_c, "Y-m-d H:i:s");
+                                            $id = $up->gdgid;
+                                        ?>
+                                            <tr>
+                                                <td><?= $up->gudang ?></td>
+                                                <td><?= format_indo($date) ?></td>
+                                                <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-body">
-                            <table id="tbupdate" class="table table-bordered table-striped mt-2">
-                                <thead>
-                                    <tr>
-                                        <td>Nama Gudang</td>
-                                        <td>Last Updated</td>
-                                        <td>#</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($updated as $up) :
-                                        date_default_timezone_set("Asia/Jakarta");
-                                        $date_c = date_create($up->updated);
-                                        $date = date_format($date_c, "Y-m-d H:i:s");
-                                        $id = $up->gdgid;
-                                    ?>
-                                        <tr>
-                                            <td><?= $up->gudang ?></td>
-                                            <td><?= format_indo($date) ?></td>
-                                            <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
                 </div>
             </section>
         </div>

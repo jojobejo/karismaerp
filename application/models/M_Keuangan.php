@@ -156,4 +156,33 @@ class M_Keuangan extends CI_Model
         GROUP BY a.gudang
         ")->result();
     }
+    public function get_stock_by_sup_global($kd)
+    {
+        return $this->db->query("SELECT
+        b.nm_barang AS nmbarang,
+        b.satuan AS satuan,
+        a.qty AS qty,
+        b.qty_min AS qtymin
+        FROM tb_dailystock_global a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        WHERE a.kd_suplier = '$kd'
+        GROUP BY a.kd_barang
+        ORDER BY a.qty DESC
+        ")->result();
+    }
+    
+    public function get_stock_by_sup($kd, $gdg)
+    {
+        return $this->db->query("SELECT
+        b.nm_barang AS nmbarang,
+        b.satuan AS satuan,
+        a.qty AS qty,
+        b.qty_min AS qtymin
+        FROM tb_dailystock a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        WHERE a.kd_suplier = '$kd' AND a.gudang = '$gdg'
+            ")->result();
+    }
 }
