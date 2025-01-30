@@ -144,6 +144,7 @@ class C_Keuangan extends CI_Controller
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/keuangan/gudang.php', $data);
             $this->load->view('partial/main/footergdg.php');
+            
         } else if ($id == '2') {
 
             $gudangid = $id;

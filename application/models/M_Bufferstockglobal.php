@@ -28,6 +28,7 @@ class M_Bufferstockglobal extends CI_Model
         $this->db->from('tb_dailystock_global a');
         $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
         $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
+        $this->db->where('a.qty >', 0);
         $this->db->group_by('c.nm_barang');
 
         $i = 0;
@@ -86,6 +87,7 @@ class M_Bufferstockglobal extends CI_Model
         $this->db->from('tb_dailystock_global a');
         $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
         $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
+        $this->db->where('a.qty >', 0);
         $this->db->group_by('c.nm_barang');
         return $this->db->count_all_results();
     }
