@@ -21,16 +21,32 @@
                 </div><!-- /.container-fluid -->
             </div>
             <!-- /.content-header -->
-            <section class="content">
-                <div class="container-fluid">
-                    <div class="card">
-                        <div class="card-body">
-                            <h2>Modules List</h2>
-                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2">Daily Stock</a>
+            <?php if ($this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
+
+                <section class="content">
+                    <div class="container-fluid">
+                        <div class="card">
+                            <div class="card-body">
+                                <h2>Modules List</h2>
+                                <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2">Daily Stock</a>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+            <?php elseif ($this->session->userdata('jobdesk') == 'ADMINGA') : ?>
+                <section class="content">
+                    <div class="container-fluid">
+                        <div class="card">
+                            <div class="card-body">
+                                Tamu
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+            <?php endif; ?>
         </div>
         <!-- /.content-wrapper -->
         <footer class="main-footer">

@@ -59,6 +59,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#dailyod').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     bsCustomFileInput.init();
   });
 </script>

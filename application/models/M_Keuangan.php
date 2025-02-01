@@ -121,6 +121,10 @@ class M_Keuangan extends CI_Model
     {
         $this->db->insert_batch('tb_dailystock_global', $data);
     }
+    public function insert_batch_logistik($data)
+    {
+        $this->db->insert_batch('tb_pre_do', $data);
+    }
     public function get_stock_global()
     {
         $this->db->select('b.nama_suplier AS nmsuplier, c.nm_barang AS nmbarang, c.satuan AS satuan, a.qty AS qty, c.qty_min AS qty_min');
@@ -171,7 +175,7 @@ class M_Keuangan extends CI_Model
         ORDER BY a.qty DESC
         ")->result();
     }
-    
+
     public function get_stock_by_sup($kd, $gdg)
     {
         return $this->db->query("SELECT

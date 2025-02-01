@@ -15,6 +15,7 @@ class Dashboard extends CI_Controller
     {
 
         $lvuser     = $this->session->userdata('lv');
+        $jobdesk    = $this->session->userdata('jobdesk');
 
         // LV-1 = ADMIN
         // LV-2 = karyawan
@@ -22,12 +23,24 @@ class Dashboard extends CI_Controller
         // LV-4 = kusus
         // LV-5 = Direktur
 
-        if ($lvuser == '1') {
+        if ($lvuser == '1' && $jobdesk == 'LOGISTIK') {
             $data['page_title'] = 'KARISMA';
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/logistik/body.php', $data);
             $this->load->view('partial/main/footer.php');
-        } elseif ($lvuser == '5') {
+        } elseif ($lvuser == '1' && $jobdesk == 'ADMINKEU') {
+            $data['page_title'] = 'KARISMA';
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/dashboard.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($lvuser == '1' && $jobdesk == 'ADMINGA') {
+            $data['page_title']  = 'Schedule Direktur';
+            $data['getschedule'] = $this->M_Hrd->getdataschedule()->result();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/schedule/body.php', $data);
+            $this->load->view('content/schedule/ajaxschedule.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($lvuser == '5' && $jobdesk == 'DIREKTUR') {
             $data['page_title'] = 'KARISMA';
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/dashboard.php', $data);

@@ -13,6 +13,7 @@ class C_Schedule extends CI_Controller
     {
         $data['page_title']  = 'Schedule Direktur';
         $data['getschedule'] = $this->M_Hrd->getdataschedule()->result();
+        $data['tamu'] = $this->M_Hrd->getdataschedule()->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/schedule/body.php', $data);

@@ -77,6 +77,7 @@ class M_Hrd extends CI_Model
         FROM tb_tamu a
         ");
     }
+
     //karyawan keluar masuk 
 
     public function get_all_laporan_karykm()
@@ -246,6 +247,7 @@ class M_Hrd extends CI_Model
         $this->db->from($this->table);
         return $this->db->count_all_results();
     }
+    
     public function insertchedule($data)
     {
         return $this->db->insert('tb_schedule_dirut', $data);

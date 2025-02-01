@@ -31,6 +31,30 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINGA') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('schedule_direktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book"></i>
+                <p>
+                  Jadwal Tamu
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
     <?php elseif ($this->session->userdata('lv') == '5' && $this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
@@ -38,9 +62,17 @@
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
               <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
-                <i class="nav-icon fas fa-quran"></i>
+                <i class="nav-icon fas fa-book"></i>
                 <p>
                   Daily Stock Product
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('schedule_direktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-user-friends"></i>
+                <p>
+                  Jadwal Tamu
                 </p>
               </a>
             </li>

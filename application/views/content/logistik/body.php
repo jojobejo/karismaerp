@@ -11,20 +11,50 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
-            <!-- Content Header (Page header) -->
+            <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
+
             <div class="content-header">
                 <div class="container-fluid">
-                    <div class="row mb-2">
-                        <div class="col-sm-6">
-                            <h3>Dashboard Delivery Order</h3>
-                        </div><!-- /.col -->
-                    </div><!-- /.row -->
-                </div><!-- /.container-fluid -->
+                    <h3>Dashboard Delivery Order</h3>
+                    <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
+                    <a href="<?= base_url() ?>" class="btn btn-success mb-2">Faktur Terkonfirmasi</a>
+                    <a href="<?= base_url() ?>" class="btn btn-success mb-2">Faktur Belum Terkonfirmasi</a>
+                </div>
             </div>
+
             <!-- /.content-header -->
             <section class="content">
                 <div class="container-fluid">
-                    
+                    <div class="card">
+                        <div class="card-body">
+                            <table id="dailyod" class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <td>FAKTUR</td>
+                                        <td>NAMA CUSTOMER</td>
+                                        <td>KIOS</td>
+                                        <td>ALAMAT KIOS</td>
+                                        <td>REGIONAL</td>
+                                        <td>ITEM</td>
+                                        <td>#</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($list_faktur as $l) : ?>
+                                        <tr>
+                                            <td><?= $l->kd_faktur ?></td>
+                                            <td><?= $l->nama_customer ?></td>
+                                            <td><?= $l->nama_kios ?></td>
+                                            <td><?= $l->alamat_kios ?></td>
+                                            <td><?= $l->regional ?></td>
+                                            <td><?= $l->total_barang ?></td>
+                                            <td><a href="<?= base_url('insert_tmp/') . $l->kd_faktur ?>" class="btn btn-primary btn-block btn-sm"><i class="fas fa-plus"></i></a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>

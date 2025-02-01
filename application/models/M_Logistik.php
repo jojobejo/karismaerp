@@ -330,8 +330,46 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
-        return $this->db->query("
-        
-        ")->result();
+        // SELECT
+        //     x.kd_faktur,
+        //     x.nama_customer,
+        //     x.nama_kios,
+        //     x.alamat_kios,
+        //     x.regional,
+        //     x.total_barang
+        //     FROM
+        //     (
+        //         SELECT 
+        //         a.kd_faktur,
+        //         b.nama_customer,
+        //         b.nama_kios,
+        //         b.alamat_kios,
+        //         b.regional,
+        //         (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
+        //         FROM tb_pre_do a
+        //         JOIN tb_customer b ON b.kd_customer = a.kd_customer
+        //         JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+        //         GROUP BY a.kd_faktur
+        //     ) AS x
+
+        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang');
+        $this->db->from('(SELECT 
+                    a.kd_faktur,
+                    b.nama_customer,
+                    b.nama_kios,
+                    b.alamat_kios,
+                    b.regional,
+                    (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
+                  FROM tb_pre_do a
+                  JOIN tb_customer b ON b.kd_customer = a.kd_customer
+                  JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                  GROUP BY a.kd_faktur) AS x', false);
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    public function get_detailed_fktur($kdfaktur)
+    {
+        // 
     }
 }

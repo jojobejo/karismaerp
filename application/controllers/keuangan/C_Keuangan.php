@@ -39,33 +39,69 @@ class C_Keuangan extends CI_Controller
 
     public function import()
     {
-        $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
-        fgetcsv($file_data); // Skip header row
+        $session    = $this->session->userdata('jobdesk');
 
-        $data = [];
-        while ($row = fgetcsv($file_data)) {
-            $data[] = [
-                'kd_suplier'    => $row[0],
-                'kd_barang'     => $row[1],
-                'gudang'        => $row[2],
-                'qty'           => $row[3]
-            ];
-        }
+        if ($session == 'ADMINKEU') {
+            $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            fgetcsv($file_data); // Skip header row
 
-        $gdgid   = $this->input->post('gdgid');
+            $data = [];
+            while ($row = fgetcsv($file_data)) {
+                $data[] = [
+                    'kd_suplier'    => $row[0],
+                    'kd_barang'     => $row[1],
+                    'gudang'        => $row[2],
+                    'qty'           => $row[3]
+                ];
+            }
 
-        if (!empty($data) && $gdgid != '1') {
-            $this->update_data();
-            $this->M_Keuangan->insert_batch($data);
-            $this->session->set_flashdata('message', 'Data imported successfully.');
-        } else if (!empty($data) && $gdgid == '1') {
-            $this->update_data();
-            $this->M_Keuangan->batch_global($data);
-            $this->session->set_flashdata('message', 'Data imported successfully.');
+            $gdgid   = $this->input->post('gdgid');
+
+            if (!empty($data) && $gdgid != '1') {
+                $this->update_data();
+                $this->M_Keuangan->insert_batch($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else if (!empty($data) && $gdgid == '1') {
+                $this->update_data();
+                $this->M_Keuangan->batch_global($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else {
+                $this->session->set_flashdata('message', 'Failed to import data.');
+            }
+            redirect('insertmodule');
+        } elseif ($session == 'LOGISTIK') {
+            $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            fgetcsv($file_data); // Skip header row
+
+            $data = [];
+            while ($row = fgetcsv($file_data)) {
+                $data[] = [
+                    'tgl_inputer'   => $row[0],
+                    'kd_faktur'     => $row[1],
+                    'kd_customer'   => $row[2],
+                    'kd_barang'     => $row[3],
+                    'qty'           => $row[4],
+                    'satuan'        => $row[5],
+                    'no_lot'        => $row[6],
+                    'tgl_exp'       => $row[7],
+                    'upload_sts'    => $row[8],
+                    'create_at'    => $row[9]
+                ];
+            }
+
+            $gdgid   = $this->input->post('gdgid');
+
+            if (!empty($data) && $gdgid == '1') {
+                $this->M_Keuangan->insert_batch_logistik($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else {
+                $this->session->set_flashdata('message', 'Failed to import data.');
+            }
+            redirect('logistik');
         } else {
-            $this->session->set_flashdata('message', 'Failed to import data.');
+            $this->session->set_flashdata("SESI BERAKHIR", "Silahkan login lagi ");
+            redirect('Auth');
         }
-        redirect('insertmodule');
     }
 
     private function update_data()
@@ -144,7 +180,6 @@ class C_Keuangan extends CI_Controller
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/keuangan/gudang.php', $data);
             $this->load->view('partial/main/footergdg.php');
-            
         } else if ($id == '2') {
 
             $gudangid = $id;
