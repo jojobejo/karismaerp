@@ -938,10 +938,19 @@ class C_Logistik extends CI_Controller
     public function create_do()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function faktur_list()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/fakturlist.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 }

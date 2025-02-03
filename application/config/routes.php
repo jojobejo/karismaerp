@@ -75,8 +75,10 @@ $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier
 
 //LOGISTIK - DO
 $route['logistik']                          = 'logistik/C_Logistik/delivery_order';
+$route['faktur_list']                       = 'logistik/C_Logistik/faktur_list';
 $route['logistikprepare']                   = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                         = 'logistik/C_Logistik/create_do';
+$route['detail_faktur/(:any)']              = 'logistik/C_Logistik/detail_faktur/$1';
 $route['insert_tmp/(:any)']                 = 'logistik/C_Logistik/insert_tmp/$1';
 
 //SCHEDULE DIREKTUR

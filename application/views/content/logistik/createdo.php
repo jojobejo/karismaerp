@@ -15,16 +15,17 @@
 
             <div class="content-header">
                 <div class="container-fluid">
-                    <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
-                    <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
+                    <a href="<?= base_url('faktur_list') ?>" class="btn btn-success mb-2">List Faktur</a>
                 </div>
             </div>
 
             <section class="content">
                 <div class="container-fluid">
                     <div class="card">
+                        <div class="card-header">
+                            <h3>Draft DO</h3>
+                        </div>
                         <div class="card-body">
-
                             <div class="row mb-2">
                                 <div class="col-md">
                                     <div class="input-group">
@@ -67,15 +68,14 @@
                                     </div>
                                 </div>
                             </div>
-
                             <table id="" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
                                         <td>Faktur</td>
-                                        <td>Nama</td>
+                                        <td>Kios</td>
                                         <td>Alamat</td>
-                                        <td>Kota</td>
-                                        <td>No.Telpon</td>
+                                        <td>Regional</td>
+                                        <td>#</td>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -89,38 +89,6 @@
                                 </tbody>
                             </table>
 
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-body">
-                            <table id="" class="table table-striped">
-                                <thead style="background-color: #212529; color:white;">
-                                    <table id="dailyod" class="table table-bordered table-striped">
-                                        <thead>
-                                            <tr>
-                                                <td>FAKTUR</td>
-                                                <td>NAMA CUSTOMER</td>
-                                                <td>KIOS</td>
-                                                <td>ALAMAT KIOS</td>
-                                                <td>REGIONAL</td>
-                                                <td>ITEM</td>
-                                                <td>#</td>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($list_faktur as $l) : ?>
-                                                <tr>
-                                                    <td><?= $l->kd_faktur ?></td>
-                                                    <td><?= $l->nama_customer ?></td>
-                                                    <td><?= $l->nama_kios ?></td>
-                                                    <td><?= $l->alamat_kios ?></td>
-                                                    <td><?= $l->regional ?></td>
-                                                    <td><?= $l->total_barang ?></td>
-                                                    <td><a href="<?= base_url('insert_tmp/') . $l->kd_faktur ?>" class="btn btn-primary btn-block btn-sm"><i class="fas fa-plus"></i></a></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
                         </div>
                     </div>
                 </div>
