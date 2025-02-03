@@ -17,13 +17,24 @@
                 <div class="container-fluid">
                     <h3>Dashboard Delivery Order</h3>
                     <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
-                    <a href="<?= base_url() ?>" class="btn btn-success mb-2">Faktur Terkonfirmasi</a>
-                    <a href="<?= base_url() ?>" class="btn btn-success mb-2">Faktur Belum Terkonfirmasi</a>
+                    <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                 </div>
             </div>
 
-            <!-- /.content-header -->
             <section class="content">
+                <div class="container-fluid">
+                    <div class="card">
+                        <div class="card-body">
+                            <h3>List Faktur Penjualan</h3>
+                            <h3>Faktur ON PROGRESS</h3>
+                            <h3>Faktur DONE</h3>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- /.content-header -->
+            <!-- <section class="content">
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
@@ -56,7 +67,9 @@
                         </div>
                     </div>
                 </div>
-            </section>
+            </section> -->
+
+
         </div>
         <!-- /.content-wrapper -->
         <footer class="main-footer">

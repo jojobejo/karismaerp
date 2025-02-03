@@ -59,7 +59,7 @@ $route['translate_uri_dashes'] = FALSE;
 $route['process']                   = 'Auth/process';
 $route['logout']                    = 'Auth/logout';
 $route['dashboard']                 = 'Dashboard';
-$route['logistik']                  = 'logistik/C_Logistik/delivery_order';
+
 
 //DAILY STOCK AHMAD
 $route['keuangan']                          = 'keuangan/C_Keuangan';
@@ -74,7 +74,9 @@ $route['pagination']                        = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
 //LOGISTIK - DO
+$route['logistik']                          = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                   = 'logistik/C_Logistik/delivery_order';
+$route['create_do']                         = 'logistik/C_Logistik/create_do';
 $route['insert_tmp/(:any)']                 = 'logistik/C_Logistik/insert_tmp/$1';
 
 //SCHEDULE DIREKTUR

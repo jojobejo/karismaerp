@@ -34,10 +34,12 @@
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                     <?php endif; ?>
 
-                    <div class="card">
-                        <div class="card-body">
-                            <h2>Data Daily Stock</h2>
-                            <?php if ($this->session->userdata('lv') == 1) : ?>
+                    <?php if ($this->session->userdata('lv') == 1) : ?>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Daily Stock</h3>
+                            </div>
+                            <div class="card-body">
                                 <table id="tbgudang" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
@@ -58,34 +60,13 @@
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                                <div class="card">
-                                    <div class="card-body">
-                                        <table id="tbupdate" class="table table-bordered table-striped mt-2">
-                                            <thead>
-                                                <tr>
-                                                    <td>Nama Gudang</td>
-                                                    <td>Last Updated</td>
-                                                    <td>#</td>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($updated as $up) :
-                                                    date_default_timezone_set("Asia/Jakarta");
-                                                    $date_c = date_create($up->updated);
-                                                    $date = date_format($date_c, "Y-m-d H:i:s");
-                                                    $id = $up->gdgid;
-                                                ?>
-                                                    <tr>
-                                                        <td><?= $up->gudang ?></td>
-                                                        <td><?= format_indo($date) ?></td>
-                                                        <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            <?php elseif ($this->session->userdata('lv') == 5) : ?>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Update History</h3>
+                            </div>
+                            <div class="card-body">
                                 <table id="tbupdate" class="table table-bordered table-striped mt-2">
                                     <thead>
                                         <tr>
@@ -109,9 +90,41 @@
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
+                    <?php elseif ($this->session->userdata('lv') == 5) : ?>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Stock Log </h3>
+                            </div>
+                            <div class="card-body">
+                                <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                    <thead>
+                                        <tr>
+                                            <td>Nama Gudang</td>
+                                            <td>Last Updated</td>
+                                            <td>#</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($updated as $up) :
+                                            date_default_timezone_set("Asia/Jakarta");
+                                            $date_c = date_create($up->updated);
+                                            $date = date_format($date_c, "Y-m-d H:i:s");
+                                            $id = $up->gdgid;
+                                        ?>
+                                            <tr>
+                                                <td><?= $up->gudang ?></td>
+                                                <td><?= format_indo($date) ?></td>
+                                                <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    <?php endif; ?>
                 </div>
             </section>
         </div>
