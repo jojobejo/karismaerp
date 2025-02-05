@@ -117,6 +117,10 @@ class M_Keuangan extends CI_Model
     {
         $this->db->insert_batch('tb_dailystock', $data);
     }
+    public function insert_batch_lot($data)
+    {
+        $this->db->insert_batch('tb_qty_lot', $data);
+    }
     public function batch_global($data)
     {
         $this->db->insert_batch('tb_dailystock_global', $data);
@@ -188,5 +192,91 @@ class M_Keuangan extends CI_Model
         JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
         WHERE a.kd_suplier = '$kd' AND a.gudang = '$gdg'
             ")->result();
+    }
+
+    public function get_list_stock_lot()
+    {
+        $this->db->select("
+        x.kd_system,
+        x.kode_barang,
+        x.nama_barang,
+        x.tot_qty,
+        x.dimensi,
+        FLOOR(x.tot_qty / x.dimensi) as qty_box,
+        (x.tot_qty - (FLOOR(x.tot_qty / x.dimensi) * x.dimensi)) AS qty_pcs");
+        $this->db->from("(SELECT 
+            a.kd_barang AS kode_barang,
+            a.nm_barang AS nama_barang,
+    		b.kd_system AS kd_system,
+            (SELECT SUM(d.qty) FROM tb_qty_lot d WHERE d.nm_barang = a.nm_barang GROUP BY d.nm_barang) AS tot_qty,
+            (b.p * b.l * b.t) AS dimensi
+            FROM tb_qty_lot a
+            JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
+            JOIN tb_suplier c ON c.kd_suplier = a.suplier
+            GROUP BY a.nm_barang) AS x", false);
+
+        $query = $this->db->get();
+        return $query->result();
+    }
+
+    public function get_detail_lot($kd)
+    {
+        return $this->db->query("SELECT
+        x.nmsuplier,
+		x.nmbarang,
+        x.nolot,
+        x.expdate,
+        x.qty_lot,
+        x.satuan,
+        x.nmgudang 
+        FROM
+        (
+            SELECT
+            a.no_lot AS nolot,
+            a.exp_date AS expdate,
+            b.kd_system AS kdsystem,
+            (SELECT SUM(c.qty) FROM tb_qty_lot c WHERE c.nm_barang = a.nm_barang AND c.no_lot = a.no_lot AND c.exp_date = a.exp_date GROUP BY c.no_lot , c.exp_date ) AS qty_lot,
+            a.unit AS satuan,
+            a.gudang AS nmgudang,
+            b.nm_barang AS nmbarang,
+            d.nama_suplier AS nmsuplier
+            FROM tb_qty_lot a
+            JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
+            JOIN tb_suplier d ON d.kd_suplier = b.kd_suplier
+            WHERE b.kd_system = '$kd'
+            GROUP BY a.no_lot , a.exp_date
+        )AS x
+        ")->result();
+    }
+
+    public function getsuplierlot($kd)
+    {
+        return $this->db->query("SELECT
+        x.nmsuplier,
+		x.nmbarang,
+        x.nolot,
+        x.expdate,
+        x.qty_lot,
+        x.satuan,
+        x.nmgudang 
+        FROM
+        (
+            SELECT
+            a.no_lot AS nolot,
+            a.exp_date AS expdate,
+            b.kd_system AS kdsystem,
+            (SELECT SUM(c.qty) FROM tb_qty_lot c WHERE c.nm_barang = a.nm_barang AND c.no_lot = a.no_lot AND c.exp_date = a.exp_date GROUP BY c.no_lot , c.exp_date ) AS qty_lot,
+            a.unit AS satuan,
+            a.gudang AS nmgudang,
+            b.nm_barang AS nmbarang,
+            d.nama_suplier AS nmsuplier
+            FROM tb_qty_lot a
+            JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
+            JOIN tb_suplier d ON d.kd_suplier = b.kd_suplier
+            WHERE b.kd_system = '$kd'
+            GROUP BY a.no_lot , a.exp_date
+        )AS x
+        LIMIT 1
+        ")->result();
     }
 }

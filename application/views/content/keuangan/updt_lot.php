@@ -23,20 +23,20 @@
             <!-- /.content-header -->
             <section class="content">
                 <div class="container-fluid">
+
                     <a href="<?= base_url('keuangan') ?>" class="btn btn-md btn-primary mb-2">Home</a>
-                    <a href="<?= base_url('insertmodule') ?>" class="btn btn-md btn-secondary mb-2">Update Stock</a>
-                    <a href="<?= base_url('insermodule_lot') ?>" class="btn btn-md btn-primary mb-2">Update Qty-LOT-EXP</a>
+                    <a href="<?= base_url('insertmodule') ?>" class="btn btn-md btn-primary mb-2">Update Stock</a>
+                    <a href="<?= base_url('insermodule_lot') ?>" class="btn btn-md btn-secondary mb-2">Update Qty-LOT-EXP</a>
+
                     <div class="card">
                         <div class="card-body">
                             <h3>Upload Data Stock</h3>
-                            <form method="post" enctype="multipart/form-data" action="<?= base_url('csv_import') ?>">
+                            <form method="post" enctype="multipart/form-data" action="<?= base_url('csv_import_lot') ?>">
                                 <?php date_default_timezone_set("Asia/Jakarta");
                                 $now = date('Y-m-d H:i:s'); ?>
                                 <div class="form-group">
                                     <select name="gdgid" id="gdgid" class="form-control">
-                                        <option value="1">Global</option>
-                                        <option value="2">Gudang Induk</option>
-                                        <option value="3">Gudang Rusak</option>
+                                        <option value="4">STOCK-LOT-EXP</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

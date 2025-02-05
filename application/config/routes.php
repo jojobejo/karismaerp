@@ -64,14 +64,19 @@ $route['dashboard']                 = 'Dashboard';
 //DAILY STOCK AHMAD
 $route['keuangan']                          = 'keuangan/C_Keuangan';
 $route['insertmodule']                      = 'keuangan/C_Keuangan/insertmodule';
+$route['insermodule_lot']                   = 'keuangan/C_Keuangan/insermodule_lot';
 $route['csv_import']                        = 'keuangan/C_Keuangan/import';
+$route['csv_import_lot']                    = 'keuangan/C_Keuangan/csv_import_lot';
+$route['daily_stock_lot']                   = 'keuangan/C_Keuangan/daily_stock_lot';
 $route['get_data_a/(:any)']                 = 'keuangan/C_Keuangan/get_stock_a/$1';
+$route['detail_lot/(:any)']                 = 'keuangan/C_Keuangan/detail_lot/$1';
 $route['gudang/(:any)']                     = 'keuangan/C_Keuangan/gudang/$1';
 $route['get_data_global']                   = 'keuangan/C_Keuangan/get_data_global';
 $route['list_stock_minimum/(:any)']         = 'keuangan/C_Keuangan/list_stock_minimum/$1';
 $route['truncateitm/(:any)/(:any)']         = 'keuangan/C_Keuangan/truncateitm/$1/$2';
 $route['pagination']                        = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
+
 
 //LOGISTIK - DO
 $route['logistik']                          = 'logistik/C_Logistik/delivery_order';

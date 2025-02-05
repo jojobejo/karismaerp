@@ -28,10 +28,12 @@
                         <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                         <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                        <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                     <?php else : ?>
                         <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                         <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
+                        <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                     <?php endif; ?>
 
                     <?php if ($this->session->userdata('lv') == 1) : ?>

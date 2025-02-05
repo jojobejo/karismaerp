@@ -5,8 +5,8 @@ class M_Bufferstockglobal extends CI_Model
 
 {
 
-    var $column_order = array('nama_suplier', 'nm_barang', 'satuan', 'qty', 'qty_box', 'qty_pcs');
-    var $column_search = array('nama_suplier', 'nm_barang');
+    var $column_order = array('kodebarang', 'nama_suplier', 'nm_barang', 'qty_box', 'qty_pcs');
+    var $column_search = array('nmsuplier', 'nmbarang');
 
     public function __construct()
     {
@@ -17,20 +17,26 @@ class M_Bufferstockglobal extends CI_Model
     private function _get_datatables_query()
     {
         $this->db->select([
-            'b.nama_suplier AS nmsuplier',
-            'c.nm_barang AS nmbarang',
-            'c.satuan AS satuan',
-            'a.qty AS qty',
-            '(c.p * c.l * c.t) AS dimensi',
-            'FLOOR((a.qty / (c.p * c.l * c.t))) AS qty_box',
-            '(a.qty - FLOOR(a.qty / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs'
+            'x.nmsuplier',
+            'x.nmbarang',
+            'x.qty_box',
+            'x.qty_pcs',
+            'x.kdbarang'
         ]);
-        $this->db->from('tb_dailystock_global a');
-        $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
-        $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
-        $this->db->where('a.qty >', 0);
-        $this->db->group_by('c.nm_barang');
-
+        $this->db->from('(SELECT 
+                a.kd_barang AS kdbarang,
+                b.nama_suplier AS nmsuplier,
+                c.nm_barang AS nmbarang,
+                c.satuan AS satuan,
+                c.qty_min AS qtymin,
+                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.nm_barang = a.nm_barang) AS qty,
+                (c.p * c.l * c.t) AS dimensi,
+                FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) AS qty_box,
+                (SUM(a.qty) - FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs
+            FROM tb_dailystock_global a
+            JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
+            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            GROUP BY c.nm_barang) AS x', false);
         $i = 0;
 
         foreach ($this->column_search as $item) {
@@ -76,19 +82,26 @@ class M_Bufferstockglobal extends CI_Model
     public function count_all()
     {
         $this->db->select([
-            'b.nama_suplier AS nmsuplier',
-            'c.nm_barang AS nmbarang',
-            'c.satuan AS satuan',
-            'a.qty AS qty',
-            '(c.p * c.l * c.t) AS dimensi',
-            'FLOOR((a.qty / (c.p * c.l * c.t))) AS qty_box',
-            '(a.qty - FLOOR(a.qty / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs'
+            'x.nmsuplier',
+            'x.nmbarang',
+            'x.qty_box',
+            'x.qty_pcs'
         ]);
-        $this->db->from('tb_dailystock_global a');
-        $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
-        $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
-        $this->db->where('a.qty >', 0);
-        $this->db->group_by('c.nm_barang');
+        $this->db->from('(SELECT 
+                a.kd_barang AS kdbarang,
+                b.nama_suplier AS nmsuplier,
+                c.nm_barang AS nmbarang,
+                c.satuan AS satuan,
+                c.qty_min AS qtymin,
+                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.nm_barang = a.nm_barang) AS qty,
+                (c.p * c.l * c.t) AS dimensi,
+                FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) AS qty_box,
+                (SUM(a.qty) - FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs
+            FROM tb_dailystock_global a
+            JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
+            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            GROUP BY c.nm_barang) AS x', false);
+
         return $this->db->count_all_results();
     }
 }

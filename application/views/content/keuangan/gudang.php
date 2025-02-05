@@ -25,7 +25,6 @@
                 <div class="container-fluid">
 
                     <?php if ($this->session->userdata('lv') == 1) : ?>
-                        <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
                         <?php if ($gudangid == '1') : ?>
                             <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-secondary mb-2">Gudang Global</a>
@@ -41,6 +40,10 @@
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                             <a href="<?= base_url('gudang/3') ?>" class="btn btn-secondary mb-2">Gudang Rusak</a>
+                        <?php elseif ($gudangid == '4') : ?>
+                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
+                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <?php endif; ?>
                         <!-- LV-5 & Lv 2,3,4 -->
                     <?php else : ?>
@@ -59,6 +62,11 @@
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                             <a href="<?= base_url('gudang/3') ?>" class="btn btn-secondary mb-2">Gudang Rusak</a>
+                        <?php elseif ($gudangid == '4') : ?>
+                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
+                            <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
+                            <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
+                            <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                         <?php endif; ?>
                     <?php endif; ?>
                     <div class="card">
@@ -106,7 +114,6 @@
                                             <td>Nama Suplier</td>
                                             <td>Nama Barang</td>
                                             <td>Satuan</td>
-                                            <td>Qty</td>
                                             <td>Box</td>
                                             <td>Pcs</td>
                                         </tr>
@@ -118,10 +125,9 @@
                                         <tr>
                                             <td>Nama Suplier</td>
                                             <td>Nama Barang</td>
-                                            <td>Satuan</td>
-                                            <td>Qty</td>
                                             <td>Box</td>
                                             <td>Pcs</td>
+                                            <td>#</td>
                                         </tr>
                                     </thead>
                                 </table>

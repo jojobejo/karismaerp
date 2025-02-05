@@ -39,9 +39,73 @@
 <!-- AdminLTE App -->
 <script src="<?php echo base_url('assets/dist/js/adminlte.js') ?>"></script>
 
+<script>
+    $(function() {
+        $('#tbstock_lot').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+        $('#dettbstock_lot').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+
+        $('#tbminglobal').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+
+        $('#tbmingdg').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+
+        $('#tb_qty_by_sup').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+
+        $('#tb_qty_by_sup_global').DataTable({
+            "paging": true,
+            "lengthChange": false,
+            "searching": true,
+            "order": [],
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+        });
+    });
+</script>
+
 <script type="text/javascript">
     var table;
     var tablegl;
+    var tblelotxp;
 
     var sup1;
     var sup2;
@@ -79,44 +143,7 @@
             }, ],
         });
 
-        $('#tbminglobal').DataTable({
-            "paging": true,
-            "lengthChange": false,
-            "searching": true,
-            "order": [],
-            "info": true,
-            "autoWidth": false,
-            "responsive": true,
-        });
-        $('#tbmingdg').DataTable({
-            "paging": true,
-            "lengthChange": false,
-            "searching": true,
-            "order": [],
-            "info": true,
-            "autoWidth": false,
-            "responsive": true,
-        });
 
-        $('#tb_qty_by_sup').DataTable({
-            "paging": true,
-            "lengthChange": false,
-            "searching": true,
-            "order": [],
-            "info": true,
-            "autoWidth": false,
-            "responsive": true,
-        });
-
-        $('#tb_qty_by_sup_global').DataTable({
-            "paging": true,
-            "lengthChange": false,
-            "searching": true,
-            "order": [],
-            "info": true,
-            "autoWidth": false,
-            "responsive": true,
-        });
     });
 </script>
 

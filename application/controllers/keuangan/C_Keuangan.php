@@ -37,6 +37,17 @@ class C_Keuangan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function insermodule_lot()
+    {
+        $data['page_title']     = 'KARISMA - KEUANGAN';
+        $data['kd']             = $this->M_Keuangan->generate_update();
+        $data['updated']        = $this->M_Keuangan->get_updated_upload();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/updt_lot.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function import()
     {
         $session    = $this->session->userdata('jobdesk');
@@ -50,8 +61,9 @@ class C_Keuangan extends CI_Controller
                 $data[] = [
                     'kd_suplier'    => $row[0],
                     'kd_barang'     => $row[1],
-                    'gudang'        => $row[2],
-                    'qty'           => $row[3]
+                    'nm_barang'     => $row[2],
+                    'gudang'        => $row[3],
+                    'qty'           => $row[4]
                 ];
             }
 
@@ -104,6 +116,48 @@ class C_Keuangan extends CI_Controller
         }
     }
 
+    public function csv_import_lot()
+    {
+        $session    = $this->session->userdata('jobdesk');
+
+        if ($session == 'ADMINKEU') {
+            $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            fgetcsv($file_data); // Skip header row
+
+            $data = [];
+            while ($row = fgetcsv($file_data)) {
+                $data[] = [
+                    'kd_barang' => $row[0],
+                    'nm_barang' => $row[1],
+                    'gudang'    => $row[2],
+                    'qty'       => $row[3],
+                    'unit'      => $row[4],
+                    'no_lot'    => $row[5],
+                    'exp_date'  => $row[6],
+                    'suplier'   => $row[7]
+                ];
+            }
+
+            $gdgid   = $this->input->post('gdgid');
+
+            if (!empty($data) && $gdgid != '1') {
+                $this->update_data();
+                $this->M_Keuangan->insert_batch_lot($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else if (!empty($data) && $gdgid == '1') {
+                $this->update_data();
+                $this->M_Keuangan->batch_global($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else {
+                $this->session->set_flashdata('message', 'Failed to import data.');
+            }
+            redirect('insermodule_lot');
+        } else {
+            $this->session->set_flashdata("SESI BERAKHIR", "Silahkan login lagi ");
+            redirect('Auth');
+        }
+    }
+
     private function update_data()
     {
         $kd      = $this->input->post('kdgenerates');
@@ -116,6 +170,8 @@ class C_Keuangan extends CI_Controller
             $gudang = 'Gdg. Induk';
         } else if ($gdgid == 3) {
             $gudang = 'Gdg. Rusak';
+        } else if ($gdgid == 4) {
+            $gudang = 'exp_lot';
         }
 
         $data  = array(
@@ -204,6 +260,18 @@ class C_Keuangan extends CI_Controller
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/keuangan/gudang.php', $data);
             $this->load->view('partial/main/footergdg.php');
+        } else if ($id == '4') {
+
+            $gudangid = $id;
+            $gudang = 'Stock Expired & LOT';
+            $data['page_title']     = 'KARISMA - KEUANGAN';
+            $data['gudang']         = $gudang;
+            $data['gudangid']       = $gudangid;
+            $data['updated']        = $this->M_Keuangan->get_last_update($id);
+
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/keuangan/gudang.php', $data);
+            $this->load->view('partial/main/footergdg.php');
         }
     }
 
@@ -219,10 +287,11 @@ class C_Keuangan extends CI_Controller
 
             $row[] = $field->nmsuplier;
             $row[] = $field->nmbarang;
-            $row[] = $field->satuan;
-            $row[] = $field->qty;
             $row[] = $field->qty_box;
             $row[] = $field->qty_pcs;
+            $row[] = '<a href="' . base_url('detail_stock/') . $field->kdbarang . '"class="btn btn-primary" style="align-items: center;"><i class="fas fa-eye"></i></a>';
+
+
 
             $data[] = $row;
         }
@@ -352,5 +421,26 @@ class C_Keuangan extends CI_Controller
             $this->load->view('content/keuangan/stock_by_suplier.php', $data);
             $this->load->view('partial/main/footergdg.php');
         }
+    }
+
+    public function daily_stock_lot()
+    {
+        $data['page_title']     = 'KARISMA';
+        $data['stocklist']      = $this->M_Keuangan->get_list_stock_lot();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/stock_exp_lot.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function detail_lot($kd)
+    {
+        $data['page_title']     = 'KARISMA';
+        $data['detail_lot']      = $this->M_Keuangan->get_detail_lot($kd);
+        $data['barang']      = $this->M_Keuangan->getsuplierlot($kd);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/detail_lot.php', $data);
+        $this->load->view('partial/main/footergdg.php');
     }
 }
