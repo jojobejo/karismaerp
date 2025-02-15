@@ -327,6 +327,13 @@ class M_Logistik extends CI_Model
     {
         return $this->db->delete('tb_tmp_lap_distribusi', array('id_lap_dis' => $id));
     }
+    public function get_grouped_regions()
+    {
+        $this->db->select('nama_regional, GROUP_CONCAT(id SEPARATOR ",") as ids');
+        $this->db->from('your_table'); // Ganti dengan nama tabel yang sesuai
+        $this->db->group_by('nama_regional');
+        return $this->db->get()->result();
+    }
 
     public function get_data_penjualan_zahir()
     {
@@ -352,24 +359,84 @@ class M_Logistik extends CI_Model
         //         GROUP BY a.kd_faktur
         //     ) AS x
 
-        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang');
+        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang ,x.upload_sts AS status');
         $this->db->from('(SELECT 
                     a.kd_faktur,
                     b.nama_customer,
                     b.nama_kios,
                     b.alamat_kios,
                     b.regional,
+                    a.upload_sts,
                     (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
                   FROM tb_pre_do a
                   JOIN tb_customer b ON b.kd_customer = a.kd_customer
                   JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                  WHERE a.upload_sts = 1
                   GROUP BY a.kd_faktur) AS x', false);
         $query = $this->db->get();
         return $query->result();
     }
 
-    public function get_detailed_fktur($kdfaktur)
+    public function get_do_cust($kd)
     {
-        // 
+        return $this->db->query("SELECT
+            a.kd_faktur
+            FROM tb_pre_do a
+            WHERE a.kd_faktur = '$kd'
+            GROUP BY a.kd_faktur
+        ")->result();
+    }
+
+    public function insert_tmp_do($data)
+    {
+        return $this->db->insert('tb_tmp_do', $data);
+    }
+
+    public function update_sts_pre_do($kd, $data)
+    {
+        $this->db->where('kd_faktur', $kd);
+        return $this->db->update('tb_pre_do', $data);
+    }
+
+    public function del_tmp_do($kd)
+    {
+        return $this->db->delete('tb_tmp_do', array("kd_faktur" => $kd));
+    }
+
+    public function get_tmp_do()
+    {
+        return $this->db->query("SELECT
+            a.kd_faktur,
+            c.nama_customer,
+            c.alamat_kios,
+            c.regional,
+            c.telp1,
+            c.telp2
+            FROM tb_tmp_do a
+            JOIN tb_pre_do b ON b.kd_faktur = a.kd_faktur
+            JOIN tb_customer c ON c.kd_customer = b.kd_customer
+            GROUP by a.kd_faktur
+        ")->result();
+    }
+    public function insert_do($data)
+    {
+        return $this->db->insert('tb_do', $data);
+    }
+
+    function generate_kd_do()
+    {
+        $cd1 = $this->db->query("SELECT MAX(RIGHT(kd_do,4)) AS kd_max FROM tb_do WHERE DATE(tgl_pengiriman)=CURDATE()");
+        $kd1 = "";
+        if ($cd1->num_rows() > 0) {
+            foreach ($cd1->result() as $k) {
+                $tmp = ((int)$k->kd_max) + 1;
+                $kd1 = sprintf("%04s", $tmp);
+            }
+        } else {
+            $kd1 = "0001";
+        }
+        date_default_timezone_set('Asia/Jakarta');
+        $kdnk1 = 'KIUDO' . date('dmy') . $kd1;
+        return $kdnk1;
     }
 }

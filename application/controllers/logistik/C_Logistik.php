@@ -935,13 +935,85 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+
+
     public function create_do()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['tmp_faktur'] = $this->M_Logistik->get_tmp_do();
+        $data['generate_do'] = $this->M_Logistik->generate_kd_do();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function insert_tmp($kd)
+    {
+
+        date_default_timezone_set("Asia/Jakarta");
+        $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+        $now    = date("Y-m-d h:i:sa");
+
+        if ($get_pre_do) {
+            foreach ($get_pre_do as $g) {
+                $kdfaktur = $g->kd_faktur;
+            }
+
+            $datainsert = array(
+                'kd_faktur'  => $kdfaktur,
+                'input_at'   => $now
+            );
+
+            $update_pre_do = array(
+                'upload_sts'    => '2'
+            );
+
+            $this->M_Logistik->insert_tmp_do($datainsert);
+            $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+
+            redirect('create_do');
+        }
+    }
+
+    public function revert_do($kd)
+    {
+        $update_pre_do = array(
+            'upload_sts'    => '1'
+        );
+
+        $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
+        $this->M_Logistik->del_tmp_do($kd);
+
+        redirect('create_do');
+    }
+
+    public function get_tmp_do()
+    {
+        $data = $this->M_Logistik->get_tmp_do();
+        echo json_encode($data);
+    }
+
+    public function save_do()
+    {
+        $data = array(
+            'kd_do'             => $this->input->post('do_isi'),
+            'kd_faktur'         => 'nofaktur',
+            'kd_customer'       => $this->input->post('nm_driver'),
+            'nolambung'         => $this->input->post('plat_no'),
+            'total_barang'      => '11',
+            'nominal_total'     => '10000',
+            'tgl_pengiriman'    => $this->input->post('tgl_isi'),
+            'tgl_create'        => $this->input->post('tgl_isi'),
+        );
+
+        $insert = $this->M_Logistik->insert_do($data);
+
+        if ($insert) {
+            echo json_encode(['status' => 'success', 'message' => 'Data berhasil disimpan']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
+        }
     }
 }
