@@ -97,7 +97,9 @@ class C_Keuangan extends CI_Controller
                     'no_lot'        => $row[6],
                     'tgl_exp'       => $row[7],
                     'upload_sts'    => $row[8],
-                    'create_at'    => $row[9]
+                    'data_sts'      => $row[9],
+                    'barang_sts'    => $row[10],
+                    'create_at'     => $row[11]
                 ];
             }
 

@@ -359,19 +359,18 @@ class M_Logistik extends CI_Model
         //         GROUP BY a.kd_faktur
         //     ) AS x
 
-        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang ,x.upload_sts AS status');
+        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang ,x.data_sts');
         $this->db->from('(SELECT 
                     a.kd_faktur,
                     b.nama_customer,
                     b.nama_kios,
                     b.alamat_kios,
                     b.regional,
-                    a.upload_sts,
+                    a.data_sts,
                     (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
                   FROM tb_pre_do a
                   JOIN tb_customer b ON b.kd_customer = a.kd_customer
                   JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
-                  WHERE a.upload_sts = 1
                   GROUP BY a.kd_faktur) AS x', false);
         $query = $this->db->get();
         return $query->result();
@@ -395,6 +394,13 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd, $data)
     {
         $this->db->where('kd_faktur', $kd);
+        $this->db->where('kd_barang !=', '3');
+        return $this->db->update('tb_pre_do', $data);
+    }
+
+    public function updatedsts($id, $data)
+    {
+        $this->db->where('id', $id);
         return $this->db->update('tb_pre_do', $data);
     }
 
@@ -438,5 +444,39 @@ class M_Logistik extends CI_Model
         date_default_timezone_set('Asia/Jakarta');
         $kdnk1 = 'KIUDO' . date('dmy') . $kd1;
         return $kdnk1;
+    }
+
+    public function detail_fk($kd)
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.kd_faktur,
+            a.kd_barang,
+            c.nm_barang,
+            a.qty,
+            a.satuan,
+            a.no_lot,
+            a.tgl_exp,
+            a.barang_sts
+            FROM tb_pre_do a
+            JOIN tb_customer b ON b.kd_customer = a.kd_customer
+            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+    public function det_customer($kd)
+    {
+        return $this->db->query("SELECT
+            b.nama_customer,
+            b.nama_kios,
+            b.regional,
+            a.upload_sts,
+            a.data_sts,
+            a.barang_sts
+            FROM tb_pre_do a
+            JOIN tb_customer b ON b.kd_customer = a.kd_customer
+            WHERE a.kd_faktur = '$kd'
+            LIMIT 1
+        ")->result();
     }
 }

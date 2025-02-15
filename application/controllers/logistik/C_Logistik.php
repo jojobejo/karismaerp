@@ -924,6 +924,19 @@ class C_Logistik extends CI_Controller
         redirect('tmp_logistik_distribusi');
     }
 
+    // PENTING UNTUK DI INGAT DAN DI PAHAMI 
+    // DATA PRE-DO DIDAPATI DARI ZAHIR DIGITAL
+
+    // DATA STATUS PRE-DO 
+    // 1   = DATA TIDAK ADA DI DRAFT
+    // 2   = DATA TERINPUT DI DRAFT LIST
+
+    // 3   = PENDING DATA BARANG / TIDAK DIMASUKAN PADA DATA FAKTUR YANG TELAH TERINPUT PADA DRAFT
+
+    // DATA STATUS UPLOAD UPDATE PENJUALAN
+    // 1   = DATA UPDATE PAGI
+    // 2   = DATA UPDATE SORE
+
     public function delivery_order()
     {
 
@@ -934,8 +947,6 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/body.php', $data);
         $this->load->view('partial/main/footer.php');
     }
-
-
 
     public function create_do()
     {
@@ -949,38 +960,71 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    public function insert_tmp($kd)
+    public function insert_tmp($kd, $action)
     {
+        switch ($action) {
 
-        date_default_timezone_set("Asia/Jakarta");
-        $get_pre_do = $this->M_Logistik->get_do_cust($kd);
-        $now    = date("Y-m-d h:i:sa");
+            case 'formdetail':
 
-        if ($get_pre_do) {
-            foreach ($get_pre_do as $g) {
-                $kdfaktur = $g->kd_faktur;
-            }
+                date_default_timezone_set("Asia/Jakarta");
+                $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $kddo       = $this->M_Logistik->generate_kd_do();
+                $now        = date("Y-m-d h:i:sa");
 
-            $datainsert = array(
-                'kd_faktur'  => $kdfaktur,
-                'input_at'   => $now
-            );
+                if ($get_pre_do) {
+                    foreach ($get_pre_do as $g) {
+                        $kdfaktur = $g->kd_faktur;
+                    }
 
-            $update_pre_do = array(
-                'upload_sts'    => '2'
-            );
+                    $datainsert = array(
+                        'kd_do'      => $kddo,
+                        'kd_faktur'  => $kdfaktur,
+                        'input_at'   => $now
+                    );
 
-            $this->M_Logistik->insert_tmp_do($datainsert);
-            $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    $update_pre_do = array(
+                        'data_sts'    => '2'
+                    );
 
-            redirect('create_do');
+                    $this->M_Logistik->insert_tmp_do($datainsert);
+                    $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    redirect('create_do');
+                }
+                break;
+
+            case 'formlist':
+                date_default_timezone_set("Asia/Jakarta");
+                $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $kddo       = $this->M_Logistik->generate_kd_do();
+                $now        = date("Y-m-d h:i:sa");
+
+                if ($get_pre_do) {
+                    foreach ($get_pre_do as $g) {
+                        $kdfaktur = $g->kd_faktur;
+                    }
+
+                    $datainsert = array(
+                        'kd_do'      => $kddo,
+                        'kd_faktur'  => $kdfaktur,
+                        'input_at'   => $now
+                    );
+
+                    $update_pre_do = array(
+                        'data_sts'    => '2'
+                    );
+
+                    $this->M_Logistik->insert_tmp_do($datainsert);
+                    $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    redirect('create_do');
+                }
+                break;
         }
     }
 
     public function revert_do($kd)
     {
         $update_pre_do = array(
-            'upload_sts'    => '1'
+            'data_sts'    => '1'
         );
 
         $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
@@ -1014,6 +1058,37 @@ class C_Logistik extends CI_Controller
             echo json_encode(['status' => 'success', 'message' => 'Data berhasil disimpan']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
+        }
+    }
+
+    public function detail_fk($kd)
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['detail_fk']      = $this->M_Logistik->detail_fk($kd);
+        $data['customer']       = $this->M_Logistik->det_customer($kd);
+        $data['kdfaktur']       = $kd;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/detailfk.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+    public function pnd_br_detpo($id, $kd, $action)
+    {
+        switch ($action) {
+            case 'pending':
+                $updatebr = array(
+                    'barang_sts'     => '3 '
+                );
+                $this->M_Logistik->updatedsts($id, $updatebr);
+                redirect('detail_fk/' . $kd);
+                break;
+            case 'revert':
+                $updatebr = array(
+                    'barang_sts'     => '1'
+                );
+                $this->M_Logistik->updatedsts($id, $updatebr);
+                redirect('detail_fk/' . $kd);
+                break;
         }
     }
 }
