@@ -82,12 +82,12 @@
                                                     <td style="width: 10%;">
                                                         <div class="row">
                                                             <div class="col">
-                                                                <button class="btn btn-warning w-100 btn-edit" data-id="<?= $det->id ?>">
+                                                                <button class="btn btn-primary w-100 btn-edit" data-id="<?= $det->id ?>">
                                                                     <i class="fas fa-pencil-alt"></i>
                                                                 </button>
                                                             </div>
                                                             <div class="col">
-                                                                <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-trash"></i></a>
+                                                                <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-hand-paper"></i></a>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -110,7 +110,7 @@
                                         <td colspan="7">
                                             <form id="editForm">
                                                 <div class="row">
-                                                    <input type="hidden" id="edit_kode" name="kd_barang" readonly>
+                                                    <input type="hidden" id="id" name="id" readonly>
                                                     <div class="col-md-2">
                                                         <input type="text" id="edit_nama" name="nm_barang" class="form-control" readonly>
                                                     </div>
@@ -124,7 +124,7 @@
                                                         <input type="text" id="edit_no_lot" name="no_lot" class="form-control">
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <input type="date" id="edit_exp" name="tgl_exp" class="form-control">
+                                                        <input type="text" id="edit_exp" name="tgl_exp" class="form-control">
                                                     </div>
                                                     <div class="col-md-2">
                                                         <button type="submit" class="btn btn-success">Simpan</button>
@@ -134,7 +134,6 @@
                                             </form>
                                         </td>
                                     </tr>
-
                                 </tbody>
                             </table>
                             <?php if ($status_faktur == '1') : ?>
@@ -147,8 +146,8 @@
                     </div>
                 </div>
             </section>
-
         </div>
+
         <!-- /.content-wrapper -->
         <footer class="main-footer">
             <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
@@ -175,14 +174,14 @@
                 var id = row.data("id");
 
                 $.ajax({
-                    url: "<?= base_url('get_barang') ?>", // Sesuaikan dengan controller
+                    url: "<?= base_url('get_barang') ?>",
                     type: "POST",
                     data: {
-                        idbarang : id
+                        id: id
                     },
                     dataType: "json",
                     success: function(data) {
-                        $("#edit_kode").val(data.id);
+                        $("#id").val(data.id);
                         $("#edit_nama").val(data.nm_barang);
                         $("#edit_qty").val(data.qty);
                         $("#edit_satuan").val(data.satuan);
@@ -198,18 +197,28 @@
                 $("#editRow").hide();
             });
 
+
             $("#editForm").on("submit", function(e) {
                 e.preventDefault();
 
                 $.ajax({
-                    url: "<?= base_url('update_barang') ?>", // Sesuaikan dengan controller
+                    url: "<?= base_url('update_barang') ?>",
                     type: "POST",
                     data: $(this).serialize(),
-                    success: function() {
-                        alert("Data berhasil diperbarui!");
-                        location.reload();
+                    dataType: "json",
+                    success: function(response) {
+                        if (response.status === "success") {
+                            alert("Data berhasil diperbarui!");
+                            location.reload();
+                        } else {
+                            alert("Terjadi kesalahan, silakan coba lagi.");
+                        }
+                    },
+                    error: function() {
+                        alert("Gagal memperbarui data.");
                     }
                 });
             });
+
         });
     </script>

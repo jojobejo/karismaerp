@@ -1,4 +1,7 @@
 <?php
+
+use JetBrains\PhpStorm\Internal\ReturnTypeContract;
+
 defined('BASEPATH') or exit('No direct script access allowed');
 
 
@@ -379,16 +382,30 @@ class M_Logistik extends CI_Model
     public function get_do_cust($kd)
     {
         return $this->db->query("SELECT
-            a.kd_faktur
+            a.*
             FROM tb_pre_do a
             WHERE a.kd_faktur = '$kd'
             GROUP BY a.kd_faktur
+        ")->result();
+    }
+    public function det_do_cust($kd)
+    {
+        return $this->db->query("SELECT
+            a.*
+            FROM tb_pre_do a
+            WHERE a.kd_faktur = '$kd'
         ")->result();
     }
 
     public function insert_tmp_do($data)
     {
         return $this->db->insert('tb_tmp_do', $data);
+    }
+    public function insert_tmp_detdo($data)
+    {
+        if (isset($data['barang_sts']) && $data['barang_sts'] != 3) {
+            return $this->db->insert('tb_tmp_detaildo', $data);
+        }
     }
 
     public function update_sts_pre_do($kd, $data)
@@ -409,21 +426,40 @@ class M_Logistik extends CI_Model
         return $this->db->delete('tb_tmp_do', array("kd_faktur" => $kd));
     }
 
+    public function del_tmp_do_det($kd)
+    {
+        return $this->db->delete('tb_tmp_detaildo', array("kd_faktur" => $kd));
+    }
+
     public function get_tmp_do()
     {
         return $this->db->query("SELECT
+            a.id,
             a.kd_faktur,
+            a.norut_do,
             c.nama_customer,
             c.alamat_kios,
             c.regional,
             c.telp1,
-            c.telp2
+            c.telp2,
+            COALESCE(c.jam_buka_tutup,'-') AS jam_buka_tutup,
+            COALESCE(c.karakteristik_kios,'-') AS toko
             FROM tb_tmp_do a
             JOIN tb_pre_do b ON b.kd_faktur = a.kd_faktur
             JOIN tb_customer c ON c.kd_customer = b.kd_customer
             GROUP by a.kd_faktur
         ")->result();
     }
+
+    public function get_tmp_dokd($kd)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_tmp_detaildo a
+        WHERE a.kd_do = '$kd'
+        ")->result();
+    }
+
     public function insert_do($data)
     {
         return $this->db->insert('tb_do', $data);
@@ -478,5 +514,19 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
             LIMIT 1
         ")->result();
+    }
+
+    public function select_driver()
+    {
+        $this->db->select('*');
+        $this->db->from('tb_op_driver');
+        return $this->db->get()->result_array();
+    }
+
+    public function select_plat()
+    {
+        $this->db->select('*');
+        $this->db->from('tb_op_plat');
+        return $this->db->get()->result_array();
     }
 }

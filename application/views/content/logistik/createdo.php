@@ -11,6 +11,7 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
+
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
             <div class="content-header">
@@ -23,21 +24,22 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
+
                             <div class="row mb-2">
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                                        </div>
-                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="po_isi" id="po_isi">
-                                    </div>
-                                </div>
                                 <div class="col-md">
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Kode Do" value="" name="do_isi" id="do_isi">
+                                        <input type="text" class="form-control" placeholder="Kode Do" value="<?= $generate_do ?>" name="do_isi" id="do_isi" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-md">
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                        </div>
+                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_kirim" id="tgl_kirim">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -61,40 +63,90 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Driver" value="" name="nm_driver" id="nm_driver">
+                                        <input type="text" class="form-control" placeholder="Driver" value="" name="kd_driver" id="kd_driver">
                                     </div>
                                 </div>
                             </div>
-                            <table id="" class="table table-striped">
+                            <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
+                                        <td style="width: 5%;">No</td>
                                         <td>Faktur</td>
                                         <td>Nama</td>
                                         <td>Alamat</td>
                                         <td>Kota</td>
                                         <td>No.Telpon</td>
-                                        <td>#</td>
+                                        <td>Jam Buka</td>
+                                        <td>Jam Tutup</td>
+                                        <td>Karakteristik</td>
+                                        <td style="text-align: center;">#</td>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($tmp_faktur as $tmp) :
-                                        $telp1 = $tmp->telp1;
-                                        $telp2 = $tmp->telp2;
+
+                                        $telp1      = $tmp->telp1;
+                                        $telp2      = $tmp->telp2;
+                                        $kiosc      = $tmp->toko;
+                                        $jmkiosbt   = $tmp->jam_buka_tutup;
+
+                                        if (empty($jmkiosbt)) {
+                                            $jmkiosbt   = '-';
+                                        } else {
+                                            $jmkiosbt;
+                                        }
+                                        if (empty($kiosc)) {
+                                            $kiosc   = '-';
+                                        } else {
+                                            $kiosc;
+                                        }
 
                                         if ($telp2 == '0') {
                                             $telp   = $tmp->telp1;
                                         } else {
                                             $telp   = $tmp->telp1 . ' ' . '/' . ' ' . $tmp->telp2;
                                         } ?>
-                                        <tr>
+
+                                        <tr data-id="<?= $tmp->id ?>">
+                                            <td><?= $tmp->norut_do ?></td>
                                             <td><?= $tmp->kd_faktur ?></td>
                                             <td><?= $tmp->nama_customer ?></td>
                                             <td><?= $tmp->alamat_kios ?></td>
                                             <td><?= $tmp->regional ?></td>
                                             <td><?= $telp ?></td>
-                                            <td>
-                                                <a href="<?= base_url('detail_fk/') . $tmp->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                <a href="<?= base_url('revert_do/') . $tmp->kd_faktur . '/' . 'formlist' ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
+                                            <td style="text-align: center;"><?= $jmkiosbt ?></td>
+                                            <td style="text-align: center;"><?= $jmkiosbt ?></td>
+                                            <td style="text-align: center;"><?= $kiosc ?></td>
+                                            <td style="width: 15%;">
+                                                <div class="row">
+                                                    <div class="col p-0">
+                                                        <a href="<?= base_url('detail_fk/') . $tmp->kd_faktur ?>" class="btn btn-primary btn-block"><i class="fas fa-eye"></i></a>
+                                                    </div>
+                                                    <div class="col p-">
+                                                        <a href="<?= base_url('revert_do/') . $tmp->kd_faktur . '/' . 'formlist' ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
+                                                    </div>
+                                                    <div class="col p-0">
+                                                        <button class="btn btn-info btn-block btn-nurut" data-id="<?= $tmp->id ?>">
+                                                            <i class=" fas fa-sort-amount-down-alt"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr id="editRow" style="display: none;">
+                                            <td colspan="7">
+                                                <form id="editForm">
+                                                    <div class="row">
+                                                        <input type="hidden" id="id" name="id" readonly>
+                                                        <div class="col-md">
+                                                            <input type="number" id="nourut" name="nourut" class="form-control">
+                                                        </div>
+                                                        <div class="col-md">
+                                                            <button type="submit" class="btn btn-success">Simpan</button>
+                                                            <button type="button" class="btn btn-danger" id="cancelEdit">Batal</button>
+                                                        </div>
+                                                    </div>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -105,7 +157,9 @@
                                     <div class="media-body">
                                         <h5 class="mt-0 mb-1"></h5>
                                     </div>
-                                    <a href="" class="btn btn-success"><i class="fas fa-print"></i> Rekam Order</a>
+                                    <button type="button" class="btn btn-success" id="rekamdo">
+                                        <i class="fas fa-print"></i> Rekam Order
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -187,7 +241,6 @@
         }
 
         $(document).ready(function() {
-            // Load data dari get_tmp_do
             function loadTmpDo() {
                 $.ajax({
                     url: 'get_tmp_do',
@@ -217,9 +270,8 @@
                 });
             }
 
-            loadTmpDo(); // Panggil saat halaman dimuat
+            loadTmpDo();
 
-            // Simpan data ke tb_do
             $('#doForm').on('submit', function(e) {
                 e.preventDefault();
 
@@ -232,7 +284,7 @@
                         if (response.status === 'success') {
                             alert(response.message);
                             $('#doForm')[0].reset();
-                            loadTmpDo(); // Refresh data
+                            loadTmpDo();
                         } else {
                             alert(response.message);
                         }
@@ -242,93 +294,85 @@
                     }
                 });
             });
+
+            $("#cancelEdit").on("click", function() {
+                $("#editRow").hide();
+            });
+
+            $(".btn-nurut").on("click", function(e) {
+                e.preventDefault();
+
+                var row = $(this).closest("tr");
+                var id = row.data("id");
+
+                $.ajax({
+                    url: "<?= base_url('get_tmpdonorut') ?>",
+                    type: "POST",
+                    data: {
+                        id: id,
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        $("#id").val(data.id);
+                        $("#nourut").val(data.norut_do);
+
+                        $("#editRow").insertAfter(row).show();
+                    },
+                });
+            });
+
+            $("#editForm").on("submit", function(e) {
+                e.preventDefault();
+
+                $.ajax({
+                    url: "<?= base_url('update_norut') ?>",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    dataType: "json",
+                    success: function(response) {
+                        if (response.status === "success") {
+                            alert("Nomor urut pengiriman telah berhasil diperbarui!");
+                            location.reload();
+                        } else {
+                            alert("Terjadi kesalahan, silakan coba lagi.");
+                        }
+                    },
+                    error: function() {
+                        alert("Gagal memperbarui data.");
+                    }
+                });
+            });
+
+            $("#rekamdo").on('click', function() {
+
+                var kd_do = $("#do_isi").val();
+                var tgl_krim = $("#tgl_kirim").val();
+                var platno = $("#plat_no").val();
+                var kota = $("#kota_isi").val();
+                var driver = $("#kd_driver").val();
+
+                $.ajax({
+                    url: "<?= base_url('rekam_do') ?>",
+                    type: "POST",
+                    data: {
+                        kd_do: kd_do,
+                        tgl_krim: tgl_krim,
+                        platno: platno,
+                        kota: kota,
+                        driver: driver
+                    },
+                    dataType: "JSON",
+                    cache: false,
+                    success: function(data) {
+                        if (data.msg == "success") {
+                            location.reload(true);
+                        } else {
+                            alert('ada kesalahan data')
+                        }
+                    }
+                });
+
+            });
+
         });
     </script>
-
-
-
-
-    <!-- <div class="row mb-2">
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                                        </div>
-                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="po_isi" id="po_isi">
-                                    </div>
-                                </div>
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
-                                        </div>
-                                        <input type="text" class="form-control" placeholder="Kode Do" value="" name="do_isi" id="do_isi">
-                                    </div>
-                                </div>
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
-                                        </div>
-                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_no" id="plat_no">
-                                    </div>
-                                </div>
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
-                                        </div>
-                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="kota_isi" id="kota_isi">
-                                    </div>
-                                </div>
-                                <div class="col-md">
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-truck"></i></span>
-                                        </div>
-                                        <input type="text" class="form-control" placeholder="Driver" value="" name="nm_driver" id="nm_driver">
-                                    </div>
-                                </div>
-                            </div>
-                            <table id="" class="table table-striped">
-                                <thead style="background-color: #212529; color:white;">
-                                    <tr>
-                                        <td>Faktur</td>
-                                        <td>Nama</td>
-                                        <td>Alamat</td>
-                                        <td>Kota</td>
-                                        <td>No.Telpon</td>
-                                        <td>#</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($tmp_faktur as $tmp) :
-                                        $telp1 = $tmp->telp1;
-                                        $telp2 = $tmp->telp2;
-
-                                        if ($telp2 == '0') {
-                                            $telp   = $tmp->telp1;
-                                        } else {
-                                            $telp   = $tmp->telp1 . ' ' . '/' . ' ' . $tmp->telp2;
-                                        } ?>
-                                        <tr>
-                                            <td><?= $tmp->kd_faktur ?></td>
-                                            <td><?= $tmp->nama_customer ?></td>
-                                            <td><?= $tmp->alamat_kios ?></td>
-                                            <td><?= $tmp->regional ?></td>
-                                            <td><?= $telp ?></td>
-                                            <td>
-                                                <a href="<?= base_url('revert_do/') . $tmp->kd_faktur ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <div class="card-footer">
-                                <div class="media">
-                                    <div class="media-body">
-                                        <h5 class="mt-0 mb-1"></h5>
-                                    </div>
-                                    <a href="" class="btn btn-success"><i class="fas fa-print"></i> Rekam Order</a>
-                                </div>
-                            </div> -->

@@ -960,6 +960,17 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function get_driver()
+    {
+        $data = $this->M_Logistik->select_driver();
+        echo json_encode($data);
+    }
+    public function get_noplat()
+    {
+        $data = $this->M_Logistik->select_plat();
+        echo json_encode($data);
+    }
+
     public function insert_tmp($kd, $action)
     {
         switch ($action) {
@@ -968,12 +979,31 @@ class C_Logistik extends CI_Controller
 
                 date_default_timezone_set("Asia/Jakarta");
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $det_pre_do = $this->M_Logistik->det_do_cust($kd);
                 $kddo       = $this->M_Logistik->generate_kd_do();
                 $now        = date("Y-m-d h:i:sa");
 
                 if ($get_pre_do) {
                     foreach ($get_pre_do as $g) {
                         $kdfaktur = $g->kd_faktur;
+                    }
+
+                    if ($det_pre_do) {
+                        foreach ($det_pre_do as $det) {
+                            $tmp_det_do  = array(
+                                'kd_do'         => $kddo,
+                                'kd_faktur'     => $det->kd_faktur,
+                                'kd_customer'   => $det->kd_customer,
+                                'kd_barang'     => $det->kd_barang,
+                                'qty'           => $det->qty,
+                                'satuan'        => $det->satuan,
+                                'no_lot'        => $det->no_lot,
+                                'tgl_exp'       => $det->tgl_exp,
+                                'barang_sts'    => $det->barang_sts,
+
+                            );
+                            $this->M_Logistik->insert_tmp_detdo($tmp_det_do);
+                        }
                     }
 
                     $datainsert = array(
@@ -1026,21 +1056,25 @@ class C_Logistik extends CI_Controller
         switch ($action) {
             case 'revertdetail':
                 $update_pre_do = array(
-                    'data_sts'    => '1'
+                    'data_sts'    => '1',
+                    'barang_sts'  => '1'
                 );
 
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);
+                $this->M_Logistik->del_tmp_do_det($kd);
 
                 redirect('detail_fk/' . $kd);
                 break;
             case 'formlist':
                 $update_pre_do = array(
-                    'data_sts'    => '1'
+                    'data_sts'    => '1',
+                    'barang_sts'  => '1'
                 );
 
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);
+                $this->M_Logistik->del_tmp_do_det($kd);
 
                 redirect('create_do');
                 break;
@@ -1053,25 +1087,33 @@ class C_Logistik extends CI_Controller
         echo json_encode($data);
     }
 
-    public function save_do()
+    public function rekam_do()
     {
-        $data = array(
-            'kd_do'             => $this->input->post('do_isi'),
-            'kd_faktur'         => 'nofaktur',
-            'kd_customer'       => $this->input->post('nm_driver'),
-            'nolambung'         => $this->input->post('plat_no'),
-            'total_barang'      => '11',
-            'nominal_total'     => '10000',
-            'tgl_pengiriman'    => $this->input->post('tgl_isi'),
-            'tgl_create'        => $this->input->post('tgl_isi'),
-        );
+        date_default_timezone_set("Asia/Jakarta");
 
-        $insert = $this->M_Logistik->insert_do($data);
+        $kd_do      = $this->input->post('do_isi');
+        $kd_driver  = $this->input->post('kd_driver');
+        $nolambung  = $this->input->post('plat_no');
+        $totbr      = '0';
+        $tgldeliv   = $this->input->post('tgl_kirim');
+        $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
-        if ($insert) {
-            echo json_encode(['status' => 'success', 'message' => 'Data berhasil disimpan']);
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data']);
+        if ($tmpdetail) {
+            foreach ($tmpdetail as $tmp) {
+                $detaildo = array(
+                    'kd_do'         => $tmp->kd_do,
+                    'kd_faktur'     => $tmp->kd_faktur,
+                    'kd_customer'   => $tmp->kd_customer,
+                    'kd_barang'     => $tmp->kd_barang,
+                    'qty'           => $tmp->qty,
+                    'satuan'        => $tmp->satuan,
+                    'no_lot'        => $tmp->no_lot,
+                    'tgl_exp'       => $tmp->tgl_exp,
+                    'create_at'     => $tmp->create_at
+                );
+                $this->M_Logistik->insert_det_do($detaildo);
+            }
+            
         }
     }
 
@@ -1089,7 +1131,7 @@ class C_Logistik extends CI_Controller
 
     public function get_barang()
     {
-        $idbarang = $this->input->post('idbarang');
+        $idbarang = $this->input->post('id');
 
         $this->db->select('a.*, b.nm_barang');
         $this->db->from('tb_pre_do a');
@@ -1101,21 +1143,59 @@ class C_Logistik extends CI_Controller
         echo json_encode($data);
     }
 
+    public function get_tmpdonorut()
+    {
+        $idtmp = $this->input->post('id');
+
+        $this->db->select('a.id,a.norut_do');
+        $this->db->from('tb_tmp_do a');
+        $this->db->where('a.id', $idtmp);
+
+        $data = $this->db->get()->row();
+
+        echo json_encode($data);
+    }
+
+    public function update_norut()
+    {
+        $idbarang  = $this->input->post('id');
+
+        $data = [
+            'norut_do'       => $this->input->post('nourut'),
+        ];
+
+        $this->db->where('id', $idbarang);
+        $this->db->update('tb_tmp_do', $data);
+
+        echo json_encode(['status' => 'success']);
+    }
 
     public function update_barang()
     {
-        $kd_barang = $this->input->post('kd_barang');
+
+        date_default_timezone_set("Asia/Jakarta");
+        $idbarang  = $this->input->post('id');
+        $items = $this->db->get_where('tb_pre_do', ['id' => $idbarang])->row();
+
+        $log_data = [
+            'kd_faktur'    => $items->kd_faktur,
+            'kd_customer'  => $items->kd_customer,
+            'kd_barang'    => $items->kd_barang,
+            'keterangan'   => "Edited:" . $items->kd_faktur . $items->kd_barang,
+            'edit_by'      => $this->session->userdata('nik'),
+            'edit_at'      => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('tb_editlog_faktur', $log_data);
+
         $data = [
-            'nm_barang' => $this->input->post('nm_barang'),
-            'qty' => $this->input->post('qty'),
-            'satuan' => $this->input->post('satuan'),
-            'no_lot' => $this->input->post('no_lot'),
-            'tgl_exp' => $this->input->post('tgl_exp')
+            'qty'       => $this->input->post('qty'),
+            'satuan'    => $this->input->post('satuan'),
+            'no_lot'    => $this->input->post('no_lot'),
+            'tgl_exp'   => $this->input->post('tgl_exp')
         ];
 
-        $this->db->where('kd_barang', $kd_barang);
-        $this->db->update('barang', $data);
-
+        $this->db->where('id', $idbarang);
+        $this->db->update('tb_pre_do', $data);
         echo json_encode(['status' => 'success']);
     }
 
