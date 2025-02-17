@@ -81,10 +81,13 @@ $route['logistik']                          = 'logistik/C_Logistik/delivery_orde
 $route['logistikprepare']                   = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                         = 'logistik/C_Logistik/create_do';
 $route['insert_tmp/(:any)/(:any)']          = 'logistik/C_Logistik/insert_tmp/$1/$2';
-$route['revert_do/(:any)']                  = 'logistik/C_Logistik/revert_do/$1';
+$route['revert_do/(:any)/(:any)']           = 'logistik/C_Logistik/revert_do/$1/$2';
 $route['detail_fk/(:any)']                  = 'logistik/C_Logistik/detail_fk/$1';
 
 $route['pnd_br_detpo/(:any)/(:any)/(:any)'] = 'logistik/C_Logistik/pnd_br_detpo/$1/$2/$3';
+
+$route['get_barang']                         = 'logistik/C_Logistik/get_barang';
+$route['update_barang']                         = 'logistik/C_Logistik/update_barang';
 
 $route['get_tmp_do']                        = 'logistik/C_Logistik/get_tmp_do';
 $route['save_do']                           = 'logistik/C_Logistik/save_do';

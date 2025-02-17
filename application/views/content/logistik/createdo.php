@@ -94,7 +94,7 @@
                                             <td><?= $telp ?></td>
                                             <td>
                                                 <a href="<?= base_url('detail_fk/') . $tmp->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                <a href="<?= base_url('revert_do/') . $tmp->kd_faktur ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
+                                                <a href="<?= base_url('revert_do/') . $tmp->kd_faktur . '/' . 'formlist' ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

@@ -988,7 +988,7 @@ class C_Logistik extends CI_Controller
 
                     $this->M_Logistik->insert_tmp_do($datainsert);
                     $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
-                    redirect('create_do');
+                    redirect('detail_fk/' . $kd);
                 }
                 break;
 
@@ -1021,16 +1021,30 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function revert_do($kd)
+    public function revert_do($kd, $action)
     {
-        $update_pre_do = array(
-            'data_sts'    => '1'
-        );
+        switch ($action) {
+            case 'revertdetail':
+                $update_pre_do = array(
+                    'data_sts'    => '1'
+                );
 
-        $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
-        $this->M_Logistik->del_tmp_do($kd);
+                $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
+                $this->M_Logistik->del_tmp_do($kd);
 
-        redirect('create_do');
+                redirect('detail_fk/' . $kd);
+                break;
+            case 'formlist':
+                $update_pre_do = array(
+                    'data_sts'    => '1'
+                );
+
+                $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
+                $this->M_Logistik->del_tmp_do($kd);
+
+                redirect('create_do');
+                break;
+        }
     }
 
     public function get_tmp_do()
@@ -1072,6 +1086,39 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/detailfk.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function get_barang()
+    {
+        $idbarang = $this->input->post('idbarang');
+
+        $this->db->select('a.*, b.nm_barang');
+        $this->db->from('tb_pre_do a');
+        $this->db->join('tb_master_barang b', 'b.kode_barang = a.kd_barang', 'left');
+        $this->db->where('a.id', $idbarang);
+
+        $data = $this->db->get()->row();
+
+        echo json_encode($data);
+    }
+
+
+    public function update_barang()
+    {
+        $kd_barang = $this->input->post('kd_barang');
+        $data = [
+            'nm_barang' => $this->input->post('nm_barang'),
+            'qty' => $this->input->post('qty'),
+            'satuan' => $this->input->post('satuan'),
+            'no_lot' => $this->input->post('no_lot'),
+            'tgl_exp' => $this->input->post('tgl_exp')
+        ];
+
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->update('barang', $data);
+
+        echo json_encode(['status' => 'success']);
+    }
+
     public function pnd_br_detpo($id, $kd, $action)
     {
         switch ($action) {

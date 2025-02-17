@@ -42,7 +42,7 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-                            <table id="" class="table table-striped">
+                            <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
                                         <th>Kode</th>
@@ -56,7 +56,7 @@
                                 </thead>
                                 <tbody>
                                     <?php foreach ($detail_fk as $det) : ?>
-                                        <tr>
+                                        <tr data-id="<?= $det->id ?>">
                                             <td><?= $det->kd_barang ?></td>
                                             <td><?= $det->nm_barang ?></td>
                                             <td><?= $det->qty ?></td>
@@ -79,8 +79,17 @@
                                                 <?php endif; ?>
                                             <?php else : ?>
                                                 <?php if ($det->barang_sts == '1') : ?>
-                                                    <td>
-                                                        <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-trash"></i></a>
+                                                    <td style="width: 10%;">
+                                                        <div class="row">
+                                                            <div class="col">
+                                                                <button class="btn btn-warning w-100 btn-edit" data-id="<?= $det->id ?>">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="col">
+                                                                <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-trash"></i></a>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 <?php elseif ($det->barang_sts == '3') : ?>
                                                     <td colspan="2">
@@ -92,15 +101,46 @@
                                                     </td>
                                                 <?php endif; ?>
                                             <?php endif; ?>
-
                                         </tr>
                                     <?php endforeach; ?>
+
+                                    <!-- BARIS EDIT TABEL -->
+
+                                    <tr id="editRow" style="display: none;">
+                                        <td colspan="7">
+                                            <form id="editForm">
+                                                <div class="row">
+                                                    <input type="hidden" id="edit_kode" name="kd_barang" readonly>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="edit_nama" name="nm_barang" class="form-control" readonly>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="number" id="edit_qty" name="qty" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="edit_satuan" name="satuan" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="text" id="edit_no_lot" name="no_lot" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <input type="date" id="edit_exp" name="tgl_exp" class="form-control">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="submit" class="btn btn-success">Simpan</button>
+                                                        <button type="button" class="btn btn-danger" id="cancelEdit">Batal</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </td>
+                                    </tr>
+
                                 </tbody>
                             </table>
                             <?php if ($status_faktur == '1') : ?>
                                 <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
                             <?php else : ?>
-                                <a href="<?= base_url('revert_do/') . $kdfaktur ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
+                                <a href="<?= base_url('revert_do/') . $kdfaktur . '/' . 'revertdetail' ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
                             <?php endif; ?>
                         <?php endforeach; ?>
                         </div>
@@ -125,3 +165,51 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $(document).ready(function() {
+            $(".btn-edit").on("click", function(e) {
+                e.preventDefault();
+
+                var row = $(this).closest("tr");
+                var id = row.data("id");
+
+                $.ajax({
+                    url: "<?= base_url('get_barang') ?>", // Sesuaikan dengan controller
+                    type: "POST",
+                    data: {
+                        idbarang : id
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        $("#edit_kode").val(data.id);
+                        $("#edit_nama").val(data.nm_barang);
+                        $("#edit_qty").val(data.qty);
+                        $("#edit_satuan").val(data.satuan);
+                        $("#edit_no_lot").val(data.no_lot);
+                        $("#edit_exp").val(data.tgl_exp);
+
+                        $("#editRow").insertAfter(row).show();
+                    }
+                });
+            });
+
+            $("#cancelEdit").on("click", function() {
+                $("#editRow").hide();
+            });
+
+            $("#editForm").on("submit", function(e) {
+                e.preventDefault();
+
+                $.ajax({
+                    url: "<?= base_url('update_barang') ?>", // Sesuaikan dengan controller
+                    type: "POST",
+                    data: $(this).serialize(),
+                    success: function() {
+                        alert("Data berhasil diperbarui!");
+                        location.reload();
+                    }
+                });
+            });
+        });
+    </script>
