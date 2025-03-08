@@ -29,7 +29,7 @@ class M_Bufferstockglobal extends CI_Model
                 c.nm_barang AS nmbarang,
                 c.satuan AS satuan,
                 c.qty_min AS qtymin,
-                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.nm_barang = a.nm_barang) AS qty,
+                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.kd_barang = a.kd_barang) AS qty,
                 (c.p * c.l * c.t) AS dimensi,
                 FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) AS qty_box,
                 (SUM(a.qty) - FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs
@@ -93,7 +93,7 @@ class M_Bufferstockglobal extends CI_Model
                 c.nm_barang AS nmbarang,
                 c.satuan AS satuan,
                 c.qty_min AS qtymin,
-                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.nm_barang = a.nm_barang) AS qty,
+                (SELECT SUM(d.qty) FROM tb_dailystock_global d WHERE d.kd_barang = a.kd_barang) AS qty,
                 (c.p * c.l * c.t) AS dimensi,
                 FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) AS qty_box,
                 (SUM(a.qty) - FLOOR(SUM(a.qty) / (c.p * c.l * c.t)) * (c.p * c.l * c.t)) AS qty_pcs

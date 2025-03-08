@@ -61,9 +61,8 @@ class C_Keuangan extends CI_Controller
                 $data[] = [
                     'kd_suplier'    => $row[0],
                     'kd_barang'     => $row[1],
-                    'nm_barang'     => $row[2],
-                    'gudang'        => $row[3],
-                    'qty'           => $row[4]
+                    'gudang'        => $row[2],
+                    'qty'           => $row[3]
                 ];
             }
 
