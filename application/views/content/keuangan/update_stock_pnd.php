@@ -26,18 +26,18 @@
 
                     <a href="<?= base_url('keuangan') ?>" class="btn btn-md btn-primary mb-2">Home</a>
                     <a href="<?= base_url('insertmodule') ?>" class="btn btn-md btn-primary mb-2">Update Stock</a>
-                    <a href="<?= base_url('insermodule_lot') ?>" class="btn btn-md btn-secondary mb-2">Update Qty-LOT-EXP</a>
-                    <a href="<?= base_url('insertmodule_pnd') ?>" class="btn btn-md btn-primary mb-2">Update Pending PO</a>
+                    <a href="<?= base_url('insermodule_lot') ?>" class="btn btn-md btn-primary mb-2">Update Qty-LOT-EXP</a>
+                    <a href="<?= base_url('insertmodule_pnd') ?>" class="btn btn-md btn-secondary mb-2">Update Pending PO</a>
 
                     <div class="card">
                         <div class="card-body">
-                            <h3>Upload Data Stock</h3>
-                            <form method="post" enctype="multipart/form-data" action="<?= base_url('csv_import_lot') ?>">
+                            <h3>Upload Data PO Pending</h3>
+                            <form method="post" enctype="multipart/form-data" action="<?= base_url('csv_import_po_pnd') ?>">
                                 <?php date_default_timezone_set("Asia/Jakarta");
                                 $now = date('Y-m-d H:i:s'); ?>
                                 <div class="form-group">
                                     <select name="gdgid" id="gdgid" class="form-control">
-                                        <option value="4">STOCK-LOT-EXP</option>
+                                        <option value="5">PO PENDING</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

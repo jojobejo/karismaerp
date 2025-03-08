@@ -26,6 +26,7 @@
                     <a href="<?= base_url('keuangan') ?>" class="btn btn-md btn-primary mb-2">Home</a>
                     <a href="<?= base_url('insertmodule') ?>" class="btn btn-md btn-secondary mb-2">Update Stock</a>
                     <a href="<?= base_url('insermodule_lot') ?>" class="btn btn-md btn-primary mb-2">Update Qty-LOT-EXP</a>
+                    <a href="<?= base_url('insertmodule_pnd') ?>" class="btn btn-md btn-primary mb-2">Update Pending PO</a>
                     <div class="card">
                         <div class="card-body">
                             <h3>Upload Data Stock</h3>

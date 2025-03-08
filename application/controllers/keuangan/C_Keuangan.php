@@ -48,6 +48,8 @@ class C_Keuangan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+
+
     public function import()
     {
         $session    = $this->session->userdata('jobdesk');
@@ -117,6 +119,57 @@ class C_Keuangan extends CI_Controller
         }
     }
 
+    public function insertmodule_pnd()
+    {
+        $data['page_title']     = 'KARISMA - KEUANGAN';
+        $data['kd']             = $this->M_Keuangan->generate_update();
+        $data['updated']        = $this->M_Keuangan->get_updated_upload();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/update_stock_pnd.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+    public function csv_import_po_pnd()
+    {
+        $session    = $this->session->userdata('jobdesk');
+
+        if ($session == 'ADMINKEU') {
+            $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
+            fgetcsv($file_data); // Skip header row
+
+            $data = [];
+            while ($row = fgetcsv($file_data)) {
+                $data[] = [
+                    'nopo'                  => $row[0],
+                    'tanggal'               => $row[1],
+                    'kd_sup'                => $row[2],
+                    'kd_barang'             => $row[3],
+                    'qty_order'             => $row[4],
+                    'qty_order_success'     => $row[5],
+                    'qty_kurang'            => $row[6],
+                ];
+            }
+
+            $gdgid   = $this->input->post('gdgid');
+
+            if (!empty($data) && $gdgid != '1') {
+                $this->update_data();
+                $this->M_Keuangan->insert_po_pending($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else if (!empty($data) && $gdgid == '1') {
+                $this->update_data();
+                $this->M_Keuangan->batch_global($data);
+                $this->session->set_flashdata('message', 'Data imported successfully.');
+            } else {
+                $this->session->set_flashdata('message', 'Failed to import data.');
+            }
+            redirect('insertmodule_pnd');
+        } else {
+            $this->session->set_flashdata("SESI BERAKHIR", "Silahkan login lagi ");
+            redirect('Auth');
+        }
+    }
+
     public function csv_import_lot()
     {
         $session    = $this->session->userdata('jobdesk');
@@ -173,6 +226,8 @@ class C_Keuangan extends CI_Controller
             $gudang = 'Gdg. Rusak';
         } else if ($gdgid == 4) {
             $gudang = 'exp_lot';
+        } else if ($gdgid == 5) {
+            $gudang = 'pendingpo';
         }
 
         $data  = array(
@@ -189,6 +244,12 @@ class C_Keuangan extends CI_Controller
     {
         $this->M_Keuangan->truncateitm($id);
         $this->M_Keuangan->deleteupdateed($kd);
+
+        redirect('keuangan');
+    }
+    public function deletedata($id)
+    {
+        $this->M_Keuangan->truncateitm($id);
 
         redirect('keuangan');
     }
@@ -424,6 +485,15 @@ class C_Keuangan extends CI_Controller
         }
     }
 
+    public function pendingpo()
+    {
+        $data['page_title']     = 'KARISMA';
+        $data['stocklist']      = $this->M_Keuangan->get_list_po_pending();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/pendingpo.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
     public function daily_stock_lot()
     {
         $data['page_title']     = 'KARISMA';

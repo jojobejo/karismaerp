@@ -29,11 +29,13 @@
                         <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                         <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
+                        <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
                     <?php else : ?>
                         <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                         <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                         <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                         <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
+                        <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
                     <?php endif; ?>
 
                     <?php if ($this->session->userdata('lv') == 1) : ?>
@@ -87,7 +89,10 @@
                                             <tr>
                                                 <td><?= $up->gudang ?></td>
                                                 <td><?= format_indo($date) ?></td>
-                                                <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
+                                                <td style="width: 10%;">
+                                                    <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
+                                                    <a href="<?= base_url('deletedata/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

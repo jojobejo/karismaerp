@@ -111,6 +111,12 @@ class M_Keuangan extends CI_Model
             $gdg    = 'Gdg. Rusak';
             $this->db->where('gudang', $gdg);
             return $this->db->delete('tb_dailystock');
+        } elseif ($id == '4') {
+            $gdg    = 'Gdg. Rusak';
+            $this->db->where('gudang', $gdg);
+            return $this->db->delete('tb_dailystock');
+        } elseif ($id == '5') {
+            $this->db->empty_table('tb_po_pending');
         }
     }
     public function insert_batch($data)
@@ -120,6 +126,10 @@ class M_Keuangan extends CI_Model
     public function insert_batch_lot($data)
     {
         $this->db->insert_batch('tb_qty_lot', $data);
+    }
+    public function insert_po_pending($data)
+    {
+        $this->db->insert_batch('tb_po_pending', $data);
     }
     public function batch_global($data)
     {
@@ -192,6 +202,23 @@ class M_Keuangan extends CI_Model
         JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
         WHERE a.kd_suplier = '$kd' AND a.gudang = '$gdg'
             ")->result();
+    }
+
+    public function get_list_po_pending()
+    {
+        return $this->db->query("SELECT
+            a.nopo AS po,
+            a.tanggal as tgl,
+            c.nama_suplier as nmsuplier,
+            b.nm_barang as nmbarang,
+            a.qty_order as qtyorder,
+            a.qty_order_success as qtydone,
+            a.qty_kurang as qtykurang
+            FROM tb_po_pending a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_suplier c ON c.kd_suplier = a.kd_sup
+            WHERE a.qty_kurang > 0
+        ")->result();
     }
 
     public function get_list_stock_lot()

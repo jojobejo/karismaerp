@@ -5,7 +5,7 @@ class M_Bufferstockglobal extends CI_Model
 
 {
 
-    var $column_order = array('kodebarang', 'nama_suplier', 'nm_barang', 'qty_box', 'qty_pcs');
+    var $column_order = array('kodebarang', 'nmsuplier', 'nmbarang', 'qty_box', 'qty_pcs');
     var $column_search = array('nmsuplier', 'nmbarang');
 
     public function __construct()
