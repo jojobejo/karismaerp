@@ -338,6 +338,19 @@ class M_Logistik extends CI_Model
         return $this->db->get()->result();
     }
 
+    public function get_updated_data_preparation()
+    {
+        return $this->db->query("SELECT
+        a.*,
+        b.data_sts AS statusdata
+        FROM tb_stock_status a
+        JOIN tb_pre_do b ON b.kdupdate = a.kd_update
+        WHERE a.gudangid = '6'
+        LIMIT 1
+        ")->result();
+    }
+
+
     public function get_data_penjualan_zahir()
     {
         // SELECT
@@ -362,19 +375,19 @@ class M_Logistik extends CI_Model
         //         GROUP BY a.kd_faktur
         //     ) AS x
 
-        $this->db->select('x.kd_faktur, x.nama_customer, x.nama_kios, x.alamat_kios, x.regional, x.total_barang ,x.data_sts');
-        $this->db->from('(SELECT 
-                    a.kd_faktur,
-                    b.nama_customer,
-                    b.nama_kios,
-                    b.alamat_kios,
-                    b.regional,
-                    a.data_sts,
-                    (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
-                  FROM tb_pre_do a
-                  JOIN tb_customer b ON b.kd_customer = a.kd_customer
-                  JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
-                  GROUP BY a.kd_faktur) AS x', false);
+        $this->db->select('
+            a.kd_faktur,
+            b.nama_customer,
+            b.nama_kios,
+            b.alamat_kios,
+            b.regional,
+            COUNT(a.kd_barang) AS total_barang,
+            a.data_sts
+        ');
+        $this->db->from('tb_pre_do a');
+        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
+        $this->db->where('a.data_sts !=', 3);
+        $this->db->group_by('a.kd_faktur');
         $query = $this->db->get();
         return $query->result();
     }
@@ -429,6 +442,15 @@ class M_Logistik extends CI_Model
     public function del_tmp_do_det($kd)
     {
         return $this->db->delete('tb_tmp_detaildo', array("kd_faktur" => $kd));
+    }
+
+    public function truncateitm($kd, $sts)
+    {
+        return $this->db->delete('tb_pre_do', array("kdupdate" => $kd, "upload_sts" => $sts));
+    }
+    public function truncatests($kd)
+    {
+        return $this->db->delete('tb_stock_status', array("kd_update" => $kd));
     }
 
     public function get_tmp_do()

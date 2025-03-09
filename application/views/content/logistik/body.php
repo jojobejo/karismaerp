@@ -25,9 +25,40 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-                            <h3>List Faktur Penjualan</h3>
+                            <table id="tbDashboardLogistik" class="table table-bordered table-striped">
+                                <thead style="background-color: #212529; color:white;">
+                                    <tr>
+                                        <th>Data Olah</th>
+                                        <th>Keterangan</th>
+                                        <th>Last Updated</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($updated as $u) :
+                                        $infoupdt   = $u->gudangid;
+                                        if ($infoupdt == '6') {
+                                            $info = "Delivery Order";
+                                            if ($u->statusdata == 1) {
+                                                $statusdata = 'DO Update PAGI';
+                                            } else {
+                                                $statusdata = 'DO Update SORE';
+                                            }
+                                        } else {
+                                        }
+                                    ?>
+                                        <tr>
+                                            <td><?= $info ?></td>
+                                            <td><?= $statusdata ?></td>
+                                            <td><?= format_indo($u->last_update) ?></td>
+                                            <td><a href="<?= base_url('truncatelog/') . $u->kd_update . '/' . $u->statusdata ?>" class="btn btn-block btn-sm btn-danger"><i class="fas fa-trash"></i></a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <!-- <h3>List Faktur Penjualan</h3>
                             <h3>Faktur ON PROGRESS</h3>
-                            <h3>Faktur DONE</h3>
+                            <h3>Faktur DONE</h3> -->
                         </div>
                     </div>
                 </div>

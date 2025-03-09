@@ -13,13 +13,16 @@
                     $now = date('Y-m-d H:i:s'); ?>
                     <div class="form-group">
                         <select name="gdgid" id="gdgid" class="form-control">
-                            <option value="1">Delivery Order</option>
+                            <option value="6">Delivery Order</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <div class="input-group">
+
                             <div class="custom-file">
                                 <input type="file" class="custom-file-input" id="exampleInputFile" name="csv_file" required>
+                                <input type="text" class="form-control" name="kdgenerates" id="kdgenerates" value="<?= $kdgenerate ?>" hidden>
+                                <input type="text" class="form-control" name="dateupload" id="dateupload" value="<?= $now ?>" hidden>
                                 <label class="custom-file-label" for="exampleInputFile">Choose file</label>
                             </div>
                             <div class="input-group-append">

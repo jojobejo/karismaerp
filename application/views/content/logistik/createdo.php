@@ -11,9 +11,6 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
-
-            <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
-
             <div class="content-header">
                 <div class="container-fluid">
                     <a href="<?= base_url('logistik') ?>" class="btn btn-primary mb-2"><i class="fas fa-home"></i></a>
@@ -76,8 +73,7 @@
                                         <td>Alamat</td>
                                         <td>Kota</td>
                                         <td>No.Telpon</td>
-                                        <td>Jam Buka</td>
-                                        <td>Jam Tutup</td>
+                                        <td>Jam Buka/Tutup</td>
                                         <td>Karakteristik</td>
                                         <td style="text-align: center;">#</td>
                                     </tr>
@@ -114,7 +110,6 @@
                                             <td><?= $tmp->alamat_kios ?></td>
                                             <td><?= $tmp->regional ?></td>
                                             <td><?= $telp ?></td>
-                                            <td style="text-align: center;"><?= $jmkiosbt ?></td>
                                             <td style="text-align: center;"><?= $jmkiosbt ?></td>
                                             <td style="text-align: center;"><?= $kiosc ?></td>
                                             <td style="width: 15%;">
@@ -193,15 +188,21 @@
                                             <td><?= $l->total_barang ?></td>
                                             <?php if ($status == 1) : ?>
                                                 <td><span class="badge badge-secondary">NOT IN DRAFT</span></td>
+                                                <td>
+                                                    <div class="row">
+                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formlist' ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                                                    </div>
+                                                </td>
                                             <?php elseif ($status == 2) : ?>
                                                 <td><span class="badge badge-success">ON DRAFT</span></td>
+                                                <td>
+                                                    <div class="row">
+                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                                    </div>
+                                                </td>
                                             <?php endif; ?>
-                                            <td>
-                                                <div class="row">
-                                                    <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                    <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formlist' ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
-                                                </div>
-                                            </td>
+
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

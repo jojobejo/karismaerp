@@ -11,7 +11,6 @@
 
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
-            <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
             <div class="content-header">
                 <div class="container-fluid">

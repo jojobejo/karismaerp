@@ -84,11 +84,12 @@ class C_Keuangan extends CI_Controller
             redirect('insertmodule');
         } elseif ($session == 'LOGISTIK') {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
-            fgetcsv($file_data); // Skip header row
-
+            fgetcsv($file_data);
+            $kdupdate = $this->input->post('kdgenerates');
             $data = [];
             while ($row = fgetcsv($file_data)) {
                 $data[] = [
+                    'kdupdate'     => $kdupdate,
                     'tgl_inputer'   => $row[0],
                     'kd_faktur'     => $row[1],
                     'kd_customer'   => $row[2],
@@ -106,7 +107,8 @@ class C_Keuangan extends CI_Controller
 
             $gdgid   = $this->input->post('gdgid');
 
-            if (!empty($data) && $gdgid == '1') {
+            if (!empty($data) && $gdgid == '6') {
+                $this->update_data();
                 $this->M_Keuangan->insert_batch_logistik($data);
                 $this->session->set_flashdata('message', 'Data imported successfully.');
             } else {
@@ -215,8 +217,8 @@ class C_Keuangan extends CI_Controller
     private function update_data()
     {
         $kd      = $this->input->post('kdgenerates');
-        $date    = $this->input->post('dateupload');
         $gdgid   = $this->input->post('gdgid');
+        $date    = $this->input->post('dateupload');
 
         if ($gdgid == 1) {
             $gudang = 'Global';
@@ -228,7 +230,10 @@ class C_Keuangan extends CI_Controller
             $gudang = 'exp_lot';
         } else if ($gdgid == 5) {
             $gudang = 'pendingpo';
+        } else if ($gdgid == 6) {
+            $gudang = 'Preparation DO';
         }
+
 
         $data  = array(
             'kd_update'     => $kd,

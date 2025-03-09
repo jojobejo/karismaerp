@@ -92,9 +92,8 @@ $route['pnd_br_detpo/(:any)/(:any)/(:any)'] = 'logistik/C_Logistik/pnd_br_detpo/
 
 $route['get_barang']                         = 'logistik/C_Logistik/get_barang';
 $route['update_barang']                      = 'logistik/C_Logistik/update_barang';
-
 $route['rekam_do']                           = 'logistik/C_Logistik/rekam_do';
-
+$route['truncatelog/(:any)/(:any)']          = 'logistik/C_Logistik/truncatelog/$1/$2';
 $route['get_tmp_do']                         = 'logistik/C_Logistik/get_tmp_do';
 $route['get_tmpdonorut']                     = 'logistik/C_Logistik/get_tmpdonorut';
 $route['update_norut']                       = 'logistik/C_Logistik/update_norut';

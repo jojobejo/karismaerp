@@ -9,6 +9,7 @@ class C_Logistik extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_Logistik');
+        $this->load->model('M_Keuangan');
     }
 
     public function index()
@@ -939,9 +940,10 @@ class C_Logistik extends CI_Controller
 
     public function delivery_order()
     {
-
-        $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['kdgenerate']     = $this->M_Keuangan->generate_update();
+        $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['updated']        = $this->M_Logistik->get_updated_data_preparation();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body.php', $data);
@@ -965,6 +967,7 @@ class C_Logistik extends CI_Controller
         $data = $this->M_Logistik->select_driver();
         echo json_encode($data);
     }
+
     public function get_noplat()
     {
         $data = $this->M_Logistik->select_plat();
@@ -1081,6 +1084,15 @@ class C_Logistik extends CI_Controller
         }
     }
 
+    public function truncatelog($kdupdate, $sts)
+    {
+
+        $this->M_Logistik->truncateitm($kdupdate, $sts);
+        $this->M_Logistik->truncatests($kdupdate);
+
+        redirect('logistik');
+    }
+
     public function get_tmp_do()
     {
         $data = $this->M_Logistik->get_tmp_do();
@@ -1094,7 +1106,6 @@ class C_Logistik extends CI_Controller
         $kd_do      = $this->input->post('do_isi');
         $kd_driver  = $this->input->post('kd_driver');
         $nolambung  = $this->input->post('plat_no');
-        $totbr      = '0';
         $tgldeliv   = $this->input->post('tgl_kirim');
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
@@ -1113,7 +1124,6 @@ class C_Logistik extends CI_Controller
                 );
                 $this->M_Logistik->insert_det_do($detaildo);
             }
-            
         }
     }
 
