@@ -346,30 +346,44 @@
 
             $("#rekamdo").on('click', function() {
 
-                var kd_do = $("#do_isi").val();
+                var kd_do = $("#do_isi").val().trim();
+
+                if (!kd_do) {
+                    alert('Kode DO tidak boleh kosong');
+                    return;
+                }
+                console.log('Kode DO:', kd_do); // Debug di Console
+
+
                 var tgl_krim = $("#tgl_kirim").val();
                 var platno = $("#plat_no").val();
                 var kota = $("#kota_isi").val();
                 var driver = $("#kd_driver").val();
 
+                if (!kd_do || !tgl_krim || !platno || !kota || !driver) {
+                    alert('Semua field harus diisi.');
+                    return;
+                }
+
                 $.ajax({
                     url: "<?= base_url('rekam_do') ?>",
                     type: "POST",
                     data: {
-                        kd_do: kd_do,
-                        tgl_krim: tgl_krim,
-                        platno: platno,
-                        kota: kota,
-                        driver: driver
+                        kd_do: kd_do
                     },
                     dataType: "JSON",
                     cache: false,
                     success: function(data) {
+                        console.log(data); // Lihat respon dari server di Console
                         if (data.msg == "success") {
-                            location.reload(true);
+                            alert('Data berhasil direkam');
+                            window.location.href = "<?= base_url('create_do') ?>";
                         } else {
-                            alert('ada kesalahan data')
+                            alert(data.message || 'Ada kesalahan data');
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Terjadi kesalahan: ' + error);
                     }
                 });
 

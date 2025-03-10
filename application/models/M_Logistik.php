@@ -434,6 +434,15 @@ class M_Logistik extends CI_Model
         return $this->db->update('tb_pre_do', $data);
     }
 
+    public function deletetmp_detdo($kd)
+    {
+        return $this->db->delete('tb_tmp_do', array("kd_do" => $kd));
+    }
+
+    public function deletetmp_do($kd)
+    {
+        return $this->db->delete('tb_tmp_detaildo', array("kd_do" => $kd));
+    }
     public function del_tmp_do($kd)
     {
         return $this->db->delete('tb_tmp_do', array("kd_faktur" => $kd));
@@ -472,14 +481,20 @@ class M_Logistik extends CI_Model
             GROUP by a.kd_faktur
         ")->result();
     }
-
     public function get_tmp_dokd($kd)
     {
-        return $this->db->query("SELECT
-        a.*
-        FROM tb_tmp_detaildo a
-        WHERE a.kd_do = '$kd'
-        ")->result();
+        $query = $this->db->get_where('tb_tmp_detaildo', ['kd_do' => $kd]);
+        if ($query->num_rows() > 0) {
+            return $query->result();
+        } else {
+            return false;
+        }
+    }
+
+
+    public function insert_det_do($data)
+    {
+        return $this->db->insert('tb_detail_do', $data);
     }
 
     public function insert_do($data)

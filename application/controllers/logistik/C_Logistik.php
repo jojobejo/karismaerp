@@ -1103,16 +1103,27 @@ class C_Logistik extends CI_Controller
     {
         date_default_timezone_set("Asia/Jakarta");
 
-        $kd_do      = $this->input->post('do_isi');
-        $kd_driver  = $this->input->post('kd_driver');
-        $nolambung  = $this->input->post('plat_no');
-        $tgldeliv   = $this->input->post('tgl_kirim');
+        $kd_do      = $this->input->post('kd_do');
+        $nolambung  = $this->input->post('platno');
+        $tgldeliv   = $this->input->post('tgl_krim');
+        $kota       = $this->input->post('kota');
+        $driver     = $this->input->post('driver');
+
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         if ($tmpdetail) {
+
+            $datado = array(
+                'kd_do'             => $kd_do,
+                'nolambung'         => $nolambung,
+                'tgl_pengiriman'    => $tgldeliv
+            );
+            $this->M_Logistik->insert_do($datado);
+
             foreach ($tmpdetail as $tmp) {
+
                 $detaildo = array(
-                    'kd_do'         => $tmp->kd_do,
+                    'kd_do'         => $kd_do,
                     'kd_faktur'     => $tmp->kd_faktur,
                     'kd_customer'   => $tmp->kd_customer,
                     'kd_barang'     => $tmp->kd_barang,
@@ -1122,9 +1133,17 @@ class C_Logistik extends CI_Controller
                     'tgl_exp'       => $tmp->tgl_exp,
                     'create_at'     => $tmp->create_at
                 );
+
                 $this->M_Logistik->insert_det_do($detaildo);
             }
+
+            $this->M_Logistik->deletetmp_detdo($kd_do);
+            $this->M_Logistik->deletetmp_do($kd_do);
+            echo json_encode(['msg' => 'success']);
+        } else {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
         }
+        exit;
     }
 
     public function detail_fk($kd)
