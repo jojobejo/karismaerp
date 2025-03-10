@@ -35,7 +35,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-calendar"></i></span>
                                         </div>
-                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_kirim" id="tgl_kirim">
+                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -43,7 +43,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="nolambung" id="nolambung">
+                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_isi" id="plat_isi">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -51,7 +51,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="regional" id="regional">
+                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="regional_isi" id="regional_isi">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -59,7 +59,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Driver" value="" name="driver" id="driver">
+                                        <input type="text" class="form-control" placeholder="Driver" value="" name="driver_isi" id="driver_isi">
                                     </div>
                                 </div>
                             </div>
@@ -346,17 +346,10 @@
             $("#rekamdo").on('click', function() {
 
                 var kd_do = $("#do_isi").val().trim();
-
-                if (!kd_do) {
-                    alert('Kode DO tidak boleh kosong');
-                    return;
-                }
-                console.log('Kode DO:', kd_do); // Debug di Console
-
-                var tgl_krim = $("#tgl_kirim").val();
-                var platno = $("#nolambung").val();
-                var kota = $("#regional").val();
-                var driver = $("#driver").val();
+                var tgl_krim = $("#tgl_isi").val();
+                var platno = $("#plat_isi").val();
+                var kota = $("#regional_isi").val();
+                var driver = $("#driver_isi").val();
 
                 if (!kd_do || !tgl_krim || !platno || !kota || !driver) {
                     alert('Semua field harus diisi.');
@@ -367,7 +360,11 @@
                     url: "<?= base_url('rekam_do') ?>",
                     type: "POST",
                     data: {
-                        kd_do: kd_do
+                        kd_do: kd_do,
+                        tgl_krim: tgl_krim,
+                        platno: platno,
+                        kota: kota,
+                        driver: driver
                     },
                     dataType: "JSON",
                     cache: false,

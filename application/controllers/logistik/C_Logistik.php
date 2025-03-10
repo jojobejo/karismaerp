@@ -1103,20 +1103,21 @@ class C_Logistik extends CI_Controller
     {
         date_default_timezone_set("Asia/Jakarta");
 
-        $kd_do      = $this->input->post('kd_do');
-        $nolambung  = $this->input->post('platno');
-        $tgldeliv   = $this->input->post('tgl_krim');
-        $kota       = $this->input->post('kota');
-        $driver     = $this->input->post('driver');
+
+        $kd_do = $this->input->post('kd_do');
+        $nolambung = $this->input->post('tgl_krim');
+        $tgldeliv = $this->input->post('platno');
+        $kota = $this->input->post('kota');
+        $driver = $this->input->post('driver');
 
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         $datado = array(
-            'kd_do'             => $kd_do,
-            'nolambung'         => $nolambung,
-            'regional'          => $kota,
-            'driver'            => $driver,
-            'tgl_pengiriman'    => $tgldeliv,
+            'kd_do' => $kd_do,
+            'nolambung' => $nolambung,
+            'regional' => $kota,
+            'driver' => $driver,
+            'tgl_pengiriman' => $tgldeliv,
         );
 
         $this->M_Logistik->insert_do($datado);
@@ -1138,9 +1139,8 @@ class C_Logistik extends CI_Controller
 
                 $this->M_Logistik->insert_det_do($detaildo);
             }
-
-            $this->M_Logistik->deletetmp_detdo($kd_do);
-            $this->M_Logistik->deletetmp_do($kd_do);
+            // $this->M_Logistik->deletetmp_detdo($kd_do);
+            // $this->M_Logistik->deletetmp_do($kd_do);
             echo json_encode(['msg' => 'success']);
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
