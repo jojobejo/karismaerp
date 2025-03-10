@@ -1111,15 +1111,17 @@ class C_Logistik extends CI_Controller
 
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
+        $datado = array(
+            'kd_do'             => $kd_do,
+            'nolambung'         => $nolambung,
+            'regional'          => $kota,
+            'driver'            => $driver,
+            'tgl_pengiriman'    => $tgldeliv,
+        );
+
+        $this->M_Logistik->insert_do($datado);
+
         if ($tmpdetail) {
-
-            $datado = array(
-                'kd_do'             => $kd_do,
-                'nolambung'         => $nolambung,
-                'tgl_pengiriman'    => $tgldeliv
-            );
-            $this->M_Logistik->insert_do($datado);
-
             foreach ($tmpdetail as $tmp) {
 
                 $detaildo = array(

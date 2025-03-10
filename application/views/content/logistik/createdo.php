@@ -21,7 +21,6 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
-
                             <div class="row mb-2">
                                 <div class="col-md">
                                     <div class="input-group">
@@ -44,7 +43,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_no" id="plat_no">
+                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="nolambung" id="nolambung">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -52,7 +51,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="kota_isi" id="kota_isi">
+                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="regional" id="regional">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -60,7 +59,7 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Driver" value="" name="kd_driver" id="kd_driver">
+                                        <input type="text" class="form-control" placeholder="Driver" value="" name="driver" id="driver">
                                     </div>
                                 </div>
                             </div>
@@ -354,11 +353,10 @@
                 }
                 console.log('Kode DO:', kd_do); // Debug di Console
 
-
                 var tgl_krim = $("#tgl_kirim").val();
-                var platno = $("#plat_no").val();
-                var kota = $("#kota_isi").val();
-                var driver = $("#kd_driver").val();
+                var platno = $("#nolambung").val();
+                var kota = $("#regional").val();
+                var driver = $("#driver").val();
 
                 if (!kd_do || !tgl_krim || !platno || !kota || !driver) {
                     alert('Semua field harus diisi.');

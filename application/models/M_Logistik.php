@@ -491,7 +491,6 @@ class M_Logistik extends CI_Model
         }
     }
 
-
     public function insert_det_do($data)
     {
         return $this->db->insert('tb_detail_do', $data);
