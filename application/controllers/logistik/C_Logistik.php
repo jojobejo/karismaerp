@@ -1003,13 +1003,13 @@ class C_Logistik extends CI_Controller
                                 'no_lot'        => $det->no_lot,
                                 'tgl_exp'       => $det->tgl_exp,
                                 'barang_sts'    => $det->barang_sts,
-
                             );
                             $this->M_Logistik->insert_tmp_detdo($tmp_det_do);
                         }
                     }
 
                     $datainsert = array(
+                        'norut_do'   => $kddo,
                         'kd_do'      => $kddo,
                         'kd_faktur'  => $kdfaktur,
                         'input_at'   => $now
@@ -1037,6 +1037,7 @@ class C_Logistik extends CI_Controller
                     }
 
                     $datainsert = array(
+                        'norut_do'   => 0,
                         'kd_do'      => $kddo,
                         'kd_faktur'  => $kdfaktur,
                         'input_at'   => $now
