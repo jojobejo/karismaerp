@@ -146,16 +146,9 @@
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
-                            <div class="card-footer">
-                                <div class="media">
-                                    <div class="media-body">
-                                        <h5 class="mt-0 mb-1"></h5>
-                                    </div>
-                                    <button type="button" class="btn btn-success" id="rekamdo">
-                                        <i class="fas fa-print"></i> Rekam Order
-                                    </button>
-                                </div>
-                            </div>
+                            <button type="button" class="btn btn-success btn-block mt-2" id="rekamdo">
+                                <i class="fas fa-print"></i> Rekam Order
+                            </button>
                         </div>
                     </div>
                     <button class="btn btn-primary mb-2 btn-block" onclick="toggleDataPreDO()" id="btnhide"><i class="fas fa-eye"></i> Faktur Penjualan <i class="fas fa-eye"></i> </button>

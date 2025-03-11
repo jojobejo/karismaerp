@@ -401,6 +401,20 @@ class M_Logistik extends CI_Model
             GROUP BY a.kd_faktur
         ")->result();
     }
+
+    public function insert_tmp_detdo_batch($data)
+    {
+        return $this->db->insert_batch('tb_tmp_detaildo', $data);
+    }
+
+    public function get_do_cust_byfaktur($kd)
+    {
+        return $this->db->query("SELECT
+            a.*
+            FROM tb_pre_do a
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
     public function det_do_cust($kd)
     {
         return $this->db->query("SELECT

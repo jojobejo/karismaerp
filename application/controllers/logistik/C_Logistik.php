@@ -1009,7 +1009,6 @@ class C_Logistik extends CI_Controller
                     }
 
                     $datainsert = array(
-                        'norut_do'   => $kddo,
                         'kd_do'      => $kddo,
                         'kd_faktur'  => $kdfaktur,
                         'input_at'   => $now
@@ -1028,30 +1027,55 @@ class C_Logistik extends CI_Controller
             case 'formlist':
                 date_default_timezone_set("Asia/Jakarta");
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
                 $kddo       = $this->M_Logistik->generate_kd_do();
-                $now        = date("Y-m-d h:i:sa");
+                $now = date("Y-m-d H:i:s");
 
                 if ($get_pre_do) {
+                    $data_tmp_det_do = [];
+                    $kdfaktur = null;
+
                     foreach ($get_pre_do as $g) {
                         $kdfaktur = $g->kd_faktur;
                     }
 
-                    $datainsert = array(
-                        'norut_do'   => 0,
-                        'kd_do'      => $kddo,
-                        'kd_faktur'  => $kdfaktur,
-                        'input_at'   => $now
-                    );
+                    if ($getdetail) {
+                        foreach ($getdetail as $det) {
+                            $data_tmp_det_do[] = array(
+                                'id_pre_do'     => $det->id,
+                                'kd_do'         => $kddo,
+                                'kd_faktur'     => $det->kd_faktur,
+                                'kd_customer'   => $det->kd_customer,
+                                'kd_barang'     => $det->kd_barang,
+                                'qty'           => $det->qty,
+                                'satuan'        => $det->satuan,
+                                'no_lot'        => $det->no_lot,
+                                'tgl_exp'       => $det->tgl_exp,
+                                'barang_sts'    => $det->barang_sts,
+                                'create_at'     => $now
+                            );
+                        }
 
-                    $update_pre_do = array(
-                        'data_sts'    => '2'
-                    );
+                        if (!empty($data_tmp_det_do)) {
+                            $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
+                        }
 
-                    $this->M_Logistik->insert_tmp_do($datainsert);
-                    $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
-                    redirect('create_do');
+                        $datainsert = array(
+                            'norut_do'   => 0,
+                            'kd_do'      => $kddo,
+                            'kd_faktur'  => $kdfaktur,
+                            'input_at'   => $now
+                        );
+
+                        $this->M_Logistik->insert_tmp_do($datainsert);
+
+                        $update_pre_do = array(
+                            'data_sts' => '2'
+                        );
+                        $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    }
                 }
-                break;
+                redirect('create_do');
         }
     }
 
@@ -1104,14 +1128,17 @@ class C_Logistik extends CI_Controller
     {
         date_default_timezone_set("Asia/Jakarta");
 
-
         $kd_do = $this->input->post('kd_do');
-        $nolambung = $this->input->post('tgl_krim');
-        $tgldeliv = $this->input->post('platno');
+        $nolambung = $this->input->post('platno');
+        $tgldeliv = $this->input->post('tgl_krim');
         $kota = $this->input->post('kota');
         $driver = $this->input->post('driver');
+        $now = date("Y-m-d H:i:s");
 
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
+
+        $date = DateTime::createFromFormat('d/m/Y', $tgldeliv);
+        $tgl_pengiriman = $date ? $date->format('Y-m-d') : null;
 
         $datado = array(
             'kd_do' => $kd_do,
@@ -1119,6 +1146,7 @@ class C_Logistik extends CI_Controller
             'regional' => $kota,
             'driver' => $driver,
             'tgl_pengiriman' => $tgldeliv,
+            'tgl_create' => $now,
         );
 
         $this->M_Logistik->insert_do($datado);
@@ -1127,6 +1155,7 @@ class C_Logistik extends CI_Controller
             foreach ($tmpdetail as $tmp) {
 
                 $detaildo = array(
+                    'id_pre_do'     => $tmp->id_pre_do,
                     'kd_do'         => $kd_do,
                     'kd_faktur'     => $tmp->kd_faktur,
                     'kd_customer'   => $tmp->kd_customer,
@@ -1140,8 +1169,8 @@ class C_Logistik extends CI_Controller
 
                 $this->M_Logistik->insert_det_do($detaildo);
             }
-            // $this->M_Logistik->deletetmp_detdo($kd_do);
-            // $this->M_Logistik->deletetmp_do($kd_do);
+            $this->M_Logistik->deletetmp_detdo($kd_do);
+            $this->M_Logistik->deletetmp_do($kd_do);
             echo json_encode(['msg' => 'success']);
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
