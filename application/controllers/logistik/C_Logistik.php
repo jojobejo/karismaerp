@@ -1137,9 +1137,6 @@ class C_Logistik extends CI_Controller
 
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
-        $date = DateTime::createFromFormat('d/m/Y', $tgldeliv);
-        $tgl_pengiriman = $date ? $date->format('Y-m-d') : null;
-
         $datado = array(
             'kd_do' => $kd_do,
             'nolambung' => $nolambung,
@@ -1153,6 +1150,12 @@ class C_Logistik extends CI_Controller
 
         if ($tmpdetail) {
             foreach ($tmpdetail as $tmp) {
+                $kdfaktur = $tmp->kd_faktur;
+                $getkdfaktur = $this->M_Logistik->getkdfaktur($kdfaktur)->result();
+
+                foreach ($getkdfaktur as $get_faktur_detail) {
+                    $norut  = $get_faktur_detail->norut_do;
+                }
 
                 $detaildo = array(
                     'id_pre_do'     => $tmp->id_pre_do,
@@ -1164,6 +1167,7 @@ class C_Logistik extends CI_Controller
                     'satuan'        => $tmp->satuan,
                     'no_lot'        => $tmp->no_lot,
                     'tgl_exp'       => $tmp->tgl_exp,
+                    'norut'         => $norut,
                     'create_at'     => $tmp->create_at
                 );
 

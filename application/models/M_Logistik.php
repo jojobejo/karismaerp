@@ -495,6 +495,15 @@ class M_Logistik extends CI_Model
             GROUP by a.kd_faktur
         ")->result();
     }
+    public function getkdfaktur($kd)
+    {
+        return $this->db->query("SELECT
+            a.kd_faktur,
+            a.norut_do
+            FROM tb_tmp_do a 
+            WHERE a.kd_faktur = '$kd'
+        ");
+    }
     public function get_tmp_dokd($kd)
     {
         $query = $this->db->get_where('tb_tmp_detaildo', ['kd_do' => $kd]);
