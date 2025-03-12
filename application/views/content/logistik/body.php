@@ -26,6 +26,7 @@
                     <div class="card">
                         <div class="card-body">
                             <table id="tbDashboardLogistik" class="table table-bordered table-striped">
+                                <h3>Info Data Update</h3>
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
                                         <th>Data Olah</th>
@@ -59,6 +60,91 @@
                             <!-- <h3>List Faktur Penjualan</h3>
                             <h3>Faktur ON PROGRESS</h3>
                             <h3>Faktur DONE</h3> -->
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <!-- <div class="container mt-4">
+                                <h4 class="text-center">Rencana Pengiriman Barang</h4>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Tanggal:</strong> 11/3/2025</p>
+                                        <p><strong>No. Kendaraan:</strong> P 9904 UG-2</p>
+                                    </div>
+                                    <div class="col-md-6 text-right">
+                                        <p><strong>Cetak:</strong> 15:52</p>
+                                        <p><strong>Loading:</strong> <span class="badge badge-success">FIX</span></p>
+                                    </div>
+                                </div>
+
+                                <h5 class="text-center font-weight-bold">BALI</h5>
+
+                                <table class="table table-bordered">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th rowspan="2">No. Loading</th>
+                                            <th rowspan="2">No. SPP</th>
+                                            <th rowspan="2">Nama</th>
+                                            <th rowspan="2">Kota</th>
+                                            <th rowspan="2">Rute</th>
+                                            <th colspan="2">TTB</th>
+                                            <th rowspan="2">Nama Barang</th>
+                                            <th rowspan="2">No. LOT</th>
+                                            <th colspan="2">Quantity Invoice</th>
+                                        </tr>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Tanggal</th>
+                                            <th>Besar</th>
+                                            <th>Kecil</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>SPP001</td>
+                                            <td>Artha Mandiri</td>
+                                            <td>Denpasar</td>
+                                            <td>R001</td>
+                                            <td>TTB123</td>
+                                            <td>11/03/2025</td>
+                                            <td>Produk A</td>
+                                            <td>LOT56789</td>
+                                            <td>10</td>
+                                            <td>5</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p><strong>Checker:</strong> </p>
+                                    </div>
+                                    <div class="col-md-6 text-right">
+                                        <p><strong>Driver:</strong> Jefri</p>
+                                    </div>
+                                </div>
+                            </div> -->
+                            <table id="tbDashboardLogistik" class="table table-bordered table-striped">
+                                <h3>Info Data Update</h3>
+                                <thead style="background-color: #212529; color:white;">
+                                    <tr>
+                                        <td>Kode DO</td>
+                                        <td>Tgl. Buat</td>
+                                        <td>Tgl. Kirim</td>
+                                        <td>No Kendaraan</td>
+                                        <td>Rute</td>
+                                        <td>Total Faktur</td>
+                                        <td>Total Barang</td>
+                                        <td>Status</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
