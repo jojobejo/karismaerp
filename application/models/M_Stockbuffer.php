@@ -16,36 +16,35 @@ class M_Stockbuffer extends CI_Model
 
     private function _get_datatables_query($where)
     {
-
         $this->db->select("
-            x.nmsuplier,
-            x.nmbarang,
-            x.nmgudang,
-            x.satuan,
-            SUM(x.qty) AS qty,
-            x.qtymin,
-            x.dimensi,
-            FLOOR(SUM(x.qty) / x.dimensi) AS qty_box,
-            sum(x.qty) - (FLOOR(sum(x.qty) / x.dimensi)) * (x.dimensi) AS qty_pcs
-        ");
+        x.nmsuplier,
+        x.nmbarang,
+        x.nmgudang,
+        x.satuan,
+        x.qty,
+        x.qtymin,
+        x.dimensi,
+        FLOOR(x.qty / x.dimensi) AS qty_box,
+        x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs");
         $this->db->from("(SELECT 
-            c.nama_suplier AS nmsuplier,
-            b.nm_barang AS nmbarang,
-            a.gudang AS nmgudang,
-            b.satuan AS satuan,
-            b.qty_min AS qtymin,
-            (b.p * b.l * b.t) AS dimensi,
-                CASE
+        c.nama_suplier AS nmsuplier,
+        b.nm_barang AS nmbarang,
+        a.gudang AS nmgudang,
+        b.satuan AS satuan,
+        SUM(a.qty) AS qty,
+        b.qty_min AS qtymin,
+        (b.p * b.l * b.t) AS dimensi,
+            CASE
                 WHEN a.gudang = 'Gdg. Induk' THEN 2
                 WHEN a.gudang = 'Gdg. Rusak' THEN 3
-            END AS idgudang,
-            (SELECT SUM(d.qty) FROM tb_dailystock d WHERE d.kd_barang = a.kd_barang) AS qty
-            FROM tb_dailystock a
-            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
-            JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
-            GROUP BY b.kode_barang
+            END AS idgudang
+        FROM tb_dailystock a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        GROUP BY a.gudang, b.nm_barang
         ) AS x");
-        $this->db->where("x.idgudang", "$where");
+        $this->db->where('x.idgudang', "$where");
+
 
         $i = 0;
 
@@ -92,38 +91,35 @@ class M_Stockbuffer extends CI_Model
     public function count_all($id)
     {
         $this->db->select("
-            x.nmsuplier,
-            x.nmbarang,
-            x.nmgudang,
-            x.satuan,
-            x.qty,
-            x.qtymin,
-            x.dimensi,
-            FLOOR(x.qty / x.dimensi) AS qty_box,
-            x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs
-        ");
+        x.nmsuplier,
+        x.nmbarang,
+        x.nmgudang,
+        x.satuan,
+        x.qty,
+        x.qtymin,
+        x.dimensi,
+        FLOOR(x.qty / x.dimensi) AS qty_box,
+        x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs");
         $this->db->from("(SELECT 
-            c.nama_suplier AS nmsuplier,
-            b.nm_barang AS nmbarang,
-            a.gudang AS nmgudang,
-            b.satuan AS satuan,
-            a.qty AS qty,
-            b.qty_min AS qtymin,
-            (b.p * b.l * b.t) AS dimensi,
+        c.nama_suplier AS nmsuplier,
+        b.nm_barang AS nmbarang,
+        a.gudang AS nmgudang,
+        b.satuan AS satuan,
+        SUM(a.qty) AS qty,
+        b.qty_min AS qtymin,
+        (b.p * b.l * b.t) AS dimensi,
             CASE
                 WHEN a.gudang = 'Gdg. Induk' THEN 2
                 WHEN a.gudang = 'Gdg. Rusak' THEN 3
             END AS idgudang
-            FROM tb_dailystock a
-            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
-            JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        FROM tb_dailystock a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+        GROUP BY a.gudang, b.nm_barang
         ) AS x");
-        $this->db->where("x.idgudang", "$id");
-
+        $this->db->where('x.idgudang', "$id");
         $query = $this->db->get();
         return $query->result();
-
-
         return $this->db->count_all_results();
     }
 }

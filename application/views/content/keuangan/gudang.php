@@ -114,7 +114,6 @@
                                             <td>Nama Suplier</td>
                                             <td>Nama Barang</td>
                                             <td>Satuan</td>
-                                            <td>QTY</td>
                                             <td>Box</td>
                                             <td>Pcs</td>
                                         </tr>
