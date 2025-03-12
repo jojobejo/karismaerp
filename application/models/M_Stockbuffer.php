@@ -22,30 +22,30 @@ class M_Stockbuffer extends CI_Model
             x.nmbarang,
             x.nmgudang,
             x.satuan,
-            x.qty,
+            SUM(x.qty) AS qty,
             x.qtymin,
             x.dimensi,
-            FLOOR(x.qty / x.dimensi) AS qty_box,
-            x.qty - (FLOOR(x.qty / x.dimensi)) * (x.dimensi) AS qty_pcs
+            FLOOR(SUM(x.qty) / x.dimensi) AS qty_box,
+            sum(x.qty) - (FLOOR(sum(x.qty) / x.dimensi)) * (x.dimensi) AS qty_pcs
         ");
         $this->db->from("(SELECT 
             c.nama_suplier AS nmsuplier,
             b.nm_barang AS nmbarang,
             a.gudang AS nmgudang,
             b.satuan AS satuan,
-            a.qty AS qty,
             b.qty_min AS qtymin,
             (b.p * b.l * b.t) AS dimensi,
-            CASE
+                CASE
                 WHEN a.gudang = 'Gdg. Induk' THEN 2
                 WHEN a.gudang = 'Gdg. Rusak' THEN 3
-            END AS idgudang
+            END AS idgudang,
+            (SELECT SUM(d.qty) FROM tb_dailystock d WHERE d.kd_barang = a.kd_barang) AS qty
             FROM tb_dailystock a
             JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
             JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
+            GROUP BY b.kode_barang
         ) AS x");
         $this->db->where("x.idgudang", "$where");
-
 
         $i = 0;
 
