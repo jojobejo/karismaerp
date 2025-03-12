@@ -504,6 +504,29 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
         ");
     }
+    public function getlistfaktur_bykd($kd)
+    {
+        return $this->db->query("
+        ")->result();
+    }
+    public function getdo()
+    {
+        return $this->db->query("SELECT 
+            a.kd_do AS kddo,
+            a.tgl_create AS createat,
+            a.tgl_pengiriman AS tglkirim,
+            a.nolambung AS nopol,
+            a.regional AS rute,
+            (SELECT COUNT(*) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalbarang,
+            (SELECT COUNT(DISTINCT kd_faktur) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalfaktur,
+            CASE 
+                WHEN a.tgl_pengiriman IS NULL OR a.tgl_pengiriman > NOW() THEN 'Pending'
+                ELSE 'Terkirim'
+            END AS Status
+            FROM tb_do a;
+        ")->result();
+    }
+
     public function get_tmp_dokd($kd)
     {
         $query = $this->db->get_where('tb_tmp_detaildo', ['kd_do' => $kd]);

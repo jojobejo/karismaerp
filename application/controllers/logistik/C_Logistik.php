@@ -944,6 +944,7 @@ class C_Logistik extends CI_Controller
         $data['kdgenerate']     = $this->M_Keuangan->generate_update();
         $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
         $data['updated']        = $this->M_Logistik->get_updated_data_preparation();
+        $data['listdo']         = $this->M_Logistik->getdo();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body.php', $data);
@@ -959,6 +960,16 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function detail_do($kd_do)
+    {
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 

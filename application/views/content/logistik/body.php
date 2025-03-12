@@ -137,12 +137,23 @@
                                         <td>Total Faktur</td>
                                         <td>Total Barang</td>
                                         <td>Status</td>
+                                        <td>#</td>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td></td>
-                                    </tr>
+                                    <?php foreach ($listdo as $i) : ?>
+                                        <tr>
+                                            <td><?= $i->kddo ?></td>
+                                            <td><?= $i->createat ?></td>
+                                            <td><?= $i->tglkirim ?></td>
+                                            <td><?= $i->nopol ?></td>
+                                            <td><?= $i->rute ?></td>
+                                            <td><?= $i->totalbarang ?></td>
+                                            <td><?= $i->totalfaktur ?></td>
+                                            <td><?= $i->Status ?></td>
+                                            <td><a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
