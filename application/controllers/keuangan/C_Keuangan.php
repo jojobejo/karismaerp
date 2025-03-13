@@ -425,7 +425,7 @@ class C_Keuangan extends CI_Controller
         } elseif ($id == '2') {
             $kd = 'SYNGE01';
         } elseif ($id == '3') {
-            $kd = 'DUPON01';
+            $kd = 'NUFAR01';
         } elseif ($id == '4') {
             $kd = 'BAYER01';
         }

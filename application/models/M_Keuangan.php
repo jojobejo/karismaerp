@@ -182,12 +182,13 @@ class M_Keuangan extends CI_Model
         return $this->db->query("SELECT
         b.nm_barang AS nmbarang,
         b.satuan AS satuan,
-        a.qty AS qty,
-        b.qty_min AS qtymin
+        SUM(a.qty) AS qty,
+        FLOOR(SUM(a.qty) / COALESCE(b.p*b.l*b.t)) as qty_box,
+        (SUM(a.qty) - (FLOOR(SUM(a.qty) / COALESCE(b.p*b.l*b.t)) * COALESCE(b.p*b.l*b.t))) AS qty_pcs
         FROM tb_dailystock_global a
         JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
         JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier
-        WHERE a.kd_suplier = '$kd'
+        WHERE a.kd_suplier = '$kd' AND a.qty > 0
         GROUP BY a.kd_barang
         ORDER BY a.qty DESC
         ")->result();
@@ -198,8 +199,9 @@ class M_Keuangan extends CI_Model
         return $this->db->query("SELECT
         b.nm_barang AS nmbarang,
         b.satuan AS satuan,
-        a.qty AS qty,
-        b.qty_min AS qtymin
+        SUM(a.qty) AS qty,
+        FLOOR(SUM(a.qty) / COALESCE(b.p*b.l*b.t)) as qty_box,
+        (SUM(a.qty) - (FLOOR(SUM(a.qty) / COALESCE(b.p*b.l*b.t)) * COALESCE(b.p*b.l*b.t))) AS qty_pcs
         FROM tb_dailystock a
         JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
         JOIN tb_suplier c ON c.kd_suplier = a.kd_suplier

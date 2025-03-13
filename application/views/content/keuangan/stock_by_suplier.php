@@ -89,55 +89,55 @@
                                         <?php if ($gudangid == '1') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-secondary btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '2') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-secondary btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '3') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">NUFARM</a></div>
                                         <?php endif; ?>
                                     <?php elseif ($gudangs == '2') : ?>
                                         <?php if ($gudangid == '1') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-secondary btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '2') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-secondary btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '3') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">NUFARM</a></div>
                                         <?php endif; ?>
                                     <?php elseif ($gudangs == '3') : ?>
                                         <?php if ($gudangid == '1') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-secondary btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '2') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-secondary btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-success btn-block mb-2">NUFARM</a></div>
                                         <?php elseif ($gudangid == '3') : ?>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '1') ?>" class="btn btn-sm btn-success btn-block mb-2">BASF</a></div>
                                             <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '2') ?>" class="btn btn-sm btn-success btn-block mb-2">SYGENTA</a></div>
-                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">DUPONT</a></div>
+                                            <div class="col"><a href="<?= base_url('gudang/' . $gudangs . '/' . 'suplier/' . '3') ?>" class="btn btn-sm btn-secondary btn-block mb-2">NUFARM</a></div>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
-                            <?= $gudang ?>s
                             <table id="tb_qty_by_sup" class="table table-bordered table-striped">
                                 <thead>
                                     <tr>
                                         <td>Nama Barang</td>
                                         <td>Satuan</td>
                                         <td>Stock</td>
-                                        <td>Qty Minimum</td>
+                                        <td>Box</td>
+                                        <td>Pcs</td>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -146,7 +146,8 @@
                                             <td><?= $s->nmbarang ?></td>
                                             <td><?= $s->satuan ?></td>
                                             <td><?= $s->qty ?></td>
-                                            <td><?= $s->qtymin ?></td>
+                                            <td><?= $s->qty_box ?></td>
+                                            <td><?= $s->qty_pcs ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
