@@ -84,16 +84,28 @@
                                             date_default_timezone_set("Asia/Jakarta");
                                             $date_c = date_create($up->updated);
                                             $date = date_format($date_c, "Y-m-d H:i:s");
+                                            $kd = $up->kdupdate;
                                             $id = $up->gdgid;
                                         ?>
-                                            <tr>
-                                                <td><?= $up->gudang ?></td>
-                                                <td><?= format_indo($date) ?></td>
-                                                <td style="width: 10%;">
-                                                    <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
-                                                    <a href="<?= base_url('deletedata/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
-                                                </td>
-                                            </tr>
+                                            <?php if ($id == 1 || $id == 2 || $id == 3 || $id == 4 || $id == 5) : ?>
+                                                <tr>
+                                                    <td><?= $up->gudang ?></td>
+                                                    <td><?= format_indo($date) ?></td>
+                                                    <td style="width: 10%;">
+                                                        <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
+                                                        <a href="<?= base_url('truncateitm/' . $kd . '/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                                    </td>
+                                                </tr>
+                                            <?php elseif ($id == 6) : ?>
+                                                <tr>
+                                                    <td><?= $up->gudang ?></td>
+                                                    <td><?= format_indo($date) ?></td>
+                                                    <td style="width: 10%;">
+                                                        <a href="<?= base_url('keuangan') ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
+                                                    </td>
+                                                </tr>
+                                            <?php endif; ?>
+
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>

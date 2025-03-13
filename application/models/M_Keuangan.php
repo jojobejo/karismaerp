@@ -117,6 +117,8 @@ class M_Keuangan extends CI_Model
             return $this->db->delete('tb_dailystock');
         } elseif ($id == '5') {
             $this->db->empty_table('tb_po_pending');
+        } elseif ($id == '6') {
+            $this->db->empty_table('tb_pre_do');
         }
     }
     public function insert_batch($data)
@@ -167,6 +169,7 @@ class M_Keuangan extends CI_Model
     public function get_updated()
     {
         return $this->db->query("SELECT
+        a.kd_update AS kdupdate,
         a.gudangid AS gdgid,
         a.gudang,
         a.last_update AS updated
