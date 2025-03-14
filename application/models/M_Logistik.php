@@ -350,7 +350,6 @@ class M_Logistik extends CI_Model
         ")->result();
     }
 
-
     public function get_data_penjualan_zahir()
     {
         // SELECT
@@ -428,6 +427,7 @@ class M_Logistik extends CI_Model
     {
         return $this->db->insert('tb_tmp_do', $data);
     }
+
     public function insert_tmp_detdo($data)
     {
         if (isset($data['barang_sts']) && $data['barang_sts'] != 3) {

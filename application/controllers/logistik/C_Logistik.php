@@ -1160,6 +1160,8 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->insert_do($datado);
 
         if ($tmpdetail) {
+            $update_ids = [];
+
             foreach ($tmpdetail as $tmp) {
                 $kdfaktur = $tmp->kd_faktur;
                 $getkdfaktur = $this->M_Logistik->getkdfaktur($kdfaktur)->result();
@@ -1183,15 +1185,25 @@ class C_Logistik extends CI_Controller
                 );
 
                 $this->M_Logistik->insert_det_do($detaildo);
+
+                $update_ids[] = $tmp->id_pre_do;
             }
+
+            if (!empty($update_ids)) {
+                $this->db->where_in('id', $update_ids);
+                $this->db->update('tb_pre_do', ['data_sts' => 3]);
+            }
+
             $this->M_Logistik->deletetmp_detdo($kd_do);
             $this->M_Logistik->deletetmp_do($kd_do);
+
             echo json_encode(['msg' => 'success']);
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
         }
         exit;
     }
+
 
     public function detail_fk($kd)
     {

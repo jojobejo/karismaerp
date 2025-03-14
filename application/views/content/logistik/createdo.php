@@ -337,15 +337,60 @@
             });
 
             $("#rekamdo").on('click', function() {
-
                 var kd_do = $("#do_isi").val().trim();
                 var tgl_krim = $("#tgl_isi").val();
                 var platno = $("#plat_isi").val();
                 var kota = $("#regional_isi").val();
                 var driver = $("#driver_isi").val();
 
-                if (!kd_do || !tgl_krim || !platno || !kota || !driver) {
-                    alert('Semua field harus diisi.');
+                $("input").css("border", "");
+
+                if (!kd_do && !tgl_krim && !platno && !kota && !driver) {
+                    alert('Semua field masih kosong.');
+                    $("input").css("border", "2px solid red");
+                    return;
+                }
+
+                var isValid = true;
+
+                if (!kd_do) {
+                    alert('Kode DO harus diisi.');
+                    $("#do_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!tgl_krim) {
+                    alert('Tanggal Kirim harus diisi.');
+                    $("#tgl_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!platno) {
+                    alert('Plat Nomor harus diisi.');
+                    $("#plat_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!kota) {
+                    alert('Kota Pengiriman harus diisi.');
+                    $("#regional_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!driver) {
+                    alert('Nama Driver harus diisi.');
+                    $("#driver_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+
+                if (!isValid) return;
+
+                var isNorutValid = true;
+                $("#detbarang tbody tr").each(function() {
+                    var norut = $(this).find("td:first").text().trim();
+                    if (norut === "" || norut === "0") {
+                        isNorutValid = false;
+                    }
+                });
+
+                if (!isNorutValid) {
+                    alert("Nomor urut (No) belum terisi semua.");
                     return;
                 }
 
@@ -362,7 +407,7 @@
                     dataType: "JSON",
                     cache: false,
                     success: function(data) {
-                        console.log(data); // Lihat respon dari server di Console
+                        console.log(data);
                         if (data.msg == "success") {
                             alert('Data berhasil direkam');
                             window.location.href = "<?= base_url('create_do') ?>";
@@ -374,8 +419,8 @@
                         alert('Terjadi kesalahan: ' + error);
                     }
                 });
-
             });
+
 
         });
     </script>
