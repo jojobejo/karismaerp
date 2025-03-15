@@ -507,6 +507,7 @@ class M_Logistik extends CI_Model
     public function getlistfaktur_bykd($kd)
     {
         return $this->db->query("
+        
         ")->result();
     }
     public function getdo()
@@ -519,10 +520,7 @@ class M_Logistik extends CI_Model
             a.regional AS rute,
             (SELECT COUNT(*) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalbarang,
             (SELECT COUNT(DISTINCT kd_faktur) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalfaktur,
-            CASE 
-                WHEN a.tgl_pengiriman IS NULL OR a.tgl_pengiriman > NOW() THEN 'Pending'
-                ELSE 'Terkirim'
-            END AS Status
+            a.status as status
             FROM tb_do a;
         ")->result();
     }
