@@ -44,7 +44,7 @@ class M_Stockbuffer extends CI_Model
         GROUP BY a.gudang, b.nm_barang
         ) AS x");
         $this->db->where('x.idgudang', "$where");
-
+        $this->db->where('x.qty >', 0);
 
         $i = 0;
 
@@ -118,6 +118,7 @@ class M_Stockbuffer extends CI_Model
         GROUP BY a.gudang, b.nm_barang
         ) AS x");
         $this->db->where('x.idgudang', "$id");
+        $this->db->where('x.qty >', 0);
         $query = $this->db->get();
         return $query->result();
         return $this->db->count_all_results();

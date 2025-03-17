@@ -37,6 +37,8 @@ class M_Bufferstockglobal extends CI_Model
             JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
             JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
             GROUP BY c.nm_barang) AS x', false);
+        $this->db->where('x.qty >', 0);
+
         $i = 0;
 
         foreach ($this->column_search as $item) {
@@ -101,6 +103,7 @@ class M_Bufferstockglobal extends CI_Model
             JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
             JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
             GROUP BY c.nm_barang) AS x', false);
+        $this->db->where('x.qty >', 0);
 
         return $this->db->count_all_results();
     }

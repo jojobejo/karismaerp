@@ -357,9 +357,6 @@ class C_Keuangan extends CI_Controller
             $row[] = $field->qty_box;
             $row[] = $field->qty_pcs;
             $row[] = '<a href="' . base_url('detail_stock/') . $field->kdbarang . '"class="btn btn-primary" style="align-items: center;"><i class="fas fa-eye"></i></a>';
-
-
-
             $data[] = $row;
         }
 
