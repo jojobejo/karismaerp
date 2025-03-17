@@ -141,7 +141,17 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($listdo as $i) : ?>
+                                    <?php foreach ($listdo as $i) :
+                                        $status = $i->status;
+
+                                        if ($status == '1') {
+                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-info">Draft</a>';
+                                        } else if ($status == '2') {
+                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-warning">Checker</a>';
+                                        } else if ($status == '3') {
+                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-success">On Delivery</a>';
+                                        }
+                                    ?>
                                         <tr>
                                             <td><?= $i->kddo ?></td>
                                             <td><?= $i->createat ?></td>
@@ -150,8 +160,11 @@
                                             <td><?= $i->rute ?></td>
                                             <td><?= $i->totalbarang ?></td>
                                             <td><?= $i->totalfaktur ?></td>
-                                            <td><?= $i->Status ?></td>
-                                            <td><a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a></td>
+                                            <td><?= $datasts ?></td>
+                                            <td>
+                                                <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
+                                                <a href="<?= base_url('printdo/') . $i->kddo ?>" class="btn btn-sm btn-success btn-block"><i class="fas fa-print"></i></a>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

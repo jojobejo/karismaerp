@@ -966,7 +966,7 @@ class C_Logistik extends CI_Controller
     public function detail_do($kd_do)
     {
         $data['page_title']  = 'KARISMA - LOGISTIK';
-        $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd();
+        // $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd($kd_do);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
