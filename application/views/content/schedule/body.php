@@ -8,8 +8,9 @@
 
         <?php $this->load->view('partial/main/navbar') ?>
         <?php $this->load->view('partial/main/sidebar') ?>
-        <?php $this->load->view('content/schedule/modalschedule.php') ?>
 
+
+        <?php $this->load->view('content/schedule/modalschedule.php') ?>
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <!-- Content Header (Page header) -->
@@ -23,6 +24,8 @@
                 </div><!-- /.container-fluid -->
             </div>
             <!-- /.content-header -->
+
+
             <section class="content">
                 <div class="container-fluid">
                     <div class="card">
@@ -31,9 +34,12 @@
                                 <div class="col ">
                                     <h3 class="">Schedule Direktur</h3>
                                 </div>
-                                <div>
-                                    <a class="btn btn-primary ml-4 text-center" data-toggle="modal" data-target="#addschedule"><i class="fas fa-plus"></i><b style="text-transform: uppercase;"> Add Schedule</b></a>
-                                </div>
+                                <?php if ($this->session->userdata('lv') != '5') : ?>
+                                    <div>
+                                        <a class="btn btn-primary ml-4 text-center" data-toggle="modal" data-target="#addschedule"><i class="fas fa-plus"></i><b style="text-transform: uppercase;"> Add Schedule</b></a>
+                                    </div>
+                                <?php else : ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div class="card-body">
@@ -49,7 +55,10 @@
                                         <td>Tujuan</td>
                                         <td>Status</td>
                                         <td>Keterangan</td>
-                                        <td>#</td>
+                                        <?php if ($this->session->userdata('lv') != '5') : ?>
+                                            <td>#</td>
+                                        <?php else : ?>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -87,18 +96,21 @@
                                                 <?php endif; ?>
                                             </th>
                                             <th><?= $get->keterangan ?></th>
-                                            <th style="width: 13%;text-align: center;">
-                                                <?php if ($status == '1') : ?>
-                                                    <a href="#" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editedschedule<?= $get->id ?>"><i class="fas fa-pencil-alt"></i></a>
-                                                    <a href="#" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#cancelschedule<?= $get->id ?>"><i class="fas fa-times-circle"></i></a>
-                                                    <a href="#" class="btn btn-sm btn-info" data-toggle="modal" data-target="#reschedule<?= $get->id ?>"><i class="fas fa-sync-alt"></i></a>
-                                                    <a href="#" class="btn btn-sm btn-success" data-toggle="modal" data-target="#scheduledone<?= $get->id ?>"><i class="fas fa-check-circle"></i></a>
-                                                <?php elseif ($status == '2') : ?>
-                                                    <a href="#" class="btn btn-sm btn-danger btn-block" data-toggle="modal" data-target="#deleteschedule<?= $get->id ?>"><i class="fas fa-trash-alt"></i></a>
-                                                <?php elseif ($status == '3') : ?>
-                                                    <a href="#" class="btn btn-sm btn-success btn-block" data-toggle="modal" data-target="#archived<?= $get->id ?>"><i class="fas fa-check-circle"></i></a>
-                                                <?php endif; ?>
-                                            </th>
+                                            <?php if ($this->session->userdata('lv') != '5') : ?>
+                                                <th style="width: 13%;text-align: center;">
+                                                    <?php if ($status == '1') : ?>
+                                                        <a href="#" class="btn btn-sm btn-warning" data-toggle="modal" data-target="#editedschedule<?= $get->id ?>"><i class="fas fa-pencil-alt"></i></a>
+                                                        <a href="#" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#cancelschedule<?= $get->id ?>"><i class="fas fa-times-circle"></i></a>
+                                                        <a href="#" class="btn btn-sm btn-info" data-toggle="modal" data-target="#reschedule<?= $get->id ?>"><i class="fas fa-sync-alt"></i></a>
+                                                        <a href="#" class="btn btn-sm btn-success" data-toggle="modal" data-target="#scheduledone<?= $get->id ?>"><i class="fas fa-check-circle"></i></a>
+                                                    <?php elseif ($status == '2') : ?>
+                                                        <a href="#" class="btn btn-sm btn-danger btn-block" data-toggle="modal" data-target="#deleteschedule<?= $get->id ?>"><i class="fas fa-trash-alt"></i></a>
+                                                    <?php elseif ($status == '3') : ?>
+                                                        <a href="#" class="btn btn-sm btn-success btn-block" data-toggle="modal" data-target="#archived<?= $get->id ?>"><i class="fas fa-check-circle"></i></a>
+                                                    <?php endif; ?>
+                                                </th>
+                                            <?php else : ?>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -106,8 +118,9 @@
                         </div>
                     </div>
                 </div>
+            </section>
+
         </div>
-        </section>
     </div>
     <!-- /.content-wrapper -->
     <footer class="main-footer">
