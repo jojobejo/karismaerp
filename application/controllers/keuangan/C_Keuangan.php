@@ -271,8 +271,6 @@ class C_Keuangan extends CI_Controller
 
             $row[] = $field->nmsuplier;
             $row[] = $field->nmbarang;
-            $row[] = $field->satuan;
-            $row[] = $field->qty;
             $row[] = $field->qty_box;
             $row[] = $field->qty_pcs;
 
@@ -289,6 +287,7 @@ class C_Keuangan extends CI_Controller
         echo json_encode($output);
     }
 
+    //  GUDANG KARISMAERP
     public function gudang($id)
     {
         if ($id == '1') {

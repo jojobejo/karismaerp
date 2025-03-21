@@ -5,7 +5,7 @@ class M_Stockbuffer extends CI_Model
 
 {
 
-    var $column_order = array('nmsuplier', 'nmbarang', 'satuan', 'qty');
+    var $column_order = array('kodebarang', 'nmsuplier', 'nmbarang', 'qty_box', 'qty_pcs');
     var $column_search = array('nmsuplier', 'nmbarang');
 
     public function __construct()
