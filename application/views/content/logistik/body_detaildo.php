@@ -1,3 +1,21 @@
+<style>
+    table {
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    th,
+    td {
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .table thead th {
+        background-color: #343a40;
+        color: #fff;
+    }
+</style>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -27,43 +45,66 @@
                             <h3 class="card-title">Rencana Pengiriman Barang</h3>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-striped">
-                                <thead class="thead-dark">
+                            <h2 class="mb-4">Data Kios</h2>
+                            <table class="table table-bordered">
+                                <thead>
                                     <tr>
-                                        <th>No. Loading</th>
-                                        <th>No. SPPB</th>
-                                        <th>Nama</th>
-                                        <th>Kota</th>
-                                        <th>Rute</th>
-                                        <th>TTB No</th>
-                                        <th>TTB Tanggal</th>
-                                        <th>No. Urut</th>
-                                        <th>Nama Barang</th>
-                                        <th>No. LOT</th>
-                                        <th colspan="2">Quantity</th>
+                                        <th rowspan="2">No</th>
+                                        <th colspan="2">Data Kios</th>
+                                        <th rowspan="2">Rute</th>
+                                        <th colspan="2">TTB</th>
+                                        <th rowspan="2">No</th>
+                                        <th rowspan="2">Nama Barang</th>
+                                        <th rowspan="2">No Lot</th>
+                                        <th colspan="2">Qty</th>
                                     </tr>
                                     <tr>
-                                        <th colspan="10"></th>
-                                        <th>Invoice</th>
+                                        <th>Nama Kios</th>
+                                        <th>Regional</th>
+                                        <th>Kode Faktur</th>
+                                        <th>Tgl Input</th>
                                         <th>Besar</th>
                                         <th>Kecil</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>3</td>
-                                        <td>786</td>
-                                        <td>Artha Mandiri - No 087 859 981 870</td>
-                                        <td>Badung</td>
-                                        <td>BLI-1</td>
-                                        <td>B25003206</td>
-                                        <td>11/03/2025</td>
-                                        <td>1</td>
-                                        <td>Round Up 486 SL 12 X 1 ltr</td>
-                                        <td>BP502005-12/2030</td>
-                                        <td>50</td>
-                                        <td>Box</td>
-                                    </tr>
+                                    <?php
+                                    $prev_norut = null;
+                                    $rowspan_count = [];
+                                    $norut_counter = 1;
+
+                                    foreach ($data_list as $row) {
+                                        if (!isset($rowspan_count[$row->kd_faktur])) {
+                                            $rowspan_count[$row->kd_faktur] = 0;
+                                        }
+                                        $rowspan_count[$row->kd_faktur]++;
+                                    }
+
+                                    $printed_faktur = [];
+                                    foreach ($data_list as $row) :
+                                        $show_faktur_info = !in_array($row->kd_faktur, $printed_faktur);
+                                        if ($show_faktur_info) {
+                                            $printed_faktur[] = $row->kd_faktur;
+                                            $norut_counter = 1; // Reset nomor urut untuk faktur baru
+                                        }
+
+                                    ?>
+                                        <tr>
+                                            <?php if ($show_faktur_info) : ?>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->norut ?></td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">JBR1</td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_inputer ?></td>
+                                            <?php endif; ?>
+                                            <td><?= $norut_counter++ ?></td>
+                                            <td><?= $row->nm_barang ?></td>
+                                            <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
+                                            <td>0</td>
+                                            <td><?= $row->qty ?> Btl</td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>

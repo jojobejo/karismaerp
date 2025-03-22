@@ -963,10 +963,36 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    public function detail_do($kd_do)
+    public function detail_dos($kd_do)
     {
         $data['page_title']  = 'KARISMA - LOGISTIK';
         // $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd($kd_do);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/body_detaildo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function detail_do($kd_do)
+    {
+        $query = $this->db->query("
+                SELECT a.norut, d.nama_kios, d.telp1, d.telp2, d.regional, 
+                       a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
+                       a.tgl_exp, a.satuan, 
+                       (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                        AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty
+                FROM tb_detail_do a
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                JOIN tb_pre_do e ON e.kd_faktur = a.kd_faktur
+                WHERE b.kd_do = '$kd_do'
+                GROUP BY a.kd_barang
+                ORDER BY a.norut
+            ", array($kd_do));
+
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['data_list'] = $query->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
