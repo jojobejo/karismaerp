@@ -92,16 +92,17 @@ class C_Keuangan extends CI_Controller
                     'kdupdate'     => $kdupdate,
                     'tgl_inputer'   => $row[0],
                     'kd_faktur'     => $row[1],
-                    'kd_customer'   => $row[2],
-                    'kd_barang'     => $row[3],
-                    'qty'           => $row[4],
-                    'satuan'        => $row[5],
-                    'no_lot'        => $row[6],
-                    'tgl_exp'       => $row[7],
-                    'upload_sts'    => $row[8],
-                    'data_sts'      => $row[9],
-                    'barang_sts'    => $row[10],
-                    'create_at'     => $row[11]
+                    'kd_rute'       => $row[2],
+                    'kd_customer'   => $row[3],
+                    'kd_barang'     => $row[4],
+                    'qty'           => $row[5],
+                    'satuan'        => $row[6],
+                    'no_lot'        => $row[7],
+                    'tgl_exp'       => $row[8],
+                    'upload_sts'    => $row[9],
+                    'data_sts'      => $row[10],
+                    'barang_sts'    => $row[11],
+                    'create_at'     => $row[12]
                 ];
             }
 

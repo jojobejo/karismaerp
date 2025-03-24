@@ -33,7 +33,8 @@
                 <div class="container-fluid">
                     <div class="row">
                         <a href="<?= base_url('logistik') ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
-                        <h3>HALAMAN DETAIL DO</h3>
+                        <!-- <h3>TITLE</h3> -->
+                        <h3></h3>
                     </div>
                 </div>
             </div>
@@ -45,7 +46,15 @@
                             <h3 class="card-title">Rencana Pengiriman Barang</h3>
                         </div>
                         <div class="card-body">
-                            <h2 class="mb-4">Data Kios</h2>
+                            <div class="row mb-4">
+                                <div class="col-auto">
+                                    <h2>Detail Orders</h2>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('') ?>" class="btn btn-warning">Status Order</a>
+                                </div>
+                            </div>
+
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
@@ -57,6 +66,7 @@
                                         <th rowspan="2">Nama Barang</th>
                                         <th rowspan="2">No Lot</th>
                                         <th colspan="2">Qty</th>
+                                        <th rowspan="2">#</th>
                                     </tr>
                                     <tr>
                                         <th>Nama Kios</th>
@@ -87,22 +97,28 @@
                                             $printed_faktur[] = $row->kd_faktur;
                                             $norut_counter = 1; // Reset nomor urut untuk faktur baru
                                         }
-
                                     ?>
                                         <tr>
                                             <?php if ($show_faktur_info) : ?>
                                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->norut ?></td>
                                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
-                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">JBR1</td>
+                                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_inputer ?></td>
                                             <?php endif; ?>
                                             <td><?= $norut_counter++ ?></td>
                                             <td><?= $row->nm_barang ?></td>
                                             <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
-                                            <td>0</td>
-                                            <td><?= $row->qty ?> Btl</td>
+                                            <td><?= $row->qty_box ?></td>
+                                            <td><?= $row->qty_pcs ?></td>
+                                            <?php if ($row->status == '1') : ?>
+                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-warning"><i class="far fa-circle"></i></a></td>
+                                            <?php elseif ($row->status == '2') : ?>
+                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-success"><i class="fas fa-check-circle"></i></a></td>
+                                            <?php else : ?>
+                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-danger"><i class="fas fa-times-circle"></i></a></td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

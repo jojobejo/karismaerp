@@ -975,12 +975,18 @@ class C_Logistik extends CI_Controller
 
     public function detail_do($kd_do)
     {
-        $query = $this->db->query("
-                SELECT a.norut, d.nama_kios, d.telp1, d.telp2, d.regional, 
-                       a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
-                       a.tgl_exp, a.satuan, 
-                       (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                        AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty
+        $query = $this->db->query("SELECT 
+				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
+                a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
+                a.tgl_exp, a.satuan, a.status,
+                (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
+                (c.p*c.l*c.t) AS dimensi,
+                FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)) AS qty_box,
+                ((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
@@ -989,6 +995,7 @@ class C_Logistik extends CI_Controller
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang
                 ORDER BY a.norut
+
             ", array($kd_do));
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
@@ -1031,8 +1038,10 @@ class C_Logistik extends CI_Controller
                     if ($det_pre_do) {
                         foreach ($det_pre_do as $det) {
                             $tmp_det_do  = array(
+                                'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
                                 'kd_faktur'     => $det->kd_faktur,
+                                'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
                                 'qty'           => $det->qty,
@@ -1046,6 +1055,7 @@ class C_Logistik extends CI_Controller
                     }
 
                     $datainsert = array(
+                        'norut_do'   => 0,
                         'kd_do'      => $kddo,
                         'kd_faktur'  => $kdfaktur,
                         'input_at'   => $now
@@ -1082,6 +1092,7 @@ class C_Logistik extends CI_Controller
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
                                 'kd_faktur'     => $det->kd_faktur,
+                                'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
                                 'qty'           => $det->qty,
@@ -1181,6 +1192,7 @@ class C_Logistik extends CI_Controller
             'driver' => $driver,
             'tgl_pengiriman' => $tgldeliv,
             'tgl_create' => $now,
+            'status'    => '1'
         );
 
         $this->M_Logistik->insert_do($datado);
@@ -1200,6 +1212,7 @@ class C_Logistik extends CI_Controller
                     'id_pre_do'     => $tmp->id_pre_do,
                     'kd_do'         => $kd_do,
                     'kd_faktur'     => $tmp->kd_faktur,
+                    'kd_rute'       => $tmp->kd_rute,
                     'kd_customer'   => $tmp->kd_customer,
                     'kd_barang'     => $tmp->kd_barang,
                     'qty'           => $tmp->qty,
@@ -1207,6 +1220,7 @@ class C_Logistik extends CI_Controller
                     'no_lot'        => $tmp->no_lot,
                     'tgl_exp'       => $tmp->tgl_exp,
                     'norut'         => $norut,
+                    'status'        => '1',
                     'create_at'     => $tmp->create_at
                 );
 

@@ -161,6 +161,7 @@
                                         <td>NAMA CUSTOMER</td>
                                         <td>KIOS</td>
                                         <td>ALAMAT KIOS</td>
+                                        <td>RUTE</td>
                                         <td>REGIONAL</td>
                                         <td>ITEM</td>
                                         <td>Status</td>
@@ -176,6 +177,7 @@
                                             <td><?= $l->nama_customer ?></td>
                                             <td><?= $l->nama_kios ?></td>
                                             <td><?= $l->alamat_kios ?></td>
+                                            <td><?= $l->kd_rute ?></td>
                                             <td><?= $l->regional ?></td>
                                             <td><?= $l->total_barang ?></td>
                                             <?php if ($status == 1) : ?>

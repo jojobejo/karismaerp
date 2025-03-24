@@ -326,10 +326,12 @@ class M_Logistik extends CI_Model
         $this->db->where('id_lap_dis', $id);
         return $this->db->update('tb_tmp_lap_distribusi', $data);
     }
+
     public function delete_tmp_lap_dis($id)
     {
         return $this->db->delete('tb_tmp_lap_distribusi', array('id_lap_dis' => $id));
     }
+
     public function get_grouped_regions()
     {
         $this->db->select('nama_regional, GROUP_CONCAT(id SEPARATOR ",") as ids');
@@ -380,11 +382,14 @@ class M_Logistik extends CI_Model
             b.nama_kios,
             b.alamat_kios,
             b.regional,
+            a.kd_rute,
+            c.keterangan AS keterangan_rute,
             COUNT(a.kd_barang) AS total_barang,
-            a.data_sts
+            a.data_sts 
         ');
         $this->db->from('tb_pre_do a');
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
+        $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
         $this->db->where('a.data_sts !=', 3);
         $this->db->group_by('a.kd_faktur');
         $query = $this->db->get();
