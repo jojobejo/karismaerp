@@ -509,12 +509,25 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
         ");
     }
-    public function getlistfaktur_bykd($kd)
+
+    public function update_sts_detail_checker($data, $id)
     {
-        return $this->db->query("
-        
-        ")->result();
+        $this->db->where('id', $id);
+        return $this->db->update('tb_detail_do', $data);
     }
+
+    public function update_checker_detail_done($kd, $sts, $data)
+    {
+        $this->db->where('kd_do', $kd);
+        $this->db->where('status', $sts);
+        return $this->db->update('tb_detail_do', $data);
+    }
+    public function update_checker_done($kd, $data)
+    {
+        $this->db->where('kd_do', $kd);
+        return $this->db->update('tb_do', $data);
+    }
+
     public function getdo()
     {
         return $this->db->query("SELECT 

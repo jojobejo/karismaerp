@@ -55,7 +55,7 @@
                                 </div>
                             </div>
 
-                            <table class="table table-bordered">
+                            <table class="table table-bordered" id="tb_checker_do">
                                 <thead>
                                     <tr>
                                         <th rowspan="2">No</th>
@@ -66,6 +66,7 @@
                                         <th rowspan="2">Nama Barang</th>
                                         <th rowspan="2">No Lot</th>
                                         <th colspan="2">Qty</th>
+                                        <th rowspan="2">Status</th>
                                         <th rowspan="2">#</th>
                                     </tr>
                                     <tr>
@@ -112,17 +113,38 @@
                                             <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
                                             <td><?= $row->qty_box ?></td>
                                             <td><?= $row->qty_pcs ?></td>
-                                            <?php if ($row->status == '1') : ?>
-                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-warning"><i class="far fa-circle"></i></a></td>
-                                            <?php elseif ($row->status == '2') : ?>
-                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-success"><i class="fas fa-check-circle"></i></a></td>
-                                            <?php else : ?>
-                                                <td><a href="<?= base_url('acc_check/' . $row->id) ?>" class="btn btn-danger"><i class="fas fa-times-circle"></i></a></td>
+
+                                            <?php if ($row->status == '2') : ?>
+                                                <td><a href="#" class="btn btn-sm btn-block btn-success"></a></td>
+                                            <?php elseif ($row->status == '3') : ?>
+                                                <td><a href="#" class="btn btn-sm btn-block btn-danger"></a></td>
+                                            <?php elseif ($row->status == '1') : ?>
+                                                <td><a href="#" class="btn btn-sm btn-block btn-warning"></a></td>
+                                            <?php endif; ?>
+
+                                            <?php if ($row->status == '2') : ?>
+                                                <td>
+                                                    <a href="#" class="btn btn-info"><i class="fas fa-thumbs-up"></i></a>
+                                                    <a href="<?= base_url('acc_check/' . $row->id . '/' . "3" . '/' . $row->kd_do) ?>" class="btn btn-warning"><i class="fas fa-undo"></i></a>
+                                                </td>
+                                            <?php elseif ($row->status == "3") : ?>
+                                                <td>
+                                                    <a href="#" class="btn btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                    <a href="<?= base_url('acc_check/' . $row->id . '/' . "3" . '/' . $row->kd_do) ?>" class="btn btn-warning"><i class="fas fa-undo"></i></a>
+                                                </td>
+                                            <?php elseif ($row->status == "1") : ?>
+                                                <td>
+                                                    <a href="<?= base_url('acc_check/' . $row->id . '/' . "1" . '/' . $row->kd_do) ?>" class="btn btn-success"><i class="fas fa-check-circle"></i></a>
+                                                    <a href="<?= base_url('acc_check/' . $row->id . '/' . "2" . '/' . $row->kd_do) ?>" class="btn btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                </td>
                                             <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                            <?php foreach ($kdo as $k) : ?>
+                                <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Rekam Order / Print Order</a>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>

@@ -89,6 +89,8 @@ $route['revert_do/(:any)/(:any)']            = 'logistik/C_Logistik/revert_do/$1
 $route['detail_fk/(:any)']                   = 'logistik/C_Logistik/detail_fk/$1';
 
 $route['detail_do/(:any)']                   = 'logistik/C_Logistik/detail_do/$1';
+$route['acc_check/(:any)/(:any)/(:any)']     = 'logistik/C_Logistik/acc_check/$1/$2/$3';
+$route['rekam_order_check/(:any)']           = 'logistik/C_Logistik/rekam_order_check/$1';
 
 $route['print_do/(:any)']                    = 'logistik/C_Logistik/print_do';
 

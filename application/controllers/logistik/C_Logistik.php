@@ -978,7 +978,7 @@ class C_Logistik extends CI_Controller
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
                 a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
-                a.tgl_exp, a.satuan, a.status,
+                a.tgl_exp, a.satuan, a.status, a.kd_do,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
                 (c.p*c.l*c.t) AS dimensi,
@@ -999,12 +999,59 @@ class C_Logistik extends CI_Controller
             ", array($kd_do));
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
+        $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $data['kdo'] = $query1->result();
         $data['data_list'] = $query->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function acc_check($id, $action, $kd)
+    {
+        switch ($action) {
+
+            case '1':
+                $update_sts = array(
+                    'status'    => '2'
+                );
+                $this->M_Logistik->update_sts_detail_checker($update_sts, $id);
+                redirect('detail_do/' . $kd);
+                break;
+
+            case '2':
+                $update_sts = array(
+                    'status'    => '3'
+                );
+                $this->M_Logistik->update_sts_detail_checker($update_sts, $id);
+                redirect('detail_do/' . $kd);
+                break;
+            case '3':
+                $update_sts = array(
+                    'status'    => '1   '
+                );
+                $this->M_Logistik->update_sts_detail_checker($update_sts, $id);
+                redirect('detail_do/' . $kd);
+                break;
+        }
+    }
+
+    public function rekam_order_check($kd)
+    {
+        $dataupdated_do = [
+            'status' => 2
+        ];
+        $dataupdateddetail_do = [
+            'dt_status' => 1,
+            'status'    => 4
+        ];
+        $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
+        $this->M_Logistik->update_checker_detail_done($kd, 2, $dataupdateddetail_do);
+
+        redirect('detail_do/' . $kd);
+    }
+
 
     public function get_driver()
     {
