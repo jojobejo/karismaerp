@@ -993,9 +993,8 @@ class C_Logistik extends CI_Controller
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 JOIN tb_pre_do e ON e.kd_faktur = a.kd_faktur
                 WHERE b.kd_do = '$kd_do'
-                GROUP BY a.kd_barang
+                GROUP BY a.kd_barang , a.no_lot
                 ORDER BY a.norut
-
             ", array($kd_do));
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
@@ -1267,6 +1266,7 @@ class C_Logistik extends CI_Controller
                     'no_lot'        => $tmp->no_lot,
                     'tgl_exp'       => $tmp->tgl_exp,
                     'norut'         => $norut,
+                    'dt_status'     => '1',
                     'status'        => '1',
                     'create_at'     => $tmp->create_at
                 );

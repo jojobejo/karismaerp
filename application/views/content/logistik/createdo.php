@@ -157,6 +157,7 @@
                             <table id="dailyod" class="table table-bordered table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
+                                        <td>TANGGAL TRANSAKSI</td>
                                         <td>FAKTUR</td>
                                         <td>NAMA CUSTOMER</td>
                                         <td>KIOS</td>
@@ -173,6 +174,7 @@
                                         $status = $l->data_sts;
                                     ?>
                                         <tr>
+                                            <td><?= $l->tgl_inputer ?></td>
                                             <td><?= $l->kd_faktur ?></td>
                                             <td><?= $l->nama_customer ?></td>
                                             <td><?= $l->nama_kios ?></td>

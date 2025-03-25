@@ -15,53 +15,31 @@
 
             <div class="content-header">
                 <div class="container-fluid">
-                    <h3>Dashboard Delivery Order</h3>
-                    <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
-                    <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
+                    <div class="row">
+                        <div class="col-auto ml-2">
+                            <h3>Dashboard Delivery Order || </h3>
+                        </div>
+                        <div class="col-auto">
+                            <h3>Last Updated : -</h3>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="https://10.10.10.12/Zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">Ambil Data Penjualan</a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
             <section class="content">
                 <div class="container-fluid">
-                    <div class="card">
-                        <div class="card-body">
-                            <table id="tbDashboardLogistik" class="table table-bordered table-striped">
-                                <h3>Info Data Update</h3>
-                                <thead style="background-color: #212529; color:white;">
-                                    <tr>
-                                        <th>Data Olah</th>
-                                        <th>Keterangan</th>
-                                        <th>Last Updated</th>
-                                        <th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($updated as $u) :
-                                        $infoupdt   = $u->gudangid;
-                                        if ($infoupdt == '6') {
-                                            $info = "Delivery Order";
-                                            if ($u->statusdata == 1) {
-                                                $statusdata = 'DO Update PAGI';
-                                            } else {
-                                                $statusdata = 'DO Update SORE';
-                                            }
-                                        } else {
-                                        }
-                                    ?>
-                                        <tr>
-                                            <td><?= $info ?></td>
-                                            <td><?= $statusdata ?></td>
-                                            <td><?= format_indo($u->last_update) ?></td>
-                                            <td><a href="<?= base_url('truncatelog/') . $u->kd_update . '/' . $u->statusdata ?>" class="btn btn-block btn-sm btn-danger"><i class="fas fa-trash"></i></a></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <!-- <h3>List Faktur Penjualan</h3>
-                            <h3>Faktur ON PROGRESS</h3>
-                            <h3>Faktur DONE</h3> -->
-                        </div>
-                    </div>
                     <div class="card">
                         <div class="card-body">
                             <table id="tbDashboardLogistik" class="table table-bordered table-striped">

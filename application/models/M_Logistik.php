@@ -377,6 +377,7 @@ class M_Logistik extends CI_Model
         //     ) AS x
 
         $this->db->select('
+            a.tgl_inputer,
             a.kd_faktur,
             b.nama_customer,
             b.nama_kios,
@@ -390,7 +391,7 @@ class M_Logistik extends CI_Model
         $this->db->from('tb_pre_do a');
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-        $this->db->where('a.data_sts !=', 3);
+        $this->db->where('a.data_sts =', 1);
         $this->db->group_by('a.kd_faktur');
         $query = $this->db->get();
         return $query->result();
