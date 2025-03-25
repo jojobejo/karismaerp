@@ -38,7 +38,6 @@
                     </div>
                 </div>
             </div>
-
             <section class="content">
                 <div class="container-fluid">
                     <div class="card">
@@ -51,7 +50,7 @@
                                     <h2>Detail Orders</h2>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="<?= base_url('') ?>" class="btn btn-warning">Status Order</a>
+                                    <a href="#" class="btn btn-warning">Status Order</a>
                                 </div>
                             </div>
 
