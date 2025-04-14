@@ -999,7 +999,9 @@ class C_Logistik extends CI_Controller
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
         $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
         $data['kdo'] = $query1->result();
+        $data['dostatus'] = $query2->result();
         $data['data_list'] = $query->result();
 
         $this->load->view('partial/main/header.php', $data);

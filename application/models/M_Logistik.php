@@ -599,6 +599,7 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
+
     public function det_customer($kd)
     {
         return $this->db->query("SELECT
