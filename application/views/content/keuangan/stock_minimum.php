@@ -73,6 +73,8 @@
                                             <td>Satuan</td>
                                             <td>Stock</td>
                                             <td>Minimum</td>
+                                            <td>Minimum Box</td>
+                                            <td>Minimum Pcs</td>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -83,6 +85,8 @@
                                                 <td><?= $s->satuan ?></td>
                                                 <td><?= $s->qty ?></td>
                                                 <td><?= $s->qty_min ?></td>
+                                                <td><?= $s->qty_box ?></td>
+                                                <td><?= $s->qty_pcs ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

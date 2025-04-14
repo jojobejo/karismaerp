@@ -143,14 +143,18 @@ class M_Keuangan extends CI_Model
     }
     public function get_stock_global()
     {
-        $this->db->select('b.nama_suplier AS nmsuplier, c.nm_barang AS nmbarang, c.satuan AS satuan, a.qty AS qty, c.qty_min AS qty_min');
-        $this->db->from('tb_dailystock_global a');
-        $this->db->join('tb_suplier b', 'b.kd_suplier = a.kd_suplier');
-        $this->db->join('tb_master_barang c', 'c.kode_barang = a.kd_barang');
-        $this->db->where('a.qty < c.qty_min');
-        $this->db->group_by('c.nm_barang');
-        $query = $this->db->get();
-        return $query->result();
+        return $this->db->query("SELECT 
+        b.nama_suplier AS nmsuplier, 
+        c.nm_barang AS nmbarang, 
+        c.satuan AS satuan, 
+        a.qty AS qty, 
+        c.qty_min AS qty_min,
+        round(c.qty_min / (c.p*c.l*c.t)) AS qty_box,
+        c.qty_min - ((round(c.qty_min / (c.p*c.l*c.t)) * (c.p*c.l*c.t))) AS qty_pcs
+        FROM tb_dailystock_global a
+        JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
+        JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+        WHERE a.qty < c.qty_min")->result();
     }
     public function get_stockmin_gdg($gdg)
     {
