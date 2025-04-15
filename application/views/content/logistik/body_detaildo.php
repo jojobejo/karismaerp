@@ -39,6 +39,7 @@
                         </div>
                     </div>
                 </div>
+
                 <section class="content">
                     <div class="container-fluid">
                         <div class="card">
@@ -51,13 +52,17 @@
                                         <h2>Detail Orders</h2>
                                     </div>
                                     <div class="col-auto">
-                                        <a href="#" class="btn btn-warning">Status Order</a>
+                                        <?php if ($d->status == '1') : ?>
+                                            <a href="#" class="btn btn-warning">ON PROGRESS</a>
+                                        <?php elseif ($d->status == '2') : ?>
+                                            <a href="#" class="btn btn-info">DONE</a>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <table class="table table-bordered" id="tb_checker_do">
                                     <thead>
                                         <tr>
-                                            <th rowspan="2">No</th>
+                                            <th rowspan="2">#</th>
                                             <th colspan="2">Data Kios</th>
                                             <th rowspan="2">Rute</th>
                                             <th colspan="2">TTB</th>
@@ -98,12 +103,16 @@
                                             $show_faktur_info = !in_array($row->kd_faktur, $printed_faktur);
                                             if ($show_faktur_info) {
                                                 $printed_faktur[] = $row->kd_faktur;
-                                                $norut_counter = 1; // Reset nomor urut untuk faktur baru
+                                                $norut_counter = 1;
                                             }
                                         ?>
                                             <tr>
                                                 <?php if ($show_faktur_info) : ?>
-                                                    <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->norut ?></td>
+                                                    <?php if ($d->status == '1') : ?>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="<?= base_url('cancel_fk/' . $row->kd_faktur) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a></td>
+                                                    <?php elseif ($d->status == '2') : ?>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="#" class="btn btn-sm btn-block btn-success"><i class="fas fa-thumbs-up"></i></a></td>
+                                                    <?php endif; ?>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
@@ -125,7 +134,6 @@
                                                     <?php endif; ?>
                                                 <?php elseif ($d->status == '2') : ?>
                                                 <?php endif; ?>
-
 
                                                 <?php if ($d->status == '1') : ?>
                                                     <?php if ($row->status == '2') : ?>
@@ -151,8 +159,16 @@
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                                <?php foreach ($kdo as $k) : ?>
-                                    <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Rekam Order / Print Order</a>
+                                <?php foreach ($doprintsts as $ds) : ?>
+                                    <?php if ($ds->status == '2') : ?>
+                                        <?php foreach ($kdo as $k) : ?>
+                                            <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Print Order</a>
+                                        <?php endforeach; ?>
+                                    <?php else : ?>
+                                        <?php foreach ($kdo as $k) : ?>
+                                            <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Rekam Order</a>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </div>
                         </div>

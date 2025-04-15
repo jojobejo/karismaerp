@@ -60,13 +60,12 @@
                                 <tbody>
                                     <?php foreach ($listdo as $i) :
                                         $status = $i->status;
-
                                         if ($status == '1') {
-                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-warning">On Progress Check</a>';
+                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-warning btn-block">On Progress Check</a></div>';
                                         } else if ($status == '2') {
-                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-info">Checker Done</a>';
+                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-info btn-block">Checker Done</a></div>';
                                         } else if ($status == '3') {
-                                            $datasts = '<a href="#" class="btn btn-sm btn-block btn-success">On Delivery</a>';
+                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Delivery</a></div>';
                                         }
                                     ?>
                                         <tr>
@@ -77,11 +76,25 @@
                                             <td><?= $i->rute ?></td>
                                             <td><?= $i->totalfaktur ?></td>
                                             <td><?= $i->totalbarang ?></td>
-                                            <td><?= $datasts ?></td>
                                             <td>
-                                                <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
-                                                <a href="<?= base_url('printdo/') . $i->kddo ?>" class="btn btn-sm btn-success btn-block"><i class="fas fa-print"></i></a>
+                                                <?= $datasts ?>
                                             </td>
+                                            <?php if ($i->status == '1') : ?>
+                                                <td>
+                                                    <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
+                                                </td>
+                                            <?php elseif ($i->status == '2') : ?>
+                                                <td>
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
+                                                        </div>
+                                                        <div class="col">
+                                                            <a href="<?= base_url('printdo/') . $i->kddo ?>" class="btn btn-sm btn-success btn-block"><i class="fas fa-print"></i></a>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

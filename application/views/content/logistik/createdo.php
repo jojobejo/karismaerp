@@ -66,7 +66,7 @@
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
-                                        <td style="width: 5%;">No</td>
+                                        <!-- <td style="width: 5%;">No</td> -->
                                         <td>Faktur</td>
                                         <td>Nama</td>
                                         <td>Alamat</td>
@@ -103,7 +103,7 @@
                                         } ?>
 
                                         <tr data-id="<?= $tmp->id ?>">
-                                            <td><?= $tmp->norut_do ?></td>
+                                            <!-- <td><?= $tmp->norut_do ?></td> -->
                                             <td><?= $tmp->kd_faktur ?></td>
                                             <td><?= $tmp->nama_customer ?></td>
                                             <td><?= $tmp->alamat_kios ?></td>
@@ -119,11 +119,11 @@
                                                     <div class="col p-">
                                                         <a href="<?= base_url('revert_do/') . $tmp->kd_faktur . '/' . 'formlist' ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
                                                     </div>
-                                                    <div class="col p-0">
+                                                    <!-- <div class="col p-0">
                                                         <button class="btn btn-info btn-block btn-nurut" data-id="<?= $tmp->id ?>">
                                                             <i class=" fas fa-sort-amount-down-alt"></i>
                                                         </button>
-                                                    </div>
+                                                    </div> -->
                                                 </div>
                                             </td>
                                         </tr>

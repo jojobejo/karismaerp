@@ -963,15 +963,15 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    public function detail_dos($kd_do)
-    {
-        $data['page_title']  = 'KARISMA - LOGISTIK';
-        // $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd($kd_do);
+    // public function detail_dos($kd_do)
+    // {
+    //     $data['page_title']  = 'KARISMA - LOGISTIK';
+    //     // $data['faktur_list'] = $this->M_Logistik->getlistfaktur_bykd($kd_do);
 
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/body_detaildo.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
+    //     $this->load->view('partial/main/header.php', $data);
+    //     $this->load->view('content/logistik/body_detaildo.php', $data);
+    //     $this->load->view('partial/main/footer.php');
+    // }
 
     public function detail_do($kd_do)
     {
@@ -997,12 +997,15 @@ class C_Logistik extends CI_Controller
                 ORDER BY a.norut
             ", array($kd_do));
 
+        $querysts = $this->db->query("SELECT a.* FROM tb_do a where a.kd_do = '$kd_do'")->result();
+
         $data['page_title']  = 'KARISMA - LOGISTIK';
         $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
         $data['kdo'] = $query1->result();
         $data['dostatus'] = $query2->result();
         $data['data_list'] = $query->result();
+        $data['doprintsts'] = $querysts;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
@@ -1103,7 +1106,6 @@ class C_Logistik extends CI_Controller
                     }
 
                     $datainsert = array(
-                        'norut_do'   => 0,
                         'kd_do'      => $kddo,
                         'kd_faktur'  => $kdfaktur,
                         'input_at'   => $now
@@ -1157,7 +1159,6 @@ class C_Logistik extends CI_Controller
                         }
 
                         $datainsert = array(
-                            'norut_do'   => 0,
                             'kd_do'      => $kddo,
                             'kd_faktur'  => $kdfaktur,
                             'input_at'   => $now
