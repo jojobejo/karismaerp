@@ -282,6 +282,7 @@ class M_Keuangan extends CI_Model
             WHERE b.kd_system = '$kd'
             GROUP BY a.no_lot , a.exp_date
         )AS x
+        WHERE x.qty_lot > '0'; 
         ")->result();
     }
 

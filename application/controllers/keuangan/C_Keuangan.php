@@ -48,8 +48,6 @@ class C_Keuangan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-
-
     public function import()
     {
         $session    = $this->session->userdata('jobdesk');
