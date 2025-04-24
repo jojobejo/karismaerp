@@ -92,7 +92,7 @@ $route['detail_do/(:any)']                   = 'logistik/C_Logistik/detail_do/$1
 $route['acc_check/(:any)/(:any)/(:any)']     = 'logistik/C_Logistik/acc_check/$1/$2/$3';
 $route['rekam_order_check/(:any)']           = 'logistik/C_Logistik/rekam_order_check/$1';
 
-$route['print_do/(:any)']                    = 'logistik/C_Logistik/print_do';
+$route['print_do/(:any)']                    = 'logistik/C_Logistik/print_do/$1';
 
 $route['pnd_br_detpo/(:any)/(:any)/(:any)']  = 'logistik/C_Logistik/pnd_br_detpo/$1/$2/$3';
 

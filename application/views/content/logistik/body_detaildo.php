@@ -29,6 +29,7 @@
 
         <!-- Content Wrapper. Contains page content -->
         <?php foreach ($dostatus as $d) : ?>
+
             <div class="content-wrapper">
                 <div class="content-header">
                     <div class="container-fluid">
@@ -162,7 +163,7 @@
                                 <?php foreach ($doprintsts as $ds) : ?>
                                     <?php if ($ds->status == '2') : ?>
                                         <?php foreach ($kdo as $k) : ?>
-                                            <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Print Order</a>
+                                            <a href="<?= base_url('print_do/' . $k->kd_do) ?>" target="_blank" class="btn btn-success btn-block mt-3 mb3">Print Order</a>
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <?php foreach ($kdo as $k) : ?>

@@ -1056,6 +1056,44 @@ class C_Logistik extends CI_Controller
         redirect('detail_do/' . $kd);
     }
 
+    public function print_do($kd_do)
+    {
+        $query = $this->db->query("SELECT 
+				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
+                a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
+                a.tgl_exp, a.satuan, a.status, a.kd_do,
+                (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
+                (c.p*c.l*c.t) AS dimensi,
+                FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)) AS qty_box,
+                ((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
+                FROM tb_detail_do a
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                JOIN tb_pre_do e ON e.kd_faktur = a.kd_faktur
+                WHERE b.kd_do = '$kd_do'
+                GROUP BY a.kd_barang , a.no_lot
+                ORDER BY a.norut
+            ", array($kd_do));
+
+        $querysts = $this->db->query("SELECT a.* FROM tb_do a where a.kd_do = '$kd_do'")->result();
+
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $data['kdo'] = $query1->result();
+        $data['dostatus'] = $query2->result();
+        $data['data_list'] = $query->result();
+        $data['doprintsts'] = $querysts;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/printout_do.php', $data);
+        $this->load->view('partial/main/footerprint.php');
+    }
 
     public function get_driver()
     {
