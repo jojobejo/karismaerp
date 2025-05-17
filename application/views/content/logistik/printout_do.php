@@ -45,6 +45,11 @@
     .info-faktur div {
         margin-bottom: 5px;
     }
+
+    .wrap-text {
+        white-space: normal !important;
+        text-align: left;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -52,17 +57,22 @@
         <?php foreach ($dostatus as $d) : ?>
             <div class="header-title">FAKTUR DELIVERY ORDER</div>
             <div class="info-faktur">
-                <?php foreach ($doprintsts as $print) : ?>
+                <?php foreach ($doprintsts as $print) :
+                    $tonase = ($print->total_tonase_faktur / 1000);
+                ?>
                     <div>Nama Driver : <?= $print->driver ?></div>
                     <div>No Polisi : <?= $print->nolambung ?></div>
-                    <div>Tgl. Pengiriman : <?= format_indo($print->tgl_pengiriman) ?></div>
+                    <div>Regional : <?= format_indo($print->tgl_pengiriman) ?></div>
+                    <div>Total Customer :<?= $print->totalfaktur ?> </div>
+                    <div>Total Barang : <?= $print->total_barang ?></div>
+                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) ' . '||' . ' ' . $tonase . ' (Ton)' ?></div>
                 <?php endforeach; ?>
             </div>
 
             <table class="table table-bordered" id="tb_checker_do">
                 <thead>
                     <tr>
-                        <th colspan="2">Data Kios</th>
+                        <th colspan="3">Data Kios</th>
                         <th rowspan="2">Rute</th>
                         <th colspan="2">TTB</th>
                         <th rowspan="2">No</th>
@@ -77,7 +87,8 @@
                     </tr>
                     <tr>
                         <th>Nama Kios</th>
-                        <th>Regional</th>
+                        <th>Jam Buka - Tutup</th>
+                        <th class="wrap-text">Karakteristik</th>
                         <th>Kode Faktur</th>
                         <th>Tgl Input</th>
                         <th>Besar</th>
@@ -104,12 +115,25 @@
                             $printed_faktur[] = $row->kd_faktur;
                             $norut_counter = 0;
                         }
+
+                        if ($row->karakteristik_kios == '') {
+                            $karakteristik_kios = '-';
+                        } else {
+                            $karakteristik_kios = $row->karakteristik_kios;
+                        }
+
+                        if ($row->jam_buka_tutup == '') {
+                            $jambukatutup = '-';
+                        } else {
+                            $jambukatutup = $row->jam_buka_tutup;
+                        }
                     ?>
                         <tr>
-                            <?php if ($show_faktur_info) : ?>
-
+                            <?php if ($show_faktur_info) :
+                            ?>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
+                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $jambukatutup ?></td>
+                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="wrap-text"><?= $karakteristik_kios ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_inputer ?></td>

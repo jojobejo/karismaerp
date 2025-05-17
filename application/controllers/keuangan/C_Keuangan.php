@@ -80,6 +80,7 @@ class C_Keuangan extends CI_Controller
                 $this->session->set_flashdata('message', 'Failed to import data.');
             }
             redirect('insertmodule');
+            
         } elseif ($session == 'LOGISTIK') {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
             fgetcsv($file_data);

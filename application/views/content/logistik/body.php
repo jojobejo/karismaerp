@@ -15,6 +15,7 @@
 
             <div class="content-header">
                 <div class="container-fluid">
+
                     <div class="row">
                         <div class="col-auto ml-2">
                             <h3>Dashboard Delivery Order || </h3>
@@ -23,12 +24,14 @@
                             <h3>Last Updated : -</h3>
                         </div>
                     </div>
+
                     <div class="row">
                         <div class="col-auto">
                             <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
                         </div>
                         <div class="col-auto">
-                            <a href="https://10.10.10.12/Zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">Ambil Data Penjualan</a>
+                            <!-- <a href="https://10.10.10.12/Zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">Ambil Data Penjualan(TODAY)</a> -->
+                            <a href="https://10.10.10.12/zahirdigital/keuangan/export_do_cb.php" class="btn btn-info mb-2">Ambil Data Penjualan(TODAY)</a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>

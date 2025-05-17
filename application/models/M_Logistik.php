@@ -454,9 +454,19 @@ class M_Logistik extends CI_Model
         return $this->db->update('tb_pre_do', $data);
     }
 
+    public function edit_faktur_customer($kd, $data)
+    {
+        $this->db->where('kd_faktur', $kd);
+        return $this->db->update('tb_pre_do', $data);
+    }
+
     public function deletetmp_detdo($kd)
     {
         return $this->db->delete('tb_tmp_do', array("kd_do" => $kd));
+    }
+    public function delete_faktur_cus($kd)
+    {
+        return $this->db->delete('tb_detail_do', array("kd_faktur" => $kd));
     }
 
     public function deletetmp_do($kd)
@@ -532,15 +542,23 @@ class M_Logistik extends CI_Model
     public function getdo()
     {
         return $this->db->query("SELECT 
-            a.kd_do AS kddo,
-            a.tgl_create AS createat,
-            a.tgl_pengiriman AS tglkirim,
-            a.nolambung AS nopol,
-            a.regional AS rute,
-            (SELECT COUNT(*) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalbarang,
-            (SELECT COUNT(DISTINCT kd_faktur) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalfaktur,
-            a.status as status
-            FROM tb_do a;
+        a.kd_do AS kddo,
+        a.tgl_create AS createat,
+        a.tgl_pengiriman AS tglkirim,
+        a.nolambung AS nopol,
+        a.regional AS rute,
+        (
+            SELECT COUNT(DISTINCT kd_barang) 
+            FROM tb_detail_do 
+            WHERE kd_do = a.kd_do
+        ) AS totalbarang,
+        (
+            SELECT COUNT(DISTINCT kd_faktur) 
+            FROM tb_detail_do 
+            WHERE kd_do = a.kd_do
+        ) AS totalfaktur,
+        a.status AS status
+        FROM tb_do a
         ")->result();
     }
 

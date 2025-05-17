@@ -60,6 +60,32 @@
                                         <?php endif; ?>
                                     </div>
                                 </div>
+
+                                <?php foreach ($kdo as $k) :
+                                    $totton = $k->total_tonase_faktur / 1000;
+                                ?>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
+                                        <div>: <?= $k->kd_do ?></div>
+                                    </div>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Regional Pengiriman</div>
+                                        <div>: <?= $k->regional ?></div>
+                                    </div>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Customer</div>
+                                        <div>: <?= $k->totalfaktur ?></div>
+                                    </div>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Barang</div>
+                                        <div>: <?= $k->total_barang ?></div>
+                                    </div>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Tonase</div>
+                                        <div>: <?= $k->total_tonase_faktur . ' (Kg)' . ' ' . '||' . ' ' . $totton . ' ' . '(Ton)' ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+
                                 <table class="table table-bordered" id="tb_checker_do">
                                     <thead>
                                         <tr>
@@ -110,7 +136,7 @@
                                             <tr>
                                                 <?php if ($show_faktur_info) : ?>
                                                     <?php if ($d->status == '1') : ?>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="<?= base_url('cancel_fk/' . $row->kd_faktur) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a></td>
                                                     <?php elseif ($d->status == '2') : ?>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="#" class="btn btn-sm btn-block btn-success"><i class="fas fa-thumbs-up"></i></a></td>
                                                     <?php endif; ?>
