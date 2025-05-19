@@ -316,4 +316,35 @@ class M_Keuangan extends CI_Model
         LIMIT 1
         ")->result();
     }
+    public function get_by_faktur_barang($kd_faktur, $kd_barang, $kodelot)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->where('kd_barang', $kd_barang)
+            ->where('no_lot', $kodelot) 
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('tb_pre_do')
+            ->row();
+    }
+
+    public function update_by_faktur($kd_faktur, $kd_barang, $data)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->where('kd_barang', $kd_barang)
+            ->update('tb_pre_do', $data);
+    }
+
+    public function insert($data)
+    {
+        return $this->db->insert('tb_pre_do', $data);
+    }
+
+    public function insert_batch_pre_do($data)
+    {
+        if (!empty($data)) {
+            $this->db->insert_batch('tb_pre_do', $data);
+        }
+    }
 }

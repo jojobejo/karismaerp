@@ -81,7 +81,7 @@ $route['pagination']                        = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
 //LOGISTIK - DO
-$route['logistik']                           = 'logistik/C_Logistik/csv_import';
+$route['logistik']                           = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                    = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                          = 'logistik/C_Logistik/create_do';
 $route['insert_tmp/(:any)/(:any)']           = 'logistik/C_Logistik/insert_tmp/$1/$2';
@@ -109,6 +109,9 @@ $route['save_do']                            = 'logistik/C_Logistik/save_do';
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']         = 'schedule/C_Schedule';
 $route['act_schedule/(:any)']       = 'schedule/C_Schedule/act_schedule/$1';
+
+// DEVELOPMENT 
+$route['development']         = 'schedule/C_Development/dashboard_do';
 
 
 // Sistem Routes

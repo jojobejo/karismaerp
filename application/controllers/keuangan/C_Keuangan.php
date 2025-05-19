@@ -80,39 +80,66 @@ class C_Keuangan extends CI_Controller
                 $this->session->set_flashdata('message', 'Failed to import data.');
             }
             redirect('insertmodule');
-            
         } elseif ($session == 'LOGISTIK') {
-            $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
-            fgetcsv($file_data);
-            $kdupdate = $this->input->post('kdgenerates');
-            $data = [];
-            while ($row = fgetcsv($file_data)) {
-                $data[] = [
-                    'kdupdate'     => $kdupdate,
-                    'tgl_inputer'   => $row[0],
-                    'kd_faktur'     => $row[1],
-                    'kd_rute'       => $row[2],
-                    'kd_customer'   => $row[3],
-                    'kd_barang'     => $row[4],
-                    'qty'           => $row[5],
-                    'satuan'        => $row[6],
-                    'no_lot'        => $row[7],
-                    'tgl_exp'       => $row[8],
-                    'upload_sts'    => $row[9],
-                    'data_sts'      => $row[10],
-                    'barang_sts'    => $row[11],
-                    'create_at'     => $row[12]
-                ];
-            }
+            if (isset($_FILES['csv_file']['name']) && $_FILES['csv_file']['size'] > 0) {
+                $file = fopen($_FILES['csv_file']['tmp_name'], 'r');
+                $header = fgetcsv($file); // skip header
 
-            $gdgid   = $this->input->post('gdgid');
+                $insertCount = 0;
+                $revisiCount = 0;
 
-            if (!empty($data) && $gdgid == '6') {
-                $this->update_data();
-                $this->M_Keuangan->insert_batch_logistik($data);
-                $this->session->set_flashdata('message', 'Data imported successfully.');
+                while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
+                    $kd_faktur = $row[1];
+                    $kd_barang = $row[4];
+                    $nolot     = $row[7];
+                    $tgl_exp   = $row[8];
+
+                    // Cek apakah data sudah ada
+                    $kdupdate = $this->input->post('kdgenerates');
+                    $existing = $this->M_Keuangan->get_by_faktur_barang($kd_faktur, $kd_barang, $nolot, $tgl_exp);
+
+                    $newData = [
+                        'kdupdate'    => $kdupdate,
+                        'tgl_inputer' => $row[0],
+                        'kd_faktur'   => $row[1],
+                        'kd_rute'     => $row[2],
+                        'kd_customer' => $row[3],
+                        'kd_barang'   => $row[4],
+                        'qty'         => $row[5],
+                        'satuan'      => $row[6],
+                        'no_lot'      => $row[7],
+                        'tgl_exp'     => $row[8],
+                        'upload_sts'  => 1,
+                        'data_sts'    => 1,
+                        'barang_sts'  => 1,
+                        'create_at'   => date('Y-m-d H:i:s'),
+                    ];
+
+                    if ($existing) {
+
+                        unset($existing->kd_faktur);
+                        $existing_arr = (array) $existing;
+
+                        $diff = array_diff_assoc($newData, $existing_arr);
+                        if (!empty($diff)) {
+                            // Ada perbedaan → update
+                            $newData['barang_sts'] = 1;
+                            $newData['upload_sts'] = 2;
+
+                            $this->M_Keuangan->update_by_faktur($kd_faktur, $kd_barang, $newData);
+                            $revisiCount++;
+                        }
+                    } else {
+                        // Belum ada → insert baru
+                        $this->M_Keuangan->insert($newData);
+                        $insertCount++;
+                    }
+                }
+
+                fclose($file);
+                $this->session->set_flashdata('message', "Import selesai: {$insertCount} data baru, {$revisiCount} direvisi.");
             } else {
-                $this->session->set_flashdata('message', 'Failed to import data.');
+                $this->session->set_flashdata('message', 'File tidak valid!');
             }
             redirect('logistik');
         } else {
