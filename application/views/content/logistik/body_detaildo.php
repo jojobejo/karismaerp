@@ -101,6 +101,7 @@
                                                 <th rowspan="2">Status</th>
                                                 <th rowspan="2">#</th>
                                             <?php elseif ($d->status == '2') : ?>
+
                                             <?php endif; ?>
                                         </tr>
                                         <tr>
@@ -136,9 +137,20 @@
                                             <tr>
                                                 <?php if ($show_faktur_info) : ?>
                                                     <?php if ($d->status == '1') : ?>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
+                                                            <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                        </td>
                                                     <?php elseif ($d->status == '2') : ?>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><a href="#" class="btn btn-sm btn-block btn-success"><i class="fas fa-thumbs-up"></i></a></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
+                                                            <div class="row">
+                                                                <div class="col">
+                                                                    <a href="#" class="btn btn-sm btn-block btn-success"><i class="fas fa-thumbs-up"></i></a>
+                                                                </div>
+                                                                <div class="col">
+                                                                    <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
                                                     <?php endif; ?>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>

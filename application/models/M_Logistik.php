@@ -354,28 +354,6 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
-        // SELECT
-        //     x.kd_faktur,
-        //     x.nama_customer,
-        //     x.nama_kios,
-        //     x.alamat_kios,
-        //     x.regional,
-        //     x.total_barang
-        //     FROM
-        //     (
-        //         SELECT 
-        //         a.kd_faktur,
-        //         b.nama_customer,
-        //         b.nama_kios,
-        //         b.alamat_kios,
-        //         b.regional,
-        //         (SELECT COUNT(d.kd_barang) FROM tb_pre_do d WHERE d.kd_faktur = a.kd_faktur) AS total_barang
-        //         FROM tb_pre_do a
-        //         JOIN tb_customer b ON b.kd_customer = a.kd_customer
-        //         JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
-        //         GROUP BY a.kd_faktur
-        //     ) AS x
-
         $this->db->select('
             a.tgl_inputer,
             a.kd_faktur,
@@ -385,14 +363,17 @@ class M_Logistik extends CI_Model
             b.regional,
             a.kd_rute,
             c.keterangan AS keterangan_rute,
-            COUNT(a.kd_barang) AS total_barang,
+            COUNT(DISTINCT a.kd_barang) AS total_barang,
             a.data_sts 
         ');
         $this->db->from('tb_pre_do a');
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-        $this->db->where('a.data_sts =', 1);
+        $this->db->join('tb_detail_do d', 'd.kd_faktur = a.kd_faktur', 'left');
+        $this->db->where('a.data_sts', 1);
+        $this->db->where('d.kd_faktur IS NULL', null, false);
         $this->db->group_by('a.kd_faktur');
+
         $query = $this->db->get();
         return $query->result();
     }

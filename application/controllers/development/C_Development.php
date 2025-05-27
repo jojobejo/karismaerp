@@ -12,6 +12,10 @@ class C_Development extends CI_Controller
     function dashboard_do()
     {
         $data['page_title']     = 'DELIVERY ORDER';
+        $data['kdgenerate']     = $this->M_Development->generate_update();
+        $data['list_faktur']    = $this->M_Development->get_data_penjualan_zahir();
+        $data['updated']        = $this->M_Development->get_updated_data_preparation();
+        $data['listdo']         = $this->M_Development->getdo();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view("content/development/body");
@@ -19,7 +23,7 @@ class C_Development extends CI_Controller
     }
 }
 
-
+    
 
 
 //  saya mau membuat aplikasi deliver order (DO) , saya membutuhkan module atau fitur yang berguna untuk :
