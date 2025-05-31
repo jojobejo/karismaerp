@@ -482,6 +482,7 @@ class M_Logistik extends CI_Model
             c.nama_customer,
             c.alamat_kios,
             c.regional,
+            b.kd_rute as kdrute,
             c.telp1,
             c.telp2,
             COALESCE(c.jam_buka_tutup,'-') AS jam_buka_tutup,

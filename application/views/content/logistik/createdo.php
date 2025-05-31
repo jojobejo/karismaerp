@@ -38,12 +38,12 @@
                                         <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
                                     </div>
                                 </div>
-                                <div class="col-md">
+                                <div class="col-md" hidden>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_isi" id="plat_isi">
+                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="-" name="plat_isi" id="plat_isi">
                                     </div>
                                 </div>
                                 <div class="col-md">
@@ -51,18 +51,24 @@
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Kota Pengiriman" value="" name="regional_isi" id="regional_isi">
+                                        <input type="text" class="form-control" placeholder="Rute" value="" name="regional_isi" id="regional_isi">
                                     </div>
                                 </div>
-                                <div class="col-md">
+                                <div class="col-md" hidden>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Driver" value="" name="driver_isi" id="driver_isi">
+                                        <input type="text" class="form-control" placeholder="Driver" value="-" name="driver_isi" id="driver_isi">
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="col">
+                                <h3>Tonase  : </h3>
+                                <h3>Kubikas : </h3>
+                            </div>
+
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
@@ -70,6 +76,7 @@
                                         <td>Faktur</td>
                                         <td>Nama</td>
                                         <td>Alamat</td>
+                                        <td>Rute</td>
                                         <td>Kota</td>
                                         <td>No.Telpon</td>
                                         <td>Jam Buka/Tutup</td>
@@ -107,6 +114,7 @@
                                             <td><?= $tmp->kd_faktur ?></td>
                                             <td><?= $tmp->nama_customer ?></td>
                                             <td><?= $tmp->alamat_kios ?></td>
+                                            <td><?= $tmp->kdrute ?></td>
                                             <td><?= $tmp->regional ?></td>
                                             <td><?= $telp ?></td>
                                             <td style="text-align: center;"><?= $jmkiosbt ?></td>
@@ -151,6 +159,7 @@
                             </button>
                         </div>
                     </div>
+                    <!-- DATA PREPARATION - SALES - LOGISTIK -->
                     <button class="btn btn-primary mb-2 btn-block" onclick="toggleDataPreDO()" id="btnhide"><i class="fas fa-eye"></i> Faktur Penjualan <i class="fas fa-eye"></i> </button>
                     <div class="card" id="pre_do" style="display: none;">
                         <div class="card-body">
@@ -373,7 +382,7 @@
                     isValid = false;
                 }
                 if (!kota) {
-                    alert('Kota Pengiriman harus diisi.');
+                    alert('Rute harus diisi');
                     $("#regional_isi").css("border", "2px solid red");
                     isValid = false;
                 }

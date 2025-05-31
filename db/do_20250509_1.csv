@@ -1,0 +1,5 @@
+<br />
+<b>Notice</b>:  Undefined index: periode1 in <b>C:\xampp\htdocs\ZahirDigital\KEUANGAN\export_do.php</b> on line <b>7</b><br />
+<br />
+<b>Notice</b>:  Undefined index: periode2 in <b>C:\xampp\htdocs\ZahirDigital\KEUANGAN\export_do.php</b> on line <b>8</b><br />
+tgl_inputer,kd_faktur,kd_rute,kd_customer,kd_barang,qty,satuan,no_lot,tgl_exp,upload_sts,data_sts,barang_sts,create_at

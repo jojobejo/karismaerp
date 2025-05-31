@@ -957,6 +957,7 @@ class C_Logistik extends CI_Controller
         $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
         $data['tmp_faktur'] = $this->M_Logistik->get_tmp_do();
         $data['generate_do'] = $this->M_Logistik->generate_kd_do();
+        $data['generate_do'] = $this->M_Logistik->generate_kd_do();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
