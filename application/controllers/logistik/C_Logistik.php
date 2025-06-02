@@ -966,11 +966,7 @@ class C_Logistik extends CI_Controller
 
     public function cancel_fk($kd_faktur, $kd_do)
     {
-        $edtpredo = [
-            'data_sts' => 1
-        ];
-
-        $this->M_Logistik->edit_faktur_customer($kd_faktur, $edtpredo);
+        $this->M_Logistik->delete_faktur_customer($kd_faktur);
         $this->M_Logistik->delete_faktur_cus($kd_faktur);
         redirect('detail_do/' . $kd_do);
     }

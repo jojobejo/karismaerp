@@ -419,7 +419,7 @@ class M_Logistik extends CI_Model
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
     }
-    
+
     public function insert_fakturfrom_draft_batch($data)
     {
         return $this->db->insert_batch('tb_detail_do', $data);
@@ -480,6 +480,10 @@ class M_Logistik extends CI_Model
     public function delete_faktur_cus($kd)
     {
         return $this->db->delete('tb_detail_do', array("kd_faktur" => $kd));
+    }
+    public function delete_faktur_customer($kd)
+    {
+        return $this->db->delete('tb_pre_do', array("kd_faktur" => $kd));
     }
 
     public function deletetmp_do($kd)
