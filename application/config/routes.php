@@ -89,9 +89,12 @@ $route['revert_do/(:any)/(:any)']            = 'logistik/C_Logistik/revert_do/$1
 $route['cancel_fk/(:any)/(:any)']            = 'logistik/C_Logistik/cancel_fk/$1/$2';
 $route['detail_fk/(:any)']                   = 'logistik/C_Logistik/detail_fk/$1';
 
+$route['insertfromdraft/(:any)/(:any)/(:any)']      = 'logistik/C_Logistik/insertfromdraft/$1/$2/$3';
+
 $route['detail_do/(:any)']                   = 'logistik/C_Logistik/detail_do/$1';
+$route['list_faktur/(:any)/(:any)']          = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
 $route['acc_check/(:any)/(:any)/(:any)']     = 'logistik/C_Logistik/acc_check/$1/$2/$3';
-$route['rekam_order_check/(:any)']           = 'logistik/C_Logistik/rekam_order_check/$1';
+$route['rekam_order_check']           = 'logistik/C_Logistik/rekam_order_check';
 
 $route['print_do/(:any)']                    = 'logistik/C_Logistik/print_do/$1';
 

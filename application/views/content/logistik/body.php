@@ -30,7 +30,6 @@
                             <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
                         </div>
                         <div class="col-auto">
-                            <!-- <a href="https://10.10.10.12/Zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">Ambil Data Penjualan(TODAY)</a> -->
                             <a href="https://10.10.10.12/zahirdigital/keuangan/export_do_cb.php" class="btn btn-info mb-2">Ambil Data Penjualan(TODAY)</a>
                         </div>
                         <div class="col-auto">
@@ -51,8 +50,6 @@
                                     <tr>
                                         <td>Kode DO</td>
                                         <td>Tgl. Buat</td>
-                                        <td>Tgl. Kirim</td>
-                                        <td>No Kendaraan</td>
                                         <td>Rute</td>
                                         <td>Total Faktur</td>
                                         <td>Total Barang</td>
@@ -64,9 +61,9 @@
                                     <?php foreach ($listdo as $i) :
                                         $status = $i->status;
                                         if ($status == '1') {
-                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-warning btn-block">On Progress Check</a></div>';
+                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-warning btn-block">Draft</a></div>';
                                         } else if ($status == '2') {
-                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-info btn-block">Checker Done</a></div>';
+                                            $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-info btn-block">On Delivery</a></div>';
                                         } else if ($status == '3') {
                                             $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Delivery</a></div>';
                                         }
@@ -74,8 +71,6 @@
                                         <tr>
                                             <td><?= $i->kddo ?></td>
                                             <td><?= $i->createat ?></td>
-                                            <td><?= $i->tglkirim ?></td>
-                                            <td><?= $i->nopol ?></td>
                                             <td><?= $i->rute ?></td>
                                             <td><?= $i->totalfaktur ?></td>
                                             <td><?= $i->totalbarang ?></td>

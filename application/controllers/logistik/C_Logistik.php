@@ -957,7 +957,7 @@ class C_Logistik extends CI_Controller
         $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
         $data['tmp_faktur'] = $this->M_Logistik->get_tmp_do();
         $data['generate_do'] = $this->M_Logistik->generate_kd_do();
-        $data['generate_do'] = $this->M_Logistik->generate_kd_do();
+        $data['qcount_tonase_kubikasi'] = $this->M_Logistik->get_tonase_kubikasi();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
@@ -979,7 +979,7 @@ class C_Logistik extends CI_Controller
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
+                a.kd_faktur,a.tgl_transaksi, c.nm_barang, a.no_lot, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
@@ -993,7 +993,6 @@ class C_Logistik extends CI_Controller
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
-                JOIN tb_pre_do e ON e.kd_faktur = a.kd_faktur
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
                 ORDER BY a.norut
@@ -1007,7 +1006,8 @@ class C_Logistik extends CI_Controller
             b.nolambung,
             b.driver,
             COUNT(DISTINCT a.kd_barang) AS total_barang,
-            ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
+            ROUND(SUM(a.qty * c.berat)/1000000,3) AS total_tonase_faktur,
+            ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
             COUNT(DISTINCT a.kd_faktur) AS totalfaktur
         FROM
             tb_detail_do a
@@ -1063,26 +1063,103 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function rekam_order_check($kd)
+    public function rekam_order_check()
     {
+        $kd = $this->input->post('kd_do');
+        $nolambung = $this->input->post('platno');
+        $tgldeliv = $this->input->post('tgl_krim');
+        $driver = $this->input->post('driver');
+
+        if (!$kd || !$nolambung || !$tgldeliv || !$driver) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
+            return;
+        }
+
         $dataupdated_do = [
+            'nolambung' => $nolambung,
+            'driver' => $driver,
+            'tgl_pengiriman' => $tgldeliv,
             'status' => 2
         ];
         $dataupdateddetail_do = [
             'dt_status' => 1,
-            'status'    => 4
+            'status' => 4
         ];
+
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 2, $dataupdateddetail_do);
 
-        redirect('detail_do/' . $kd);
+        echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
+    }
+
+
+
+    public function list_faktur_sortby_rute($kdfaktur, $rute)
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['kdfaktur']       = $kdfaktur;
+        $data['list_faktur']    = $this->M_Logistik->get_list_by_rute($rute);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/list_faktur_by_rute.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function insertfromdraft($kddo, $kdfaktur, $rute)
+    {
+        date_default_timezone_set("Asia/Jakarta");
+        $get_pre_do = $this->M_Logistik->get_do_cust($kdfaktur);
+        $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kdfaktur);
+
+        $now = date("Y-m-d H:i:s");
+
+        if ($get_pre_do) {
+            $data_tmp_det_do = [];
+            $kdfaktur = null;
+
+            foreach ($get_pre_do as $g) {
+                $kdfaktur = $g->kd_faktur;
+            }
+
+            if ($getdetail) {
+                foreach ($getdetail as $det) {
+                    $data_tmp_det_do[] = array(
+                        'id_pre_do'     => $det->id,
+                        'kd_do'         => $kddo,
+                        'kd_faktur'     => $det->kd_faktur,
+                        'tgl_transaksi' => $det->tgl_inputer,
+                        'kd_rute'       => $det->kd_rute,
+                        'kd_customer'   => $det->kd_customer,
+                        'kd_barang'     => $det->kd_barang,
+                        'qty'           => $det->qty,
+                        'satuan'        => $det->satuan,
+                        'no_lot'        => $det->no_lot,
+                        'tgl_exp'       => $det->tgl_exp,
+                        'norut'         => 0,
+                        'dt_status'     => 1,
+                        'status'        => 1,
+                        'create_at'     => $now
+                    );
+                }
+
+                if (!empty($data_tmp_det_do)) {
+                    $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
+                }
+
+                $update_pre_do = array(
+                    'data_sts' => '2'
+                );
+                $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+            }
+        }
+        redirect('list_faktur/' . $kddo . '/' . $rute);
     }
 
     public function print_do($kd_do)
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur, e.tgl_inputer, c.nm_barang, a.no_lot, 
+                a.kd_faktur, a.tgl_transaksi, c.nm_barang, a.no_lot, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,d.jam_buka_tutup AS jam_buka_tutup, d.karakteristik_kios AS karakteristik_kios,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
@@ -1096,7 +1173,6 @@ class C_Logistik extends CI_Controller
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
-                JOIN tb_pre_do e ON e.kd_faktur = a.kd_faktur
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
                 ORDER BY a.norut
@@ -1168,6 +1244,7 @@ class C_Logistik extends CI_Controller
                             $tmp_det_do  = array(
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
+                                'tgl_transaksi' => $det->tgl_inputer,
                                 'kd_faktur'     => $det->kd_faktur,
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
@@ -1218,6 +1295,7 @@ class C_Logistik extends CI_Controller
                             $data_tmp_det_do[] = array(
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
+                                'tgl_transaksi' => $det->tgl_inputer,
                                 'kd_faktur'     => $det->kd_faktur,
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
@@ -1338,6 +1416,7 @@ class C_Logistik extends CI_Controller
                     'id_pre_do'     => $tmp->id_pre_do,
                     'kd_do'         => $kd_do,
                     'kd_faktur'     => $tmp->kd_faktur,
+                    'tgl_transaksi' => $tmp->tgl_transaksi,
                     'kd_rute'       => $tmp->kd_rute,
                     'kd_customer'   => $tmp->kd_customer,
                     'kd_barang'     => $tmp->kd_barang,

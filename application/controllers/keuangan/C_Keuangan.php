@@ -89,14 +89,20 @@ class C_Keuangan extends CI_Controller
                 $revisiCount = 0;
 
                 while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
+
+                    if (count($row) < 9) {
+                        continue;
+                    }
+
                     $kd_faktur = $row[1];
                     $kd_barang = $row[4];
+                    $qty       = $row[5];
                     $nolot     = $row[7];
                     $tgl_exp   = $row[8];
 
                     // Cek apakah data sudah ada
                     $kdupdate = $this->input->post('kdgenerates');
-                    $existing = $this->M_Keuangan->get_by_faktur_barang($kd_faktur, $kd_barang, $nolot, $tgl_exp);
+                    $existing = $this->M_Keuangan->get_by_faktur_barang($kd_faktur, $kd_barang,$qty,$nolot, $tgl_exp);
 
                     $newData = [
                         'kdupdate'    => $kdupdate,

@@ -54,16 +54,23 @@
                                     </div>
                                     <div class="col-auto">
                                         <?php if ($d->status == '1') : ?>
-                                            <a href="#" class="btn btn-warning">ON PROGRESS</a>
+                                            <div class="row">
+                                                <div class="col-auto">
+                                                    <a href="#" class="btn btn-warning">DRAFT</a>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <?php foreach ($kdo as $k) : ?>
+                                                        <a href="<?= base_url('list_faktur/') . $k->kd_do . "/" . $k->regional ?>" class="btn btn-info"><i class="fas fa-plus"></i> Tambah Faktur</a>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            </div>
                                         <?php elseif ($d->status == '2') : ?>
                                             <a href="#" class="btn btn-info">DONE</a>
                                         <?php endif; ?>
                                     </div>
                                 </div>
 
-                                <?php foreach ($kdo as $k) :
-                                    $totton = $k->total_tonase_faktur / 1000;
-                                ?>
+                                <?php foreach ($kdo as $k) : ?>
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
                                         <div>: <?= $k->kd_do ?></div>
@@ -82,14 +89,66 @@
                                     </div>
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Total Tonase</div>
-                                        <div>: <?= $k->total_tonase_faktur . ' (Kg)' . ' ' . '||' . ' ' . $totton . ' ' . '(Ton)' ?></div>
+                                        <div>: <?= $k->total_tonase_faktur . ' (TON)' ?></div>
                                     </div>
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Kubikasi</div>
+                                        <div>: <?= $k->total_kubikasi . ' (m³)' ?></div>
+                                    </div>
+
+                                    <!-- FORM START -->
+                                    <?php if ($d->status == '1') : ?>
+                                        <div class="row mb-2">
+                                            <div class="col-md" hidden>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                                    </div>
+                                                    <input type="text" class="form-control" value="<?= $k->kd_do ?>" name="do_isi" id="do_isi" readonly>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md">
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                                    </div>
+                                                    <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md">
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-truck"></i></span>
+                                                    </div>
+                                                    <input type="text" class="form-control" placeholder="Driver" value="" name="driver_isi" id="driver_isi">
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md">
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
+                                                    </div>
+                                                    <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_isi" id="plat_isi">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php else : ?>
+
+                                    <?php endif; ?>
+
                                 <?php endforeach; ?>
+                                <!-- END FORM -->
 
                                 <table class="table table-bordered" id="tb_checker_do">
                                     <thead>
                                         <tr>
-                                            <th rowspan="2">#</th>
+                                            <?php if ($d->status == '1') : ?>
+                                                <th rowspan="2">#</th>
+                                            <?php elseif ($d->status == '2') : ?>
+                                            <?php endif; ?>
                                             <th colspan="2">Data Kios</th>
                                             <th rowspan="2">Rute</th>
                                             <th colspan="2">TTB</th>
@@ -97,12 +156,7 @@
                                             <th rowspan="2">Nama Barang</th>
                                             <th rowspan="2">No Lot</th>
                                             <th colspan="2">Qty</th>
-                                            <?php if ($d->status == '1') : ?>
-                                                <th rowspan="2">Status</th>
-                                                <th rowspan="2">#</th>
-                                            <?php elseif ($d->status == '2') : ?>
 
-                                            <?php endif; ?>
                                         </tr>
                                         <tr>
                                             <th>Nama Kios</th>
@@ -141,29 +195,19 @@
                                                             <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
                                                         </td>
                                                     <?php elseif ($d->status == '2') : ?>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
-                                                            <div class="row">
-                                                                <div class="col">
-                                                                    <a href="#" class="btn btn-sm btn-block btn-success"><i class="fas fa-thumbs-up"></i></a>
-                                                                </div>
-                                                                <div class="col">
-                                                                    <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
-                                                                </div>
-                                                            </div>
-                                                        </td>
                                                     <?php endif; ?>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                                     <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
-                                                    <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_inputer ?></td>
+                                                    <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>
                                                 <?php endif; ?>
                                                 <td><?= $norut_counter++ ?></td>
                                                 <td><?= $row->nm_barang ?></td>
                                                 <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
                                                 <td><?= $row->qty_box ?></td>
                                                 <td><?= $row->qty_pcs ?></td>
-                                                <?php if ($d->status == '1') : ?>
+                                                <!-- <?php if ($d->status == '1') : ?>
                                                     <?php if ($row->status == '2') : ?>
                                                         <td><a href="#" class="btn btn-sm btn-block btn-success"></a></td>
                                                     <?php elseif ($row->status == '3') : ?>
@@ -192,8 +236,7 @@
                                                         </td>
                                                     <?php endif; ?>
                                                 <?php elseif ($d->status == '2') : ?>
-                                                <?php endif; ?>
-
+                                                <?php endif; ?> -->
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -205,7 +248,9 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <?php foreach ($kdo as $k) : ?>
-                                            <a href="<?= base_url('rekam_order_check/' . $k->kd_do) ?>" class="btn btn-success btn-block mt-3 mb3">Rekam Order</a>
+                                            <button type="button" class="btn btn-success btn-block mt-3 mb3" id="draftpost">
+                                                Rekam Draft Order
+                                            </button>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
                                 <?php endforeach; ?>
@@ -232,3 +277,65 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $(document).ready(function() {
+            $("#draftpost").on('click', function() {
+                var kd_do = $("#do_isi").val().trim();
+                var tgl_krim = $("#tgl_isi").val();
+                var platno = $("#plat_isi").val();
+                var driver = $("#driver_isi").val();
+
+                $("input").css("border", "");
+
+                if (!tgl_krim && !platno && !driver) {
+                    alert('Semua field masih kosong.');
+                    $("input").css("border", "2px solid red");
+                    return;
+                }
+
+                var isValid = true;
+                if (!tgl_krim) {
+                    alert('Tanggal Kirim harus diisi.');
+                    $("#tgl_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!platno) {
+                    alert('Plat Nomor harus diisi.');
+                    $("#plat_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+                if (!driver) {
+                    alert('Nama Driver harus diisi.');
+                    $("#driver_isi").css("border", "2px solid red");
+                    isValid = false;
+                }
+
+                if (!isValid) return;
+
+                $.ajax({
+                    url: "<?= base_url('rekam_order_check') ?>",
+                    type: "POST",
+                    data: {
+                        kd_do: kd_do,
+                        tgl_krim: tgl_krim,
+                        platno: platno,
+                        driver: driver
+                    },
+                    dataType: "JSON",
+                    success: function(data) {
+                        console.log(data);
+                        if (data.msg === "success") {
+                            alert('Data berhasil direkam');
+                            window.location.href = "<?= base_url('detail_do/') ?>" + kd_do;
+                        } else {
+                            alert(data.message || 'Ada kesalahan data');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Terjadi kesalahan: ' + error);
+                    }
+                });
+            });
+        });
+    </script>

@@ -316,12 +316,14 @@ class M_Keuangan extends CI_Model
         LIMIT 1
         ")->result();
     }
-    public function get_by_faktur_barang($kd_faktur, $kd_barang, $kodelot)
+    public function get_by_faktur_barang($kd_faktur, $kd_barang, $qty, $nolot, $tgl_exp)
     {
         return $this->db
             ->where('kd_faktur', $kd_faktur)
             ->where('kd_barang', $kd_barang)
-            ->where('no_lot', $kodelot) 
+            ->where('qty', $qty)
+            ->where('no_lot', $nolot)
+            ->where('tgl_exp', $tgl_exp)
             ->order_by('id', 'DESC')
             ->limit(1)
             ->get('tb_pre_do')

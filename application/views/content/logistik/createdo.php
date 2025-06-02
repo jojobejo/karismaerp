@@ -30,14 +30,16 @@
                                         <input type="text" class="form-control" placeholder="Kode Do" value="<?= $generate_do ?>" name="do_isi" id="do_isi" readonly>
                                     </div>
                                 </div>
-                                <div class="col-md">
+
+                                <div class="col-md" hidden>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text"><i class="fas fa-calendar"></i></span>
                                         </div>
-                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
+                                        <input type="text" class="form-control" placeholder="Tanggal Kirim" value="-" name="tgl_isi" id="tgl_isi">
                                     </div>
                                 </div>
+
                                 <div class="col-md" hidden>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
@@ -65,9 +67,22 @@
                             </div>
 
                             <div class="col">
-                                <h3>Tonase  : </h3>
-                                <h3>Kubikas : </h3>
+                                <?php if (!empty($qcount_tonase_kubikasi)) : ?>
+                                    <?php foreach ($qcount_tonase_kubikasi as $q) : ?>
+                                        <?php
+                                        $tonase_ton = $q->total_tonase_kg / 1000000;
+                                        $kubikasi_m3 = round($q->total_kubikasi_m3, 3);
+                                        ?>
+                                        <h3>Tonase: <?= number_format($tonase_ton, 3) ?> ton</h3>
+                                        <h3>Kubikasi: <?= $kubikasi_m3 ?> m³</h3>
+                                    <?php endforeach; ?>
+                                <?php else : ?>
+                                    <h3>Tonase: 0 ton</h3>
+                                    <h3>Kubikasi: 0 m³</h3>
+                                <?php endif; ?>
                             </div>
+
+
 
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
@@ -155,7 +170,7 @@
                                 </tbody>
                             </table>
                             <button type="button" class="btn btn-success btn-block mt-2" id="rekamdo">
-                                <i class="fas fa-print"></i> Rekam Order
+                                <i class="fas fa-print"></i> Rekam Draft Order
                             </button>
                         </div>
                     </div>

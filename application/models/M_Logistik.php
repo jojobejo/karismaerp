@@ -378,6 +378,33 @@ class M_Logistik extends CI_Model
         return $query->result();
     }
 
+    public function get_list_by_rute($rute)
+    {
+        $this->db->select('
+            a.tgl_inputer,
+            a.kd_faktur,
+            b.nama_customer,
+            b.nama_kios,
+            b.alamat_kios,
+            b.regional,
+            a.kd_rute,
+            c.keterangan AS keterangan_rute,
+            COUNT(DISTINCT a.kd_barang) AS total_barang,
+            a.data_sts 
+        ');
+        $this->db->from('tb_pre_do a');
+        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
+        $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
+        $this->db->join('tb_detail_do d', 'd.kd_faktur = a.kd_faktur', 'left');
+        $this->db->where('a.data_sts', 1);
+        $this->db->where('d.kd_faktur IS NULL', null, false);
+        $this->db->where('a.kd_rute', $rute);
+        $this->db->group_by('a.kd_faktur');
+
+        $query = $this->db->get();
+        return $query->result();
+    }
+
     public function get_do_cust($kd)
     {
         return $this->db->query("SELECT
@@ -391,6 +418,11 @@ class M_Logistik extends CI_Model
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
+    }
+    
+    public function insert_fakturfrom_draft_batch($data)
+    {
+        return $this->db->insert_batch('tb_detail_do', $data);
     }
 
     public function get_do_cust_byfaktur($kd)
@@ -541,6 +573,11 @@ class M_Logistik extends CI_Model
         ) AS totalfaktur,
         a.status AS status
         FROM tb_do a
+        WHERE (
+            SELECT COUNT(DISTINCT kd_faktur) 
+            FROM tb_detail_do 
+            WHERE kd_do = a.kd_do
+        ) > 0
         ")->result();
     }
 
@@ -579,6 +616,32 @@ class M_Logistik extends CI_Model
         date_default_timezone_set('Asia/Jakarta');
         $kdnk1 = 'KIUDO' . date('dmy') . $kd1;
         return $kdnk1;
+    }
+
+    public function get_tonase_kubikasi($kd_do = null)
+    {
+        if (!$kd_do) {
+            $this->db->select('kd_do');
+            $this->db->from('tb_tmp_detaildo');
+            $this->db->order_by('id_pre_do', 'DESC');
+            $this->db->limit(1);
+            $last_kd_do = $this->db->get()->row();
+            $kd_do = $last_kd_do ? $last_kd_do->kd_do : null;
+        }
+
+        if (!$kd_do) {
+            return [];
+        }
+
+        $this->db->select('d.kd_do, 
+                       SUM(d.qty * m.berat) AS total_tonase_kg, 
+                       SUM(d.qty * m.kubikasi) AS total_kubikasi_m3');
+        $this->db->from('tb_tmp_detaildo d');
+        $this->db->join('tb_master_barang m', 'd.kd_barang = m.kode_barang');
+        $this->db->where('d.kd_do', $kd_do);
+        $this->db->group_by('d.kd_do');
+
+        return $this->db->get()->result();
     }
 
     public function detail_fk($kd)
