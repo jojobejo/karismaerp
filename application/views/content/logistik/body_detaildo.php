@@ -241,18 +241,19 @@
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                                <?php foreach ($doprintsts as $ds) : ?>
-                                    <?php if ($ds->status == '2') : ?>
-                                        <?php foreach ($kdo as $k) : ?>
-                                            <a href="<?= base_url('print_do/' . $k->kd_do) ?>" target="_blank" class="btn btn-success btn-block mt-3 mb3">Print Order</a>
-                                        <?php endforeach; ?>
-                                    <?php else : ?>
-                                        <?php foreach ($kdo as $k) : ?>
-                                            <button type="button" class="btn btn-success btn-block mt-3 mb3" id="draftpost">
-                                                Rekam Draft Order
+                                <?php foreach ($kdo as $k) : ?>
+                                    <div class="row">
+                                        <div class="col">
+                                            <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
+                                                <i class="fas fa-check-double"></i> Rekam Draft Order
                                             </button>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
+                                        </div>
+                                        <div class="col">
+                                            <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
+                                                <i class="fas fa-print"></i> Print Order
+                                            </button>
+                                        </div>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -337,5 +338,26 @@
                     }
                 });
             });
+        });
+
+        $("#btnPrintOrder").on('click', function() {
+            var kd_do = $(this).data('kd');
+            var tgl_krim = $("#tgl_isi").val().trim();
+            var platno = $("#plat_isi").val().trim();
+            var driver = $("#driver_isi").val().trim();
+
+            if (!tgl_krim || !platno || !driver) {
+                alert("Lengkapi semua field terlebih dahulu sebelum print.");
+                if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
+                if (!platno) $("#plat_isi").css("border", "2px solid red");
+                if (!driver) $("#driver_isi").css("border", "2px solid red");
+                return;
+            }
+            var printUrl = "<?= base_url('print_do/') ?>" + kd_do +
+                "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
+                "&driver=" + encodeURIComponent(driver) +
+                "&plat=" + encodeURIComponent(platno);
+
+            window.open(printUrl, "_blank");
         });
     </script>

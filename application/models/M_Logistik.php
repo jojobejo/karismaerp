@@ -607,7 +607,7 @@ class M_Logistik extends CI_Model
 
     function generate_kd_do()
     {
-        $cd1 = $this->db->query("SELECT MAX(RIGHT(kd_do,4)) AS kd_max FROM tb_do WHERE DATE(tgl_pengiriman)=CURDATE()");
+        $cd1 = $this->db->query("SELECT MAX(RIGHT(kd_do,4)) AS kd_max FROM tb_do WHERE DATE(tgl_create)=CURDATE()");
         $kd1 = "";
         if ($cd1->num_rows() > 0) {
             foreach ($cd1->result() as $k) {

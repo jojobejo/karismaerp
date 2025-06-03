@@ -57,12 +57,16 @@
         <?php foreach ($dostatus as $d) : ?>
             <div class="header-title">FAKTUR DELIVERY ORDER</div>
             <div class="info-faktur">
+
                 <?php foreach ($doprintsts as $print) :
                     $tonase = ($print->total_tonase_faktur / 1000);
+                    $tgl_kirim = $this->input->get('tgl_kirim');
+                    $driver = $this->input->get('driver');
+                    $plat = $this->input->get('plat');
                 ?>
-                    <div>Nama Driver : <?= $print->driver ?></div>
-                    <div>No Polisi : <?= $print->nolambung ?></div>
-                    <div>Regional : <?= format_indo($print->tgl_pengiriman) ?></div>
+                    <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
+                    <div>Driver : <?= htmlspecialchars($driver) ?></div>
+                    <div>No Lambung : <?= htmlspecialchars($plat) ?> </div>
                     <div>Total Customer :<?= $print->totalfaktur ?> </div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
                     <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) ' . '||' . ' ' . $tonase . ' (Ton)' ?></div>
@@ -79,11 +83,6 @@
                         <th rowspan="2">Nama Barang</th>
                         <th rowspan="2">No Lot</th>
                         <th colspan="2">Qty</th>
-                        <?php if ($d->status == '1') : ?>
-                            <th rowspan="2">Status</th>
-                            <th rowspan="2">#</th>
-                        <?php elseif ($d->status == '2') : ?>
-                        <?php endif; ?>
                     </tr>
                     <tr>
                         <th>Nama Kios</th>
@@ -143,16 +142,6 @@
                             <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
                             <td><?= $row->qty_box ?></td>
                             <td><?= $row->qty_pcs ?></td>
-                            <?php if ($d->status == '1') : ?>
-                                <?php if ($row->status == '2') : ?>
-                                    <td><a href="#" class="btn btn-sm btn-block btn-success"></a></td>
-                                <?php elseif ($row->status == '3') : ?>
-                                    <td><a href="#" class="btn btn-sm btn-block btn-danger"></a></td>
-                                <?php elseif ($row->status == '1') : ?>
-                                    <td><a href="#" class="btn btn-sm btn-block btn-warning"></a></td>
-                                <?php endif; ?>
-                            <?php elseif ($d->status == '2') : ?>
-                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

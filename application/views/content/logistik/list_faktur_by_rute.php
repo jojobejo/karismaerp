@@ -14,7 +14,7 @@
             <div class="content-header">
                 <div class="container-fluid">
                     <div class="row">
-                        <a href="<?= base_url('logistik') ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
+                        <a href="<?= base_url('detail_do/') . $kdfaktur ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
                         <!-- <h3>TITLE</h3> -->
                         <h3></h3>
                     </div>

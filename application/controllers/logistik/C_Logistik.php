@@ -1201,6 +1201,8 @@ class C_Logistik extends CI_Controller
         $data['data_list'] = $query->result();
         $data['doprintsts'] = $querysts;
 
+        
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/printout_do.php', $data);
         $this->load->view('partial/main/footerprint.php');
