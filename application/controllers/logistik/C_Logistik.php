@@ -975,7 +975,7 @@ class C_Logistik extends CI_Controller
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur,a.tgl_transaksi, c.nm_barang, a.no_lot, 
+                a.kd_faktur,a.tgl_transaksi, c.nm_barang, a.no_lot, a.nominal_p , a.jtempo, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
@@ -991,6 +991,18 @@ class C_Logistik extends CI_Controller
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
+                ORDER BY a.norut
+            ", array($kd_do));
+
+        $querytc = $this->db->query("SELECT 
+				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
+                a.kd_faktur,a.tgl_transaksi, a.nominal_p , a.jtempo, 
+                a.tgl_exp, a.satuan, a.status, a.kd_do
+                FROM tb_detail_do a
+                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                WHERE b.kd_do = '$kd_do'
+                GROUP BY a.kd_faktur
                 ORDER BY a.norut
             ", array($kd_do));
 
@@ -1023,13 +1035,13 @@ class C_Logistik extends CI_Controller
         $data['dostatus'] = $query2->result();
         $data['dostatuss'] = $query3->result();
         $data['data_list'] = $query->result();
+        $data['datatc'] = $querytc->result();
         $data['doprintsts'] = $querysts;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
     }
-
     public function acc_check($id, $action, $kd)
     {
         switch ($action) {
@@ -1087,8 +1099,6 @@ class C_Logistik extends CI_Controller
 
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
     }
-
-
 
     public function list_faktur_sortby_rute($kdfaktur, $rute)
     {
@@ -1201,10 +1211,64 @@ class C_Logistik extends CI_Controller
         $data['data_list'] = $query->result();
         $data['doprintsts'] = $querysts;
 
-        
-
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/printout_do.php', $data);
+        $this->load->view('partial/main/footerprint.php');
+    }
+
+    public function print_regis($kd_do)
+    {
+        $query = $this->db->query("SELECT 
+				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
+                a.kd_faktur, a.tgl_transaksi, c.nm_barang, a.no_lot, 
+                a.tgl_exp, a.satuan,a.nominal_p AS valuep, a.jtempo AS tempo,
+                a.status, a.kd_do,d.jam_buka_tutup AS jam_buka_tutup, d.karakteristik_kios AS karakteristik_kios,
+                (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
+                (c.p*c.l*c.t) AS dimensi,
+                FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)) AS qty_box,
+                ((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
+                FROM tb_detail_do a
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                WHERE b.kd_do = '$kd_do'
+                GROUP BY a.kd_barang , a.no_lot
+                ORDER BY a.norut
+            ", array($kd_do));
+
+        $querysts = $this->db->query("SELECT
+                b.kd_do,
+                b.regional,
+                b.nolambung,
+                b.driver,
+                b.tgl_pengiriman,
+                COUNT(DISTINCT a.kd_barang) AS total_barang,
+                ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
+                COUNT(DISTINCT a.kd_faktur) AS totalfaktur
+            FROM
+                tb_detail_do a
+            JOIN tb_do b ON b.kd_do = a.kd_do
+            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            WHERE
+                b.kd_do = '$kd_do'
+            GROUP BY
+                b.kd_do, b.regional, b.nolambung, b.driver
+            ")->result();
+
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $data['kdo'] = $query1->result();
+        $data['dostatus'] = $query2->result();
+        $data['data_list'] = $query->result();
+        $data['doprintsts'] = $querysts;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/printout_regis.php', $data);
         $this->load->view('partial/main/footerprint.php');
     }
 
@@ -1251,6 +1315,8 @@ class C_Logistik extends CI_Controller
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
                                 'tgl_exp'       => $det->tgl_exp,
+                                'nominal_p'     => $det->nominal_p,
+                                'jtempo'        => $det->jtempo,
                                 'barang_sts'    => $det->barang_sts,
                             );
                             $this->M_Logistik->insert_tmp_detdo($tmp_det_do);
@@ -1302,6 +1368,8 @@ class C_Logistik extends CI_Controller
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
                                 'tgl_exp'       => $det->tgl_exp,
+                                'nominal_p'     => $det->nominal_p,
+                                'jtempo'        => $det->jtempo,
                                 'barang_sts'    => $det->barang_sts,
                                 'create_at'     => $now
                             );
@@ -1423,6 +1491,8 @@ class C_Logistik extends CI_Controller
                     'no_lot'        => $tmp->no_lot,
                     'tgl_exp'       => $tmp->tgl_exp,
                     'norut'         => $norut,
+                    'nominal_p'     => $tmp->nominal_p,
+                    'jtempo'        => $tmp->jtempo,
                     'dt_status'     => '1',
                     'status'        => '1',
                     'create_at'     => $tmp->create_at

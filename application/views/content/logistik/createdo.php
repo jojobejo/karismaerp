@@ -82,12 +82,9 @@
                                 <?php endif; ?>
                             </div>
 
-
-
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
-                                        <!-- <td style="width: 5%;">No</td> -->
                                         <td>Faktur</td>
                                         <td>Nama</td>
                                         <td>Alamat</td>

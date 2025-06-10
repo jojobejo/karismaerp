@@ -1,6 +1,11 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+function format_rupiah($angka)
+{
+    return 'Rp ' . number_format($angka, 0, ',', '.');
+}
+
 function format_indo($date)
 {
     date_default_timezone_set('Asia/Jakarta');

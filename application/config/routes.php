@@ -75,10 +75,13 @@ $route['detail_lot/(:any)']                 = 'keuangan/C_Keuangan/detail_lot/$1
 $route['gudang/(:any)']                     = 'keuangan/C_Keuangan/gudang/$1';
 $route['get_data_global']                   = 'keuangan/C_Keuangan/get_data_global';
 $route['list_stock_minimum/(:any)']         = 'keuangan/C_Keuangan/list_stock_minimum/$1';
-$route['truncateitm/(:any)/(:any)']         = 'keuangan/C_Keuangan/truncateitm/$1/$2';
+$route['truncateitm/(:any)/(:any)']         = 'keuangan/C_Keuangan/trsuncateitm/$1/$2';
 $route['deletedata/(:any)']                 = 'keuangan/C_Keuangan/deletedata/$1';
 $route['pagination']                        = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
+
+// LOGISTIK ICS
+$route['ics']                                = 'logistik/C_Logistik/ics';
 
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';
@@ -97,6 +100,7 @@ $route['acc_check/(:any)/(:any)/(:any)']     = 'logistik/C_Logistik/acc_check/$1
 $route['rekam_order_check']           = 'logistik/C_Logistik/rekam_order_check';
 
 $route['print_do/(:any)']                    = 'logistik/C_Logistik/print_do/$1';
+$route['print_regis/(:any)']                 = 'logistik/C_Logistik/print_regis/$1';
 
 $route['pnd_br_detpo/(:any)/(:any)/(:any)']  = 'logistik/C_Logistik/pnd_br_detpo/$1/$2/$3';
 

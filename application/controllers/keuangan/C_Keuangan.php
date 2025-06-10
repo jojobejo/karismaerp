@@ -8,6 +8,7 @@ class C_Keuangan extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_Keuangan');
+        $this->load->model('M_Logistik');
         $this->load->model('M_Stockbuffer');
         $this->load->model('M_Bufferstockglobal');
         $this->load->helper(array('form', 'url'));
@@ -20,6 +21,7 @@ class C_Keuangan extends CI_Controller
         $data['page_title']     = 'KARISMA - KEUANGAN';
         $data['count_gudang']   = $this->M_Keuangan->get_data_gdg();
         $data['updated']        = $this->M_Keuangan->get_updated();
+        $data['listdo']         = $this->M_Logistik->getdo();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/body.php', $data);
@@ -102,7 +104,7 @@ class C_Keuangan extends CI_Controller
 
                     // Cek apakah data sudah ada
                     $kdupdate = $this->input->post('kdgenerates');
-                    $existing = $this->M_Keuangan->get_by_faktur_barang($kd_faktur, $kd_barang,$qty,$nolot, $tgl_exp);
+                    $existing = $this->M_Keuangan->get_by_faktur_barang($kd_faktur, $kd_barang, $qty, $nolot, $tgl_exp);
 
                     $newData = [
                         'kdupdate'    => $kdupdate,
@@ -115,6 +117,8 @@ class C_Keuangan extends CI_Controller
                         'satuan'      => $row[6],
                         'no_lot'      => $row[7],
                         'tgl_exp'     => $row[8],
+                        'nominal_p'   => $row[9],
+                        'jtempo'      => $row[10],
                         'upload_sts'  => 1,
                         'data_sts'    => 1,
                         'barang_sts'  => 1,

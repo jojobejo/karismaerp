@@ -45,6 +45,8 @@ class Auth extends CI_Controller
                         redirect('dashboard');
                     } else if ($key->jobdesk == 'ADMINGA') {
                         redirect('schedule_direktur');
+                    } else if ($key->jobdesk == 'ADMINKEUTC') {
+                        redirect('keuangan');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
