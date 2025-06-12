@@ -1240,6 +1240,18 @@ class C_Logistik extends CI_Controller
                 ORDER BY a.norut
             ", array($kd_do));
 
+        $querytc = $this->db->query("SELECT 
+				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
+                a.kd_faktur,a.tgl_transaksi, a.nominal_p , a.jtempo, 
+                a.tgl_exp, a.satuan, a.status, a.kd_do,d.alamat_kios
+                FROM tb_detail_do a
+                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                WHERE b.kd_do = '$kd_do'
+                GROUP BY a.kd_faktur
+                ORDER BY a.norut
+            ", array($kd_do));
+
         $querysts = $this->db->query("SELECT
                 b.kd_do,
                 b.regional,
@@ -1265,6 +1277,7 @@ class C_Logistik extends CI_Controller
         $data['kdo'] = $query1->result();
         $data['dostatus'] = $query2->result();
         $data['data_list'] = $query->result();
+        $data['datatc'] = $querytc->result();
         $data['doprintsts'] = $querysts;
 
         $this->load->view('partial/main/header.php', $data);
@@ -1619,5 +1632,35 @@ class C_Logistik extends CI_Controller
                 redirect('detail_fk/' . $kd);
                 break;
         }
+    }
+
+    public function ics($gudang)
+    {
+        switch ($gudang) {
+            case 'global':
+
+                $data['page_title'] = 'KARISMA - ICS';
+                $data['listics'] = $this->M_Logistik->getbarangics()->result();
+
+                $this->load->view('partial/main/header.php', $data);
+                $this->load->view('content/logistik/ics/ics.php', $data);
+                $this->load->view('partial/main/footer.php');
+                $this->load->view('content/logistik/ics/ajaxics.php', $data);
+
+                break;
+            case 'induk':
+                break;
+        }
+    }
+
+    public function detailbarang($kdbarang)
+    {
+        $data['page_title'] = 'KARISMA - ICS';
+        $data['detailbr']   = $this->M_Logistik->detailbrics($kdbarang)->result();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/deatilics.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 }

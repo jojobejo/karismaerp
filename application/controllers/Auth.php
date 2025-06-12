@@ -39,6 +39,8 @@ class Auth extends CI_Controller
                     $this->session->set_userdata($data_session);
                     if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
+                    } else if ($key->jobdesk == 'ADMINICS') {
+                        redirect('logistik');
                     } else if ($key->jobdesk == 'ADMINKEU') {
                         redirect('keuangan');
                     } else if ($key->jobdesk == 'DIREKTUR') {

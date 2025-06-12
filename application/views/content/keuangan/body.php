@@ -82,7 +82,8 @@
                             </div>
                         </div>
                     </div>
-                <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+
+                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
                     <div class="container-fluid">
                         <?php if ($this->session->userdata('lv') == 1) : ?>
                             <a href="<?= base_url('insertmodule') ?>" class="btn btn-primary mb-2">Update Data Stock</a>
@@ -98,113 +99,109 @@
                             <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                             <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
                         <?php endif; ?>
-
-                        <?php if ($this->session->userdata('lv') == 1) : ?>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3>Daily Stock</h3>
-                                </div>
-                                <div class="card-body">
-                                    <table id="tbgudang" class="table table-bordered table-striped">
-                                        <thead>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Daily Stock</h3>
+                        </div>
+                        <div class="card-body">
+                            <table id="tbgudang" class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <td>Total Data</td>
+                                        <td>Gdg.Global</td>
+                                        <td>Gdg.Induk</td>
+                                        <td>Gdg.Rusak</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($count_gudang as $c) : ?>
+                                        <tr>
+                                            <td><?= number_format($c->total_data) ?></td>
+                                            <td><?= number_format($c->global) ?></td>
+                                            <td><?= number_format($c->induk) ?></td>
+                                            <td><?= number_format($c->rusak) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Update History</h3>
+                        </div>
+                        <div class="card-body">
+                            <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                <thead>
+                                    <tr>
+                                        <td>Nama Gudang</td>
+                                        <td>Last Updated</td>
+                                        <td>#</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($updated as $up) :
+                                        date_default_timezone_set("Asia/Jakarta");
+                                        $date_c = date_create($up->updated);
+                                        $date = date_format($date_c, "Y-m-d H:i:s");
+                                        $kd = $up->kdupdate;
+                                        $id = $up->gdgid;
+                                    ?>
+                                        <?php if ($id == 1 || $id == 2 || $id == 3 || $id == 4 || $id == 5) : ?>
                                             <tr>
-                                                <td>Total Data</td>
-                                                <td>Gdg.Global</td>
-                                                <td>Gdg.Induk</td>
-                                                <td>Gdg.Rusak</td>
+                                                <td><?= $up->gudang ?></td>
+                                                <td><?= format_indo($date) ?></td>
+                                                <td style="width: 10%;">
+                                                    <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
+                                                    <a href="<?= base_url('truncateitm/' . $kd . '/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($count_gudang as $c) : ?>
-                                                <tr>
-                                                    <td><?= number_format($c->total_data) ?></td>
-                                                    <td><?= number_format($c->global) ?></td>
-                                                    <td><?= number_format($c->induk) ?></td>
-                                                    <td><?= number_format($c->rusak) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3>Update History</h3>
-                                </div>
-                                <div class="card-body">
-                                    <table id="tbupdate" class="table table-bordered table-striped mt-2">
-                                        <thead>
+                                        <?php elseif ($id == 6) : ?>
                                             <tr>
-                                                <td>Nama Gudang</td>
-                                                <td>Last Updated</td>
-                                                <td>#</td>
+                                                <td><?= $up->gudang ?></td>
+                                                <td><?= format_indo($date) ?></td>
+                                                <td style="width: 10%;">
+                                                    <a href="<?= base_url('keuangan') ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($updated as $up) :
-                                                date_default_timezone_set("Asia/Jakarta");
-                                                $date_c = date_create($up->updated);
-                                                $date = date_format($date_c, "Y-m-d H:i:s");
-                                                $kd = $up->kdupdate;
-                                                $id = $up->gdgid;
-                                            ?>
-                                                <?php if ($id == 1 || $id == 2 || $id == 3 || $id == 4 || $id == 5) : ?>
-                                                    <tr>
-                                                        <td><?= $up->gudang ?></td>
-                                                        <td><?= format_indo($date) ?></td>
-                                                        <td style="width: 10%;">
-                                                            <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
-                                                            <a href="<?= base_url('truncateitm/' . $kd . '/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
-                                                        </td>
-                                                    </tr>
-                                                <?php elseif ($id == 6) : ?>
-                                                    <tr>
-                                                        <td><?= $up->gudang ?></td>
-                                                        <td><?= format_indo($date) ?></td>
-                                                        <td style="width: 10%;">
-                                                            <a href="<?= base_url('keuangan') ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
-                                                        </td>
-                                                    </tr>
-                                                <?php endif; ?>
+                                        <?php endif; ?>
 
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        <?php elseif ($this->session->userdata('lv') == 5) : ?>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3>Stock Log </h3>
-                                </div>
-                                <div class="card-body">
-                                    <table id="tbupdate" class="table table-bordered table-striped mt-2">
-                                        <thead>
-                                            <tr>
-                                                <td>Nama Gudang</td>
-                                                <td>Last Updated</td>
-                                                <td>#</td>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($updated as $up) :
-                                                date_default_timezone_set("Asia/Jakarta");
-                                                $date_c = date_create($up->updated);
-                                                $date = date_format($date_c, "Y-m-d H:i:s");
-                                                $id = $up->gdgid;
-                                            ?>
-                                                <tr>
-                                                    <td><?= $up->gudang ?></td>
-                                                    <td><?= format_indo($date) ?></td>
-                                                    <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <?php elseif ($this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Stock Log </h3>
+                        </div>
+                        <div class="card-body">
+                            <table id="tbupdate" class="table table-bordered table-striped mt-2">
+                                <thead>
+                                    <tr>
+                                        <td>Nama Gudang</td>
+                                        <td>Last Updated</td>
+                                        <td>#</td>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($updated as $up) :
+                                        date_default_timezone_set("Asia/Jakarta");
+                                        $date_c = date_create($up->updated);
+                                        $date = date_format($date_c, "Y-m-d H:i:s");
+                                        $id = $up->gdgid;
+                                    ?>
+                                        <tr>
+                                            <td><?= $up->gudang ?></td>
+                                            <td><?= format_indo($date) ?></td>
+                                            <td style="width: 5%;"><a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 <?php endif; ?>
             </section>

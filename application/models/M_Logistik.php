@@ -696,4 +696,20 @@ class M_Logistik extends CI_Model
         $this->db->from('tb_op_plat');
         return $this->db->get()->result_array();
     }
+
+    public function getbarangics()
+    {
+        return $this->db->query("SELECT 
+        a.kode_barang,
+        a.nm_barang,
+        a.kordinat
+        FROM tb_master_barang a
+        ");
+    }
+
+    public function detailbrics($kdbarang)
+    {
+        return $this->db->query("
+        ");
+    }
 }

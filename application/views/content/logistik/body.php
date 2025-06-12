@@ -13,7 +13,7 @@
         <div class="content-wrapper">
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
-            <?php if ($this->session->userdata('nama') == 'Admin Gudang') : ?>
+            <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
                 <div class="content-header">
                     <div class="container-fluid">
                         <div class="row">
@@ -98,7 +98,7 @@
                         </div>
                     </div>
                 </section>
-            <?php elseif ($this->session->userdata('nama') == 'Admin ICS') : ?>
+            <?php elseif ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
                 <div class="content-header">
                     <div class="container-fluid">
                         <div class="row">
@@ -112,110 +112,66 @@
                 <section class="content">
                     <div class="container-fluid">
                         <div class="row">
-                            <div class="col-12 col-sm-6 col-md-3">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="info-box">
                                     <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
                                     <div class="info-box-content">
-                                        <span class="info-box-text">CPU Traffic</span>
+                                        <span class="info-box-text">Master Barang</span>
                                         <span class="info-box-number">
                                             10
-                                            <small>%</small>
                                         </span>
                                     </div>
-                                    <!-- /.info-box-content -->
                                 </div>
-                                <!-- /.info-box -->
                             </div>
 
-                            <div class="col-12 col-sm-6 col-md-3">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="info-box">
                                     <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
                                     <div class="info-box-content">
-                                        <span class="info-box-text">CPU Traffic</span>
+                                        <span class="info-box-text">Match</span>
                                         <span class="info-box-number">
-                                            10
+                                            90
                                             <small>%</small>
                                         </span>
                                     </div>
-                                    <!-- /.info-box-content -->
                                 </div>
-                                <!-- /.info-box -->
                             </div>
 
-                            <div class="col-12 col-sm-6 col-md-3">
+                            <div class="col-12 col-sm-6 col-md-4">
                                 <div class="info-box">
                                     <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
                                     <div class="info-box-content">
-                                        <span class="info-box-text">CPU Traffic</span>
+                                        <span class="info-box-text">Not Match</span>
                                         <span class="info-box-number">
                                             10
                                             <small>%</small>
                                         </span>
                                     </div>
-                                    <!-- /.info-box-content -->
                                 </div>
-                                <!-- /.info-box -->
-                            </div>
-                            <div class="col-12 col-sm-6 col-md-3">
-                                <div class="info-box">
-                                    <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
-
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">CPU Traffic</span>
-                                        <span class="info-box-number">
-                                            10
-                                            <small>%</small>
-                                        </span>
-                                    </div>
-                                    <!-- /.info-box-content -->
-                                </div>
-                                <!-- /.info-box -->
                             </div>
                         </div>
-                    </div>
+
+                        <div class="row">
+                            <div class="col ml-2">
+                                <a href="<?= base_url('ics/global') ?>" class="btn btn-primary w-100">STOCK ICS</a>
+                            </div>
+                        </div>
+                        <!-- <div class="row">
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="<?= base_url('ics/global') ?>" class="btn btn-primary w-100">STOCK GLOBAL</a>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="" class="btn btn-primary w-100">STOCK INDUK</a>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <a href="" class="btn btn-primary w-100">STOCK LOT</a>
+                            </div>
+                        </div> -->
                 </section>
+
+                <!-- END USER ROUTES -->
             <?php endif; ?>
-
-            <!-- /.content-header -->
-            <!-- <section class="content">
-                <div class="container-fluid">
-                    <div class="card">
-                        <div class="card-body">
-                            <table id="dailyod" class="table table-bordered table-striped">
-                                <thead>
-                                    <tr>
-                                        <td>FAKTUR</td>
-                                        <td>NAMA CUSTOMER</td>
-                                        <td>KIOS</td>
-                                        <td>ALAMAT KIOS</td>
-                                        <td>REGIONAL</td>
-                                        <td>ITEM</td>
-                                        <td>#</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($list_faktur as $l) : ?>
-                                        <tr>
-                                            <td><?= $l->kd_faktur ?></td>
-                                            <td><?= $l->nama_customer ?></td>
-                                            <td><?= $l->nama_kios ?></td>
-                                            <td><?= $l->alamat_kios ?></td>
-                                            <td><?= $l->regional ?></td>
-                                            <td><?= $l->total_barang ?></td>
-                                            <td><a href="<?= base_url('insert_tmp/') . $l->kd_faktur ?>" class="btn btn-primary btn-block btn-sm"><i class="fas fa-plus"></i></a></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section> -->
-
-
+            <!-- END USER ROUTES -->
         </div>
         <!-- /.content-wrapper -->
         <footer class="main-footer">

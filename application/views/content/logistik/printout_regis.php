@@ -13,6 +13,46 @@
         }
     }
 
+    .footer-highlight {
+        background-color: black !important;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .footer-black {
+        background-color: black !important;
+        color: white;
+        text-align: center;
+    }
+
+
+    .badge-tempo {
+        display: inline-block;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: bold;
+        border-radius: 6px;
+        min-width: 70px;
+        text-align: center;
+    }
+
+    .badge-cash {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .badge-30 {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .badge-other {
+        background-color: #28a745;
+        color: #fff;
+    }
+
+
     table {
         font-size: 14px;
         white-space: nowrap;
@@ -50,6 +90,10 @@
         white-space: normal !important;
         text-align: left;
     }
+
+    .wrap-text-left {
+        text-align: left !important;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -57,7 +101,6 @@
         <?php foreach ($dostatus as $d) : ?>
             <div class="header-title">FAKTUR DELIVERY ORDER</div>
             <div class="info-faktur">
-
                 <?php foreach ($doprintsts as $print) :
                     $tonase = ($print->total_tonase_faktur / 1000);
                     $tgl_kirim = $this->input->get('tgl_kirim');
@@ -66,90 +109,77 @@
                 ?>
                     <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
                     <div>Driver : <?= htmlspecialchars($driver) ?></div>
-                    <div>No Lambung : <?= htmlspecialchars($plat) ?> </div>
-                    <div>Total Customer :<?= $print->totalfaktur ?> </div>
+                    <div>No Lambung : <?= htmlspecialchars($plat) ?></div>
+                    <div>Total Customer : <?= $print->totalfaktur ?></div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
-                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) ' . '||' . ' ' . $tonase . ' (Ton)' ?></div>
+                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) || ' . $tonase . ' (Ton)' ?></div>
                 <?php endforeach; ?>
             </div>
 
             <table class="table table-bordered" id="tb_checker_do">
                 <thead>
                     <tr>
-                        <th colspan="3">Data Kios</th>
-                        <th rowspan="2">Rute</th>
-                        <th colspan="2">TTB</th>
-                        <th rowspan="2">Value</th>
-                        <th rowspan="2">JT</th>
-                        <th rowspan="2">No</th>
-                        <th rowspan="2">Nama Barang</th>
-                        <th rowspan="2">No Lot</th>
-                        <th colspan="2">Qty</th>
+                        <th colspan="2">Data Kios</th>
+                        <th colspan="3">TTB</th>
+                        <th rowspan="2">Cash / Tempo</th>
                     </tr>
                     <tr>
                         <th>Nama Kios</th>
-                        <th>Jam Buka - Tutup</th>
-                        <th class="wrap-text">Karakteristik</th>
+                        <th>Alamat</th>
                         <th>Kode Faktur</th>
                         <th>Tgl Input</th>
-                        <th>Besar</th>
-                        <th>Kecil</th>
+                        <th>Value</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php
-                    $prev_norut = null;
+                    $total_value = 0;
                     $rowspan_count = [];
-                    $norut_counter = 1;
-
-                    foreach ($data_list as $row) {
+                    foreach ($datatc as $row) {
                         if (!isset($rowspan_count[$row->kd_faktur])) {
                             $rowspan_count[$row->kd_faktur] = 0;
                         }
                         $rowspan_count[$row->kd_faktur]++;
                     }
-
                     $printed_faktur = [];
-                    foreach ($data_list as $row) :
+                    foreach ($datatc as $row) :
                         $show_faktur_info = !in_array($row->kd_faktur, $printed_faktur);
                         if ($show_faktur_info) {
                             $printed_faktur[] = $row->kd_faktur;
-                            $norut_counter = 0;
                         }
 
-                        if ($row->karakteristik_kios == '') {
-                            $karakteristik_kios = '-';
-                        } else {
-                            $karakteristik_kios = $row->karakteristik_kios;
-                        }
+                        // Total value
+                        $total_value += $row->nominal_p;
 
-                        if ($row->jam_buka_tutup == '') {
-                            $jambukatutup = '-';
+                        // Format tempo
+                        if ($row->jtempo == '0') {
+                            $tempo = '<span class="badge-tempo badge-cash">Cash</span>';
+                        } elseif ($row->jtempo == '30') {
+                            $tempo = '<span class="badge-tempo badge-30">30 Hari</span>';
                         } else {
-                            $jambukatutup = $row->jam_buka_tutup;
+                            $tempo = '<span class="badge-tempo badge-other">' . htmlspecialchars($row->jtempo) . ' Hari</span>';
                         }
                     ?>
                         <tr>
-                            <?php if ($show_faktur_info) :
-                            ?>
+                            <?php if ($show_faktur_info) : ?>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $jambukatutup ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="wrap-text"><?= $karakteristik_kios ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
+                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="wrap-text-left"><?= $row->alamat_kios ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->valuep ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tempo ?></td>
                             <?php endif; ?>
-                            <td><?= $norut_counter++ ?></td>
-                            <td><?= $row->nm_barang ?></td>
-                            <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
-                            <td><?= $row->qty_box ?></td>
-                            <td><?= $row->qty_pcs ?></td>
+                            <td><?= format_rupiah($row->nominal_p) ?></td>
+                            <td><?= $tempo ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" style="text-align: right;">Total</th>
+                        <th><?= format_rupiah($total_value) ?></th>
+                        <th class="footer-highlight">&nbsp;</th>
+                    </tr>
+                </tfoot>
             </table>
         <?php endforeach; ?>
     </div>
-    <!-- ./wrapper -->
+</body>

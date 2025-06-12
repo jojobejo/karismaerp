@@ -81,7 +81,8 @@ $route['pagination']                        = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
 // LOGISTIK ICS
-$route['ics']                                = 'logistik/C_Logistik/ics';
+$route['ics/(:any)']                         = 'logistik/C_Logistik/ics/$1';
+$route['detailbarang/(:any)']                = 'logistik/C_Logistik/detailbarang/$1';
 
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';
