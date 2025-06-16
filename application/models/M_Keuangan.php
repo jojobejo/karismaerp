@@ -250,7 +250,7 @@ class M_Keuangan extends CI_Model
             JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
             JOIN tb_suplier c ON c.kd_suplier = a.suplier
             GROUP BY a.nm_barang) AS x", false);
-
+            
         $query = $this->db->get();
         return $query->result();
     }

@@ -21,13 +21,13 @@
                         </div>
                         <div class="row">
                             <div class="col-12 col-sm-6 col-md-4">
-                                <a href="<?= base_url('icsglobal') ?>" class="btn btn-secondary w-100">STOCK GLOBAL</a>
+                                <a href="" class="btn btn-primary w-100">Data Update</a>
                             </div>
                             <div class="col-12 col-sm-6 col-md-4">
-                                <a href="" class="btn btn-primary w-100">STOCK INDUK</a>
+                                <a href="" class="btn btn-primary w-100">Data Purchase Order</a>
                             </div>
                             <div class="col-12 col-sm-6 col-md-4">
-                                <a href="" class="btn btn-primary w-100">STOCK LOT</a>
+                                <a href="" class="btn btn-primary w-100">Data Delivery Order</a>
                             </div>
                         </div>
                     </div>
@@ -40,22 +40,24 @@
                                     <table id="tbics" class="table table-bordered table-striped">
                                         <thead style="background-color: #212529; color:white;">
                                             <tr>
-                                                <td style="width: 10%;">Kode Barang</td>
+                                                <td style="width: 10%;" hidden>Kode Barang</td>
                                                 <td>Nama Barang</td>
-                                                <td style="width: 15%;">Kordinat</td>
-                                                <td style="width: 15%;">Qty</td>
+                                                <td style="width: 10%;">Expired Date</td>
+                                                <td style="width: 15%;">Box</td>
+                                                <td style="width: 15%;">Pcs</td>
                                                 <td style="width: 5%;">#</td>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($listics as $list) : ?>
                                                 <tr>
-                                                    <td><?= $list->kode_barang ?></td>
-                                                    <td><?= $list->nm_barang ?></td>
-                                                    <td><?= $list->kordinat ?></td>
-                                                    <td><?= $list->kordinat ?></td>
+                                                    <td hidden><?= $list->kd_system ?></td>
+                                                    <td><?= $list->nama_barang ?></td>
+                                                    <td><?= $list->exp_date ?></td>
+                                                    <td><?= $list->qty_box ?></td>
+                                                    <td><?= $list->qty_pcs ?></td>
                                                     <td>
-                                                        <a href="<?= base_url('detailbarang/') . $list->kode_barang ?>" class="btn btn-info w-100"><i class="fa fas fa-eye"></i></a>
+                                                        <a href="" class="btn btn-sm btn-warnings">Match / Not Match</a>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

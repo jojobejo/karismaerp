@@ -1077,6 +1077,7 @@ class C_Logistik extends CI_Controller
         $nolambung = $this->input->post('platno');
         $tgldeliv = $this->input->post('tgl_krim');
         $driver = $this->input->post('driver');
+        $datenow = date("Y-m-d");
 
         if (!$kd || !$nolambung || !$tgldeliv || !$driver) {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
@@ -1091,11 +1092,12 @@ class C_Logistik extends CI_Controller
         ];
         $dataupdateddetail_do = [
             'dt_status' => 1,
-            'status' => 4
+            'status' => 4,
+            'input_at' => $datenow
         ];
 
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
-        $this->M_Logistik->update_checker_detail_done($kd, 2, $dataupdateddetail_do);
+        $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
 
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
     }
@@ -1324,6 +1326,7 @@ class C_Logistik extends CI_Controller
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
+                                'nm_barang'     => $det->nm_barang,
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
@@ -1377,6 +1380,7 @@ class C_Logistik extends CI_Controller
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
+                                'nm_barang'     => $det->nm_barang,
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
@@ -1499,6 +1503,7 @@ class C_Logistik extends CI_Controller
                     'kd_rute'       => $tmp->kd_rute,
                     'kd_customer'   => $tmp->kd_customer,
                     'kd_barang'     => $tmp->kd_barang,
+                    'nama_barang'   => $tmp->nm_barang,
                     'qty'           => $tmp->qty,
                     'satuan'        => $tmp->satuan,
                     'no_lot'        => $tmp->no_lot,
@@ -1640,14 +1645,14 @@ class C_Logistik extends CI_Controller
             case 'global':
 
                 $data['page_title'] = 'KARISMA - ICS';
-                $data['listics'] = $this->M_Logistik->getbarangics()->result();
+                $data['listics'] = $this->M_Logistik->getbarangics();
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/ics.php', $data);
                 $this->load->view('partial/main/footer.php');
                 $this->load->view('content/logistik/ics/ajaxics.php', $data);
-
                 break;
+
             case 'induk':
                 break;
         }

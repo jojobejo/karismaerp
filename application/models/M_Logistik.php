@@ -428,17 +428,21 @@ class M_Logistik extends CI_Model
     public function get_do_cust_byfaktur($kd)
     {
         return $this->db->query("SELECT
-            a.*
+            a.*,b.nm_barang
             FROM tb_pre_do a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
     public function det_do_cust($kd)
     {
         return $this->db->query("SELECT
-            a.*
-            FROM tb_pre_do a
-            WHERE a.kd_faktur = '$kd'
+            a.*,b.nm_barang
+        FROM
+            tb_pre_do a
+        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        WHERE
+            a.kd_faktur = '$kd'
         ")->result();
     }
 
@@ -700,16 +704,71 @@ class M_Logistik extends CI_Model
     public function getbarangics()
     {
         return $this->db->query("SELECT 
-        a.kode_barang,
-        a.nm_barang,
-        a.kordinat
-        FROM tb_master_barang a
-        ");
+        b.kd_system,
+        a.nm_barang AS nama_barang,
+        (b.p * b.l * b.t) AS dimensi,
+        a.exp_date,
+        SUM(a.qty) AS tot_qty,
+        FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) AS qty_box,
+        (SUM(a.qty) - FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) * (b.p * b.l * b.t)) AS qty_pcs
+    FROM tb_qty_lot a
+    JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
+    JOIN tb_suplier c ON c.kd_suplier = a.suplier
+    GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
     }
 
     public function detailbrics($kdbarang)
     {
         return $this->db->query("
+        ");
+    }
+
+    public function detailics()
+    {
+        return $this->db->query("SELECT 
+        x.nama_barang,
+        x.exp_date,
+        IFNULL(s.qty, 0) AS saldo_awal,
+        IFNULL(p.qty, 0) AS qty_masuk,
+        IFNULL(d.total_do, 0) AS qty_keluar,
+        
+        (IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) AS sistem_qty,
+        IFNULL(o.qty, 0) AS fisik_qty,
+        
+        ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) - IFNULL(o.qty, 0)) AS selisih,
+
+        CASE 
+            WHEN ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) = IFNULL(o.qty, 0)) 
+            THEN 'sama'
+            ELSE 'beda'
+        END AS keterangan
+
+    FROM (
+        SELECT nama_barang, exp_date FROM tb_ics
+        UNION
+        SELECT nama_barang, exp_date FROM tb_ics_po
+        UNION
+        SELECT nama_barang, tgl_exp AS exp_date FROM tb_detail_do
+        UNION
+        SELECT nama_barang, exp_date FROM tb_ics_opname
+    ) AS x
+
+    LEFT JOIN tb_ics s 
+        ON x.nama_barang = s.nama_barang AND x.exp_date = s.exp_date
+
+    LEFT JOIN tb_ics_po p 
+        ON x.nama_barang = p.nama_barang AND x.exp_date = p.exp_date
+
+    LEFT JOIN (
+        SELECT nama_barang, tgl_exp AS exp_date, SUM(qty) AS total_do
+        FROM tb_detail_do
+        GROUP BY nama_barang, tgl_exp
+    ) d ON x.nama_barang = d.nama_barang AND x.exp_date = d.exp_date
+
+    LEFT JOIN tb_ics_opname o 
+        ON x.nama_barang = o.nama_barang AND x.exp_date = o.exp_date
+
+    ORDER BY x.nama_barang, x.exp_date
         ");
     }
 }
