@@ -21,6 +21,9 @@
                         <div class="col-auto">
                             <a href="<?= base_url('trackingtim/2') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock TIM 2</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Stock Opname</a>
+                        </div>
                     </div>
 
                     <div class="card">

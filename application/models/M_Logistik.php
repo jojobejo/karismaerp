@@ -728,9 +728,19 @@ class M_Logistik extends CI_Model
     public function getAllICS()
     {
         return $this->db->query("SELECT
-        a.*,(b.p*b.l*b.t) AS dimensi
-        FROM tb_ics a
-        INNER JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+        x.nama_barang,
+        x.exp_date,
+        x.dimensi
+        FROM
+        (
+            SELECT
+            a.nama_barang,
+            a.exp_date,
+            (b.p*b.l*b.t) AS dimensi
+            FROM tb_ics a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+                
+        ) AS x
         ")->result();
     }
 
