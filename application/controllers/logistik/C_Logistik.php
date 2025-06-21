@@ -10,6 +10,7 @@ class C_Logistik extends CI_Controller
         parent::__construct();
         $this->load->model('M_Logistik');
         $this->load->model('M_Keuangan');
+        $this->load->helper('stock_helper');
     }
 
     public function index()
@@ -1639,6 +1640,19 @@ class C_Logistik extends CI_Controller
         }
     }
 
+    public function admstocktracking()
+    {
+        $data['page_title'] = 'KARISMA - ICS';
+
+        $data['fefo']           = $this->M_Logistik->admin_compareuser_exp();
+        $data['allbarang']      = $this->M_Logistik->admin_compareuser_all();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/adminstockopname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
     public function ics($gudang)
     {
         switch ($gudang) {
@@ -1646,6 +1660,12 @@ class C_Logistik extends CI_Controller
 
                 $data['page_title'] = 'KARISMA - ICS';
                 $data['listics'] = $this->M_Logistik->getbarangics();
+                $data['data_ics'] = $this->M_Logistik->getAllICS();
+
+                $data['fefo'] = $this->M_Logistik->compareFEFO();
+                $data['allbarang'] = $this->M_Logistik->compareAllBarang();
+                $data['stat_fefo'] = $this->M_Logistik->statistikFEFO();
+                $data['stat_allbarang'] = $this->M_Logistik->statistikAllBarang();
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/ics.php', $data);
@@ -1656,6 +1676,92 @@ class C_Logistik extends CI_Controller
             case 'induk':
                 break;
         }
+    }
+
+    public function stockopname()
+    {
+        $data['page_title'] = 'KARISMA - ICS';
+        $data['data_ics'] = $this->M_Logistik->getAllICS();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/icsopname.php', $data);
+        $this->load->view('partial/main/footeropname.php');
+    }
+
+    public function insertopname()
+    {
+        $nama_barang    = $this->input->post('nmbarang');
+        $exp_date       = $this->input->post('expdate');
+        $qty_box        = (int)$this->input->post('qtybox');
+        $qty_pcs        = (int)$this->input->post('qtypcs');
+        $dimensi        = (int)$this->input->post('dimensi');
+        $inputer        = $this->session->userdata('nama');
+        $inputernik     = $this->session->userdata('nik');
+        $tim            = $this->session->userdata('tim');
+
+        $dimensi = $this->M_Logistik->getDimensi($nama_barang);
+        $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
+
+        $this->M_Logistik->insertOpname([
+            'nama_barang' => $nama_barang,
+            'exp_date' => $exp_date,
+            'qty' => $total_qty,
+            'qty_box'   => $qty_box,
+            'qty_pcs'   => $qty_pcs,
+            'inputer'   => $inputer,
+            'tim'       => $tim,
+            'input_at'  => date('Y-m-d H:i:s')
+        ]);
+
+        $this->M_Logistik->logInput([
+            'nama_user' => $inputer,
+            'nama_barang' => $nama_barang,
+            'qty' => $total_qty,
+            'qty_box' => $qty_box,
+            'qty_pcs' => $qty_pcs,
+            'no_lot' => '-',
+            'exp_date' => $exp_date,
+            'inputer' => $inputernik,
+            'tgl_input' => date('Y-m-d'),
+            'keterangan' => 'Stock Opname'
+        ]);
+
+        redirect('stockopname');
+    }
+
+    public function forminput($nama_barang, $exp_date)
+    {
+        $data['barang'] = $this->M_Logistik->getBarangByNama($nama_barang);
+        $data['exp_date'] = $exp_date;
+        $this->load->view('content/logistik/ics/modalopname.php', $data);
+    }
+
+    public function stkopname_tracking()
+    {
+        $user                   = $this->session->userdata('nama');
+        $data['page_title']     = 'KARISMA - ICS';
+        $data['trkopname']      = $this->M_Logistik->trackingopname($user);
+        $data['resultcompare']  = $this->M_Logistik->compareinputer($user);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/stocktracking.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function admtrackingtim($tim)
+
+    {
+        $data['page_title']             = 'KARISMA - ICS';
+
+        $data['trkopname']              = $this->M_Logistik->adm_trackingopname($tim);
+        $data['resultcomparebyexp']     = $this->M_Logistik->compareinputerexp($tim);
+        $data['resultcompare']          = $this->M_Logistik->compareinputer($tim);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/admstocktracking_tim.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
     public function detailbarang($kdbarang)
