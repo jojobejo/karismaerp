@@ -37,6 +37,7 @@ class Auth extends CI_Controller
                         'nama'          => $key->nm_karyawan,
                         'tim'           => $key->tim,
                     );
+                    $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);
                     if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
@@ -51,7 +52,7 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'ADMINKEUTC') {
                         redirect('keuangan');
                     } else if ($key->jobdesk == 'STOCKOPNAME') {
-                        redirect('ics/global');
+                        redirect('stockopname');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

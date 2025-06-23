@@ -11,6 +11,8 @@ class C_Logistik extends CI_Controller
         $this->load->model('M_Logistik');
         $this->load->model('M_Keuangan');
         $this->load->helper('stock_helper');
+        $this->load->helper('login_auth');
+        is_logged_in();
     }
 
     public function index()
@@ -1644,8 +1646,8 @@ class C_Logistik extends CI_Controller
     {
         $data['page_title'] = 'KARISMA - ICS';
 
-        $data['fefo']           = $this->M_Logistik->admin_compareuser_exp();
-        $data['allbarang']      = $this->M_Logistik->admin_compareuser_all();
+        // $data['fefo']           = $this->M_Logistik->admin_compareuser_exp();
+        // $data['allbarang']      = $this->M_Logistik->admin_compareuser_all();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/adminstockopname.php', $data);
@@ -1688,46 +1690,128 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footeropname.php');
     }
 
-    public function insertopname()
+    public function searchbarang()
     {
-        $nama_barang    = $this->input->post('nmbarang');
-        $exp_date       = $this->input->post('expdate');
-        $qty_box        = (int)$this->input->post('qtybox');
-        $qty_pcs        = (int)$this->input->post('qtypcs');
-        $dimensi        = (int)$this->input->post('dimensi');
-        $inputer        = $this->session->userdata('nama');
-        $inputernik     = $this->session->userdata('nik');
-        $tim            = $this->session->userdata('tim');
+        $search = $this->input->get('search');
+        $result = $this->db->like('nama_barang', $search)
+            ->group_by('nama_barang')
+            ->get('tb_ics')->result();
 
-        $dimensi = $this->M_Logistik->getDimensi($nama_barang);
-        $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
-
-        $this->M_Logistik->insertOpname([
-            'nama_barang' => $nama_barang,
-            'exp_date' => $exp_date,
-            'qty' => $total_qty,
-            'qty_box'   => $qty_box,
-            'qty_pcs'   => $qty_pcs,
-            'inputer'   => $inputer,
-            'tim'       => $tim,
-            'input_at'  => date('Y-m-d H:i:s')
-        ]);
-
-        $this->M_Logistik->logInput([
-            'nama_user' => $inputer,
-            'nama_barang' => $nama_barang,
-            'qty' => $total_qty,
-            'qty_box' => $qty_box,
-            'qty_pcs' => $qty_pcs,
-            'no_lot' => '-',
-            'exp_date' => $exp_date,
-            'inputer' => $inputernik,
-            'tgl_input' => date('Y-m-d'),
-            'keterangan' => 'Stock Opname'
-        ]);
-
-        redirect('stockopname');
+        $data = [];
+        foreach ($result as $row) {
+            $data[] = ['id' => $row->nama_barang, 'text' => $row->nama_barang];
+        }
+        echo json_encode($data);
     }
+
+    public function search_get_exp_date()
+    {
+        $nama_barang = $this->input->post('nama_barang');
+
+        $exp_dates = $this->db->select('exp_date')
+            ->where('nama_barang', $nama_barang)
+            ->group_by('exp_date')
+            ->order_by('exp_date', 'ASC')
+            ->get('tb_ics')
+            ->result();
+
+        $dimensi = $this->db->select('p, l, t')
+            ->where('nm_barang', $nama_barang)
+            ->get('tb_mbarang')
+            ->row();
+
+        $data_dimensi = [
+            'p' => $dimensi ? $dimensi->p : null,
+            'l' => $dimensi ? $dimensi->l : null,
+            't' => $dimensi ? $dimensi->t : null,
+        ];
+
+        $result = [
+            'exp_dates' => $exp_dates,
+            'dimensi' => $data_dimensi
+        ];
+
+        echo json_encode($result);
+    }
+
+    public function save_opname()
+    {
+        $nmbarang   = $this->input->post('nama_barang');
+        $box        = $this->input->post('qty_box');
+        $pcs        = $this->input->post('qty_pcs');
+
+        $dimensi    = $this->M_Logistik->getDimensi($nmbarang);
+        $total_qty  = hitung_qty($box, $pcs, $dimensi);
+
+        $opname = [
+            'nama_barang'   => $nmbarang,
+            'exp_date'      => $this->input->post('exp_date'),
+            'qty'           => $total_qty,
+            'qty_box'       => $box,
+            'qty_pcs'       => $pcs,
+            'inputer'       => $this->session->userdata('nama'),
+            'tim'           => $this->session->userdata('tim'),
+            'input_at'      => date('Y-m-d H:i:s')
+        ];
+
+        $log = [
+            'nama_user'     => $this->session->userdata('nama'),
+            'nama_barang'   => $nmbarang,
+            'qty'           => $total_qty,
+            'qty_box'       => $box,
+            'qty_pcs'       => $pcs,
+            'no_lot'        => '-',
+            'exp_date'      => $this->input->post('exp_date'),
+            'inputer'       => $this->session->userdata('nik'),
+            'tgl_input'     => date('Y-m-d'),
+            'keterangan'    => 'Stock Opname'
+        ];
+
+        $this->db->insert('tb_ics_opname', $opname);
+        $this->db->insert('tb_log_ics', $log);
+        echo 'ok';
+    }
+
+    // public function insertopname()
+    // {
+    //     $nama_barang    = $this->input->post('nmbarang');
+    //     $exp_date       = $this->input->post('expdate');
+    //     $qty_box        = (int)$this->input->post('qtybox');
+    //     $qty_pcs        = (int)$this->input->post('qtypcs');
+    //     $dimensi        = (int)$this->input->post('dimensi');
+    //     $inputer        = $this->session->userdata('nama');
+    //     $inputernik     = $this->session->userdata('nik');
+    //     $tim            = $this->session->userdata('tim');
+
+    //     $dimensi = $this->M_Logistik->getDimensi($nama_barang);
+    //     $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
+
+    //     $this->M_Logistik->insertOpname([
+    //         'nama_barang' => $nama_barang,
+    //         'exp_date' => $exp_date,
+    //         'qty' => $total_qty,
+    //         'qty_box'   => $qty_box,
+    //         'qty_pcs'   => $qty_pcs,
+    //         'inputer'   => $inputer,
+    //         'tim'       => $tim,
+    //         'input_at'  => date('Y-m-d H:i:s')
+    //     ]);
+
+    //     $this->M_Logistik->logInput([
+    //         'nama_user' => $inputer,
+    //         'nama_barang' => $nama_barang,
+    //         'qty' => $total_qty,
+    //         'qty_box' => $qty_box,
+    //         'qty_pcs' => $qty_pcs,
+    //         'no_lot' => '-',
+    //         'exp_date' => $exp_date,
+    //         'inputer' => $inputernik,
+    //         'tgl_input' => date('Y-m-d'),
+    //         'keterangan' => 'Stock Opname'
+    //     ]);
+
+    //     redirect('stockopname');
+    // }
 
     public function forminput($nama_barang, $exp_date)
     {

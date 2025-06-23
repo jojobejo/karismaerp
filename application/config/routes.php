@@ -88,6 +88,9 @@ $route['forminput/(:any)/(:any)']            = 'logistik/C_Logistik/forminput/$1
 $route['insertopname']                       = 'logistik/C_Logistik/insertopname';
 $route['stkopname_tracking']                 = 'logistik/C_Logistik/stkopname_tracking';
 $route['admstocktracking']                   = 'logistik/C_Logistik/admstocktracking';
+$route['searchbarang']                       = 'logistik/C_Logistik/searchbarang';
+$route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_exp_date';
+$route['save_opname']                        = 'logistik/C_Logistik/save_opname';
 $route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
 
 //LOGISTIK - DO

@@ -1,3 +1,9 @@
+<style>
+    .select2-container .select2-selection--single {
+        height: 38px;
+    }
+</style>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -16,9 +22,15 @@
                 <section class="content">
                     <div class="container-fluid">
                         <div class="row">
-                            <div class="col-12 col-sm-6 col-md-2">
-                                <a href="<?= base_url('logistik'); ?>" class="btn btn-primary w-10"><i class="fas fa-home"></i></a>
-                            </div>
+                            <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                                <div class="col-12 col-sm-6 col-md-2">
+                                    <a href="<?= base_url('admstocktracking'); ?>" class="btn btn-primary w-10"><i class="fas fa-home"></i></a>
+                                </div>
+                            <?php else : ?>
+                                <div class="col-12 col-sm-6 col-md-2">
+                                    <a href="<?= base_url('usropname_input'); ?>" class="btn btn-primary w-10"><i class="fas fa-tasks"></i> Histori Input</a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </section>
@@ -26,74 +38,65 @@
 
             <section class="content">
                 <div class="container-fluid">
-                    <div class="card mt-4 mb-2">
-                        <div class="card-body">
-                            <h4>Data Stock Opname</h4>
-
-                            <table class="table table-bordered" id="list_tb_opname">
-                                <thead>
-                                    <tr>
-                                        <th>Nama Barang</th>
-                                        <th style="width: 15%;text-align: center;">Expired Date</th>
-                                        <th style="width: 10%;text-align: center;">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($data_ics as $itm) : ?>
-                                        <tr>
-                                            <td><?= $itm->nama_barang ?></td>
-                                            <td><?= $itm->exp_date ?></td>
-                                            <td class="text-center">
-                                                <button class="btn btn-success btn-sm btn-input" data-nama="<?= $itm->nama_barang ?>" data-exp="<?= $itm->exp_date ?>" data-dimensi="<?= $itm->dimensi ?>">
-                                                    <i class="fas fa-pen"></i> Input
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                            <!-- Modal Input Opname -->
-                            <div class="modal fade" id="modalInputOpname" tabindex="-1" role="dialog" aria-labelledby="opnameModalLabel" aria-hidden="true">
-                                <div class="modal-dialog" role="document">
-                                    <form id="formOpname">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Input Stock Opname</h5>
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <input type="hidden" name="nmbarang" id="modal_nama_barang">
-                                                <input type="hidden" name="expdate" id="modal_exp_date">
-                                                <input type="hidden" name="dimensi" id="modal_dimensi">
-
-                                                <div class="form-group">
-                                                    <label>Nama Barang</label>
-                                                    <input type="text" class="form-control" id="view_nama_barang" readonly>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Expired Date</label>
-                                                    <input type="text" class="form-control" id="view_exp_date" readonly>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Qty Box</label>
-                                                    <input type="number" name="qtybox" class="form-control" required>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Qty Pcs</label>
-                                                    <input type="number" name="qtypcs" class="form-control" required>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="submit" class="btn btn-primary">Simpan</button>
-                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-
+                    <form id="formOpname">
+                        <div class="form-group">
+                            <label for="nama_barang">Nama Barang</label>
+                            <select id="nama_barang" name="nama_barang" class="form-control" style="width:100%"></select>
                         </div>
-                    </div>
+
+                        <div class="form-row d-none" id="dimensi_group" hidden>
+                            <div class="form-group col-md-4">
+                                <label>Panjang (cm)</label>
+                                <input type="text" class="form-control" id="p" name="p" readonly>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Lebar (cm)</label>
+                                <input type="text" class="form-control" id="l" name="l" readonly>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label>Tinggi (cm)</label>
+                                <input type="text" class="form-control" id="t" name="t" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-group d-none" id="exp_date_group">
+                            <label for="exp_date">Expired Date</label>
+                            <select id="exp_date" name="exp_date" class="form-control" required></select>
+                        </div>
+
+                        <!-- <div class="form-group">
+                            <button type="button" class="btn btn-warning btn-sm" id="btn_toggle_input">
+                                Gunakan Input Manual
+                            </button>
+                        </div> -->
+
+                        <div class="form-group d-none" id="qty_form">
+                            <label for="qty_box">Qty Box</label>
+                            <input type="number" class="form-control" id="qty_box" name="qty_box" value="0" required>
+
+                            <label for="qty_pcs" class="mt-2">Qty Pcs</label>
+                            <input type="number" class="form-control" id="qty_pcs" name="qty_pcs" value="0" required>
+
+                            <button type="submit" class="btn btn-primary btn-block mt-3">Simpan</button>
+                        </div>
+
+                        <div id="manual_input_group" class="d-none">
+                            <div class="form-group">
+                                <label for="exp_date_manual">Expired Date (Manual)</label>
+                                <input type="date" class="form-control" id="exp_date_manual" name="exp_date_manual">
+                            </div>
+                            <div class="form-group">
+                                <label for="qty_box_manual">Qty Box</label>
+                                <input type="number" class="form-control" id="qty_box_manual" name="qty_box_manual">
+                            </div>
+                            <div class="form-group">
+                                <label for="qty_pcs_manual">Qty Pcs</label>
+                                <input type="number" class="form-control" id="qty_pcs_manual" name="qty_pcs_manual">
+                            </div>
+                        </div>
+
+                    </form>
+                    <div id="alertMsg" class="alert alert-success mt-3 d-none" role="alert"></div>
                 </div>
             </section>
         </div>
@@ -115,47 +118,120 @@
     </div>
     <!-- ./wrapper -->
     <script>
-        $(function() {
-            $("#list_tb_opname").DataTable({
-                "responsive": true,
-                "lengthChange": false,
-                "aaSorting": [],
-                "autoWidth": false,
+        $(document).ready(function() {
+
+            let isManualMode = false;
+
+            $('#btn_toggle_input').on('click', function() {
+                isManualMode = !isManualMode;
+
+                if (isManualMode) {
+                    $('#manual_input_group').removeClass('d-none');
+                    $('#exp_date_group, #qty_form').addClass('d-none');
+                    $(this).text('Gunakan Dropdown Exp Date');
+                } else {
+                    $('#manual_input_group').addClass('d-none');
+                    $('#exp_date_group').removeClass('d-none');
+                    $('#qty_form').removeClass('d-none');
+                    $(this).text('Gunakan Input Manual');
+                }
             });
 
-            // Event tombol input
-            $('.btn-input').on('click', function() {
-                let nama_barang = $(this).data('nama');
-                let exp_date = $(this).data('exp');
-                let dimensi = $(this).data('dimensi');
 
-                $('#modal_nama_barang').val(nama_barang);
-                $('#modal_exp_date').val(exp_date);
-                $('#modal_dimensi').val(dimensi);
-
-                $('#view_nama_barang').val(nama_barang);
-                $('#view_exp_date').val(exp_date);
-
-                $('#modalInputOpname').modal('show');
-            });
-
-            // Submit form via AJAX
-            $('#formOpname').on('submit', function(e) {
-                e.preventDefault();
-                $.ajax({
-                    url: "<?= base_url('logistik/insertopname') ?>",
-                    type: "POST",
-                    data: $(this).serialize(),
-                    success: function(res) {
-                        $('#modalInputOpname').modal('hide');
-                        Swal.fire('Berhasil', 'Data opname berhasil disimpan!', 'success').then(() => {
-                            location.reload();
-                        });
+            $('#nama_barang').select2({
+                placeholder: 'Cari nama barang...',
+                ajax: {
+                    url: '<?= base_url("searchbarang") ?>',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            search: params.term
+                        };
                     },
-                    error: function() {
-                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error');
+                    processResults: function(data) {
+                        return {
+                            results: data
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            $('#nama_barang').on('change', function() {
+                const nama_barang = $(this).val();
+                $('#exp_date_group').removeClass('d-none');
+                $('#qty_form').addClass('d-none');
+                $('#exp_date').empty().append('<option value="">Loading...</option>');
+
+                $.ajax({
+                    url: '<?= base_url("search_get_exp_date") ?>',
+                    type: 'POST',
+                    data: {
+                        nama_barang
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+
+                        $('#exp_date').empty().append('<option value="">Pilih Expired Date</option>');
+                        $.each(res.exp_dates, function(i, val) {
+                            $('#exp_date').append('<option value="' + val.exp_date + '">' + val.exp_date + '</option>');
+                        });
+
+                        $('#exp_date_group').removeClass('d-none');
+
+                        const d = res.dimensi;
+                        if (d && d.p && d.l && d.t) {
+                            $('#p').val(d.p);
+                            $('#l').val(d.l);
+                            $('#t').val(d.t);
+                            $('#dimensi_group').removeClass('d-none');
+                        } else {
+                            $('#p, #l, #t').val('');
+                            $('#dimensi_group').addClass('d-none');
+                        }
+
+                        $('#qty_form').addClass('d-none');
+                        $('#info_boxpcs').text('');
                     }
                 });
             });
+
+            $('#exp_date').on('change', function() {
+                $('#qty_form').removeClass('d-none');
+            });
+
+            // $('#btn_manual_exp').on('click', function() {
+            //     $('#manual_input_group').removeClass('d-none');
+            //     $('#exp_date_group, #qty_form').addClass('d-none');
+            // });
+
+            $('#formOpname').on('submit', function(e) {
+                e.preventDefault();
+
+                let url = '<?= base_url("save_opname") ?>';
+                if (isManualMode) {
+                    url = '<?= base_url("request_opname") ?>';
+                }
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    success: function(response) {
+                        $('#alertMsg').text("Data berhasil disimpan!").removeClass('d-none');
+                        $('#formOpname')[0].reset();
+                        $('#nama_barang').val(null).trigger('change');
+
+                        $('#exp_date_group, #qty_form, #manual_input_group').addClass('d-none');
+                        $('#btn_toggle_input').text('Gunakan Input Manual');
+                        isManualMode = false;
+
+                        setTimeout(() => $('#alertMsg').addClass('d-none'), 2000);
+                    }
+                });
+            });
+
+
         });
     </script>

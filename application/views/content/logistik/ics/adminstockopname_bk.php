@@ -25,29 +25,69 @@
                             <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Stock Opname</a>
                         </div>
                     </div>
+
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="mt-2 mb-2">Compare Tim - FEFO</h5>
+                            <div class="container-fluid">
+                                <h4>Dashboard Stock Opname</h4>
+                                <h5 class="mt-2 mb-2">Compare Tim - FEFO</h5>
+                                <table class="table table-bordered table-sm" id="tb_dash_fefo">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Barang</th>
+                                            <th>Expired Date</th>
+                                            <th>TIM 1</th>
+                                            <th>TIM 2</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($fefo as $row) : ?>
+                                            <tr>
+                                                <td><?= $row->nm_barang ?></td>
+                                                <td><?= $row->exp_date ?></td>
+                                                <td><?= $row->qty_fisik_tim1 ?></td>
+                                                <td><?= $row->qty_fisik_tim2 ?></td>
+                                                <td><span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
+                                                        <?= $row->status ?>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="mt-2">Compare Tim - AllBarang</h5>
+                            <table class="table table-bordered table-sm" id="tb_dash_allbarang">
 
-                            <table class="table table-bordered table-sm" id="tb_dash_fefo">
                                 <thead>
                                     <tr>
                                         <th>Nama Barang</th>
-                                        <th>Expired Date</th>
                                         <th>TIM 1</th>
                                         <th>TIM 2</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                                    <?php foreach ($allbarang as $row) : ?>
+                                        <tr>
+                                            <td><?= $row->nm_barang ?></td>
+                                            <td><?= $row->qty_fisik_tim1 ?></td>
+                                            <td><?= $row->qty_fisik_tim2 ?></td>
+                                            <td>
+                                                <span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
+                                                    <?= $row->status ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach ?>
                                 </tbody>
                             </table>
-
                         </div>
                     </div>
                 </section>
