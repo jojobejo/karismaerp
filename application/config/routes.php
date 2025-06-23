@@ -91,6 +91,7 @@ $route['admstocktracking']                   = 'logistik/C_Logistik/admstocktrac
 $route['searchbarang']                       = 'logistik/C_Logistik/searchbarang';
 $route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_exp_date';
 $route['save_opname']                        = 'logistik/C_Logistik/save_opname';
+$route['request_opname']                     = 'logistik/C_Logistik/request_opname';
 $route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
 
 //LOGISTIK - DO

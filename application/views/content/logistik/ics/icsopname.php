@@ -21,7 +21,7 @@
             <div class="content-header">
                 <section class="content">
                     <div class="container-fluid">
-                        <div class="row">
+                        <div class="row align-items-start">
                             <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
                                 <div class="col-12 col-sm-6 col-md-2">
                                     <a href="<?= base_url('admstocktracking'); ?>" class="btn btn-primary w-10"><i class="fas fa-home"></i></a>
@@ -31,6 +31,9 @@
                                     <a href="<?= base_url('usropname_input'); ?>" class="btn btn-primary w-10"><i class="fas fa-tasks"></i> Histori Input</a>
                                 </div>
                             <?php endif; ?>
+                            <button type="button" class="btn btn-warning d-none" id="btn_toggle_input">
+                                Gunakan Input Manual
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -64,12 +67,6 @@
                             <select id="exp_date" name="exp_date" class="form-control" required></select>
                         </div>
 
-                        <!-- <div class="form-group">
-                            <button type="button" class="btn btn-warning btn-sm" id="btn_toggle_input">
-                                Gunakan Input Manual
-                            </button>
-                        </div> -->
-
                         <div class="form-group d-none" id="qty_form">
                             <label for="qty_box">Qty Box</label>
                             <input type="number" class="form-control" id="qty_box" name="qty_box" value="0" required>
@@ -83,17 +80,21 @@
                         <div id="manual_input_group" class="d-none">
                             <div class="form-group">
                                 <label for="exp_date_manual">Expired Date (Manual)</label>
-                                <input type="date" class="form-control" id="exp_date_manual" name="exp_date_manual">
+                                <input type="Text" class="form-control" id="exp_date_manual" name="exp_date_manual" placeholder="Gunakan Format dd/mm/yyyy">
                             </div>
                             <div class="form-group">
                                 <label for="qty_box_manual">Qty Box</label>
-                                <input type="number" class="form-control" id="qty_box_manual" name="qty_box_manual">
+                                <input type="number" class="form-control" id="qty_box_manual" name="qty_box_manual" value="0">
                             </div>
                             <div class="form-group">
                                 <label for="qty_pcs_manual">Qty Pcs</label>
-                                <input type="number" class="form-control" id="qty_pcs_manual" name="qty_pcs_manual">
+                                <input type="number" class="form-control" id="qty_pcs_manual" name="qty_pcs_manual" value="0">
                             </div>
+
                         </div>
+                        <button type="button" class="btn btn-success btn-block mt-2 d-none" id="btn_submit_manual">
+                            Simpan Request Opname
+                        </button>
 
                     </form>
                     <div id="alertMsg" class="alert alert-success mt-3 d-none" role="alert"></div>
@@ -127,15 +128,17 @@
 
                 if (isManualMode) {
                     $('#manual_input_group').removeClass('d-none');
+                    $('#btn_submit_manual').removeClass('d-none');
                     $('#exp_date_group, #qty_form').addClass('d-none');
                     $(this).text('Gunakan Dropdown Exp Date');
                 } else {
                     $('#manual_input_group').addClass('d-none');
-                    $('#exp_date_group').removeClass('d-none');
-                    $('#qty_form').removeClass('d-none');
+                    $('#btn_submit_manual').addClass('d-none');
+                    $('#exp_date_group, #qty_form').removeClass('d-none');
                     $(this).text('Gunakan Input Manual');
                 }
             });
+
 
 
             $('#nama_barang').select2({
@@ -160,6 +163,9 @@
 
             $('#nama_barang').on('change', function() {
                 const nama_barang = $(this).val();
+
+                $('#btn_toggle_input').removeClass('d-none'); // ⬅️ tampilkan tombol manual input
+
                 $('#exp_date_group').removeClass('d-none');
                 $('#qty_form').addClass('d-none');
                 $('#exp_date').empty().append('<option value="">Loading...</option>');
@@ -172,7 +178,6 @@
                     },
                     dataType: 'json',
                     success: function(res) {
-
                         $('#exp_date').empty().append('<option value="">Pilih Expired Date</option>');
                         $.each(res.exp_dates, function(i, val) {
                             $('#exp_date').append('<option value="' + val.exp_date + '">' + val.exp_date + '</option>');
@@ -197,14 +202,35 @@
                 });
             });
 
+
             $('#exp_date').on('change', function() {
                 $('#qty_form').removeClass('d-none');
             });
 
-            // $('#btn_manual_exp').on('click', function() {
-            //     $('#manual_input_group').removeClass('d-none');
-            //     $('#exp_date_group, #qty_form').addClass('d-none');
-            // });
+            
+
+            $('#btn_submit_manual').on('click', function(e) {
+                e.preventDefault();
+
+                $.ajax({
+                    url: '<?= base_url("request_opname") ?>',
+                    type: 'POST',
+                    data: $('#formOpname').serialize(),
+                    success: function(response) {
+                        $('#btn_toggle_input').addClass('d-none');
+                        $('#alertMsg').text("Data berhasil disimpan!").removeClass('d-none');
+                        $('#formOpname')[0].reset();
+                        $('#nama_barang').val(null).trigger('change');
+
+                        $('#exp_date_group, #qty_form, #manual_input_group, #btn_submit_manual').addClass('d-none');
+                        $('#btn_toggle_input').text('Gunakan Input Manual');
+                        isManualMode = false;
+
+                        setTimeout(() => $('#alertMsg').addClass('d-none'), 2000);
+                    }
+                });
+            });
+
 
             $('#formOpname').on('submit', function(e) {
                 e.preventDefault();
@@ -220,17 +246,29 @@
                     data: $(this).serialize(),
                     success: function(response) {
                         $('#alertMsg').text("Data berhasil disimpan!").removeClass('d-none');
+
+                        // ✅ Reset form input dan select2
                         $('#formOpname')[0].reset();
                         $('#nama_barang').val(null).trigger('change');
 
-                        $('#exp_date_group, #qty_form, #manual_input_group').addClass('d-none');
-                        $('#btn_toggle_input').text('Gunakan Input Manual');
+                        // ✅ Reset dan sembunyikan select Exp Date
+                        $('#exp_date').empty().append('<option value="">Pilih Expired Date</option>');
+                        $('#exp_date_group').addClass('d-none');
+
+                        // ✅ Sembunyikan semua group lain
+                        $('#qty_form, #manual_input_group, #dimensi_group, #btn_submit_manual').addClass('d-none');
+
+                        // ✅ Reset tombol toggle dan state manual
+                        $('#btn_toggle_input').text('Gunakan Input Manual').addClass('d-none');
                         isManualMode = false;
 
+                        // ✅ Sembunyikan alert otomatis
                         setTimeout(() => $('#alertMsg').addClass('d-none'), 2000);
                     }
                 });
             });
+
+
 
 
         });

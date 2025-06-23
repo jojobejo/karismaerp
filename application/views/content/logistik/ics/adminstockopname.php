@@ -1,3 +1,12 @@
+<style>
+    .small-chart {
+        width: 50% !important;
+        height: auto;
+        margin: auto;
+        display: block;
+    }
+</style>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -24,32 +33,70 @@
                         <div class="col-auto">
                             <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Stock Opname</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-hourglass"></i> Data Pending</a>
+                        </div>
                     </div>
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="mt-2 mb-2">Compare Tim - FEFO</h5>
+                            <!-- BY ALL BARANG -->
+                            <h1 style="text-align: center;">RESULT ALL BARANG</h1>
+                            <div class="row mt-4">
 
-                            <table class="table table-bordered table-sm" id="tb_dash_fefo">
-                                <thead>
-                                    <tr>
-                                        <th>Nama Barang</th>
-                                        <th>Expired Date</th>
-                                        <th>TIM 1</th>
-                                        <th>TIM 2</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                <div class="col-md-6">
+                                    <h3 style="text-align: center;">TIM 1</h3>
+                                    <canvas id="pieChartTim1" class="small-chart"></canvas>
+                                    <div class="text-center">
+                                        <span class="mx-2">All Barang : <?= $stat_t1['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $stat_t1['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $stat_t1['total_notmatch'] ?></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h3 style="text-align: center;">TIM 2</h3>
+                                    <canvas id="pieChartTim2" class="small-chart"></canvas>
+                                    <div class="text-center">
+                                        <span class="mx-2">All Barang : <?= $stat_t2['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $stat_t2['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $stat_t2['total_notmatch'] ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- BY EXPIRED DATE -->
+
 
                         </div>
                     </div>
+
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <h1 style="text-align: center;">RESULT FEFO</h1>
+                            <div class="row mt-4">
+
+                                <div class="col-md-6">
+                                    <h3 style="text-align: center;">TIM 1</h3>
+                                    <canvas id="pieChartTim1exp" class="small-chart"></canvas>
+                                    <div class="text-center">
+                                        <span class="mx-2">All Barang : <?= $statexp_t1['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $statexp_t1['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $statexp_t1['total_notmatch'] ?></span>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h3 style="text-align: center;">TIM 2</h3>
+                                    <canvas id="pieChartTim2exp" class="small-chart"></canvas>
+                                    <div class="text-center">
+                                        <span class="mx-2">All Barang : <?= $statexp_t2['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $statexp_t2['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $statexp_t2['total_notmatch'] ?></span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
                 </section>
             </div>
         </div>
@@ -71,51 +118,20 @@
     </div>
     <!-- ./wrapper -->
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // FEFO Pie Chart
-        var fefoPieCtx = document.getElementById('fefoPieChart').getContext('2d');
-        new Chart(fefoPieCtx, {
-            type: 'pie',
-            data: {
-                labels: ['MATCH', 'NOT MATCH'],
-                datasets: [{
-                    label: 'Statistik FEFO',
-                    data: [<?= $stat_fefo['match'] ?>, <?= $stat_fefo['not_match'] ?>],
-                    backgroundColor: ['#28a745', '#dc3545']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
+        // Pie Chart TIM 1
+        const dataTim1 = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $stat_t1['persen_match'] ?>, <?= $stat_t1['persen_notmatch'] ?>],
+                backgroundColor: ['#28a745', '#dc3545'],
+            }]
+        };
 
-        // All Barang Pie Chart
-        var allBarangPieCtx = document.getElementById('allBarangPieChart').getContext('2d');
-        new Chart(allBarangPieCtx, {
+        const configTim1 = {
             type: 'pie',
-            data: {
-                labels: [
-                    <?php foreach ($allbarang as $row) : ?> "<?= $row->nama_barang ?>",
-                    <?php endforeach ?>
-                ],
-                datasets: [{
-                    label: 'Qty Fisik',
-                    data: [
-                        <?php foreach ($allbarang as $row) : ?>
-                            <?= $row->qty_fisik ?>,
-                        <?php endforeach ?>
-                    ],
-                    backgroundColor: [
-                        '#007bff', '#28a745', '#ffc107', '#dc3545', '#6610f2',
-                        '#20c997', '#e83e8c', '#fd7e14', '#6c757d', '#17a2b8'
-                    ]
-                }]
-            },
+            data: dataTim1,
             options: {
                 responsive: true,
                 plugins: {
@@ -124,5 +140,82 @@
                     }
                 }
             }
-        });
+        };
+
+        new Chart(document.getElementById('pieChartTim1'), configTim1);
+
+        // Pie Chart TIM 2
+        const dataTim2 = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $stat_t2['persen_match'] ?>, <?= $stat_t2['persen_notmatch'] ?>],
+                backgroundColor: ['#007bff', '#ffc107'],
+            }]
+        };
+
+        const configTim2 = {
+            type: 'pie',
+            data: dataTim2,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim2'), configTim2);
+
+
+        // BY EXPIRED DATE
+
+        // Pie Chart TIM 1
+        const dataTim1exp = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $statexp_t1['persen_match'] ?>, <?= $statexp_t1['persen_notmatch'] ?>],
+                backgroundColor: ['#28a745', '#dc3545'],
+            }]
+        };
+
+        const configTim1exp = {
+            type: 'pie',
+            data: dataTim1exp,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim1exp'), configTim1exp);
+
+        // Pie Chart TIM 2
+        const dataTim2exp = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $statexp_t2['persen_match'] ?>, <?= $statexp_t2['persen_notmatch'] ?>],
+                backgroundColor: ['#007bff', '#ffc107'],
+            }]
+        };
+
+        const configTim2exp = {
+            type: 'pie',
+            data: dataTim2exp,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim2exp'), configTim2exp);
     </script>

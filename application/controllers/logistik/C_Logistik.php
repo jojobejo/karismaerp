@@ -1645,9 +1645,54 @@ class C_Logistik extends CI_Controller
     public function admstocktracking()
     {
         $data['page_title'] = 'KARISMA - ICS';
+        $result_t1 = $this->M_Logistik->all_barang_match_t1();
+        $result_t2 = $this->M_Logistik->all_barang_match_t2();
+        $resultexp_t1 = $this->M_Logistik->fefo_match_t1();
+        $resultexp_t2 = $this->M_Logistik->fefo_match_t2();
 
-        // $data['fefo']           = $this->M_Logistik->admin_compareuser_exp();
-        // $data['allbarang']      = $this->M_Logistik->admin_compareuser_all();
+        $res_t1 = $result_t1[0];
+        $res_t2 = $result_t2[0];
+
+        $resexp_t1 = $resultexp_t1[0];
+        $resexp_t2 = $resultexp_t2[0];
+
+        $data['stat_t1'] = [
+            'total_barang'   => $res_t1->total_barang,
+            'total_match'    => $res_t1->total_match,
+            'total_notmatch' => $res_t1->total_notmatch,
+            'persen_match'   => $res_t1->total_barang > 0 ? round(($res_t1->total_match / $res_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t1->total_barang > 0 ? round(($res_t1->total_notmatch / $res_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['statexp_t1'] = [
+            'total_barang'   => $resexp_t1->total_barang,
+            'total_match'    => $resexp_t1->total_match,
+            'total_notmatch' => $resexp_t1->total_notmatch,
+            'persen_match'   => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_match / $resexp_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['stat_t2'] = [
+            'total_barang'   => $res_t2->total_barang,
+            'total_match'    => $res_t2->total_match,
+            'total_notmatch' => $res_t2->total_notmatch,
+            'persen_match'   => $res_t2->total_barang > 0 ? round(($res_t2->total_match / $res_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t2->total_barang > 0 ? round(($res_t2->total_notmatch / $res_t2->total_barang) * 100, 2) : 0
+        ];
+
+        $data['statexp_t2'] = [
+            'total_barang'   => $resexp_t2->total_barang,
+            'total_match'    => $resexp_t2->total_match,
+            'total_notmatch' => $resexp_t2->total_notmatch,
+            'persen_match'   => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_match / $resexp_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_notmatch / $resexp_t2->total_barang) * 100, 2) : 0
+        ];
+
+        $data['all_t1'] = $result_t1;
+        $data['all_t2'] = $result_t2;
+
+        $data['allexp_t1'] = $resultexp_t1;
+        $data['allexp_t2'] = $resultexp_t2;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/adminstockopname.php', $data);
