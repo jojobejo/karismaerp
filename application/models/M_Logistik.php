@@ -887,6 +887,7 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_exp()
     {
         return $this->db->query("SELECT 
+        COALESCE(c.kd_system,'-') AS kd_barang,
         b.nm_barang,
         IFNULL(a.exp_date, '-') AS exp_date,
         COALESCE(SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim1,
@@ -900,6 +901,8 @@ class M_Logistik extends CI_Model
         FROM tb_mbarang b
         LEFT JOIN tb_ics_opname a 
         ON a.nama_barang = b.nm_barang
+        LEFT JOIN tb_mbarang c 
+        ON a.nama_barang = c.nm_barang
         GROUP BY b.nm_barang, a.exp_date
         ")->result();
     }
@@ -907,6 +910,7 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_all()
     {
         return $this->db->query("SELECT 
+			COALESCE(c.kd_system,'-') AS kd_barang,
             b.nm_barang,
             COALESCE(SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim1,
             COALESCE(SUM(CASE WHEN a.tim = '2' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim2,
@@ -919,6 +923,8 @@ class M_Logistik extends CI_Model
             FROM tb_mbarang b
             LEFT JOIN tb_ics_opname a 
             ON a.nama_barang = b.nm_barang
+            LEFT JOIN tb_mbarang c 
+            ON a.nama_barang = c.nm_barang
             GROUP BY b.nm_barang
         ")->result();
     }
@@ -999,21 +1005,19 @@ class M_Logistik extends CI_Model
 
     public function compareAllBarang()
     {
-        // Fisik opname
+
         $this->db->select('nama_barang, SUM(qty) AS qty_fisik');
         $this->db->from('tb_ics_opname');
         $this->db->group_by('nama_barang');
         $subquery_fisik = $this->db->get_compiled_select();
         $this->db->reset_query();
 
-        // Saldo dari tb_ics (qty buku)
         $this->db->select('nama_barang, SUM(qty) AS qty_buku');
         $this->db->from('tb_ics');
         $this->db->group_by('nama_barang');
         $subquery_buku = $this->db->get_compiled_select();
         $this->db->reset_query();
 
-        // Saldo dari tb_pending
         $this->db->select('nama_barang, SUM(qty) AS qty_pending');
         $this->db->from('tb_ics_do');
         $this->db->group_by('nama_barang');
@@ -1232,7 +1236,6 @@ class M_Logistik extends CI_Model
 
         return $this->db->query($sql)->result();
     }
-    // Statistik FEFO
     public function statistikFEFO()
     {
         $sql = "SELECT
@@ -1256,7 +1259,6 @@ FROM (
         return $this->_hitungStatistik($result);
     }
 
-    // Statistik All Barang
     public function statistikAllBarang()
     {
         $sql = "SELECT 
@@ -1273,7 +1275,6 @@ FROM (
         return $this->_hitungStatistik($result);
     }
 
-    // Helper privat
     private function _hitungStatistik($data)
     {
         $total = count($data);
@@ -1350,6 +1351,7 @@ FROM (
         ")->result();
     }
 
+
     public function all_barang_match_t2()
     {
         return $this->db->query("SELECT
@@ -1379,6 +1381,38 @@ FROM (
             GROUP BY nama_barang
         ) AS op
         ON ics.nama_barang = op.nama_barang;
+        ")->result();
+    }
+
+    public function list_inputer_by_allbarang($kdbarang)
+    {
+        return $this->db->query("SELECT	
+        a.id,
+        a.nama_barang,
+        a.qty,
+        a.qty_box,
+        a.qty_pcs,
+        a.tim,
+        a.inputer
+        FROM tb_ics_opname a
+        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        WHERE b.kd_system = '$kdbarang'
+        ")->result();
+    }
+    public function list_inputer_by_expdate($kdbarang)
+    {
+        return $this->db->query("SELECT	
+        a.id,
+        a.nama_barang,
+        a.exp_date,
+        a.qty,
+        a.qty_box,
+        a.qty_pcs,
+        a.tim,
+        a.inputer
+        FROM tb_ics_opname a
+        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        WHERE b.kd_system = '$kdbarang'
         ")->result();
     }
 

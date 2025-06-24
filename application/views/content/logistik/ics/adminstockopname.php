@@ -37,12 +37,13 @@
                             <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-hourglass"></i> Data Pending</a>
                         </div>
                     </div>
+
                     <div class="card">
                         <div class="card-body">
                             <!-- BY ALL BARANG -->
                             <h1 style="text-align: center;">RESULT ALL BARANG</h1>
+                            <h1 style="text-align: center;"><a href="<?= base_url('compareall_tim') ?>" class="btn btn-sm btn-primary w-20"><i class="fas fa-eye"></i> SHOW COMPARE</a></h1>
                             <div class="row mt-4">
-
                                 <div class="col-md-6">
                                     <h3 style="text-align: center;">TIM 1</h3>
                                     <canvas id="pieChartTim1" class="small-chart"></canvas>
@@ -63,14 +64,13 @@
                                 </div>
                             </div>
                             <!-- BY EXPIRED DATE -->
-
-
                         </div>
                     </div>
 
-                    <div class="card mt-3">
+                    <div class="card">
                         <div class="card-body">
                             <h1 style="text-align: center;">RESULT FEFO</h1>
+                            <h1 style="text-align: center;"><a href="<?= base_url('compare_exp') ?>" class="btn btn-sm btn-primary w-20"><i class="fas fa-eye"></i> SHOW COMPARE</a></h1>
                             <div class="row mt-4">
 
                                 <div class="col-md-6">

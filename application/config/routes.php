@@ -93,6 +93,10 @@ $route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_e
 $route['save_opname']                        = 'logistik/C_Logistik/save_opname';
 $route['request_opname']                     = 'logistik/C_Logistik/request_opname';
 $route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
+$route['compareall_tim']                     = 'logistik/C_Logistik/compareall_tim';
+$route['compare_exp']                        = 'logistik/C_Logistik/compare_exp';
+$route['detailtrack/(:any)/(:any)']          = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
+
 
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';
