@@ -15,7 +15,7 @@
                 <section class="content">
                     <div class="row">
                         <div class="col-auto">
-                            <a href="<?= base_url('compareall_tim') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                            <a href="<?= base_url('compare_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                         </div>
                     </div>
                     <div class="card">
@@ -52,12 +52,13 @@
                                         <?php foreach ($list1 as $row) : ?>
                                             <tr>
                                                 <td><?= $row->nama_barang ?></td>
+                                                <td><?= $row->exp_date ?></td>
                                                 <td><?= $row->qty ?></td>
                                                 <td><?= $row->qty_box ?></td>
                                                 <td><?= $row->qty_pcs ?></td>
                                                 <td><?= $row->inputer ?></td>
                                                 <td>
-                                                    <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row->id ?>" data-kdbarang="<?= $row->kd_system ?>" data-nama="<?= $row->nama_barang ?>" data-qty="<?= $row->qty ?>" data-qtybox="<?= $row->qty_box ?>" data-qtypcs="<?= $row->qty_pcs ?>" data-p="<?= $row->dimensi ?>">
+                                                    <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row->id ?>" data-kdbarang="<?= $row->kd_system ?>" data-nama="<?= $row->nama_barang ?>" data-qty="<?= $row->qty ?>" data-qtybox="<?= $row->qty_box ?>" data-qtypcs="<?= $row->qty_pcs ?>" data-expired="<?= $row->exp_date ?>" data-dimensi="<?= $row->dimensi ?>">
                                                         <i class="fas fa-pen"></i>
                                                     </a>
                                                 </td>
@@ -71,6 +72,7 @@
                                     <thead>
                                         <tr>
                                             <th>Nama Barang</th>
+                                            <th>Expired Date</th>
                                             <th>Qty</th>
                                             <th>Qty Box</th>
                                             <th>Qty Pcs</th>
@@ -82,12 +84,13 @@
                                         <?php foreach ($list2 as $row1) : ?>
                                             <tr>
                                                 <td><?= $row1->nama_barang ?></td>
+                                                <td><?= $row1->exp_date ?></td>
                                                 <td><?= $row1->qty ?></td>
                                                 <td><?= $row1->qty_box ?></td>
                                                 <td><?= $row1->qty_pcs ?></td>
                                                 <td><?= $row1->inputer ?></td>
                                                 <td>
-                                                    <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row1->id ?>" data-kdbarang="<?= $row1->kd_system ?>" data-nama="<?= $row1->nama_barang ?>" data-qty="<?= $row1->qty ?>" data-qtybox="<?= $row1->qty_box ?>" data-qtypcs="<?= $row1->qty_pcs ?>" data-p="<?= $row1->dimensi ?>">
+                                                    <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row1->id ?>" data-kdbarang="<?= $row1->kd_system ?>" data-nama="<?= $row1->nama_barang ?>" data-qty="<?= $row1->qty ?>" data-qtybox="<?= $row1->qty_box ?>" data-qtypcs="<?= $row1->qty_pcs ?>" data-expired="<?= $row1->exp_date ?>" data-dimensi="<?= $row1->dimensi ?>">
                                                         <i class="fas fa-pen"></i>
                                                     </a>
                                                 </td>
@@ -143,6 +146,11 @@
                             </div>
 
                             <div class="form-group">
+                                <label>Tgl Expired</label>
+                                <input type="text" class="form-control" id="edit_expdate" name="exp_date" readonly>
+                            </div>
+
+                            <div class="form-group">
                                 <label>Qty Box</label>
                                 <input type="number" class="form-control" id="edit_qty_box" name="qty_box" required>
                             </div>
@@ -153,7 +161,7 @@
                             </div>
 
                             <div class="form-group" hidden>
-                                <label>Dimensi (P x L x T)</label>
+                                <label>Dimensi</label>
                                 <input type="text" class="form-control" id="edit_dimensi" name="dimensi" readonly>
                             </div>
                         </div>
@@ -177,9 +185,10 @@
                 $('#edit_id').val(data.id);
                 $('#edit_kd_barang').val(data.kdbarang);
                 $('#edit_nama_barang').val(data.nama);
+                $('#edit_expdate').val(data.expired);
                 $('#edit_qty_box').val(data.qtybox);
                 $('#edit_qty_pcs').val(data.qtypcs);
-                $('#edit_dimensi').val(`${data.p}`);
+                $('#edit_dimensi').val(`${data.dimensi}`);
 
                 $('#modalEditOpname').modal('show');
             });

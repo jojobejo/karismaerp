@@ -24,6 +24,12 @@
             "aaSorting": [],
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+        $("#dt_pending").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
         $("#tb_dash_allbarang1").DataTable({
             "responsive": true,
             "lengthChange": false,

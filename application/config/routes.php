@@ -91,10 +91,12 @@ $route['admstocktracking']                   = 'logistik/C_Logistik/admstocktrac
 $route['searchbarang']                       = 'logistik/C_Logistik/searchbarang';
 $route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_exp_date';
 $route['save_opname']                        = 'logistik/C_Logistik/save_opname';
+$route['save_edit_opname']                   = 'logistik/C_Logistik/save_edit_opname';
 $route['request_opname']                     = 'logistik/C_Logistik/request_opname';
 $route['req_opname_acc/(:any)']              = 'logistik/C_Logistik/req_opname_acc/$1';
 $route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
 $route['compare_opname']                     = 'logistik/C_Logistik/compare_opname';
+$route['opname_datapending']                 = 'logistik/C_Logistik/opname_datapending';
 $route['request_opname_admin']               = 'logistik/C_Logistik/request_opname_admin';
 $route['detailtrack/(:any)/(:any)']          = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
 

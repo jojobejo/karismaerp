@@ -1700,23 +1700,6 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
-    public function save_edit_opname()
-    {
-        $id = $this->input->post('id');
-        $data = array(
-            'qty'      => $this->input->post('qty'),
-            'qty_box'  => $this->input->post('qty_box'),
-            'qty_pcs'  => $this->input->post('qty_pcs')
-        );
-
-        $this->db->where('id', $id);
-        $this->db->update('tb_ics_opname', $data);
-
-        $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
-        redirect('compareall_tim');
-    }
-
-
     public function detail_tracking_input($kdbarang, $action)
     {
         $tim1   = '1';
@@ -1725,22 +1708,12 @@ class C_Logistik extends CI_Controller
         switch ($action) {
             case 'allbarang':
                 $data['page_title'] = 'Opname Detail Inputer';
-                $data['list1']      = $this->M_Logistik->list_inputer_by_allbarang($kdbarang, $tim1);
-                $data['list2']      = $this->M_Logistik->list_inputer_by_allbarang($kdbarang, $tim2);
+                $data['list1']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
+                $data['list2']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
                 $data['nmbarang']   = $this->M_Logistik->get_nmbarang($kdbarang);
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
-                $this->load->view('partial/main/footer.php');
-                $this->load->view('content/logistik/ics/ajaxics.php', $data);
-                break;
-            case 'expdate':
-
-                $data['page_title'] = 'Opname Detail Inputer';
-                $data['list'] = $this->M_Logistik->list_inputer_by_expdate($kdbarang);
-
-                $this->load->view('partial/main/header.php', $data);
-                $this->load->view('content/logistik/ics/detail_tracking_exp.php', $data);
                 $this->load->view('partial/main/footer.php');
                 $this->load->view('content/logistik/ics/ajaxics.php', $data);
                 break;
@@ -1755,6 +1728,17 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/compare_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function opname_datapending()
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['pending']            = $this->M_Logistik->opname_pending();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/brpending_opname.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
@@ -1875,6 +1859,43 @@ class C_Logistik extends CI_Controller
         $this->db->insert('tb_log_ics', $log);
         echo 'ok';
     }
+
+    public function save_edit_opname()
+    {
+        $id         = $this->input->post('id');
+        $kdbarang   = $this->input->post('kd_barang');
+        $pcs        = $this->input->post('qty_pcs');
+        $box        = $this->input->post('qty_box');
+        $dimensi    = $this->input->post('dimensi');
+        $total_qty  = hitung_qty($box, $pcs, $dimensi);
+
+        $data = array(
+            'qty'      => $total_qty,
+            'qty_box'  => $box,
+            'qty_pcs'  => $pcs
+        );
+
+        $log = [
+            'nama_user'     => $this->session->userdata('nama'),
+            'nama_barang'   => $this->input->post('nama_barang'),
+            'qty'           => $total_qty,
+            'qty_box'       => $box,
+            'qty_pcs'       => $pcs,
+            'no_lot'        => '-',
+            'exp_date'      => $this->input->post('exp_date'),
+            'inputer'       => $this->session->userdata('nik'),
+            'tgl_input'     => date('Y-m-d'),
+            'keterangan'    => 'Edited Opname By Admin'
+        ];
+
+        $this->db->where('id', $id);
+        $this->db->update('tb_ics_opname', $data);
+        $this->db->insert('tb_log_ics', $log);
+
+        $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
+        redirect('detailtrack/' . $kdbarang . '/allbarang');
+    }
+
 
     public function request_opname()
     {

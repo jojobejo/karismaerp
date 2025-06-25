@@ -94,7 +94,7 @@
                                     <?php foreach ($expired_date as $row) : ?>
                                         <tr>
                                             <td style="text-align: center;">
-                                                <a href="<?= base_url('detailtrack/' . $row->kd_barang . '/expdate') ?>" class="btn btn-sm btn-info" title="Detail Tracking">
+                                                <a href="<?= base_url('detailtrack/' . $row->kd_barang . '/allbarang') ?>" class="btn btn-sm btn-info" title="Detail Tracking">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </td>
