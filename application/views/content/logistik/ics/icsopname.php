@@ -7,7 +7,6 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
-        <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
@@ -15,7 +14,6 @@
         <?php $this->load->view('partial/main/navbar') ?>
         <?php $this->load->view('partial/main/sidebar') ?>
 
-        <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
 
             <div class="content-header">
@@ -113,7 +111,6 @@
 
         <!-- Control Sidebar -->
         <aside class="control-sidebar control-sidebar-dark">
-            <!-- Control sidebar content goes here -->
         </aside>
         <!-- /.control-sidebar -->
     </div>
@@ -164,7 +161,7 @@
             $('#nama_barang').on('change', function() {
                 const nama_barang = $(this).val();
 
-                $('#btn_toggle_input').removeClass('d-none'); // ⬅️ tampilkan tombol manual input
+                $('#btn_toggle_input').removeClass('d-none');
 
                 $('#exp_date_group').removeClass('d-none');
                 $('#qty_form').addClass('d-none');
@@ -207,7 +204,7 @@
                 $('#qty_form').removeClass('d-none');
             });
 
-            
+
 
             $('#btn_submit_manual').on('click', function(e) {
                 e.preventDefault();
@@ -246,30 +243,16 @@
                     data: $(this).serialize(),
                     success: function(response) {
                         $('#alertMsg').text("Data berhasil disimpan!").removeClass('d-none');
-
-                        // ✅ Reset form input dan select2
                         $('#formOpname')[0].reset();
                         $('#nama_barang').val(null).trigger('change');
-
-                        // ✅ Reset dan sembunyikan select Exp Date
                         $('#exp_date').empty().append('<option value="">Pilih Expired Date</option>');
                         $('#exp_date_group').addClass('d-none');
-
-                        // ✅ Sembunyikan semua group lain
                         $('#qty_form, #manual_input_group, #dimensi_group, #btn_submit_manual').addClass('d-none');
-
-                        // ✅ Reset tombol toggle dan state manual
                         $('#btn_toggle_input').text('Gunakan Input Manual').addClass('d-none');
                         isManualMode = false;
-
-                        // ✅ Sembunyikan alert otomatis
                         setTimeout(() => $('#alertMsg').addClass('d-none'), 2000);
                     }
                 });
             });
-
-
-
-
         });
     </script>

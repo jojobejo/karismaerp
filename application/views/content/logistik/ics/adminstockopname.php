@@ -24,17 +24,23 @@
                 <section class="content">
 
                     <div class="row">
-                        <div class="col-auto">
+                        <!-- <div class="col-auto">
                             <a href="<?= base_url('trackingtim/1') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock TIM 1</a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('trackingtim/2') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock TIM 2</a>
-                        </div>
-                        <div class="col-auto">
+                        </div> -->
+                        <!-- <div class="col-auto">
                             <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Stock Opname</a>
+                        </div> -->
+                        <div class="col-auto">
+                            <a href="<?= base_url('compare_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Opname Compare</a>
                         </div>
                         <div class="col-auto">
-                            <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-hourglass"></i> Data Pending</a>
+                            <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Data Pending</a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('request_opname_admin') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-notes-medical"></i> Request Input</a>
                         </div>
                     </div>
 
@@ -42,7 +48,6 @@
                         <div class="card-body">
                             <!-- BY ALL BARANG -->
                             <h1 style="text-align: center;">RESULT ALL BARANG</h1>
-                            <h1 style="text-align: center;"><a href="<?= base_url('compareall_tim') ?>" class="btn btn-sm btn-primary w-20"><i class="fas fa-eye"></i> SHOW COMPARE</a></h1>
                             <div class="row mt-4">
                                 <div class="col-md-6">
                                     <h3 style="text-align: center;">TIM 1</h3>
@@ -70,7 +75,6 @@
                     <div class="card">
                         <div class="card-body">
                             <h1 style="text-align: center;">RESULT FEFO</h1>
-                            <h1 style="text-align: center;"><a href="<?= base_url('compare_exp') ?>" class="btn btn-sm btn-primary w-20"><i class="fas fa-eye"></i> SHOW COMPARE</a></h1>
                             <div class="row mt-4">
 
                                 <div class="col-md-6">
@@ -125,7 +129,7 @@
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
                 data: [<?= $stat_t1['persen_match'] ?>, <?= $stat_t1['persen_notmatch'] ?>],
-                backgroundColor: ['#28a745', '#dc3545'],
+                backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
 
@@ -149,7 +153,7 @@
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
                 data: [<?= $stat_t2['persen_match'] ?>, <?= $stat_t2['persen_notmatch'] ?>],
-                backgroundColor: ['#007bff', '#ffc107'],
+                backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
 
@@ -176,7 +180,7 @@
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
                 data: [<?= $statexp_t1['persen_match'] ?>, <?= $statexp_t1['persen_notmatch'] ?>],
-                backgroundColor: ['#28a745', '#dc3545'],
+                backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
 
@@ -200,7 +204,7 @@
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
                 data: [<?= $statexp_t2['persen_match'] ?>, <?= $statexp_t2['persen_notmatch'] ?>],
-                backgroundColor: ['#007bff', '#ffc107'],
+                backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
 

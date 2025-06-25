@@ -92,11 +92,13 @@ $route['searchbarang']                       = 'logistik/C_Logistik/searchbarang
 $route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_exp_date';
 $route['save_opname']                        = 'logistik/C_Logistik/save_opname';
 $route['request_opname']                     = 'logistik/C_Logistik/request_opname';
+$route['req_opname_acc/(:any)']              = 'logistik/C_Logistik/req_opname_acc/$1';
 $route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
-$route['compareall_tim']                     = 'logistik/C_Logistik/compareall_tim';
-$route['compare_exp']                        = 'logistik/C_Logistik/compare_exp';
+$route['compare_opname']                     = 'logistik/C_Logistik/compare_opname';
+$route['request_opname_admin']               = 'logistik/C_Logistik/request_opname_admin';
 $route['detailtrack/(:any)/(:any)']          = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
 
+$route['export_compare_allbarang']           = 'logistik/C_Logistik/export_compare_allbarang';
 
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';

@@ -887,46 +887,75 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_exp()
     {
         return $this->db->query("SELECT 
-        COALESCE(c.kd_system,'-') AS kd_barang,
-        b.nm_barang,
-        IFNULL(a.exp_date, '-') AS exp_date,
-        COALESCE(SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim1,
-        COALESCE(SUM(CASE WHEN a.tim = '2' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim2,
+        COALESCE(m.kd_system, '-') AS kd_barang,
+        i.nama_barang,
+        i.exp_date,
+        COALESCE(SUM(CASE WHEN o.tim = '1' THEN o.qty ELSE 0 END), 0) AS qty_fisik_tim1,
+        COALESCE(SUM(CASE WHEN o.tim = '2' THEN o.qty ELSE 0 END), 0) AS qty_fisik_tim2,
+        SUM(i.qty) AS qty_zahir,
+        COALESCE(p.qty_pending, 0) AS qty_pending,
+        SUM(i.qty) + COALESCE(p.qty_pending, 0) AS qty_sistem,
         CASE
-            WHEN SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END) = 
-                SUM(CASE WHEN a.tim = '2' THEN a.qty ELSE 0 END)
+            WHEN COALESCE(SUM(CASE WHEN o.tim = '1' THEN o.qty ELSE 0 END), 0) = SUM(i.qty) + COALESCE(p.qty_pending, 0)
             THEN 'MATCH'
             ELSE 'NOT MATCH'
-        END AS status
-        FROM tb_mbarang b
-        LEFT JOIN tb_ics_opname a 
-        ON a.nama_barang = b.nm_barang
-        LEFT JOIN tb_mbarang c 
-        ON a.nama_barang = c.nm_barang
-        GROUP BY b.nm_barang, a.exp_date
-        ")->result();
+        END AS status_tim1,
+        CASE
+            WHEN COALESCE(SUM(CASE WHEN o.tim = '2' THEN o.qty ELSE 0 END), 0) = SUM(i.qty) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH'
+            ELSE 'NOT MATCH'
+        END AS status_tim2
+        FROM tb_ics i
+        LEFT JOIN tb_ics_opname o 
+            ON i.nama_barang = o.nama_barang AND i.exp_date = o.exp_date
+        LEFT JOIN tb_mbarang m 
+            ON i.nama_barang = m.nm_barang
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) p ON p.nama_barang = i.nama_barang AND p.exp_date = i.exp_date
+        GROUP BY i.nama_barang, i.exp_date, m.kd_system, p.qty_pending
+        ORDER BY i.nama_barang, i.exp_date;")->result();
     }
 
     public function admin_compareuser_all()
     {
         return $this->db->query("SELECT 
-			COALESCE(c.kd_system,'-') AS kd_barang,
-            b.nm_barang,
-            COALESCE(SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim1,
-            COALESCE(SUM(CASE WHEN a.tim = '2' THEN a.qty ELSE 0 END), 0) AS qty_fisik_tim2,
-            CASE
-                WHEN SUM(CASE WHEN a.tim = '1' THEN a.qty ELSE 0 END) = 
-                    SUM(CASE WHEN a.tim = '2' THEN a.qty ELSE 0 END)
-                THEN 'MATCH'
-                ELSE 'NOT MATCH'
-            END AS status
-            FROM tb_mbarang b
-            LEFT JOIN tb_ics_opname a 
-            ON a.nama_barang = b.nm_barang
-            LEFT JOIN tb_mbarang c 
-            ON a.nama_barang = c.nm_barang
-            GROUP BY b.nm_barang
-        ")->result();
+        COALESCE(m.kd_system, '-') AS kd_barang,
+        i.nama_barang,
+        COALESCE(SUM(CASE WHEN o.tim = '1' THEN o.qty ELSE 0 END), 0) AS qty_fisik_tim1,
+        COALESCE(SUM(CASE WHEN o.tim = '2' THEN o.qty ELSE 0 END), 0) AS qty_fisik_tim2,
+        COALESCE(s.qty_zahir, 0) AS qty_zahir,
+        COALESCE(p.qty_pending, 0) AS qty_pending,
+        COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) AS qty_sistem,
+        CASE
+            WHEN COALESCE(SUM(CASE WHEN o.tim = '1' THEN o.qty ELSE 0 END), 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH'
+            ELSE 'NOT MATCH'
+        END AS status_tim1,
+
+        CASE
+            WHEN COALESCE(SUM(CASE WHEN o.tim = '2' THEN o.qty ELSE 0 END), 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH'
+            ELSE 'NOT MATCH'
+        END AS status_tim2
+
+            FROM tb_ics i
+            JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_zahir
+                FROM tb_ics
+                GROUP BY nama_barang
+            ) s ON s.nama_barang = i.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang
+            ) p ON p.nama_barang = i.nama_barang
+            LEFT JOIN tb_mbarang m ON i.nama_barang = m.nm_barang
+            LEFT JOIN tb_ics_opname o ON i.nama_barang = o.nama_barang
+            GROUP BY i.nama_barang, m.kd_system, s.qty_zahir, p.qty_pending
+            ORDER BY i.nama_barang;")->result();
     }
 
 
@@ -1319,6 +1348,20 @@ FROM (
         ")->result();
     }
 
+    public function get_requestbr($id)
+    {
+        return $this->db->get_where('tb_req_opname', ['id' => $id])->row();
+    }
+
+    public function opname_req_user()
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_req_opname a
+        WHERE a.status = '1'
+        ")->result();
+    }
+
     public function all_barang_match_t1()
     {
         return $this->db->query("SELECT
@@ -1384,19 +1427,30 @@ FROM (
         ")->result();
     }
 
-    public function list_inputer_by_allbarang($kdbarang)
+    public function get_nmbarang($kdbarang)
+    {
+        return $this->db->query("SELECT
+        a.nm_barang AS nama_barang
+        FROM tb_mbarang a
+        WHERE a.kd_system = '$kdbarang'
+        ")->result();
+    }
+
+    public function list_inputer_by_allbarang($kdbarang, $tim)
     {
         return $this->db->query("SELECT	
         a.id,
+        b.kd_system,
         a.nama_barang,
         a.qty,
         a.qty_box,
         a.qty_pcs,
         a.tim,
+        (b.p*b.l*b.t) AS dimensi,
         a.inputer
         FROM tb_ics_opname a
         LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
-        WHERE b.kd_system = '$kdbarang'
+        WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
         ")->result();
     }
     public function list_inputer_by_expdate($kdbarang)

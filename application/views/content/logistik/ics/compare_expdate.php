@@ -23,79 +23,68 @@
                         </div>
                     </div>
 
-                    <div class="card">
+                    <div class="card mt-2 mb-5">
                         <div class="card-body">
-                            <h5 class="mt-2">Compare Tim - Expired Date</h5>
-                            <table border="1" cellpadding="8" cellspacing="0">
+                            <h5 class="mt-2">Compare Tim - Allbarang</h5>
+                            <table class="table table-bordered table-sm" id="tb_dash_allbarang">
                                 <thead>
                                     <tr>
-                                        <th></th>
-                                        <th>Tim 1</th>
-                                        <th>Tim 2</th>
+                                        <th>Nama Barang</th>
+                                        <th>QTY Fisik 1</th>
+                                        <th>QTY Fisik 2</th>
+                                        <th>QTY Zahir</th>
+                                        <th>Status TIM 1</th>
+                                        <th>Status TIM 2</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><strong>Total Barang</strong></td>
-                                        <td><?= $statexp_t1['total_barang'] ?></td>
-                                        <td><?= $statexp_t2['total_barang'] ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Total Match</strong></td>
-                                        <td><?= $statexp_t1['total_match'] ?></td>
-                                        <td><?= $statexp_t2['total_match'] ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Total Not Match</strong></td>
-                                        <td><?= $statexp_t1['total_notmatch'] ?></td>
-                                        <td><?= $statexp_t2['total_notmatch'] ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Persentase Match</strong></td>
-                                        <td><?= $statexp_t1['persen_match'] ?>%</td>
-                                        <td><?= $statexp_t2['persen_match'] ?>%</td>
-
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Persentase Not Match</strong></td>
-                                        <td><?= $statexp_t1['persen_notmatch'] ?>%</td>
-                                        <td><?= $statexp_t2['persen_notmatch'] ?>%</td>
+                                        <?php foreach ($allbarang as $rowall) : ?>
+                                            <td><?= $rowall->nama_barang ?></td>
+                                            <td><?= $rowall->qty_fisik_tim1 ?></td>
+                                            <td><?= $rowall->qty_fisik_tim2 ?></td>
+                                            <td><?= $rowall->qty_sistem ?></td>
+                                            <td><?= $rowall->status_tim1 ?></td>
+                                            <td><?= $rowall->status_tim2 ?></td>
+                                        <?php endforeach ?>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
 
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="mt-2">Compare Tim - Expired Date</h5>
                             <table class="table table-bordered table-sm" id="tb_dash_allbarang">
                                 <thead>
                                     <tr>
                                         <th>Nama Barang</th>
                                         <th>Expired Date</th>
-                                        <th>TIM 1</th>
-                                        <th>TIM 2</th>
-                                        <th>Status</th>
-                                        <th>#</th>
+                                        <th>QTY Fisik 1</th>
+                                        <th>QTY Fisik 2</th>
+                                        <th>QTY Zahir</th>
+                                        <th>Status TIM 1</th>
+                                        <th>Status TIM 2</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($expired_date as $row) : ?>
                                         <tr>
-                                            <td><?= $row->nm_barang ?></td>
+                                            <td><?= $row->nama_barang ?></td>
                                             <td><?= $row->exp_date ?></td>
                                             <td><?= $row->qty_fisik_tim1 ?></td>
                                             <td><?= $row->qty_fisik_tim2 ?></td>
-                                            <td>
-                                                <span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
-                                                    <?= $row->status ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <a href="<?= base_url('detailtrack/') . $row->kd_barang . '/expdate' ?>" class="badge bg-primary"><i class="fas fa-eye"></i></a>
-                                            </td>
+                                            <td><?= $row->qty_sistem ?></td>
+                                            <td><?= $row->status_tim1 ?></td>
+                                            <td><?= $row->status_tim2 ?></td>
                                         </tr>
                                     <?php endforeach ?>
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
                 </section>
             </div>
         </div>

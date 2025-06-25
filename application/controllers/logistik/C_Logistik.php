@@ -1,6 +1,9 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 class C_Logistik extends CI_Controller
 {
 
@@ -379,7 +382,6 @@ class C_Logistik extends CI_Controller
     public function export_tracking_driver()
     {
         include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-        $excel = new PHPExcel();
         $excel->getProperties()->setCreator('it_karisma')
             ->setLastModifiedBy('tracking_driver_')
             ->setTitle("Tracking All Driver")
@@ -494,7 +496,6 @@ class C_Logistik extends CI_Controller
     public function export_lap_distribusi()
     {
         include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-        $excel = new PHPExcel();
         $excel->getProperties()->setCreator('it_karisma')
             ->setLastModifiedBy('lap_distribusi_')
             ->setTitle("Laporan Keluar Masuk Distribusi")
@@ -727,7 +728,6 @@ class C_Logistik extends CI_Controller
     public function export_rekap_laporan_driver()
     {
         include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-        $excel = new PHPExcel();
         $excel->getProperties()->setCreator('it_karisma')
             ->setLastModifiedBy('rekap_driver_order_')
             ->setTitle("Rekap Laporan Driver Order")
@@ -1700,49 +1700,34 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
-    public function compareall_tim()
+    public function save_edit_opname()
     {
-        $data['page_title'] = 'KARISMA - ICS';
+        $id = $this->input->post('id');
+        $data = array(
+            'qty'      => $this->input->post('qty'),
+            'qty_box'  => $this->input->post('qty_box'),
+            'qty_pcs'  => $this->input->post('qty_pcs')
+        );
 
-        $data['allbarang'] = $this->M_Logistik->admin_compareuser_all();
+        $this->db->where('id', $id);
+        $this->db->update('tb_ics_opname', $data);
 
-        $result_t1 = $this->M_Logistik->all_barang_match_t1();
-        $result_t2 = $this->M_Logistik->all_barang_match_t2();
-
-        $res_t1 = $result_t1[0];
-        $res_t2 = $result_t2[0];
-
-        $data['stat_t1'] = [
-            'total_barang'   => $res_t1->total_barang,
-            'total_match'    => $res_t1->total_match,
-            'total_notmatch' => $res_t1->total_notmatch,
-            'persen_match'   => $res_t1->total_barang > 0 ? round(($res_t1->total_match / $res_t1->total_barang) * 100, 2) : 0,
-            'persen_notmatch' => $res_t1->total_barang > 0 ? round(($res_t1->total_notmatch / $res_t1->total_barang) * 100, 2) : 0
-        ];
-        $data['stat_t2'] = [
-            'total_barang'   => $res_t2->total_barang,
-            'total_match'    => $res_t2->total_match,
-            'total_notmatch' => $res_t2->total_notmatch,
-            'persen_match'   => $res_t2->total_barang > 0 ? round(($res_t2->total_match / $res_t2->total_barang) * 100, 2) : 0,
-            'persen_notmatch' => $res_t2->total_barang > 0 ? round(($res_t2->total_notmatch / $res_t2->total_barang) * 100, 2) : 0
-        ];
-
-        $data['all_t1'] = $result_t1;
-        $data['all_t2'] = $result_t2;
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/compare_allbarang.php', $data);
-        $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+        $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
+        redirect('compareall_tim');
     }
+
 
     public function detail_tracking_input($kdbarang, $action)
     {
+        $tim1   = '1';
+        $tim2   = '2';
 
         switch ($action) {
             case 'allbarang':
                 $data['page_title'] = 'Opname Detail Inputer';
-                $data['list'] = $this->M_Logistik->list_inputer_by_allbarang($kdbarang);
+                $data['list1']      = $this->M_Logistik->list_inputer_by_allbarang($kdbarang, $tim1);
+                $data['list2']      = $this->M_Logistik->list_inputer_by_allbarang($kdbarang, $tim2);
+                $data['nmbarang']   = $this->M_Logistik->get_nmbarang($kdbarang);
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
@@ -1762,38 +1747,14 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function compare_exp()
+    public function compare_opname()
     {
-        $data['page_title'] = 'KARISMA - ICS';
-        $data['expired_date'] = $this->M_Logistik->admin_compareuser_exp();
-
-        $resultexp_t1 = $this->M_Logistik->fefo_match_t1();
-        $resultexp_t2 = $this->M_Logistik->fefo_match_t2();
-
-        $resexp_t1 = $resultexp_t1[0];
-        $resexp_t2 = $resultexp_t2[0];
-
-        $data['statexp_t1'] = [
-            'total_barang'   => $resexp_t1->total_barang,
-            'total_match'    => $resexp_t1->total_match,
-            'total_notmatch' => $resexp_t1->total_notmatch,
-            'persen_match'   => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_match / $resexp_t1->total_barang) * 100, 2) : 0,
-            'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
-        ];
-
-        $data['statexp_t2'] = [
-            'total_barang'   => $resexp_t2->total_barang,
-            'total_match'    => $resexp_t2->total_match,
-            'total_notmatch' => $resexp_t2->total_notmatch,
-            'persen_match'   => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_match / $resexp_t2->total_barang) * 100, 2) : 0,
-            'persen_notmatch' => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_notmatch / $resexp_t2->total_barang) * 100, 2) : 0
-        ];
-
-        $data['allexp_t1'] = $resultexp_t1;
-        $data['allexp_t2'] = $resultexp_t2;
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['allbarang']          = $this->M_Logistik->admin_compareuser_all();
+        $data['expired_date']       = $this->M_Logistik->admin_compareuser_exp();
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/compare_expdate.php', $data);
+        $this->load->view('content/logistik/ics/compare_opname.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
@@ -1894,7 +1855,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
-            'input_at'      => date('Y-m-d H:i:s')
+            'input_at'      => date('d/m/Y')
         ];
 
         $log = [
@@ -1915,46 +1876,96 @@ class C_Logistik extends CI_Controller
         echo 'ok';
     }
 
-    // public function insertopname()
-    // {
-    //     $nama_barang    = $this->input->post('nmbarang');
-    //     $exp_date       = $this->input->post('expdate');
-    //     $qty_box        = (int)$this->input->post('qtybox');
-    //     $qty_pcs        = (int)$this->input->post('qtypcs');
-    //     $dimensi        = (int)$this->input->post('dimensi');
-    //     $inputer        = $this->session->userdata('nama');
-    //     $inputernik     = $this->session->userdata('nik');
-    //     $tim            = $this->session->userdata('tim');
+    public function request_opname()
+    {
+        $nmbarang   = $this->input->post('nama_barang');
+        $box        = $this->input->post('qty_box_manual');
+        $pcs        = $this->input->post('qty_pcs_manual');
 
-    //     $dimensi = $this->M_Logistik->getDimensi($nama_barang);
-    //     $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
+        $dimensi    = $this->M_Logistik->getDimensi($nmbarang);
+        $total_qty  = hitung_qty($box, $pcs, $dimensi);
 
-    //     $this->M_Logistik->insertOpname([
-    //         'nama_barang' => $nama_barang,
-    //         'exp_date' => $exp_date,
-    //         'qty' => $total_qty,
-    //         'qty_box'   => $qty_box,
-    //         'qty_pcs'   => $qty_pcs,
-    //         'inputer'   => $inputer,
-    //         'tim'       => $tim,
-    //         'input_at'  => date('Y-m-d H:i:s')
-    //     ]);
+        $opname = [
+            'nama_barang'   => $nmbarang,
+            'exp_date'      => $this->input->post('exp_date_manual'),
+            'qty'           => $total_qty,
+            'qty_box'       => $box,
+            'qty_pcs'       => $pcs,
+            'inputer'       => $this->session->userdata('nama'),
+            'tim'           => $this->session->userdata('tim'),
+            'status'        => '1',
+            'acc_with'      => '-',
+            'input_at'      => date('d/m/Y')
+        ];
 
-    //     $this->M_Logistik->logInput([
-    //         'nama_user' => $inputer,
-    //         'nama_barang' => $nama_barang,
-    //         'qty' => $total_qty,
-    //         'qty_box' => $qty_box,
-    //         'qty_pcs' => $qty_pcs,
-    //         'no_lot' => '-',
-    //         'exp_date' => $exp_date,
-    //         'inputer' => $inputernik,
-    //         'tgl_input' => date('Y-m-d'),
-    //         'keterangan' => 'Stock Opname'
-    //     ]);
+        $log = [
+            'nama_user'     => $this->session->userdata('nama'),
+            'nama_barang'   => $nmbarang,
+            'qty'           => $total_qty,
+            'qty_box'       => $box,
+            'qty_pcs'       => $pcs,
+            'no_lot'        => '-',
+            'exp_date'      => $this->input->post('exp_date_manual'),
+            'inputer'       => $this->session->userdata('nik'),
+            'tgl_input'     => date('Y-m-d'),
+            'keterangan'    => 'expired-date tidak-ada'
+        ];
 
-    //     redirect('stockopname');
-    // }
+        $this->db->insert('tb_req_opname', $opname);
+        $this->db->insert('tb_log_ics', $log);
+        echo 'ok';
+    }
+
+    public function request_opname_admin()
+    {
+        $data['page_title']     = 'KARISMA - ICS';
+        $data['request']        = $this->M_Logistik->opname_req_user();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/requestopname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function req_opname_acc($id)
+    {
+        $req = $this->M_Logistik->get_requestbr($id);
+
+        if ($req) {
+            $datareq = array(
+                'nama_barang' => $req->nama_barang,
+                'exp_date'    => $req->exp_date,
+                'qty'         => $req->qty,
+                'qty_box'     => $req->qty_box,
+                'qty_pcs'     => $req->qty_pcs,
+                'inputer'     => $req->inputer,
+                'tim'         => $req->tim,
+                'input_at'    => date('d/m/Y')
+            );
+
+            $log = array(
+                'nama_user'   => $req->inputer,
+                'nama_barang' => $req->nama_barang,
+                'qty'         => $req->qty,
+                'qty_box'     => $req->qty_box,
+                'qty_pcs'     => $req->qty_pcs,
+                'no_lot'      => '-',
+                'exp_date'    => $req->exp_date,
+                'keterangan'  => 'Input Request Expired Tidak Ada',
+                'inputer'     => $this->session->userdata('nik'),
+                'tgl_input'   => date('d/m/Y')
+            );
+
+            $this->db->insert('tb_ics_opname', $datareq);
+            $this->db->insert('tb_log_ics', $log);
+            $this->db->where('id', $id)->update('tb_req_opname', [
+                'status'   => 2,
+                'acc_with' => $this->session->userdata('nik')
+            ]);
+        }
+        redirect('request_opname_admin');
+    }
+
 
     public function forminput($nama_barang, $exp_date)
     {
@@ -2000,5 +2011,41 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/deatilics.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function export_compare_allbarang()
+    {
+
+        $data = $this->M_Logistik->admin_compareuser_all();
+
+        require_once APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php'; // jika tidak pakai Composer
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $sheet->setCellValue('A1', 'Kode Barang');
+        $sheet->setCellValue('B1', 'Nama Barang');
+        $sheet->setCellValue('C1', 'Qty Tim 1');
+        $sheet->setCellValue('D1', 'Qty Tim 2');
+        $sheet->setCellValue('E1', 'Qty Sistem');
+        $sheet->setCellValue('F1', 'Status Tim 1');
+        $sheet->setCellValue('G1', 'Status Tim 2');
+        $row = 2;
+        foreach ($data as $d) {
+            $sheet->setCellValue('A' . $row, $d->kd_barang);
+            $sheet->setCellValue('B' . $row, $d->nama_barang);
+            $sheet->setCellValue('C' . $row, $d->qty_fisik_tim1);
+            $sheet->setCellValue('D' . $row, $d->qty_fisik_tim2);
+            $sheet->setCellValue('E' . $row, $d->qty_sistem);
+            $sheet->setCellValue('F' . $row, $d->status_tim1);
+            $sheet->setCellValue('G' . $row, $d->status_tim2);
+            $row++;
+        }
+        $filename = 'Perbandingan_Stock_Opname_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header("Content-Disposition: attachment; filename=\"$filename\"");
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 }
