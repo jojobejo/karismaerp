@@ -102,6 +102,8 @@ $route['detailtrack/(:any)/(:any)']          = 'logistik/C_Logistik/detail_track
 
 $route['export_compare_allbarang']           = 'logistik/C_Logistik/export_compare_allbarang';
 
+$route['usropname_input']                    = 'logistik/C_Logistik/usropname_input';
+
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                    = 'logistik/C_Logistik/delivery_order';
