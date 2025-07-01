@@ -135,6 +135,13 @@ $route['act_schedule/(:any)']       = 'schedule/C_Schedule/act_schedule/$1';
 // DEVELOPMENT 
 $route['development']         = 'schedule/C_Development/dashboard_do';
 
+// EXTRAVAGANZA - UNDIAN
+$route['extravaganza']                  = 'extravaganza/C_Extravaganza';
+$route['extravaganza_undian']           = 'extravaganza/C_Extravaganza/undian';
+$route['extravaganza_savewin']          = 'extravaganza/C_Extravaganza/save_win';
+// EXTRAVAGANZA - REGISTRASI
+$route['extravaganza_registrasi']       = 'extravaganza/C_Extravaganza/registrasi_tamu';
+
 
 // Sistem Routes
 // $route['default_controller'] = 'Auth';
