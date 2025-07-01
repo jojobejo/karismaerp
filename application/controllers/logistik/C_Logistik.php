@@ -958,10 +958,10 @@ class C_Logistik extends CI_Controller
 
     public function create_do()
     {
-        $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
-        $data['tmp_faktur'] = $this->M_Logistik->get_tmp_do();
-        $data['generate_do'] = $this->M_Logistik->generate_kd_do();
+        $data['page_title']             = 'KARISMA - LOGISTIK';
+        $data['list_faktur']            = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['tmp_faktur']             = $this->M_Logistik->get_tmp_do();
+        $data['generate_do']            = $this->M_Logistik->generate_kd_do();
         $data['qcount_tonase_kubikasi'] = $this->M_Logistik->get_tonase_kubikasi();
 
         $this->load->view('partial/main/header.php', $data);
@@ -1292,6 +1292,35 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footerprint.php');
     }
 
+    public function print_checker($kd_do)
+    {
+        $query = $this->db->query("SELECT
+            ROW_NUMBER() OVER (ORDER BY a.nama_barang) AS nomor_urut,
+            a.nama_barang,
+            a.no_lot,
+            a.tgl_exp,
+            (b.p*b.l*b.t) AS dimensi,
+            sum(a.qty) AS qty,
+            FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
+            (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
+            FROM tb_detail_do a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            WHERE a.kd_do = '$kd_do'
+            GROUP BY a.kd_barang , a.tgl_exp , a.no_lot",);
+
+        $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['kdo'] = $query1->result();
+        $data['dostatus'] = $query2->result();
+        $data['data_list'] = $query->result();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/printout_checker.php', $data);
+        $this->load->view('partial/main/footerprint.php');
+    }
+
     public function get_driver()
     {
         $data = $this->M_Logistik->select_driver();
@@ -1361,6 +1390,7 @@ class C_Logistik extends CI_Controller
                 break;
 
             case 'formlist':
+
                 date_default_timezone_set("Asia/Jakarta");
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
                 $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
@@ -2049,39 +2079,40 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
-    public function export_compare_allbarang()
-    {
+    // public function export_compare_allbarang()
+    // {
 
-        $data = $this->M_Logistik->admin_compareuser_all();
+    //     $data = $this->M_Logistik->admin_compareuser_all();
 
-        require_once APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php'; // jika tidak pakai Composer
-        $sheet = $spreadsheet->getActiveSheet();
+    //     require_once APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php'; // jika tidak pakai Composer
+    //     $sheet = $spreadsheet->getActiveSheet();
 
-        $sheet->setCellValue('A1', 'Kode Barang');
-        $sheet->setCellValue('B1', 'Nama Barang');
-        $sheet->setCellValue('C1', 'Qty Tim 1');
-        $sheet->setCellValue('D1', 'Qty Tim 2');
-        $sheet->setCellValue('E1', 'Qty Sistem');
-        $sheet->setCellValue('F1', 'Status Tim 1');
-        $sheet->setCellValue('G1', 'Status Tim 2');
-        $row = 2;
-        foreach ($data as $d) {
-            $sheet->setCellValue('A' . $row, $d->kd_barang);
-            $sheet->setCellValue('B' . $row, $d->nama_barang);
-            $sheet->setCellValue('C' . $row, $d->qty_fisik_tim1);
-            $sheet->setCellValue('D' . $row, $d->qty_fisik_tim2);
-            $sheet->setCellValue('E' . $row, $d->qty_sistem);
-            $sheet->setCellValue('F' . $row, $d->status_tim1);
-            $sheet->setCellValue('G' . $row, $d->status_tim2);
-            $row++;
-        }
-        $filename = 'Perbandingan_Stock_Opname_' . date('Ymd_His') . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-        header('Cache-Control: max-age=0');
+    //     $sheet->setCellValue('A1', 'Kode Barang');
+    //     $sheet->setCellValue('B1', 'Nama Barang');
+    //     $sheet->setCellValue('C1', 'Qty Tim 1');
+    //     $sheet->setCellValue('D1', 'Qty Tim 2');
+    //     $sheet->setCellValue('E1', 'Qty Sistem');
+    //     $sheet->setCellValue('F1', 'Status Tim 1');
+    //     $sheet->setCellValue('G1', 'Status Tim 2');
+    //     $row = 2;
+    //     foreach ($data as $d) {
+    //         $sheet->setCellValue('A' . $row, $d->kd_barang);
+    //         $sheet->setCellValue('B' . $row, $d->nama_barang);
+    //         $sheet->setCellValue('C' . $row, $d->qty_fisik_tim1);
+    //         $sheet->setCellValue('D' . $row, $d->qty_fisik_tim2);
+    //         $sheet->setCellValue('E' . $row, $d->qty_sistem);
+    //         $sheet->setCellValue('F' . $row, $d->status_tim1);
+    //         $sheet->setCellValue('G' . $row, $d->status_tim2);
+    //         $row++;
+    //     }
+    //     $filename = 'Perbandingan_Stock_Opname_' . date('Ymd_His') . '.xlsx';
+    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    //     header("Content-Disposition: attachment; filename=\"$filename\"");
+    //     header('Cache-Control: max-age=0');
 
-        $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
-    }
+    //     $writer = new Xlsx($spreadsheet);
+    //     $writer->save('php://output');
+    //     exit;
+    // }
+
 }

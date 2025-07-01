@@ -265,6 +265,11 @@
                                                     <i class="fas fa-print"></i> Print Register
                                                 </button>
                                             </div>
+                                            <div class="col">
+                                                <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker" data-kd="<?= $k->kd_do ?>">
+                                                    <i class="fas fa-print"></i> Print Checker
+                                                </button>
+                                            </div>
                                         </div>
                                     <?php endforeach; ?>
                                     <!-- LOGISTIK END -->
@@ -444,6 +449,26 @@
                 return;
             }
             var printUrl = "<?= base_url('print_regis/') ?>" + kd_do +
+                "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
+                "&driver=" + encodeURIComponent(driver) +
+                "&plat=" + encodeURIComponent(platno);
+            window.open(printUrl, "_blank");
+        });
+
+        $("#btnPrintChecker").on('click', function() {
+            var kd_do = $(this).data('kd');
+            var tgl_krim = $("#tgl_isi").val().trim();
+            var platno = $("#plat_isi").val().trim();
+            var driver = $("#driver_isi").val().trim();
+
+            if (!tgl_krim || !platno || !driver) {
+                alert("Lengkapi semua field terlebih dahulu sebelum print.");
+                if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
+                if (!platno) $("#plat_isi").css("border", "2px solid red");
+                if (!driver) $("#driver_isi").css("border", "2px solid red");
+                return;
+            }
+            var printUrl = "<?= base_url('print_checker/') ?>" + kd_do +
                 "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
                 "&driver=" + encodeURIComponent(driver) +
                 "&plat=" + encodeURIComponent(platno);
