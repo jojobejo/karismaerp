@@ -1,9 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-
 class C_Logistik extends CI_Controller
 {
 
@@ -379,250 +376,251 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    // public function export_tracking_driver()
-    // {
-    //     include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-    //     $excel->getProperties()->setCreator('it_karisma')
-    //         ->setLastModifiedBy('tracking_driver_')
-    //         ->setTitle("Tracking All Driver")
-    //         ->setSubject("Tracking All Driver")
-    //         ->setDescription("Tracking All Driver")
-    //         ->setKeywords("Tracking Driver");
+    public function export_tracking_driver()
+    {
+        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
+        $excel = new PHPExcel();
+        $excel->getProperties()->setCreator('it_karisma')
+            ->setLastModifiedBy('tracking_driver_')
+            ->setTitle("Tracking All Driver")
+            ->setSubject("Tracking All Driver")
+            ->setDescription("Tracking All Driver")
+            ->setKeywords("Tracking Driver");
 
-    //     $style_col = array(
-    //         'font' => array('bold' => true),
-    //         'alignment' => array(
-    //             'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $style_col = array(
+            'font' => array('bold' => true),
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $style_row = array(
-    //         'alignment' => array(
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A1', "Tracking Driver");
-    //     $excel->getActiveSheet()->mergeCells('A1:J1');
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
-    //     $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "Tracking Driver");
+        $excel->getActiveSheet()->mergeCells('A1:J1');
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('B3', "KODE DELIVERI");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('C3', "TANGGAL JALAN");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('D3', "NO JALAN");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA DRIVER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('F3', "KODE TRUK");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('G3', "NOMOR PLAT");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('H3', "STATUS DRIVER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('I3', "DESTINASI");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('J3', "KETERANGAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "KODE DELIVERI");
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "TANGGAL JALAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "NO JALAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('F3', "KODE TRUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('G3', "NOMOR PLAT");
+        $excel->setActiveSheetIndex(0)->setCellValue('H3', "STATUS DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('I3', "DESTINASI");
+        $excel->setActiveSheetIndex(0)->setCellValue('J3', "KETERANGAN");
 
-    //     $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
 
-    //     $tracking = $this->M_Logistik->export_tracking()->result();
+        $tracking = $this->M_Logistik->export_tracking()->result();
 
-    //     $no = 1;
-    //     $numrow = 4;
-    //     foreach ($tracking as $data) {
-    //         $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->kd_deliveri);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, format_indo($data->tgl_jalan));
-    //         $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->norut);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->nama_driver);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->kd_truk);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->noplat);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->sts_driver);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->destinasi);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->keterangan);
-    //         $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
-    //         $no++;
-    //         $numrow++;
-    //     }
+        $no = 1;
+        $numrow = 4;
+        foreach ($tracking as $data) {
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->kd_deliveri);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, format_indo($data->tgl_jalan));
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->norut);
+            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->nama_driver);
+            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->kd_truk);
+            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->noplat);
+            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->sts_driver);
+            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->destinasi);
+            $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->keterangan);
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
+            $no++;
+            $numrow++;
+        }
 
-    //     $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
-    //     $excel->getActiveSheet()->getColumnDimension('B')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('C')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('D')->setWidth(10);
-    //     $excel->getActiveSheet()->getColumnDimension('E')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('F')->setWidth(11);
-    //     $excel->getActiveSheet()->getColumnDimension('G')->setWidth(13);
-    //     $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('I')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('J')->setWidth(20);
-    //     $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
-    //     $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
-    //     $excel->getActiveSheet(0)->setTitle("Rekap Tracking Driver ");
-    //     $excel->setActiveSheetIndex(0);
-    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    //     header('Content-Disposition: attachment; filename="rekap_tracking_driver.xlsx"');
-    //     header('Cache-Control: max-age=0');
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(10);
+        $excel->getActiveSheet()->getColumnDimension('E')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('F')->setWidth(11);
+        $excel->getActiveSheet()->getColumnDimension('G')->setWidth(13);
+        $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('I')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('J')->setWidth(20);
+        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        $excel->getActiveSheet(0)->setTitle("Rekap Tracking Driver ");
+        $excel->setActiveSheetIndex(0);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="rekap_tracking_driver.xlsx"');
+        header('Cache-Control: max-age=0');
 
-    //     $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
-    //     $write->save('php://output');
-    // }
-    // public function export_lap_distribusi()
-    // {
-    //     include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-    //     $excel->getProperties()->setCreator('it_karisma')
-    //         ->setLastModifiedBy('lap_distribusi_')
-    //         ->setTitle("Laporan Keluar Masuk Distribusi")
-    //         ->setSubject("Laporan Distribusi Logistik")
-    //         ->setDescription("Laporan Keluar Masuk Distribusi Logistik")
-    //         ->setKeywords("Laporan Distribusi");
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+    }
+    public function export_lap_distribusi()
+    {
+        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
+        $excel = new PHPExcel();
+        $excel->getProperties()->setCreator('it_karisma')
+            ->setLastModifiedBy('lap_distribusi_')
+            ->setTitle("Laporan Keluar Masuk Distribusi")
+            ->setSubject("Laporan Distribusi Logistik")
+            ->setDescription("Laporan Keluar Masuk Distribusi Logistik")
+            ->setKeywords("Laporan Distribusi");
 
-    //     $style_col = array(
-    //         'font' => array('bold' => true),
-    //         'alignment' => array(
-    //             'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $style_col = array(
+            'font' => array('bold' => true),
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $style_row = array(
-    //         'alignment' => array(
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A1', "Laporan Distribusi");
-    //     $excel->getActiveSheet()->mergeCells('A1:M1');
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
-    //     $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "Laporan Distribusi");
+        $excel->getActiveSheet()->mergeCells('A1:M1');
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('B3', "NOPOL");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('C3', "NOMOR LAMBUNG");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('D3', "NAMA DRIVER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA HELPER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('F3', "TUJUAN");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('G3', "TGL KELUAR");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('H3', "JAM KELUAR");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('I3', "KM KELUAR");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('J3', "TGL MASUK");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('K3', "JAM MASUK");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('L3', "KM MASUK");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('M3', "KETERANGAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "NOPOL");
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "NOMOR LAMBUNG");
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "NAMA DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA HELPER");
+        $excel->setActiveSheetIndex(0)->setCellValue('F3', "TUJUAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('G3', "TGL KELUAR");
+        $excel->setActiveSheetIndex(0)->setCellValue('H3', "JAM KELUAR");
+        $excel->setActiveSheetIndex(0)->setCellValue('I3', "KM KELUAR");
+        $excel->setActiveSheetIndex(0)->setCellValue('J3', "TGL MASUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('K3', "JAM MASUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('L3', "KM MASUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('M3', "KETERANGAN");
 
-    //     $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('L3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('M3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('L3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('M3')->applyFromArray($style_col);
 
-    //     $export = $this->M_Logistik->export_lap_distribusi();
+        $export = $this->M_Logistik->export_lap_distribusi();
 
-    //     $no = 1;
-    //     $numrow = 4;
-    //     foreach ($export as $data) {
-    //         $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->nopol);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->nolambung);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->namadriver);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->namahelper);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->tujuan);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->tglkeluar);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->jamkeluar);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->kmkeluar);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->tglmasuk);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->jammasuk);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('L' . $numrow, $data->kmmasuk);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('M' . $numrow, $data->keterangan);
-    //         $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('L' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('M' . $numrow)->applyFromArray($style_row);
-    //         $no++;
-    //         $numrow++;
-    //     }
+        $no = 1;
+        $numrow = 4;
+        foreach ($export as $data) {
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->nopol);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->nolambung);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->namadriver);
+            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->namahelper);
+            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->tujuan);
+            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->tglkeluar);
+            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->jamkeluar);
+            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->kmkeluar);
+            $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->tglmasuk);
+            $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->jammasuk);
+            $excel->setActiveSheetIndex(0)->setCellValue('L' . $numrow, $data->kmmasuk);
+            $excel->setActiveSheetIndex(0)->setCellValue('M' . $numrow, $data->keterangan);
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('L' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('M' . $numrow)->applyFromArray($style_row);
+            $no++;
+            $numrow++;
+        }
 
-    //     $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
-    //     $excel->getActiveSheet()->getColumnDimension('B')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('C')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('D')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('E')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('F')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('G')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('I')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('J')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('K')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('L')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('M')->setWidth(15);
-    //     $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
-    //     $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
-    //     $excel->getActiveSheet(0)->setTitle("Laporan Keluar Masuk Kendaraan ");
-    //     $excel->setActiveSheetIndex(0);
-    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    //     header('Content-Disposition: attachment; filename="laporan_keluar_masuk_kendaraan.xlsx"');
-    //     header('Cache-Control: max-age=0');
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('E')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('F')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('G')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('I')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('J')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('K')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('L')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('M')->setWidth(15);
+        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        $excel->getActiveSheet(0)->setTitle("Laporan Keluar Masuk Kendaraan ");
+        $excel->setActiveSheetIndex(0);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="laporan_keluar_masuk_kendaraan.xlsx"');
+        header('Cache-Control: max-age=0');
 
-    //     $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
-    //     $write->save('php://output');
-    // }
-
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+    }
     public function editnorut()
     {
         $id    = $this->input->post('id_isi');
@@ -726,141 +724,141 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->deleteorder($kd);
         redirect('deliveriorder');
     }
+    public function export_rekap_laporan_driver()
+    {
+        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
+        $excel = new PHPExcel();
+        $excel->getProperties()->setCreator('it_karisma')
+            ->setLastModifiedBy('rekap_driver_order_')
+            ->setTitle("Rekap Laporan Driver Order")
+            ->setSubject("Rekap Laporan Driver Order")
+            ->setDescription("Rekap Laporan DO")
+            ->setKeywords("Rekap DO");
 
-    // public function export_rekap_laporan_driver()
-    // {
-    //     include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-    //     $excel->getProperties()->setCreator('it_karisma')
-    //         ->setLastModifiedBy('rekap_driver_order_')
-    //         ->setTitle("Rekap Laporan Driver Order")
-    //         ->setSubject("Rekap Laporan Driver Order")
-    //         ->setDescription("Rekap Laporan DO")
-    //         ->setKeywords("Rekap DO");
+        $style_col = array(
+            'font' => array('bold' => true),
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $style_col = array(
-    //         'font' => array('bold' => true),
-    //         'alignment' => array(
-    //             'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
 
-    //     $style_row = array(
-    //         'alignment' => array(
-    //             'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
-    //         ),
-    //         'borders' => array(
-    //             'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
-    //             'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
-    //         )
-    //     );
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "Rekap Laporan Driver Order");
+        $excel->getActiveSheet()->mergeCells('A1:J1');
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A1', "Rekap Laporan Driver Order");
-    //     $excel->getActiveSheet()->mergeCells('A1:J1');
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
-    //     $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
-    //     $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "KODE DELIVERI");
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "TANGGAL JALAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "NO JALAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('F3', "NAMA HELPER");
+        $excel->setActiveSheetIndex(0)->setCellValue('G3', "KODE TRUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('H3', "NOMOR PLAT");
+        $excel->setActiveSheetIndex(0)->setCellValue('I3', "DESTINASI");
+        $excel->setActiveSheetIndex(0)->setCellValue('J3', "JUMLAH KIOS");
+        $excel->setActiveSheetIndex(0)->setCellValue('K3', "TONASE");
+        $excel->setActiveSheetIndex(0)->setCellValue('L3', "KUBIKASI");
+        $excel->setActiveSheetIndex(0)->setCellValue('M3', "STATUS DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('N3', "KETERANGAN");
 
-    //     $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('B3', "KODE DELIVERI");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('C3', "TANGGAL JALAN");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('D3', "NO JALAN");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('E3', "NAMA DRIVER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('F3', "NAMA HELPER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('G3', "KODE TRUK");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('H3', "NOMOR PLAT");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('I3', "DESTINASI");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('J3', "JUMLAH KIOS");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('K3', "TONASE");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('L3', "KUBIKASI");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('M3', "STATUS DRIVER");
-    //     $excel->setActiveSheetIndex(0)->setCellValue('N3', "KETERANGAN");
+        $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('L3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('M3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('N3')->applyFromArray($style_col);
 
-    //     $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('L3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('M3')->applyFromArray($style_col);
-    //     $excel->getActiveSheet()->getStyle('N3')->applyFromArray($style_col);
+        $tracking = $this->M_Logistik->export_tracking()->result();
 
-    //     $tracking = $this->M_Logistik->export_tracking()->result();
+        $no = 1;
+        $numrow = 4;
+        foreach ($tracking as $data) {
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->kd_deliveri);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->tgl_jalan);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->norut);
+            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->nama_driver);
+            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->nama_helper);
+            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->kd_truk);
+            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->noplat);
+            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->destinasi);
+            $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->jml_kios);
+            $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->tonase);
+            $excel->setActiveSheetIndex(0)->setCellValue('L' . $numrow, $data->kubikasi);
+            $excel->setActiveSheetIndex(0)->setCellValue('M' . $numrow, $data->sts_driver);
+            $excel->setActiveSheetIndex(0)->setCellValue('N' . $numrow, $data->keterangan);
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('L' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('M' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('N' . $numrow)->applyFromArray($style_row);
+            $no++;
+            $numrow++;
+        }
 
-    //     $no = 1;
-    //     $numrow = 4;
-    //     foreach ($tracking as $data) {
-    //         $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->kd_deliveri);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->tgl_jalan);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->norut);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->nama_driver);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->nama_helper);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->kd_truk);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->noplat);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->destinasi);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->jml_kios);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->tonase);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('L' . $numrow, $data->kubikasi);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('M' . $numrow, $data->sts_driver);
-    //         $excel->setActiveSheetIndex(0)->setCellValue('N' . $numrow, $data->keterangan);
-    //         $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('L' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('M' . $numrow)->applyFromArray($style_row);
-    //         $excel->getActiveSheet()->getStyle('N' . $numrow)->applyFromArray($style_row);
-    //         $no++;
-    //         $numrow++;
-    //     }
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(4);
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(16);
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(16);
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(10);
+        $excel->getActiveSheet()->getColumnDimension('E')->setWidth(14);
+        $excel->getActiveSheet()->getColumnDimension('F')->setWidth(14);
+        $excel->getActiveSheet()->getColumnDimension('G')->setWidth(12);
+        $excel->getActiveSheet()->getColumnDimension('H')->setWidth(13);
+        $excel->getActiveSheet()->getColumnDimension('I')->setWidth(20);
+        $excel->getActiveSheet()->getColumnDimension('J')->setWidth(13);
+        $excel->getActiveSheet()->getColumnDimension('K')->setWidth(8);
+        $excel->getActiveSheet()->getColumnDimension('L')->setWidth(9);
+        $excel->getActiveSheet()->getColumnDimension('M')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('N')->setWidth(55);
+        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        $excel->getActiveSheet(0)->setTitle("Rekap Driver Order");
+        $excel->setActiveSheetIndex(0);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="rekap_driver_order.xlsx"');
+        header('Cache-Control: max-age=0');
 
-    //     $excel->getActiveSheet()->getColumnDimension('A')->setWidth(4);
-    //     $excel->getActiveSheet()->getColumnDimension('B')->setWidth(16);
-    //     $excel->getActiveSheet()->getColumnDimension('C')->setWidth(16);
-    //     $excel->getActiveSheet()->getColumnDimension('D')->setWidth(10);
-    //     $excel->getActiveSheet()->getColumnDimension('E')->setWidth(14);
-    //     $excel->getActiveSheet()->getColumnDimension('F')->setWidth(14);
-    //     $excel->getActiveSheet()->getColumnDimension('G')->setWidth(12);
-    //     $excel->getActiveSheet()->getColumnDimension('H')->setWidth(13);
-    //     $excel->getActiveSheet()->getColumnDimension('I')->setWidth(20);
-    //     $excel->getActiveSheet()->getColumnDimension('J')->setWidth(13);
-    //     $excel->getActiveSheet()->getColumnDimension('K')->setWidth(8);
-    //     $excel->getActiveSheet()->getColumnDimension('L')->setWidth(9);
-    //     $excel->getActiveSheet()->getColumnDimension('M')->setWidth(15);
-    //     $excel->getActiveSheet()->getColumnDimension('N')->setWidth(55);
-    //     $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
-    //     $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
-    //     $excel->getActiveSheet(0)->setTitle("Rekap Driver Order");
-    //     $excel->setActiveSheetIndex(0);
-    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    //     header('Content-Disposition: attachment; filename="rekap_driver_order.xlsx"');
-    //     header('Cache-Control: max-age=0');
-
-    //     $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
-    //     $write->save('php://output');
-    // }
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+    }
 
     public function tmp_lap_distribusi()
     {
@@ -1702,45 +1700,100 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
+    public function compareall_tim()
+    {
+        $data['page_title'] = 'KARISMA - ICS';
+
+        $data['allbarang'] = $this->M_Logistik->admin_compareuser_all();
+
+        $result_t1 = $this->M_Logistik->all_barang_match_t1();
+        $result_t2 = $this->M_Logistik->all_barang_match_t2();
+
+        $res_t1 = $result_t1[0];
+        $res_t2 = $result_t2[0];
+
+        $data['stat_t1'] = [
+            'total_barang'   => $res_t1->total_barang,
+            'total_match'    => $res_t1->total_match,
+            'total_notmatch' => $res_t1->total_notmatch,
+            'persen_match'   => $res_t1->total_barang > 0 ? round(($res_t1->total_match / $res_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t1->total_barang > 0 ? round(($res_t1->total_notmatch / $res_t1->total_barang) * 100, 2) : 0
+        ];
+        $data['stat_t2'] = [
+            'total_barang'   => $res_t2->total_barang,
+            'total_match'    => $res_t2->total_match,
+            'total_notmatch' => $res_t2->total_notmatch,
+            'persen_match'   => $res_t2->total_barang > 0 ? round(($res_t2->total_match / $res_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t2->total_barang > 0 ? round(($res_t2->total_notmatch / $res_t2->total_barang) * 100, 2) : 0
+        ];
+
+        $data['all_t1'] = $result_t1;
+        $data['all_t2'] = $result_t2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/compare_allbarang.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
     public function detail_tracking_input($kdbarang, $action)
     {
-        $tim1   = '1';
-        $tim2   = '2';
 
         switch ($action) {
             case 'allbarang':
                 $data['page_title'] = 'Opname Detail Inputer';
-                $data['list1']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
-                $data['list2']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
-                $data['nmbarang']   = $this->M_Logistik->get_nmbarang($kdbarang);
+                $data['list'] = $this->M_Logistik->list_inputer_by_allbarang($kdbarang);
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
                 $this->load->view('partial/main/footer.php');
                 $this->load->view('content/logistik/ics/ajaxics.php', $data);
                 break;
+            case 'expdate':
+
+                $data['page_title'] = 'Opname Detail Inputer';
+                $data['list'] = $this->M_Logistik->list_inputer_by_expdate($kdbarang);
+
+                $this->load->view('partial/main/header.php', $data);
+                $this->load->view('content/logistik/ics/detail_tracking_exp.php', $data);
+                $this->load->view('partial/main/footer.php');
+                $this->load->view('content/logistik/ics/ajaxics.php', $data);
+                break;
         }
     }
 
-    public function compare_opname()
+    public function compare_exp()
     {
-        $data['page_title']         = 'KARISMA - ICS';
-        $data['allbarang']          = $this->M_Logistik->admin_compareuser_all();
-        $data['expired_date']       = $this->M_Logistik->admin_compareuser_exp();
+        $data['page_title'] = 'KARISMA - ICS';
+        $data['expired_date'] = $this->M_Logistik->admin_compareuser_exp();
+
+        $resultexp_t1 = $this->M_Logistik->fefo_match_t1();
+        $resultexp_t2 = $this->M_Logistik->fefo_match_t2();
+
+        $resexp_t1 = $resultexp_t1[0];
+        $resexp_t2 = $resultexp_t2[0];
+
+        $data['statexp_t1'] = [
+            'total_barang'   => $resexp_t1->total_barang,
+            'total_match'    => $resexp_t1->total_match,
+            'total_notmatch' => $resexp_t1->total_notmatch,
+            'persen_match'   => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_match / $resexp_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['statexp_t2'] = [
+            'total_barang'   => $resexp_t2->total_barang,
+            'total_match'    => $resexp_t2->total_match,
+            'total_notmatch' => $resexp_t2->total_notmatch,
+            'persen_match'   => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_match / $resexp_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_notmatch / $resexp_t2->total_barang) * 100, 2) : 0
+        ];
+
+        $data['allexp_t1'] = $resultexp_t1;
+        $data['allexp_t2'] = $resultexp_t2;
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/compare_opname.php', $data);
-        $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ics/ajaxics.php', $data);
-    }
-
-    public function opname_datapending()
-    {
-        $data['page_title']         = 'KARISMA - ICS';
-        $data['pending']            = $this->M_Logistik->opname_pending();
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/brpending_opname.php', $data);
+        $this->load->view('content/logistik/ics/compare_expdate.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
@@ -1841,7 +1894,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
-            'input_at'      => date('d/m/Y')
+            'input_at'      => date('Y-m-d H:i:s')
         ];
 
         $log = [
@@ -1862,133 +1915,46 @@ class C_Logistik extends CI_Controller
         echo 'ok';
     }
 
-    public function save_edit_opname()
-    {
-        $id         = $this->input->post('id');
-        $kdbarang   = $this->input->post('kd_barang');
-        $pcs        = $this->input->post('qty_pcs');
-        $box        = $this->input->post('qty_box');
-        $dimensi    = $this->input->post('dimensi');
-        $total_qty  = hitung_qty($box, $pcs, $dimensi);
+    // public function insertopname()
+    // {
+    //     $nama_barang    = $this->input->post('nmbarang');
+    //     $exp_date       = $this->input->post('expdate');
+    //     $qty_box        = (int)$this->input->post('qtybox');
+    //     $qty_pcs        = (int)$this->input->post('qtypcs');
+    //     $dimensi        = (int)$this->input->post('dimensi');
+    //     $inputer        = $this->session->userdata('nama');
+    //     $inputernik     = $this->session->userdata('nik');
+    //     $tim            = $this->session->userdata('tim');
 
-        $data = array(
-            'qty'      => $total_qty,
-            'qty_box'  => $box,
-            'qty_pcs'  => $pcs
-        );
+    //     $dimensi = $this->M_Logistik->getDimensi($nama_barang);
+    //     $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
 
-        $log = [
-            'nama_user'     => $this->session->userdata('nama'),
-            'nama_barang'   => $this->input->post('nama_barang'),
-            'qty'           => $total_qty,
-            'qty_box'       => $box,
-            'qty_pcs'       => $pcs,
-            'no_lot'        => '-',
-            'exp_date'      => $this->input->post('exp_date'),
-            'inputer'       => $this->session->userdata('nik'),
-            'tgl_input'     => date('Y-m-d'),
-            'keterangan'    => 'Edited Opname By Admin'
-        ];
+    //     $this->M_Logistik->insertOpname([
+    //         'nama_barang' => $nama_barang,
+    //         'exp_date' => $exp_date,
+    //         'qty' => $total_qty,
+    //         'qty_box'   => $qty_box,
+    //         'qty_pcs'   => $qty_pcs,
+    //         'inputer'   => $inputer,
+    //         'tim'       => $tim,
+    //         'input_at'  => date('Y-m-d H:i:s')
+    //     ]);
 
-        $this->db->where('id', $id);
-        $this->db->update('tb_ics_opname', $data);
-        $this->db->insert('tb_log_ics', $log);
+    //     $this->M_Logistik->logInput([
+    //         'nama_user' => $inputer,
+    //         'nama_barang' => $nama_barang,
+    //         'qty' => $total_qty,
+    //         'qty_box' => $qty_box,
+    //         'qty_pcs' => $qty_pcs,
+    //         'no_lot' => '-',
+    //         'exp_date' => $exp_date,
+    //         'inputer' => $inputernik,
+    //         'tgl_input' => date('Y-m-d'),
+    //         'keterangan' => 'Stock Opname'
+    //     ]);
 
-        $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
-        redirect('detailtrack/' . $kdbarang . '/allbarang');
-    }
-
-
-    public function request_opname()
-    {
-        $nmbarang   = $this->input->post('nama_barang');
-        $box        = $this->input->post('qty_box_manual');
-        $pcs        = $this->input->post('qty_pcs_manual');
-
-        $dimensi    = $this->M_Logistik->getDimensi($nmbarang);
-        $total_qty  = hitung_qty($box, $pcs, $dimensi);
-
-        $opname = [
-            'nama_barang'   => $nmbarang,
-            'exp_date'      => $this->input->post('exp_date_manual'),
-            'qty'           => $total_qty,
-            'qty_box'       => $box,
-            'qty_pcs'       => $pcs,
-            'inputer'       => $this->session->userdata('nama'),
-            'tim'           => $this->session->userdata('tim'),
-            'status'        => '1',
-            'acc_with'      => '-',
-            'input_at'      => date('d/m/Y')
-        ];
-
-        $log = [
-            'nama_user'     => $this->session->userdata('nama'),
-            'nama_barang'   => $nmbarang,
-            'qty'           => $total_qty,
-            'qty_box'       => $box,
-            'qty_pcs'       => $pcs,
-            'no_lot'        => '-',
-            'exp_date'      => $this->input->post('exp_date_manual'),
-            'inputer'       => $this->session->userdata('nik'),
-            'tgl_input'     => date('Y-m-d'),
-            'keterangan'    => 'expired-date tidak-ada'
-        ];
-
-        $this->db->insert('tb_req_opname', $opname);
-        $this->db->insert('tb_log_ics', $log);
-        echo 'ok';
-    }
-
-    public function request_opname_admin()
-    {
-        $data['page_title']     = 'KARISMA - ICS';
-        $data['request']        = $this->M_Logistik->opname_req_user();
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/requestopname.php', $data);
-        $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ics/ajaxics.php', $data);
-    }
-
-    public function req_opname_acc($id)
-    {
-        $req = $this->M_Logistik->get_requestbr($id);
-
-        if ($req) {
-            $datareq = array(
-                'nama_barang' => $req->nama_barang,
-                'exp_date'    => $req->exp_date,
-                'qty'         => $req->qty,
-                'qty_box'     => $req->qty_box,
-                'qty_pcs'     => $req->qty_pcs,
-                'inputer'     => $req->inputer,
-                'tim'         => $req->tim,
-                'input_at'    => date('d/m/Y')
-            );
-
-            $log = array(
-                'nama_user'   => $req->inputer,
-                'nama_barang' => $req->nama_barang,
-                'qty'         => $req->qty,
-                'qty_box'     => $req->qty_box,
-                'qty_pcs'     => $req->qty_pcs,
-                'no_lot'      => '-',
-                'exp_date'    => $req->exp_date,
-                'keterangan'  => 'Input Request Expired Tidak Ada',
-                'inputer'     => $this->session->userdata('nik'),
-                'tgl_input'   => date('d/m/Y')
-            );
-
-            $this->db->insert('tb_ics_opname', $datareq);
-            $this->db->insert('tb_log_ics', $log);
-            $this->db->where('id', $id)->update('tb_req_opname', [
-                'status'   => 2,
-                'acc_with' => $this->session->userdata('nik')
-            ]);
-        }
-        redirect('request_opname_admin');
-    }
-
+    //     redirect('stockopname');
+    // }
 
     public function forminput($nama_barang, $exp_date)
     {
@@ -2034,54 +2000,5 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/deatilics.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
-    }
-
-    public function usropname_input()
-    {
-        $user = $this->session->userdata('nama');
-
-        $data['page_title']     = 'KARISMA - ICS';
-        $data['inputopname']    = $this->M_Logistik->getinputopname($user);
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/histori_input.php', $data);
-        $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ics/ajaxics.php', $data);
-    }
-
-    public function export_compare_allbarang()
-    {
-
-        $data = $this->M_Logistik->admin_compareuser_all();
-
-        require_once APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php'; // jika tidak pakai Composer
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $sheet->setCellValue('A1', 'Kode Barang');
-        $sheet->setCellValue('B1', 'Nama Barang');
-        $sheet->setCellValue('C1', 'Qty Tim 1');
-        $sheet->setCellValue('D1', 'Qty Tim 2');
-        $sheet->setCellValue('E1', 'Qty Sistem');
-        $sheet->setCellValue('F1', 'Status Tim 1');
-        $sheet->setCellValue('G1', 'Status Tim 2');
-        $row = 2;
-        foreach ($data as $d) {
-            $sheet->setCellValue('A' . $row, $d->kd_barang);
-            $sheet->setCellValue('B' . $row, $d->nama_barang);
-            $sheet->setCellValue('C' . $row, $d->qty_fisik_tim1);
-            $sheet->setCellValue('D' . $row, $d->qty_fisik_tim2);
-            $sheet->setCellValue('E' . $row, $d->qty_sistem);
-            $sheet->setCellValue('F' . $row, $d->status_tim1);
-            $sheet->setCellValue('G' . $row, $d->status_tim2);
-            $row++;
-        }
-        $filename = 'Perbandingan_Stock_Opname_' . date('Ymd_His') . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header("Content-Disposition: attachment; filename=\"$filename\"");
-        header('Cache-Control: max-age=0');
-
-        $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
     }
 }

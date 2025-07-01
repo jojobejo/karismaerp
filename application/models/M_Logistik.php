@@ -717,13 +717,862 @@ class M_Logistik extends CI_Model
     GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
     }
 
-    public function detailbrics($kdbarang)
+    public function list_item_ics()
     {
-        return $this->db->query("
+        return $this->db->query("SELECT
+            a.*
+            FROM v_ics_all a
         ");
     }
 
-    public function detailics()
+    public function getAllICS()
+    {
+        return $this->db->query("SELECT
+        x.nama_barang,
+        x.exp_date,
+        x.dimensi
+        FROM
+        (
+            SELECT
+            a.nama_barang,
+            a.exp_date,
+            (b.p*b.l*b.t) AS dimensi
+            FROM tb_ics a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+                
+        ) AS x
+        ")->result();
+    }
+    public function getinputopname($user)
+    {
+        return $this->db->query("SELECT * FROM `tb_ics_opname` WHERE inputer = '$user'
+        ")->result();
+    }
+    public function getBarangByNama($nama)
+    {
+        return $this->db->get_where('tb_mbarang', ['nm_barang' => $nama])->row();
+    }
+    public function getDimensi($nama)
+    {
+        $barang = $this->getBarangByNama($nama);
+        return $barang->p * $barang->l * $barang->t;
+    }
+    public function insertOpname($data)
+    {
+        $this->db->insert('tb_ics_opname', $data);
+    }
+
+    public function logInput($log)
+    {
+        $this->db->insert('tb_log_ics', $log);
+    }
+
+    public function compareOpname()
+    {
+        $sql = "SELECT 
+                    o.nama_barang, o.exp_date, o.qty AS qty_fisik,
+                    i.qty AS qty_saldo,
+                    IF(o.qty = i.qty, 'MATCH', 'NOT MATCH') AS status
+                FROM tb_ics_opname o
+                LEFT JOIN tb_ics i ON o.nama_barang = i.nama_barang AND o.exp_date = i.exp_date";
+        return $this->db->query($sql)->result();
+    }
+
+    public function querysql_not_ci()
+    {
+        // public function compareFEFO()
+        // {
+        //     $sql = "SELECT 
+        //         COALESCE(a.nama_barang, b.nama_barang) AS nama_barang,
+        //         COALESCE(a.exp_date, b.exp_date) AS exp_date,
+        //         IFNULL(a.qty_fisik, 0) AS qty_fisik,
+        //         IFNULL(b.qty_saldo, 0) AS qty_saldo,
+        //         CASE 
+        //             WHEN IFNULL(a.qty_fisik, 0) = IFNULL(b.qty_saldo, 0) THEN 'MATCH'
+        //             ELSE 'NOT MATCH'
+        //         END AS status
+        //     FROM 
+        //         (
+        //             SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik 
+        //             FROM tb_ics_opname 
+        //             GROUP BY nama_barang, exp_date
+        //         ) a
+        //     LEFT JOIN 
+        //         (
+        //             SELECT nama_barang, exp_date, SUM(qty) AS qty_saldo 
+        //             FROM tb_ics 
+        //             GROUP BY nama_barang, exp_date
+        //         ) b 
+        //         ON a.nama_barang = b.nama_barang AND a.exp_date = b.exp_date
+
+        //     UNION
+
+        //     SELECT 
+        //         COALESCE(a.nama_barang, b.nama_barang) AS nama_barang,
+        //         COALESCE(a.exp_date, b.exp_date) AS exp_date,
+        //         IFNULL(a.qty_fisik, 0) AS qty_fisik,
+        //         IFNULL(b.qty_saldo, 0) AS qty_saldo,
+        //         CASE 
+        //             WHEN IFNULL(a.qty_fisik, 0) = IFNULL(b.qty_saldo, 0) THEN 'MATCH'
+        //             ELSE 'NOT MATCH'
+        //         END AS status
+        //     FROM 
+        //         (
+        //             SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik 
+        //             FROM tb_ics_opname 
+        //             GROUP BY nama_barang, exp_date
+        //         ) a
+        //     RIGHT JOIN 
+        //         (
+        //             SELECT nama_barang, exp_date, SUM(qty) AS qty_saldo 
+        //             FROM tb_ics 
+        //             GROUP BY nama_barang, exp_date
+        //         ) b 
+        //         ON a.nama_barang = b.nama_barang AND a.exp_date = b.exp_date
+
+        //     ORDER BY nama_barang, exp_date;";
+
+        //     return $this->db->query($sql)->result();
+        // }
+
+        // by All Barang (tanpa exp_date)
+        // public function compareAllBarang()
+        // {
+        //     $sql = "SELECT 
+        //         COALESCE(a.nama_barang, b.nama_barang) AS nama_barang,
+        //         IFNULL(a.qty_fisik, 0) AS qty_fisik,
+        //         IFNULL(b.qty_saldo, 0) AS qty_saldo,
+        //         CASE 
+        //             WHEN IFNULL(a.qty_fisik, 0) = IFNULL(b.qty_saldo, 0) THEN 'MATCH'
+        //             ELSE 'NOT MATCH'
+        //         END AS STATUS
+        //     FROM 
+        //         (
+        //             SELECT nama_barang, SUM(qty) AS qty_fisik 
+        //             FROM tb_ics_opname 
+        //             GROUP BY nama_barang
+        //         ) a
+        //     LEFT JOIN 
+        //         (
+        //             SELECT nama_barang, SUM(qty) AS qty_saldo 
+        //             FROM tb_ics 
+        //             GROUP BY nama_barang
+        //         ) b ON a.nama_barang = b.nama_barang
+
+        //     UNION
+
+        //     SELECT 
+        //         COALESCE(a.nama_barang, b.nama_barang) AS nama_barang,
+        //         IFNULL(a.qty_fisik, 0) AS qty_fisik,
+        //         IFNULL(b.qty_saldo, 0) AS qty_saldo,
+        //         CASE 
+        //             WHEN IFNULL(a.qty_fisik, 0) = IFNULL(b.qty_saldo, 0) THEN 'MATCH'
+        //             ELSE 'NOT MATCH'
+        //         END AS STATUS
+        //     FROM 
+        //         (
+        //             SELECT nama_barang, SUM(qty) AS qty_fisik 
+        //             FROM tb_ics_opname 
+        //             GROUP BY nama_barang
+        //         ) a
+        //     RIGHT JOIN 
+        //         (
+        //             SELECT nama_barang, SUM(qty) AS qty_saldo 
+        //             FROM tb_ics 
+        //             GROUP BY nama_barang
+        //         ) b ON a.nama_barang = b.nama_barang
+
+        //     ORDER BY nama_barang;
+        //     ";
+        //     return $this->db->query($sql)->result();
+        // }
+    }
+
+    public function admin_compareuser_exp()
+    {
+        return $this->db->query("SELECT 
+        COALESCE(m.kd_system, '-') AS kd_barang,
+        base.nama_barang,
+        base.exp_date,
+        COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+        COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+        COALESCE(base.qty_zahir, 0) AS qty_zahir,
+        COALESCE(p.qty_pending, 0) AS qty_pending,
+        COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) AS qty_sistem,
+        CASE
+            WHEN COALESCE(t1.qty_fisik_tim1, 0) = COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH' ELSE 'NOT MATCH'
+        END AS status_tim1,
+
+        CASE
+            WHEN COALESCE(t2.qty_fisik_tim2, 0) = COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH' ELSE 'NOT MATCH'
+        END AS status_tim2
+        FROM (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
+            FROM tb_ics
+            GROUP BY nama_barang, exp_date
+        ) base
+        LEFT JOIN tb_mbarang m ON base.nama_barang = m.nm_barang
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) p ON p.nama_barang = base.nama_barang AND p.exp_date = base.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim1
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang, exp_date
+        ) t1 ON t1.nama_barang = base.nama_barang AND t1.exp_date = base.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim2
+            FROM tb_ics_opname
+            WHERE tim = '2'
+            GROUP BY nama_barang, exp_date
+        ) t2 ON t2.nama_barang = base.nama_barang AND t2.exp_date = base.exp_date
+        ORDER BY base.nama_barang, base.exp_date;
+        ")->result();
+    }
+
+    public function opname_pending()
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_ics_do a ")->result();
+    }
+
+    public function admin_compareuser_all()
+    {
+        return $this->db->query("SELECT 
+        COALESCE(m.kd_system, '-') AS kd_barang,
+        i.nama_barang,
+        COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+        COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+        COALESCE(s.qty_zahir, 0) AS qty_zahir,
+        COALESCE(p.qty_pending, 0) AS qty_pending,
+        COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) AS qty_sistem,
+        CASE
+            WHEN COALESCE(t1.qty_fisik_tim1, 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH'
+            ELSE 'NOT MATCH'
+        END AS status_tim1,
+        CASE
+            WHEN COALESCE(t2.qty_fisik_tim2, 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
+            THEN 'MATCH'
+            ELSE 'NOT MATCH'
+        END AS status_tim2
+
+        FROM tb_ics i
+        JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_zahir
+            FROM tb_ics
+            GROUP BY nama_barang
+        ) s ON s.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang
+        ) p ON p.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_fisik_tim1
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang
+        ) t1 ON t1.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_fisik_tim2
+            FROM tb_ics_opname
+            WHERE tim = '2'
+            GROUP BY nama_barang
+        ) t2 ON t2.nama_barang = i.nama_barang
+        LEFT JOIN tb_mbarang m ON i.nama_barang = m.nm_barang
+        GROUP BY i.nama_barang, m.kd_system, s.qty_zahir, p.qty_pending, t1.qty_fisik_tim1, t2.qty_fisik_tim2
+        ORDER BY i.nama_barang;")->result();
+    }
+
+
+    public function compareinputer($tim)
+    {
+        // Fisik opname hanya dari User StockOpname 1
+        $this->db->select('nama_barang, SUM(qty) AS qty_fisik');
+        $this->db->from('tb_ics_opname');
+        $this->db->where('tim', $tim);
+        $this->db->group_by('nama_barang');
+        $subquery_fisik = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        // Saldo dari tb_ics (qty buku)
+        $this->db->select('nama_barang, SUM(qty) AS qty_buku');
+        $this->db->from('tb_ics');
+        $this->db->group_by('nama_barang');
+        $subquery_buku = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        // Saldo dari tb_pending
+        $this->db->select('nama_barang, SUM(qty) AS qty_pending');
+        $this->db->from('tb_ics_do');
+        $this->db->group_by('nama_barang');
+        $subquery_pending = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $sql = "SELECT 
+                COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+                IFNULL(f.qty_fisik, 0) AS qty_fisik,
+                IFNULL(b.qty_buku, 0) AS qty_buku,
+                IFNULL(p.qty_pending, 0) AS qty_pending,
+                CASE 
+                    WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                    ELSE 'NOT MATCH'
+                END AS status
+            FROM ($subquery_fisik) f
+            LEFT JOIN ($subquery_buku) b ON f.nama_barang = b.nama_barang
+            LEFT JOIN ($subquery_pending) p ON f.nama_barang = p.nama_barang
+
+            UNION
+
+            SELECT 
+                COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+                IFNULL(f.qty_fisik, 0) AS qty_fisik,
+                IFNULL(b.qty_buku, 0) AS qty_buku,
+                IFNULL(p.qty_pending, 0) AS qty_pending,
+                CASE 
+                    WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                    ELSE 'NOT MATCH'
+                END AS status
+            FROM ($subquery_buku) b
+            LEFT JOIN ($subquery_fisik) f ON b.nama_barang = f.nama_barang
+            LEFT JOIN ($subquery_pending) p ON b.nama_barang = p.nama_barang
+
+            UNION
+
+            SELECT 
+                COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+                IFNULL(f.qty_fisik, 0) AS qty_fisik,
+                IFNULL(b.qty_buku, 0) AS qty_buku,
+                IFNULL(p.qty_pending, 0) AS qty_pending,
+                CASE 
+                    WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                    ELSE 'NOT MATCH'
+                END AS status
+            FROM ($subquery_pending) p
+            LEFT JOIN ($subquery_fisik) f ON p.nama_barang = f.nama_barang
+            LEFT JOIN ($subquery_buku) b ON p.nama_barang = b.nama_barang
+
+            ORDER BY nama_barang
+            ";
+
+        return $this->db->query($sql)->result();
+    }
+
+    public function compareAllBarang()
+    {
+
+        $this->db->select('nama_barang, SUM(qty) AS qty_fisik');
+        $this->db->from('tb_ics_opname');
+        $this->db->group_by('nama_barang');
+        $subquery_fisik = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $this->db->select('nama_barang, SUM(qty) AS qty_buku');
+        $this->db->from('tb_ics');
+        $this->db->group_by('nama_barang');
+        $subquery_buku = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $this->db->select('nama_barang, SUM(qty) AS qty_pending');
+        $this->db->from('tb_ics_do');
+        $this->db->group_by('nama_barang');
+        $subquery_pending = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $sql = "
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_fisik) f
+        LEFT JOIN ($subquery_buku) b ON f.nama_barang = b.nama_barang
+        LEFT JOIN ($subquery_pending) p ON f.nama_barang = p.nama_barang
+
+        UNION
+
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_buku) b
+        LEFT JOIN ($subquery_fisik) f ON b.nama_barang = f.nama_barang
+        LEFT JOIN ($subquery_pending) p ON b.nama_barang = p.nama_barang
+
+        UNION
+
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_pending) p
+        LEFT JOIN ($subquery_fisik) f ON p.nama_barang = f.nama_barang
+        LEFT JOIN ($subquery_buku) b ON p.nama_barang = b.nama_barang
+
+        ORDER BY nama_barang
+    ";
+        return $this->db->query($sql)->result();
+    }
+
+    public function compareinputerexp($tim)
+    {
+
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_fisik');
+        $this->db->from('tb_ics_opname');
+        $this->db->where('tim', $tim);
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $sub_fisik = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_buku');
+        $this->db->from('tb_ics');
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $sub_buku = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_pending');
+        $this->db->from('tb_ics_do');
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $sub_pending = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $sql = "
+        SELECT
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            COALESCE(f.exp_date ,  b.exp_date ,  p.exp_date )     AS exp_date,
+            IFNULL(f.qty_fisik , 0)                               AS qty_fisik,
+            IFNULL(b.qty_buku , 0)                                AS qty_buku,
+            IFNULL(p.qty_pending , 0)                             AS qty_pending,
+            '$tim'                                                AS tim,
+            CASE
+                WHEN IFNULL(f.qty_fisik ,0) =
+                     (IFNULL(b.qty_buku ,0) + IFNULL(p.qty_pending ,0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END                                                   AS status
+        FROM ($sub_fisik)     f
+        LEFT JOIN ($sub_buku) b ON b.nama_barang = f.nama_barang
+                               AND b.exp_date   = f.exp_date
+        LEFT JOIN ($sub_pending) p ON p.nama_barang = f.nama_barang
+                                   AND p.exp_date   = f.exp_date
+
+        UNION
+
+        SELECT
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang),
+            COALESCE(f.exp_date ,  b.exp_date ,  p.exp_date ),
+            IFNULL(f.qty_fisik , 0),
+            IFNULL(b.qty_buku , 0),
+            IFNULL(p.qty_pending , 0),
+            '$tim',
+            CASE
+                WHEN IFNULL(f.qty_fisik ,0) =
+                     (IFNULL(b.qty_buku ,0) + IFNULL(p.qty_pending ,0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END
+        FROM ($sub_buku)      b
+        LEFT JOIN ($sub_fisik) f ON f.nama_barang = b.nama_barang
+                                AND f.exp_date   = b.exp_date
+        LEFT JOIN ($sub_pending) p ON p.nama_barang = b.nama_barang
+                                   AND p.exp_date   = b.exp_date
+
+        UNION
+
+        SELECT
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang),
+            COALESCE(f.exp_date ,  b.exp_date ,  p.exp_date ),
+            IFNULL(f.qty_fisik , 0),
+            IFNULL(b.qty_buku , 0),
+            IFNULL(p.qty_pending , 0),
+            '$tim',
+            CASE
+                WHEN IFNULL(f.qty_fisik ,0) =
+                     (IFNULL(b.qty_buku ,0) + IFNULL(p.qty_pending ,0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END
+        FROM ($sub_pending)   p
+        LEFT JOIN ($sub_fisik) f ON f.nama_barang = p.nama_barang
+                                AND f.exp_date   = p.exp_date
+        LEFT JOIN ($sub_buku)  b ON b.nama_barang = p.nama_barang
+                                AND b.exp_date   = p.exp_date
+        ORDER BY nama_barang, exp_date
+    ";
+
+        return $this->db->query($sql)->result();
+    }
+
+
+
+    public function compareFEFO()
+    {
+        // Fisik opname
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_fisik');
+        $this->db->from('tb_ics_opname');
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $subquery_fisik = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        // Saldo buku dari tb_ics
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_buku');
+        $this->db->from('tb_ics');
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $subquery_buku = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        // Pending berdasarkan nama_barang + exp_date
+        $this->db->select('nama_barang, exp_date, SUM(qty) AS qty_pending');
+        $this->db->from('tb_ics_do');
+        $this->db->group_by(['nama_barang', 'exp_date']);
+        $subquery_pending = $this->db->get_compiled_select();
+        $this->db->reset_query();
+
+        $sql = "
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            COALESCE(f.exp_date, b.exp_date, p.exp_date) AS exp_date,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_fisik) f
+        LEFT JOIN ($subquery_buku) b ON f.nama_barang = b.nama_barang AND f.exp_date = b.exp_date
+        LEFT JOIN ($subquery_pending) p ON f.nama_barang = p.nama_barang AND f.exp_date = p.exp_date
+
+        UNION
+
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            COALESCE(f.exp_date, b.exp_date, p.exp_date) AS exp_date,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_buku) b
+        LEFT JOIN ($subquery_fisik) f ON b.nama_barang = f.nama_barang AND b.exp_date = f.exp_date
+        LEFT JOIN ($subquery_pending) p ON b.nama_barang = p.nama_barang AND b.exp_date = p.exp_date
+
+        UNION
+
+        SELECT 
+            COALESCE(f.nama_barang, b.nama_barang, p.nama_barang) AS nama_barang,
+            COALESCE(f.exp_date, b.exp_date, p.exp_date) AS exp_date,
+            IFNULL(f.qty_fisik, 0) AS qty_fisik,
+            IFNULL(b.qty_buku, 0) AS qty_buku,
+            IFNULL(p.qty_pending, 0) AS qty_pending,
+            CASE 
+                WHEN IFNULL(f.qty_fisik, 0) = (IFNULL(b.qty_buku, 0) + IFNULL(p.qty_pending, 0)) THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status
+        FROM ($subquery_pending) p
+        LEFT JOIN ($subquery_fisik) f ON p.nama_barang = f.nama_barang AND p.exp_date = f.exp_date
+        LEFT JOIN ($subquery_buku) b ON p.nama_barang = b.nama_barang AND p.exp_date = b.exp_date
+
+        ORDER BY nama_barang, exp_date
+    ";
+
+        return $this->db->query($sql)->result();
+    }
+    public function statistikFEFO()
+    {
+        $sql = "SELECT
+    COUNT(*) AS total,
+    SUM(IF(qty_fisik = qty_saldo, 1, 0)) AS match_count,
+    SUM(IF(qty_fisik != qty_saldo, 1, 0)) AS not_match_count
+FROM (
+    SELECT 
+        o.nama_barang,
+        o.exp_date,
+        SUM(o.qty) AS qty_fisik,
+        IFNULL(SUM(i.qty), 0) AS qty_saldo
+    FROM tb_ics_opname o
+    LEFT JOIN tb_ics i ON o.nama_barang = i.nama_barang AND o.exp_date = i.exp_date
+    GROUP BY o.nama_barang, o.exp_date
+) AS sub
+
+    ";
+        $result = $this->db->query($sql)->result();
+
+        return $this->_hitungStatistik($result);
+    }
+
+    public function statistikAllBarang()
+    {
+        $sql = "SELECT 
+            o.nama_barang,
+            SUM(o.qty) AS qty_fisik,
+            IFNULL(SUM(i.qty), 0) AS qty_saldo,
+            IF(SUM(o.qty) = IFNULL(SUM(i.qty), 0), 'MATCH', 'NOT MATCH') AS status
+        FROM tb_ics_opname o
+        LEFT JOIN tb_ics i ON o.nama_barang = i.nama_barang
+        GROUP BY o.nama_barang
+    ";
+
+        $result = $this->db->query($sql)->result();
+        return $this->_hitungStatistik($result);
+    }
+
+    private function _hitungStatistik($data)
+    {
+        $total = count($data);
+        $match = 0;
+        $not_match = 0;
+
+        foreach ($data as $row) {
+            if (isset($row->status) && $row->status === 'MATCH') {
+                $match++;
+            } else {
+                $not_match++;
+            }
+        }
+
+        $persen_match = $total > 0 ? round(($match / $total) * 100, 2) : 0;
+        $persen_not = 100 - $persen_match;
+
+        return [
+            'total' => $total,
+            'match' => $match,
+            'not_match' => $not_match,
+            'persen_match' => $persen_match,
+            'persen_not' => $persen_not
+        ];
+    }
+
+    public function trackingopname($user)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_ics_opname a
+        WHERE a.inputer = '$user'
+        ")->result();
+    }
+
+    public function adm_trackingopname($tim)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_ics_opname a
+        WHERE a.tim = '$tim'
+        ")->result();
+    }
+
+    public function get_requestbr($id)
+    {
+        return $this->db->get_where('tb_req_opname', ['id' => $id])->row();
+    }
+
+    public function opname_req_user()
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_req_opname a
+        WHERE a.status = '1'
+        ")->result();
+    }
+
+    public function all_barang_match_t1()
+    {
+        return $this->db->query("SELECT
+        COUNT(DISTINCT ics.nama_barang) AS total_barang,
+        SUM(CASE 
+            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
+            ELSE 0
+        END) AS total_match,
+        SUM(CASE 
+            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
+            ELSE 0
+        END) AS total_notmatch
+        FROM
+        (
+            SELECT 
+                nama_barang, 
+                SUM(qty) AS qty_buku
+            FROM tb_ics
+            GROUP BY nama_barang
+        ) AS ics
+        LEFT JOIN (
+            SELECT 
+                nama_barang, 
+                SUM(qty) AS qty_input
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang
+        ) AS op
+        ON ics.nama_barang = op.nama_barang;
+        ")->result();
+    }
+
+
+    public function all_barang_match_t2()
+    {
+        return $this->db->query("SELECT
+        COUNT(DISTINCT ics.nama_barang) AS total_barang,
+        SUM(CASE 
+            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
+            ELSE 0
+        END) AS total_match,
+        SUM(CASE 
+            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
+            ELSE 0
+        END) AS total_notmatch
+        FROM
+        (
+            SELECT 
+                nama_barang, 
+                SUM(qty) AS qty_buku
+            FROM tb_ics
+            GROUP BY nama_barang
+        ) AS ics
+        LEFT JOIN (
+            SELECT 
+                nama_barang, 
+                SUM(qty) AS qty_input
+            FROM tb_ics_opname
+            WHERE tim = '2'
+            GROUP BY nama_barang
+        ) AS op
+        ON ics.nama_barang = op.nama_barang;
+        ")->result();
+    }
+
+    public function get_nmbarang($kdbarang)
+    {
+        return $this->db->query("SELECT
+        a.nm_barang AS nama_barang
+        FROM tb_mbarang a
+        WHERE a.kd_system = '$kdbarang'
+        ")->result();
+    }
+
+    public function list_inputer_by_allbarang($kdbarang, $tim)
+    {
+        return $this->db->query("SELECT	
+        a.id,
+        b.kd_system,
+        a.nama_barang,
+        a.qty,
+        a.qty_box,
+        a.qty_pcs,
+        a.tim,
+        (b.p*b.l*b.t) AS dimensi,
+        a.inputer
+        FROM tb_ics_opname a
+        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
+        ")->result();
+    }
+    public function list_inputer_by_expdate($kdbarang, $tim)
+    {
+        return $this->db->query("SELECT	
+        a.id,
+        b.kd_system,
+        a.nama_barang,
+        a.exp_date,
+        a.qty,
+        a.qty_box,
+        a.qty_pcs,
+        a.tim,
+        (b.p*b.l*b.t) AS dimensi,
+        a.inputer
+        FROM tb_ics_opname a
+        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
+        ")->result();
+    }
+
+    public function fefo_match_t1()
+    {
+        return $this->db->query("SELECT
+            COUNT(*) AS total_barang,
+            SUM(CASE 
+                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
+                ELSE 0
+            END) AS total_match,
+            SUM(CASE 
+                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
+                ELSE 0
+            END) AS total_notmatch
+            FROM
+            (
+                SELECT 
+                    nama_barang, 
+                    exp_date,
+                    SUM(qty) AS qty_buku
+                FROM tb_ics
+                GROUP BY nama_barang, exp_date
+            ) AS ics
+            LEFT JOIN (
+                SELECT 
+                    nama_barang, 
+                    exp_date,
+                    SUM(qty) AS qty_input
+                FROM tb_ics_opname
+                WHERE tim = '1'
+                GROUP BY nama_barang, exp_date
+            ) AS op
+            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
+        ")->result();
+    }
+    public function fefo_match_t2()
+    {
+        return $this->db->query("SELECT
+            COUNT(*) AS total_barang,
+            SUM(CASE 
+                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
+                ELSE 0
+            END) AS total_match,
+            SUM(CASE 
+                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
+                ELSE 0
+            END) AS total_notmatch
+            FROM
+            (
+                SELECT 
+                    nama_barang, 
+                    exp_date,
+                    SUM(qty) AS qty_buku
+                FROM tb_ics
+                GROUP BY nama_barang, exp_date
+            ) AS ics
+            LEFT JOIN (
+                SELECT 
+                    nama_barang, 
+                    exp_date,
+                    SUM(qty) AS qty_input
+                FROM tb_ics_opname
+                WHERE tim = '2'
+                GROUP BY nama_barang, exp_date
+            ) AS op
+            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
+        ")->result();
+    }
+
+    public function create_view_ics()
     {
         return $this->db->query("SELECT 
         x.nama_barang,
@@ -731,17 +1580,21 @@ class M_Logistik extends CI_Model
         IFNULL(s.qty, 0) AS saldo_awal,
         IFNULL(p.qty, 0) AS qty_masuk,
         IFNULL(d.total_do, 0) AS qty_keluar,
-        
+
         (IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) AS sistem_qty,
         IFNULL(o.qty, 0) AS fisik_qty,
-        
+
         ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) - IFNULL(o.qty, 0)) AS selisih,
 
         CASE 
             WHEN ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) = IFNULL(o.qty, 0)) 
             THEN 'sama'
             ELSE 'beda'
-        END AS keterangan
+        END AS keterangan,
+
+        mb.dimensi,
+        FLOOR((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) / NULLIF(mb.dimensi, 0)) AS qty_box,
+        ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) % NULLIF(mb.dimensi, 0)) AS qty_pcs
 
     FROM (
         SELECT nama_barang, exp_date FROM tb_ics
@@ -753,11 +1606,17 @@ class M_Logistik extends CI_Model
         SELECT nama_barang, exp_date FROM tb_ics_opname
     ) AS x
 
-    LEFT JOIN tb_ics s 
-        ON x.nama_barang = s.nama_barang AND x.exp_date = s.exp_date
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty
+        FROM tb_ics
+        GROUP BY nama_barang, exp_date
+    ) s ON x.nama_barang = s.nama_barang AND x.exp_date = s.exp_date
 
-    LEFT JOIN tb_ics_po p 
-        ON x.nama_barang = p.nama_barang AND x.exp_date = p.exp_date
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty
+        FROM tb_ics_po
+        GROUP BY nama_barang, exp_date
+    ) p ON x.nama_barang = p.nama_barang AND x.exp_date = p.exp_date
 
     LEFT JOIN (
         SELECT nama_barang, tgl_exp AS exp_date, SUM(qty) AS total_do
@@ -765,8 +1624,17 @@ class M_Logistik extends CI_Model
         GROUP BY nama_barang, tgl_exp
     ) d ON x.nama_barang = d.nama_barang AND x.exp_date = d.exp_date
 
-    LEFT JOIN tb_ics_opname o 
-        ON x.nama_barang = o.nama_barang AND x.exp_date = o.exp_date
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty
+        FROM tb_ics_opname
+        GROUP BY nama_barang, exp_date
+    ) o ON x.nama_barang = o.nama_barang AND x.exp_date = o.exp_date
+
+    LEFT JOIN (
+        SELECT nm_barang, MIN(p * l * t) AS dimensi
+        FROM tb_master_barang
+        GROUP BY nm_barang
+    ) mb ON x.nama_barang = mb.nm_barang
 
     ORDER BY x.nama_barang, x.exp_date
         ");

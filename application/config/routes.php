@@ -82,7 +82,27 @@ $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier
 
 // LOGISTIK ICS
 $route['ics/(:any)']                         = 'logistik/C_Logistik/ics/$1';
+$route['stockopname']                        = 'logistik/C_Logistik/stockopname';
 $route['detailbarang/(:any)']                = 'logistik/C_Logistik/detailbarang/$1';
+$route['forminput/(:any)/(:any)']            = 'logistik/C_Logistik/forminput/$1/$2';
+$route['insertopname']                       = 'logistik/C_Logistik/insertopname';
+$route['stkopname_tracking']                 = 'logistik/C_Logistik/stkopname_tracking';
+$route['admstocktracking']                   = 'logistik/C_Logistik/admstocktracking';
+$route['searchbarang']                       = 'logistik/C_Logistik/searchbarang';
+$route['search_get_exp_date']                = 'logistik/C_Logistik/search_get_exp_date';
+$route['save_opname']                        = 'logistik/C_Logistik/save_opname';
+$route['save_edit_opname']                   = 'logistik/C_Logistik/save_edit_opname';
+$route['request_opname']                     = 'logistik/C_Logistik/request_opname';
+$route['req_opname_acc/(:any)']              = 'logistik/C_Logistik/req_opname_acc/$1';
+$route['trackingtim/(:any)']                 = 'logistik/C_Logistik/admtrackingtim/$1';
+$route['compare_opname']                     = 'logistik/C_Logistik/compare_opname';
+$route['opname_datapending']                 = 'logistik/C_Logistik/opname_datapending';
+$route['request_opname_admin']               = 'logistik/C_Logistik/request_opname_admin';
+$route['detailtrack/(:any)/(:any)']          = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
+
+$route['export_compare_allbarang']           = 'logistik/C_Logistik/export_compare_allbarang';
+
+$route['usropname_input']                    = 'logistik/C_Logistik/usropname_input';
 
 //LOGISTIK - DO
 $route['logistik']                           = 'logistik/C_Logistik/delivery_order';

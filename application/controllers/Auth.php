@@ -34,8 +34,10 @@ class Auth extends CI_Controller
                         'departemen'    => $key->departemen,
                         'lv'            => $key->akses_lv,
                         'jobdesk'       => $key->jobdesk,
-                        'nama'          => $key->nm_karyawan
+                        'nama'          => $key->nm_karyawan,
+                        'tim'           => $key->tim,
                     );
+                    $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);
                     if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
@@ -49,6 +51,8 @@ class Auth extends CI_Controller
                         redirect('schedule_direktur');
                     } else if ($key->jobdesk == 'ADMINKEUTC') {
                         redirect('keuangan');
+                    } else if ($key->jobdesk == 'STOCKOPNAME') {
+                        redirect('stockopname');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

@@ -120,6 +120,54 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('admstocktracking') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('stockopname') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->

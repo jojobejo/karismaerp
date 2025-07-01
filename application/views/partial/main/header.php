@@ -36,6 +36,9 @@
   <link rel="stylesheet" href="<?php echo base_url('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') ?>">
   <link rel="stylesheet" href="<?php echo base_url('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') ?>">
   <link rel="stylesheet" href="<?php echo base_url('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css') ?>">
+  
+  <!-- CHARTS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- fullCalendar -->
   <link rel="stylesheet" href="<?= base_url('assets/plugins/fullcalendar/main.css') ?>">

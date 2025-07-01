@@ -155,7 +155,11 @@
                             <div class="col ml-2">
                                 <a href="<?= base_url('ics/global') ?>" class="btn btn-primary w-100">STOCK ICS</a>
                             </div>
+                            <div class="col ml-2">
+                                <a href="<?= base_url('admstocktracking') ?>" class="btn btn-primary w-100">Stock Opname</a>
+                            </div>
                         </div>
+
                         <!-- <div class="row">
                             <div class="col-12 col-sm-6 col-md-4">
                                 <a href="<?= base_url('ics/global') ?>" class="btn btn-primary w-100">STOCK GLOBAL</a>
@@ -168,7 +172,7 @@
                             </div>
                         </div> -->
                 </section>
-
+            <?php elseif ($this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
                 <!-- END USER ROUTES -->
             <?php endif; ?>
             <!-- END USER ROUTES -->
