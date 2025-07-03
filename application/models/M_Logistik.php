@@ -1337,6 +1337,146 @@ FROM (
         return $this->_hitungStatistik($result);
     }
 
+    public function getallopnametodo($kdbr)
+    {
+        return $this->db->query("SELECT
+        a.nama_barang,
+        a.exp_date,
+        SUM(a.qty) AS qty_zahir,
+        COALESCE(pending.qty_pending, 0) AS qty_pending,
+        SUM(a.qty) + COALESCE(pending.qty_pending, 0) AS qty_final,
+        COALESCE(op1.qtyinput_1, 0) AS qtyinput_1,
+        COALESCE(op2.qtyinput_2, 0) AS qtyinput_2,
+        CASE
+            WHEN (SUM(a.qty) + COALESCE(pending.qty_pending, 0)) = COALESCE(op1.qtyinput_1, 0) THEN 'Match'
+            ELSE 'Not Match'
+        END AS status_tim1,
+        CASE
+            WHEN (SUM(a.qty) + COALESCE(pending.qty_pending, 0)) = COALESCE(op2.qtyinput_2, 0) THEN 'Match'
+            ELSE 'Not Match'
+        END AS status_tim2
+        FROM
+        tb_ics AS a
+        JOIN tb_mbarang AS b ON b.nm_barang = a.nama_barang
+        LEFT JOIN (
+            SELECT
+                d.nama_barang,
+                d.exp_date,
+                SUM(d.qty) AS qty_pending
+            FROM
+                tb_ics_do d
+                JOIN tb_mbarang mb ON mb.nm_barang = d.nama_barang
+            WHERE
+                mb.kd_system = '$kdbr'
+            GROUP BY
+                d.nama_barang,
+                d.exp_date
+        ) AS pending ON pending.nama_barang = a.nama_barang
+        AND pending.exp_date = a.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qtyinput_1
+            FROM
+                tb_ics_opname
+            WHERE
+                tim = 1
+            GROUP BY
+                nama_barang,
+                exp_date
+        ) AS op1 ON op1.nama_barang = a.nama_barang
+        AND op1.exp_date = a.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qtyinput_2
+            FROM
+                tb_ics_opname
+            WHERE
+                tim = 2
+            GROUP BY
+                nama_barang,
+                exp_date
+        ) AS op2 ON op2.nama_barang = a.nama_barang
+        AND op2.exp_date = a.exp_date
+        WHERE
+            b.kd_system = '$kdbr'
+        GROUP BY
+            a.nama_barang,
+            a.exp_date
+        ORDER BY
+            a.nama_barang,
+            a.exp_date;")->result();
+    }
+
+    public function rekapopnamebarang($kdbr, $tim)
+    {
+        return $this->db->query("SELECT
+            COUNT(*) AS total_data,
+            SUM(CASE
+                WHEN (qty_final = qtyinput_1) THEN 1
+                ELSE 0
+            END) AS total_match,
+            SUM(CASE
+                WHEN (qtyinput_1 IS NOT NULL AND qty_final != qtyinput_1) THEN 1
+                ELSE 0
+            END) AS total_not_match
+        FROM (
+            SELECT
+                a.nama_barang,
+                a.exp_date,
+                SUM(a.qty) + COALESCE(pending.qty_pending, 0) AS qty_final,
+                COALESCE(op1.qtyinput_1, 0) AS qtyinput_1
+            FROM tb_ics a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT d.nama_barang, d.exp_date, SUM(d.qty) AS qty_pending
+                FROM tb_ics_do d
+                JOIN tb_mbarang mb ON mb.nm_barang = d.nama_barang
+                WHERE mb.kd_system = '$kdbr'
+                GROUP BY d.nama_barang, d.exp_date
+            ) AS pending
+            ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qtyinput_1
+                FROM tb_ics_opname
+                WHERE tim = '$tim'
+                GROUP BY nama_barang, exp_date
+            ) AS op1
+            ON op1.nama_barang = a.nama_barang AND op1.exp_date = a.exp_date
+            WHERE b.kd_system = '$kdbr'
+            GROUP BY a.nama_barang, a.exp_date) AS hasil ")->result();
+    }
+
+    public function detail_opname_barang($kdbr, $tim)
+    {
+        return $this->db->query("SELECT 
+        b.kd_system AS kd_barang,
+        a.nama_barang,
+        SUM(a.qty) AS qty_zahir,
+        (SUM(a.qty)+COALESCE(pending.qty_pending, 0)) AS qty_zahirwith_pnd,
+        COALESCE(pending.qty_pending, 0) AS qty_pending,
+        COALESCE(opname.qty_fisik, 0) AS qty_fisik,
+        IF(SUM(a.qty) + COALESCE(pending.qty_pending, 0) = COALESCE(opname.qty_fisik, 0),1,0) AS status
+        FROM tb_ics a
+        JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang
+        ) pending ON pending.nama_barang = a.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_fisik
+            FROM tb_ics_opname
+            WHERE tim = '$tim'
+            GROUP BY nama_barang
+        ) opname ON opname.nama_barang = a.nama_barang
+        WHERE b.kd_system = '$kdbr'
+        GROUP BY a.nama_barang")->result();
+    }
+
     private function _hitungStatistik($data)
     {
         $total = count($data);
@@ -1469,6 +1609,21 @@ FROM (
         ")->result();
     }
 
+    public function deleteopnameinputuser($id)
+    {
+        return $this->db->delete('tb_ics_opname', array("id" => $id));
+    }
+
+    public function getdataopname($id)
+    {
+        return $this->db->select('a.inputer, a.nama_barang, a.exp_date, a.qty, a.qty_box, a.qty_pcs')
+            ->from('tb_ics_opname a')
+            ->join('tb_mbarang b', 'b.nm_barang = a.nama_barang')
+            ->where('a.id', $id)
+            ->get()
+            ->row();
+    }
+
     public function list_inputer_by_allbarang($kdbarang, $tim)
     {
         return $this->db->query("SELECT	
@@ -1489,20 +1644,43 @@ FROM (
     public function list_inputer_by_expdate($kdbarang, $tim)
     {
         return $this->db->query("SELECT	
-        a.id,
-        b.kd_system,
-        a.nama_barang,
-        a.exp_date,
-        a.qty,
-        a.qty_box,
-        a.qty_pcs,
-        a.tim,
-        (b.p*b.l*b.t) AS dimensi,
-        a.inputer
-        FROM tb_ics_opname a
-        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
-        WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
-        ")->result();
+            a.id,
+            b.kd_system,
+            a.nama_barang,
+            a.exp_date,
+            COALESCE(zahir.qty_zahir, 0) AS qty_zahir,
+            COALESCE(pending.qty_pending, 0) AS qty_pending,
+            (COALESCE(zahir.qty_zahir, 0) + COALESCE(pending.qty_pending, 0)) AS qty_with_pending,
+            COALESCE(opname.qty_fisik, 0) AS qty_fisik,
+            IF(COALESCE(zahir.qty_zahir, 0) + COALESCE(pending.qty_pending, 0) = COALESCE(opname.qty_fisik, 0),1,0) AS status,
+            a.qty,
+            a.qty_box,
+            a.qty_pcs,
+            a.tim,
+            (b.p * b.l * b.t) AS dimensi,
+            a.inputer
+            FROM tb_ics_opname a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
+                FROM tb_ics
+                GROUP BY nama_barang, exp_date
+            ) AS zahir ON zahir.nama_barang = a.nama_barang AND zahir.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT d.nama_barang, d.exp_date, SUM(d.qty) AS qty_pending
+                FROM tb_ics_do d
+                JOIN tb_ics i ON i.nama_barang = d.nama_barang AND i.exp_date = d.exp_date
+                GROUP BY d.nama_barang, d.exp_date
+            ) AS pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik
+                FROM tb_ics_opname
+                WHERE tim = '$tim'
+                GROUP BY nama_barang, exp_date
+            ) AS opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
+            WHERE b.kd_system = '$kdbarang'
+            AND a.tim = '$tim'
+            ORDER BY a.nama_barang, a.exp_date")->result();
     }
 
     public function fefo_match_t1()

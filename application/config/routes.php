@@ -101,6 +101,7 @@ $route['request_opname_admin']                      = 'logistik/C_Logistik/reque
 $route['detailtrack/(:any)/(:any)']                 = 'logistik/C_Logistik/detail_tracking_input/$1/$2';
 $route['export_compare_allbarang']                  = 'logistik/C_Logistik/export_compare_allbarang';
 $route['usropname_input']                           = 'logistik/C_Logistik/usropname_input';
+$route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
 
 //LOGISTIK - DO
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';

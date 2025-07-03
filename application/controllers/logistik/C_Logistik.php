@@ -1739,10 +1739,15 @@ class C_Logistik extends CI_Controller
 
         switch ($action) {
             case 'allbarang':
-                $data['page_title'] = 'Opname Detail Inputer';
-                $data['list1']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
-                $data['list2']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
-                $data['nmbarang']   = $this->M_Logistik->get_nmbarang($kdbarang);
+                $data['page_title']     = 'Opname Detail Inputer';
+                $data['list1']          = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
+                $data['list2']          = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
+                $data['detailqtyt1']    = $this->M_Logistik->detail_opname_barang($kdbarang, $tim1);
+                $data['detailqtyt2']    = $this->M_Logistik->detail_opname_barang($kdbarang, $tim2);
+                $data['nmbarang']       = $this->M_Logistik->get_nmbarang($kdbarang);
+                $data['opnametodo']     = $this->M_Logistik->getallopnametodo($kdbarang);
+                $data['result_1']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim1);
+                $data['result_2']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim2);
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
@@ -1928,7 +1933,6 @@ class C_Logistik extends CI_Controller
         redirect('detailtrack/' . $kdbarang . '/allbarang');
     }
 
-
     public function request_opname()
     {
         $nmbarang   = $this->input->post('nama_barang');
@@ -2077,6 +2081,33 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/histori_input.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function delete_opname($id)
+    {
+        $getdataopname = $this->M_Logistik->getdataopname($id);
+
+        if (!$getdataopname) {
+            redirect('usropname_input');
+            return;
+        }
+
+        $log = [
+            'nama_user'   => $getdataopname->inputer,
+            'nama_barang' => $getdataopname->nama_barang,
+            'qty'         => $getdataopname->qty,
+            'qty_box'     => $getdataopname->qty_box,
+            'qty_pcs'     => $getdataopname->qty_pcs,
+            'no_lot'      => '-',
+            'exp_date'    => $getdataopname->exp_date,
+            'keterangan'  => 'Delete User Opname',
+            'inputer'     => $this->session->userdata('nik'),
+            'tgl_input'   => date('d/m/Y')
+        ];
+
+        $this->db->insert('tb_log_ics', $log);
+        $this->M_Logistik->deleteopnameinputuser($id);
+        redirect('usropname_input');
     }
 
     // public function export_compare_allbarang()
