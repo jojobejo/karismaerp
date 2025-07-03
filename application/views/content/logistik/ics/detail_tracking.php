@@ -41,42 +41,29 @@
                                     $finalqty   = $det1->qty_zahir + $det1->qty_pending;
                                     $qtyfisik   = $det1->qty_fisik;
                                     $status     = $det1->status;
-                                    if ($status = '1') {
-                                        $statuss = '<span class="badge badge-success w-90 mt-2">MATCH</span>';
-                                    } else {
-                                        $statuss = '<span class="badge badge-danger w-90 mt-2">NOT MATCH</span>';
-                                    }
                                 ?>
-                                    <div class="row">
-                                        <div class="col-auto">
-                                            <h4>Qty Zahir : <?= $qtyzahir ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Pending : <?= $det1->qty_pending ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Zahir + Pending : <?= $finalqty ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Fisik : <?= $qtyfisik ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <?= $statuss ?>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
+                                    <div class="form-group">
+                                        <div class="form-group" style="position: relative; width: 35%; z-index: 0; background: #fff; padding: 10px;">
+                                            <table class="table table-bordered mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Zahir</th>
+                                                        <th>Pending</th>
+                                                        <th>All Qty</th>
+                                                        <th>Fisik</th>
+                                                        <th>Selisih</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><?= $qtyzahir ?></td>
+                                                        <td><?= $det1->qty_pending ?></td>
+                                                        <td><?= $finalqty ?></td>
+                                                        <td><?= $qtyfisik ?></td>
+                                                        <td><?= $finalqty - $qtyfisik ?></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -126,7 +113,6 @@
                                     </tbody>
                                 </table>
                             </div>
-
                             <div class="tab-pane" id="tim2">
                                 <?php foreach ($detailqtyt2 as $det2) :
                                     $qtyzahir   = $det2->qty_zahir;
@@ -139,38 +125,31 @@
                                         $statuss2 = '<span class="badge badge-danger w-90 mt-2">NOT MATCH</span>';
                                     }
                                 ?>
-                                    <div class="row">
-                                        <div class="col-auto">
-                                            <h4>Qty Zahir : <?= $qtyzahir ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Pending : <?= $det2->qty_pending ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Zahir + Pending : <?= $finalqty ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>Qty Fisik : <?= $qtyfisik ?></h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
-                                        </div>
-                                        <div class="col-auto">
-                                            <?= $statuss2 ?>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h4>||</h4>
+                                    <div class="form-group">
+                                        <div class="form-group mt-2" style="position: relative; width: 35%; z-index: 0; background: #fff; padding: 10px;">
+                                            <table class="table table-bordered mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Zahir</th>
+                                                        <th>Pending</th>
+                                                        <th>All Qty</th>
+                                                        <th>Fisik</th>
+                                                        <th>Selisih</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><?= $qtyzahir ?></td>
+                                                        <td><?= $det2->qty_pending ?></td>
+                                                        <td><?= $finalqty ?></td>
+                                                        <td><?= $qtyfisik ?></td>
+                                                        <td><?= $finalqty - $qtyfisik ?></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
+
                                 <?php endforeach; ?>
 
                                 <table class="table table-bordered table-sm" id="tb_dash_allbarang1">
@@ -218,45 +197,55 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="card">
+                    <div class="card mt-2">
                         <div class="card-body">
-                            <h3>Opname To Do</h3>
+                            <div class="row">
+                                <div class="col-auto">
+                                    <h3>TIM 1</h3>
+                                    <table style="border: 1px solid #000000; border-collapse: collapse; width: 100%; text-align: center;">
+                                        <thead>
+                                            <tr>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Total Data</th>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Match</th>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Not Match</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($result_1 as $r1) : ?>
+                                                <tr>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r1->total_data ?></td>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r1->total_match ?></td>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r1->total_not_match ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                            <div>
-                                <h3>TIM 1</h3>
-                                <?php foreach ($result_1 as $r1) : ?>
-                                    <div class="row">
-                                        <div class="col-auto">
-                                            <h5>Total Data : <?= $r1->total_data ?></h5>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h5>Total Match : <?= $r1->total_match ?></h5>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h5>Total Not Match :<?= $r1->total_not_match ?></h5>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <div>
-                                <h3>TIM 2</h3>
-                                <?php foreach ($result_2 as $r2) : ?>
-                                    <div class="row">
-                                        <div class="col-auto">
-                                            <h5>Total Data : <?= $r2->total_data ?></h5>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h5>Total Match : <?= $r2->total_match ?></h5>
-                                        </div>
-                                        <div class="col-auto">
-                                            <h5>Total Not Match :<?= $r2->total_not_match ?></h5>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
+                                <div class="col-auto">
+                                    <h3>TIM 2</h3>
+                                    <table style="border: 1px solid #000000; border-collapse: collapse; width: 100%; text-align: center;">
+                                        <thead>
+                                            <tr>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Total Data</th>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Match</th>
+                                                <th style="border: 1px solid #000000; padding: 5px;">Not Match</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($result_2 as $r2) : ?>
+                                                <tr>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r2->total_data ?></td>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r2->total_match ?></td>
+                                                    <td style="border: 1px solid #000000; padding: 5px;"><?= $r2->total_not_match ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
-                            <table class="table table-bordered table-sm" id="tbopnametodo">
+                            <table class="table table-bordered table-sm mt-2" id="tbopnametodo">
                                 <thead>
                                     <tr>
                                         <th>Nama Barang</th>
@@ -292,8 +281,6 @@
                     </div>
                 </section>
             </div>
-
-
         </div>
 
         <!-- /.content-wrapper -->
