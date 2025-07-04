@@ -1748,6 +1748,8 @@ class C_Logistik extends CI_Controller
                 $data['opnametodo']     = $this->M_Logistik->getallopnametodo($kdbarang);
                 $data['result_1']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim1);
                 $data['result_2']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim2);
+                $data['countreq1']      = $this->M_Logistik->countrequseropname($kdbarang, $tim1);
+                $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
@@ -1776,6 +1778,17 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/brpending_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function cek_req_user_opname($kdbarang, $tim)
+    {
+        $data['page_title']     = 'KARISMA - OPNNAME';
+        $data['request']        = $this->M_Logistik->getreqbr_opname($kdbarang, $tim);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/request_user_opname.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }

@@ -1603,9 +1603,20 @@ FROM (
     public function get_nmbarang($kdbarang)
     {
         return $this->db->query("SELECT
-        a.nm_barang AS nama_barang
+        a.nm_barang AS nama_barang,
+        a.kd_system AS kdbarang
         FROM tb_mbarang a
         WHERE a.kd_system = '$kdbarang'
+        ")->result();
+    }
+
+    public function getreqbr_opname($kdbarang, $tim)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_req_opname a
+        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim' AND a.status = '1'
         ")->result();
     }
 
@@ -1623,6 +1634,21 @@ FROM (
             ->get()
             ->row();
     }
+
+    public function countrequseropname($kd_system, $tim)
+    {
+        $this->db->select('COUNT(a.id) AS total_request');
+        $this->db->from('tb_req_opname a');
+        $this->db->join('tb_mbarang b', 'b.nm_barang = a.nama_barang', 'left');
+        $this->db->where('b.kd_system', $kd_system);
+        $this->db->where('a.tim', $tim);
+        $this->db->where('a.status', '1');
+
+        $query = $this->db->get();
+        return $query->row()->total_request;
+    }
+
+
 
     public function list_inputer_by_allbarang($kdbarang, $tim)
     {
