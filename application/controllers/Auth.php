@@ -36,7 +36,7 @@ class Auth extends CI_Controller
                         'jobdesk'       => $key->jobdesk,
                         'nama'          => $key->nm_karyawan,
                         'tim'           => $key->tim,
-                        'wilayah'       => $key->loc_opname
+                        'wilayah'       => $key->wilayah
                     );
                     $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);

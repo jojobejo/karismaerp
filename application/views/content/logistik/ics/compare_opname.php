@@ -28,24 +28,20 @@
                             <h5 class="card-title mt-2">Compare Wilayah</h5>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-sm" id="compare_allbarang">
+                            <table class="table table-bordered table-sm" id="compare_user">
                                 <thead>
                                     <tr>
                                         <th>Wilayah</th>
-                                        <th>Status</th>
-                                        <th>Tim 1</th>
-                                        <th>Tim 2</th>
                                         <th>#</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
+                                    <?php foreach ($wilayah as $w) : ?>
+                                        <tr>
+                                            <td><?= $w->wilayah ?></td>
+                                            <td><a href="<?= base_url('compare_wilayah/') . $w->id ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -61,13 +57,16 @@
                                     <tr>
                                         <th style="text-align: center;">#</th>
                                         <th>Nama Barang</th>
-                                        <th style="text-align: center;">QTY Fisik 1</th>
-                                        <th style="text-align: center;">QTY Fisik 2</th>
-                                        <th style="text-align: center;">QTY Zahir</th>
-                                        <th style="text-align: center;">QTY Pending</th>
-                                        <th style="text-align: center;">QTY(Pending + Zahir)</th>
-                                        <th style="text-align: center;">Status TIM 1</th>
-                                        <th style="text-align: center;">Status TIM 2</th>
+                                        <th style="text-align: center;">QTY 1</th>
+                                        <th style="text-align: center;">QTY 2</th>
+                                        <th style="text-align: center;">SALDO BUKU </th>
+                                        <th style="text-align: center;">PENDING</th>
+                                        <th style="text-align: center;">SUPPLIER</th>
+                                        <th style="text-align: center;">QTY</th>
+                                        <th style="text-align: center;">SELISIH QTY 1</th>
+                                        <th style="text-align: center;">SELISIH QTY 2</th>
+                                        <th style="text-align: center;">STATUS TIM 1</th>
+                                        <th style="text-align: center;">STATUS TIM 2</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -83,7 +82,10 @@
                                             <td style="text-align: center;"><?= $rowall->qty_fisik_tim2 ?></td>
                                             <td style="text-align: center;"><?= $rowall->qty_zahir ?></td>
                                             <td style="text-align: center;"><?= $rowall->qty_pending ?></td>
-                                            <td style="text-align: center;"><?= $rowall->qty_sistem ?></td>
+                                            <td style="text-align: center;"><?= $rowall->qty_supp ?></td>
+                                            <td style="text-align: center;"><?= $rowall->qty_sistem_final ?></td>
+                                            <td style="text-align: center;"><?= $rowall->selisih_qty_tim1 ?></td>
+                                            <td style="text-align: center;"><?= $rowall->selisih_qty_tim2 ?></td>
                                             <td style="text-align: center;">
                                                 <?= ($rowall->status_tim1 == 'MATCH') ? '<span class="badge badge-success w-70">MATCH</span>' : '<span class="badge badge-danger w-70">NOTMATCH</span>'; ?>
                                             </td>
@@ -109,15 +111,19 @@
                                         <th style="text-align: center;">#</th>
                                         <th>Nama Barang</th>
                                         <th>Expired Date</th>
-                                        <th style="text-align: center;">QTY Fisik 1</th>
-                                        <th style="text-align: center;">QTY Fisik 2</th>
-                                        <th style="text-align: center;">QTY Zahir</th>
-                                        <th style="text-align: center;">QTY Pending</th>
-                                        <th style="text-align: center;">QTY (Zahir + Pending)</th>
-                                        <th style="text-align: center;">Status TIM 1</th>
-                                        <th style="text-align: center;">Status TIM 2</th>
+                                        <th style="text-align: center;">QTY 1</th>
+                                        <th style="text-align: center;">QTY 2</th>
+                                        <th style="text-align: center;">SALDO BUKU</th>
+                                        <th style="text-align: center;">PENDING</th>
+                                        <th style="text-align: center;">SUPPLIER</th>
+                                        <th style="text-align: center;">QTY</th>
+                                        <th style="text-align: center;">SELISIH TIM 1</th>
+                                        <th style="text-align: center;">SELISIH TIM 2</th>
+                                        <th style="text-align: center;">STATUS TIM 1</th>
+                                        <th style="text-align: center;">STATUS TIM 2</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
                                     <?php foreach ($expired_date as $row) : ?>
                                         <tr>
@@ -132,7 +138,10 @@
                                             <td style="text-align: center;"><?= $row->qty_fisik_tim2 ?></td>
                                             <td style="text-align: center;"><?= $row->qty_zahir ?></td>
                                             <td style="text-align: center;"><?= $row->qty_pending ?></td>
+                                            <td style="text-align: center;"><?= $row->qty_supp ?></td>
                                             <td style="text-align: center;"><?= $row->qty_sistem ?></td>
+                                            <td style="text-align: center;"><?= $row->selisih_tim1 ?></td>
+                                            <td style="text-align: center;"><?= $row->selisih_tim2 ?></td>
                                             <td style="text-align: center;">
                                                 <?= ($row->status_tim1 == 'MATCH') ? '<span class="badge badge-success">MATCH</span>' : '<span class="badge badge-danger">NOTMATCH</span>'; ?>
                                             </td>

@@ -6,8 +6,6 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class C_Logistik extends CI_Controller
 {
-
-
     function __construct()
     {
         parent::__construct();
@@ -1761,14 +1759,73 @@ class C_Logistik extends CI_Controller
         }
     }
 
+    public function final_result_opname()
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+
+        $result_t1 = $this->M_Logistik->final_opname_allbarang_statis();
+        $resultexp_t1 = $this->M_Logistik->final_opname_expdate_statis();
+
+        $res_t1 = $result_t1[0];
+        $resexp_t1 = $resultexp_t1[0];
+
+        $data['stat_t1'] = [
+            'total_barang'   => $res_t1->total_barang,
+            'total_match'    => $res_t1->total_match,
+            'total_notmatch' => $res_t1->total_notmatch,
+            'persen_match'   => $res_t1->total_barang > 0 ? round(($res_t1->total_match / $res_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t1->total_barang > 0 ? round(($res_t1->total_notmatch / $res_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['statexp_t1'] = [
+            'total_barang'   => $resexp_t1->total_barang,
+            'total_match'    => $resexp_t1->total_match,
+            'total_notmatch' => $resexp_t1->total_notmatch,
+            'persen_match'   => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_match / $resexp_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['all_t1'] = $result_t1;
+        $data['allexp_t1'] = $resultexp_t1;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/final_result.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function data_final_input_opname()
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['listallbarang']      = $this->M_Logistik->list_final_data();
+        $data['fefo_final']         = $this->M_Logistik->list_final_datafefo();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/final_data.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
     public function compare_opname()
     {
         $data['page_title']         = 'KARISMA - ICS';
         $data['allbarang']          = $this->M_Logistik->admin_compareuser_all();
         $data['expired_date']       = $this->M_Logistik->admin_compareuser_exp();
+        $data['wilayah']            = $this->M_Logistik->get_wilayah();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/compare_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function compare_wilayah($id)
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['list']               = $this->M_Logistik->list_opname_user_wilayah($id);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/compare_wilayah.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }

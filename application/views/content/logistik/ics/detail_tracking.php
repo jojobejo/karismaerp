@@ -121,6 +121,7 @@
                                             <th>Qty Box</th>
                                             <th>Qty Pcs</th>
                                             <th>Inputer</th>
+                                            <th>Ket</th>
                                             <th>#</th>
                                         </tr>
                                     </thead>
@@ -143,6 +144,7 @@
                                                 <td><?= $row->qty_box ?></td>
                                                 <td><?= $row->qty_pcs ?></td>
                                                 <td><?= $row->inputer ?></td>
+                                                <td><?= $row->keterangan ?></td>
                                                 <td>
                                                     <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row->id ?>" data-kdbarang="<?= $row->kd_system ?>" data-nama="<?= $row->nama_barang ?>" data-qty="<?= $row->qty ?>" data-qtybox="<?= $row->qty_box ?>" data-qtypcs="<?= $row->qty_pcs ?>" data-expired="<?= $row->exp_date ?>" data-dimensi="<?= $row->dimensi ?>">
                                                         <i class="fas fa-pen"></i>
@@ -213,8 +215,26 @@
                                             </div>
                                         <?php endforeach; ?>
                                     </div>
+                                    <div class="col-auto">
+                                        <form id="formEditOpname" method="POST" action="<?= base_url('save_edit_opname') ?>">
+                                            <div class="row">
+                                                <div class="col-auto">
+                                                    <div class="form-group">
+                                                        <input type="text" class="form-control" id="qty_isi" name="qty_isi">
+                                                        <select name="exp_date_isi" id="exp_date_isi" class="form-control mt-1">
+                                                            <option value="" selected>Pilih Expired</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <button type="submit" class="btn btn-success">Simpan</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
                                 </div>
-                                <table class="table table-bordered table-sm" id="tb_dash_allbarang1">
+
+                                <table class="table table-bordered table-sm" id="tb_dash_allbarang2">
                                     <thead>
                                         <tr>
                                             <th>Nama Barang</th>
@@ -227,6 +247,7 @@
                                             <th>Qty Box</th>
                                             <th>Qty Pcs</th>
                                             <th>Inputer</th>
+                                            <th>Ket</th>
                                             <th>#</th>
                                         </tr>
                                     </thead>
@@ -238,21 +259,24 @@
                                                 $status = '<span class="badge badge-danger w-70 mt-2">NOT MATCH</span>';
                                             }
                                         ?>
-                                            <td><?= $row2->nama_barang ?></td>
-                                            <td><?= $row2->exp_date ?></td>
-                                            <td><?= $status ?></td>
-                                            <td><?= $row2->qty_zahir ?></td>
-                                            <td><?= $row2->qty_pending ?></td>
-                                            <td><?= $row2->qty_with_pending ?></td>
-                                            <td><?= $row2->qty ?></td>
-                                            <td><?= $row2->qty_box ?></td>
-                                            <td><?= $row2->qty_pcs ?></td>
-                                            <td><?= $row2->inputer ?></td>
-                                            <td>
-                                                <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row2->id ?>" data-kdbarang="<?= $row2->kd_system ?>" data-nama="<?= $row2->nama_barang ?>" data-qty="<?= $row2->qty ?>" data-qtybox="<?= $row2->qty_box ?>" data-qtypcs="<?= $row2->qty_pcs ?>" data-expired="<?= $row2->exp_date ?>" data-dimensi="<?= $row2->dimensi ?>">
-                                                    <i class="fas fa-pen"></i>
-                                                </a>
-                                            </td>
+                                            <tr>
+                                                <td><?= $row2->nama_barang ?></td>
+                                                <td><?= $row2->exp_date ?></td>
+                                                <td><?= $status ?></td>
+                                                <td><?= $row2->qty_zahir ?></td>
+                                                <td><?= $row2->qty_pending ?></td>
+                                                <td><?= $row2->qty_with_pending ?></td>
+                                                <td><?= $row2->qty ?></td>
+                                                <td><?= $row2->qty_box ?></td>
+                                                <td><?= $row2->qty_pcs ?></td>
+                                                <td><?= $row2->inputer ?></td>
+                                                <td><?= $row2->keterangan ?></td>
+                                                <td>
+                                                    <a href="javascript:void(0);" class="btn btn-success btn-sm btn-edit-opname" data-id="<?= $row2->id ?>" data-kdbarang="<?= $row2->kd_system ?>" data-nama="<?= $row2->nama_barang ?>" data-qty="<?= $row2->qty ?>" data-qtybox="<?= $row2->qty_box ?>" data-qtypcs="<?= $row2->qty_pcs ?>" data-expired="<?= $row2->exp_date ?>" data-dimensi="<?= $row2->dimensi ?>">
+                                                        <i class="fas fa-pen"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
                                         <?php endforeach ?>
                                     </tbody>
                                 </table>

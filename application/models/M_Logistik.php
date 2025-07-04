@@ -891,23 +891,27 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_exp()
     {
         return $this->db->query("SELECT 
-        COALESCE(m.kd_system, '-') AS kd_barang,
-        base.nama_barang,
-        base.exp_date,
-        COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
-        COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
-        COALESCE(base.qty_zahir, 0) AS qty_zahir,
-        COALESCE(p.qty_pending, 0) AS qty_pending,
-        COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) AS qty_sistem,
-        CASE
-            WHEN COALESCE(t1.qty_fisik_tim1, 0) = COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
-            THEN 'MATCH' ELSE 'NOT MATCH'
-        END AS status_tim1,
-
-        CASE
-            WHEN COALESCE(t2.qty_fisik_tim2, 0) = COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
-            THEN 'MATCH' ELSE 'NOT MATCH'
-        END AS status_tim2
+            COALESCE(m.kd_system, '-') AS kd_barang,
+            base.nama_barang,
+            base.exp_date,
+            COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+            COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+            COALESCE(base.qty_zahir, 0) AS qty_zahir,
+            COALESCE(p.qty_pending, 0) AS qty_pending,
+            COALESCE(supp.qty_supp, 0) AS qty_supp,
+            (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(supp.qty_supp, 0)) AS qty_sistem,
+            (COALESCE(t1.qty_fisik_tim1, 0) - (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(supp.qty_supp, 0))) AS selisih_tim1,
+            (COALESCE(t2.qty_fisik_tim2, 0) - (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(supp.qty_supp, 0))) AS selisih_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = 
+                    (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(supp.qty_supp, 0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END AS status_tim1,
+            CASE
+                WHEN COALESCE(t2.qty_fisik_tim2, 0) = 
+                    (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(supp.qty_supp, 0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END AS status_tim2
         FROM (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
             FROM tb_ics
@@ -920,6 +924,11 @@ class M_Logistik extends CI_Model
             GROUP BY nama_barang, exp_date
         ) p ON p.nama_barang = base.nama_barang AND p.exp_date = base.exp_date
         LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_supp
+            FROM tb_ics_supp
+            GROUP BY nama_barang, exp_date
+        ) supp ON supp.nama_barang = base.nama_barang AND supp.exp_date = base.exp_date
+        LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim1
             FROM tb_ics_opname
             WHERE tim = '1'
@@ -931,8 +940,7 @@ class M_Logistik extends CI_Model
             WHERE tim = '2'
             GROUP BY nama_barang, exp_date
         ) t2 ON t2.nama_barang = base.nama_barang AND t2.exp_date = base.exp_date
-        ORDER BY base.nama_barang, base.exp_date;
-        ")->result();
+        ORDER BY base.nama_barang, base.exp_date;")->result();
     }
 
     public function opname_pending()
@@ -945,26 +953,32 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_all()
     {
         return $this->db->query("SELECT 
-        COALESCE(m.kd_system, '-') AS kd_barang,
-        i.nama_barang,
-        COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
-        COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
-        COALESCE(s.qty_zahir, 0) AS qty_zahir,
-        COALESCE(p.qty_pending, 0) AS qty_pending,
-        COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) AS qty_sistem,
-        CASE
-            WHEN COALESCE(t1.qty_fisik_tim1, 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
-            THEN 'MATCH'
-            ELSE 'NOT MATCH'
-        END AS status_tim1,
-        CASE
-            WHEN COALESCE(t2.qty_fisik_tim2, 0) = COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)
-            THEN 'MATCH'
-            ELSE 'NOT MATCH'
-        END AS status_tim2
-
-        FROM tb_ics i
-        JOIN (
+            COALESCE(m.kd_system, '-') AS kd_barang,
+            i.nama_barang,
+            COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+            COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+            COALESCE(s.qty_zahir, 0) AS qty_zahir,
+            COALESCE(p.qty_pending, 0) AS qty_pending,
+            COALESCE(sp.qty_supp, 0) AS qty_supp,
+            (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0)) AS qty_sistem,
+            (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(sp.qty_supp, 0)) AS qty_sistem_final,
+            (COALESCE(t1.qty_fisik_tim1, 0) - (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(sp.qty_supp, 0))) AS selisih_qty_tim1,
+            (COALESCE(t2.qty_fisik_tim2, 0) - (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(sp.qty_supp, 0))) AS selisih_qty_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = 
+                    (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(sp.qty_supp, 0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END AS status_tim1,
+            CASE
+                WHEN COALESCE(t2.qty_fisik_tim2, 0) = 
+                    (COALESCE(s.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(sp.qty_supp, 0))
+                THEN 'MATCH' ELSE 'NOT MATCH'
+            END AS status_tim2
+        FROM (
+            SELECT DISTINCT nama_barang
+            FROM tb_ics
+        ) i
+        LEFT JOIN (
             SELECT nama_barang, SUM(qty) AS qty_zahir
             FROM tb_ics
             GROUP BY nama_barang
@@ -974,6 +988,11 @@ class M_Logistik extends CI_Model
             FROM tb_ics_do
             GROUP BY nama_barang
         ) p ON p.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_supp
+            FROM tb_ics_supp
+            GROUP BY nama_barang
+        ) sp ON sp.nama_barang = i.nama_barang
         LEFT JOIN (
             SELECT nama_barang, SUM(qty) AS qty_fisik_tim1
             FROM tb_ics_opname
@@ -986,8 +1005,7 @@ class M_Logistik extends CI_Model
             WHERE tim = '2'
             GROUP BY nama_barang
         ) t2 ON t2.nama_barang = i.nama_barang
-        LEFT JOIN tb_mbarang m ON i.nama_barang = m.nm_barang
-        GROUP BY i.nama_barang, m.kd_system, s.qty_zahir, p.qty_pending, t1.qty_fisik_tim1, t2.qty_fisik_tim2
+        LEFT JOIN tb_mbarang m ON m.nm_barang = i.nama_barang
         ORDER BY i.nama_barang;")->result();
     }
 
@@ -1063,6 +1081,297 @@ class M_Logistik extends CI_Model
             ";
 
         return $this->db->query($sql)->result();
+    }
+
+    public function list_final_data()
+    {
+        return $this->db->query("SELECT 
+            i.nama_barang,
+            COALESCE(m.kd_system, '-') AS kd_barang,
+            COALESCE(z.qty_zahir, 0) AS qty_zahir,
+            COALESCE(p.qty_pending, 0) AS qty_pending,
+            COALESCE(s.qty_supp, 0) AS qty_supp,
+            (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)) AS qty_sistem,
+            COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+            COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = 
+                    (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status_tim1,
+            CASE
+                WHEN COALESCE(t2.qty_fisik_tim2, 0) = 
+                    (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'Ambil dari Tim 1'     
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'Ambil dari Tim 2'
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH KEDUANYA'
+                ELSE 'CEK ULANG'
+            END AS keterangan
+        FROM (
+            SELECT DISTINCT nama_barang FROM tb_ics
+        ) i
+        LEFT JOIN tb_mbarang m ON m.nm_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_zahir
+            FROM tb_ics
+            GROUP BY nama_barang
+        ) z ON z.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang
+        ) p ON p.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_supp
+            FROM tb_ics_supp
+            GROUP BY nama_barang
+        ) s ON s.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_fisik_tim1
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang
+        ) t1 ON t1.nama_barang = i.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_fisik_tim2
+            FROM tb_ics_opname
+            WHERE tim = '2'
+            GROUP BY nama_barang
+        ) t2 ON t2.nama_barang = i.nama_barang
+        WHERE 
+            (COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+            OR
+            (COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+            OR
+            (COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+            AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+        ORDER BY i.nama_barang;")->result();
+    }
+
+    public function list_final_datafefo()
+    {
+        return $this->db->query("SELECT 
+            base.nama_barang,
+            base.exp_date,
+            COALESCE(m.kd_system, '-') AS kd_barang,
+            COALESCE(base.qty_zahir, 0) AS qty_zahir,
+            COALESCE(p.qty_pending, 0) AS qty_pending,
+            COALESCE(s.qty_supp, 0) AS qty_supp,
+            (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)) AS qty_sistem,
+            COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+            COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = 
+                    (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status_tim1,
+            CASE
+                WHEN COALESCE(t2.qty_fisik_tim2, 0) = 
+                    (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH'
+                ELSE 'NOT MATCH'
+            END AS status_tim2,
+            CASE
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'Ambil dari Tim 1'
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'Ambil dari Tim 2'
+                WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                THEN 'MATCH KEDUANYA'
+                ELSE 'CEK ULANG'
+            END AS keterangan
+        FROM (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
+            FROM tb_ics
+            GROUP BY nama_barang, exp_date
+        ) base
+        LEFT JOIN tb_mbarang m ON m.nm_barang = base.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) p ON p.nama_barang = base.nama_barang AND p.exp_date = base.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_supp
+            FROM tb_ics_supp
+            GROUP BY nama_barang, exp_date
+        ) s ON s.nama_barang = base.nama_barang AND s.exp_date = base.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim1
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang, exp_date
+        ) t1 ON t1.nama_barang = base.nama_barang AND t1.exp_date = base.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim2
+            FROM tb_ics_opname
+            WHERE tim = '2'
+            GROUP BY nama_barang, exp_date
+        ) t2 ON t2.nama_barang = base.nama_barang AND t2.exp_date = base.exp_date
+        WHERE 
+            (COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+            OR
+            (COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+            OR
+            (COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)) AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(base.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)))
+        ORDER BY base.nama_barang, base.exp_date;")->result();
+    }
+
+    public function final_opname_expdate_statis()
+    {
+        return $this->db->query("SELECT
+            COUNT(*) AS total_barang,
+            SUM(CASE
+                WHEN keterangan IN ('MATCH KEDUANYA', 'Ambil dari Tim 1', 'Ambil dari Tim 2') THEN 1
+                ELSE 0
+            END) AS total_match,
+            SUM(CASE
+                WHEN keterangan = 'CEK ULANG' THEN 1
+                ELSE 0
+            END) AS total_notmatch
+        FROM (
+            SELECT 
+                base.nama_barang,
+                base.exp_date,
+                COALESCE(z.qty_zahir, 0) AS qty_zahir,
+                COALESCE(p.qty_pending, 0) AS qty_pending,
+                COALESCE(s.qty_supp, 0) AS qty_supp,
+                (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)) AS qty_sistem,
+                COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+                COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+
+                -- Keterangan berdasarkan kecocokan qty_fisik dan qty_sistem
+                CASE
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'Ambil dari Tim 1'
+
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'Ambil dari Tim 2'
+
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'MATCH KEDUANYA'
+
+                    ELSE 'CEK ULANG'
+                END AS keterangan
+            FROM (
+                SELECT nama_barang, exp_date FROM tb_ics GROUP BY nama_barang, exp_date
+            ) base
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
+                FROM tb_ics
+                GROUP BY nama_barang, exp_date
+            ) z ON z.nama_barang = base.nama_barang AND z.exp_date = base.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang, exp_date
+            ) p ON p.nama_barang = base.nama_barang AND p.exp_date = base.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_supp
+                FROM tb_ics_supp
+                GROUP BY nama_barang, exp_date
+            ) s ON s.nama_barang = base.nama_barang AND s.exp_date = base.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim1
+                FROM tb_ics_opname
+                WHERE tim = '1'
+                GROUP BY nama_barang, exp_date
+            ) t1 ON t1.nama_barang = base.nama_barang AND t1.exp_date = base.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_fisik_tim2
+                FROM tb_ics_opname
+                WHERE tim = '2'
+                GROUP BY nama_barang, exp_date
+            ) t2 ON t2.nama_barang = base.nama_barang AND t2.exp_date = base.exp_date
+        ) hasil;")->result();
+    }
+
+    public function final_opname_allbarang_statis()
+    {
+        return $this->db->query("SELECT
+            COUNT(*) AS total_barang,
+            SUM(CASE
+                WHEN keterangan IN ('MATCH KEDUANYA', 'Ambil dari Tim 1', 'Ambil dari Tim 2') THEN 1
+                ELSE 0
+            END) AS total_match,
+            SUM(CASE
+                WHEN keterangan = 'CEK ULANG' THEN 1
+                ELSE 0
+            END) AS total_notmatch
+        FROM (
+            SELECT 
+                i.nama_barang,
+                COALESCE(z.qty_zahir, 0) AS qty_zahir,
+                COALESCE(p.qty_pending, 0) AS qty_pending,
+                COALESCE(s.qty_supp, 0) AS qty_supp,
+                (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0)) AS qty_sistem,
+                COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
+                COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
+                CASE
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'Ambil dari Tim 1'
+
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) != (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'Ambil dari Tim 2'
+
+                    WHEN COALESCE(t1.qty_fisik_tim1, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                        AND COALESCE(t2.qty_fisik_tim2, 0) = (COALESCE(z.qty_zahir, 0) + COALESCE(p.qty_pending, 0) - COALESCE(s.qty_supp, 0))
+                    THEN 'MATCH KEDUANYA'
+
+                    ELSE 'CEK ULANG'
+                END AS keterangan
+            FROM (
+                SELECT DISTINCT nama_barang FROM tb_ics
+            ) i
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_zahir
+                FROM tb_ics
+                GROUP BY nama_barang
+            ) z ON z.nama_barang = i.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang
+            ) p ON p.nama_barang = i.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_supp
+                FROM tb_ics_supp
+                GROUP BY nama_barang
+            ) s ON s.nama_barang = i.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_fisik_tim1
+                FROM tb_ics_opname
+                WHERE tim = '1'
+                GROUP BY nama_barang
+            ) t1 ON t1.nama_barang = i.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_fisik_tim2
+                FROM tb_ics_opname
+                WHERE tim = '2'
+                GROUP BY nama_barang
+            ) t2 ON t2.nama_barang = i.nama_barang
+        ) hasil
+        ")->result();
     }
 
     public function compareAllBarang()
@@ -1538,17 +1847,10 @@ FROM (
     public function all_barang_match_t1()
     {
         return $this->db->query("SELECT
-        COUNT(DISTINCT ics.nama_barang) AS total_barang,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_match,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_notmatch
-        FROM
-        (
+            COUNT(DISTINCT ics.nama_barang) AS total_barang,
+            SUM((COALESCE(op.qty_input, 0) = (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_match,
+            SUM((COALESCE(op.qty_input, 0) != (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_notmatch
+        FROM (
             SELECT 
                 nama_barang, 
                 SUM(qty) AS qty_buku
@@ -1562,26 +1864,23 @@ FROM (
             FROM tb_ics_opname
             WHERE tim = '1'
             GROUP BY nama_barang
-        ) AS op
-        ON ics.nama_barang = op.nama_barang;
-        ")->result();
+        ) AS op ON ics.nama_barang = op.nama_barang
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang
+        ) AS pending ON pending.nama_barang = ics.nama_barang;")->result();
     }
-
 
     public function all_barang_match_t2()
     {
         return $this->db->query("SELECT
-        COUNT(DISTINCT ics.nama_barang) AS total_barang,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_match,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_notmatch
-        FROM
-        (
+            COUNT(DISTINCT ics.nama_barang) AS total_barang,
+            SUM((COALESCE(op.qty_input, 0) = (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_match,
+            SUM((COALESCE(op.qty_input, 0) != (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_notmatch
+        FROM (
             SELECT 
                 nama_barang, 
                 SUM(qty) AS qty_buku
@@ -1595,9 +1894,35 @@ FROM (
             FROM tb_ics_opname
             WHERE tim = '2'
             GROUP BY nama_barang
-        ) AS op
-        ON ics.nama_barang = op.nama_barang;
+        ) AS op ON ics.nama_barang = op.nama_barang
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang
+        ) AS pending ON pending.nama_barang = ics.nama_barang;")->result();
+    }
+
+    public function get_wilayah()
+    {
+        return $this->db->query("SELECT
+        a.nm_wilayah as wilayah,
+        a.id AS id
+        FROM tb_gdg_kordinat a
         ")->result();
+    }
+
+    public function list_opname_user_wilayah($wilayah)
+    {
+        return $this->db->query("SELECT
+            nama_barang,
+            exp_date,
+            SUM(CASE WHEN tim = '1' THEN qty ELSE 0 END) AS fisik_tim1,
+            SUM(CASE WHEN tim = '2' THEN qty ELSE 0 END) AS fisik_tim2
+        FROM tb_ics_opname
+        WHERE wilayah = '$wilayah'
+        GROUP BY nama_barang, exp_date;")->result();
     }
 
     public function get_nmbarang($kdbarang)
@@ -1684,9 +2009,15 @@ FROM (
             a.qty_pcs,
             a.tim,
             (b.p * b.l * b.t) AS dimensi,
-            a.inputer
+            a.inputer,
+            log.keterangan
             FROM tb_ics_opname a
             JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN(
+                SELECT nama_barang, exp_date , keterangan
+                FROM tb_log_ics
+                GROUP BY nama_barang, exp_date
+            ) AS log ON log.nama_barang = a.nama_barang AND log.exp_date = a.exp_date
             LEFT JOIN (
                 SELECT nama_barang, exp_date, SUM(qty) AS qty_zahir
                 FROM tb_ics
@@ -1713,67 +2044,66 @@ FROM (
     {
         return $this->db->query("SELECT
             COUNT(*) AS total_barang,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_match,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_notmatch
-            FROM
-            (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_buku
-                FROM tb_ics
-                GROUP BY nama_barang, exp_date
-            ) AS ics
-            LEFT JOIN (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_input
-                FROM tb_ics_opname
-                WHERE tim = '1'
-                GROUP BY nama_barang, exp_date
-            ) AS op
-            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
-        ")->result();
+            SUM((COALESCE(op.qty_input, 0) = (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_match,
+            SUM((COALESCE(op.qty_input, 0) != (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_notmatch
+        FROM (
+            SELECT 
+                nama_barang, 
+                exp_date,
+                SUM(qty) AS qty_buku
+            FROM tb_ics
+            GROUP BY nama_barang, exp_date
+        ) AS ics
+        LEFT JOIN (
+            SELECT 
+                nama_barang, 
+                exp_date,
+                SUM(qty) AS qty_input
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang, exp_date
+        ) AS op ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qty_pending
+            FROM tb_ics_do 
+            GROUP BY nama_barang, exp_date
+        ) AS pending ON pending.nama_barang = ics.nama_barang AND pending.exp_date = ics.exp_date;")->result();
     }
+
     public function fefo_match_t2()
     {
         return $this->db->query("SELECT
             COUNT(*) AS total_barang,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_match,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_notmatch
-            FROM
-            (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_buku
-                FROM tb_ics
-                GROUP BY nama_barang, exp_date
-            ) AS ics
-            LEFT JOIN (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_input
-                FROM tb_ics_opname
-                WHERE tim = '2'
-                GROUP BY nama_barang, exp_date
-            ) AS op
-            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
-        ")->result();
+            SUM((COALESCE(op.qty_input, 0) = (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_match,
+            SUM((COALESCE(op.qty_input, 0) != (ics.qty_buku + COALESCE(pending.qty_pending, 0))) + 0) AS total_notmatch
+        FROM (
+            SELECT 
+                nama_barang, 
+                exp_date,
+                SUM(qty) AS qty_buku
+            FROM tb_ics
+            GROUP BY nama_barang, exp_date
+        ) AS ics
+        LEFT JOIN (
+            SELECT 
+                nama_barang, 
+                exp_date,
+                SUM(qty) AS qty_input
+            FROM tb_ics_opname
+            WHERE tim = '1'
+            GROUP BY nama_barang, exp_date
+        ) AS op ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qty_pending
+            FROM tb_ics_do 
+            GROUP BY nama_barang, exp_date
+        ) AS pending ON pending.nama_barang = ics.nama_barang AND pending.exp_date = ics.exp_date;")->result();
     }
 
     public function create_view_ics()
