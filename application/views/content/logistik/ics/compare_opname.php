@@ -23,6 +23,34 @@
                         </div>
                     </div>
 
+                    <div class="card card-primary mt-2 mb-2">
+                        <div class="card-header">
+                            <h5 class="card-title mt-2">Compare Wilayah</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered table-sm" id="compare_allbarang">
+                                <thead>
+                                    <tr>
+                                        <th>Wilayah</th>
+                                        <th>Status</th>
+                                        <th>Tim 1</th>
+                                        <th>Tim 2</th>
+                                        <th>#</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div class="card card-primary mt-2 mb-5">
                         <div class="card-header">
                             <h5 class="card-title mt-2">Compare Tim - Allbarang</h5>

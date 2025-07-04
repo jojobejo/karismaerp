@@ -1306,7 +1306,7 @@ class C_Logistik extends CI_Controller
             FROM tb_detail_do a
             JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
             WHERE a.kd_do = '$kd_do'
-            GROUP BY a.kd_barang , a.tgl_exp , a.no_lot",);
+            GROUP BY a.kd_barang , a.tgl_exp , a.no_lot");
 
         $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
@@ -1751,6 +1751,7 @@ class C_Logistik extends CI_Controller
                 $data['countreq1']      = $this->M_Logistik->countrequseropname($kdbarang, $tim1);
                 $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
                 $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
+                $data['kdbarang']       = $kdbarang;
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
@@ -1890,6 +1891,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
+            'wilayah'       => $this->session->userdata('wilayah'),
             'input_at'      => date('d/m/Y')
         ];
 
@@ -1964,6 +1966,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
+            'wilayah'       => $this->session->userdata('wilayah'),
             'status'        => '1',
             'acc_with'      => '-',
             'input_at'      => date('d/m/Y')
@@ -2011,6 +2014,7 @@ class C_Logistik extends CI_Controller
                 'qty_pcs'     => $req->qty_pcs,
                 'inputer'     => $req->inputer,
                 'tim'         => $req->tim,
+                'wilayah'     => $req->wilayah,
                 'input_at'    => date('d/m/Y')
             );
 
