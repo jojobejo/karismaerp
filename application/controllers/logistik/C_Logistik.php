@@ -1748,7 +1748,6 @@ class C_Logistik extends CI_Controller
                 $data['result_2']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim2);
                 $data['countreq1']      = $this->M_Logistik->countrequseropname($kdbarang, $tim1);
                 $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
-                $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
                 $data['kdbarang']       = $kdbarang;
 
                 $this->load->view('partial/main/header.php', $data);

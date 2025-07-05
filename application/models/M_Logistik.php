@@ -1009,7 +1009,6 @@ class M_Logistik extends CI_Model
         ORDER BY i.nama_barang;")->result();
     }
 
-
     public function compareinputer($tim)
     {
         // Fisik opname hanya dari User StockOpname 1
@@ -1973,8 +1972,6 @@ FROM (
         return $query->row()->total_request;
     }
 
-
-
     public function list_inputer_by_allbarang($kdbarang, $tim)
     {
         return $this->db->query("SELECT	
@@ -2001,8 +1998,9 @@ FROM (
             a.exp_date,
             COALESCE(zahir.qty_zahir, 0) AS qty_zahir,
             COALESCE(pending.qty_pending, 0) AS qty_pending,
-            (COALESCE(zahir.qty_zahir, 0) + COALESCE(pending.qty_pending, 0)) AS qty_with_pending,
+            (COALESCE(zahir.qty_zahir, 0) + COALESCE(pending.qty_pending, 0)-COALESCE(supp.qty_supp,0)) AS qty_with_pending,
             COALESCE(opname.qty_fisik, 0) AS qty_fisik,
+            COALESCE(supp.qty_supp,0) AS qty_supp,
             IF(COALESCE(zahir.qty_zahir, 0) + COALESCE(pending.qty_pending, 0) = COALESCE(opname.qty_fisik, 0),1,0) AS status,
             a.qty,
             a.qty_box,
@@ -2035,6 +2033,11 @@ FROM (
                 WHERE tim = '$tim'
                 GROUP BY nama_barang, exp_date
             ) AS opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_supp
+                FROM tb_ics_supp
+                GROUP BY nama_barang, exp_date
+                ) AS supp ON supp.nama_barang = a.nama_barang AND supp.exp_date = a.exp_date
             WHERE b.kd_system = '$kdbarang'
             AND a.tim = '$tim'
             ORDER BY a.nama_barang, a.exp_date")->result();

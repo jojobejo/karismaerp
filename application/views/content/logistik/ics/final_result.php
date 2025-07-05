@@ -36,8 +36,8 @@
                                     <canvas id="pieChartTim1" class="small-chart"></canvas>
                                     <div class="text-center">
                                         <span class="mx-2">All Barang : <?= $stat_t1['total_barang'] ?></span>
-                                        <span class="mx-2">Total Match : <?= $stat_t1['total_barang'] ?></span>
-                                        <span class="mx-2">Total Not : <?= $stat_t1['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $stat_t1['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $stat_t1['total_notmatch'] ?></span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -45,8 +45,8 @@
                                     <canvas id="pieChartTim1exp" class="small-chart"></canvas>
                                     <div class="text-center">
                                         <span class="mx-2">All Barang : <?= $statexp_t1['total_barang'] ?></span>
-                                        <span class="mx-2">Total Match : <?= $statexp_t1['total_barang'] ?></span>
-                                        <span class="mx-2">Total Not : <?= $statexp_t1['total_barang'] ?></span>
+                                        <span class="mx-2">Total Match : <?= $statexp_t1['total_match'] ?></span>
+                                        <span class="mx-2">Total Not : <?= $statexp_t1['total_notmatch'] ?></span>
                                     </div>
                                 </div>
                             </div>

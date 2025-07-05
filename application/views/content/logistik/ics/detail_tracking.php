@@ -113,13 +113,14 @@
                                         <tr>
                                             <th>Nama Barang</th>
                                             <th>Expired Date</th>
-                                            <th>status</th>
-                                            <th>Qty Zahir</th>
-                                            <th>Qty Pending</th>
-                                            <th>Qty(zahir+pending)</th>
-                                            <th>Qty Input</th>
-                                            <th>Qty Box</th>
-                                            <th>Qty Pcs</th>
+                                            <th>Status</th>
+                                            <th>Zahir</th>
+                                            <th>Pending</th>
+                                            <th>Suplier</th>
+                                            <th>QTY</th>
+                                            <th>Input</th>
+                                            <th>Box</th>
+                                            <th>Pcs</th>
                                             <th>Inputer</th>
                                             <th>Ket</th>
                                             <th>#</th>
@@ -136,9 +137,10 @@
                                             <tr>
                                                 <td><?= $row->nama_barang ?></td>
                                                 <td><?= $row->exp_date ?></td>
-                                                <td><?= $status ?></td>
+                                                <td><?= $status . '(' . ($row->qty - $row->qty_with_pending) . ')' ?></td>
                                                 <td><?= $row->qty_zahir ?></td>
                                                 <td><?= $row->qty_pending ?></td>
+                                                <td><?= $row->qty_supp ?></td>
                                                 <td><?= $row->qty_with_pending ?></td>
                                                 <td><?= $row->qty ?></td>
                                                 <td><?= $row->qty_box ?></td>
@@ -239,13 +241,14 @@
                                         <tr>
                                             <th>Nama Barang</th>
                                             <th>Expired Date</th>
-                                            <th>status</th>
-                                            <th>Qty Zahir</th>
-                                            <th>Qty Pending</th>
-                                            <th>Qty(zahir+pending)</th>
-                                            <th>Qty Input</th>
-                                            <th>Qty Box</th>
-                                            <th>Qty Pcs</th>
+                                            <th>Status</th>
+                                            <th>Zahir</th>
+                                            <th>Pending</th>
+                                            <th>Suplier</th>
+                                            <th>QTY</th>
+                                            <th>Input</th>
+                                            <th>Box</th>
+                                            <th>Pcs</th>
                                             <th>Inputer</th>
                                             <th>Ket</th>
                                             <th>#</th>
@@ -262,9 +265,10 @@
                                             <tr>
                                                 <td><?= $row2->nama_barang ?></td>
                                                 <td><?= $row2->exp_date ?></td>
-                                                <td><?= $status ?></td>
+                                                <td><?= $status . '(' . ($row2->qty - $row2->qty_with_pending) . ')' ?></td>
                                                 <td><?= $row2->qty_zahir ?></td>
                                                 <td><?= $row2->qty_pending ?></td>
+                                                <td><?= $row2->qty_supp ?></td>
                                                 <td><?= $row2->qty_with_pending ?></td>
                                                 <td><?= $row2->qty ?></td>
                                                 <td><?= $row2->qty_box ?></td>
