@@ -58,7 +58,7 @@
                                     <div class="col-auto">
                                         <?php foreach ($detailqtyt1 as $det1) :
                                             $qtyzahir   = $det1->qty_zahir;
-                                            $finalqty   = $det1->qty_zahir + $det1->qty_pending;
+                                            $finalqty   = $det1->qty_zahir + $det1->qty_pending - $det1->qty_supp;
                                             $qtyfisik   = $det1->qty_fisik;
                                             $status     = $det1->status;
                                         ?>
@@ -68,6 +68,7 @@
                                                         <tr>
                                                             <th style="border: 1px solid #000000; padding: 5px;">Zahir</th>
                                                             <th style="border: 1px solid #000000; padding: 5px;">Pending</th>
+                                                            <th style="border: 1px solid #000000; padding: 5px;">Supplier</th>
                                                             <th style="border: 1px solid #000000; padding: 5px;">All Qty</th>
                                                             <th style="border: 1px solid #000000; padding: 5px;">Fisik</th>
                                                             <th style="border: 1px solid #000000; padding: 5px;">Selisih</th>

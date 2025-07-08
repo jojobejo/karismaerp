@@ -1761,13 +1761,14 @@ FROM (
     public function detail_opname_barang($kdbr, $tim)
     {
         return $this->db->query("SELECT 
-        b.kd_system AS kd_barang,
-        a.nama_barang,
-        SUM(a.qty) AS qty_zahir,
-        (SUM(a.qty)+COALESCE(pending.qty_pending, 0)) AS qty_zahirwith_pnd,
-        COALESCE(pending.qty_pending, 0) AS qty_pending,
-        COALESCE(opname.qty_fisik, 0) AS qty_fisik,
-        IF(SUM(a.qty) + COALESCE(pending.qty_pending, 0) = COALESCE(opname.qty_fisik, 0),1,0) AS status
+            b.kd_system AS kd_barang,
+            a.nama_barang,
+            SUM(a.qty) AS qty_zahir,
+            (SUM(a.qty) + COALESCE(pending.qty_pending, 0)) AS qty_zahirwith_pnd,
+            COALESCE(pending.qty_pending, 0) AS qty_pending,
+            COALESCE(supp.qty_supp, 0) AS qty_supp,
+            COALESCE(opname.qty_fisik, 0) AS qty_fisik,
+            IF((SUM(a.qty) + COALESCE(pending.qty_pending, 0)) - COALESCE(supp.qty_supp, 0) = COALESCE(opname.qty_fisik, 0), 1, 0) AS status
         FROM tb_ics a
         JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
         LEFT JOIN (
@@ -1781,6 +1782,11 @@ FROM (
             WHERE tim = '$tim'
             GROUP BY nama_barang
         ) opname ON opname.nama_barang = a.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, SUM(qty) AS qty_supp
+            FROM tb_ics_supp
+            GROUP BY nama_barang
+        ) supp ON supp.nama_barang = a.nama_barang
         WHERE b.kd_system = '$kdbr'
         GROUP BY a.nama_barang")->result();
     }

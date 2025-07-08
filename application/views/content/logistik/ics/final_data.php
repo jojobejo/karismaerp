@@ -34,6 +34,7 @@
                                 <tbody>
                                     <?php foreach ($listallbarang as $list) : ?>
                                         <tr>
+                                            <td><?= $list->kode_barang ?></td>
                                             <td><?= $list->nama_barang ?></td>
                                             <td><?= $list->qty_sistem ?></td>
                                             <td><?= $list->qty_fisik_tim1 ?></td>

@@ -39,6 +39,12 @@
                                         <span class="mx-2">Total Match : <?= $stat_t1['total_match'] ?></span>
                                         <span class="mx-2">Total Not : <?= $stat_t1['total_notmatch'] ?></span>
                                     </div>
+                                    <div class="text-center">
+                                        <span class="mx-2">Persentase Match : <?= number_format($stat_t1['persen_match'])  ?> %</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="mx-2">Persentase NotMatch : <?= number_format($stat_t1['persen_notmatch']) ?> %</span>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <h3 style="text-align: center;">FINAL FEFO</h3>
@@ -47,6 +53,12 @@
                                         <span class="mx-2">All Barang : <?= $statexp_t1['total_barang'] ?></span>
                                         <span class="mx-2">Total Match : <?= $statexp_t1['total_match'] ?></span>
                                         <span class="mx-2">Total Not : <?= $statexp_t1['total_notmatch'] ?></span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="mx-2">Persentase Match : <?= number_format($statexp_t1['persen_match']) ?> %</span>
+                                    </div>
+                                    <div class="text-center">
+                                        <span class="mx-2">Persentase NotMatch : <?= number_format($statexp_t1['persen_notmatch']) ?> %</span>
                                     </div>
                                 </div>
                             </div>

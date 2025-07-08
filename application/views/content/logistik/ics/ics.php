@@ -16,226 +16,56 @@
                     <section class="content">
                         <div class="row">
                             <div class="col-auto">
-                                <a href="<?= base_url('admstocktracking') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock</a>
+                                <a href="<?= base_url('admstocktracking') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i>Update Data</a>
                             </div>
                         </div>
 
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <h4>Dashboard Stock Opname</h4>
-
-                                    <h5 class="mt-4">Opname FEFO</h5>
-                                    <table class="table table-bordered table-sm" id="tb_opname_fefo_adm">
+                                    <table class="table table-bordered ">
                                         <thead>
                                             <tr>
-                                                <th>Nama Barang</th>
-                                                <th>Expired Date</th>
-                                                <th>Qty Fisik</th>
-                                                <th>Qty Buku</th>
-                                                <th>Qty Pending</th>
-                                                <th>Status</th>
+                                                <th colspan="2" class="bg-success text-white text-center">NAMA</th>
+                                                <th colspan="2" class="bg-danger text-white text-center">Out Today</th>
+                                                <th colspan="2" class="bg-success text-white text-center">Saldo Awal</th>
+                                                <th colspan="2" class="bg-success text-white text-center">7/7/2025</th>
+                                                <th colspan="2" class="bg-danger text-white text-center">Saldo Akhir</th>
+                                                <th rowspan="2" class="align-middle bg-danger text-white text-center">klop</th>
+                                            </tr>
+                                            <tr>
+                                                <th class="bg-success text-white">Nama Barang</th>
+                                                <th class="bg-success text-white">Date</th>
+                                                <th class="bg-danger text-white">Box</th>
+                                                <th class="bg-danger text-white">Pcs</th>
+                                                <th class="bg-success text-white">Box</th>
+                                                <th class="bg-success text-white">Pcs</th>
+                                                <th class="bg-success text-white">Box</th>
+                                                <th class="bg-success text-white">Pcs</th>
+                                                <th class="bg-danger text-white">Box</th>
+                                                <th class="bg-danger text-white">Pcs</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($fefo as $row) : ?>
+                                            <?php foreach ($barang_ics as $br) : ?>
                                                 <tr>
-                                                    <td><?= $row->nama_barang ?></td>
-                                                    <td><?= $row->exp_date ?></td>
-                                                    <td><?= $row->qty_fisik ?></td>
-                                                    <td><?= $row->qty_buku ?></td>
-                                                    <td><?= $row->qty_pending ?></td>
-                                                    <td><span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
-                                                            <?= $row->status ?>
-                                                        </span></td>
+                                                    <td><?= $br->nama_barang ?></td>
+                                                    <td><?= $br->exp_date ?></td>
+                                                    <td><?= $br->out_box ?></td>
+                                                    <td><?= $br->out_pcs ?></td>
+                                                    <td><?= $br->saldo_awal_box ?></td>
+                                                    <td><?= $br->saldo_awal_pcs ?></td>
+                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_box"><?= $br->opname_box ?></td>
+                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_pcs"><?= $br->opname_pcs ?></td>
+                                                    <td><?= $br->saldo_akhir_box ?></td>
+                                                    <td><?= $br->saldo_akhir_pcs ?></td>
+                                                    <td><?= $br->klop ?></td>
+
                                                 </tr>
-                                            <?php endforeach ?>
+                                            <?php endforeach; ?>
                                         </tbody>
                                     </table>
 
-                                    <h5 class="mt-5">Opname All Barang</h5>
-                                    <table class="table table-bordered table-sm" id="tb_opname_allbarang_adm">
-                                        <thead>
-                                            <tr>
-                                                <th>Nama Barang</th>
-                                                <th>Qty Fisik</th>
-                                                <th>Qty Buku</th>
-                                                <th>Qty Pending</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($allbarang as $row) : ?>
-                                                <tr>
-                                                    <td><?= $row->nama_barang ?></td>
-                                                    <td><?= $row->qty_fisik ?></td>
-                                                    <td><?= $row->qty_buku ?></td>
-                                                    <td><?= $row->qty_pending ?></td>
-                                                    <td>
-                                                        <span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
-                                                            <?= $row->status ?>
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach ?>
-                                        </tbody>
-                                    </table>
-
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- <section class="content">
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-auto ml-2">
-                                    <h3>Stock ICS</h3>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12 col-sm-6 col-md-4">
-                                    <a href="" class="btn btn-primary w-100">Data Update</a>
-                                </div>
-                                <div class="col-12 col-sm-6 col-md-4">
-                                    <a href="" class="btn btn-primary w-100">Data Purchase Order</a>
-                                </div>
-                                <div class="col-12 col-sm-6 col-md-4">
-                                    <a href="" class="btn btn-primary w-100">Data Delivery Order</a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="content">
-                        <div class="container-fluid">
-                            <div class="card mt-4 mb-2">
-                                <div class="card-body">
-                                    <div style="overflow-x:auto;">
-                                        <table id="tbics" class="table table-bordered table-striped">
-                                            <thead>
-                                                <tr>
-                                                    <th rowspan="2" style="background-color: #a0d18c;">NAMA <br> BARANG</th>
-                                                    <th rowspan="2" style="background-color: #f4a29b;">Expired <br> Date</th>
-                                                    <th colspan="2" style="background-color: #f8805e; color:white;">Out Today</th>
-                                                    <th colspan="2" style="background-color: #90d089;">Saldo Awal</th>
-                                                    <th colspan="2" style="background-color: #7fd9d1;">16/6/2025</th>
-                                                    <th colspan="2" style="background-color: #fca469;">Saldo Akhir</th>
-                                                    <th rowspan="2" style="background-color: #f66;">klop</th>
-                                                </tr>
-                                                <tr>
-                                                    <th style="background-color: #f8805e;">Box</th>
-                                                    <th style="background-color: #f8805e;">Pcs</th>
-                                                    <th style="background-color: #90d089;">Box</th>
-                                                    <th style="background-color: #90d089;">Pcs</th>
-                                                    <th style="background-color: #7fd9d1;">Box</th>
-                                                    <th style="background-color: #7fd9d1;">Pcs</th>
-                                                    <th style="background-color: #fca469;">Box</th>
-                                                    <th style="background-color: #fca469;">Pcs</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php foreach ($listics as $list) : ?>
-                                                    <tr>
-                                                        <td><?= $list->nama_barang ?></td>
-                                                        <td><?= $list->exp_date ?></td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>0</td>
-                                                        <td>klop</td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section> -->
-                <?php elseif ($this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
-
-                    <section class="content">
-                        <div class="row">
-                            <div class="col-auto">
-                                <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus"></i> Stock Opname</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('stkopname_tracking') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock</a>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="container-fluid">
-                                    <h4>Dashboard Stock Opname</h4>
-
-                                    <h5 class="mt-4">Opname FEFO</h5>
-                                    <table class="table table-bordered table-sm" id="tb_opname_fefo_user">
-                                        <thead>
-                                            <tr>
-                                                <th>Nama Barang</th>
-                                                <th>Expired Date</th>
-                                                <th>Qty Fisik</th>
-                                                <th>Qty Buku</th>
-                                                <th>Qty Pending</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($fefo as $row) : ?>
-                                                <tr>
-                                                    <td><?= $row->nama_barang ?></td>
-                                                    <td><?= $row->exp_date ?></td>
-                                                    <td><?= $row->qty_fisik ?></td>
-                                                    <td><?= $row->qty_buku ?></td>
-                                                    <td><?= $row->qty_pending ?></td>
-                                                    <td><span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
-                                                            <?= $row->status ?>
-                                                        </span></td>
-                                                </tr>
-                                            <?php endforeach ?>
-                                        </tbody>
-                                    </table>
-
-
-
-                                </div>
-                            </div>
-                        </div>
-                        <br>
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="container-fluid">
-                                    <h5 class="mt-5">Opname All Barang</h5>
-                                    <table class="table table-bordered table-sm" id="tb_opname_allbarang_user">
-                                        <thead>
-                                            <tr>
-                                                <th>Nama Barang</th>
-                                                <th>Qty Fisik</th>
-                                                <th>Qty Buku</th>
-                                                <th>Qty Pending</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($allbarang as $row) : ?>
-                                                <tr>
-                                                    <td><?= $row->nama_barang ?></td>
-                                                    <td><?= $row->qty_fisik ?></td>
-                                                    <td><?= $row->qty_buku ?></td>
-                                                    <td><?= $row->qty_pending ?></td>
-                                                    <td>
-                                                        <span class="badge <?= $row->status == 'MATCH' ? 'bg-success' : 'bg-danger' ?>">
-                                                            <?= $row->status ?>
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach ?>
-                                        </tbody>
-                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -262,57 +92,31 @@
     <!-- ./wrapper -->
 
     <script>
-        // FEFO Pie Chart
-        var fefoPieCtx = document.getElementById('fefoPieChart').getContext('2d');
-        new Chart(fefoPieCtx, {
-            type: 'pie',
-            data: {
-                labels: ['MATCH', 'NOT MATCH'],
-                datasets: [{
-                    label: 'Statistik FEFO',
-                    data: [<?= $stat_fefo['match'] ?>, <?= $stat_fefo['not_match'] ?>],
-                    backgroundColor: ['#28a745', '#dc3545']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
+        $(document).ready(function() {
+            $('.editable').on('blur', function() {
+                var data_id = $(this).data('id').split('|');
+                var nama_barang = data_id[0];
+                var exp_date = data_id[1];
+                var field = $(this).data('field');
+                var value = $(this).text();
 
-        // All Barang Pie Chart
-        var allBarangPieCtx = document.getElementById('allBarangPieChart').getContext('2d');
-        new Chart(allBarangPieCtx, {
-            type: 'pie',
-            data: {
-                labels: [
-                    <?php foreach ($allbarang as $row) : ?> "<?= $row->nama_barang ?>",
-                    <?php endforeach ?>
-                ],
-                datasets: [{
-                    label: 'Qty Fisik',
-                    data: [
-                        <?php foreach ($allbarang as $row) : ?>
-                            <?= $row->qty_fisik ?>,
-                        <?php endforeach ?>
-                    ],
-                    backgroundColor: [
-                        '#007bff', '#28a745', '#ffc107', '#dc3545', '#6610f2',
-                        '#20c997', '#e83e8c', '#fd7e14', '#6c757d', '#17a2b8'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
+                $.ajax({
+                    url: "<?= base_url('admstocktracking/update_inline') ?>",
+                    method: "POST",
+                    data: {
+                        nama_barang: nama_barang,
+                        exp_date: exp_date,
+                        field: field,
+                        value: value
+                    },
+                    success: function(response) {
+                        console.log(response);
+                        // bisa tambahkan notifikasi sukses jika mau
+                    },
+                    error: function() {
+                        alert('Gagal menyimpan data');
                     }
-                }
-            }
+                });
+            });
         });
     </script>

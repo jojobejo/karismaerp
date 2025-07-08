@@ -1,62 +1,99 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Opname extends CI_Controller
+class C_Ics extends CI_Controller
 {
 
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('M_Opname');
-        $this->load->model('M_Barang');
+        $this->load->model('M_Ics');
         $this->load->helper('stock_helper');
     }
 
     public function index()
     {
-        $data['title'] = "Stock Opname";
-        $data['data_ics'] = $this->M_Opname->getAllICS();
-        $this->load->view('partial/header', $data);
-        $this->load->view('opname/index', $data);
-        $this->load->view('partial/footer');
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics();
+
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
-    public function form_input($nama_barang, $exp_date)
-    {
-        $data['barang'] = $this->M_Barang->getBarangByNama($nama_barang);
-        $data['exp_date'] = $exp_date;
-        $this->load->view('opname/modal_input', $data);
-    }
-
-    public function save()
+    public function update_inline()
     {
         $nama_barang = $this->input->post('nama_barang');
         $exp_date = $this->input->post('exp_date');
-        $qty_box = (int)$this->input->post('qty_box');
-        $qty_pcs = (int)$this->input->post('qty_pcs');
-        $inputer = $this->session->userdata('username');
+        $field = $this->input->post('field'); // "opname_box" atau "opname_pcs"
+        $value = (int) $this->input->post('value');
 
-        $dimensi = $this->M_Barang->getDimensi($nama_barang);
-        $total_qty = hitung_qty($qty_box, $qty_pcs, $dimensi);
+        // konversi ke qty_op berdasarkan ukuran box (butuh data volume barang)
+        $barang = $this->db->get_where('tb_mbarang', ['nm_barang' => $nama_barang])->row();
+        if (!$barang) {
+            echo json_encode(['status' => 'failed', 'message' => 'Barang tidak ditemukan']);
+            return;
+        }
 
-        $this->M_Opname->insertOpname([
+        $unit_size = $barang->p * $barang->l * $barang->t;
+
+        // Ambil data qty_op saat ini
+        $current = $this->db->get_where('tb_ics_opname', [
             'nama_barang' => $nama_barang,
             'exp_date' => $exp_date,
-            'qty' => $total_qty,
-            'inputer' => $inputer,
-            'input_at' => date('Y-m-d H:i:s')
-        ]);
+            'DATE(input_at)' => date('Y-m-d')
+        ])->row();
 
-        $this->M_Opname->logInput([
-            'nama_user' => $inputer,
-            'nama_barang' => $nama_barang,
-            'exp_date' => $exp_date,
-            'qty_box' => $qty_box,
-            'qty_pcs' => $qty_pcs,
-            'qty_total' => $total_qty,
-            'keterangan' => 'Stock Opname'
-        ]);
+        if ($field == 'opname_box') {
+            $new_qty = $value * $unit_size;
+            if ($current) {
+                $this->db->set('qty', $new_qty + ($current->qty % $unit_size));
+                $this->db->where('id', $current->id);
+                $this->db->update('tb_ics_opname');
+            } else {
+                $this->db->insert('tb_ics_opname', [
+                    'nama_barang' => $nama_barang,
+                    'exp_date' => $exp_date,
+                    'qty' => $new_qty,
+                    'input_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+        } elseif ($field == 'opname_pcs') {
+            $new_qty = $value;
+            if ($current) {
+                $this->db->set('qty', floor($current->qty / $unit_size) * $unit_size + $new_qty);
+                $this->db->where('id', $current->id);
+                $this->db->update('tb_ics_opname');
+            } else {
+                $this->db->insert('tb_ics_opname', [
+                    'nama_barang' => $nama_barang,
+                    'exp_date' => $exp_date,
+                    'qty' => $new_qty,
+                    'input_at' => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
 
-        redirect('opname');
+        echo json_encode(['status' => 'success']);
+    }
+
+
+    public function get_data()
+    {
+        $data = $this->M_Ics->list_barang_ics();
+        echo json_encode($data);
+    }
+
+    public function inline_update()
+    {
+        $id    = $this->input->post('id');
+        $field = $this->input->post('field');
+        $value = $this->input->post('value');
+
+        if ($field === 'qty')  $value = (int)$value;
+
+        $ok = $this->Stok_model->update_cell($id, $field, $value);
+        echo json_encode(['success' => $ok]);
     }
 }
