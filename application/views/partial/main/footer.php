@@ -63,6 +63,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#tbics_erp').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     $('#tbgudang').DataTable({
       "paging": true,
       "lengthChange": false,

@@ -153,7 +153,7 @@
 
                         <div class="row">
                             <div class="col ml-2">
-                                <a href="<?= base_url('ics/global') ?>" class="btn btn-primary w-100">STOCK ICS</a>
+                                <a href="<?= base_url('ics') ?>" class="btn btn-primary w-100">STOCK ICS</a>
                             </div>
                             <div class="col ml-2">
                                 <a href="<?= base_url('admstocktracking') ?>" class="btn btn-primary w-100">Stock Opname</a>

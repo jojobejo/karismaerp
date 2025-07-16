@@ -1569,6 +1569,29 @@ class C_Logistik extends CI_Controller
         exit;
     }
 
+    public function ics($gudang)
+    {
+        switch ($gudang) {
+            case 'global':
+
+                $data['page_title'] = 'KARISMA - ICS';
+                $data['listics'] = $this->M_Logistik->getbarangics();
+                $data['data_ics'] = $this->M_Logistik->getAllICS();
+                $data['fefo'] = $this->M_Logistik->compareFEFO();
+                $data['allbarang'] = $this->M_Logistik->compareAllBarang();
+                $data['stat_fefo'] = $this->M_Logistik->statistikFEFO();
+                $data['stat_allbarang'] = $this->M_Logistik->statistikAllBarang();
+
+                $this->load->view('partial/main/header.php', $data);
+                $this->load->view('content/logistik/ics/ics.php', $data);
+                $this->load->view('partial/main/footer.php');
+                $this->load->view('content/logistik/ics/ajaxics.php', $data);
+                break;
+
+            case 'induk':
+                break;
+        }
+    }
 
     public function detail_fk($kd)
     {
@@ -1849,31 +1872,6 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/request_user_opname.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
-    }
-
-    public function ics($gudang)
-    {
-        switch ($gudang) {
-            case 'global':
-
-                $data['page_title'] = 'KARISMA - ICS';
-                $data['listics'] = $this->M_Logistik->getbarangics();
-                $data['data_ics'] = $this->M_Logistik->getAllICS();
-
-                $data['fefo'] = $this->M_Logistik->compareFEFO();
-                $data['allbarang'] = $this->M_Logistik->compareAllBarang();
-                $data['stat_fefo'] = $this->M_Logistik->statistikFEFO();
-                $data['stat_allbarang'] = $this->M_Logistik->statistikAllBarang();
-
-                $this->load->view('partial/main/header.php', $data);
-                $this->load->view('content/logistik/ics/ics.php', $data);
-                $this->load->view('partial/main/footer.php');
-                $this->load->view('content/logistik/ics/ajaxics.php', $data);
-                break;
-
-            case 'induk':
-                break;
-        }
     }
 
     public function stockopname()

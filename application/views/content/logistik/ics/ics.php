@@ -23,7 +23,7 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <table class="table table-bordered ">
+                                    <table class="table table-bordered" id="tbics_erp">
                                         <thead>
                                             <tr>
                                                 <th colspan="2" class="bg-success text-white text-center">NAMA</th>
@@ -60,7 +60,6 @@
                                                     <td><?= $br->saldo_akhir_box ?></td>
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
                                                     <td><?= $br->klop ?></td>
-
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
@@ -101,7 +100,7 @@
                 var value = $(this).text();
 
                 $.ajax({
-                    url: "<?= base_url('admstocktracking/update_inline') ?>",
+                    url: "<?= base_url('ics/updateinline') ?>",
                     method: "POST",
                     data: {
                         nama_barang: nama_barang,
@@ -111,7 +110,6 @@
                     },
                     success: function(response) {
                         console.log(response);
-                        // bisa tambahkan notifikasi sukses jika mau
                     },
                     error: function() {
                         alert('Gagal menyimpan data');

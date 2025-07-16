@@ -16,7 +16,6 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $data['barang_ics']         = $this->M_Ics->list_barang_ics();
 
-
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -26,10 +25,9 @@ class C_Ics extends CI_Controller
     {
         $nama_barang = $this->input->post('nama_barang');
         $exp_date = $this->input->post('exp_date');
-        $field = $this->input->post('field'); // "opname_box" atau "opname_pcs"
+        $field = $this->input->post('field');
         $value = (int) $this->input->post('value');
 
-        // konversi ke qty_op berdasarkan ukuran box (butuh data volume barang)
         $barang = $this->db->get_where('tb_mbarang', ['nm_barang' => $nama_barang])->row();
         if (!$barang) {
             echo json_encode(['status' => 'failed', 'message' => 'Barang tidak ditemukan']);
@@ -37,8 +35,6 @@ class C_Ics extends CI_Controller
         }
 
         $unit_size = $barang->p * $barang->l * $barang->t;
-
-        // Ambil data qty_op saat ini
         $current = $this->db->get_where('tb_ics_opname', [
             'nama_barang' => $nama_barang,
             'exp_date' => $exp_date,
@@ -77,7 +73,6 @@ class C_Ics extends CI_Controller
 
         echo json_encode(['status' => 'success']);
     }
-
 
     public function get_data()
     {

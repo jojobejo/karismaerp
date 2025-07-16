@@ -84,7 +84,6 @@ $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock
 $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
 
-
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';

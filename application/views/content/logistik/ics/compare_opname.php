@@ -23,12 +23,12 @@
                         </div>
                     </div>
 
-                    <!-- <div class="card card-primary mt-2 mb-2">
+                    <div class="card card-primary mt-2 mb-2">
                         <div class="card-header">
                             <h5 class="card-title mt-2">Compare Wilayah</h5>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-sm" id="compare_user">
+                            <table class="table table-bordered table-sm" id="tb_wilayah ">
                                 <thead>
                                     <tr>
                                         <th>Wilayah</th>
@@ -44,8 +44,9 @@
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+
                         </div>
-                    </div> -->
+                    </div>
 
                     <div class="card card-primary mt-2 mb-5">
                         <div class="card-header">
