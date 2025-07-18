@@ -219,7 +219,6 @@
                                                     </div>
                                                 </td>
                                             <?php endif; ?>
-
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

@@ -252,6 +252,7 @@ class M_Logistik extends CI_Model
         GROUP BY a.kd_driver         
         ");
     }
+
     public function get_det_tracking($kd)
     {
         return $this->db->query("SELECT a.sts_driver,d.nama_helper,a.kd_deliveri , a.tgl_jalan ,a.kd_truk , COALESCE(c.noplat,'-') AS noplat , a.destinasi,COALESCE(NULLIF(a.keterangan,''),'-') AS keterangan
@@ -263,6 +264,7 @@ class M_Logistik extends CI_Model
         GROUP BY a.kd_deliveri
         ");
     }
+
     public function get_det_data_driver($kd)
     {
         return $this->db->query("SELECT b.nama_driver , b.kd_driver
@@ -272,6 +274,7 @@ class M_Logistik extends CI_Model
         GROUP BY a.kd_driver 
         ");
     }
+
     public function get_deliv($kd)
     {
         $this->db->select('*');
@@ -282,6 +285,7 @@ class M_Logistik extends CI_Model
         $this->db->where('kd_deliveri', $kd);
         return $this->db->get()->result();
     }
+
     public function detail_deliv($kd)
     {
         $this->db->select('*');
@@ -289,19 +293,23 @@ class M_Logistik extends CI_Model
         $this->db->where('kd_order', $kd);
         return $this->db->get()->result();
     }
+
     public function edit_detail_order_driver($id, $data)
     {
         $this->db->where('id', $id);
         return $this->db->update('tb_det_tracking_driver', $data);
     }
+
     public function deleteorder($id)
     {
         return $this->db->delete('tb_order_tracking_driver', array("kd_order" => $id));
     }
+
     public function deletedetailorder($id)
     {
         return $this->db->delete('tb_det_tracking_driver', array('kd_deliveri' => $id));
     }
+
     public function export_lap_distribusi()
     {
         return $this->db->get('tb_lap_distribusi')->result();
@@ -317,10 +325,23 @@ class M_Logistik extends CI_Model
         WHERE a.status ='ready'
         ");
     }
+
     public function insert_lap_distribusi($data)
     {
         return $this->db->insert('tb_lap_distribusi', $data);
     }
+
+    public function insert_do_detail_ics($data)
+    {
+        return $this->db->insert('tb_ics_do', $data);
+    }
+
+    public function insert_batch_do_detail_ics($data)
+    {
+        return $this->db->insert_batch('tb_ics_do', $data);
+    }
+
+
     public function edited_tmp_lap_dis($id, $data)
     {
         $this->db->where('id_lap_dis', $id);
@@ -434,6 +455,21 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
+
+    public function get_do_cust_byfaktur_ics($kd)
+    {
+        return $this->db->query("SELECT
+        a.kd_do,
+        a.kd_faktur,
+        a.tgl_transaksi,
+        a.nama_barang,
+        a.qty,
+        a.tgl_exp,
+        a.no_lot
+        FROM tb_detail_do a
+        WHERE a.kd_do = '$kd'")->result();
+    }
+
     public function det_do_cust($kd)
     {
         return $this->db->query("SELECT
@@ -602,6 +638,11 @@ class M_Logistik extends CI_Model
     public function insert_det_do($data)
     {
         return $this->db->insert('tb_detail_do', $data);
+    }
+
+    public function insertics_det_do($data)
+    {
+        return $this->db->insert('tb_ics_do', $data);
     }
 
     public function insert_do($data)

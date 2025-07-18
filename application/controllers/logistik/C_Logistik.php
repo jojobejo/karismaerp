@@ -1082,6 +1082,11 @@ class C_Logistik extends CI_Controller
         $driver = $this->input->post('driver');
         $datenow = date("Y-m-d");
 
+        $tgl                        = date('d/m/Y');
+        $data['tanggal_now']        = date('d/m/Y');
+
+        $getdetail  = $this->M_Logistik->get_do_cust_byfaktur_ics($kd);
+
         if (!$kd || !$nolambung || !$tgldeliv || !$driver) {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
             return;
@@ -1093,15 +1098,28 @@ class C_Logistik extends CI_Controller
             'tgl_pengiriman' => $tgldeliv,
             'status' => 2
         ];
+
         $dataupdateddetail_do = [
             'dt_status' => 1,
             'status' => 4,
             'input_at' => $datenow
         ];
 
+        $insert_batch = [];
+        foreach ($getdetail as $det) {
+            $insert_batch[] = array(
+                'kd_faktur'     => $det->kd_faktur,
+                'tgl_transaksi' => $tgl,
+                'nama_barang'   => $det->nama_barang,
+                'qty'           => $det->qty,
+                'no_lot'        => $det->no_lot,
+                'exp_date'      => date('m/d/Y', strtotime($det->tgl_exp))
+            );
+        }
+
+        $this->M_Logistik->insert_batch_do_detail_ics($insert_batch);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
-
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
     }
 
