@@ -34,6 +34,7 @@
                                     <table class="table table-bordered" id="tbics_erp">
                                         <thead>
                                             <tr>
+                                                <th rowspan="2" class="bg-info text-white text-center">#</th>
                                                 <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
                                                 <th colspan="2" class="bg-success text-white text-center">In Today</th>
                                                 <th colspan="2" class="bg-danger text-white text-center">Out Today</th>
@@ -41,6 +42,7 @@
                                                 <th colspan="2" class="bg-success text-white text-center"><?= $tanggal_now ?></th>
                                                 <th colspan="2" class="bg-danger text-white text-center">Saldo Akhir</th>
                                                 <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
+                                                <th rowspan="2" class="align-middle bg-success text-white text-center">#</th>
                                             </tr>
                                             <tr>
                                                 <th class="bg-primary text-white">Nama Barang</th>
@@ -60,6 +62,9 @@
                                         <tbody>
                                             <?php foreach ($barang_ics as $br) : ?>
                                                 <tr>
+                                                    <td>
+                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                    </td>
                                                     <td><?= $br->nama_barang ?></td>
                                                     <td><?= $br->exp_date ?></td>
                                                     <td><?= $br->in_box ?></td>
@@ -74,15 +79,16 @@
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
                                                     <?php if ($br->klop == 'KLOP') : ?>
                                                         <td style="text-align: center;">
-                                                            <a href="#" class="btn btn-sm btn-success">MATCH</a>
-                                                            <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                            <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
                                                         </td>
                                                     <?php else : ?>
                                                         <td style="text-align: center;">
-                                                            <a href="#" class="btn btn-sm btn-danger">NOT MATCH</a>
-                                                            <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times-circle"></i></a>
                                                         </td>
                                                     <?php endif; ?>
+                                                    <td>
+                                                        <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->id ?>"><i class="fas fa-plus-circle"></i></a>
+                                                    </td>
                                                 </tr>
                                                 <!-- <tr>
                                                     <td><?= $br->nama_barang ?></td>
@@ -109,6 +115,46 @@
                     </section>
                 <?php endif; ?>
             </div>
+
+            <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <form action="<?= base_url('ics/sv_opname') ?>" method="post">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success">
+                                <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Opname</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="hidden" name="id" id="modal_id">
+                                <input type="hidden" name="dimensi" id="modal_dimensi">
+                                <div class="form-group">
+                                    <label for="nama_barang">Nama Barang</label>
+                                    <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="exp_date">Expired Date</label>
+                                    <input type="text" name="exp_date" id="modal_exp_date" class="form-control" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="qty_box">Qty Box</label>
+                                    <input type="number" name="qty_box" id="modal_qty_box" class="form-control" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="qty_pcs">Qty Pcs</label>
+                                    <input type="number" name="qty_pcs" id="modal_qty_pcs" class="form-control" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </div>
 
         <!-- /.content-wrapper -->
@@ -127,6 +173,37 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+
+    <script>
+        $(document).ready(function() {
+            $('.btn-open-opname').on('click', function() {
+                const rowId = $(this).data('id');
+
+                $.ajax({
+                    url: "<?= base_url('ics/get_detail_barang') ?>",
+                    method: "POST",
+                    data: {
+                        id: rowId
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        $('#modal_id').val(data.id);
+                        $('#modal_nama_barang').val(data.nama_barang);
+                        $('#modal_exp_date').val(data.exp_date);
+                        $('#modal_dimensi').val(data.dimensi);
+                        $('#modal_qty_box').val('');
+                        $('#modal_qty_pcs').val('');
+                        $('#modalAddOpname').modal('show');
+                    },
+                    error: function() {
+                        alert('Gagal mengambil data barang.');
+                    }
+                });
+            });
+        });
+    </script>
+
 
     <script>
         $(document).ready(function() {

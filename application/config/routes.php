@@ -85,8 +85,10 @@ $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
 $route['ics/icsdo']                                 = 'logistik/C_Ics/ics_do';
 $route['ics/icspo']                                 = 'logistik/C_Ics/ics_po';
-$route['ics/simpan_opname']                         = 'logistik/C_Ics/simpan_opname';
+$route['ics/sv_opname']                             = 'logistik/C_Ics/save_opname_ics';
+$route['ics/get_detail_barang']                     = 'logistik/C_Ics/get_detail_barang';
 $route['ics/ics_stock_controller/(:any)']           = 'logistik/C_Ics/ics_stock_controller/$1';
+
 
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';

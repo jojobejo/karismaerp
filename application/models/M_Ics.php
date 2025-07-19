@@ -182,6 +182,15 @@ class M_Ics extends CI_Model
         LIMIT 1
         ")->result();
     }
+
+    public function ics_log_input($nmbarang, $exp)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_log_ics a
+        WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$exp'")->result();
+    }
+
     public function compare_ics_allbarang($kdbarang)
     {
         return $this->db->query("SELECT

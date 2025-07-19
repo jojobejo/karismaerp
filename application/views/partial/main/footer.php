@@ -72,6 +72,7 @@
       "autoWidth": false,
       "responsive": true,
     });
+
     $('#tb_ics_do').DataTable({
       "paging": true,
       "lengthChange": false,

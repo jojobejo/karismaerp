@@ -157,6 +157,7 @@ class C_Ics extends CI_Controller
                 'input_at'    => $today
             ];
         }
+
         $this->db->insert_batch('tb_ics_opname', $insert_batch);
         echo json_encode(['status' => 'success']);
     }
@@ -165,6 +166,7 @@ class C_Ics extends CI_Controller
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $data['nmbarang']           = $this->M_Ics->get_br_name($idbarang);
+
 
         $data_barang = $this->db
             ->select('a.nama_barang, a.exp_date, b.kode_barang')
@@ -214,22 +216,62 @@ class C_Ics extends CI_Controller
             WHERE a.nama_barang = ? AND a.exp_date = ?
             GROUP BY a.nama_barang, a.exp_date", array($nama_barang, $exp_date));
 
-        $data['detail_stok'] = $query->result();
+        $data['detail_stok']        = $query->result();
+        $data['input_log']          = $this->M_Ics->ics_log_input($nama_barang, $exp_date);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_stock_controller.php', $data);
         $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
-    public function save_opname()
+    public function get_detail_barang()
     {
+        $id = $this->input->post('id');
+        $this->db->select('i.id, i.nama_barang, i.exp_date, (m.p * m.l * m.t) AS dimensi');
+        $this->db->from('tb_ics i');
+        $this->db->join('tb_mbarang m', 'm.nm_barang = i.nama_barang', 'left');
+        $this->db->where('i.id', $id);
+        $query = $this->db->get()->row();
+
+        echo json_encode($query);
+    }
+
+    public function simpan_input_opname()
+    {
+        $dimensi   = (int) $this->input->post('dimensi');
+        $qty_box   = (int) $this->input->post('qty_box');
+        $qty_pcs   = (int) $this->input->post('qty_pcs');
+        $qty_total = ($qty_box * $dimensi) + $qty_pcs;
+        $today = date('d/m/Y');
+
+        $data = [
+            'nama_barang' => $this->input->post('nama_barang'),
+            'exp_date'    => $this->input->post('exp_date'),
+            'qty'         => $qty_total,
+            'qty_box'     => $qty_box,
+            'qty_pcs'     => $qty_pcs,
+            'dimensi'     => $dimensi,
+            'input_at'    => $today,
+            'create_at'   => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->db->insert('tb_ics_opname', $data)) {
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Insert gagal']);
+        }
+    }
+
+    public function save_opname_ics()
+    {
+        $id          = $this->input->post('id');
         $nama_barang = $this->input->post('nama_barang');
         $exp_date    = $this->input->post('exp_date');
         $dimensi     = $this->input->post('dimensi');
         $qty_box     = $this->input->post('qty_box');
         $qty_pcs     = $this->input->post('qty_pcs');
-        $qty_total = ($qty_box * $dimensi) + $qty_pcs;
-
+        $qty_total   = ($qty_box * $dimensi) + $qty_pcs;
 
         $data = [
             'nama_barang' => $nama_barang,
@@ -237,6 +279,7 @@ class C_Ics extends CI_Controller
             'qty_box'     => $qty_box,
             'qty_pcs'     => $qty_pcs,
             'qty'         => $qty_total,
+            'inputer'     => $this->session->userdata('nama'),
             'input_at'    => date('d/m/Y'),
             'create_at'   => date('Y-m-d H:i:s')
         ];
@@ -258,6 +301,6 @@ class C_Ics extends CI_Controller
         $this->db->insert('tb_log_ics', $logics);
 
         $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
-        redirect('ics/ics_stock_controller/20');
+        redirect('ics/ics_stock_controller/' . $id);
     }
 }
