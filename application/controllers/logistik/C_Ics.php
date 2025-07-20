@@ -9,6 +9,7 @@ class C_Ics extends CI_Controller
         parent::__construct();
         $this->load->model('M_Ics');
         $this->load->helper('stock_helper');
+        date_default_timezone_set('Asia/Jakarta');
     }
 
     public function index()
@@ -167,11 +168,10 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $data['nmbarang']           = $this->M_Ics->get_br_name($idbarang);
 
-
         $data_barang = $this->db
-            ->select('a.nama_barang, a.exp_date, b.kode_barang')
-            ->from('tb_ics a')
-            ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
+            ->select('a.nama_barang, a.exp_date')
+            ->from('tb_saldo_awal a')
+            ->join('tb_mbarang b', 'b.nm_barang = a.nama_barang')
             ->where('a.id', $idbarang)
             ->get()
             ->row();

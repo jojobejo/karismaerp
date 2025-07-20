@@ -31,18 +31,20 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
+                                    <h3><?= $tanggal_now ?></h3>
                                     <table class="table table-bordered" id="tbics_erp">
                                         <thead>
                                             <tr>
-                                                <th rowspan="2" class="bg-info text-white text-center">#</th>
+                                                <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
                                                 <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
                                                 <th colspan="2" class="bg-success text-white text-center">In Today</th>
                                                 <th colspan="2" class="bg-danger text-white text-center">Out Today</th>
                                                 <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
                                                 <th colspan="2" class="bg-success text-white text-center"><?= $tanggal_now ?></th>
                                                 <th colspan="2" class="bg-danger text-white text-center">Saldo Akhir</th>
+                                                <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
                                                 <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
-                                                <th rowspan="2" class="align-middle bg-success text-white text-center">#</th>
+                                                <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
                                             </tr>
                                             <tr>
                                                 <th class="bg-primary text-white">Nama Barang</th>
@@ -73,11 +75,12 @@
                                                     <td><?= $br->out_pcs ?></td>
                                                     <td><?= $br->saldo_awal_box ?></td>
                                                     <td><?= $br->saldo_awal_pcs ?></td>
-                                                    <td><?= $br->opname_box ?></td>
-                                                    <td><?= $br->opname_pcs ?></td>
+                                                    <td><?= $br->adj_box ?></td>
+                                                    <td><?= $br->adj_pcs ?></td>
                                                     <td><?= $br->saldo_akhir_box ?></td>
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
-                                                    <?php if ($br->klop == 'KLOP') : ?>
+                                                    <td><?= $br->qty_selisih ?></td>
+                                                    <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                         <td style="text-align: center;">
                                                             <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
                                                         </td>
