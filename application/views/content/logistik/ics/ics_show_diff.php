@@ -34,7 +34,7 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <table class="table table-bordered" id="tbics_erp">
+                                    <table class="table table-bordered" id="tbics_erp_diff">
                                         <thead>
                                             <tr>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>

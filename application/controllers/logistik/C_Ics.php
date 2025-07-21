@@ -24,6 +24,18 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function ics_diffrent()
+    {
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $tgl                        = date('d/m/Y');
+        $data['tanggal_now']        = date('d/m/Y');
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_diffrent($tgl);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function update_inline()
     {
         $nama_barang = $this->input->post('nama_barang');
