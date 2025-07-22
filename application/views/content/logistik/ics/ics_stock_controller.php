@@ -15,7 +15,7 @@
                 <section class="content">
 
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header bg-primary text-white">
                             <?php foreach ($nmbarang as $nm) : ?>
                                 <h5 class="card-title">Detail Inputer Barang - <b><?= $nm->nama_barang . ' ' . '(' . $nm->exp_date . ')' ?></b></h5>
                             <?php endforeach; ?>
@@ -23,25 +23,25 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-auto">
-                                    <a href="<?= base_url('ics') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                                    <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                                 </div>
-                                <div class="col-auto">
+                                <!-- <div class="col-auto">
                                     <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
                                         <i class="fas fa-boxes"></i> Allbarang
                                     </button>
-                                </div>
+                                </div> -->
                                 <div class="col-auto">
                                     <button class="btn btn-md btn-secondary" data-toggle="modal" data-target="#modalAddOpname">
                                         <i class="fas fa-date"></i> FEFO
                                     </button>
                                 </div>
                                 <div class="col-auto">
-                                    <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
+                                    <button class="btn btn-md btn-primary" id="btndo">
                                         <i class="fas fa-search-minus"></i> DO
                                     </button>
                                 </div>
                                 <div class="col-auto">
-                                    <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
+                                    <button class="btn btn-md btn-primary" id="btnpo">
                                         <i class="fas fa-search-plus"></i> PO
                                     </button>
                                 </div>
@@ -53,7 +53,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-auto">
-                                    <div class="form-group" style="position: relative;background: #fff;">
+                                    <!-- <div class="form-group" style="position: relative;background: #fff;">
                                         <h5 class="card-title mt-2 mb-2"><b>Compare By All Barang</b></h5>
                                         <table style="border: 1px solid #000000; border-collapse: collapse; width: 100%; text-align: center;">
                                             <thead>
@@ -85,7 +85,7 @@
                                                 <?php endforeach; ?>
                                             </tbody>
                                         </table>
-                                    </div>
+                                    </div> -->
                                 </div>
                                 <div class="col-auto">
                                     <div class="form-group" style="position: relative;background: #fff;">
@@ -125,38 +125,106 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h3 class="card-title mb-3"><strong>Tracking Inputer</strong></h3>
+                                    <table class="table table-bordered table-sm w-100" id="tracking_input_ics_byexp">
+                                        <thead class="bg-info text-white text-center">
+                                            <tr>
+                                                <th>Nama Barang</th>
+                                                <th>Expired Date</th>
+                                                <th>QTY</th>
+                                                <th>Box</th>
+                                                <th>Pcs</th>
+                                                <th>Inputer</th>
+                                                <th>Keterangan</th>
+                                                <th>Input At</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($input_log as $log) : ?>
+                                                <tr>
+                                                    <td><?= $log->nama_barang ?></td>
+                                                    <td><?= $log->exp_date ?></td>
+                                                    <td><?= $log->qty ?></td>
+                                                    <td><?= $log->qty_box ?></td>
+                                                    <td><?= $log->qty_pcs ?></td>
+                                                    <td><?= $log->inputer ?></td>
+                                                    <td><?= $log->keterangan ?></td>
+                                                    <td><?= $log->tgl_input ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                            <h3 class="card-title mt-2 mb-3"><strong>Tracking Inputer</strong> </h3>
-                            <table class="table table-bordered table-sm" id="x">
-                                <thead>
+                    <!-- Card DO -->
+                    <div class="card mt-3" id="card_do" style="display: none;">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title">Data DO</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered table-sm" id="ics_do_byexp">
+                                <thead class="bg-warning text-white text-center">
                                     <tr>
+                                        <th>Kode Faktur</th>
+                                        <th>Tgl Transaksi</th>
                                         <th>Nama Barang</th>
                                         <th>Expired Date</th>
-                                        <th>QTY</th>
-                                        <th>Box</th>
-                                        <th>Pcs</th>
-                                        <th>Inputer</th>
-                                        <th>Keterangan</th>
-                                        <th>Input At</th>
+                                        <th>Qty</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($input_log as $log) : ?>
+                                    <?php $no = 1;
+                                    foreach ($data_do as $do) : ?>
                                         <tr>
-                                            <td><?= $log->nama_barang ?></td>
-                                            <td><?= $log->exp_date ?></td>
-                                            <td><?= $log->qty ?></td>
-                                            <td><?= $log->qty_box ?></td>
-                                            <td><?= $log->qty_pcs ?></td>
-                                            <td><?= $log->inputer ?></td>
-                                            <td><?= $log->keterangan ?></td>
-                                            <td><?= $log->tgl_input ?></td>
+                                            <td><?= $do->kd_faktur ?></td>
+                                            <td><?= $do->tgl_transaksi ?></td>
+                                            <td><?= $do->nama_barang ?></td>
+                                            <td><?= $do->exp_date ?></td>
+                                            <td><?= $do->qty ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
+                    <!-- Card PO -->
+                    <div class="card mt-3" id="card_po" style="display: none;">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title">Data PO</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered table-sm" id="ics_po_byexp">
+                                <thead class="bg-warning text-white text-center">
+                                    <tr>
+                                        <th>Kode Faktur</th>
+                                        <th>Tgl Transaksi</th>
+                                        <th>Nama Barang</th>
+                                        <th>Expired Date</th>
+                                        <th>Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $no = 1;
+                                    foreach ($data_po as $po) : ?>
+                                        <tr>
+                                            <td><?= $po->kd_faktur_lpb ?></td>
+                                            <td><?= $po->tgl_transaksi ?></td>
+                                            <td><?= $po->nama_barang ?></td>
+                                            <td><?= $po->exp_date ?></td>
+                                            <td><?= $po->qty ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </section>
             </div>
         </div>
@@ -226,6 +294,18 @@
         <aside class="control-sidebar control-sidebar-dark">
             <!-- Control sidebar content goes here -->
         </aside>
-        <!-- /.control-sidebar -->
     </div>
-    <!-- ./wrapper -->
+
+    <script>
+        $(document).ready(function() {
+            $('#btndo').click(function() {
+                $('#card_do').slideToggle(); // toggle DO card
+                $('#card_po').slideUp(); // sembunyikan PO saat DO tampil
+            });
+
+            $('#btnpo').click(function() {
+                $('#card_po').slideToggle(); // toggle PO card
+                $('#card_do').slideUp(); // sembunyikan DO saat PO tampil
+            });
+        });
+    </script>

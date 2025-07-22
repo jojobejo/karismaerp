@@ -8,17 +8,42 @@ class C_Ics extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_Ics');
+        $this->load->model('M_Logistik');
+        $this->load->model('M_Keuangan');
         $this->load->helper('stock_helper');
         date_default_timezone_set('Asia/Jakarta');
     }
 
     public function index()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics();
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['kdgenerate']     = $this->M_Keuangan->generate_update();
+        $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['updated']        = $this->M_Logistik->get_updated_data_preparation();
+        $data['listdo']         = $this->M_Logistik->getdo();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ics_by_expdate()
+    {
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_expdate();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics_by_expdate.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ics_by_allbarang()
+    {
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_allbarang();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics_by_allbarang.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -225,6 +250,9 @@ class C_Ics extends CI_Controller
         $data['detail_stok']        = $query->result();
         $data['detail_allbarang']   = $this->M_Ics->ics_get_all_qty_barang($nama_barang);
         $data['input_log']          = $this->M_Ics->ics_log_input($nama_barang, $exp_date);
+        $data['data_do']            = $this->M_Ics->get_do_by_expdate($nama_barang, $exp_date);
+        $data['data_po']            = $this->M_Ics->get_po_by_expdate($nama_barang, $exp_date);
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_stock_controller.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -268,38 +296,6 @@ class C_Ics extends CI_Controller
             echo json_encode(['status' => 'error', 'message' => 'Insert gagal']);
         }
     }
-    
-    public function import_csv()
-    {
-        if ($_FILES['file_csv']['name']) {
-            $filename = $_FILES['file_csv']['tmp_name'];
-            $handle = fopen($filename, "r");
-
-            // Skip header
-            fgetcsv($handle);
-
-            $this->load->database();
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if (count($data) >= 7) {
-                    $this->db->insert('tb_ics_po', [
-                        'kd_faktur'      => $data[0],
-                        'tgl_transaksi'  => $data[1],
-                        'nama_barang'    => $data[2],
-                        'exp_date'       => $data[3],
-                        'qty'            => $data[4],
-                        'qty_box'        => $data[5],
-                        'qty_pcs'        => $data[6]
-                    ]);
-                }
-            }
-            fclose($handle);
-            http_response_code(200);
-        } else {
-            http_response_code(400);
-            echo "No file uploaded";
-        }
-    }
-
 
     public function save_opname_ics()
     {
@@ -357,5 +353,54 @@ class C_Ics extends CI_Controller
                 redirect('ics/ics_diffrent');
                 break;
         }
+    }
+
+    public function import_csv_po()
+    {
+        $this->load->library('upload');
+        $this->load->helper('file');
+
+        $config['upload_path']   = './uploads/';
+        $config['allowed_types'] = 'csv';
+        $config['file_name']     = 'import_po_' . time();
+        $config['overwrite']     = true;
+
+        $this->upload->initialize($config);
+
+        if (!$this->upload->do_upload('file_csv')) {
+            $this->session->set_flashdata('error', $this->upload->display_errors());
+            redirect('ics/icspo');
+        }
+
+        $fileData = $this->upload->data();
+        $filePath = $fileData['full_path'];
+
+        $handle = fopen($filePath, "r");
+        $header = fgetcsv($handle);
+
+        $data_import = [];
+        $now = date('d/m/Y');
+
+        while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            $data_import[] = [
+                'tgl_transaksi'   => $row[0],
+                'kd_faktur_lpb'   => $row[1],
+                'nama_barang'     => $row[2],
+                'exp_date'        => $row[3],
+                'qty'             => $row[4],
+                'input_at'        => $now,
+                'lpb_status'      => '1',
+            ];
+        }
+        fclose($handle);
+
+        if (!empty($data_import)) {
+            $this->db->insert_batch('tb_ics_po', $data_import);
+            $this->session->set_flashdata('success', 'Import berhasil!');
+        } else {
+            $this->session->set_flashdata('error', 'File kosong atau format tidak sesuai.');
+        }
+
+        redirect('ics/icspo');
     }
 }

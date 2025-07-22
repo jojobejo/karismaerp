@@ -81,6 +81,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#tbics_byallbarang').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     $('#tb_ics_do').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -109,6 +118,33 @@
       "responsive": true,
     });
     $('#dailyod').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+    $('#tracking_input_ics_byexp').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+    $('#ics_do_byexp').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+    $('#ics_po_byexp').DataTable({
       "paging": true,
       "lengthChange": false,
       "searching": true,

@@ -16,7 +16,10 @@
                     <section class="content">
                         <div class="row">
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                                <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-boxes"></i> By All Barang</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-calendar"></i> By Expired Date</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
@@ -25,13 +28,13 @@
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                             </div>
                         </div>
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <table class="table table-bordered" id="tbics_erp">
+                                    <table class="table table-bordered table-striped" id="tbics_erp">
                                         <thead>
                                             <tr>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
@@ -64,7 +67,7 @@
                                             <?php foreach ($barang_ics as $br) : ?>
                                                 <tr>
                                                     <td>
-                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
                                                     </td>
                                                     <td><?= $br->nama_barang ?></td>
                                                     <td><?= $br->exp_date ?></td>
@@ -76,9 +79,20 @@
                                                     <td><?= $br->out_pcs ?></td>
                                                     <td><?= $br->saldo_akhir_box ?></td>
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
-                                                    <td><?= $br->adj_box ?></td>
-                                                    <td><?= $br->adj_pcs ?></td>
+                                                    <td><?= $br->fisik_box ?></td>
+                                                    <td><?= $br->fisik_pcs ?></td>
                                                     <td><?= $br->qty_selisih ?></td>
+                                                    <!-- <td class="bg-info text-white"><?= $br->saldo_awal_box ?></td>
+                                                    <td class="bg-info text-white"><?= $br->saldo_awal_pcs ?></td>
+                                                    <td class="bg-success text-white"><?= $br->in_box ?></td>
+                                                    <td class="bg-success text-white"><?= $br->in_box ?></td>
+                                                    <td class="bg-danger text-white"><?= $br->out_box ?></td>
+                                                    <td class="bg-danger text-white"><?= $br->out_pcs ?></td>
+                                                    <td class="bg-info text-white"><?= $br->saldo_akhir_box ?></td>
+                                                    <td class="bg-info text-white"><?= $br->saldo_akhir_pcs ?></td>
+                                                    <td class="bg-success text-white"><?= $br->fisik_box ?></td>
+                                                    <td class="bg-success text-white"><?= $br->fisik_pcs ?></td>
+                                                    <td class="bg-info text-white"><?= $br->qty_selisih ?></td> -->
                                                     <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                         <td style="text-align: center;">
                                                             <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -92,6 +106,22 @@
                                                         <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->id ?>"><i class="fas fa-plus-circle"></i></a>
                                                     </td>
                                                 </tr>
+                                                <!-- <tr>
+                                                    <td><?= $br->nama_barang ?></td>
+                                                    <td><?= $br->exp_date ?></td>
+                                                    <td><?= $br->in_box ?></td>
+                                                    <td><?= $br->in_box ?></td>
+                                                    <td><?= $br->out_box ?></td>
+                                                    <td><?= $br->out_pcs ?></td>
+                                                    <td><?= $br->saldo_awal_box ?></td>
+                                                    <td><?= $br->saldo_awal_pcs ?></td>
+                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_box"><?= $br->opname_box ?></td>
+                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_pcs"><?= $br->opname_pcs ?></td>
+                                                    <td><?= $br->saldo_akhir_box ?></td>
+                                                    <td><?= $br->saldo_akhir_pcs ?></td>
+                                                    <td><?= $br->klop ?></td>
+                                                    <td><?= $br->klop ?></td>
+                                                </tr> -->
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
@@ -115,7 +145,8 @@
                             <div class="modal-body">
                                 <input type="hidden" name="id" id="modal_id">
                                 <input type="hidden" name="dimensi" id="modal_dimensi">
-                                <input type="hidden" name="action" id="action_id" value="diffrent">
+                                <input type="hidden" name="action" id="action_id" value="dashboard">
+
                                 <div class="form-group">
                                     <label for="nama_barang">Nama Barang</label>
                                     <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
@@ -123,6 +154,10 @@
                                 <div class="form-group">
                                     <label for="exp_date">Expired Date</label>
                                     <input type="text" name="exp_date" id="modal_exp_date" class="form-control" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="exp_date">Keterangan</label>
+                                    <textarea class="form-control" name="keterangan_isi" id="modal_keterangan" placeholder="Tambahkan keterangan inputer" required></textarea>
                                 </div>
                                 <div class="form-group">
                                     <label for="qty_box">Qty Box</label>

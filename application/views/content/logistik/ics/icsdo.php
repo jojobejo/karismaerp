@@ -15,7 +15,7 @@
                 <section class="content">
                     <div class="row">
                         <div class="col-auto">
-                            <a href="<?= base_url('ics') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-home"></i> Dashboard</a>
+                            <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
