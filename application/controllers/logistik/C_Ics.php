@@ -15,9 +15,7 @@ class C_Ics extends CI_Controller
     public function index()
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
-        $tgl                        = date('d/m/Y');
-        $data['tanggal_now']        = date('d/m/Y');
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics($tgl);
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics.php', $data);
@@ -27,12 +25,10 @@ class C_Ics extends CI_Controller
     public function ics_diffrent()
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
-        $tgl                        = date('d/m/Y');
-        $data['tanggal_now']        = date('d/m/Y');
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics_diffrent($tgl);
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_diffrent();
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/ics.php', $data);
+        $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -179,7 +175,6 @@ class C_Ics extends CI_Controller
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $data['nmbarang']           = $this->M_Ics->get_br_name($idbarang);
-
         $data_barang = $this->db
             ->select('a.nama_barang, a.exp_date')
             ->from('tb_saldo_awal a')
@@ -198,7 +193,6 @@ class C_Ics extends CI_Controller
         $query = $this->db->query("SELECT
             a.id,
             a.nama_barang,
-            b.kode_barang,
             a.exp_date as exp_date,
             (b.p*b.l*b.t) AS dimensi,
             SUM(a.qty) AS qty_awal,
@@ -208,8 +202,8 @@ class C_Ics extends CI_Controller
             (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
             COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
-            FROM tb_ics a
-            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+            FROM tb_saldo_awal a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
             LEFT JOIN (
                 SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
                 FROM tb_ics_do
@@ -229,8 +223,8 @@ class C_Ics extends CI_Controller
             GROUP BY a.nama_barang, a.exp_date", array($nama_barang, $exp_date));
 
         $data['detail_stok']        = $query->result();
+        $data['detail_allbarang']   = $this->M_Ics->ics_get_all_qty_barang($nama_barang);
         $data['input_log']          = $this->M_Ics->ics_log_input($nama_barang, $exp_date);
-
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_stock_controller.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -274,15 +268,49 @@ class C_Ics extends CI_Controller
             echo json_encode(['status' => 'error', 'message' => 'Insert gagal']);
         }
     }
+    
+    public function import_csv()
+    {
+        if ($_FILES['file_csv']['name']) {
+            $filename = $_FILES['file_csv']['tmp_name'];
+            $handle = fopen($filename, "r");
+
+            // Skip header
+            fgetcsv($handle);
+
+            $this->load->database();
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                if (count($data) >= 7) {
+                    $this->db->insert('tb_ics_po', [
+                        'kd_faktur'      => $data[0],
+                        'tgl_transaksi'  => $data[1],
+                        'nama_barang'    => $data[2],
+                        'exp_date'       => $data[3],
+                        'qty'            => $data[4],
+                        'qty_box'        => $data[5],
+                        'qty_pcs'        => $data[6]
+                    ]);
+                }
+            }
+            fclose($handle);
+            http_response_code(200);
+        } else {
+            http_response_code(400);
+            echo "No file uploaded";
+        }
+    }
+
 
     public function save_opname_ics()
     {
+        $action = $this->input->post('action');
         $id          = $this->input->post('id');
         $nama_barang = $this->input->post('nama_barang');
         $exp_date    = $this->input->post('exp_date');
         $dimensi     = $this->input->post('dimensi');
         $qty_box     = $this->input->post('qty_box');
         $qty_pcs     = $this->input->post('qty_pcs');
+        $keterangan  = $this->input->post('keterangan_isi');
         $qty_total   = ($qty_box * $dimensi) + $qty_pcs;
 
         $data = [
@@ -303,16 +331,31 @@ class C_Ics extends CI_Controller
             'qty_pcs'       => $qty_pcs,
             'no_lot'        => '-',
             'exp_date'      => $exp_date,
-            'keterangan'    => 'ICS UPDATE',
+            'keterangan'    => $keterangan,
             'inputer'       => $this->session->userdata('nama'),
             'tgl_input'     => date('d/m/Y'),
             'create_at'     => date('Y-m-d H:i:s')
         ];
 
-        $this->db->insert('tb_ics_opname', $data);
-        $this->db->insert('tb_log_ics', $logics);
-
-        $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
-        redirect('ics/ics_stock_controller/' . $id);
+        switch ($action) {
+            case 'dashboard':
+                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_log_ics', $logics);
+                $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
+                redirect('ics');
+                break;
+            case 'formdetail':
+                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_log_ics', $logics);
+                $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
+                redirect('ics/ics_stock_controller/' . $id);
+                break;
+            case 'diffrent':
+                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_log_ics', $logics);
+                $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
+                redirect('ics/ics_diffrent');
+                break;
+        }
     }
 }

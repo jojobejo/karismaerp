@@ -1,0 +1,13 @@
+QUERY PERHITUNGAN ICS BERDASARKAN EXPIRED DATE
+
+| Komponen            | Penjelasan                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `saldo_awal_qty`    | Diambil dari `tb_saldo_awal`, dijumlahkan berdasarkan `nama_barang` dan `exp_date` |
+| `qty_in`            | Dari `tb_ics_po`                                                                   |
+| `qty_out`           | Dari `tb_ics_do`                                                                   |
+| `saldo_akhir_qty`   | Hasil hitung: `saldo_awal_qty + qty_in - qty_out`                                  |
+| `fisik_ics`         | Jumlah aktual yang dicatat di `tb_ics_opname`                                      |
+| `qty_selisih`       | Selisih antara `fisik_ics` dan `saldo_akhir_qty`                                   |
+| `status_kesesuaian` | Menunjukkan apakah stok fisik sesuai dengan sistem                                 |
+
+

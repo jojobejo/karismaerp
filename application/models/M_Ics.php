@@ -42,114 +42,92 @@ class M_Ics extends CI_Model
         return $barang->p * $barang->l * $barang->t;
     }
 
-    public function list_barang_ics($tgl)
+    public function list_barang_ics()
     {
         return $this->db->query("SELECT
-            x.id,
-            x.nama_barang,
-            x.exp_date,
-            x.saldo_awal_qty,
-            FLOOR(x.saldo_awal_qty / (mb.p * mb.l * mb.t)) AS saldo_awal_box,
-            MOD(x.saldo_awal_qty, (mb.p * mb.l * mb.t)) AS saldo_awal_pcs,
-
-            COALESCE(d.qty_out, 0) AS qty_out,
-            FLOOR(COALESCE(d.qty_out, 0) / (mb.p * mb.l * mb.t)) AS out_box,
-            MOD(COALESCE(d.qty_out, 0), (mb.p * mb.l * mb.t)) AS out_pcs,
-
-            COALESCE(p.qty_in, 0) AS qty_in,
-            FLOOR(COALESCE(p.qty_in, 0) / (mb.p * mb.l * mb.t)) AS in_box,
-            MOD(COALESCE(p.qty_in, 0), (mb.p * mb.l * mb.t)) AS in_pcs,
-
-            COALESCE(o.adjustment, 0) AS adjustment,
-            FLOOR(COALESCE(o.adjustment, 0) / (mb.p * mb.l * mb.t)) AS adj_box,
-            MOD(COALESCE(o.adjustment, 0), (mb.p * mb.l * mb.t)) AS adj_pcs,
-
-            -- Saldo Akhir
+        x.id,
+        x.nama_barang,
+        x.exp_date,
+        COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
+        FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
+        MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
+        COALESCE(p.qty_in, 0) AS qty_in,
+        FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
+        MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(d.qty_out, 0) AS qty_out,
+        FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
+        MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
+        (
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ) AS saldo_akhir_qty,
+        FLOOR((
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
+        MOD((
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
+        COALESCE(o.qty_opname, 0) AS fisik_ics,
+        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
+        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        (
+            COALESCE(o.qty_opname, 0) -
             (
-                x.saldo_awal_qty
-                - COALESCE(d.qty_out, 0)
-                + COALESCE(p.qty_in, 0)
-                + COALESCE(o.adjustment, 0)
-            ) AS saldo_akhir_qty,
-
-            FLOOR((
-                x.saldo_awal_qty
-                - COALESCE(d.qty_out, 0)
-                + COALESCE(p.qty_in, 0)
-                + COALESCE(o.adjustment, 0)
-            ) / (mb.p * mb.l * mb.t)) AS saldo_akhir_box,
-
-            MOD((
-                x.saldo_awal_qty
-                - COALESCE(d.qty_out, 0)
-                + COALESCE(p.qty_in, 0)
-                + COALESCE(o.adjustment, 0)
-            ), (mb.p * mb.l * mb.t)) AS saldo_akhir_pcs,
-
-            -- Selisih
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ) AS qty_selisih,
+        FLOOR((
+            COALESCE(o.qty_opname, 0) -
             (
-                (
-                    x.saldo_awal_qty
-                    - COALESCE(d.qty_out, 0)
-                    + COALESCE(p.qty_in, 0)
-                    + COALESCE(o.adjustment, 0)
-                ) - x.saldo_awal_qty
-            ) AS qty_selisih,
-
-            FLOOR((
-                (
-                    x.saldo_awal_qty
-                    - COALESCE(d.qty_out, 0)
-                    + COALESCE(p.qty_in, 0)
-                    + COALESCE(o.adjustment, 0)
-                ) - x.saldo_awal_qty
-            ) / (mb.p * mb.l * mb.t)) AS selisih_box,
-
-            MOD((
-                (
-                    x.saldo_awal_qty
-                    - COALESCE(d.qty_out, 0)
-                    + COALESCE(p.qty_in, 0)
-                    + COALESCE(o.adjustment, 0)
-                ) - x.saldo_awal_qty
-            ), (mb.p * mb.l * mb.t)) AS selisih_pcs,
-
-            CASE 
-                WHEN (
-                    x.saldo_awal_qty
-                    - COALESCE(d.qty_out, 0)
-                    + COALESCE(p.qty_in, 0)
-                    + COALESCE(o.adjustment, 0)
-                ) = x.saldo_awal_qty THEN 'KLOP'
-                ELSE 'TIDAK'
-            END AS status_kesesuaian
-
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
+        MOD((
+            COALESCE(o.qty_opname, 0) -
+            (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
+        CASE
+            WHEN (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            ) = COALESCE(o.qty_opname, 0)
+            THEN 'KLOP'
+            ELSE 'TIDAK'
+        END AS status_kesesuaian
         FROM (
             SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty
             FROM tb_saldo_awal
             GROUP BY nama_barang, exp_date
         ) x
-
-        LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-            FROM tb_ics_do
-            WHERE tgl_transaksi = '$tgl'
-            GROUP BY nama_barang, exp_date
-        ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
-
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_in
             FROM tb_ics_po
-            WHERE tgl_transaksi = '$tgl'
             GROUP BY nama_barang, exp_date
         ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
-
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS adjustment
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_out
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
             FROM tb_ics_opname
             GROUP BY nama_barang, exp_date
         ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
-
         LEFT JOIN (
             SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
             FROM tb_mbarang
@@ -158,7 +136,8 @@ class M_Ics extends CI_Model
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
 
-    public function list_barang_ics_diffrent($tgl)
+
+    public function list_barang_ics_diffrent()
     {
         return $this->db->query("SELECT
             x.id,
@@ -235,13 +214,11 @@ class M_Ics extends CI_Model
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_out
             FROM tb_ics_do
-            WHERE tgl_transaksi = '21/07/2025'
             GROUP BY nama_barang, exp_date
         ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_in
             FROM tb_ics_po
-            WHERE tgl_transaksi = '21/07/2025'
             GROUP BY nama_barang, exp_date
         ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
         LEFT JOIN (
@@ -262,60 +239,6 @@ class M_Ics extends CI_Model
         ) != x.saldo_awal_qty
         ORDER BY x.nama_barang, x.exp_date")->result();
     }
-
-
-    // public function list_barang_ics($tgl)
-    // {
-    //     return $this->db->query("SELECT 
-    //     i.id as id,
-    // 	mb.kode_barang,
-    //     i.nama_barang,
-    //     i.exp_date,
-    //     SUM(COALESCE(FLOOR(od.qty_out / (mb.p * mb.l * mb.t)), 0)) AS out_box,
-    //     SUM(COALESCE(MOD(od.qty_out, (mb.p * mb.l * mb.t)), 0))    AS out_pcs,
-    //     SUM(COALESCE(FLOOR(po.qty_po / (mb.p * mb.l * mb.t)), 0)) AS in_box,
-    //     SUM(COALESCE(MOD(po.qty_po, (mb.p * mb.l * mb.t)), 0))    AS in_pcs,
-    //     SUM(FLOOR(i.qty / (mb.p * mb.l * mb.t))) AS saldo_awal_box,
-    //     SUM(MOD(i.qty, (mb.p * mb.l * mb.t)))    AS saldo_awal_pcs,
-    //     SUM(COALESCE(FLOOR(op.qty_op / (mb.p * mb.l * mb.t)), 0)) AS opname_box,
-    //     SUM(COALESCE(MOD(op.qty_op, (mb.p * mb.l * mb.t)), 0))    AS opname_pcs,
-    //     SUM(FLOOR((i.qty - COALESCE(od.qty_out, 0) + COALESCE(po.qty_po, 0)) / (mb.p * mb.l * mb.t))) AS saldo_akhir_box,
-    //     SUM(MOD((i.qty - COALESCE(od.qty_out, 0) + COALESCE(po.qty_po, 0)), (mb.p * mb.l * mb.t)))    AS saldo_akhir_pcs,
-    //     CASE
-    //         WHEN
-    //             SUM(FLOOR((i.qty - COALESCE(od.qty_out, 0) + COALESCE(po.qty_po, 0)) / (mb.p * mb.l * mb.t))) =
-    //             SUM(COALESCE(FLOOR(op.qty_op / (mb.p * mb.l * mb.t)), 0))
-    //         AND
-    //             SUM(MOD((i.qty - COALESCE(od.qty_out, 0) + COALESCE(po.qty_po, 0)), (mb.p * mb.l * mb.t))) =
-    //             SUM(COALESCE(MOD(op.qty_op, (mb.p * mb.l * mb.t)), 0))
-    //         THEN 'KLOP'
-    //         ELSE 'TIDAK'
-    //     END AS klop
-    //     FROM tb_ics i
-    //     LEFT JOIN tb_master_barang mb ON mb.nm_barang = i.nama_barang
-    //     LEFT JOIN (
-    //         SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-    //         FROM tb_ics_do
-    //         WHERE DATE(tgl_transaksi) = '$tgl'
-    //         GROUP BY nama_barang, exp_date
-    //     ) od ON od.nama_barang = i.nama_barang AND od.exp_date = i.exp_date
-    //     LEFT JOIN (
-    //         SELECT nama_barang, exp_date, SUM(qty) AS qty_po
-    //         FROM tb_ics_po
-    //         WHERE DATE(tgl_transaksi) = '$tgl'
-    //         GROUP BY nama_barang, exp_date
-    //     ) po ON po.nama_barang = i.nama_barang AND po.exp_date = i.exp_date
-    //     LEFT JOIN (
-    //         SELECT nama_barang, exp_date, SUM(qty) AS qty_op
-    //         FROM tb_ics_opname
-    //         WHERE DATE(input_at) = '$tgl'
-    //         GROUP BY nama_barang, exp_date
-    //     ) op ON op.nama_barang = i.nama_barang AND op.exp_date = i.exp_date
-    //     WHERE mb.p * mb.l * mb.t > 0
-    //     GROUP BY i.nama_barang, i.exp_date
-    //     ORDER BY i.nama_barang, i.exp_date;")->result();
-    // }
-
     public function update_cell($id, $field, $value)
     {
         $allowed = ['kd_barang', 'nama_barang', 'qty', 'exp_date'];
@@ -444,5 +367,39 @@ class M_Ics extends CI_Model
         ) opname ON opname.nama_barang = a.nama_barang
         WHERE b.kode_barang = '$kdbarang'
         ")->result();
+    }
+
+    public function ics_get_all_qty_barang($nmbarang)
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.nama_barang,
+            (b.p*b.l*b.t) AS dimensi,
+            SUM(a.qty) AS qty_awal,
+            COALESCE(pending.qty_pending, 0) AS DO,
+            COALESCE(purchase.qty_po, 0) AS PO,
+            COALESCE(opname.qty_opname, 0) AS ICS,
+            (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
+            FROM tb_saldo_awal a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang,SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang
+            ) pending ON pending.nama_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang,SUM(qty) AS qty_po
+                FROM tb_ics_po
+                GROUP BY nama_barang
+            ) purchase ON purchase.nama_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, SUM(qty) AS qty_opname
+                FROM tb_ics_opname
+                GROUP BY nama_barang
+            ) opname ON opname.nama_barang = a.nama_barang
+            WHERE a.nama_barang = '$nmbarang'
+            GROUP BY a.nama_barang;")->result();
     }
 }

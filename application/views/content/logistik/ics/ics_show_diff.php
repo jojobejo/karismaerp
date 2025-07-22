@@ -16,10 +16,7 @@
                     <section class="content">
                         <div class="row">
                             <div class="col-auto">
-                                <a href="<?= base_url('ics') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-home"></i> Dashboard</a>
-                            </div>
-                            <div class="col-auto">
-                                <button id="btnSimpanOpname" class="btn btn-md btn-primary w-100 mb-3"> <i class="fas fa-tasks"></i> Simpan Opname</button>
+                                <a href="<?= base_url('ics') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-home"></i> Dashboard</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
@@ -28,22 +25,22 @@
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                             </div>
                         </div>
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <table class="table table-bordered" id="tbics_erp_diff">
+                                    <table class="table table-bordered" id="tbics_erp">
                                         <thead>
                                             <tr>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
                                                 <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
-                                                <th colspan="2" class="bg-success text-white text-center">In Today</th>
-                                                <th colspan="2" class="bg-danger text-white text-center">Out Today</th>
                                                 <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
-                                                <th colspan="2" class="bg-success text-white text-center"><?= $tanggal_now ?></th>
-                                                <th colspan="2" class="bg-danger text-white text-center">Saldo Akhir</th>
+                                                <th colspan="2" class="bg-success text-white text-center">LPB</th>
+                                                <th colspan="2" class="bg-danger text-white text-center">DO</th>
+                                                <th colspan="2" class="bg-info text-white text-center">Sistem</th>
+                                                <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
                                                 <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
@@ -51,6 +48,8 @@
                                             <tr>
                                                 <th class="bg-primary text-white">Nama Barang</th>
                                                 <th class="bg-primary text-white">Date</th>
+                                                <th class="bg-info text-white">Box</th>
+                                                <th class="bg-info text-white">Pcs</th>
                                                 <th class="bg-success text-white">Box</th>
                                                 <th class="bg-success text-white">Pcs</th>
                                                 <th class="bg-danger text-white">Box</th>
@@ -59,28 +58,26 @@
                                                 <th class="bg-info text-white">Pcs</th>
                                                 <th class="bg-success text-white">Box</th>
                                                 <th class="bg-success text-white">Pcs</th>
-                                                <th class="bg-danger text-white">Box</th>
-                                                <th class="bg-danger text-white">Pcs</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <?php foreach ($barang_ics as $br) : ?>
                                                 <tr>
                                                     <td>
-                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
                                                     </td>
                                                     <td><?= $br->nama_barang ?></td>
                                                     <td><?= $br->exp_date ?></td>
+                                                    <td><?= $br->saldo_awal_box ?></td>
+                                                    <td><?= $br->saldo_awal_pcs ?></td>
                                                     <td><?= $br->in_box ?></td>
                                                     <td><?= $br->in_box ?></td>
                                                     <td><?= $br->out_box ?></td>
                                                     <td><?= $br->out_pcs ?></td>
-                                                    <td><?= $br->saldo_awal_box ?></td>
-                                                    <td><?= $br->saldo_awal_pcs ?></td>
-                                                    <td><?= $br->adj_box ?></td>
-                                                    <td><?= $br->adj_pcs ?></td>
                                                     <td><?= $br->saldo_akhir_box ?></td>
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
+                                                    <td><?= $br->adj_box ?></td>
+                                                    <td><?= $br->adj_pcs ?></td>
                                                     <td><?= $br->qty_selisih ?></td>
                                                     <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                         <td style="text-align: center;">
@@ -95,22 +92,6 @@
                                                         <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->id ?>"><i class="fas fa-plus-circle"></i></a>
                                                     </td>
                                                 </tr>
-                                                <!-- <tr>
-                                                    <td><?= $br->nama_barang ?></td>
-                                                    <td><?= $br->exp_date ?></td>
-                                                    <td><?= $br->in_box ?></td>
-                                                    <td><?= $br->in_box ?></td>
-                                                    <td><?= $br->out_box ?></td>
-                                                    <td><?= $br->out_pcs ?></td>
-                                                    <td><?= $br->saldo_awal_box ?></td>
-                                                    <td><?= $br->saldo_awal_pcs ?></td>
-                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_box"><?= $br->opname_box ?></td>
-                                                    <td contenteditable="true" class="editable" data-id="<?= $br->nama_barang ?>|<?= $br->exp_date ?>" data-field="opname_pcs"><?= $br->opname_pcs ?></td>
-                                                    <td><?= $br->saldo_akhir_box ?></td>
-                                                    <td><?= $br->saldo_akhir_pcs ?></td>
-                                                    <td><?= $br->klop ?></td>
-                                                    <td><?= $br->klop ?></td>
-                                                </tr> -->
                                             <?php endforeach; ?>
                                         </tbody>
                                     </table>
@@ -134,6 +115,7 @@
                             <div class="modal-body">
                                 <input type="hidden" name="id" id="modal_id">
                                 <input type="hidden" name="dimensi" id="modal_dimensi">
+                                <input type="hidden" name="action" id="action_id" value="diffrent">
                                 <div class="form-group">
                                     <label for="nama_barang">Nama Barang</label>
                                     <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>

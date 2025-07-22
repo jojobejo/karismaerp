@@ -13,11 +13,7 @@
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-                    <div class="row">
-                        <div class="col-auto">
-                            <a href="<?= base_url('ics') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
-                        </div>
-                    </div>
+
                     <div class="card">
                         <div class="card-header">
                             <?php foreach ($nmbarang as $nm) : ?>
@@ -26,6 +22,71 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
+                                        <i class="fas fa-boxes"></i> Allbarang
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-secondary" data-toggle="modal" data-target="#modalAddOpname">
+                                        <i class="fas fa-date"></i> FEFO
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
+                                        <i class="fas fa-search-minus"></i> DO
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-primary" data-toggle="modal" data-target="#modalAddOpname">
+                                        <i class="fas fa-search-plus"></i> PO
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-md btn-success" data-toggle="modal" data-target="#modalAddOpname">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-auto">
+                                    <div class="form-group" style="position: relative;background: #fff;">
+                                        <h5 class="card-title mt-2 mb-2"><b>Compare By All Barang</b></h5>
+                                        <table style="border: 1px solid #000000; border-collapse: collapse; width: 100%; text-align: center;">
+                                            <thead>
+                                                <tr>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">Qty</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">DO</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">PO</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">Qty All</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">Ics</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">Selisih</th>
+                                                    <th style="border: 1px solid #000000; padding: 5px;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($detail_allbarang as $dallbarang) : ?>
+                                                    <tr>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->qty_awal ?></td>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->DO ?></td>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->PO ?></td>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->qty_all ?></td>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->ICS ?></td>
+                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dallbarang->selisih ?></td>
+                                                        <?php if ($dallbarang->status == '0') : ?>
+                                                            <td style="border: 1px solid #000000; padding: 5px;"><a href="#" class="btn btn-sm btn-danger w-100"><i class="fas fa-times"></i></a></td>
+                                                        <?php else : ?>
+                                                            <td style="border: 1px solid #000000; padding: 5px;"><a href="#" class="btn btn-sm btn-success w-100"><i class="fas fa-check"></i></a></td>
+                                                        <?php endif; ?>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                                 <div class="col-auto">
                                     <div class="form-group" style="position: relative;background: #fff;">
                                         <h5 class="card-title mt-2 mb-2"><b>Compare By Expired Date</b></h5>
@@ -52,18 +113,20 @@
                                                         <td style="border: 1px solid #000000; padding: 5px;"><?= $dstock->qty_all ?></td>
                                                         <td style="border: 1px solid #000000; padding: 5px;"><?= $dstock->ICS ?></td>
                                                         <td style="border: 1px solid #000000; padding: 5px;"><?= $dstock->selisih ?></td>
-                                                        <td style="border: 1px solid #000000; padding: 5px;"><?= $dstock->status ?></td>
+                                                        <?php if ($dstock->status == '0') : ?>
+                                                            <td style="border: 1px solid #000000; padding: 5px;"><a href="#" class="btn btn-sm btn-danger w-100"><i class="fas fa-times"></i></a></td>
+                                                        <?php else : ?>
+                                                            <td style="border: 1px solid #000000; padding: 5px;"><a href="#" class="btn btn-sm btn-success w-100"><i class="fas fa-check"></i></a></td>
+                                                        <?php endif; ?>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>
                                         </table>
-                                        <button class="btn btn-sm btn-success w-100 mt-2" data-toggle="modal" data-target="#modalAddOpname">
-                                            <i class="fas fa-plus"></i> Add
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-                            <h3 class="card-title mt-2 mb-3"><strong>Tracking Inputer</strong></h3>
+
+                            <h3 class="card-title mt-2 mb-3"><strong>Tracking Inputer</strong> </h3>
                             <table class="table table-bordered table-sm" id="x">
                                 <thead>
                                     <tr>
@@ -72,6 +135,8 @@
                                         <th>QTY</th>
                                         <th>Box</th>
                                         <th>Pcs</th>
+                                        <th>Inputer</th>
+                                        <th>Keterangan</th>
                                         <th>Input At</th>
                                     </tr>
                                 </thead>
@@ -83,6 +148,8 @@
                                             <td><?= $log->qty ?></td>
                                             <td><?= $log->qty_box ?></td>
                                             <td><?= $log->qty_pcs ?></td>
+                                            <td><?= $log->inputer ?></td>
+                                            <td><?= $log->keterangan ?></td>
                                             <td><?= $log->tgl_input ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -122,11 +189,16 @@
                                     <input type="text" name="nama_barang" class="form-control" value="<?= $dstock->nama_barang ?>" readonly required>
                                     <input type="text" name="dimensi" class="form-control" value="<?= $dstock->dimensi ?>" hidden readonly>
                                     <input type="text" name="id" class="form-control" value="<?= $dstock->id ?>" readonly hidden>
+                                    <input type="hidden" name="action" id="action_id" value="formdetail">
                                 </div>
                                 <!-- Expired Date -->
                                 <div class="form-group">
                                     <label for="exp_date">Expired Date</label>
                                     <input type="text" name="exp_date" class="form-control" value="<?= $dstock->exp_date ?>" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label for="exp_date">Keterangan</label>
+                                    <textarea class="form-control" name="keterangan_isi" id="modal_keterangan" required placeholder="Tambahkan keterangan inputer"></textarea>
                                 </div>
                                 <!-- Qty Box -->
                                 <div class="form-group">

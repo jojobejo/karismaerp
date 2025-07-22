@@ -89,6 +89,7 @@ $route['ics/diffrent']                              = 'logistik/C_Ics/ics_diffre
 $route['ics/sv_opname']                             = 'logistik/C_Ics/save_opname_ics';
 $route['ics/get_detail_barang']                     = 'logistik/C_Ics/get_detail_barang';
 $route['ics/ics_stock_controller/(:any)']           = 'logistik/C_Ics/ics_stock_controller/$1';
+$route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffrent';
 
 
 // LOGISTIK & OPNAME
