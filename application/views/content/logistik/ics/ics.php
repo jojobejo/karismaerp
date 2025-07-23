@@ -150,15 +150,23 @@
                                 </div>
                             </div>
                         </div>
+                        <?php if ($this->session->userdata('lv') == 2) : ?>
+                            <div class="row">
+                                <div class="col ml-2">
+                                    <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-primary w-100">STOCK ICS</a>
+                                </div>
+                            </div>
+                        <?php else : ?>
+                            <div class="row">
+                                <div class="col ml-2">
+                                    <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-primary w-100">STOCK ICS</a>
+                                </div>
+                                <div class="col ml-2">
+                                    <a href="<?= base_url('admstocktracking') ?>" class="btn btn-primary w-100">Stock Opname</a>
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
-                        <div class="row">
-                            <div class="col ml-2">
-                                <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-primary w-100">STOCK ICS</a>
-                            </div>
-                            <div class="col ml-2">
-                                <a href="<?= base_url('admstocktracking') ?>" class="btn btn-primary w-100">Stock Opname</a>
-                            </div>
-                        </div>
                 </section>
             <?php elseif ($this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
             <?php endif; ?>

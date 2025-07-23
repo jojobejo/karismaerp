@@ -18,12 +18,15 @@
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                             </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
-                            </div>
+                            <?php if ($this->session->userdata('lv') == '1') : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
+                                </div>
+                            <?php else : ?>
+                            <?php endif; ?>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                             </div>
