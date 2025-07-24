@@ -79,8 +79,8 @@
                                                     <td><?= $br->out_pcs ?></td>
                                                     <td><?= $br->saldo_akhir_box ?></td>
                                                     <td><?= $br->saldo_akhir_pcs ?></td>
-                                                    <td><?= $br->adj_box ?></td>
-                                                    <td><?= $br->adj_pcs ?></td>
+                                                    <td><?= $br->fisik_box ?></td>
+                                                    <td><?= $br->fisik_pcs ?></td>
                                                     <td><?= $br->qty_selisih ?></td>
                                                     <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                         <td style="text-align: center;">

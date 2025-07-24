@@ -126,10 +126,18 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('admstocktracking') ?>" class="nav-link">
+              <a href="<?php echo base_url('ics') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('ics/master_barang') ?>" class="nav-link">
+                <i class="nav-icon fas fa-database"></i>
+                <p>
+                  Master Barang
                 </p>
               </a>
             </li>
@@ -150,7 +158,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('stockopname') ?>" class="nav-link">
+              <a href="<?php echo base_url('s') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard

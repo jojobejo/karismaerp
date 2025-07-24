@@ -82,6 +82,10 @@ $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
+$route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
+$route['ics/save_mbarang']                          = 'logistik/C_Ics/add_master_barang';
+$route['ics/get_detail_mbarang']                    = 'logistik/C_Ics/get_detail_mbarang';
+
 $route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_expdate';
 $route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';

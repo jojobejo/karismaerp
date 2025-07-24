@@ -39,7 +39,7 @@ class C_Ics extends CI_Controller
 
     public function ics_by_allbarang()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['page_title']         = 'KARISMA - ICS';
         $data['barang_ics']         = $this->M_Ics->list_barang_ics_allbarang();
 
         $this->load->view('partial/main/header.php', $data);
@@ -49,13 +49,62 @@ class C_Ics extends CI_Controller
 
     public function ics_diffrent()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['page_title']         = 'KARISMA - ICS';
         $data['barang_ics']         = $this->M_Ics->list_barang_ics_diffrent();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function master_barang()
+    {
+        $data['page_title']         = 'KARISMA - MASTER BARANG';
+        $data['mbarang']            = $this->M_Ics->get_master_barang_ics();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/master_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function get_detail_mbarang()
+    {
+        $id = $this->input->post('id');
+        $this->db->select('i.id,i.nm_barang,i.bhn_aktif,i.satuan,i.p,i.l,i.t,i.berat,i.kubikasi,i.qty_min,i.status');
+        $this->db->from('tb_mbarang i');
+        $this->db->where('i.id', $id);
+        $query = $this->db->get()->row();
+
+        echo json_encode($query);
+    }
+
+    // public function add_master_barang()
+    // {
+    //     $nmbarang       = $this->post('');
+    //     $bhn_aktif      = $this->post('');
+    //     $satuan         = $this->post('');
+    //     $dimensi        = $this->post('');
+    //     $tonase         = $this->post('');
+    //     $kubikasi       = $this->post('');
+    //     $qty_min        = $this->post('');
+
+    //     $svbarang = array(
+    //         'kd_system'     =>
+    //         'nm_barang'     =>
+    //         'bhn_aktif'     =>
+    //         'satuan'        =>
+    //         'p'             =>
+    //         'l'             =>
+    //         't'             =>
+    //         'berat'         =>
+    //         'kubikasi'      =>
+    //         'qty_min'       =>
+    //         'status'        =>
+    //     );
+
+    //     $this->M_Ics->insert_mbarang_ics($svbarang);
+    //     redirect('ics/master_barang');
+    // }
 
     public function update_inline()
     {
