@@ -271,6 +271,16 @@ class C_Ics extends CI_Controller
         echo json_encode($query);
     }
 
+    public function ics_detail_allbarang($nmbarang)
+    {
+        $data['ics_detail_all'] = $this->M_Ics->get_detail_ics_allbarang($nmbarang);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics_detail_allbarang.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
     public function simpan_input_opname()
     {
         $dimensi   = (int) $this->input->post('dimensi');

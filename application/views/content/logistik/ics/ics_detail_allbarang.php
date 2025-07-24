@@ -242,59 +242,6 @@
             </div>
         </footer>
 
-        <!-- Modal Add Opname -->
-        <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <form action="<?= base_url('ics/sv_opname') ?>" method="post">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success">
-                            <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Opname</h5>
-                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        <?php foreach ($detail_stok as $dstock) : ?>
-                            <div class="modal-body">
-                                <!-- Nama Barang -->
-                                <div class="form-group">
-                                    <label for="nama_barang">Nama Barang</label>
-                                    <input type="text" name="nama_barang" class="form-control" value="<?= $dstock->nama_barang ?>" readonly required>
-                                    <input type="text" name="dimensi" class="form-control" value="<?= $dstock->dimensi ?>" hidden readonly>
-                                    <input type="text" name="id" class="form-control" value="<?= $dstock->id ?>" readonly hidden>
-                                    <input type="hidden" name="action" id="action_id" value="formdetail">
-                                </div>
-                                <!-- Expired Date -->
-                                <div class="form-group">
-                                    <label for="exp_date">Expired Date</label>
-                                    <input type="text" name="exp_date" class="form-control" value="<?= $dstock->exp_date ?>" readonly>
-                                </div>
-                                <div class="form-group">
-                                    <label for="exp_date">Keterangan</label>
-                                    <textarea class="form-control" name="keterangan_isi" id="modal_keterangan" required placeholder="Tambahkan keterangan inputer"></textarea>
-                                </div>
-                                <!-- Qty Box -->
-                                <div class="form-group">
-                                    <label for="qty_box">Qty Box</label>
-                                    <input type="number" name="qty_box" class="form-control" placeholder="0">
-                                </div>
-                                <!-- Qty Pcs -->
-                                <div class="form-group">
-                                    <label for="qty_pcs">Qty Pcs</label>
-                                    <input type="number" name="qty_pcs" class="form-control" placeholder="0">
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-
-        <!-- Control Sidebar -->
         <aside class="control-sidebar control-sidebar-dark">
             <!-- Control sidebar content goes here -->
         </aside>
@@ -303,13 +250,13 @@
     <script>
         $(document).ready(function() {
             $('#btndo').click(function() {
-                $('#card_do').slideToggle(); // toggle DO card
-                $('#card_po').slideUp(); // sembunyikan PO saat DO tampil
+                $('#card_do').slideToggle();
+                $('#card_po').slideUp(); 
             });
 
             $('#btnpo').click(function() {
-                $('#card_po').slideToggle(); // toggle PO card
-                $('#card_do').slideUp(); // sembunyikan DO saat PO tampil
+                $('#card_po').slideToggle(); 
+                $('#card_do').slideUp(); 
             });
         });
     </script>
