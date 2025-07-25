@@ -130,7 +130,7 @@ class M_Ics extends CI_Model
         ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
         LEFT JOIN (
             SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
-            FROM tb_mbarang
+            FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
         ORDER BY x.nama_barang, x.exp_date;")->result();
