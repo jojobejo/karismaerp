@@ -57,6 +57,26 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function stock_by_kodebr($kd)
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['get_barang']         = $this->M_Ics->get_detail_barang($kd);
+        $data['exp_date']           = $this->M_Ics->get_exp_by_kdsys($kd);
+
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/stock_by_kodebr.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function get_detail_by_exp_date()
+    {
+        $exp_date = $this->input->post('exp_date');
+        $nama_barang = $this->input->post('nama_barang');
+        $data = $this->M_Ics->get_exp_detail($nama_barang, $exp_date);
+        echo json_encode($data);
+    }
+
     public function master_barang()
     {
         $data['page_title']         = 'KARISMA - MASTER BARANG';

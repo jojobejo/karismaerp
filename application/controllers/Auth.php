@@ -43,7 +43,7 @@ class Auth extends CI_Controller
                     if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
                     } else if ($key->jobdesk == 'ADMINICS') {
-                        redirect('ics');
+                        redirect('ics/ics_diffrent');
                     } else if ($key->jobdesk == 'ADMINKEU') {
                         redirect('keuangan');
                     } else if ($key->jobdesk == 'DIREKTUR') {

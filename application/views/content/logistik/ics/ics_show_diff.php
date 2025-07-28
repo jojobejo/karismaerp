@@ -1,3 +1,14 @@
+<style>
+    .table-fixed-header thead th {
+        position: sticky;
+        top: 0;
+        background-color: #343a40;
+        /* warna sesuai thead-dark */
+        color: white;
+        z-index: 10;
+    }
+</style>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -34,70 +45,73 @@
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">
-                                    <table class="table table-bordered" id="tbics_erp">
-                                        <thead>
-                                            <tr>
-                                                <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
-                                                <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
-                                                <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
-                                                <th colspan="2" class="bg-success text-white text-center">LPB</th>
-                                                <th colspan="2" class="bg-danger text-white text-center">DO</th>
-                                                <th colspan="2" class="bg-info text-white text-center">Sistem</th>
-                                                <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
-                                                <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
-                                                <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
-                                            </tr>
-                                            <tr>
-                                                <th class="bg-primary text-white">Nama Barang</th>
-                                                <th class="bg-primary text-white">Date</th>
-                                                <th class="bg-info text-white">Box</th>
-                                                <th class="bg-info text-white">Pcs</th>
-                                                <th class="bg-success text-white">Box</th>
-                                                <th class="bg-success text-white">Pcs</th>
-                                                <th class="bg-danger text-white">Box</th>
-                                                <th class="bg-danger text-white">Pcs</th>
-                                                <th class="bg-info text-white">Box</th>
-                                                <th class="bg-info text-white">Pcs</th>
-                                                <th class="bg-success text-white">Box</th>
-                                                <th class="bg-success text-white">Pcs</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($barang_ics as $br) : ?>
+
+                                    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                        <table class="table table-bordered table-hover table-sm table-fixed-header" id="tbics_erp">
+                                            <thead>
                                                 <tr>
-                                                    <td>
-                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
-                                                    </td>
-                                                    <td><?= $br->nama_barang ?></td>
-                                                    <td><?= $br->exp_date ?></td>
-                                                    <td><?= $br->saldo_awal_box ?></td>
-                                                    <td><?= $br->saldo_awal_pcs ?></td>
-                                                    <td><?= $br->in_box ?></td>
-                                                    <td><?= $br->in_box ?></td>
-                                                    <td><?= $br->out_box ?></td>
-                                                    <td><?= $br->out_pcs ?></td>
-                                                    <td><?= $br->saldo_akhir_box ?></td>
-                                                    <td><?= $br->saldo_akhir_pcs ?></td>
-                                                    <td><?= $br->fisik_box ?></td>
-                                                    <td><?= $br->fisik_pcs ?></td>
-                                                    <td><?= $br->qty_selisih ?></td>
-                                                    <?php if ($br->status_kesesuaian == 'KLOP') : ?>
-                                                        <td style="text-align: center;">
-                                                            <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
-                                                        </td>
-                                                    <?php else : ?>
-                                                        <td style="text-align: center;">
-                                                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times-circle"></i></a>
-                                                        </td>
-                                                    <?php endif; ?>
-                                                    <td>
-                                                        <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->id ?>"><i class="fas fa-plus-circle"></i></a>
-                                                    </td>
+                                                    <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
+                                                    <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
+                                                    <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
+                                                    <th colspan="2" class="bg-success text-white text-center">LPB</th>
+                                                    <th colspan="2" class="bg-danger text-white text-center">DO</th>
+                                                    <th colspan="2" class="bg-info text-white text-center">Sistem</th>
+                                                    <th colspan="2" class="bg-success text-white text-center">Fisik</th>
+                                                    <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                    <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
+                                                    <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
                                                 </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                                                <tr>
+                                                    <th class="bg-primary text-white">Nama Barang</th>
+                                                    <th class="bg-primary text-white">Date</th>
+                                                    <th class="bg-info text-white">Box</th>
+                                                    <th class="bg-info text-white">Pcs</th>
+                                                    <th class="bg-success text-white">Box</th>
+                                                    <th class="bg-success text-white">Pcs</th>
+                                                    <th class="bg-danger text-white">Box</th>
+                                                    <th class="bg-danger text-white">Pcs</th>
+                                                    <th class="bg-info text-white">Box</th>
+                                                    <th class="bg-info text-white">Pcs</th>
+                                                    <th class="bg-success text-white">Box</th>
+                                                    <th class="bg-success text-white">Pcs</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($barang_ics as $br) : ?>
+                                                    <tr>
+                                                        <td>
+                                                            <a href="<?= base_url('ics/stock_by_kodebr/' . $br->kd)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                        </td>
+                                                        <td><?= $br->nama_barang ?></td>
+                                                        <td><?= $br->exp_date ?></td>
+                                                        <td><?= $br->saldo_awal_box ?></td>
+                                                        <td><?= $br->saldo_awal_pcs ?></td>
+                                                        <td><?= $br->in_box ?></td>
+                                                        <td><?= $br->in_box ?></td>
+                                                        <td><?= $br->out_box ?></td>
+                                                        <td><?= $br->out_pcs ?></td>
+                                                        <td><?= $br->saldo_akhir_box ?></td>
+                                                        <td><?= $br->saldo_akhir_pcs ?></td>
+                                                        <td><?= $br->fisik_box ?></td>
+                                                        <td><?= $br->fisik_pcs ?></td>
+                                                        <td><?= $br->qty_selisih ?></td>
+                                                        <?php if ($br->status_kesesuaian == 'KLOP') : ?>
+                                                            <td style="text-align: center;">
+                                                                <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
+                                                            </td>
+                                                        <?php else : ?>
+                                                            <td style="text-align: center;">
+                                                                <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                            </td>
+                                                        <?php endif; ?>
+                                                        <td>
+                                                            <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->kd ?>"><i class="fas fa-plus-circle"></i></a>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>

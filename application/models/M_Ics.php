@@ -235,10 +235,68 @@ class M_Ics extends CI_Model
         FROM tb_mbarang a
         ")->result();
     }
+
+    public function get_detail_barang($br)
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_master_barang a
+        WHERE a.kd_system = '$br'
+        ")->result();
+    }
+
+    public function get_exp_by_kdsys($kd)
+    {
+        return $this->db->query("SELECT
+        a.exp_date
+        FROM tb_saldo_awal a
+        LEFT JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+        WHERE b.kd_system = '$kd'
+        GROUP BY a.exp_date
+        ")->result();
+    }
+
+    public function get_exp_detail($nama_barang, $exp_date)
+    {
+        $sql = "SELECT
+                a.id,
+                a.nama_barang,
+                a.exp_date as expired,
+                (b.p*b.l*b.t) AS dimensi,
+                SUM(a.qty) AS qty,
+                COALESCE(pending.qty_pending, 0) AS do,
+                COALESCE(purchase.qty_po, 0) AS po,
+                COALESCE(opname.qty_opname, 0) AS ics,
+                (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+                COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+                IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
+            FROM tb_saldo_awal a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang, exp_date
+            ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_po
+                FROM tb_ics_po
+                GROUP BY nama_barang, exp_date
+            ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+                FROM tb_ics_opname
+                GROUP BY nama_barang, exp_date
+            ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
+            WHERE a.nama_barang = ? AND a.exp_date = ?
+            GROUP BY a.nama_barang, a.exp_date";
+
+        return $this->db->query($sql, [$nama_barang, $exp_date])->result();
+    }
+
     public function list_barang_ics_diffrent()
     {
         return $this->db->query("SELECT
-        x.id,
+        mb.kd,
         x.nama_barang,
         x.exp_date,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
@@ -322,12 +380,12 @@ class M_Ics extends CI_Model
             GROUP BY nama_barang, exp_date
         ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
-            FROM tb_mbarang
+            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+            FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
      	WHERE (COALESCE(o.qty_opname, 0) -(COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))) != 0
-        ORDER BY x.nama_barang, x.exp_date;")->result();
+        ORDER BY x.nama_barang, x.exp_date")->result();
     }
     public function update_cell($id, $field, $value)
     {
@@ -501,6 +559,7 @@ class M_Ics extends CI_Model
         WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$expdate'
         ")->result();
     }
+    
     public function get_po_by_expdate($nmbarang, $expdate)
     {
         return $this->db->query("SELECT
