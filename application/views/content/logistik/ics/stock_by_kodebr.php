@@ -64,10 +64,9 @@
                                                             <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
+                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-dimensi="<?= $br->dimensi ?>" data-kdbarang="<?= $br->kd_system ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
                                                                 <i class="fas fa-plus"></i>
                                                             </button>
-
                                                         </td>
                                                     <?php else : ?>
                                                         <td>
@@ -75,7 +74,7 @@
                                                             <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
+                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-dimensi="<?= $br->dimensi ?>" data-kdbarang="<?= $br->kd_system ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
                                                                 <i class="fas fa-plus"></i>
                                                             </button>
 
@@ -149,9 +148,9 @@
                                 <thead>
                                     <tr>
                                         <th>No</th>
+                                        <th>Qty</th>
                                         <th>User Input</th>
                                         <th>Waktu Input</th>
-                                        <th>Qty</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -173,8 +172,10 @@
                                         <div class="form-group">
                                             <label for="nama_barang">Nama Barang</label>
                                             <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
-                                            <input type="hidden" name="id" id="modal_id_barang" readonly>
-                                            <input type="hidden" name="action" value="formdetail">
+                                            <input type="text" name="id" id="modal_id_barang" readonly>
+                                            <input type="text" name="kdbarang" id="modal_kdbarang" readonly>
+                                            <input type="text" name="dimensi" id="modal_dimensi" readonly>
+                                            <input type="hidden" name="action" value="formbyexp">
                                         </div>
                                         <div class="form-group">
                                             <label for="exp_date">Expired Date</label>
@@ -192,8 +193,9 @@
                                             <label for="qty_pcs">Qty Pcs</label>
                                             <input type="number" name="qty_pcs" class="form-control" placeholder="0">
                                         </div>
-                                        <div class="">
-
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                                         </div>
                                     </div>
                                 </div>
@@ -230,6 +232,7 @@
             $('.view-detail').click(function() {
                 const nama_barang = $(this).data('nama');
                 const exp_date = $(this).data('exp');
+
 
                 $.ajax({
                     url: "<?= base_url('ics/get_detail_by_exp') ?>",
@@ -271,9 +274,9 @@
                         $.each(res.data_log, function(i, v) {
                             log_html += `<tr>
                         <td>${i+1}</td>
-                        <td>${v.user_input}</td>
-                        <td>${v.input_at}</td>
                         <td>${v.qty}</td>
+                        <td>${v.inputer}</td>
+                        <td>${v.tgl_input}</td>
                     </tr>`;
                         });
                         $('#table_log tbody').html(log_html);
@@ -286,9 +289,13 @@
             const exp_date = $(this).data('exp');
             const nama_barang = $(this).data('nama');
             const id_barang = $(this).data('id');
+            const kdbarang = $(this).data('kdbarang');
+            const dimensi = $(this).data('dimensi');
 
             $('#modal_exp_date').val(exp_date);
             $('#modal_nama_barang').val(nama_barang);
             $('#modal_id_barang').val(id_barang);
+            $('#modal_kdbarang').val(kdbarang);
+            $('#modal_dimensi').val(dimensi);
         });
     </script>

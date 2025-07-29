@@ -60,7 +60,6 @@ class C_Ics extends CI_Controller
     public function stock_by_kodebr($kd)
     {
         $kdbarang = $this->M_Ics->getnmbarang($kd);
-
         $data_barang = $this->db
             ->select('a.nama_barang, a.exp_date')
             ->from('tb_saldo_awal a')
@@ -78,6 +77,7 @@ class C_Ics extends CI_Controller
 
         $query = $this->db->query("SELECT
             a.id,
+            b.kd_system,
             a.nama_barang,
             a.exp_date as exp_date,
             (b.p*b.l*b.t) AS dimensi,
@@ -89,7 +89,7 @@ class C_Ics extends CI_Controller
             COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
-            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
             LEFT JOIN (
                 SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
                 FROM tb_ics_do
@@ -112,7 +112,6 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - ICS';
         $data['get_barang']         = $this->M_Ics->get_detail_barang($kd);
         $data['list_stock_by_exp']  = $this->M_Ics->tracking_br_diffrent_by_expdate($kdbarang);
-
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/stock_by_kodebr.php', $data);
@@ -148,7 +147,6 @@ class C_Ics extends CI_Controller
             'data_log' => $data_log
         ]);
     }
-
 
     public function get_detail_by_exp_date()
     {
@@ -459,8 +457,9 @@ class C_Ics extends CI_Controller
 
     public function save_opname_ics()
     {
-        $action = $this->input->post('action');
+        $action      = $this->input->post('action');
         $id          = $this->input->post('id');
+        $kdbarang    = $this->input->post('kdbarang');
         $nama_barang = $this->input->post('nama_barang');
         $exp_date    = $this->input->post('exp_date');
         $dimensi     = $this->input->post('dimensi');
@@ -505,6 +504,12 @@ class C_Ics extends CI_Controller
                 $this->db->insert('tb_log_ics', $logics);
                 $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
                 redirect('ics/ics_stock_controller/' . $id);
+                break;
+            case 'formbyexp':
+                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_log_ics', $logics);
+                $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
+                redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
             case 'diffrent':
                 $this->db->insert('tb_ics_opname', $data);
