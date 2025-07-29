@@ -59,15 +59,96 @@ class C_Ics extends CI_Controller
 
     public function stock_by_kodebr($kd)
     {
+        $kdbarang = $this->M_Ics->getnmbarang($kd);
+
+        $data_barang = $this->db
+            ->select('a.nama_barang, a.exp_date')
+            ->from('tb_saldo_awal a')
+            ->join('tb_mbarang b', 'b.nm_barang = a.nama_barang')
+            ->where('a.nama_barang', $kdbarang)
+            ->get()
+            ->row();
+
+        if (!$data_barang) {
+            show_404();
+        }
+
+        $nama_barang = $data_barang->nama_barang;
+        $exp_date    = $data_barang->exp_date;
+
+        $query = $this->db->query("SELECT
+            a.id,
+            a.nama_barang,
+            a.exp_date as exp_date,
+            (b.p*b.l*b.t) AS dimensi,
+            SUM(a.qty) AS qty_awal,
+            COALESCE(pending.qty_pending, 0) AS DO,
+            COALESCE(purchase.qty_po, 0) AS PO,
+            COALESCE(opname.qty_opname, 0) AS ICS,
+            (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
+            FROM tb_saldo_awal a
+            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+                FROM tb_ics_do
+                GROUP BY nama_barang, exp_date
+            ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_po
+                FROM tb_ics_po
+                GROUP BY nama_barang, exp_date
+            ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
+            LEFT JOIN (
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+                FROM tb_ics_opname
+                GROUP BY nama_barang, exp_date
+            ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
+            WHERE a.nama_barang = ? AND a.exp_date = ?
+            GROUP BY a.nama_barang, a.exp_date", array($nama_barang, $exp_date));
+
+        $data['detail_stok']        = $query->result();
         $data['page_title']         = 'KARISMA - ICS';
         $data['get_barang']         = $this->M_Ics->get_detail_barang($kd);
-        $data['exp_date']           = $this->M_Ics->get_exp_by_kdsys($kd);
+        $data['list_stock_by_exp']  = $this->M_Ics->tracking_br_diffrent_by_expdate($kdbarang);
 
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/stock_by_kodebr.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function get_detail_by_exp()
+    {
+        $nama_barang = $this->input->post('nama_barang');
+        $exp_date = $this->input->post('exp_date');
+
+        $data_do = $this->db->select('kd_faktur, tgl_transaksi, qty')
+            ->from('tb_ics_do')
+            ->where('nama_barang', $nama_barang)
+            ->where('exp_date', $exp_date)
+            ->get()->result();
+
+        $data_po = $this->db->select('kd_faktur_lpb, tgl_transaksi, qty')
+            ->from('tb_ics_po')
+            ->where('nama_barang', $nama_barang)
+            ->where('exp_date', $exp_date)
+            ->get()->result();
+
+        $data_log = $this->db->select('inputer, tgl_input, qty')
+            ->from('tb_log_ics')
+            ->where('nama_barang', $nama_barang)
+            ->where('exp_date', $exp_date)
+            ->get()->result();
+
+        echo json_encode([
+            'data_do' => $data_do,
+            'data_po' => $data_po,
+            'data_log' => $data_log
+        ]);
+    }
+
 
     public function get_detail_by_exp_date()
     {
