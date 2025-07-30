@@ -16,9 +16,10 @@
 
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <?php foreach ($get_barang as $nm) : ?>
+                            <?php foreach ($get_barang as $nm) :
+                                $dimensi = $nm->p * $nm->l * $nm->t;
+                            ?>
                                 <h5 class="card-title">Detail Inputer Barang - <b><?= $nm->nm_barang ?></b></h5>
-
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -26,7 +27,7 @@
                                     <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                                 </div>
                                 <div class="col-auto">
-                                    <button class="btn btn-md btn-success" data-toggle="modal" data-target="#modalAddOpname">
+                                    <button class="btn btn-md btn-success" data-toggle="modal" data-target="#modal_insert_new_exp">
                                         <i class="fas fa-plus"></i> Add Expired Baru
                                     </button>
                                 </div>
@@ -43,8 +44,10 @@
                                                 <th style="border: 1px solid #000000;">DO</th>
                                                 <th style="border: 1px solid #000000;">LPB</th>
                                                 <th style="border: 1px solid #000000;">Qty All</th>
-                                                <th style="border: 1px solid #000000;">ICS</th>
+                                                <th style="border: 1px solid #000000;">Fisik Qty</th>
                                                 <th style="border: 1px solid #000000;">Selisih</th>
+                                                <th style="border: 1px solid #000000;">Fisik BOX</th>
+                                                <th style="border: 1px solid #000000;">Fisik PCS</th>
                                                 <th style="border: 1px solid #000000;">Status</th>
                                             </tr>
                                         </thead>
@@ -55,18 +58,18 @@
                                                     <td><?= $br->qty ?></td>
                                                     <td><?= $br->do ?></td>
                                                     <td><?= $br->po ?></td>
-                                                    <td><?= $br->ics ?></td>
                                                     <td><?= $br->qty_all ?></td>
+                                                    <td><?= $br->ics ?></td>
                                                     <td><?= $br->selisih ?></td>
+                                                    <td><?= $br->qty_box ?></td>
+                                                    <td><?= $br->qty_pcs ?></td>
                                                     <?php if ($br->status == '1') : ?>
                                                         <td>
                                                             <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check"></i></a>
                                                             <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-dimensi="<?= $br->dimensi ?>" data-kdbarang="<?= $br->kd_system ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
-                                                                <i class="fas fa-plus"></i>
-                                                            </button>
+                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                         </td>
                                                     <?php else : ?>
                                                         <td>
@@ -74,10 +77,7 @@
                                                             <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname" data-dimensi="<?= $br->dimensi ?>" data-kdbarang="<?= $br->kd_system ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->id ?>">
-                                                                <i class="fas fa-plus"></i>
-                                                            </button>
-
+                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                         </td>
                                                     <?php endif; ?>
                                                 </tr>
@@ -158,46 +158,96 @@
                         </div>
                     </div>
 
-                    <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
+                    <?php foreach ($list_stock_by_exp as $br) : ?>
+                        <div class="modal fade" id="modalAddOpname<?= $br->opname_id ?>" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <form action="<?= base_url('ics/sv_opname') ?>" method="post">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-success">
+                                            <h5 class="modal-title"><i class="fas fa-box"></i> Input Data Opname</h5>
+                                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <input type="hidden" name="nama_barang" value="<?= $nm->nm_barang ?>">
+                                            <input type="hidden" name="id" value="<?= $br->opname_id ?>">
+                                            <input type="hidden" name="kdbarang" value="<?= $br->kd_system ?>">
+                                            <input type="hidden" name="dimensi" value="<?= $br->dimensi ?>">
+                                            <input type="hidden" name="action" value="formbyexp">
+                                            <div class="form-group">
+                                                <label for="exp_date">Expired Date</label>
+                                                <input type="text" name="exp_date" class="form-control" value="<?= $br->expired ?>" readonly>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="keterangan_isi">Keterangan</label>
+                                                <textarea class="form-control" name="keterangan_isi" required placeholder="Tambahkan keterangan inputer"></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="qty_box">Qty Box</label>
+                                                <input type="number" name="qty_box" class="form-control" value="<?= $br->qty_box ?>">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="qty_pcs">Qty Pcs</label>
+                                                <input type="number" name="qty_pcs" class="form-control" value="<?= $br->qty_pcs ?>">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+
+                    <!-- Modal Insert New Expired -->
+                    <div class="modal fade" id="modal_insert_new_exp" tabindex="-1" role="dialog" aria-labelledby="modalInsertNewExpLabel" aria-hidden="true">
                         <div class="modal-dialog" role="document">
                             <form action="<?= base_url('ics/sv_opname') ?>" method="post">
                                 <div class="modal-content">
                                     <div class="modal-header bg-success">
-                                        <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Opname</h5>
+                                        <h5 class="modal-title" id="modalInsertNewExpLabel"><i class="fas fa-plus-circle"></i> Input Saldo Awal</h5>
                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                             <span aria-hidden="true">&times;</span>
                                         </button>
                                     </div>
                                     <div class="modal-body">
+                                        <!-- Nama Barang -->
                                         <div class="form-group">
                                             <label for="nama_barang">Nama Barang</label>
-                                            <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
-                                            <input type="text" name="id" id="modal_id_barang" readonly>
-                                            <input type="text" name="kdbarang" id="modal_kdbarang" readonly>
-                                            <input type="text" name="dimensi" id="modal_dimensi" readonly>
-                                            <input type="hidden" name="action" value="formbyexp">
+                                            <input type="text" name="nama_barang" class="form-control" value="<?= $nm->nm_barang ?>" required readonly>
+                                            <input type="text" name="dimensi" class="form-control" value="<?= $dimensi ?>" required readonly>
+                                            <input type="text" name="action" class="form-control" value="new_expired" required readonly>
+                                            <input type="text" name="kdbarang" class="form-control" value="<?= $nm->kd_system ?>" required readonly>
+                                            <input type="text" name="keterangan_isi" class="form-control" value="input_expired_baru" required readonly>
                                         </div>
+                                        <!-- Expired Date -->
                                         <div class="form-group">
                                             <label for="exp_date">Expired Date</label>
-                                            <input type="text" name="exp_date" id="modal_exp_date" class="form-control" readonly>
+                                            <input type="date" name="exp_date" class="form-control" required>
                                         </div>
-                                        <div class="form-group">
-                                            <label for="keterangan_isi">Keterangan</label>
-                                            <textarea class="form-control" name="keterangan_isi" id="modal_keterangan" required placeholder="Tambahkan keterangan inputer"></textarea>
-                                        </div>
+                                        <!-- Qty Box -->
                                         <div class="form-group">
                                             <label for="qty_box">Qty Box</label>
-                                            <input type="number" name="qty_box" class="form-control" placeholder="0">
+                                            <input type="number" name="qty_box" class="form-control" placeholder="0" value="0" required>
                                         </div>
+                                        <!-- Qty Pcs -->
                                         <div class="form-group">
                                             <label for="qty_pcs">Qty Pcs</label>
-                                            <input type="number" name="qty_pcs" class="form-control" placeholder="0">
+                                            <input type="number" name="qty_pcs" class="form-control" placeholder="0" value="0" required>
                                         </div>
-                                        <div class="modal-footer">
-                                            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                                        </div>
+                                        <!-- Waktu Input -->
+                                        <input type="hidden" name="input_at" value="<?= date('d/m/Y') ?>">
+                                        <input type="hidden" name="create_at" value="<?= date('Y-m-d H:i:s') ?>">
                                     </div>
+
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                    </div>
+
                                 </div>
                             </form>
                         </div>
@@ -297,5 +347,16 @@
             $('#modal_id_barang').val(id_barang);
             $('#modal_kdbarang').val(kdbarang);
             $('#modal_dimensi').val(dimensi);
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $('input[name="qty_box"], input[name="qty_pcs"]').on('input', function() {
+                let qty_box = parseInt($('input[name="qty_box"]').val()) || 0;
+                let qty_pcs = parseInt($('input[name="qty_pcs"]').val()) || 0;
+                let total = qty_box + qty_pcs;
+                $('#qty_total_input').val(total);
+            });
         });
     </script>

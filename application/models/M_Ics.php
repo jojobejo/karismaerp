@@ -270,39 +270,43 @@ class M_Ics extends CI_Model
     public function tracking_br_diffrent_by_expdate($nmbarang)
     {
         return $this->db->query("SELECT
-                a.id,
-                b.kd_system,
-                b.p*b.l*b.t AS dimensi,
-                a.nama_barang,
-                a.exp_date as expired,
-                (b.p*b.l*b.t) AS dimensi,
-                SUM(a.qty) AS qty,
-                COALESCE(pending.qty_pending, 0) AS do,
-                COALESCE(purchase.qty_po, 0) AS po,
-                COALESCE(opname.qty_opname, 0) AS ics,
-                (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-                ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) - COALESCE(opname.qty_opname, 0)) AS selisih,
-                IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
-            FROM tb_saldo_awal a
-            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
-            LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
-                FROM tb_ics_do
-                GROUP BY nama_barang, exp_date
-            ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
-            LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_po
-                FROM tb_ics_po
-                GROUP BY nama_barang, exp_date
-            ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
-            LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
-                FROM tb_ics_opname
-                GROUP BY nama_barang, exp_date
-            ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
-            WHERE a.nama_barang = '$nmbarang' 
-            GROUP BY a.nama_barang , a.exp_date
-        ")->result();
+            a.id,
+            opname.id AS opname_id,
+            b.kd_system,
+            b.p * b.l * b.t AS dimensi,
+            a.nama_barang,
+            a.exp_date AS expired,
+            SUM(a.qty) AS qty,
+            COALESCE(pending.qty_pending, 0) AS do,
+            COALESCE(purchase.qty_po, 0) AS po,
+            (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            COALESCE(opname.qty_opname, 0) AS ics,
+            opname.qty_box AS qty_box,
+            opname.qty_pcs AS qty_pcs,
+            IF(
+                ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
+                1, 0
+            ) AS status
+        FROM tb_saldo_awal a
+        JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+        LEFT JOIN (
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_po
+            FROM tb_ics_po
+            GROUP BY nama_barang, exp_date
+        ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
+        LEFT JOIN (
+            SELECT id,nama_barang, exp_date, SUM(qty) AS qty_opname , qty_box , qty_pcs
+            FROM tb_ics_opname
+            GROUP BY nama_barang, exp_date
+        ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
+        WHERE a.nama_barang = '$nmbarang'
+        GROUP BY a.nama_barang, a.exp_date;")->result();
     }
 
     public function get_exp_detail($nama_barang, $exp_date)

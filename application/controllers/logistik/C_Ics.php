@@ -63,7 +63,7 @@ class C_Ics extends CI_Controller
         $data_barang = $this->db
             ->select('a.nama_barang, a.exp_date')
             ->from('tb_saldo_awal a')
-            ->join('tb_mbarang b', 'b.nm_barang = a.nama_barang')
+            ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
             ->where('a.nama_barang', $kdbarang)
             ->get()
             ->row();
@@ -86,7 +86,7 @@ class C_Ics extends CI_Controller
             COALESCE(purchase.qty_po, 0) AS PO,
             COALESCE(opname.qty_opname, 0) AS ICS,
             (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-            COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0))- COALESCE(opname.qty_opname, 0) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
             JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
@@ -467,6 +467,7 @@ class C_Ics extends CI_Controller
         $qty_pcs     = $this->input->post('qty_pcs');
         $keterangan  = $this->input->post('keterangan_isi');
         $qty_total   = ($qty_box * $dimensi) + $qty_pcs;
+        $expawal     = date('d/m/Y', strtotime($exp_date));
 
         $data = [
             'nama_barang' => $nama_barang,
@@ -479,6 +480,28 @@ class C_Ics extends CI_Controller
             'create_at'   => date('Y-m-d H:i:s')
         ];
 
+        $dataawal = [
+            'kd_system'   => $kdbarang,
+            'nama_barang' => $nama_barang,
+            'exp_date'    => $expawal,
+            'qty_box'     => $qty_box,
+            'qty_pcs'     => $qty_pcs,
+            'qty'         => $qty_total,
+            'inputer'     => $this->session->userdata('nama'),
+            'input_at'    => date('d/m/Y'),
+            'create_at'   => date('Y-m-d H:i:s')
+        ];
+
+        $data_awal = [
+            'nama_barang' => $nama_barang,
+            'exp_date'    => $expawal,
+            'qty'         => $qty_total,
+            'qty_box'     => $qty_box,
+            'qty_pcs'     => $qty_pcs,
+            'input_at'    => date('d/m/Y'),
+            'create_at'   => date('Y-m-d H:i:s')
+        ];
+
         $logics = [
             'nama_barang'   => $nama_barang,
             'qty'           => $qty_total,
@@ -486,6 +509,19 @@ class C_Ics extends CI_Controller
             'qty_pcs'       => $qty_pcs,
             'no_lot'        => '-',
             'exp_date'      => $exp_date,
+            'keterangan'    => $keterangan,
+            'inputer'       => $this->session->userdata('nama'),
+            'tgl_input'     => date('d/m/Y'),
+            'create_at'     => date('Y-m-d H:i:s')
+        ];
+
+        $logicsawal = [
+            'nama_barang'   => $nama_barang,
+            'qty'           => $qty_total,
+            'qty_box'       => $qty_box,
+            'qty_pcs'       => $qty_pcs,
+            'no_lot'        => '-',
+            'exp_date'      => $expawal,
             'keterangan'    => $keterangan,
             'inputer'       => $this->session->userdata('nama'),
             'tgl_input'     => date('d/m/Y'),
@@ -506,9 +542,16 @@ class C_Ics extends CI_Controller
                 redirect('ics/ics_stock_controller/' . $id);
                 break;
             case 'formbyexp':
-                $this->db->insert('tb_ics_opname', $data);
+                $this->db->update('tb_ics_opname', $data, ['id' => $id]);
                 $this->db->insert('tb_log_ics', $logics);
-                $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
+                $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
+                redirect('ics/stock_by_kodebr/' . $kdbarang);
+                break;
+            case 'new_expired':
+                $this->db->insert('tb_ics_opname', $dataawal);
+                $this->db->insert('tb_log_ics', $logicsawal);
+                $this->db->insert('tb_saldo_awal', $data_awal);
+                $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
                 redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
             case 'diffrent':
