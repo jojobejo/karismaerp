@@ -281,7 +281,7 @@ class M_Ics extends CI_Model
                 COALESCE(purchase.qty_po, 0) AS po,
                 COALESCE(opname.qty_opname, 0) AS ics,
                 (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-                COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+                ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) - COALESCE(opname.qty_opname, 0)) AS selisih,
                 IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
             JOIN tb_master_barang b ON b.nm_barang = a.nama_barang

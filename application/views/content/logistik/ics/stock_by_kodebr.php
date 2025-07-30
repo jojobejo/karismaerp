@@ -41,7 +41,7 @@
                                                 <th style="border: 1px solid #000000;">Expired</th>
                                                 <th style="border: 1px solid #000000;">Qty</th>
                                                 <th style="border: 1px solid #000000;">DO</th>
-                                                <th style="border: 1px solid #000000;">PO</th>
+                                                <th style="border: 1px solid #000000;">LPB</th>
                                                 <th style="border: 1px solid #000000;">Qty All</th>
                                                 <th style="border: 1px solid #000000;">ICS</th>
                                                 <th style="border: 1px solid #000000;">Selisih</th>
@@ -130,7 +130,7 @@
                                 <tbody></tbody>
                             </table>
 
-                            <h6><b>Data PO</b></h6>
+                            <h6><b>Data LPB</b></h6>
                             <table class="table table-bordered table-sm" id="table_po">
                                 <thead>
                                     <tr>
