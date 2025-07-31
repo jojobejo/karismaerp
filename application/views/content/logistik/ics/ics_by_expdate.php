@@ -49,7 +49,6 @@
                                                 <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                 <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
                                                 <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
-                                                <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
                                             </tr>
                                             <tr>
                                                 <th class="bg-primary text-white">Nama Barang</th>
@@ -70,7 +69,7 @@
                                             <?php foreach ($barang_ics as $br) : ?>
                                                 <tr>
                                                     <td>
-                                                        <a href="<?= base_url('ics/ics_stock_controller/' . $br->id)  ?>" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('ics/stock_by_kodebr/' . $br->kd)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
                                                     </td>
                                                     <td><?= $br->nama_barang ?></td>
                                                     <td><?= $br->exp_date ?></td>
@@ -105,9 +104,6 @@
                                                             <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times-circle"></i></a>
                                                         </td>
                                                     <?php endif; ?>
-                                                    <td>
-                                                        <a href="#" class="btn btn-sm btn-primary btn-open-opname" data-id="<?= $br->id ?>"><i class="fas fa-plus-circle"></i></a>
-                                                    </td>
                                                 </tr>
                                                 <!-- <tr>
                                                     <td><?= $br->nama_barang ?></td>

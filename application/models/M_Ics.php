@@ -56,6 +56,7 @@ class M_Ics extends CI_Model
     public function list_barang_ics_expdate()
     {
         return $this->db->query("SELECT
+        mb.kd,
         x.id,
         x.nama_barang,
         x.exp_date,
@@ -140,7 +141,7 @@ class M_Ics extends CI_Model
             GROUP BY nama_barang, exp_date
         ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
+            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system as kd
             FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
@@ -493,7 +494,7 @@ class M_Ics extends CI_Model
             a.no_lot,
             a.exp_date
         FROM tb_ics_do a
-        LEFT JOIN tb_mbarang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
         WHERE 
             DATE(a.tgl_transaksi) = '$tgl'
             AND (m.p * m.l * m.t) > 0

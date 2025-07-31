@@ -451,7 +451,7 @@ class M_Logistik extends CI_Model
         return $this->db->query("SELECT
             a.*,b.nm_barang
             FROM tb_pre_do a
-            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }

@@ -978,7 +978,7 @@ class C_Logistik extends CI_Controller
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur,a.tgl_transaksi, c.nm_barang, a.no_lot, a.nominal_p , a.jtempo, 
+                a.kd_faktur,a.tgl_transaksi,c.kd_system ,c.nm_barang, a.no_lot, a.nominal_p , a.jtempo, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
@@ -990,7 +990,7 @@ class C_Logistik extends CI_Controller
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
                 JOIN tb_do b ON b.kd_do = a.kd_do
-                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
@@ -1023,7 +1023,7 @@ class C_Logistik extends CI_Controller
         FROM
             tb_detail_do a
         JOIN tb_do b ON b.kd_do = a.kd_do
-        JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+        JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
         WHERE
             b.kd_do = '$kd_do'
         GROUP BY
@@ -1113,7 +1113,8 @@ class C_Logistik extends CI_Controller
                 'nama_barang'   => $det->nama_barang,
                 'qty'           => $det->qty,
                 'no_lot'        => $det->no_lot,
-                'exp_date'      => date('m/d/Y', strtotime($det->tgl_exp))
+                'exp_date'      => date('m/d/Y', strtotime($det->tgl_exp)),
+                'input_at'      => date('d/m/Y')
             );
         }
 
@@ -1200,7 +1201,7 @@ class C_Logistik extends CI_Controller
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
                 JOIN tb_do b ON b.kd_do = a.kd_do
-                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+                JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
@@ -1219,7 +1220,7 @@ class C_Logistik extends CI_Controller
             FROM
                 tb_detail_do a
             JOIN tb_do b ON b.kd_do = a.kd_do
-            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
             WHERE
                 b.kd_do = '$kd_do'
             GROUP BY
@@ -1320,7 +1321,7 @@ class C_Logistik extends CI_Controller
             FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
             (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
             FROM tb_detail_do a
-            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
             WHERE a.kd_do = '$kd_do'
             GROUP BY a.kd_barang , a.tgl_exp , a.no_lot");
 
@@ -1411,16 +1412,14 @@ class C_Logistik extends CI_Controller
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
                 $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
                 $kddo       = $this->M_Logistik->generate_kd_do();
-                $now = date("Y-m-d H:i:s");
+                $now        = date("Y-m-d H:i:s");
 
                 if ($get_pre_do) {
                     $data_tmp_det_do = [];
                     $kdfaktur = null;
-
                     foreach ($get_pre_do as $g) {
                         $kdfaktur = $g->kd_faktur;
                     }
-
                     if ($getdetail) {
                         foreach ($getdetail as $det) {
                             $data_tmp_det_do[] = array(
@@ -1442,11 +1441,9 @@ class C_Logistik extends CI_Controller
                                 'create_at'     => $now
                             );
                         }
-
                         if (!empty($data_tmp_det_do)) {
                             $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
                         }
-
                         $datainsert = array(
                             'kd_do'      => $kddo,
                             'kd_faktur'  => $kdfaktur,
@@ -1454,7 +1451,6 @@ class C_Logistik extends CI_Controller
                         );
 
                         $this->M_Logistik->insert_tmp_do($datainsert);
-
                         $update_pre_do = array(
                             'data_sts' => '2'
                         );

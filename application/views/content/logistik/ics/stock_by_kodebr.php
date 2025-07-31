@@ -94,7 +94,7 @@
                             <h5 class="card-title">Data DO</h5>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-sm" id="ics_do_byexp">
+                            <table class="table table-bordered table-sm">
                                 <thead class="bg-warning text-white text-center">
                                     <tr>
                                         <th>Kode Faktur</th>
@@ -118,7 +118,7 @@
                         </div>
                         <div class="card-body">
                             <h6><b>Data DO</b></h6>
-                            <table class="table table-bordered table-sm" id="table_do">
+                            <table class="table table-bordered table-sm">
                                 <thead>
                                     <tr>
                                         <th>No</th>
