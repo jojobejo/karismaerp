@@ -10,4 +10,15 @@ QUERY PERHITUNGAN ICS BERDASARKAN EXPIRED DATE
 | `qty_selisih`       | Selisih antara `fisik_ics` dan `saldo_akhir_qty`                                   |
 | `status_kesesuaian` | Menunjukkan apakah stok fisik sesuai dengan sistem                                 |
 
+=====================================================================================================================
 
+Module urgent 
+login menggunakan akun masing masing , sektorisasi berdasarkan akun dan tim 
+setelah login tampilkan data berdasarkan wilayah / lokasi 
+
+data inputan ditambah keterangan lokasi input dan wilayahnya
+
+session ditambah keterangan TIM 
+
+https://localhost/karismaerp/ics/stock_by_kodebr/QIU01062
+rapikan tampilan detail

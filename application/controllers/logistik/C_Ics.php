@@ -50,7 +50,8 @@ class C_Ics extends CI_Controller
     public function ics_diffrent()
     {
         $data['page_title']         = 'KARISMA - ICS';
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics_diffrent();
+        $data['barang_ics_a']         = $this->M_Ics->list_barang_ics_diffrent_a();
+        $data['barang_ics_b']         = $this->M_Ics->list_barang_ics_diffrent_b();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
