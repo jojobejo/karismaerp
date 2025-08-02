@@ -25,22 +25,45 @@
             <div class="content-header">
                 <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
                     <section class="content">
+                        <?php
+
+                        $lv     = $this->session->userdata('lv');
+                        $tim    = $this->session->userdata('tim');
+
+                        if ($lv == 1) {
+                            $akses = 'admin';
+                        } elseif ($lv == 2) {
+                            $akses = 'ics';
+                        }
+                        ?>
                         <div class="row">
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
-                            </div>
-                            <?php if ($this->session->userdata('lv') == '1') : ?>
+                            <?php if ($akses == 'admin') : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-box"></i> Data All Barang</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> Data By Expired Date</a>
+                                </div>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
                                 </div>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                                 </div>
-                            <?php else : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                </div>
+                            <?php elseif ($akses == 'ics') : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_allbarang_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-box"></i> Data All Barang</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_expdate_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> Data By Expired Date</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/ics_diffrent_ics/') . $tim ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                </div>
                             <?php endif; ?>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
-                            </div>
                         </div>
                         <div class="card">
                             <div class="card-header ui-sortable-handle " style="cursor: move">
@@ -50,10 +73,13 @@
                                 <div class="card-tools">
                                     <ul class="nav nav-pills ml-auto">
                                         <li class="nav-item">
-                                            <a class="nav-link active" href="#ics_a" data-toggle="tab">Sektor A</a>
+                                            <a class="nav-link active" href="#ics_a" data-toggle="tab">A</a>
                                         </li>
                                         <li class="nav-item">
-                                            <a class="nav-link" href="#ics_b" data-toggle="tab">Sektor B</a>
+                                            <a class="nav-link" href="#ics_b" data-toggle="tab">B</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="#ics_c" data-toggle="tab">C</a>
                                         </li>
                                     </ul>
                                 </div>
@@ -193,6 +219,9 @@
                                                 </tbody>
                                             </table>
                                         </div>
+                                    </div>
+                                    <div class="chart tab-pane" id="ics_c">
+                                        <h3>VIEW STOCK DIFFFRENT C</h3>
                                     </div>
                                 </div>
                             </div>
