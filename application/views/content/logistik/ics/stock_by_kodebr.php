@@ -36,19 +36,19 @@
                             <div class="col-auto">
                                 <div class="form-group" style="position: relative;background: #fff;">
                                     <h5 class="card-title mt-2 mb-2"><b>Compare By Expired Date</b></h5>
-                                    <table id="tb_exp_form" class="table table-bordered table-striped" style="border: 1px solid #000000; border-collapse: collapse; width: 100%; text-align: center;">
+                                    <table id="tb_exp_form" class="table table-bordered table-striped">
                                         <thead>
                                             <tr>
-                                                <th style="border: 1px solid #000000;">Expired</th>
-                                                <th style="border: 1px solid #000000;">Qty</th>
-                                                <th style="border: 1px solid #000000;">DO</th>
-                                                <th style="border: 1px solid #000000;">LPB</th>
-                                                <th style="border: 1px solid #000000;">Qty All</th>
-                                                <th style="border: 1px solid #000000;">Fisik Qty</th>
-                                                <th style="border: 1px solid #000000;">Selisih</th>
-                                                <th style="border: 1px solid #000000;">Fisik BOX</th>
-                                                <th style="border: 1px solid #000000;">Fisik PCS</th>
-                                                <th style="border: 1px solid #000000;">Status</th>
+                                                <th>Expired</th>
+                                                <th>Qty</th>
+                                                <th>DO</th>
+                                                <th>LPB</th>
+                                                <th>Qty All</th>
+                                                <th>Fisik Qty</th>
+                                                <th>Selisih</th>
+                                                <th>Fisik BOX</th>
+                                                <th>Fisik PCS</th>
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -89,72 +89,68 @@
                         </div>
                     </div>
 
-                    <div class="card mt-3" id="card_do" style="display: none;">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="card-title">Data DO</h5>
-                        </div>
-                        <div class="card-body">
-                            <table class="table table-bordered table-sm">
-                                <thead class="bg-warning text-white text-center">
-                                    <tr>
-                                        <th>Kode Faktur</th>
-                                        <th>Tgl Transaksi</th>
-                                        <th>Nama Barang</th>
-                                        <th>Expired Date</th>
-                                        <th>Qty</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                     <div class="card mt-3" id="card_detail" style="display: none;">
                         <div class="card-header bg-secondary text-white">
-                            <h5 class="card-title">Detail Transaksi Berdasarkan Expired Date</h5>
+                            <h5 class="card-title">Detail Data</h5>
                         </div>
+
                         <div class="card-body">
-                            <h6><b>Data DO</b></h6>
-                            <table class="table table-bordered table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Kode Faktur</th>
-                                        <th>Tgl Transaksi</th>
-                                        <th>Qty</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div class="row">
+                                <div class="col-auto">
+                                    <a href="#" class="btn btn-primary" id="btnShowDO">DO</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="#" class="btn btn-primary" id="btnShowLPB">LPB</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="#" class="btn btn-primary" id="btnShowLogInpt">Log Input</a>
+                                </div>
+                            </div>
 
-                            <h6><b>Data LPB</b></h6>
-                            <table class="table table-bordered table-sm" id="table_po">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Kode Faktur</th>
-                                        <th>Tgl Transaksi</th>
-                                        <th>Qty</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div id="data_log_do" style="display: none;">
+                                <table class="table table-bordered table-sm mb-2" id="tbdo_track_barang" style="display: none;">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Kode Faktur</th>
+                                            <th>Tgl Transaksi</th>
+                                            <th>Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
 
-                            <h6><b>Data Tracking Inputer</b></h6>
-                            <table class="table table-bordered table-sm" id="table_log">
-                                <thead>
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Qty</th>
-                                        <th>User Input</th>
-                                        <th>Waktu Input</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
+                            <div id="data_log_lpb" style="display: none;">
+                                <table class="table table-bordered table-sm" id="tblpb_track_barang">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Kode Faktur</th>
+                                            <th>Tgl Transaksi</th>
+                                            <th>Qty</th>
+                                            <th>Input At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+
+                            <div id="data_log_inpt" style="display: none;">
+                                <table class="table table-bordered table-sm" id="tblog_track_barang">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Qty</th>
+                                            <th>Keterangan</th>
+                                            <th>User Input</th>
+                                            <th>Waktu Input</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+
                         </div>
                     </div>
 
@@ -266,23 +262,48 @@
             <b>Version</b> 1.0
         </div>
     </footer>
-
-    <!-- Modal Add Opname -->
-
-
-
-    <!-- Control Sidebar -->
     <aside class="control-sidebar control-sidebar-dark">
-        <!-- Control sidebar content goes here -->
     </aside>
     </div>
+
+    <script>
+        $(document).ready(function() {
+
+            $('.view-detail').on('click', function() {
+                $('.view-detail').removeClass('btn-secondary').addClass('btn-info');
+                $(this).removeClass('btn-info').addClass('btn-secondary');
+            });
+
+            $('#btnShowDO, #btnShowLPB, #btnShowLogInpt').on('click', function() {
+                $('#btnShowDO, #btnShowLPB, #btnShowLogInpt').removeClass('btn-secondary').addClass('btn-primary');
+                $(this).removeClass('btn-primary').addClass('btn-secondary');
+            });
+
+            $('#btnShowDO').click(function() {
+                $('#data_log_do').show();
+                $('#tbdo_track_barang').show();
+                $('#data_log_lpb, #data_log_inpt').hide();
+            });
+
+            $('#btnShowLPB').click(function() {
+                $('#data_log_lpb').show();
+                $('#tblpb_track_barang').show();
+                $('#data_log_do, #data_log_inpt').hide();
+            });
+
+            $('#btnShowLogInpt').click(function() {
+                $('#data_log_inpt').show();
+                $('#tblog_track_barang').show();
+                $('#data_log_do, #data_log_lpb').hide();
+            });
+        });
+    </script>
 
     <script>
         $(document).ready(function() {
             $('.view-detail').click(function() {
                 const nama_barang = $(this).data('nama');
                 const exp_date = $(this).data('exp');
-
 
                 $.ajax({
                     url: "<?= base_url('ics/get_detail_by_exp') ?>",
@@ -295,42 +316,46 @@
                     success: function(res) {
                         $('#card_detail').show();
 
-                        // Tabel DO
+                        $('#tbdo_track_barang tbody').html('');
+                        $('#tblpb_track_barang tbody').html('');
+                        $('#tblog_track_barang tbody').html('');
+
                         let do_html = '';
-                        $.each(res.data_do, function(i, v) {
+                        $.each(res.data_do, function(i, item) {
                             do_html += `<tr>
-                        <td>${i+1}</td>
-                        <td>${v.kd_faktur}</td>
-                        <td>${v.tgl_transaksi}</td>
-                        <td>${v.qty}</td>
-                    </tr>`;
+                            <td>${i + 1}</td>
+                            <td>${item.kd_faktur}</td>
+                            <td>${item.tgl_transaksi}</td>
+                            <td>${item.qty}</td>
+                        </tr>`;
                         });
-                        $('#table_do tbody').html(do_html);
+                        $('#tbdo_track_barang tbody').html(do_html);
 
-                        // Tabel PO
                         let po_html = '';
-                        $.each(res.data_po, function(i, v) {
+                        $.each(res.data_po, function(i, item) {
                             po_html += `<tr>
-                        <td>${i+1}</td>
-                        <td>${v.kd_faktur}</td>
-                        <td>${v.tgl_transaksi}</td>
-                        <td>${v.qty}</td>
-                    </tr>`;
+                            <td>${i + 1}</td>
+                            <td>${item.kd_faktur_lpb}</td>
+                            <td>${item.tgl_transaksi}</td>
+                            <td>${item.qty}</td>
+                            <td>${item.input_at}</td>
+                        </tr>`;
                         });
-                        $('#table_po tbody').html(po_html);
+                        $('#tblpb_track_barang tbody').html(po_html);
 
-                        // Tabel Log Input
                         let log_html = '';
-                        $.each(res.data_log, function(i, v) {
+                        $.each(res.data_log, function(i, item) {
                             log_html += `<tr>
-                        <td>${i+1}</td>
-                        <td>${v.qty}</td>
-                        <td>${v.inputer}</td>
-                        <td>${v.tgl_input}</td>
-                    </tr>`;
+                            <td>${i + 1}</td>
+                            <td>${item.qty}</td>
+                            <td>${item.keterangan}</td>
+                            <td>${item.inputer}</td>
+                            <td>${item.tgl_input}</td>
+                        </tr>`;
                         });
-                        $('#table_log tbody').html(log_html);
+                        $('#tblog_track_barang tbody').html(log_html);
                     }
+
                 });
             });
         });

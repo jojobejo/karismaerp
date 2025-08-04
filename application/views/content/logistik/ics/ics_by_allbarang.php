@@ -12,25 +12,40 @@
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <div class="content-header">
-                <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') :
+                    $pic = $this->session->userdata('nama');
+                ?>
                     <section class="content">
                         <div class="row">
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-boxes"></i> By All Barang</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> By Expired Date</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
-                            </div>
+                            <?php if ($pic == 'Admin ICS') : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_allbarang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-boxes"></i> By All Barang</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> By Expired Date</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                </div>
+                            <?php else : ?>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_allbarang_ics/') . $tim ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-box"></i> Data All Barang</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/by_expdate_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> Data By Expired Date</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="<?= base_url('ics/ics_diffrent_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                </div>
+                            <?php endif; ?>
                         </div>
+
                         <div class="card">
                             <div class="card-body">
                                 <div class="container-fluid">

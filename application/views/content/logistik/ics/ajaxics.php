@@ -150,5 +150,68 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
+        $("#tbics_erp").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_a1").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_b1").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_b").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_c").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tb_exp_form").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbdo_track_barang").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tblpb_track_barang").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tblog_track_barang").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
     });
 </script>

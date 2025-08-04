@@ -63,15 +63,7 @@
       "autoWidth": false,
       "responsive": true,
     });
-    $('#tbics_erp').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
+
     $('#tbics_erp_diff').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -81,6 +73,7 @@
       "autoWidth": false,
       "responsive": true,
     });
+
     $('#tbics_byallbarang').DataTable({
       "paging": true,
       "lengthChange": false,

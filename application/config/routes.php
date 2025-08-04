@@ -98,8 +98,10 @@ $route['ics/ics_stock_controller/(:any)']           = 'logistik/C_Ics/ics_stock_
 $route['ics/get_detail_by_exp_date']                = 'logistik/C_Ics/get_detail_by_exp_date';
 $route['ics/stock_by_kodebr/(:any)']                = 'logistik/C_Ics/stock_by_kodebr/$1';
 $route['ics/get_detail_by_exp']                     = 'logistik/C_Ics/get_detail_by_exp';
+$route['ics/by_allbarang_ics/(:any)']               = 'logistik/C_Ics/by_allbarang_ics/$1';
 
 $route['ics/detail_allbarang/(:any)']               = 'logistik/C_Ics/ics_detail_allbarang/$1';
+$route['ics/by_expdate_ics/(:any)']               = 'logistik/C_Ics/by_expdate_ics/$1';
 $route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffrent';
 $route['ics/import_csv']                            = 'logistik/C_Ics/import_csv_po';
 

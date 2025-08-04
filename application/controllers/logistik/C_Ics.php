@@ -49,12 +49,90 @@ class C_Ics extends CI_Controller
 
     public function ics_diffrent()
     {
+        $akses = $this->session->userdata('nama');
+
         $data['page_title']         = 'KARISMA - ICS';
-        $data['barang_ics_a']         = $this->M_Ics->list_barang_ics_diffrent_a();
-        $data['barang_ics_b']         = $this->M_Ics->list_barang_ics_diffrent_b();
+
+        if ($akses == 'Admin ICS') {
+            $data['barang_ics_a']         = $this->M_Ics->list_barang_ics_diffrent_a();
+            $data['barang_ics_b']         = $this->M_Ics->list_barang_ics_diffrent_b();
+            $data['barang_ics_c']         = $this->M_Ics->list_barang_ics_diffrent_c();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 1') {
+            $data['barang_ics_a']         = $this->M_Ics->list_barang_ics_diffrent_a();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 2') {
+            $data['barang_ics_b']         = $this->M_Ics->list_barang_ics_diffrent_b();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 3') {
+            $data['barang_ics_c']         = $this->M_Ics->list_barang_ics_diffrent_c();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 4') {
+            $data['barang_ics_d']         = $this->M_Ics->list_barang_ics_diffrent_d();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        }
+    }
+
+    public function by_allbarang_ics($pic)
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+
+        if ($pic == '1') {
+            $rpic = "A";
+        } elseif ($pic == '2') {
+            $rpic = "B";
+        } elseif ($pic == '3') {
+            $rpic = "C";
+        } elseif ($pic == '4') {
+            $rpic = "D";
+        } elseif ($pic == '0') {
+            $rpic = "E";
+        }
+
+        $data['tim']                = $pic;
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_allbarang($rpic);
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+        $this->load->view('content/logistik/ics/ics_by_allbarang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function by_expdate_ics($pic)
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+
+        if ($pic == '1') {
+            $rpic = "A";
+        } elseif ($pic == '2') {
+            $rpic = "B";
+        } elseif ($pic == '3') {
+            $rpic = "C";
+        } elseif ($pic == '4') {
+            $rpic = "D";
+        } elseif ($pic == '0') {
+            $rpic = "E";
+        }
+        $data['tim']                = $pic;
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_expdate($rpic);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/ics_by_expdate.php', $data);
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -116,6 +194,7 @@ class C_Ics extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/stock_by_kodebr.php', $data);
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -136,7 +215,7 @@ class C_Ics extends CI_Controller
             ->where('exp_date', $exp_date)
             ->get()->result();
 
-        $data_log = $this->db->select('inputer, tgl_input, qty')
+        $data_log = $this->db->select('inputer, tgl_input, qty , keterangan')
             ->from('tb_log_ics')
             ->where('nama_barang', $nama_barang)
             ->where('exp_date', $exp_date)

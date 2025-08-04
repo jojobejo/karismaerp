@@ -53,8 +53,13 @@ class M_Ics extends CI_Model
         return $kd->nm_barang;
     }
 
-    public function list_barang_ics_expdate()
+    public function list_barang_ics_expdate($pic)
     {
+        $where = "";
+        if ($pic != "E") {
+            $where = "WHERE x.lokasi = '$pic'";
+        }
+
         return $this->db->query("SELECT
         mb.kd,
         x.id,
@@ -121,7 +126,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty
+            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , lokasi
             FROM tb_saldo_awal
             GROUP BY nama_barang, exp_date
         ) x
@@ -145,10 +150,17 @@ class M_Ics extends CI_Model
             FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
+        $where
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
-    public function list_barang_ics_allbarang()
+
+    public function list_barang_ics_allbarang($pic)
     {
+        $where = "";
+        if ($pic != "E") {
+            $where = "WHERE x.lokasi = '$pic'";
+        }
+
         return $this->db->query("SELECT
         x.id,
         x.nama_barang,
@@ -213,7 +225,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty
+            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,lokasi
             FROM tb_saldo_awal
             GROUP BY nama_barang
         ) x
@@ -237,6 +249,7 @@ class M_Ics extends CI_Model
             FROM tb_mbarang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
+        $where
         ORDER BY x.nama_barang")->result();
     }
 
@@ -533,6 +546,106 @@ class M_Ics extends CI_Model
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
         WHERE tim = 'B'
+        GROUP BY nama_barang, exp_date
+    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+    LEFT JOIN (
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        FROM tb_master_barang
+        GROUP BY nm_barang
+    ) mb ON mb.nm_barang = x.nama_barang
+    WHERE (
+        COALESCE(o.qty_opname, 0) - 
+        (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
+    ) != 0
+    ORDER BY x.nama_barang, x.exp_date;")->result();
+    }
+
+    public function list_barang_ics_diffrent_c()
+    {
+        return $this->db->query("SELECT
+        mb.kd,
+        x.nama_barang,
+        x.exp_date,
+        COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
+        FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
+        MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
+        COALESCE(p.qty_in, 0) AS qty_in,
+        FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
+        MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(d.qty_out, 0) AS qty_out,
+        FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
+        MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
+        (
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ) AS saldo_akhir_qty,
+        FLOOR((
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
+        MOD((
+            COALESCE(x.saldo_awal_qty, 0) +
+            COALESCE(p.qty_in, 0) -
+            COALESCE(d.qty_out, 0)
+        ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
+        COALESCE(o.qty_opname, 0) AS fisik_ics,
+        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
+        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        (
+            COALESCE(o.qty_opname, 0) -
+            (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ) AS qty_selisih,
+        FLOOR((
+            COALESCE(o.qty_opname, 0) -
+            (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
+        MOD((
+            COALESCE(o.qty_opname, 0) -
+            (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            )
+        ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
+        CASE
+            WHEN (
+                COALESCE(x.saldo_awal_qty, 0) +
+                COALESCE(p.qty_in, 0) -
+                COALESCE(d.qty_out, 0)
+            ) = COALESCE(o.qty_opname, 0)
+            THEN 'KLOP'
+            ELSE 'TIDAK'
+        END AS status_kesesuaian
+    FROM (
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
+        FROM tb_saldo_awal
+        WHERE lokasi = 'C'
+        GROUP BY nama_barang, exp_date
+    ) x
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        FROM tb_ics_po
+        GROUP BY nama_barang, exp_date
+    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
+        FROM tb_ics_do
+        GROUP BY nama_barang, exp_date
+    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+    LEFT JOIN (
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        FROM tb_ics_opname
+        WHERE tim = 'C'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
