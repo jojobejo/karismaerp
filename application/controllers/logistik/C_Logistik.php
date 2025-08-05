@@ -1031,6 +1031,7 @@ class C_Logistik extends CI_Controller
         ");
 
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+
         $query3 = $this->db->where('kd_do', $kd_do)->get('tb_detail_do');
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
@@ -1105,9 +1106,17 @@ class C_Logistik extends CI_Controller
             'input_at' => $datenow
         ];
 
+        $datalog = [
+            'kd_do'         => $kd,
+            'tgl_input'     => date('d/m/Y'),
+            'keterangan'    => "POST - FAKTUR",
+            'inputer'       => $this->session->userdata('nama')
+        ];
+
         $insert_batch = [];
         foreach ($getdetail as $det) {
             $insert_batch[] = array(
+                'kd_do'         => $kd,
                 'kd_faktur'     => $det->kd_faktur,
                 'tgl_transaksi' => $tgl,
                 'nama_barang'   => $det->nama_barang,
@@ -1119,9 +1128,68 @@ class C_Logistik extends CI_Controller
         }
 
         $this->M_Logistik->insert_batch_do_detail_ics($insert_batch);
+        $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
+    }
+
+    public function repost_status()
+    {
+        $kd_do = $this->input->post('kd_do');
+        $status = $this->input->post('status');
+
+        if (!$kd_do || $status === null) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
+            return;
+        }
+
+        $this->db->where('kd_do', $kd_do);
+
+        $updated        = $this->db->update('tb_do', ['status' => $status]);
+
+        if ($updated) {
+            echo json_encode(['msg' => 'success']);
+            $datalog = [
+                'kd_do'         => $kd_do,
+                'tgl_input'     => date('d/m/Y'),
+                'keterangan'    => "REPOST",
+                'inputer'       => $this->session->userdata('nama')
+            ];
+            $repostdo = [
+                'status'    => '1'
+            ];
+
+            $this->M_Logistik->insertlog_do($datalog);
+            $this->M_Logistik->updated_repost_do($kd_do, $repostdo);
+        } else {
+            echo json_encode(['msg' => 'error', 'message' => 'Gagal update status']);
+        }
+    }
+
+    public function delete_ics_do()
+    {
+        $kd_do = $this->input->post('kd_do');
+
+        if (!$kd_do) {
+            echo json_encode(['msg' => 'error', 'message' => 'Kode DO tidak ditemukan']);
+            return;
+        }
+
+        $exists = $this->db->get_where('tb_ics_do', ['kd_do' => $kd_do])->num_rows();
+        if ($exists == 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
+            return;
+        }
+
+        $this->db->where('kd_do', $kd_do);
+        $deleted = $this->db->delete('tb_ics_do');
+
+        if ($deleted) {
+            echo json_encode(['msg' => 'success', 'message' => 'Data berhasil dihapus']);
+        } else {
+            echo json_encode(['msg' => 'error', 'message' => 'Gagal menghapus data']);
+        }
     }
 
     public function list_faktur_sortby_rute($kdfaktur, $rute)
@@ -1232,7 +1300,9 @@ class C_Logistik extends CI_Controller
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
         $data['kdo'] = $query1->result();
         $data['dostatus'] = $query2->result();
+
         $data['data_list'] = $query->result();
+
         $data['doprintsts'] = $querysts;
 
         $this->load->view('partial/main/header.php', $data);

@@ -487,6 +487,11 @@ class M_Logistik extends CI_Model
         return $this->db->insert('tb_tmp_do', $data);
     }
 
+    public function insertlog_do($data)
+    {
+        return $this->db->insert('tb_log_do', $data);
+    }
+
     public function insert_tmp_detdo($data)
     {
         if (isset($data['barang_sts']) && $data['barang_sts'] != 3) {
@@ -511,6 +516,12 @@ class M_Logistik extends CI_Model
     {
         $this->db->where('kd_faktur', $kd);
         return $this->db->update('tb_pre_do', $data);
+    }
+
+    public function updated_repost_do($kd, $data)
+    {
+        $this->db->where('kd_do', $kd);
+        return $this->db->update('tb_detail_do', $data);
     }
 
     public function deletetmp_detdo($kd)

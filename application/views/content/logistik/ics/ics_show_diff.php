@@ -550,7 +550,6 @@
     </div>
     <!-- ./wrapper -->
 
-
     <script>
         $(document).ready(function() {
             $('.btn-open-opname').on('click', function() {

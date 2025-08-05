@@ -69,6 +69,9 @@
                                                 </div>
                                             <?php elseif ($d->status == '2') : ?>
                                                 <a href="#" class="btn btn-info">DONE</a>
+                                                <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                    <i class="fas fa-redo"></i> REPOST
+                                                </button>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -76,10 +79,20 @@
                                 <?php endif; ?>
 
                                 <?php foreach ($kdo as $k) : ?>
+
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
                                         <div>: <?= $k->kd_do ?></div>
+                                        <?php foreach ($dostatus as $ds) : $date = date('d/m/Y') ?>
+                                            <div class="col-auto" hidden>
+                                                <input type="text" class="form-control" value="<?= $ds->kd_do ?>" name="print_kdo" id="print_kdo">
+                                                <input type="text" class="form-control" value="<?= $date ?>" name="print_tgl" id="print_tgl">
+                                                <input type="text" class="form-control" value="<?= $ds->nolambung ?>" name="print_plat" id="print_plat">
+                                                <input type="text" class="form-control" value="<?= $ds->status ?>" name="print_status" id="print_status">
+                                            </div>
+                                        <?php endforeach; ?>
                                     </div>
+
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Regional Pengiriman</div>
                                         <div>: <?= $k->regional ?></div>
@@ -250,26 +263,44 @@
                                     </table>
                                     <?php foreach ($kdo as $k) : ?>
                                         <div class="row">
-                                            <div class="col">
-                                                <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
-                                                    <i class="fas fa-check-double"></i> Rekam Draft Order
-                                                </button>
-                                            </div>
-                                            <div class="col">
-                                                <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
-                                                    <i class="fas fa-print"></i> Print Order
-                                                </button>
-                                            </div>
-                                            <div class="col">
-                                                <button type="button" class="btn btn-primary btn-block mt-3" id="btnPrintRegis" data-kd="<?= $k->kd_do ?>">
-                                                    <i class="fas fa-print"></i> Print Register
-                                                </button>
-                                            </div>
-                                            <div class="col">
-                                                <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker" data-kd="<?= $k->kd_do ?>">
-                                                    <i class="fas fa-print"></i> Print Checker
-                                                </button>
-                                            </div>
+                                            <?php if ($d->status == '1') : ?>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
+                                                        <i class="fas fa-check-double"></i> Rekam Draft Order
+                                                    </button>
+                                                </div>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Order
+                                                    </button>
+                                                </div>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-primary btn-block mt-3" id="btnPrintRegis" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Register
+                                                    </button>
+                                                </div>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Checker
+                                                    </button>
+                                                </div>
+                                            <?php else : ?>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Order
+                                                    </button>
+                                                </div>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-primary btn-block mt-3" id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Register
+                                                    </button>
+                                                </div>
+                                                <div class="col">
+                                                    <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
+                                                        <i class="fas fa-print"></i> Print Checker
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                     <?php endforeach; ?>
                                     <!-- LOGISTIK END -->
@@ -414,6 +445,63 @@
             });
         });
 
+        $("#btnunpost").on('click', function() {
+            var kd_do = $(this).data('kd');
+
+            $.ajax({
+                url: "<?= base_url('do/repost_status') ?>",
+                type: "POST",
+                data: {
+                    kd_do: kd_do,
+                    status: "1"
+                },
+                dataType: "JSON",
+                success: function(response) {
+                    if (response.msg === "success") {
+                        alert("Data berhasil di-repost!");
+                        window.location.href = "<?= base_url('detail_do/') ?>" + kd_do;
+                    } else {
+                        alert(response.message || "Gagal mengubah status");
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert("Terjadi kesalahan: " + error);
+                }
+            });
+
+            $.ajax({
+                url: "<?= base_url('do/delete_ics_do') ?>",
+                type: 'POST',
+                data: {
+                    kd_do: kd_do
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.msg === 'success') {
+                        alert('Data berhasil dihapus');
+                    } else {
+                        alert('Gagal: ' + response.message);
+                    }
+                }
+            });
+        });
+
+
+
+        $("#btnPrintOrder1").on('click', function() {
+            var kd_do = $(this).data('kd');
+            var status = $("#print_status").val();
+            var plat = $("#print_plat").val();
+            var tgl = $("#print_tgl").val();
+            var drive = $("#print_kdo").val();
+
+            var printUrl = "<?= base_url('print_do/') ?>" + kd_do +
+                "?tgl_kirim=" + encodeURIComponent(tgl) +
+                "&driver=" + encodeURIComponent(drive) +
+                "&plat=" + encodeURIComponent(plat);
+            window.open(printUrl, "_blank");
+        });
+
         $("#btnPrintOrder").on('click', function() {
             var kd_do = $(this).data('kd');
             var tgl_krim = $("#tgl_isi").val().trim();
@@ -431,7 +519,6 @@
                 "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
                 "&driver=" + encodeURIComponent(driver) +
                 "&plat=" + encodeURIComponent(platno);
-
             window.open(printUrl, "_blank");
         });
 
@@ -455,6 +542,20 @@
             window.open(printUrl, "_blank");
         });
 
+        $("#btnPrintRegis1").on('click', function() {
+            var kd_do = $(this).data('kd');
+            var status = $("#print_status").val();
+            var plat = $("#print_plat").val();
+            var tgl = $("#print_tgl").val();
+            var drive = $("#print_kdo").val();
+
+            var printUrl = "<?= base_url('print_regis/') ?>" + kd_do +
+                "?tgl_kirim=" + encodeURIComponent(tgl) +
+                "&driver=" + encodeURIComponent(drive) +
+                "&plat=" + encodeURIComponent(plat);
+            window.open(printUrl, "_blank");
+        });
+
         $("#btnPrintChecker").on('click', function() {
             var kd_do = $(this).data('kd');
             var tgl_krim = $("#tgl_isi").val().trim();
@@ -473,5 +574,20 @@
                 "&driver=" + encodeURIComponent(driver) +
                 "&plat=" + encodeURIComponent(platno);
             window.open(printUrl, "_blank");
+        });
+
+        $("#btnPrintChecker1").on('click', function() {
+            var kd_do = $(this).data('kd');
+            var status = $("#print_status").val();
+            var plat = $("#print_plat").val();
+            var tgl = $("#print_tgl").val();
+            var drive = $("#print_kdo").val();
+
+            var printUrl = "<?= base_url('print_checker/') ?>" + kd_do +
+                "?tgl_kirim=" + encodeURIComponent(tgl) +
+                "&driver=" + encodeURIComponent(drive) +
+                "&plat=" + encodeURIComponent(plat);
+            window.open(printUrl, "_blank");
+
         });
     </script>
