@@ -29,8 +29,22 @@ class C_Ics extends CI_Controller
 
     public function ics_by_expdate()
     {
+        $pic    = $this->session->userdata('tim');
+
+        if ($pic == '1') {
+            $rpic = "A";
+        } elseif ($pic == '2') {
+            $rpic = "B";
+        } elseif ($pic == '3') {
+            $rpic = "C";
+        } elseif ($pic == '4') {
+            $rpic = "D";
+        } elseif ($pic == '0') {
+            $rpic = "E";
+        }
+
         $data['page_title']         = 'KARISMA - LOGISTIK';
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics_expdate();
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_expdate($rpic);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_by_expdate.php', $data);
@@ -39,8 +53,23 @@ class C_Ics extends CI_Controller
 
     public function ics_by_allbarang()
     {
+
+        $pic    = $this->session->userdata('tim');
+
+        if ($pic == '1') {
+            $rpic = "A";
+        } elseif ($pic == '2') {
+            $rpic = "B";
+        } elseif ($pic == '3') {
+            $rpic = "C";
+        } elseif ($pic == '4') {
+            $rpic = "D";
+        } elseif ($pic == '0') {
+            $rpic = "E";
+        }
+
         $data['page_title']         = 'KARISMA - ICS';
-        $data['barang_ics']         = $this->M_Ics->list_barang_ics_allbarang();
+        $data['barang_ics']         = $this->M_Ics->list_barang_ics_allbarang($rpic);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_by_allbarang.php', $data);
