@@ -41,7 +41,7 @@
                                     <a href="<?= base_url('ics/by_expdate_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar"></i> Data By Expired Date</a>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="<?= base_url('ics/ics_diffrent_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                                 </div>
                             <?php endif; ?>
                         </div>
