@@ -5,10 +5,8 @@
         <div class="preloader flex-column justify-content-center align-items-center">
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
-
         <?php $this->load->view('partial/main/navbar') ?>
         <?php $this->load->view('partial/main/sidebar') ?>
-
         <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <!-- Content Header (Page header) -->
@@ -92,12 +90,14 @@
                             <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                             <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                             <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
+                            <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
                         <?php else : ?>
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
                             <a href="<?= base_url('gudang/3') ?>" class="btn btn-success mb-2">Gudang Rusak</a>
                             <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                             <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
+                            <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
                         <?php endif; ?>
                     </div>
                     <div class="card">
@@ -203,7 +203,61 @@
                             </table>
                         </div>
                     </div>
+                <?php elseif ($this->session->userdata('jobdesk') == 'ADMINPURCHASING') : ?>
+                    <div class="container-fluid">
+                        <a href="<?= base_url('pendingpo') ?>" class="btn btn-secondary mb-2">Dashboard</a>
+                        <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
+                        <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
+                    </div>
                 <?php endif; ?>
+                <div class="container-fluid">
+                    <h3>Dashboard Purchasing</h3>
+
+                    <div class="col">
+                        <div class="row">
+                            <div class="col-lg-2 col-6">
+                                <div class="small-box bg-info">
+                                    <div class="inner">
+                                        <h3>150</h3>
+                                        <p>Master Barang</p>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="ion ion-bag"></i>
+                                    </div>
+                                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-6">
+                                <div class="small-box bg-info">
+                                    <div class="inner">
+                                        <h3>150</h3>
+                                        <p>Master Barang</p>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="ion ion-bag"></i>
+                                    </div>
+                                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-3 col-6">
+                            <div class="small-box bg-info">
+                                <div class="inner">
+                                    <h3>150</h3>
+                                    <p>Master Barang</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="ion ion-bag"></i>
+                                </div>
+                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                </div>
             </section>
         </div>
         <!-- /.content-wrapper -->

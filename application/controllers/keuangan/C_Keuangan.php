@@ -553,4 +553,22 @@ class C_Keuangan extends CI_Controller
         $this->load->view('content/keuangan/detail_lot.php', $data);
         $this->load->view('partial/main/footergdg.php');
     }
+
+    public function master_barang()
+    {
+        $user   = $this->session->userdata('jobdesk');
+
+        if ($user == 'ADMINKEU') {
+
+            $data['page_title']         = 'KARISMA';
+            $data['barang']             = $this->M_Keuangan->master_barang();
+
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/keuangan/detail_lot.php', $data);
+            $this->load->view('partial/main/footergdg.php');
+        } elseif ($user == 'LOGISTIK') {
+        } else {
+            return redirect('');
+        }
+    }
 }

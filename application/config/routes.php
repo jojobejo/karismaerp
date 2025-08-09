@@ -79,6 +79,7 @@ $route['truncateitm/(:any)/(:any)']                 = 'keuangan/C_Keuangan/trsun
 $route['deletedata/(:any)']                         = 'keuangan/C_Keuangan/deletedata/$1';
 $route['pagination']                                = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
+$route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
@@ -172,6 +173,8 @@ $route['development']         = 'schedule/C_Development/dashboard_do';
 $route['extravaganza']                  = 'extravaganza/C_Extravaganza';
 $route['extravaganza_undian']           = 'extravaganza/C_Extravaganza/undian';
 $route['extravaganza_savewin']          = 'extravaganza/C_Extravaganza/save_win';
+$route['extravaganza/get_customer']     = 'extravaganza/C_Extravaganza/get_customer_by_nomor';
+
 // EXTRAVAGANZA - REGISTRASI
 $route['extravaganza_registrasi']       = 'extravaganza/C_Extravaganza/registrasi_tamu';
 

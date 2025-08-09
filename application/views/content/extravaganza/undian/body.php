@@ -252,8 +252,6 @@
                         <div class="d-flex flex-row justify-content-center">
                             <h3 class="col-md-2 h3FontCus" id="lblAngka"> x </h3>
                             <h3 class="col-md-2 h3FontCus" id="lblAngka1"> x </h3>
-                            <h3 class="col-md-2 h3FontCus" id="lblAngka2"> x </h3>
-                            <h3 class="col-md-2 h3FontCus" id="lblAngka3"> x </h3>
                         </div>
                         <div class="card-footers">
                             <button type="button" class="btn btn-block btn-success mt-2 mb-2 mr-2" id="btnBerhenti" disabled hidden>Berhenti</button>
@@ -266,6 +264,7 @@
                                 <tr>
                                     <th>Pemenang Ke</th>
                                     <th>Nomor Undian</th>
+                                    <th>#</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -276,35 +275,27 @@
         </div>
     </div>
     <script>
-        /* --------- KONFIG ---------- */
-        const TOTAL_PEMENANG = 5; // target
-        const DURASI_PUTAR = 500; // ms sebelum otomatis berhenti
-        const JEDA_LANJUT = 500; // ms setelah tampil pemenang
+        const TOTAL_PEMENANG = 5;
+        const DURASI_PUTAR = 500;
+        const JEDA_LANJUT = 500;
 
-        /* --------- VARIABEL -------- */
         let rollingInterval; // id setInterval
         let isRunning = false; // status angka berputar
         let winners = []; // array nomor valid sesi ini
         let dbExisting = []; // nomor yg sdh ada di DB (di‑inject server)
 
-        /* ------ FUNGSI UTIL -------- */
         const rand = () => Math.floor(Math.random() * 10);
 
         function showDigits() {
             $('#lblAngka').text(rand());
             $('#lblAngka1').text(rand());
-            $('#lblAngka2').text(rand());
-            $('#lblAngka3').text(rand());
         }
 
         function currentNumber() {
             return $('#lblAngka').text() +
-                $('#lblAngka1').text() +
-                $('#lblAngka2').text() +
-                $('#lblAngka3').text();
+                $('#lblAngka1').text();
         }
 
-        /* ------ LOGIKA PUTAR ------- */
         function startRolling() {
             if (isRunning) return;
             isRunning = true;
@@ -312,49 +303,61 @@
             rollingInterval = setInterval(showDigits, 50);
 
             setTimeout(() => {
-                stopRollingAuto(); // otomatis berhenti
+                stopRollingAuto();
             }, DURASI_PUTAR);
         }
 
         function stopRollingAuto() {
             clearInterval(rollingInterval);
             isRunning = false;
-
             let nomor = currentNumber();
 
-            // Skip syarat
             if (
-                nomor === '0000' ||
+                nomor === '00' ||
                 winners.includes(nomor) ||
                 dbExisting.includes(nomor)
             ) {
-                setTimeout(startRolling, 50); // langsung putar ulang
+                setTimeout(startRolling, 50);
                 return;
             }
+            $.ajax({
+                url: '<?= base_url('extravaganza/get_customer') ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    noundi: nomor
+                },
+                success: function(res) {
+                    if (res.status === 'success') {
+                        winners.push(nomor);
+                        tampilkan(nomor, winners.length, res.nama_customer);
+                    } else {
+                        winners.push(nomor);
+                        tampilkan(nomor, winners.length, '(Tidak ditemukan)');
+                    }
 
-            winners.push(nomor);
-            tampilkan(nomor, winners.length);
-
-            if (winners.length < TOTAL_PEMENANG) {
-                setTimeout(startRolling, JEDA_LANJUT); // lanjut batch berikut
-            } else {
-                $('.card-footers').prepend(
-                    '<div class="alert alert-info text-center">Tekan <strong>ENTER</strong> untuk menyimpan &amp; refresh.</div>'
-                );
-            }
+                    if (winners.length < TOTAL_PEMENANG) {
+                        setTimeout(startRolling, JEDA_LANJUT);
+                    } else {
+                        $('.card-footers').prepend(
+                            '<div class="alert alert-info text-center">Tekan <strong>ENTER</strong> untuk menyimpan &amp; refresh.</div>'
+                        );
+                    }
+                }
+            });
         }
 
-        /* ----- TAMPILKAN UI ------- */
-        function tampilkan(nomor, urut) {
+        function tampilkan(nomor, urut, nama) {
             $('#tblPemenang tbody').append(`
         <tr>
             <td>Pemenang ${urut}</td>
             <td>${nomor}</td>
+            <td>${nama}</td>
         </tr>
-    `);
+         `);
         }
 
-        /* ----- SIMPAN KOLEKTIF ---- */
+
         function simpanSemua() {
             let selesai = 0;
 
@@ -364,7 +367,6 @@
                 }, res => {
                     selesai++;
 
-                    // add ke cache agar tidak terpilih di sesi berikut
                     if (res.status === 'ok') dbExisting.push(nomor);
 
                     if (selesai === winners.length) {
@@ -374,23 +376,19 @@
             });
         }
 
-        /* ------ KEY BINDING ------- */
         $(document).on('keydown', function(e) {
             const key = e.key || e.code || e.keyCode;
 
-            // Cegah jika fokus di input atau textarea
             const tag = document.activeElement.tagName;
             if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
 
             console.log("Key pressed:", key); // bantu debug
 
-            // SPACE → mulai undian
             if ((key === ' ' || key === 'Space' || key === 32) && winners.length === 0 && !isRunning) {
                 e.preventDefault();
                 startRolling();
             }
 
-            // ENTER → simpan & reload
             if ((key === 'Enter' || key === 13) && winners.length === TOTAL_PEMENANG && !isRunning) {
                 e.preventDefault();
                 simpanSemua();

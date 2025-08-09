@@ -37,34 +37,56 @@ class C_Extravaganza extends CI_Controller
         $kat_undi = 1;
         $ket_undi = 1;
 
-        // Validasi format (4 digit angka)
-        if (!preg_match('/^\d{4}$/', $noundi) || $noundi === '0000') {
+        $nm_win = $this->M_Extravaganza->get_win($kat_undi, $noundi);
+
+        if (!$nm_win) {
+            echo json_encode(['status' => 'notfound']);
+            return;
+        }
+
+        // Validasi format (2 digit angka)
+        if (!preg_match('/^\d{1,2}$/', $noundi) || $noundi == 0) {
             http_response_code(400);
             echo json_encode(['status' => 'invalid']);
             return;
         }
 
-        // Cek apakah nomor sudah ada
         $exists = $this->db->get_where('tb_pemenang', ['noundi' => $noundi])->num_rows();
         if ($exists > 0) {
             echo json_encode(['status' => 'exists']);
             return;
         }
 
-        // Simpan ke DB
         $data = [
-            'noundi'   => $noundi,
             'kat_undi' => $kat_undi,
+            'noundi'   => $noundi,
+            'nama_win' => $nm_win->nama_customer,
             'ket_undi' => $ket_undi
         ];
 
         $insert = $this->db->insert('tb_pemenang', $data);
 
         if ($insert) {
-            echo json_encode(['status' => 'ok']);
+            echo json_encode([
+                'status' => 'ok',
+                'nama' => $nm_win->nama_customer
+            ]);
         } else {
             http_response_code(500);
             echo json_encode(['status' => 'error']);
+        }
+    }
+
+    public function get_customer_by_nomor()
+    {
+        $noundi = $this->input->post('noundi');
+        $query = $this->db->get_where('tb_customer_list_undian', ['noundi' => $noundi]);
+        $result = $query->row();
+
+        if ($result) {
+            echo json_encode(['status' => 'success', 'nama_customer' => $result->nama_customer]);
+        } else {
+            echo json_encode(['status' => 'error', 'nama_customer' => null]);
         }
     }
 }
