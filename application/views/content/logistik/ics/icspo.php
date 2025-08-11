@@ -21,7 +21,7 @@
                             <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
                         </div>
                         <div class="col-auto">
-                            <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
+                            <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
@@ -61,17 +61,20 @@
                                 </div>
 
                                 <table class="table table-bordered" id="tb_ics_po">
+
                                     <thead class="bg-primary text-white text-center">
                                         <tr>
-                                            <th>Kode Faktur</th>
+                                            <th>No LPB</th>
                                             <th>Tgl Transaksi</th>
                                             <th>Nama Barang</th>
                                             <th>Expired Date</th>
                                             <th>Qty</th>
                                             <th>Box</th>
                                             <th>Pcs</th>
+                                            <th>Note LPB</th>
                                         </tr>
                                     </thead>
+
                                     <tbody>
                                         <?php foreach ($ics_po as $po) : ?>
                                             <tr>
@@ -82,6 +85,7 @@
                                                 <td><?= $po->qty ?></td>
                                                 <td><?= $po->qty_box ?></td>
                                                 <td><?= $po->qty_pcs ?></td>
+                                                <td><?= $po->note ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

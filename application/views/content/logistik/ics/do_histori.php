@@ -19,17 +19,39 @@
                         </div>
                         <?php if ($this->session->userdata('lv') == '1') : ?>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-minus-circle"></i> Out Today</a>
+                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Out Today</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/icsdo/dohistori') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-recycle"></i> Histori DO</a>
+                                <a href="<?= base_url('ics/icsdo/dohistori/daterange') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-recycle"></i> Histori DO</a>
                             </div>
                         <?php else : ?>
                         <?php endif; ?>
                     </div>
+
+                    <form action="<?= base_url('ics/sc_do_by_date_range') ?>" method="post">
+                        <h4>Serach By Date</h4>
+                        <div class="row">
+                            <div class="col-auto">
+                                <div class="form-group">
+                                    <input type="date" name="nama_barang" id="modal_nama_barang" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-group">
+                                    <input type="date" name="nama_barang" id="modal_nama_barang" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
@@ -51,7 +73,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($ics_do as $do) : ?>
+                                        <?php foreach ($historydo_all as $do) : ?>
                                             <tr>
                                                 <td><?= $do->kd_faktur ?></td>
                                                 <td><?= $do->tgl_transaksi ?></td>

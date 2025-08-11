@@ -48,6 +48,7 @@ class C_Ics extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_by_expdate.php', $data);
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -73,6 +74,7 @@ class C_Ics extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/ics_by_allbarang.php', $data);
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -408,6 +410,7 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
+
         $data['ics_do']             = $this->M_Ics->list_do_today($tgl);
 
         $this->load->view('partial/main/header.php', $data);
@@ -594,9 +597,9 @@ class C_Ics extends CI_Controller
             'kd_system'   => $kdbarang,
             'nama_barang' => $nama_barang,
             'exp_date'    => $expawal,
-            'qty_box'     => $qty_box,
-            'qty_pcs'     => $qty_pcs,
-            'qty'         => $qty_total,
+            'qty_box'     => '0',
+            'qty_pcs'     => '0',
+            'qty'         => '0',
             'inputer'     => $this->session->userdata('nama'),
             'input_at'    => date('d/m/Y'),
             'create_at'   => date('Y-m-d H:i:s')
@@ -605,9 +608,9 @@ class C_Ics extends CI_Controller
         $data_awal = [
             'nama_barang' => $nama_barang,
             'exp_date'    => $expawal,
-            'qty'         => $qty_total,
-            'qty_box'     => $qty_box,
-            'qty_pcs'     => $qty_pcs,
+            'qty'         => '0',
+            'qty_box'     => '0',
+            'qty_pcs'     => '0',
             'input_at'    => date('d/m/Y'),
             'create_at'   => date('Y-m-d H:i:s')
         ];
@@ -706,6 +709,7 @@ class C_Ics extends CI_Controller
                 'nama_barang'     => $row[2],
                 'exp_date'        => $row[3],
                 'qty'             => $row[4],
+                'lpb_note'        => $row[5],
                 'input_at'        => $now,
                 'lpb_status'      => '1',
             ];
@@ -720,5 +724,15 @@ class C_Ics extends CI_Controller
         }
 
         redirect('ics/icspo');
+    }
+
+    public function history_ics_do()
+    {
+        $data['page_title']            = 'KARISMA - LOGISTIK';
+        $data['historydo_all']         = $this->M_Ics->historydo_all();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/do_histori.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 }

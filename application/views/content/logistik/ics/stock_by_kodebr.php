@@ -211,7 +211,7 @@
                                     </div>
                                     <div class="modal-body">
                                         <!-- Nama Barang -->
-                                        <div class="form-group">
+                                        <div class="form-group" hidden>
                                             <label for="nama_barang">Nama Barang</label>
                                             <input type="text" name="nama_barang" class="form-control" value="<?= $nm->nm_barang ?>" required readonly>
                                             <input type="text" name="dimensi" class="form-control" value="<?= $dimensi ?>" required readonly>
@@ -225,12 +225,12 @@
                                             <input type="date" name="exp_date" class="form-control" required>
                                         </div>
                                         <!-- Qty Box -->
-                                        <div class="form-group">
+                                        <div class="form-group" hidden>
                                             <label for="qty_box">Qty Box</label>
                                             <input type="number" name="qty_box" class="form-control" placeholder="0" value="0" required>
                                         </div>
                                         <!-- Qty Pcs -->
-                                        <div class="form-group">
+                                        <div class="form-group" hidden>
                                             <label for="qty_pcs">Qty Pcs</label>
                                             <input type="number" name="qty_pcs" class="form-control" placeholder="0" value="0" required>
                                         </div>

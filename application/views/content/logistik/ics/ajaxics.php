@@ -1,11 +1,20 @@
 <script>
     $(function() {
+
         $("#tb_dash_fefo").DataTable({
             "responsive": true,
             "lengthChange": false,
             "aaSorting": [],
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_byallbarang").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
         $("#compare_expired_date").DataTable({
             "responsive": true,
             "lengthChange": false,
@@ -144,6 +153,13 @@
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
         $("#tb_masterbr_ics").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_expdate").DataTable({
             "responsive": true,
             "lengthChange": false,
             "aaSorting": [],

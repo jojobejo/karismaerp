@@ -90,6 +90,7 @@ $route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_exp
 $route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
 $route['ics/icsdo']                                 = 'logistik/C_Ics/ics_do';
+$route['ics/icsdo/dohistori']                       = 'logistik/C_Ics/history_ics_do';
 $route['ics/icspo']                                 = 'logistik/C_Ics/ics_po';
 $route['ics/diffrent']                              = 'logistik/C_Ics/ics_diffrent';
 $route['ics/sv_opname']                             = 'logistik/C_Ics/save_opname_ics';

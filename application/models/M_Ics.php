@@ -246,7 +246,7 @@ class M_Ics extends CI_Model
         ) o ON o.nama_barang = x.nama_barang
         LEFT JOIN (
             SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
-            FROM tb_mbarang
+            FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
         $where
@@ -257,7 +257,7 @@ class M_Ics extends CI_Model
     {
         return $this->db->query("SELECT 
         a.*
-        FROM tb_mbarang a
+        FROM tb_master_barang a
         ")->result();
     }
 
@@ -811,14 +811,20 @@ class M_Ics extends CI_Model
             FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
             MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
             a.no_lot,
-            a.exp_date
+            a.exp_date,
+            c.nama_kios as nm_kios,
+            b.kd_rute as rute
         FROM tb_ics_do a
         LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
+        LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
             DATE(a.tgl_transaksi) = '$tgl'
             AND (m.p * m.l * m.t) > 0
+            GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer 
         ")->result();
     }
+
     public function list_po_today($tgl)
     {
         return $this->db->query("SELECT
@@ -830,9 +836,10 @@ class M_Ics extends CI_Model
             a.exp_date,
             (m.p * m.l * m.t) AS dimensi,
             FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
-            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs
+            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            a.lpb_note as note
         FROM tb_ics_po a
-        LEFT JOIN tb_mbarang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
         WHERE DATE(a.tgl_transaksi) = '$tgl'
         AND (m.p * m.l * m.t) > 0")->result();
     }
@@ -940,5 +947,27 @@ class M_Ics extends CI_Model
         FROM tb_ics_po a
         WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$expdate'
         ")->result();
+    }
+
+    public function historydo_all()
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.tgl_transaksi,
+            a.kd_faktur,
+            a.nama_barang,
+            a.qty,
+            FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
+            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            a.no_lot,
+            a.exp_date,
+            c.nama_kios as nm_kios,
+            b.kd_rute as rute
+        FROM tb_ics_do a
+        LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
+        LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
+        WHERE (m.p * m.l * m.t) > 0
+        GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer")->result();
     }
 }

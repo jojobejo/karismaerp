@@ -74,15 +74,16 @@
       "responsive": true,
     });
 
-    $('#tbics_byallbarang').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
+    // $('#tbics_byallbarang').DataTable({
+    //   "paging": true,
+    //   "lengthChange": false,
+    //   "searching": true,
+    //   "ordering": false,
+    //   "info": true,
+    //   "autoWidth": false,
+    //   "responsive": true,
+    // });
+
     $('#tb_masterbr_ics').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -92,6 +93,7 @@
       "autoWidth": false,
       "responsive": true,
     });
+    
     $('#tb_ics_do').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -101,6 +103,7 @@
       "autoWidth": false,
       "responsive": true,
     });
+
     $('#tb_ics_po').DataTable({
       "paging": true,
       "lengthChange": false,
