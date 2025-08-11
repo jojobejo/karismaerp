@@ -429,6 +429,7 @@ class M_Ics extends CI_Model
     FROM (
         SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
         FROM tb_saldo_awal
+        WHERE lokasi = 'A'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -528,6 +529,7 @@ class M_Ics extends CI_Model
     FROM (
         SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
         FROM tb_saldo_awal
+        WHERE lokasi = 'B'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -627,6 +629,7 @@ class M_Ics extends CI_Model
     FROM (
         SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
         FROM tb_saldo_awal
+        WHERE lokasi = 'C'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -726,6 +729,7 @@ class M_Ics extends CI_Model
     FROM (
         SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
         FROM tb_saldo_awal
+        WHERE lokasi = 'D'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
