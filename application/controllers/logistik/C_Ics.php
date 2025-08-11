@@ -703,15 +703,24 @@ class C_Ics extends CI_Controller
         $now = date('d/m/Y');
 
         while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
+
+            $exp_raw = trim($row[3]);
+            $exp_date = null;
+
+            if (preg_match('/\d{1,2}\/\d{1,2}\/\d{4}/', $exp_raw)) {
+                $date_obj = DateTime::createFromFormat('d/m/Y', $exp_raw);
+                $exp_date = $date_obj ? $date_obj->format('d/m/Y') : null;
+            }
+
             $data_import[] = [
                 'tgl_transaksi'   => $row[0],
                 'kd_faktur_lpb'   => $row[1],
                 'nama_barang'     => $row[2],
-                'exp_date'        => $row[3],
+                'exp_date'        => $exp_date,
                 'qty'             => $row[4],
                 'lpb_note'        => $row[5],
                 'input_at'        => $now,
-                'lpb_status'      => '1',
+                'lpb_status'      => '1'
             ];
         }
         fclose($handle);
