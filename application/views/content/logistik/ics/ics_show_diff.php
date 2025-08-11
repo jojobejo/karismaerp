@@ -85,6 +85,9 @@
                                             <li class="nav-item">
                                                 <a class="nav-link" href="#ics_c" data-toggle="tab">C</a>
                                             </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" href="#ics_d" data-toggle="tab">D</a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
@@ -252,6 +255,69 @@
                                                 </thead>
                                                 <tbody>
                                                     <?php foreach ($barang_ics_c as $br) : ?>
+                                                        <tr>
+                                                            <td>
+                                                                <a href="<?= base_url('ics/stock_by_kodebr/' . $br->kd)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                                            </td>
+                                                            <td><?= $br->nama_barang ?></td>
+                                                            <td><?= $br->exp_date ?></td>
+                                                            <td><?= $br->saldo_awal_box ?></td>
+                                                            <td><?= $br->saldo_awal_pcs ?></td>
+                                                            <td><?= $br->in_box ?></td>
+                                                            <td><?= $br->in_box ?></td>
+                                                            <td><?= $br->out_box ?></td>
+                                                            <td><?= $br->out_pcs ?></td>
+                                                            <td><?= $br->saldo_akhir_box ?></td>
+                                                            <td><?= $br->saldo_akhir_pcs ?></td>
+                                                            <td><?= $br->fisik_box ?></td>
+                                                            <td><?= $br->fisik_pcs ?></td>
+                                                            <td><?= $br->qty_selisih ?></td>
+                                                            <?php if ($br->status_kesesuaian == 'KLOP') : ?>
+                                                                <td style="text-align: center;">
+                                                                    <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
+                                                                </td>
+                                                            <?php else : ?>
+                                                                <td style="text-align: center;">
+                                                                    <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                                </td>
+                                                            <?php endif; ?>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="chart tab-pane" id="ics_d">
+                                            <h3>VIEW STOCK DIFFFRENT D</h3>
+                                            <table class="table table-bordered table-hover table-sm table-fixed-header" id="tbics_erp_d">
+                                                <thead>
+                                                    <tr>
+                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
+                                                        <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
+                                                        <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
+                                                        <th colspan="2" class="bg-success text-white text-center">LPB</th>
+                                                        <th colspan="2" class="bg-danger text-white text-center">DO</th>
+                                                        <th colspan="2" class="bg-info text-white text-center">Sistem</th>
+                                                        <th colspan="2" class="bg-success text-white text-center">Fisik</th>
+                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="bg-primary text-white">Nama Barang</th>
+                                                        <th class="bg-primary text-white">Date</th>
+                                                        <th class="bg-info text-white">Box</th>
+                                                        <th class="bg-info text-white">Pcs</th>
+                                                        <th class="bg-success text-white">Box</th>
+                                                        <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
+                                                        <th class="bg-info text-white">Box</th>
+                                                        <th class="bg-info text-white">Pcs</th>
+                                                        <th class="bg-success text-white">Box</th>
+                                                        <th class="bg-success text-white">Pcs</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($barang_ics_d as $br) : ?>
                                                         <tr>
                                                             <td>
                                                                 <a href="<?= base_url('ics/stock_by_kodebr/' . $br->kd)  ?>" target="__blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>

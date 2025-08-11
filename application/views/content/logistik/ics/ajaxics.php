@@ -185,6 +185,13 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
+        $("#tbics_erp_d").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
         $("#tb_exp_form").DataTable({
             "responsive": true,
             "lengthChange": false,
