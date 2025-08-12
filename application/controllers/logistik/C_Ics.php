@@ -241,7 +241,7 @@ class C_Ics extends CI_Controller
             ->where('exp_date', $exp_date)
             ->get()->result();
 
-        $data_po = $this->db->select('kd_faktur_lpb, tgl_transaksi, qty')
+        $data_po = $this->db->select('kd_faktur_lpb, tgl_transaksi, qty , input_at')
             ->from('tb_ics_po')
             ->where('nama_barang', $nama_barang)
             ->where('exp_date', $exp_date)
@@ -737,11 +737,44 @@ class C_Ics extends CI_Controller
 
     public function history_ics_do()
     {
-        $data['page_title']            = 'KARISMA - LOGISTIK';
-        $data['historydo_all']         = $this->M_Ics->historydo_all();
+        $data['page_title'] = 'KARISMA - LOGISTIK';
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/do_histori.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function sc_do_by_date_range()
+    {
+        $this->load->helper('date');
+
+        $tgl1 = $this->input->post('tgl1');
+        $tgl2 = $this->input->post('tgl2');
+
+        $start_date = DateTime::createFromFormat('d/m/Y', $tgl1);
+        $end_date = DateTime::createFromFormat('d/m/Y', $tgl2);
+
+        if (!$start_date || !$end_date) {
+
+            $this->session->set_flashdata('error', 'Format tanggal salah');
+            redirect('ics/by_expdate');
+            return;
+        }
+
+        $start_date_str = $start_date->format('Y-m-d');
+        $end_date_str = $end_date->format('Y-m-d');
+
+        $this->db->where('tgl_transaksi >=', $start_date_str);
+        $this->db->where('tgl_transaksi <=', $end_date_str);
+        $query = $this->db->get('tb_ics_do');
+
+        $data['page_title'] = 'Hasil Pencarian DO by Tanggal';
+        $data['results'] = $query->result();
+        $data['tgl1'] = $tgl1;
+        $data['tgl2'] = $tgl2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/do_date_range_view.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 }

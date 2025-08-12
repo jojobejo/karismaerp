@@ -105,6 +105,7 @@ $route['ics/detail_allbarang/(:any)']               = 'logistik/C_Ics/ics_detail
 $route['ics/by_expdate_ics/(:any)']                 = 'logistik/C_Ics/by_expdate_ics/$1';
 $route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffrent';
 $route['ics/import_csv']                            = 'logistik/C_Ics/import_csv_po';
+$route['ics/sc_do_by_date_range']                   = 'logistik/C_Ics/sc_do_by_date_range';
 
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';

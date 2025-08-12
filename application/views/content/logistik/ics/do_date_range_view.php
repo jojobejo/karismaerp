@@ -34,19 +34,42 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
-
-                                <form action="<?= base_url('ics/sc_do_by_date_range') ?>" method="post" class="form-inline mb-3">
-                                    <div class="form-group mr-2">
-                                        <label for="tgl1" class="mr-2">Tanggal Start</label>
-                                        <input type="text" name="tgl1" id="tgl1" class="form-control" placeholder="dd/mm/yyyy" autocomplete="off" required value="<?= isset($tgl1) ? $tgl1 : date('d/m/Y') ?>">
-                                    </div>
-                                    <div class="form-group mr-2">
-                                        <label for="tgl2" class="mr-2">Tanggal End</label>
-                                        <input type="text" name="tgl2" id="tgl2" class="form-control" placeholder="dd/mm/yyyy" autocomplete="off" required value="<?= isset($tgl2) ? $tgl2 : date('d/m/Y') ?>">
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Cari</button>
-                                </form>
-
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Id</th>
+                                            <th>Kode DO</th>
+                                            <th>Kode Faktur</th>
+                                            <th>Tgl Transaksi</th>
+                                            <th>Nama Barang</th>
+                                            <th>Qty</th>
+                                            <th>No Lot</th>
+                                            <th>Exp Date</th>
+                                            <th>Input At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($results)) : ?>
+                                            <?php foreach ($results as $row) : ?>
+                                                <tr>
+                                                    <td><?= $row->id ?></td>
+                                                    <td><?= $row->kd_do ?></td>
+                                                    <td><?= $row->kd_faktur ?></td>
+                                                    <td><?= date('d/m/Y', strtotime($row->tgl_transaksi)) ?></td>
+                                                    <td><?= $row->nama_barang ?></td>
+                                                    <td><?= $row->qty ?></td>
+                                                    <td><?= $row->no_lot ?></td>
+                                                    <td><?= date('d/m/Y', strtotime($row->exp_date)) ?></td>
+                                                    <td><?= date('d/m/Y', strtotime($row->input_at)) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else : ?>
+                                            <tr>
+                                                <td colspan="9" class="text-center">Data tidak ditemukan.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
