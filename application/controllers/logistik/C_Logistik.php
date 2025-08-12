@@ -2266,6 +2266,70 @@ class C_Logistik extends CI_Controller
         redirect('usropname_input');
     }
 
+    public function preview_csv()
+    {
+        $data['page_title']     = 'KARISMA - ICS';
+
+        if (!isset($_FILES['file_csv']['name']) || $_FILES['file_csv']['size'] <= 0) {
+            $this->session->set_flashdata('error', 'Pilih file CSV terlebih dahulu.');
+            redirect('pre_do');
+        }
+
+        $file = fopen($_FILES['file_csv']['tmp_name'], 'r');
+        $header = fgetcsv($file);
+
+        $data_baru = [];
+        $data_duplikat = [];
+
+        while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
+            $kd_faktur = trim($row[1]);
+            $tgl_faktur = trim($row[0]);
+            $nama_customer = trim($row[2]);
+            $alamat = trim($row[3]);
+
+            $row_data = [
+                'kd_faktur' => $kd_faktur,
+                'tgl_faktur' => $tgl_faktur,
+                'nama_customer' => $nama_customer,
+                'alamat' => $alamat
+            ];
+
+            if ($this->M_Logistik->is_exist($kd_faktur)) {
+                $data_duplikat[] = $row_data;
+            } else {
+                $data_baru[] = $row_data;
+            }
+        }
+
+        fclose($file);
+
+        $data['data_baru'] = $data_baru;
+        $data['data_duplikat'] = $data_duplikat;
+
+        $this->session->set_userdata('data_baru_csv', $data_baru);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/pre_do_preview.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function insert_csv()
+    {
+        $data_baru = $this->session->userdata('data_baru_csv');
+
+        if (!empty($data_baru)) {
+            foreach ($data_baru as $row) {
+                $this->M_Logistik->insert_data($row);
+            }
+            $this->session->unset_userdata('data_baru_csv');
+            $this->session->set_flashdata('success', count($data_baru) . " data berhasil diinsert.");
+        } else {
+            $this->session->set_flashdata('error', 'Tidak ada data untuk diinsert.');
+        }
+        redirect('pre_do');
+    }
+
     // public function export_compare_allbarang()
     // {
 

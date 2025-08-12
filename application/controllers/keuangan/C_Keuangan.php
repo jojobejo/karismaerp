@@ -159,6 +159,49 @@ class C_Keuangan extends CI_Controller
         }
     }
 
+    public function preview_csv()
+    {
+        if (!isset($_FILES['file_csv']['name']) || $_FILES['file_csv']['size'] <= 0) {
+            $this->session->set_flashdata('error', 'Pilih file CSV terlebih dahulu.');
+            redirect('pre_do');
+        }
+
+        $file = fopen($_FILES['file_csv']['tmp_name'], 'r');
+        $header = fgetcsv($file); // skip header
+
+        $data_baru = [];
+        $data_duplikat = [];
+
+        while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
+            $kd_faktur = trim($row[0]);
+            $tgl_faktur = trim($row[1]);
+            $nama_customer = trim($row[2]);
+            $alamat = trim($row[3]);
+
+            $row_data = [
+                'kd_faktur' => $kd_faktur,
+                'tgl_faktur' => $tgl_faktur,
+                'nama_customer' => $nama_customer,
+                'alamat' => $alamat
+            ];
+
+            if ($this->Pre_do_model->is_exist($kd_faktur)) {
+                $data_duplikat[] = $row_data;
+            } else {
+                $data_baru[] = $row_data;
+            }
+        }
+        fclose($file);
+
+        $data['data_baru'] = $data_baru;
+        $data['data_duplikat'] = $data_duplikat;
+
+        // Simpan data_baru ke session untuk konfirmasi insert
+        $this->session->set_userdata('data_baru_csv', $data_baru);
+
+        $this->load->view('pre_do_preview', $data);
+    }
+
     public function insertmodule_pnd()
     {
         $data['page_title']     = 'KARISMA - KEUANGAN';

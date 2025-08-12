@@ -85,7 +85,6 @@ $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
 $route['ics/save_mbarang']                          = 'logistik/C_Ics/add_master_barang';
 $route['ics/get_detail_mbarang']                    = 'logistik/C_Ics/get_detail_mbarang';
-
 $route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_expdate';
 $route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
@@ -100,7 +99,6 @@ $route['ics/get_detail_by_exp_date']                = 'logistik/C_Ics/get_detail
 $route['ics/stock_by_kodebr/(:any)']                = 'logistik/C_Ics/stock_by_kodebr/$1';
 $route['ics/get_detail_by_exp']                     = 'logistik/C_Ics/get_detail_by_exp';
 $route['ics/by_allbarang_ics/(:any)']               = 'logistik/C_Ics/by_allbarang_ics/$1';
-
 $route['ics/detail_allbarang/(:any)']               = 'logistik/C_Ics/ics_detail_allbarang/$1';
 $route['ics/by_expdate_ics/(:any)']                 = 'logistik/C_Ics/by_expdate_ics/$1';
 $route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffrent';
@@ -135,6 +133,7 @@ $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delet
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
 
 //LOGISTIK - DO
+$route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                                 = 'logistik/C_Logistik/create_do';

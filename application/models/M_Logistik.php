@@ -2234,4 +2234,17 @@ FROM (
     ORDER BY x.nama_barang, x.exp_date
         ");
     }
+
+    public function is_exist($kd_faktur)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->get('tb_pre_do')
+            ->num_rows() > 0;
+    }
+
+    public function insert_data($data)
+    {
+        return $this->db->insert('tb_pre_do', $data);
+    }
 }
