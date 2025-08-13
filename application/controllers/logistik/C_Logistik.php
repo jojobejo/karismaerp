@@ -2330,40 +2330,4 @@ class C_Logistik extends CI_Controller
         redirect('pre_do');
     }
 
-    // public function export_compare_allbarang()
-    // {
-
-    //     $data = $this->M_Logistik->admin_compareuser_all();
-
-    //     require_once APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php'; // jika tidak pakai Composer
-    //     $sheet = $spreadsheet->getActiveSheet();
-
-    //     $sheet->setCellValue('A1', 'Kode Barang');
-    //     $sheet->setCellValue('B1', 'Nama Barang');
-    //     $sheet->setCellValue('C1', 'Qty Tim 1');
-    //     $sheet->setCellValue('D1', 'Qty Tim 2');
-    //     $sheet->setCellValue('E1', 'Qty Sistem');
-    //     $sheet->setCellValue('F1', 'Status Tim 1');
-    //     $sheet->setCellValue('G1', 'Status Tim 2');
-    //     $row = 2;
-    //     foreach ($data as $d) {
-    //         $sheet->setCellValue('A' . $row, $d->kd_barang);
-    //         $sheet->setCellValue('B' . $row, $d->nama_barang);
-    //         $sheet->setCellValue('C' . $row, $d->qty_fisik_tim1);
-    //         $sheet->setCellValue('D' . $row, $d->qty_fisik_tim2);
-    //         $sheet->setCellValue('E' . $row, $d->qty_sistem);
-    //         $sheet->setCellValue('F' . $row, $d->status_tim1);
-    //         $sheet->setCellValue('G' . $row, $d->status_tim2);
-    //         $row++;
-    //     }
-    //     $filename = 'Perbandingan_Stock_Opname_' . date('Ymd_His') . '.xlsx';
-    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    //     header("Content-Disposition: attachment; filename=\"$filename\"");
-    //     header('Cache-Control: max-age=0');
-
-    //     $writer = new Xlsx($spreadsheet);
-    //     $writer->save('php://output');
-    //     exit;
-    // }
-
 }

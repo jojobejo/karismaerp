@@ -20,3 +20,14 @@ NOTE - TRIAL :
 
 REPORT : TRIAL DONE / TAMBAHAN BARU 
 
+Giulio Leone
+ident {rng 2792840142 id E1_82022}
+
+Lorenzo Amato
+ident {rng 3035355368 id E1_70033}
+
+Clara Hoffmann
+ident {rng 3288262340 id E1_70544}
+
+
+trait-organized trait-hardworking trait-cautious

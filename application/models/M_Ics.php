@@ -948,6 +948,5 @@ class M_Ics extends CI_Model
         WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$expdate'
         ")->result();
     }
-
     
 }
