@@ -1229,6 +1229,7 @@ class C_Logistik extends CI_Controller
                         'kd_rute'       => $det->kd_rute,
                         'kd_customer'   => $det->kd_customer,
                         'kd_barang'     => $det->kd_barang,
+                        'nama_barang'   => $det->nama_barang,
                         'qty'           => $det->qty,
                         'satuan'        => $det->satuan,
                         'no_lot'        => $det->no_lot,
@@ -2282,16 +2283,37 @@ class C_Logistik extends CI_Controller
         $data_duplikat = [];
 
         while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
-            $kd_faktur = trim($row[1]);
-            $tgl_faktur = trim($row[0]);
-            $nama_customer = trim($row[2]);
-            $alamat = trim($row[3]);
+            $kdupdate       = $this->M_Logistik->generate_kd_do();
+            $tgl_inputer    = trim($row[0]);
+            $kd_faktur      = trim($row[1]);
+            $kd_rute        = trim($row[2]);
+            $kd_customer    = trim($row[3]);
+            $kd_barang      = trim($row[4]);
+            $nama_barang    = trim($row[5]);
+            $qty            = trim($row[6]);
+            $satuan         = trim($row[7]);
+            $no_lot         = trim($row[8]);
+            $tgl_exp        = trim($row[9]);
+            $nominal_p      = trim($row[10]);
+            $jtempo         = trim($row[11]);
 
             $row_data = [
-                'kd_faktur' => $kd_faktur,
-                'tgl_faktur' => $tgl_faktur,
-                'nama_customer' => $nama_customer,
-                'alamat' => $alamat
+                'kdupdate'          => $kdupdate,
+                'tgl_inputer'       => $tgl_inputer,
+                'kd_faktur'         => $kd_faktur,
+                'kd_rute'           => $kd_rute,
+                'kd_customer'       => $kd_customer,
+                'kd_barang'         => $kd_barang,
+                'nama_barang'       => $nama_barang,
+                'qty'               => $qty,
+                'satuan'            => $satuan,
+                'no_lot'            => $no_lot,
+                'tgl_exp'           => $tgl_exp,
+                'nominal_p'         => $nominal_p,
+                'jtempo'            => $jtempo,
+                'upload_sts'        => '1',
+                'data_sts'          => '1',
+                'barang_sts'        => '1'
             ];
 
             if ($this->M_Logistik->is_exist($kd_faktur)) {
@@ -2306,12 +2328,16 @@ class C_Logistik extends CI_Controller
         $data['data_baru'] = $data_baru;
         $data['data_duplikat'] = $data_duplikat;
 
-        $this->session->set_userdata('data_baru_csv', $data_baru);
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/pre_do_preview.php', $data);
-        $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+        if (!empty($data_baru)) {
+            foreach ($data_baru as $row) {
+                $this->M_Logistik->insert_data($row);
+            }
+            $this->session->unset_userdata('data_baru_csv');
+            $this->session->set_flashdata('success', count($data_baru) . " data berhasil diinsert.");
+        } else {
+            $this->session->set_flashdata('error', 'Tidak ada data untuk diinsert.');
+        }
+        redirect('logistik');
     }
 
     public function insert_csv()
@@ -2327,7 +2353,6 @@ class C_Logistik extends CI_Controller
         } else {
             $this->session->set_flashdata('error', 'Tidak ada data untuk diinsert.');
         }
-        redirect('pre_do');
+        redirect('logistik');
     }
-
 }

@@ -30,19 +30,19 @@
                         <table class="table table-bordered table-sm">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>KD Faktur</th>
+                                    <th>Kode Faktur</th>
                                     <th>Tanggal Faktur</th>
-                                    <th>Nama Customer</th>
-                                    <th>Alamat</th>
+                                    <th>Kode Customer</th>
+                                    <th>Kode Barang</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($data_baru as $row) : ?>
                                     <tr>
                                         <td><?= $row['kd_faktur'] ?></td>
-                                        <td><?= $row['tgl_faktur'] ?></td>
-                                        <td><?= $row['nama_customer'] ?></td>
-                                        <td><?= $row['alamat'] ?></td>
+                                        <td><?= $row['tgl_inputer'] ?></td>
+                                        <td><?= $row['kd_customer'] ?></td>
+                                        <td><?= $row['kd_barang'] ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -56,19 +56,19 @@
                         <table class="table table-bordered table-sm">
                             <thead class="thead-light">
                                 <tr>
-                                    <th>KD Faktur</th>
+                                    <th>Kode Faktur</th>
                                     <th>Tanggal Faktur</th>
-                                    <th>Nama Customer</th>
-                                    <th>Alamat</th>
+                                    <th>Kode Customer</th>
+                                    <th>Kode Barang</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($data_duplikat as $row) : ?>
                                     <tr>
                                         <td><?= $row['kd_faktur'] ?></td>
-                                        <td><?= $row['tgl_faktur'] ?></td>
-                                        <td><?= $row['nama_customer'] ?></td>
-                                        <td><?= $row['alamat'] ?></td>
+                                        <td><?= $row['tgl_inputer'] ?></td>
+                                        <td><?= $row['kd_customer'] ?></td>
+                                        <td><?= $row['kd_barang'] ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

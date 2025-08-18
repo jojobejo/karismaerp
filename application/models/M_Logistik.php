@@ -502,7 +502,6 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd, $data)
     {
         $this->db->where('kd_faktur', $kd);
-        $this->db->where('kd_barang !=', '3');
         return $this->db->update('tb_pre_do', $data);
     }
 
