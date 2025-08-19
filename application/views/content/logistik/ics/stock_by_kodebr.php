@@ -48,6 +48,7 @@
                                                 <th>Selisih</th>
                                                 <th>Fisik BOX</th>
                                                 <th>Fisik PCS</th>
+                                                <th>Kordinat</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
@@ -63,6 +64,7 @@
                                                     <td><?= $br->selisih ?></td>
                                                     <td><?= $br->qty_box ?></td>
                                                     <td><?= $br->qty_pcs ?></td>
+                                                    <td><?= $br->kordinat ?></td>
                                                     <?php if ($br->status == '1') : ?>
                                                         <td>
                                                             <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check"></i></a>
@@ -187,6 +189,21 @@
                                                 <label for="qty_pcs">Qty Pcs</label>
                                                 <input type="number" name="qty_pcs" class="form-control" value="<?= $br->qty_pcs ?>">
                                             </div>
+
+                                            <div class="form-group">
+                                                <label for="qty_pcs">Kalkulator</label>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <input type="text" class="form-control mathInput" placeholder="contoh: 10+5*4+10">
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <a href="#" class="btn btn-success font-control btnmaths">Calculate</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="result" style="margin-top:15px; font-weight:bold; color:blue;"></div>
+                                            <div id="result" style="margin-top:15px; font-weight:bold; color:blue;"></div>
                                             <div class="modal-footer">
                                                 <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
                                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
@@ -382,6 +399,38 @@
                 let qty_pcs = parseInt($('input[name="qty_pcs"]').val()) || 0;
                 let total = qty_box + qty_pcs;
                 $('#qty_total_input').val(total);
+            });
+        });
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".btnmaths").forEach(function(btn) {
+                btn.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    let parent = btn.closest(".modal-body"); // cari parent modal
+                    let input = parent.querySelector(".mathInput").value.trim();
+                    let resultBox = parent.querySelector(".result");
+
+                    if (input === "") {
+                        resultBox.innerHTML = "Masukkan ekspresi matematika!";
+                        return;
+                    }
+
+                    // validasi hanya boleh angka, operator + - * / ( )
+                    let validPattern = /^[0-9+\-*/().\s]+$/;
+                    if (!validPattern.test(input)) {
+                        resultBox.innerHTML = "Input hanya boleh angka dan operator + - * / ( )";
+                        return;
+                    }
+
+                    try {
+                        let result = Function("return " + input)();
+                        resultBox.innerHTML = "= " + result;
+                    } catch (err) {
+                        resultBox.innerHTML = "Ekspresi tidak valid!";
+                    }
+                });
             });
         });
     </script>

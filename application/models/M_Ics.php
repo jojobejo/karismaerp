@@ -290,6 +290,7 @@ class M_Ics extends CI_Model
             b.p * b.l * b.t AS dimensi,
             a.nama_barang,
             a.exp_date AS expired,
+            a.kordinat,
             SUM(a.qty) AS qty,
             COALESCE(pending.qty_pending, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
@@ -366,6 +367,7 @@ class M_Ics extends CI_Model
         mb.kd,
         x.nama_barang,
         x.exp_date,
+        x.kordinat,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
@@ -427,7 +429,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi , kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'A'
         GROUP BY nama_barang, exp_date
@@ -466,6 +468,7 @@ class M_Ics extends CI_Model
         mb.kd,
         x.nama_barang,
         x.exp_date,
+        x.kordinat,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
@@ -527,7 +530,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'B'
         GROUP BY nama_barang, exp_date
@@ -566,6 +569,7 @@ class M_Ics extends CI_Model
         mb.kd,
         x.nama_barang,
         x.exp_date,
+        x.kordinat,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
@@ -627,7 +631,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'C'
         GROUP BY nama_barang, exp_date
@@ -666,6 +670,7 @@ class M_Ics extends CI_Model
         mb.kd,
         x.nama_barang,
         x.exp_date,
+        x.kordinat,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
@@ -727,7 +732,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'D'
         GROUP BY nama_barang, exp_date
@@ -948,5 +953,4 @@ class M_Ics extends CI_Model
         WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$expdate'
         ")->result();
     }
-    
 }

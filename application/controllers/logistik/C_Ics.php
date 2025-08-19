@@ -777,4 +777,18 @@ class C_Ics extends CI_Controller
         $this->load->view('content/logistik/ics/do_date_range_view.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+    public function kalkulator_operan()
+    {
+        $expression = $this->input->post('expression');
+        if (!preg_match('/^[0-9+\-*/(). ]+$/', $expression)) {
+            echo json_encode(['error' => 'Ekspresi tidak valid']);
+            return;
+        }
+        try {
+            $result = eval("return ($expression);");
+            echo json_encode(['result' => $result]);
+        } catch (Throwable $e) {
+            echo json_encode(['error' => 'Perhitungan error']);
+        }
+    }
 }

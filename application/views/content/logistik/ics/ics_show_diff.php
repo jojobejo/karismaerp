@@ -12,7 +12,6 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
-        <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
@@ -20,7 +19,6 @@
         <?php $this->load->view('partial/main/navbar') ?>
         <?php $this->load->view('partial/main/sidebar') ?>
 
-        <!-- Content Wrapper. Contains page content -->
         <div class="content-wrapper">
             <div class="content-header">
                 <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
@@ -106,6 +104,7 @@
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                         <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
                                                     <tr>
@@ -142,6 +141,7 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
                                                                     <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -169,6 +169,7 @@
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                         <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
                                                     <tr>
@@ -205,6 +206,7 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
                                                                     <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -232,6 +234,7 @@
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                         <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
                                                     <tr>
@@ -268,6 +271,7 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
                                                                     <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -295,6 +299,7 @@
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                         <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
                                                     <tr>
@@ -331,6 +336,7 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
                                                                     <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -366,6 +372,7 @@
                                                     <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                     <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                     <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                    <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                     <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                 </tr>
                                                 <tr>
@@ -402,6 +409,7 @@
                                                         <td><?= $br->fisik_box ?></td>
                                                         <td><?= $br->fisik_pcs ?></td>
                                                         <td><?= $br->qty_selisih ?></td>
+                                                        <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                         <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                             <td style="text-align: center;">
                                                                 <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -427,6 +435,7 @@
                                                     <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                     <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                     <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                    <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                     <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                 </tr>
                                                 <tr>
@@ -463,6 +472,7 @@
                                                         <td><?= $br->fisik_box ?></td>
                                                         <td><?= $br->fisik_pcs ?></td>
                                                         <td><?= $br->qty_selisih ?></td>
+                                                        <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                         <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                             <td style="text-align: center;">
                                                                 <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -488,6 +498,7 @@
                                                     <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                     <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                                     <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                    <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                     <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                 </tr>
                                                 <tr>
@@ -524,6 +535,7 @@
                                                         <td><?= $br->fisik_box ?></td>
                                                         <td><?= $br->fisik_pcs ?></td>
                                                         <td><?= $br->qty_selisih ?></td>
+                                                        <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                         <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                             <td style="text-align: center;">
                                                                 <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>
@@ -566,6 +578,7 @@
                                                     <th class="bg-success text-white">Pcs</th>
                                                 </tr>
                                             </thead>
+
                                             <tbody>
                                                 <?php foreach ($barang_ics_d as $br) : ?>
                                                     <tr>
@@ -585,6 +598,7 @@
                                                         <td><?= $br->fisik_box ?></td>
                                                         <td><?= $br->fisik_pcs ?></td>
                                                         <td><?= $br->qty_selisih ?></td>
+                                                        <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                         <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                             <td style="text-align: center;">
                                                                 <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check-circle"></i></a>

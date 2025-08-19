@@ -20,7 +20,8 @@
                         <label>Pilih File CSV</label>
                         <input type="file" name="file_csv" class="form-control" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Preview</button>
+                    <a href="<?= base_url('preview') ?>" class="btn btn-primary">Preview Data</a>
+                    <button type="submit" class="btn btn-success">Upload</button>
                 </form>
             </div>
         </div>

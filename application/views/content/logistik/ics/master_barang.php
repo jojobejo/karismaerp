@@ -45,7 +45,7 @@
                                                     <td><?= $br->kubikasi ?></td>
                                                     <td><?= $br->qty_min ?></td>
                                                     <td>
-                                                        <a href="#" class="btn btn-sm btn-warning btn-open-mbarang" data-id="<?= $br->id ?>"><i class="fas fa-pencil"></i></a>
+                                                        <a href="#" class="btn btn-sm btn-warning btn-open-mbarang" data-id="<?= $br->id ?>"><i class="fas fa-pen "></i></a>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
