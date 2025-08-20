@@ -256,8 +256,12 @@ class M_Ics extends CI_Model
     public function get_master_barang_ics()
     {
         return $this->db->query("SELECT 
-        a.*
+        a.*, 
+        IFNULL(b.lokasi," - ") AS pic,
+        IFNULL(b.kordinat," - ") AS kordinat,
+        IFNULL(b.kordinat1," - ") AS kordinat1
         FROM tb_master_barang a
+        LEFT JOIN tb_saldo_awal b ON b.nama_barang = a.nm_barang
         ")->result();
     }
 

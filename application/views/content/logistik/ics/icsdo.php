@@ -15,7 +15,7 @@
                 <section class="content">
                     <div class="row">
                         <div class="col-auto">
-                            <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                            <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                         </div>
                         <?php if ($this->session->userdata('lv') == '1') : ?>
                             <div class="col-auto">
@@ -28,12 +28,17 @@
                                 <a href="<?= base_url('ics/icsdo/dohistori') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-recycle"></i> Histori DO</a>
                             </div>
                         <?php else : ?>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-minus-circle"></i> Out Today</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
+                            </div>
                         <?php endif; ?>
                     </div>
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
-
                                 <table class="table table-bordered " id="tb_ics_do">
                                     <thead class="bg-primary text-white text-center">
                                         <tr>

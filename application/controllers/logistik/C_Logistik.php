@@ -993,7 +993,7 @@ class C_Logistik extends CI_Controller
                 JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
-                GROUP BY a.kd_barang , a.no_lot
+                GROUP BY a.kd_faktur , a.kd_barang , a.tgl_exp , a.no_lot
                 ORDER BY a.norut
             ", array($kd_do));
 

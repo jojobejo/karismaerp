@@ -410,7 +410,6 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
-
         $data['ics_do']             = $this->M_Ics->list_do_today($tgl);
 
         $this->load->view('partial/main/header.php', $data);

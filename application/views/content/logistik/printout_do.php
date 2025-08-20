@@ -33,6 +33,13 @@
         text-align: center;
         font-size: 24px;
         font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .header-title-rute {
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
         margin-bottom: 20px;
         text-transform: uppercase;
     }
@@ -56,8 +63,9 @@
     <div class="wrapper m-5">
         <?php foreach ($dostatus as $d) : ?>
             <div class="header-title">FAKTUR DELIVERY ORDER</div>
-            <div class="info-faktur">
+            <div class="header-title-rute">RUTE : <?= $d->regional ?></div>
 
+            <div class="info-faktur">
                 <?php foreach ($doprintsts as $print) :
                     $tonase = ($print->total_tonase_faktur / 1000);
                     $tgl_kirim = $this->input->get('tgl_kirim');
@@ -76,7 +84,8 @@
             <table class="table table-bordered" id="tb_checker_do">
                 <thead>
                     <tr>
-                        <th colspan="3">Data Kios</th>
+                        <!-- <th colspan="3">Data Kios</th> -->
+                        <th rowspan="2">Nama Kios</th>
                         <th rowspan="2">Rute</th>
                         <th colspan="2">TTB</th>
                         <th rowspan="2">No</th>
@@ -85,9 +94,9 @@
                         <th colspan="2">Qty</th>
                     </tr>
                     <tr>
-                        <th>Nama Kios</th>
-                        <th>Jam Buka - Tutup</th>
-                        <th class="wrap-text">Karakteristik</th>
+                        <!-- <th>Nama Kios</th> -->
+                        <!-- <th>Jam Buka - Tutup</th> -->
+                        <!-- <th class="wrap-text">Karakteristik</th> -->
                         <th>Kode Faktur</th>
                         <th>Tgl Input</th>
                         <th>Besar</th>
@@ -112,7 +121,7 @@
                         $show_faktur_info = !in_array($row->kd_faktur, $printed_faktur);
                         if ($show_faktur_info) {
                             $printed_faktur[] = $row->kd_faktur;
-                            $norut_counter = 0;
+                            $norut_counter = 1;
                         }
 
                         if ($row->karakteristik_kios == '') {
@@ -131,8 +140,8 @@
                             <?php if ($show_faktur_info) :
                             ?>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $jambukatutup ?></td>
-                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="wrap-text"><?= $karakteristik_kios ?></td>
+                                <!-- <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $jambukatutup ?></td>
+                                <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="wrap-text"><?= $karakteristik_kios ?></td> -->
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>

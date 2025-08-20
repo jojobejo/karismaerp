@@ -15,7 +15,7 @@
                 <section class="content">
                     <div class="row">
                         <div class="col-auto">
-                            <a href="<?= base_url('ics/by_expdate') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                            <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
@@ -23,45 +23,43 @@
                         <div class="col-auto">
                             <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
                         </div>
-                        <div class="col-auto">
-                            <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
-                        </div>
                     </div>
 
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
-
-                                <button class="btn btn-success mb-3" data-toggle="modal" data-target="#modalImportCSV">
-                                    <i class="fas fa-file-csv"></i> Import CSV
-                                </button>
-
-                                <!-- Modal Import CSV -->
-                                <div class="modal fade" id="modalImportCSV" tabindex="-1" role="dialog" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
-                                    <div class="modal-dialog" role="document">
-                                        <form action="<?= base_url('ics/import_csv') ?>" method="post" enctype="multipart/form-data">
-                                            <div class="modal-content">
-                                                <div class="modal-header bg-success">
-                                                    <h5 class="modal-title">Import Data PO dari CSV</h5>
-                                                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="form-group">
-                                                        <label for="file_csv">Pilih File CSV</label>
-                                                        <input type="file" name="file_csv" class="form-control" required accept=".csv">
+                                
+                            <?php if ($this->session->userdata('lv') == '1') : ?>
+                                    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#modalImportCSV">
+                                        <i class="fas fa-file-csv"></i> Import CSV
+                                    </button>
+                                    <!-- Modal Import CSV -->
+                                    <div class="modal fade" id="modalImportCSV" tabindex="-1" role="dialog" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
+                                        <div class="modal-dialog" role="document">
+                                            <form action="<?= base_url('ics/import_csv') ?>" method="post" enctype="multipart/form-data">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-success">
+                                                        <h5 class="modal-title">Import Data PO dari CSV</h5>
+                                                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="form-group">
+                                                            <label for="file_csv">Pilih File CSV</label>
+                                                            <input type="file" name="file_csv" class="form-control" required accept=".csv">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-success">Import</button>
+                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                                                     </div>
                                                 </div>
-                                                <div class="modal-footer">
-                                                    <button type="submit" class="btn btn-success">Import</button>
-                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
-                                                </div>
-                                            </div>
-                                        </form>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
+                                <?php else : ?>
+                                <?php endif; ?>
 
                                 <table class="table table-bordered" id="tb_ics_po">
-
                                     <thead class="bg-primary text-white text-center">
                                         <tr>
                                             <th>No LPB</th>
