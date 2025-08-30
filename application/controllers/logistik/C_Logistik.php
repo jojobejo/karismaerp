@@ -1308,6 +1308,7 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/printout_do.php', $data);
+        // $this->load->view('content/logistik/printout_do1.php', $data);
         $this->load->view('partial/main/footerprint.php');
     }
 

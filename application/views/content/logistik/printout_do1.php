@@ -1,4 +1,11 @@
 <style>
+    @page {
+        size: 9.5in 5.5in landscape;
+        /* Ukuran kertas + orientasi landscape */
+        margin: 0.2cm 0.5cm;
+        /* Sesuaikan margin kiri kanan */
+    }
+
     @media print {
         body {
             font-family: "Courier New", monospace;
@@ -37,7 +44,7 @@
     }
 </style>
 
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse" onload="window.print();">
     <div class="wrapper">
         <?php foreach ($dostatus as $d) : ?>
             <div class="header-title">FAKTUR DELIVERY ORDER</div>
@@ -53,7 +60,7 @@
                     <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
                     <div>Driver : <?= htmlspecialchars($driver) ?></div>
                     <div>No Lambung : <?= htmlspecialchars($plat) ?> </div>
-                    <div>Total Customer :<?= $print->totalfaktur ?> </div>
+                    <div>Total Customer : <?= $print->totalfaktur ?> </div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
                     <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) ' . '||' . ' ' . $tonase . ' (Ton)' ?></div>
                 <?php endforeach; ?>
@@ -78,7 +85,6 @@
                 </thead>
                 <tbody>
                     <?php
-                    $prev_norut = null;
                     $rowspan_count = [];
                     $norut_counter = 1;
 
@@ -97,21 +103,11 @@
                             $norut_counter = 1;
                         }
 
-                        if ($row->karakteristik_kios == '') {
-                            $karakteristik_kios = '-';
-                        } else {
-                            $karakteristik_kios = $row->karakteristik_kios;
-                        }
-
-                        if ($row->jam_buka_tutup == '') {
-                            $jambukatutup = '-';
-                        } else {
-                            $jambukatutup = $row->jam_buka_tutup;
-                        }
+                        $karakteristik_kios = $row->karakteristik_kios == '' ? '-' : $row->karakteristik_kios;
+                        $jambukatutup = $row->jam_buka_tutup == '' ? '-' : $row->jam_buka_tutup;
                     ?>
                         <tr>
-                            <?php if ($show_faktur_info) :
-                            ?>
+                            <?php if ($show_faktur_info) : ?>
                                 <td class="nama-kios" rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
@@ -128,4 +124,4 @@
             </table>
         <?php endforeach; ?>
     </div>
-    <!-- ./wrapper -->
+</body>
