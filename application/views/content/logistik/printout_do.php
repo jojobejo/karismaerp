@@ -2,31 +2,32 @@
     @media print {
         body {
             font-family: "Courier New", monospace;
-            font-size: 14px;
-            line-height: 1.2;
+            font-size: 16px;
+            line-height: 2.0;
+
         }
 
         .header-title {
-            font-size: 16px;
+            font-size: 24px;
             font-weight: bold;
             text-align: center;
         }
 
         .header-title-rute {
-            font-size: 14px;
+            font-size: 16px;
             margin-bottom: 10px;
             text-align: center;
         }
 
         .info-faktur {
-            font-size: 13px;
+            font-size: 16px;
             margin-bottom: 15px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            font-size: 16px;
         }
 
         table th,
