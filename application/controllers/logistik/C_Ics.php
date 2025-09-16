@@ -89,6 +89,8 @@ class C_Ics extends CI_Controller
             $data['barang_ics_b']         = $this->M_Ics->list_barang_ics_diffrent_b();
             $data['barang_ics_c']         = $this->M_Ics->list_barang_ics_diffrent_c();
             $data['barang_ics_d']         = $this->M_Ics->list_barang_ics_diffrent_d();
+            $data['barang_ics_e']         = $this->M_Ics->list_barang_ics_diffrent_e();
+            $data['barang_ics_0']         = $this->M_Ics->list_barang_ics_diffrent_0();
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
             $this->load->view('content/logistik/ics/ajaxics.php', $data);
@@ -113,6 +115,18 @@ class C_Ics extends CI_Controller
             $this->load->view('partial/main/footer.php');
         } elseif ($akses == 'Admin ICS 4') {
             $data['barang_ics_d']         = $this->M_Ics->list_barang_ics_diffrent_d();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 5') {
+            $data['barang_ics_e']         = $this->M_Ics->list_barang_ics_diffrent_e();
+            $this->load->view('partial/main/header.php', $data);
+            $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
+            $this->load->view('content/logistik/ics/ajaxics.php', $data);
+            $this->load->view('partial/main/footer.php');
+        } elseif ($akses == 'Admin ICS 6') {
+            $data['barang_ics_0']         = $this->M_Ics->list_barang_ics_diffrent_0();
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/logistik/ics/ics_show_diff.php', $data);
             $this->load->view('content/logistik/ics/ajaxics.php', $data);
@@ -699,6 +713,9 @@ class C_Ics extends CI_Controller
         $header = fgetcsv($handle);
 
         $data_import = [];
+        $data_opname = [];
+        $data_saldo_awal = [];
+
         $now = date('d/m/Y');
 
         while (($row = fgetcsv($handle, 1000, ",")) !== FALSE) {
@@ -711,21 +728,78 @@ class C_Ics extends CI_Controller
                 $exp_date = $date_obj ? $date_obj->format('d/m/Y') : null;
             }
 
+            $nama_barang = trim($row[2]);
+
             $data_import[] = [
                 'tgl_transaksi'   => $row[0],
                 'kd_faktur_lpb'   => $row[1],
-                'nama_barang'     => $row[2],
+                'nama_barang'     => $nama_barang,
                 'exp_date'        => $exp_date,
                 'qty'             => $row[4],
                 'lpb_note'        => $row[5],
                 'input_at'        => $now,
                 'lpb_status'      => '1'
             ];
+
+            $exists_opname = $this->db->get_where('tb_ics_opname', [
+                'nama_barang' => $nama_barang,
+                'exp_date'    => $exp_date
+            ])->num_rows();
+
+            $opname_dt = $this->db->get_where('tb_ics_opname', [
+                'nama_barang' => $nama_barang,
+            ])->row();
+
+            if ($exists_opname == 0) {
+
+                $data_opname[] = [
+                    'kd_system'     => $opname_dt->kd_system,
+                    'nama_barang'   => $nama_barang,
+                    'exp_date'      => $exp_date,
+                    'qty'           => '0',
+                    'qty_box'       => '0',
+                    'qty_pcs'       => '0',
+                    'inputer'       => 'Admin ICS',
+                    'tim'           => '0',
+                    'wilayah'       => '-',
+                    'input_at'      => $now
+                ];
+            }
+
+            $exists_saldo = $this->db->get_where('tb_saldo_awal', [
+                'nama_barang' => $nama_barang,
+                'exp_date'    => $exp_date
+            ])->num_rows();
+
+            if ($exists_saldo == 0) {
+                $data_saldo_awal[] = [
+                    'nama_barang'   => $nama_barang,
+                    'exp_date'      => $exp_date,
+                    'qty'           => '0',
+                    'qty_box'       => '0',
+                    'qty_pcs'       => '0',
+                    'lokasi'        => '0',
+                    'kordinat'      => '-',
+                    'kordinat1'     => '-',
+                    'input_at'      => $now
+                ];
+            }
         }
         fclose($handle);
 
         if (!empty($data_import)) {
             $this->db->insert_batch('tb_ics_po', $data_import);
+        }
+
+        if (!empty($data_opname)) {
+            $this->db->insert_batch('tb_ics_opname', $data_opname);
+        }
+
+        if (!empty($data_saldo_awal)) {
+            $this->db->insert_batch('tb_saldo_awal', $data_saldo_awal);
+        }
+
+        if (!empty($data_import)) {
             $this->session->set_flashdata('success', 'Import berhasil!');
         } else {
             $this->session->set_flashdata('error', 'File kosong atau format tidak sesuai.');
@@ -733,6 +807,7 @@ class C_Ics extends CI_Controller
 
         redirect('ics/icspo');
     }
+
 
     public function history_ics_do()
     {
