@@ -981,13 +981,13 @@ class C_Logistik extends CI_Controller
                 a.kd_faktur,a.tgl_transaksi,c.kd_system ,c.nm_barang, a.no_lot, a.nominal_p , a.jtempo, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot AND a.tgl_exp = f.tgl_exp ) AS qty,
                 (c.p*c.l*c.t) AS dimensi,
                 FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)) AS qty_box,
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot AND a.tgl_exp = f.tgl_exp )/(c.p*c.l*c.t)) AS qty_box,
                 ((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot AND a.tgl_exp = f.tgl_exp)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
+                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot AND a.tgl_exp = f.tgl_exp)/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
