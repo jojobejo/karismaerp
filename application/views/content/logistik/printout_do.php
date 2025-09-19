@@ -4,7 +4,6 @@
             font-family: "Courier New", monospace;
             font-size: 16px;
             line-height: 2.0;
-
         }
 
         .header-title {
@@ -28,12 +27,20 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 16px;
+            page-break-inside: auto;
+            /* izinkan tabel terbagi */
         }
 
         table th,
         table td {
             border: 1px solid black;
             padding: 2px 4px;
+        }
+
+        tr {
+            page-break-inside: avoid;
+            /* hindari baris terpotong */
+            page-break-after: auto;
         }
     }
 </style>
