@@ -1639,4 +1639,12 @@ FROM (
     ORDER BY x.nama_barang, x.exp_date
         ");
     }
+
+    function get_masterbarangall()
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_master_barang a
+        ")->result();
+    }
 }

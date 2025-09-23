@@ -90,6 +90,24 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#masterbarang').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+    $('#compare_allbarang').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     bsCustomFileInput.init();
   });
 </script>
