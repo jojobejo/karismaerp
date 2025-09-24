@@ -22,10 +22,10 @@
                             <a href="<?= base_url('master_barang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Master Barang</a>
                         </div>
                         <div class="col-auto">
-                            <a href="<?= base_url('compare_opname_all') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare All</a>
+                            <a href="<?= base_url('compare_opname_all') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare All</a>
                         </div>
                         <div class="col-auto">
-                            <a href="<?= base_url('compare_opname_exp') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare Exp</a>
+                            <a href="<?= base_url('compare_opname_exp') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare Exp</a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Data Pending</a>
@@ -35,39 +35,39 @@
                         </div>
                     </div>
 
-                    <div class="card card-primary mt-2 mb-5">
+                    <div class="card card-primary">
                         <div class="card-header">
-                            <h5 class="card-title mt-2">Compare - Allbarang</h5>
+                            <h5 class="card-title">Compare Tim - Expired Date</h5>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-sm" id="compare_allbarang">
+                            <table class="table table-bordered table-sm" id="compare_expired_date">
                                 <thead>
                                     <tr>
                                         <th style="text-align: center;">Nama Barang</th>
+                                        <th style="text-align: center;">Expired Date</th>
                                         <th style="text-align: center;">QTY Fisik</th>
                                         <th style="text-align: center;">QTY Zahir</th>
                                         <th style="text-align: center;">QTY Pending</th>
-                                        <th style="text-align: center;">QTY(Pending + Zahir)</th>
+                                        <th style="text-align: center;">QTY (Zahir + Pending)</th>
                                         <th style="text-align: center;">Status</th>
                                         <th style="text-align: center;">#</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($compare_all as $all) : ?>
+                                    <?php foreach ($compare_exp as $ce) : ?>
                                         <tr>
-                                            <td style="text-align: center;"><?= $all->nama_barang ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_fisik ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_sistem ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_pending ?></td>
-                                            <td style="text-align: center;"><?= $all->total_sistem_pending ?></td>
-                                            <?php if ($all->status == 'match') : ?>
+                                            <td><?= $ce->nama_barang ?></td>
+                                            <td style="text-align: center;"><?= $ce->exp_date ?></td>
+                                            <td style="text-align: center;"><?= $ce->qty_fisik ?></td>
+                                            <td style="text-align: center;"><?= $ce->qty_sistem ?></td>
+                                            <td style="text-align: center;"><?= $ce->qty_pending ?></td>
+                                            <td style="text-align: center;"><?= $ce->total_sistem_pending ?></td>
+                                            <?php if ($ce->status == 'match') : ?>
                                                 <td style="text-align: center;"><a href="#" class="btn btn-success w-100"></a></td>
                                             <?php else : ?>
                                                 <td style="text-align: center;"><a href="#" class="btn btn-danger w-100"></a></td>
                                             <?php endif; ?>
-                                            <td style="text-align: center;">
-                                                <a href="<?= base_url('detail_opname/') . $all->kode_barang  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
-                                            </td>
+                                            <td style="text-align: center;"><a href="<?= base_url('detail_opname/') . $ce->kode_barang  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

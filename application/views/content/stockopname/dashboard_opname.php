@@ -31,7 +31,10 @@
                             <a href="<?= base_url('master_barang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Master Barang</a>
                         </div>
                         <div class="col-auto">
-                            <a href="<?= base_url('compare_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Opname Compare</a>
+                            <a href="<?= base_url('compare_opname_all') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare All</a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('compare_opname_exp') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Compare Exp</a>
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('opname_datapending') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Data Pending</a>

@@ -139,7 +139,7 @@
             $('#nama_barang').select2({
                 placeholder: 'Cari nama barang...',
                 ajax: {
-                    url: '<?= base_url("searchbarang") ?>',
+                    url: '<?= base_url("op_searchbarang") ?>',
                     dataType: 'json',
                     delay: 250,
                     data: function(params) {
@@ -166,7 +166,7 @@
                 $('#exp_date').empty().append('<option value="">Loading...</option>');
 
                 $.ajax({
-                    url: '<?= base_url("search_get_exp_date") ?>',
+                    url: '<?= base_url("op_search_get_exp_date") ?>',
                     type: 'POST',
                     data: {
                         nama_barang
@@ -175,7 +175,7 @@
                     success: function(res) {
                         $('#exp_date').empty().append('<option value="">Pilih Expired Date</option>');
                         $.each(res.exp_dates, function(i, val) {
-                            $('#exp_date').append('<option value="' + val.exp_date + '">' + val.exp_date + '</option>');
+                            $('#exp_date').append('<option value="' + val.expired_date + '">' + val.expired_date + '</option>');
                         });
 
                         $('#exp_date_group').removeClass('d-none');
@@ -197,18 +197,15 @@
                 });
             });
 
-
             $('#exp_date').on('change', function() {
                 $('#qty_form').removeClass('d-none');
             });
-
-
 
             $('#btn_submit_manual').on('click', function(e) {
                 e.preventDefault();
 
                 $.ajax({
-                    url: '<?= base_url("request_opname") ?>',
+                    url: '<?= base_url("op_request_opname") ?>',
                     type: 'POST',
                     data: $('#formOpname').serialize(),
                     success: function(response) {
@@ -230,11 +227,10 @@
             $('#formOpname').on('submit', function(e) {
                 e.preventDefault();
 
-                let url = '<?= base_url("save_opname") ?>';
+                let url = '<?= base_url("op_save_opname") ?>';
                 if (isManualMode) {
-                    url = '<?= base_url("request_opname") ?>';
+                    url = '<?= base_url("op_request_opname") ?>';
                 }
-
                 $.ajax({
                     url: url,
                     type: 'POST',
@@ -252,5 +248,6 @@
                     }
                 });
             });
+
         });
     </script>

@@ -108,6 +108,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#compare_expired_date').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     bsCustomFileInput.init();
   });
 </script>

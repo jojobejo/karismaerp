@@ -83,8 +83,12 @@ $route['gudang/(:any)/suplier/(:any)']      = 'keuangan/C_Keuangan/stock_suplier
 // STOCK OPNAME
 $route['master_barang']                      = 'logistik/C_Logistik/master_barang';
 $route['dashboard_opname']                   = 'stockopname/C_Stockopname';
-$route['compare_opname']                     = 'stockopname/C_Stockopname/compare_opname';
-
+$route['compare_opname_all']                 = 'stockopname/C_Stockopname/compare_opname_all';
+$route['usrstockopname']                     = 'stockopname/C_Stockopname/usrstockopname';
+$route['op_searchbarang']                    = 'stockopname/C_Stockopname/searchbarang';
+$route['op_search_get_exp_date']             = 'stockopname/C_Stockopname/op_search_get_exp_date';
+$route['op_request_opname']                  = 'stockopname/C_Stockopname/request_opname';
+$route['op_save_opname']                     = 'stockopname/C_Stockopname/save_opname';
 
 // LOGISTIK ICS
 $route['ics/(:any)']                         = 'logistik/C_Logistik/ics/$1';

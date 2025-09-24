@@ -52,7 +52,7 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'ADMINKEUTC') {
                         redirect('keuangan');
                     } else if ($key->jobdesk == 'STOCKOPNAME') {
-                        redirect('stockopname');
+                        redirect('usrstockopname');
                     } else if ($key->jobdesk == 'ADMIN_STOCKOPNAME') {
                         redirect('dashboard_opname');
                     }
