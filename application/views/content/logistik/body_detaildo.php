@@ -176,6 +176,7 @@
                                                 <th rowspan="2">Nama Barang</th>
                                                 <th rowspan="2">No Lot</th>
                                                 <th colspan="2">Qty</th>
+                                                <th rowspan="2">Qty</th>
 
                                             </tr>
                                             <tr>
@@ -227,6 +228,7 @@
                                                     <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
                                                     <td><?= $row->qty_box ?></td>
                                                     <td><?= $row->qty_pcs ?></td>
+                                                    <td><?= $row->qty ?></td>
                                                     <!-- <?php if ($d->status == '1') : ?>
                                                     <?php if ($row->status == '2') : ?>
                                                         <td><a href="#" class="btn btn-sm btn-block btn-success"></a></td>
@@ -256,7 +258,7 @@
                                                         </td>
                                                     <?php endif; ?>
                                                 <?php elseif ($d->status == '2') : ?>
-                                                <?php endif; ?> -->
+                                                    <?php endif; ?> -->
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
