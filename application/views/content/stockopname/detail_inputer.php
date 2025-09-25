@@ -37,37 +37,38 @@
 
                     <div class="card card-primary mt-2 mb-5">
                         <div class="card-header">
-                            <h5 class="card-title mt-2">Compare - Allbarang</h5>
+                            <h5 class="card-title mt-2">Nama Barang</h5>
                         </div>
                         <div class="card-body">
-                            <table class="table table-bordered table-sm" id="compare_allbarang">
+                            <table class="table table-bordered table-sm" id="detail_inputer">
                                 <thead>
                                     <tr>
-                                        <th style="text-align: center;">Nama Barang</th>
-                                        <th style="text-align: center;">QTY Fisik</th>
-                                        <th style="text-align: center;">QTY Zahir</th>
-                                        <th style="text-align: center;">QTY Pending</th>
-                                        <th style="text-align: center;">QTY(Pending + Zahir)</th>
-                                        <th style="text-align: center;">Status</th>
+                                        <th>Inputer</th>
+                                        <th>Qty</th>
+                                        <th>Qty BOX</th>
+                                        <th>Qty PCS</th>
                                         <th style="text-align: center;">#</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($compare_all as $all) : ?>
+                                    <?php foreach ($item_detail as $d) : ?>
                                         <tr>
-                                            <td style="text-align: center;"><?= $all->nama_barang ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_fisik ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_sistem ?></td>
-                                            <td style="text-align: center;"><?= $all->qty_pending ?></td>
-                                            <td style="text-align: center;"><?= $all->total_sistem_pending ?></td>
-                                            <?php if ($all->status == 'match') : ?>
-                                                <td style="text-align: center;"><a href="#" class="btn btn-success w-100"></a></td>
-                                            <?php else : ?>
-                                                <td style="text-align: center;"><a href="#" class="btn btn-danger w-100"></a></td>
-                                            <?php endif; ?>
-                                            <td style="text-align: center;">
-                                                <a href="<?= base_url('op_detail_opname/') . $all->id  ?>" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                                            <td><?= $d->input_by ?></td>
+                                            <td><?= $d->qty ?></td>
+                                            <td><?= $d->qty_box ?></td>
+                                            <td><?= $d->qty_pcs ?></td>
+
+                                            <td style="width: 10%;">
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <a href="<?= base_url('edit_opname/') . $d->id ?>" class="btn btn-sm btn-success"><i class="fas fa-plus"></i></a>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <a href="<?= base_url('edit_opname/') . $d->id ?>" class="btn btn-sm btn-danger"><i class="fas fa-minus"></i></a>
+                                                    </div>
+                                                </div>
                                             </td>
+
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -94,9 +95,3 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
-
-    <script>
-        $('#btn-export-compare-allbarang').on('click', function() {
-            window.location.href = "<?= site_url('export_compare_allbarang') ?>";
-        });
-    </script>

@@ -6,6 +6,7 @@ class M_Stockopname extends CI_Model
     public function get_stockopname()
     {
         return $this->db->query("SELECT
+            m.id,
             m.kode_barang AS kode_barang,
             m.nama_barang,
             COALESCE(o.qty, 0) AS qty_fisik,
@@ -67,12 +68,30 @@ class M_Stockopname extends CI_Model
     }
     public function getBarangByNama($nama)
     {
-        return $this->db->get_where('tb_master_barang', ['nm_barang' => $nama])->row();
+        return $this->db->get_where('tb_mbarang', ['nm_barang' => $nama])->row();
     }
+
+    public function getBarangByNamamaster($nama)
+    {
+        return $this->db->get_where('stockopname_master', ['nama_barang' => $nama])->row();
+    }
+
     public function getDimensi($nama)
     {
         $barang = $this->getBarangByNama($nama);
-        return $barang->p * $barang->l * $barang->t;
+        if ($barang) {
+            return $barang->dimensi;
+        }
+        return 0;
+    }
+
+    public function getId($nm)
+    {
+        $barang = $this->getBarangByNamamaster($nm);
+        if ($barang) {
+            return $barang->id;
+        }
+        return 0;
     }
     public function insertOpname($data)
     {
@@ -82,5 +101,39 @@ class M_Stockopname extends CI_Model
     public function logInput($log)
     {
         $this->db->insert('tb_log_ics', $log);
+    }
+
+    public function search_barang($keyword)
+    {
+        return $this->db->select('nama_barang AS id, nama_barang AS text')
+            ->like('nama_barang', $keyword)
+            ->group_by('nama_barang')
+            ->limit(20)
+            ->get('stockopname_master')
+            ->result();
+    }
+
+    public function insert_opname($data)
+    {
+        return $this->db->insert('stockopname_opname', $data);
+    }
+    public function insert_log($data)
+    {
+        return $this->db->insert('tb_log_ics', $data);
+    }
+
+    public function get_detail_inputer($id)
+    {
+        return $this->db->query("SELECT
+        a.id, 
+        a.qty,
+        a.qty_pcs,
+        a.qty_box,
+        a.input_by,
+        a.input_at,
+        a.wilayah
+        FROM stockopname_opname a
+        WHERE a.kode_barang = '$id'
+        ")->result();
     }
 }

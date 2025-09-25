@@ -117,6 +117,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#detail_inputer').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     bsCustomFileInput.init();
   });
 </script>

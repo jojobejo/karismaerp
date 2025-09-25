@@ -89,6 +89,8 @@ $route['op_searchbarang']                    = 'stockopname/C_Stockopname/search
 $route['op_search_get_exp_date']             = 'stockopname/C_Stockopname/op_search_get_exp_date';
 $route['op_request_opname']                  = 'stockopname/C_Stockopname/request_opname';
 $route['op_save_opname']                     = 'stockopname/C_Stockopname/save_opname';
+$route['op_get_dimensi']                     = 'stockopname/C_Stockopname/get_dimensi';
+$route['op_detail_opname/(:any)']            = 'stockopname/C_Stockopname/detail_inputer/$1';
 
 // LOGISTIK ICS
 $route['ics/(:any)']                         = 'logistik/C_Logistik/ics/$1';

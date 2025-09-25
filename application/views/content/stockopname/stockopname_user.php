@@ -42,62 +42,24 @@
                     <form id="formOpname">
                         <div class="form-group">
                             <label for="nama_barang">Nama Barang</label>
-                            <select id="nama_barang" name="nama_barang" class="form-control" style="width:100%"></select>
+                            <select id="nama_barang" name="nama_barang" class="form-control" style="width:100%" required></select>
                         </div>
 
-                        <div class="form-row d-none" id="dimensi_group" hidden>
-                            <div class="form-group col-md-4">
-                                <label>Panjang (cm)</label>
-                                <input type="text" class="form-control" id="p" name="p" readonly>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Lebar (cm)</label>
-                                <input type="text" class="form-control" id="l" name="l" readonly>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label>Tinggi (cm)</label>
-                                <input type="text" class="form-control" id="t" name="t" readonly>
-                            </div>
-                        </div>
-
-                        <div class="form-group d-none" id="exp_date_group">
-                            <label for="exp_date">Expired Date</label>
-                            <select id="exp_date" name="exp_date" class="form-control" required></select>
-                        </div>
-
-                        <div class="form-group d-none" id="qty_form">
-                            <label for="qty_box">Qty Box</label>
-                            <input type="number" class="form-control" id="qty_box" name="qty_box" value="0" required>
+                        <div class="form-group" id="qty_form">
+                            <label for="qty_box" hidden>Qty Box</label>
+                            <input type="number" class="form-control" id="qty_box" name="qty_box" value="0" required hidden>
 
                             <label for="qty_pcs" class="mt-2">Qty Pcs</label>
                             <input type="number" class="form-control" id="qty_pcs" name="qty_pcs" value="0" required>
 
                             <button type="submit" class="btn btn-primary btn-block mt-3">Simpan</button>
                         </div>
-
-                        <div id="manual_input_group" class="d-none">
-                            <div class="form-group">
-                                <label for="exp_date_manual">Expired Date (Manual)</label>
-                                <input type="Text" class="form-control" id="exp_date_manual" name="exp_date_manual" placeholder="Gunakan Format dd/mm/yyyy">
-                            </div>
-                            <div class="form-group">
-                                <label for="qty_box_manual">Qty Box</label>
-                                <input type="number" class="form-control" id="qty_box_manual" name="qty_box_manual" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label for="qty_pcs_manual">Qty Pcs</label>
-                                <input type="number" class="form-control" id="qty_pcs_manual" name="qty_pcs_manual" value="0">
-                            </div>
-
-                        </div>
-                        <button type="button" class="btn btn-success btn-block mt-2 d-none" id="btn_submit_manual">
-                            Simpan Request Opname
-                        </button>
-
                     </form>
-                    <div id="alertMsg" class="alert alert-success mt-3 d-none" role="alert"></div>
+
+                    <div id="alertMsg" class="alert mt-3 d-none" role="alert"></div>
                 </div>
             </section>
+
         </div>
 
         <!-- /.content-wrapper -->
@@ -115,7 +77,68 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
     <script>
+        $(document).ready(function() {
+
+            // init select2 barang
+            $('#nama_barang').select2({
+                placeholder: 'Cari nama barang...',
+                ajax: {
+                    url: '<?= base_url("op_searchbarang") ?>',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            search: params.term
+                        };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            // submit form opname
+            $('#formOpname').on('submit', function(e) {
+                e.preventDefault();
+
+                $.ajax({
+                    url: '<?= base_url("op_save_opname") ?>',
+                    type: 'POST',
+                    data: $(this).serialize(),
+                    dataType: 'json',
+                    success: function(res) {
+                        if (res.status === 'ok') {
+                            $('#alertMsg').removeClass('d-none alert-danger')
+                                .addClass('alert-success')
+                                .text(res.message);
+                            $('#formOpname')[0].reset();
+                            $('#nama_barang').val(null).trigger('change');
+                        } else {
+                            $('#alertMsg').removeClass('d-none alert-success')
+                                .addClass('alert-danger')
+                                .text('Gagal menyimpan data');
+                        }
+
+                        setTimeout(() => $('#alertMsg').addClass('d-none'), 2000);
+                    },
+                    error: function(xhr) {
+                        console.error(xhr.responseText);
+                        $('#alertMsg').removeClass('d-none alert-success')
+                            .addClass('alert-danger')
+                            .text('Terjadi kesalahan server');
+                    }
+                });
+            });
+
+        });
+    </script>
+
+    <!-- <script>
         $(document).ready(function() {
 
             let isManualMode = false;
@@ -250,4 +273,4 @@
             });
 
         });
-    </script>
+    </script> -->
