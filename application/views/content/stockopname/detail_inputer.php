@@ -37,7 +37,9 @@
 
                     <div class="card card-primary mt-2 mb-5">
                         <div class="card-header">
-                            <h5 class="card-title mt-2">Nama Barang</h5>
+                            <?php foreach ($item_info as $i) : ?>
+                                <h5 class="card-title mt-2"><?= $i->nama_barang ?></h5>
+                            <?php endforeach; ?>
                         </div>
                         <div class="card-body">
                             <table class="table table-bordered table-sm" id="detail_inputer">

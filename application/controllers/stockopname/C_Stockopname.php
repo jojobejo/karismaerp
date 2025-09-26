@@ -6,7 +6,7 @@ class C_Stockopname extends CI_Controller
     function __construct()
     {
         parent::__construct();
-        $this->load->model('M_Stockopname');
+        $this->load->model("M_Stockopname", "opname");
         $this->load->helper('stock_helper');
         $this->load->helper('login_auth');
         is_logged_in();
@@ -15,6 +15,8 @@ class C_Stockopname extends CI_Controller
     public function index()
     {
         $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['result']  = $this->opname->get_opname_result();
+        $data['summary'] = $this->opname->get_summary_match();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/stockopname/dashboard_opname.php', $data);
@@ -29,7 +31,7 @@ class C_Stockopname extends CI_Controller
     public function compare_opname_all()
     {
         $data['page_title']         = 'KARISMA - ICS';
-        $data['compare_all']        = $this->M_Stockopname->get_stockopname();
+        $data['compare_all']        = $this->opname->get_stockopname();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/stockopname/compare_opname.php', $data);
@@ -39,7 +41,7 @@ class C_Stockopname extends CI_Controller
     public function compare_opname_exp()
     {
         $data['page_title']         = 'KARISMA - ICS';
-        $data['compare_exp']        = $this->M_Stockopname->get_stockopname_exp();
+        $data['compare_exp']        = $this->opname->get_stockopname_exp();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/stockopname/compare_opname_exp.php', $data);
@@ -67,7 +69,7 @@ class C_Stockopname extends CI_Controller
     public function searchbarang()
     {
         $search = $this->input->get('search');
-        $result = $this->M_Stockopname->search_barang($search);
+        $result = $this->opname->search_barang($search);
         echo json_encode($result);
     }
 
@@ -77,8 +79,8 @@ class C_Stockopname extends CI_Controller
         $box        = (int) $this->input->post('qty_box');
         $pcs        = (int) $this->input->post('qty_pcs');
 
-        $dimensi    = $this->M_Stockopname->getDimensi($nmbarang);
-        $idbarang   = $this->M_Stockopname->getId($nmbarang);
+        $dimensi    = $this->opname->getDimensi($nmbarang);
+        $idbarang   = $this->opname->getId($nmbarang);
         $total_qty  = $this->hitung_qty($box, $pcs, $dimensi);
 
         $data = [
@@ -107,8 +109,8 @@ class C_Stockopname extends CI_Controller
             'keterangan'    => 'Stock Opname'
         ];
 
-        $this->M_Stockopname->insert_opname($data);
-        $this->M_Stockopname->insert_log($log);
+        $this->opname->insert_opname($data);
+        $this->opname->insert_log($log);
 
         echo json_encode(['status' => 'ok', 'message' => 'Data berhasil disimpan']);
     }
@@ -144,7 +146,7 @@ class C_Stockopname extends CI_Controller
         $box        = $this->input->post('qty_box_manual');
         $pcs        = $this->input->post('qty_pcs_manual');
 
-        $dimensi    = $this->M_Stockopname->getDimensi($nmbarang);
+        $dimensi    = $this->opname->getDimensi($nmbarang);
         $total_qty  = $this->hitung_qty($box, $pcs, $dimensi);
 
         $opname = [
@@ -181,8 +183,8 @@ class C_Stockopname extends CI_Controller
     public function detail_inputer($id)
     {
         $data['page_title']         = 'KARISMA - ICS';
-        $data['item_info']          = $this->M_Stockopname->get_info_barang($id);
-        $data['item_detail']        = $this->M_Stockopname->get_detail_inputer($id);
+        $data['item_info']          = $this->opname->get_info_barang($id);
+        $data['item_detail']        = $this->opname->get_detail_inputer($id);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/stockopname/detail_inputer.php', $data);

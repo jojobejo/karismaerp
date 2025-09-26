@@ -136,4 +136,53 @@ class M_Stockopname extends CI_Model
         WHERE a.kode_barang = '$id'
         ")->result();
     }
+
+    public function get_info_barang($id)
+    {
+        return $this->db->query("SELECT a.*
+        FROM stockopname_master a
+        WHERE a.id = '$id'
+        ")->result();
+    }
+
+    public function get_opname_result()
+    {
+        $this->db->select("
+            m.id,
+            m.nama_barang,
+            m.qty AS qty_master,
+            IFNULL(SUM(o.qty),0) AS qty_opname,
+            ROUND((IFNULL(SUM(o.qty),0) / m.qty) * 100,2) AS persen_match
+        ");
+        $this->db->from("stockopname_master m");
+        $this->db->join("stockopname_opname o", "o.kode_barang = m.id", "left");
+        $this->db->group_by("m.id, m.nama_barang, m.qty");
+
+        return $this->db->get()->result();
+    }
+
+    public function get_summary_match()
+    {
+        $result = $this->get_opname_result();
+
+        $total_barang   = count($result);
+        $total_match    = 0;
+        $total_notmatch = 0;
+
+        foreach ($result as $row) {
+            if ($row->qty_master == $row->qty_opname) {
+                $total_match++;
+            } else {
+                $total_notmatch++;
+            }
+        }
+
+        return [
+            'total_barang'   => $total_barang,
+            'total_match'    => $total_match,
+            'total_notmatch' => $total_notmatch,
+            'persen_match'   => $total_barang > 0 ? round(($total_match / $total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $total_barang > 0 ? round(($total_notmatch / $total_barang) * 100, 2) : 0,
+        ];
+    }
 }

@@ -45,30 +45,24 @@
                     </div>
 
                     <div class="card">
-                        <div class="card-body">
-                            <h1 style="text-align: center;">Dashboard Opname</h1>
-                            <div class="row mt-4">
-                                <div class="col-md-6">
-                                    <h3 style="text-align: center;">Allbarang</h3>
-                                    <canvas id="pieChartTim1" class="small-chart"></canvas>
-                                    <div class="text-center">
-                                        <span class="mx-2">All Barang : </span>
-                                        <span class="mx-2">Total Match : </span>
-                                        <span class="mx-2">Total Not : </span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <h3 style="text-align: center;">FEFO</h3>
-                                    <canvas id="pieChartTim2" class="small-chart"></canvas>
-                                    <div class="text-center">
-                                        <span class="mx-2">All Barang : </span>
-                                        <span class="mx-2">Total Match :</span>
-                                        <span class="mx-2">Total Not : </span>
-                                    </div>
-                                </div>
+                        <div class="card-body text-center">
+
+                            <h1 style="text-align: center; margin-bottom: 25px;">Dashboard Opname</h1>
+                            <!-- chart wrapper supaya di tengah -->
+                            <div style="max-width: 1000px; margin: 0 auto;">
+                                <canvas id="cartsummary"></canvas>
                             </div>
+
+                            <!-- summary text -->
+                            <div class="mt-3">
+                                <span class="mx-2">All Barang : <b><?= $summary['total_barang'] ?></b></span>
+                                <span class="mx-2">Total Match : <b><?= $summary['total_match'] ?></b></span>
+                                <span class="mx-2">Total Not Match : <b><?= $summary['total_notmatch'] ?></b></span>
+                            </div>
+
                         </div>
                     </div>
+
                 </section>
             </div>
         </div>
@@ -89,3 +83,39 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        const ctx = document.getElementById('cartsummary').getContext('2d');
+        const chartSummary = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    'Match (<?= $summary['persen_match'] ?>%)',
+                    'Not Match (<?= $summary['persen_notmatch'] ?>%)'
+                ],
+                datasets: [{
+                    data: [<?= $summary['total_match'] ?>, <?= $summary['total_notmatch'] ?>],
+                    backgroundColor: ['#28a745', '#dc3545'], // hijau & merah
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.raw || 0;
+                                return label + ': ' + value + ' barang';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
