@@ -25,7 +25,7 @@ class M_Stockopname extends CI_Model
             GROUP BY nama_barang
         ) o ON m.nama_barang = o.nama_barang
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            SELECT nama_barang,SUM(qty) AS qty_pending
             FROM tb_ics_do
             GROUP BY nama_barang
         ) d ON m.nama_barang = d.nama_barang
@@ -148,15 +148,16 @@ class M_Stockopname extends CI_Model
     public function get_opname_result()
     {
         $this->db->select("
-            m.id,
-            m.nama_barang,
-            m.qty AS qty_master,
-            IFNULL(SUM(o.qty),0) AS qty_opname,
-            ROUND((IFNULL(SUM(o.qty),0) / m.qty) * 100,2) AS persen_match
-        ");
+        m.id,
+        m.nama_barang,
+        (COALESCE(m.qty,0) + COALESCE(p.qty,0)) AS qty_master,
+        IFNULL(SUM(o.qty),0) AS qty_opname,
+        ROUND((IFNULL(SUM(o.qty),0) / m.qty) * 100,2) AS persen_match");
         $this->db->from("stockopname_master m");
         $this->db->join("stockopname_opname o", "o.kode_barang = m.id", "left");
+        $this->db->join("tb_ics_do p", "p.kd_do = m.id", "left");
         $this->db->group_by("m.id, m.nama_barang, m.qty");
+
 
         return $this->db->get()->result();
     }
