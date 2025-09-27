@@ -103,7 +103,7 @@
       "paging": true,
       "lengthChange": false,
       "searching": true,
-      "ordering": false,
+      "order": [],
       "info": true,
       "autoWidth": false,
       "responsive": true,

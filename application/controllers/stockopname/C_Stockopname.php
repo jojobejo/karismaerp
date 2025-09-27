@@ -190,4 +190,17 @@ class C_Stockopname extends CI_Controller
         $this->load->view('content/stockopname/detail_inputer.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function usropname_input()
+    {
+        $user = $this->session->userdata('nama');
+
+        $data['page_title']     = 'KARISMA - ICS';
+        $data['inputopname']    = $this->opname->getinputopname($user);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/stockopname/histori_input.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
 }

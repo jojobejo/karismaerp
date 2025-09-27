@@ -25,8 +25,13 @@
                                     <a href="<?= base_url('admstocktracking'); ?>" class="btn btn-primary w-10"><i class="fas fa-home"></i></a>
                                 </div>
                             <?php else : ?>
-                                <div class="col-12 col-sm-6 col-md-2">
-                                    <a href="<?= base_url('usropname_input'); ?>" class="btn btn-primary w-10"><i class="fas fa-tasks"></i> Histori Input</a>
+                                <div class="row">
+                                    <div class="col-auto">
+                                        <a href="<?= base_url('usrstockopname') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-home"></i>Dashboard</a>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a href="<?= base_url('op_usropname_input') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i>Histori Input</a>
+                                    </div>
                                 </div>
                             <?php endif; ?>
                             <button type="button" class="btn btn-warning d-none" id="btn_toggle_input">

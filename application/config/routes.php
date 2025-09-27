@@ -91,6 +91,7 @@ $route['op_request_opname']                  = 'stockopname/C_Stockopname/reques
 $route['op_save_opname']                     = 'stockopname/C_Stockopname/save_opname';
 $route['op_get_dimensi']                     = 'stockopname/C_Stockopname/get_dimensi';
 $route['op_detail_opname/(:any)']            = 'stockopname/C_Stockopname/detail_inputer/$1';
+$route['op_usropname_input']                 = 'stockopname/C_Stockopname/usropname_input';
 
 // LOGISTIK ICS
 $route['ics/(:any)']                         = 'logistik/C_Logistik/ics/$1';
