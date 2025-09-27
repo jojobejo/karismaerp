@@ -26,7 +26,7 @@ class M_Stockopname extends CI_Model
         ) o ON m.nama_barang = o.nama_barang
         LEFT JOIN (
             SELECT nama_barang,SUM(qty) AS qty_pending
-            FROM tb_ics_do
+            FROM stockopname_pending
             GROUP BY nama_barang
         ) d ON m.nama_barang = d.nama_barang
         GROUP BY m.nama_barang")->result();
@@ -55,7 +55,7 @@ class M_Stockopname extends CI_Model
         ) o ON m.nama_barang = o.nama_barang AND m.expired_date = o.expired_date
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
-            FROM tb_ics_do d
+            FROM stockopname_pending d
             GROUP BY d.nama_barang , d.exp_date 
         ) d ON m.nama_barang = d.nama_barang AND m.expired_date = d.exp_date
         GROUP BY m.nama_barang , m.expired_date")->result();
@@ -155,7 +155,7 @@ class M_Stockopname extends CI_Model
         ROUND((IFNULL(SUM(o.qty),0) / m.qty) * 100,2) AS persen_match");
         $this->db->from("stockopname_master m");
         $this->db->join("stockopname_opname o", "o.kode_barang = m.id", "left");
-        $this->db->join("tb_ics_do p", "p.kd_do = m.id", "left");
+        $this->db->join("stockopname_pending p", "p.kd_do = m.id", "left");
         $this->db->group_by("m.id, m.nama_barang, m.qty");
 
 
