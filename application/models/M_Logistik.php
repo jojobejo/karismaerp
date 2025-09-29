@@ -787,10 +787,9 @@ class M_Logistik extends CI_Model
             SELECT
             a.nama_barang,
             a.exp_date,
-            (b.p*b.l*b.t) AS dimensi
+            b.dimensi
             FROM tb_ics a
             JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
-                
         ) AS x
         ")->result();
     }
