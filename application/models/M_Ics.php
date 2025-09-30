@@ -295,32 +295,32 @@ class M_Ics extends CI_Model
             a.nama_barang,
             a.exp_date AS expired,
             a.kordinat,
-            SUM(a.qty) AS qty,
+            a.qty AS qty,
             COALESCE(pending.qty_pending, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
-            (SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-            COALESCE(opname.qty_opname, 0) - ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            (a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             COALESCE(opname.qty_opname, 0) AS ics,
             opname.qty_box AS qty_box,
             opname.qty_pcs AS qty_pcs,
             IF(
-                ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
+                ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
                 1, 0
             ) AS status
         FROM tb_saldo_awal a
         JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+            SELECT nama_barang, exp_date, qty AS qty_pending
             FROM tb_ics_do
             GROUP BY nama_barang, exp_date
         ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_po
+            SELECT nama_barang, exp_date, qty AS qty_po
             FROM tb_ics_po
             GROUP BY nama_barang, exp_date
         ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
         LEFT JOIN (
-            SELECT id,nama_barang, exp_date, SUM(qty) AS qty_opname , qty_box , qty_pcs
+            SELECT id,nama_barang, exp_date, qty AS qty_opname , qty_box , qty_pcs
             FROM tb_ics_opname
             GROUP BY nama_barang, exp_date
         ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
