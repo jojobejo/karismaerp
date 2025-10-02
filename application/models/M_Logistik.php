@@ -2045,6 +2045,7 @@ FROM (
         WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
         ")->result();
     }
+
     public function list_inputer_by_expdate($kdbarang, $tim)
     {
         return $this->db->query("SELECT	

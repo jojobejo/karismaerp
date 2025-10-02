@@ -208,6 +208,20 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
+        $("#tbics_erp_e").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_0").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
         $("#tbics_erp_c1").DataTable({
             "responsive": true,
             "lengthChange": false,
@@ -215,7 +229,14 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
-        $("#tbics_erp_d2").DataTable({
+        $("#tbics_erp_d1").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbics_erp_e1").DataTable({
             "responsive": true,
             "lengthChange": false,
             "aaSorting": [],
@@ -250,7 +271,7 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
-       
+
 
     });
 </script>

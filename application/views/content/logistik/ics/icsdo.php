@@ -25,6 +25,9 @@
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
                             </div>
                             <div class="col-auto">
+                                <a href="<?= base_url('ics/export_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-file-export"></i> Export DO</a>
+                            </div>
+                            <div class="col-auto">
                                 <a href="<?= base_url('ics/icsdo/dohistori') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-recycle"></i> Histori DO</a>
                             </div>
                         <?php else : ?>

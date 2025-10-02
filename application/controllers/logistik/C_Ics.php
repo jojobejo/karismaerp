@@ -865,4 +865,7 @@ class C_Ics extends CI_Controller
             echo json_encode(['error' => 'Perhitungan error']);
         }
     }
+    public function export_opname()
+    {
+    }
 }

@@ -1030,7 +1030,7 @@ class M_Ics extends CI_Model
         LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
         LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
-            DATE(a.tgl_transaksi) = '$tgl'
+            a.tgl_transaksi = '$tgl'
             AND (m.p * m.l * m.t) > 0
             GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer 
         ")->result();
