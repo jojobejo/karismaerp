@@ -2356,4 +2356,39 @@ class C_Logistik extends CI_Controller
         }
         redirect('logistik');
     }
+
+    public function custupdate()
+    {
+        $file_mimes = array('text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel');
+
+        if (isset($_FILES['fileCSV']['name']) && in_array($_FILES['fileCSV']['type'], $file_mimes)) {
+            $csvFile = fopen($_FILES['fileCSV']['tmp_name'], 'r');
+            $header = fgetcsv($csvFile);
+            $this->db->truncate('tb_customer');
+            $count = 0;
+
+            while (($row = fgetcsv($csvFile)) !== FALSE) {
+                $data = array(
+                    "kd_customer"         => $row[0],
+                    "nama_customer"       => $row[1],
+                    "nama_kios"           => $row[2],
+                    "alamat_kios"         => $row[3],
+                    "telp1"               => $row[4],
+                    "telp2"               => $row[5],
+                    "regional"            => $row[6],
+                    "jam_buka_tutup"      => $row[7],
+                    "karakteristik_kios"  => $row[8],
+                );
+
+                $this->db->insert("tb_customer", $data);
+                $count++;
+            }
+            fclose($csvFile);
+            $this->session->set_flashdata('msg', "Import berhasil! Jumlah data: " . $count);
+            redirect('logistik');
+        } else {
+            $this->session->set_flashdata('msg', "Format file tidak valid. Harap upload file CSV!");
+            redirect('logistik');
+        }
+    }
 }

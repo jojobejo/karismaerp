@@ -162,6 +162,7 @@ $route['get_tmp_do']                                = 'logistik/C_Logistik/get_t
 $route['get_tmpdonorut']                            = 'logistik/C_Logistik/get_tmpdonorut';
 $route['update_norut']                              = 'logistik/C_Logistik/update_norut';
 $route['save_do']                                   = 'logistik/C_Logistik/save_do';
+$route['custupdate']                                = 'logistik/C_Logistik/custupdate';
 
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';
