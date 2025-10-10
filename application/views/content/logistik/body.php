@@ -32,6 +32,9 @@
                                 <a href="https://10.10.10.12/zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">Ambil Data Penjualan(TODAY)</a>
                             </div>
                             <div class="col-auto">
+                                <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#updatecs">Update Customer</a>
+                            </div>
+                            <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                             </div>
                         </div>
@@ -39,6 +42,13 @@
                 </div>
                 <section class="content">
                     <div class="container-fluid">
+                        <?php if ($this->session->flashdata('msg')) : ?>
+                            <div class="alert alert-info">
+                                <?= $this->session->flashdata('msg'); ?>
+                            </div>
+                        <?php endif; ?>
+
+
                         <div class="card">
                             <div class="card-body">
                                 <table id="tbDashboardLogistik" class="table table-bordered table-striped">

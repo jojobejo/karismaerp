@@ -2174,10 +2174,8 @@ FROM (
         IFNULL(s.qty, 0) AS saldo_awal,
         IFNULL(p.qty, 0) AS qty_masuk,
         IFNULL(d.total_do, 0) AS qty_keluar,
-
         (IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) AS sistem_qty,
         IFNULL(o.qty, 0) AS fisik_qty,
-
         ((IFNULL(s.qty, 0) + IFNULL(p.qty, 0) - IFNULL(d.total_do, 0)) - IFNULL(o.qty, 0)) AS selisih,
 
         CASE 
