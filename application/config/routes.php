@@ -177,3 +177,6 @@ $route['extravaganza_savewin']                      = 'extravaganza/C_Extravagan
 
 // EXTRAVAGANZA - REGISTRASI
 $route['extravaganza_registrasi']                   = 'extravaganza/C_Extravaganza/registrasi_tamu';
+
+// USER REPORT
+$route['user_report']                               = 'karyawan_report/C_Report';
