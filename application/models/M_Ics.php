@@ -433,7 +433,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi , kordinat
+        SELECT nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi , kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'A'
         GROUP BY nama_barang, exp_date
@@ -451,11 +451,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'A'
+        WHERE wilayah = 'A'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -463,7 +463,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_b()
