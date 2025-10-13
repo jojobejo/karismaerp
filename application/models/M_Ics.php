@@ -310,17 +310,17 @@ class M_Ics extends CI_Model
         FROM tb_saldo_awal a
         JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
         LEFT JOIN (
-            SELECT nama_barang, exp_date, qty AS qty_pending
+            SELECT nama_barang, exp_date, sum(qty) AS qty_pending
             FROM tb_ics_do
             GROUP BY nama_barang, exp_date
         ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
         LEFT JOIN (
-            SELECT nama_barang, exp_date, qty AS qty_po
+            SELECT nama_barang, exp_date, sum(qty) AS qty_po
             FROM tb_ics_po
             GROUP BY nama_barang, exp_date
         ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
         LEFT JOIN (
-            SELECT id,nama_barang, exp_date, qty AS qty_opname , qty_box , qty_pcs
+            SELECT id,nama_barang, exp_date, sum(qty) AS qty_opname , qty_box , qty_pcs
             FROM tb_ics_opname
             GROUP BY nama_barang, exp_date
         ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
@@ -433,7 +433,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi , kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'A'
         GROUP BY nama_barang, exp_date
@@ -451,11 +451,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'A'
+        WHERE wilayah = 'A'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -534,7 +534,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'B'
         GROUP BY nama_barang, exp_date
@@ -552,11 +552,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'B'
+        WHERE wilayah = 'B'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -635,7 +635,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'C'
         GROUP BY nama_barang, exp_date
@@ -653,11 +653,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'C'
+        WHERE wilayah = 'C'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -736,7 +736,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'D'
         GROUP BY nama_barang, exp_date
@@ -754,11 +754,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'D'
+        WHERE wilayah = 'D'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -837,7 +837,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = 'E'
         GROUP BY nama_barang, exp_date
@@ -855,11 +855,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = 'E'
+        WHERE wilayah = 'E'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang
@@ -938,7 +938,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, lokasi, kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
         FROM tb_saldo_awal
         WHERE lokasi = '0'
         GROUP BY nama_barang, exp_date
@@ -956,11 +956,11 @@ class M_Ics extends CI_Model
     LEFT JOIN (
         SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
         FROM tb_ics_opname
-        WHERE tim = '0'
+        WHERE wilayah = '0'
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system AS kd
+        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
         FROM tb_master_barang
         GROUP BY nm_barang
     ) mb ON mb.nm_barang = x.nama_barang

@@ -614,4 +614,14 @@ class C_Keuangan extends CI_Controller
             return redirect('');
         }
     }
+
+    public function pricelist_online()
+    {
+        $data['page_title']     = 'KARISMA - KEUANGAN';
+        $data['pricelist']      = $this->M_Keuangan->get_pricelist();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/body_pl.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
 }

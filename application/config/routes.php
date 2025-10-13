@@ -181,3 +181,6 @@ $route['extravaganza_registrasi']                   = 'extravaganza/C_Extravagan
 
 // USER REPORT
 $route['user_report']                               = 'karyawan_report/C_Report';
+
+// PRICELIST - ONLINE
+$route['pricelist_online']                          = 'keuangan/C_Keuangan/pricelist_online';
