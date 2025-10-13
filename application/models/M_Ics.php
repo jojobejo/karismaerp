@@ -463,7 +463,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_b()
