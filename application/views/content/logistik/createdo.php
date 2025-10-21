@@ -73,7 +73,7 @@
                                         $tonase_ton = $q->total_tonase_kg / 1000000;
                                         $kubikasi_m3 = round($q->total_kubikasi_m3, 3);
                                         ?>
-                                        <h3>Tonase: <?= number_format($tonase_ton, 3) ?> ton</h3>
+                                        <h3>Tonase: <?= number_format($tonase_ton, 6) ?> ton</h3>
                                         <h3>Kubikasi: <?= $kubikasi_m3 ?> m³</h3>
                                     <?php endforeach; ?>
                                 <?php else : ?>

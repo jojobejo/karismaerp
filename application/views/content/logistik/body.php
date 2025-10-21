@@ -35,6 +35,9 @@
                                 <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#updatecs">Update Customer</a>
                             </div>
                             <div class="col-auto">
+                                <a href="<?= base_url('ics/master_barang') ?>" class="btn btn-info mb-2">Master Barang</a>
+                            </div>
+                            <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                             </div>
                         </div>

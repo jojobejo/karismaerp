@@ -47,6 +47,10 @@
                                         <th>Kode</th>
                                         <th>Nama Barang</th>
                                         <th>QTY</th>
+                                        <th>Gram</th>
+                                        <th>Kilo</th>
+                                        <th>Total Berat Barang</th>
+                                        <th>Satuan</th>
                                         <th>Satuan</th>
                                         <th>No-Lot</th>
                                         <th>Exp Date</th>
@@ -59,6 +63,9 @@
                                             <td><?= $det->kd_barang ?></td>
                                             <td><?= $det->nm_barang ?></td>
                                             <td><?= $det->qty ?></td>
+                                            <td><?= number_format($det->gr_berat, 3)  ?></td>
+                                            <td><?= number_format($det->convert_kg, 3) ?></td>
+                                            <td><?= number_format($det->total_berat, 3) ?></td>
                                             <td><?= $det->satuan ?></td>
                                             <td><?= $det->no_lot ?></td>
                                             <td><?= $det->tgl_exp ?></td>

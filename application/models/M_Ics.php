@@ -265,6 +265,22 @@ class M_Ics extends CI_Model
         ")->result();
     }
 
+    public function get_master_barang_log()
+    {
+        return $this->db->query("SELECT
+        a.id as id,
+        a.nm_barang AS nama_barang,
+        b.nama_suplier as nama_suplier,
+        a.bhn_aktif as bahan_aktif,
+        a.satuan as satuan,
+        (a.p*a.l*a.t) as dimensi,
+        a.berat as berat,
+        a.kubikasi as kubikasi
+        FROM tb_master_barang a
+        LEFT JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
+        ")->result();
+    }
+
     public function get_detail_barang($br)
     {
         return $this->db->query("SELECT

@@ -711,13 +711,16 @@ class M_Logistik extends CI_Model
             a.kd_barang,
             c.nm_barang,
             a.qty,
+            c.berat as gr_berat,
+            (c.berat/1000) as convert_kg,
+            (a.qty * (c.berat/1000)) AS total_berat,
             a.satuan,
             a.no_lot,
             a.tgl_exp,
             a.barang_sts
             FROM tb_pre_do a
-            JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
+            LEFT JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }

@@ -58,30 +58,71 @@
                 <?php endif; ?>
             </div>
 
-            <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <form action="<?= base_url('ics/save_mbarang') ?>" method="post">
-                        <div class="modal-content">
-                            <div class="modal-header bg-success">
-                                <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Master Barang</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="form-group">
-                                    <label for="nama_barang">Nama Barang</label>
-                                    <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+            <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+                <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <form action="<?= base_url('ics/save_mbarang') ?>" method="post">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success">
+                                    <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Master Barang</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label for="nama_barang">Nama Barang</label>
+                                        <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                                 </div>
                             </div>
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                        </form>
+                    </div>
+                </div>
+
+            <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                <section class="content">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="container-fluid">
+                                <table class="table table-bordered table-striped" id="tb_masterbr_ics">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Barang</th>
+                                            <th>Bahan Aktif</th>
+                                            <th>Satuan</th>
+                                            <th>Dimensi</th>
+                                            <th>Berat</th>
+                                            <th>Kubikasi</th>
+                                            <th>#</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($mbarang as $br) :
+                                        ?>
+                                            <tr>
+                                                <td><?= $br->nama_barang ?></td>
+                                                <td><?= $br->bahan_aktif ?></td>
+                                                <td><?= $br->satuan ?></td>
+                                                <td><?= $br->dimensi ?></td>
+                                                <td><?= $br->berat ?></td>
+                                                <td><?= $br->kubikasi ?></td>
+                                                <td>
+                                                    <a href="#" class="btn btn-sm btn-warning btn-open-mbarang" data-id="<?= $br->id ?>"><i class="fas fa-pen "></i></a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </form>
-                </div>
-            </div>
+                    </div>
+                </section>
+            <?php endif; ?>
 
         </div>
 

@@ -285,7 +285,14 @@ class C_Ics extends CI_Controller
     public function master_barang()
     {
         $data['page_title']         = 'KARISMA - MASTER BARANG';
-        $data['mbarang']            = $this->M_Ics->get_master_barang_ics();
+
+        $userlog = $this->session->userdata("jobdesk");
+
+        if ($userlog == 'ADMINICS') {
+            $data['mbarang']            = $this->M_Ics->get_master_barang_ics();
+        } elseif ($userlog == 'LOGISTIK') {
+            $data['mbarang']            = $this->M_Ics->get_master_barang_log();
+        }
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/master_barang.php', $data);
