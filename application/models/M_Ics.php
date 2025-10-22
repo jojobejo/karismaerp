@@ -413,8 +413,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -465,7 +465,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'A'
         GROUP BY nama_barang, exp_date
@@ -514,8 +514,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -566,7 +566,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'B'
         GROUP BY nama_barang, exp_date
@@ -580,7 +580,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_c()
@@ -615,8 +615,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -667,7 +667,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'C'
         GROUP BY nama_barang, exp_date
@@ -681,7 +681,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_d()
@@ -716,8 +716,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -768,7 +768,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'D'
         GROUP BY nama_barang, exp_date
@@ -782,7 +782,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_e()
@@ -817,8 +817,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -869,7 +869,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'E'
         GROUP BY nama_barang, exp_date
@@ -883,7 +883,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_diffrent_0()
@@ -918,8 +918,8 @@ class M_Ics extends CI_Model
             COALESCE(d.qty_out, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
-        FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
-        MOD(COALESCE(o.qty_opname, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_pcs,
+        COALESCE(o.qty_box, 0) AS fisik_box,
+        COALESCE(o.qty_pcs, 0)AS fisik_pcs,     
         (
             COALESCE(o.qty_opname, 0) -
             (
@@ -970,7 +970,7 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = '0'
         GROUP BY nama_barang, exp_date
@@ -984,7 +984,7 @@ class M_Ics extends CI_Model
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
     ) != 0
-    ORDER BY x.nama_barang, x.exp_date;")->result();
+    ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function update_cell($id, $field, $value)

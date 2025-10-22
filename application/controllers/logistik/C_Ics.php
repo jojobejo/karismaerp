@@ -249,11 +249,17 @@ class C_Ics extends CI_Controller
         $nama_barang = $this->input->post('nama_barang');
         $exp_date = $this->input->post('exp_date');
 
-        $data_do = $this->db->select('kd_faktur, tgl_transaksi, qty')
-            ->from('tb_ics_do')
-            ->where('nama_barang', $nama_barang)
-            ->where('exp_date', $exp_date)
+        $data_do = $this->db->select('a.kd_faktur AS kd_faktur,a.tgl_transaksi AS tgl_transaksi,a.qty AS qty,
+        c.nama_customer AS nm_customer, 
+        c.nama_kios AS nm_kios')
+            ->from('tb_ics_do a')
+            ->join('tb_pre_do b', 'b.kd_faktur = a.kd_faktur', 'left')
+            ->join('tb_customer c', 'c.kd_customer = b.kd_customer', 'left')
+            ->where('a.nama_barang', $nama_barang)
+            ->where('a.exp_date', $exp_date)
+            ->group_by('a.kd_faktur')
             ->get()->result();
+
 
         $data_po = $this->db->select('kd_faktur_lpb, tgl_transaksi, qty , input_at')
             ->from('tb_ics_po')

@@ -116,6 +116,8 @@
                                             <th>No</th>
                                             <th>Kode Faktur</th>
                                             <th>Tgl Transaksi</th>
+                                            <th>Nama Customer</th>
+                                            <th>Nama Kios</th>
                                             <th>Qty</th>
                                         </tr>
                                     </thead>
@@ -343,6 +345,8 @@
                             <td>${i + 1}</td>
                             <td>${item.kd_faktur}</td>
                             <td>${item.tgl_transaksi}</td>
+                            <td>${item.nm_customer}</td>
+                            <td>${item.nm_kios}</td>  
                             <td>${item.qty}</td>
                         </tr>`;
                         });
