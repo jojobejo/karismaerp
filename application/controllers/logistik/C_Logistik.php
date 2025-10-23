@@ -994,7 +994,7 @@ class C_Logistik extends CI_Controller
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_faktur , a.kd_barang , a.tgl_exp , a.no_lot
-                ORDER BY a.norut
+                ORDER BY d.nama_kios ASC
             ", array($kd_do));
 
         $querytc = $this->db->query("SELECT 

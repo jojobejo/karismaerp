@@ -96,6 +96,7 @@
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Regional Pengiriman</div>
                                         <div>: <?= $k->regional ?></div>
+                                        <div><a href="#" data-toggle="modal" data-target="#edited_rute" class="btn btn-warning btn-sm ml-2"><i class="fas fa-pencil-alt"></i></a></div>
                                     </div>
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Total Customer</div>
