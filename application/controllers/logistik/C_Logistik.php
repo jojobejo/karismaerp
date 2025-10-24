@@ -1012,6 +1012,7 @@ class C_Logistik extends CI_Controller
         $querysts = $this->db->query("SELECT a.* FROM tb_do a where a.kd_do = '$kd_do'")->result();
 
         $query1 = $this->db->query("SELECT
+            b.id as id,
             b.kd_do,
             b.regional,
             b.nolambung,
@@ -1019,7 +1020,7 @@ class C_Logistik extends CI_Controller
             COUNT(DISTINCT a.kd_barang) AS total_barang,
             ROUND(SUM(a.qty * c.berat)/1000000,3) AS total_tonase_faktur,
             ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
-            COUNT(DISTINCT a.kd_faktur) AS totalfaktur
+            COUNT(DISTINCT a.kd_customer) AS totalfaktur
         FROM
             tb_detail_do a
         JOIN tb_do b ON b.kd_do = a.kd_do
@@ -1046,6 +1047,21 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function edited_rute_do()
+    {
+        $id         = $this->input->post('id');
+        $kd_do      = $this->input->post('kddo');
+        $regional   = $this->input->post('regional');
+
+        $edit   = array(
+            'regional'  => $regional
+        );
+
+        $this->M_Logistik->edited_rute_do($id, $edit);
+        redirect('detail_do/' . $kd_do);
+    }
+
     public function acc_check($id, $action, $kd)
     {
         switch ($action) {
@@ -1192,18 +1208,29 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function list_faktur_sortby_rute($kdfaktur, $rute)
+    // public function list_faktur_sortby_rute($kdfaktur, $rute)
+    // {
+    //     $data['page_title']     = 'KARISMA - LOGISTIK';
+    //     $data['kdfaktur']       = $kdfaktur;
+    //     $data['list_faktur']    = $this->M_Logistik->get_list_by_rute($rute);
+
+    //     $this->load->view('partial/main/header.php', $data);
+    //     $this->load->view('content/logistik/list_faktur_by_rute.php', $data);
+    //     $this->load->view('partial/main/footer.php');
+    // }
+
+    public function list_faktur_sortby_rute($kdfaktur)
     {
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdfaktur']       = $kdfaktur;
-        $data['list_faktur']    = $this->M_Logistik->get_list_by_rute($rute);
+        $data['list_faktur']    = $this->M_Logistik->get_list_by_rute();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/list_faktur_by_rute.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function insertfromdraft($kddo, $kdfaktur, $rute)
+    public function insertfromdraft($kddo, $kdfaktur)
     {
         date_default_timezone_set("Asia/Jakarta");
         $get_pre_do = $this->M_Logistik->get_do_cust($kdfaktur);
@@ -1251,7 +1278,7 @@ class C_Logistik extends CI_Controller
                 $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
             }
         }
-        redirect('list_faktur/' . $kddo . '/' . $rute);
+        redirect('list_faktur/' . $kddo);
     }
 
     public function print_do($kd_do)

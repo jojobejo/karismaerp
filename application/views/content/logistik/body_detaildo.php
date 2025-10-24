@@ -63,7 +63,7 @@
                                                     </div>
                                                     <div class="col-auto">
                                                         <?php foreach ($kdo as $k) : ?>
-                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do . "/" . $k->regional ?>" class="btn btn-info"><i class="fas fa-plus"></i> Tambah Faktur</a>
+                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info"><i class="fas fa-plus"></i> Tambah Faktur</a>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 </div>
@@ -79,6 +79,8 @@
                                 <?php endif; ?>
 
                                 <?php foreach ($kdo as $k) : ?>
+
+                                    <?php $this->load->view('content/logistik/modal/modal_detail_do'); ?>
 
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
@@ -211,14 +213,26 @@
                                                 }
                                             ?>
                                                 <tr>
-                                                    <?php if ($show_faktur_info) : ?>
+                                                    <?php if ($show_faktur_info) :
+                                                        if ($row->telp1 == NULL || "0") {
+                                                            $telp1 = "-";
+                                                        } else {
+                                                            $telp1 = $row->telp1;
+                                                        }
+
+                                                        if ($row->telp2 == NULL || "0") {
+                                                            $telp2 = "-";
+                                                        } else {
+                                                            $telp2 = $row->telp2;
+                                                        }
+                                                    ?>
                                                         <?php if ($d->status == '1') : ?>
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
                                                                 <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
                                                             </td>
                                                         <?php elseif ($d->status == '2') : ?>
                                                         <?php endif; ?>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?><br><?= "(" . $telp1 . "/" . $telp2 . ")" ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>

@@ -15,7 +15,6 @@
                 <div class="container-fluid">
                     <div class="row">
                         <a href="<?= base_url('detail_do/') . $kdfaktur ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
-                        <!-- <h3>TITLE</h3> -->
                         <h3></h3>
                     </div>
                 </div>
@@ -25,7 +24,7 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <h3 class="card-title">List Faktur By Rute</h3>
+                            <h3 class="card-title">List Faktur Tambahan</h3>
                         </div>
                         <div class="card-body">
                             <table id="lsfakturbyrute" class="table table-bordered table-striped">
@@ -57,7 +56,7 @@
                                             <td><?= $l->total_barang ?></td>
                                             <td>
                                                 <div class="row">
-                                                    <a href="<?= base_url('insertfromdraft/') . $kdfaktur . '/' . $l->kd_faktur . '/' . $l->kd_rute ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                                                    <a href="<?= base_url('insertfromdraft/') . $kdfaktur . '/' . $l->kd_faktur ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
                                                 </div>
                                             </td>
                                         </tr>
