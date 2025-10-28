@@ -84,6 +84,16 @@
       "responsive": true,
     });
 
+    $('#fkcashonsite').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+
     // $('#tbics_byallbarang').DataTable({
     //   "paging": true,
     //   "lengthChange": false,

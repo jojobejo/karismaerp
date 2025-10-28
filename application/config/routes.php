@@ -139,6 +139,7 @@ $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/inser
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                                 = 'logistik/C_Logistik/create_do';
+$route['faktur_on_site']                                 = 'logistik/C_Logistik/faktur_on_site';
 $route['edited_rute_do']                            = 'logistik/C_Logistik/edited_rute_do';
 $route['insert_tmp/(:any)/(:any)']                  = 'logistik/C_Logistik/insert_tmp/$1/$2';
 $route['revert_do/(:any)/(:any)']                   = 'logistik/C_Logistik/revert_do/$1/$2';

@@ -475,9 +475,9 @@ class M_Logistik extends CI_Model
     public function get_do_cust_byfaktur($kd)
     {
         return $this->db->query("SELECT
-            a.*,b.nm_barang
+            a.*,b.nama_barang
             FROM tb_pre_do a
-            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
@@ -499,10 +499,10 @@ class M_Logistik extends CI_Model
     public function det_do_cust($kd)
     {
         return $this->db->query("SELECT
-            a.*,b.nm_barang
+            a.*,b.nama_barang
         FROM
             tb_pre_do a
-        JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+        JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
         WHERE
             a.kd_faktur = '$kd'
         ")->result();
@@ -702,6 +702,22 @@ class M_Logistik extends CI_Model
         $kdnk1 = 'KIUDO' . date('dmy') . $kd1;
         return $kdnk1;
     }
+    function generate_kd_do_onsite()
+    {
+        $cd1 = $this->db->query("SELECT MAX(RIGHT(kd_do,4)) AS kd_max FROM tb_do WHERE DATE(tgl_create)=CURDATE()");
+        $kd1 = "";
+        if ($cd1->num_rows() > 0) {
+            foreach ($cd1->result() as $k) {
+                $tmp = ((int)$k->kd_max) + 1;
+                $kd1 = sprintf("%04s", $tmp);
+            }
+        } else {
+            $kd1 = "0001";
+        }
+        date_default_timezone_set('Asia/Jakarta');
+        $kdnk1 = 'KIUDOOTS' . date('dmy') . $kd1;
+        return $kdnk1;
+    }
 
     public function edited_rute_do($id, $data)
     {
@@ -728,7 +744,7 @@ class M_Logistik extends CI_Model
                        SUM(d.qty * m.berat) AS total_tonase_kg, 
                        SUM(d.qty * m.kubikasi) AS total_kubikasi_m3');
         $this->db->from('tb_tmp_detaildo d');
-        $this->db->join('tb_master_barang m', 'd.kd_barang = m.kode_barang');
+        $this->db->join('tb_master_barang_all m', 'd.kd_barang = m.kd_barang');
         $this->db->where('d.kd_do', $kd_do);
         $this->db->group_by('d.kd_do');
 
@@ -741,7 +757,7 @@ class M_Logistik extends CI_Model
             a.id,
             a.kd_faktur,
             a.kd_barang,
-            c.nm_barang,
+            c.nama_barang,
             a.qty,
             c.berat as gr_berat,
             (c.berat/1000) as convert_kg,
@@ -752,7 +768,7 @@ class M_Logistik extends CI_Model
             a.barang_sts
             FROM tb_pre_do a
             LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
@@ -798,7 +814,7 @@ class M_Logistik extends CI_Model
         FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) AS qty_box,
         (SUM(a.qty) - FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) * (b.p * b.l * b.t)) AS qty_pcs
     FROM tb_qty_lot a
-    JOIN tb_master_barang b ON b.nm_barang = a.nm_barang
+    JOIN tb_master_barang_all b ON b.nama_barang = a.nm_barang
     JOIN tb_suplier c ON c.kd_suplier = a.suplier
     GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
     }

@@ -17,14 +17,6 @@
                 <div class="content-header">
                     <div class="container-fluid">
                         <div class="row">
-                            <div class="col-auto ml-2">
-                                <h3>Dashboard Delivery Order || </h3>
-                            </div>
-                            <div class="col-auto">
-                                <h3>Last Updated : -</h3>
-                            </div>
-                        </div>
-                        <div class="row">
                             <div class="col-auto">
                                 <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">Update Data DO</a>
                             </div>
@@ -33,6 +25,9 @@
                             </div>
                             <div class="col-auto">
                                 <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#updatecs">Update Customer</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('faktur_on_site') ?>" class="btn btn-success mb-2">Faktur Cash / On Site</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/master_barang') ?>" class="btn btn-info mb-2">Master Barang</a>
@@ -50,8 +45,6 @@
                                 <?= $this->session->flashdata('msg'); ?>
                             </div>
                         <?php endif; ?>
-
-
                         <div class="card">
                             <div class="card-body">
                                 <table id="tbDashboardLogistik" class="table table-bordered table-striped">
@@ -76,6 +69,8 @@
                                                 $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-info btn-block">On Delivery</a></div>';
                                             } else if ($status == '3') {
                                                 $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Delivery</a></div>';
+                                            } else if ($status == '4') {
+                                                $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Site</a></div>';
                                             }
                                         ?>
                                             <tr>
@@ -100,6 +95,12 @@
                                                             <div class="col">
                                                                 <a href="<?= base_url('printdo/') . $i->kddo ?>" class="btn btn-sm btn-success btn-block"><i class="fas fa-print"></i></a>
                                                             </div>
+                                                        </div>
+                                                    </td>
+                                                <?php elseif ($i->status == '4') : ?>
+                                                    <td>
+                                                        <div class="col">
+                                                            <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
                                                         </div>
                                                     </td>
                                                 <?php endif; ?>

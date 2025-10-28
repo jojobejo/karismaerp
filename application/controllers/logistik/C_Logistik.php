@@ -1476,7 +1476,7 @@ class C_Logistik extends CI_Controller
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
-                                'nm_barang'     => $det->nm_barang,
+                                'nm_barang'     => $det->nama_barang,
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
@@ -1529,7 +1529,7 @@ class C_Logistik extends CI_Controller
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
-                                'nm_barang'     => $det->nm_barang,
+                                'nm_barang'     => $det->nama_barang,
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
@@ -1556,7 +1556,71 @@ class C_Logistik extends CI_Controller
                         $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
                     }
                 }
+
                 redirect('create_do');
+                break;
+
+            case 'formonsite':
+
+                date_default_timezone_set("Asia/Jakarta");
+                $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
+                $kddo       = $this->M_Logistik->generate_kd_do_onsite();
+                $now        = date("Y-m-d H:i:s");
+                $nowtoday   = date("Y-m-d");
+
+                $data_onsite = array(
+                    'kd_do'             => $kddo,
+                    'nolambung'         => 'onsite',
+                    'regional'          => 'onsite',
+                    'driver'            => 'onsite',
+                    'tgl_pengiriman'    => $nowtoday,
+                    'tgl_create'        => $now,
+                    'status'            => '4'
+                );
+                $this->M_Logistik->insert_do($data_onsite);
+
+                if ($get_pre_do) {
+                    $data_tmp_det_do = [];
+                    $kdfaktur = null;
+                    foreach ($get_pre_do as $g) {
+                        $kdfaktur = $g->kd_faktur;
+                    }
+                    if ($getdetail) {
+                        foreach ($getdetail as $det) {
+                            $data_tmp_det_do[] = array(
+                                'id_pre_do'     => $det->id,
+                                'kd_do'         => $kddo,
+                                'kd_faktur'     => $det->kd_faktur,
+                                'tgl_transaksi' => $det->tgl_inputer,
+                                'kd_rute'       => $det->kd_rute,
+                                'kd_customer'   => $det->kd_customer,
+                                'kd_barang'     => $det->kd_barang,
+                                'nama_barang'   => $det->nama_barang,
+                                'qty'           => $det->qty,
+                                'satuan'        => $det->satuan,
+                                'no_lot'        => $det->no_lot,
+                                'tgl_exp'       => $det->tgl_exp,
+                                'norut'         => '0',
+                                'nominal_p'     => $det->nominal_p,
+                                'jtempo'        => $det->jtempo,
+                                'dt_status'     => '1',
+                                'status'        => '4',
+                                'input_at'      => $nowtoday,
+                                'create_at'     => $now
+                            );
+                        }
+                        if (!empty($data_tmp_det_do)) {
+                            $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
+                        }
+                        $update_pre_do = array(
+                            'data_sts' => '2'
+                        );
+                        $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    }
+                }
+                redirect('faktur_on_site');
+                break;
         }
     }
 
@@ -2417,5 +2481,15 @@ class C_Logistik extends CI_Controller
             $this->session->set_flashdata('msg', "Format file tidak valid. Harap upload file CSV!");
             redirect('logistik');
         }
+    }
+
+    public function faktur_on_site()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/fakturonsite.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 }

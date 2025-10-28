@@ -61,7 +61,7 @@
                                     <?php foreach ($detail_fk as $det) : ?>
                                         <tr data-id="<?= $det->id ?>">
                                             <td><?= $det->kd_barang ?></td>
-                                            <td><?= $det->nm_barang ?></td>
+                                            <td><?= $det->nama_barang ?></td>
                                             <td><?= $det->qty ?></td>
                                             <td><?= number_format($det->gr_berat, 3)  ?></td>
                                             <td><?= number_format($det->convert_kg, 3) ?></td>
@@ -143,7 +143,14 @@
                                 </tbody>
                             </table>
                             <?php if ($status_faktur == '1') : ?>
-                                <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
+                                    </div>
+                                </div>
                             <?php else : ?>
                                 <a href="<?= base_url('revert_do/') . $kdfaktur . '/' . 'revertdetail' ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
                             <?php endif; ?>
