@@ -678,7 +678,7 @@ class M_Logistik extends CI_Model
 
     public function insertics_det_do($data)
     {
-        return $this->db->insert('tb_ics_do', $data);
+        return $this->db->insert_batch('tb_ics_do', $data);
     }
 
     public function insert_do($data)

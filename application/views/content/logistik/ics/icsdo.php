@@ -55,7 +55,6 @@
                                             <th>Box</th>
                                             <th>Pcs</th>
                                             <th>Lot</th>
-                                            <!-- <th>#</th> -->
                                         </tr>
                                     </thead>
                                     <tbody>

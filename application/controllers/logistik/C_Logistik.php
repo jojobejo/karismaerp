@@ -1568,17 +1568,9 @@ class C_Logistik extends CI_Controller
                 $kddo       = $this->M_Logistik->generate_kd_do_onsite();
                 $now        = date("Y-m-d H:i:s");
                 $nowtoday   = date("Y-m-d");
+                $todaydo    = date("d/m/Y");
 
-                $data_onsite = array(
-                    'kd_do'             => $kddo,
-                    'nolambung'         => 'onsite',
-                    'regional'          => 'onsite',
-                    'driver'            => 'onsite',
-                    'tgl_pengiriman'    => $nowtoday,
-                    'tgl_create'        => $now,
-                    'status'            => '4'
-                );
-                $this->M_Logistik->insert_do($data_onsite);
+
 
                 if ($get_pre_do) {
                     $data_tmp_det_do = [];
@@ -1609,7 +1601,31 @@ class C_Logistik extends CI_Controller
                                 'input_at'      => $nowtoday,
                                 'create_at'     => $now
                             );
+
+                            $data_onsite_ics[] = array(
+                                'kd_do'             => $kddo,
+                                'kd_faktur'         => $det->kd_faktur,
+                                'tgl_transaksi'     => $det->tgl_inputer,
+                                'nama_barang'       => $det->nama_barang,
+                                'qty'               => $det->qty,
+                                'no_lot'            => $det->no_lot,
+                                'exp_date'          => $det->tgl_exp,
+                                'input_at'          => $nowtoday
+                            );
                         }
+
+                        $data_onsite = array(
+                            'kd_do'             => $kddo,
+                            'nolambung'         => 'onsite',
+                            'regional'          => 'onsite',
+                            'driver'            => 'onsite',
+                            'tgl_pengiriman'    => $nowtoday,
+                            'tgl_create'        => $now,
+                            'status'            => '4'
+                        );
+                        $this->M_Logistik->insert_do($data_onsite);
+                        $this->M_Logistik->insertics_det_do($data_onsite_ics);
+
                         if (!empty($data_tmp_det_do)) {
                             $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
                         }
@@ -2463,12 +2479,12 @@ class C_Logistik extends CI_Controller
                     "kd_customer"         => $row[0],
                     "nama_customer"       => $row[1],
                     "nama_kios"           => $row[2],
-                    "alamat_kios"         => $row[3],
-                    "telp1"               => $row[4],
-                    "telp2"               => $row[5],
-                    "regional"            => $row[6],
-                    "jam_buka_tutup"      => $row[7],
-                    "karakteristik_kios"  => $row[8],
+                    "alamat_kios"         => $row[4],
+                    "telp1"               => $row[9],
+                    "telp2"               => $row[10],
+                    "regional"            => $row[8],
+                    "jam_buka_tutup"      => "-",
+                    "karakteristik_kios"  => "-",
                 );
 
                 $this->db->insert("tb_customer", $data);

@@ -32,9 +32,8 @@
                                     <tr>
                                         <td>TANGGAL TRANSAKSI</td>
                                         <td>FAKTUR</td>
-                                        <td>NAMA CUSTOMER</td>
                                         <td>KIOS</td>
-                                        <td>ALAMAT KIOS</td>
+                                        <td>Alamat Kios</td>
                                         <td>RUTE</td>
                                         <td>REGIONAL</td>
                                         <td>ITEM</td>
@@ -48,9 +47,8 @@
                                         <tr>
                                             <td><?= $l->tgl_inputer ?></td>
                                             <td><?= $l->kd_faktur ?></td>
-                                            <td><?= $l->nama_customer ?></td>
                                             <td><?= $l->nama_kios ?></td>
-                                            <td><?= $l->alamat_kios ?></td>
+                                            <td><?= $l->alamat_kios  ?></td>
                                             <td><?= $l->kd_rute ?></td>
                                             <td><?= $l->regional ?></td>
                                             <td><?= $l->total_barang ?></td>
