@@ -1093,13 +1093,13 @@ class C_Logistik extends CI_Controller
 
     public function rekam_order_check()
     {
-        $kd = $this->input->post('kd_do');
-        $nolambung = $this->input->post('platno');
-        $tgldeliv = $this->input->post('tgl_krim');
-        $driver = $this->input->post('driver');
-        $datenow = date("Y-m-d");
+        date_default_timezone_set("Asia/Jakarta");
+        $kd         = $this->input->post('kd_do');
+        $nolambung  = $this->input->post('platno');
+        $tgldeliv   = $this->input->post('tgl_krim');
+        $driver     = $this->input->post('driver');
+        $datenow    = date('d/m/Y');
 
-        $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
 
         $getdetail  = $this->M_Logistik->get_do_cust_byfaktur_ics($kd);
@@ -1134,7 +1134,7 @@ class C_Logistik extends CI_Controller
             $insert_batch[] = array(
                 'kd_do'         => $kd,
                 'kd_faktur'     => $det->kd_faktur,
-                'tgl_transaksi' => $tgl,
+                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_transaksi)),
                 'nama_barang'   => $det->nama_barang,
                 'qty'           => $det->qty,
                 'no_lot'        => $det->no_lot,
@@ -1568,17 +1568,7 @@ class C_Logistik extends CI_Controller
                 $kddo       = $this->M_Logistik->generate_kd_do_onsite();
                 $now        = date("Y-m-d H:i:s");
                 $nowtoday   = date("Y-m-d");
-
-                $data_onsite = array(
-                    'kd_do'             => $kddo,
-                    'nolambung'         => 'onsite',
-                    'regional'          => 'onsite',
-                    'driver'            => 'onsite',
-                    'tgl_pengiriman'    => $nowtoday,
-                    'tgl_create'        => $now,
-                    'status'            => '4'
-                );
-                $this->M_Logistik->insert_do($data_onsite);
+                $todaydo    = date("d/m/Y");
 
                 if ($get_pre_do) {
                     $data_tmp_det_do = [];
@@ -1592,7 +1582,7 @@ class C_Logistik extends CI_Controller
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
                                 'kd_faktur'     => $det->kd_faktur,
-                                'tgl_transaksi' => $det->tgl_inputer,
+                                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_inputer)),
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
@@ -1600,16 +1590,40 @@ class C_Logistik extends CI_Controller
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
-                                'tgl_exp'       => $det->tgl_exp,
+                                'tgl_exp'       => date('m/d/Y', strtotime($det->tgl_exp)),
                                 'norut'         => '0',
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
                                 'dt_status'     => '1',
                                 'status'        => '4',
-                                'input_at'      => $nowtoday,
+                                'input_at'      => $todaydo,
                                 'create_at'     => $now
                             );
+
+                            $data_onsite_ics[] = array(
+                                'kd_do'             => $kddo,
+                                'kd_faktur'         => $det->kd_faktur,
+                                'tgl_transaksi'     => date('m/d/Y', strtotime($det->tgl_inputer)),
+                                'nama_barang'       => $det->nama_barang,
+                                'qty'               => $det->qty,
+                                'no_lot'            => $det->no_lot,
+                                'exp_date'          => date('m/d/Y', strtotime($det->tgl_exp)),
+                                'input_at'          => $todaydo
+                            );
                         }
+
+                        $data_onsite = array(
+                            'kd_do'             => $kddo,
+                            'nolambung'         => 'onsite',
+                            'regional'          => 'onsite',
+                            'driver'            => 'onsite',
+                            'tgl_pengiriman'    => $nowtoday,
+                            'tgl_create'        => $now,
+                            'status'            => '4'
+                        );
+                        $this->M_Logistik->insert_do($data_onsite);
+                        $this->M_Logistik->insertics_det_do($data_onsite_ics);
+
                         if (!empty($data_tmp_det_do)) {
                             $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
                         }
@@ -1683,13 +1697,13 @@ class C_Logistik extends CI_Controller
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         $datado = array(
-            'kd_do' => $kd_do,
-            'nolambung' => $nolambung,
-            'regional' => $kota,
-            'driver' => $driver,
-            'tgl_pengiriman' => $tgldeliv,
-            'tgl_create' => $now,
-            'status'    => '1'
+            'kd_do'             => $kd_do,
+            'nolambung'         => $nolambung,
+            'regional'          => $kota,
+            'driver'            => $driver,
+            'tgl_pengiriman'    => $tgldeliv,
+            'tgl_create'        => $now,
+            'status'            => '1'
         );
 
         $this->M_Logistik->insert_do($datado);
@@ -2463,12 +2477,12 @@ class C_Logistik extends CI_Controller
                     "kd_customer"         => $row[0],
                     "nama_customer"       => $row[1],
                     "nama_kios"           => $row[2],
-                    "alamat_kios"         => $row[3],
-                    "telp1"               => $row[4],
-                    "telp2"               => $row[5],
-                    "regional"            => $row[6],
-                    "jam_buka_tutup"      => $row[7],
-                    "karakteristik_kios"  => $row[8],
+                    "alamat_kios"         => $row[4],
+                    "telp1"               => $row[9],
+                    "telp2"               => $row[10],
+                    "regional"            => $row[8],
+                    "jam_buka_tutup"      => "-",
+                    "karakteristik_kios"  => "-",
                 );
 
                 $this->db->insert("tb_customer", $data);

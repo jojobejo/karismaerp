@@ -46,7 +46,7 @@
                                     <thead class="bg-primary text-white text-center">
                                         <tr>
                                             <th>Kode Faktur</th>
-                                            <th>Tgl Transaksi</th>
+                                            <!-- <th>Tgl Transaksi</th> -->
                                             <th>Kios</th>
                                             <th>Rute</th>
                                             <th>Nama Barang</th>
@@ -55,14 +55,13 @@
                                             <th>Box</th>
                                             <th>Pcs</th>
                                             <th>Lot</th>
-                                            <!-- <th>#</th> -->
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($ics_do as $do) : ?>
                                             <tr>
                                                 <td><?= $do->kd_faktur ?></td>
-                                                <td><?= $do->tgl_transaksi ?></td>
+                                                <!-- <td><?= $do->tgl_transaksi ?></td> -->
                                                 <td><?= $do->nm_kios ?></td>
                                                 <td><?= $do->rute ?></td>
                                                 <td><?= $do->nama_barang ?></td>

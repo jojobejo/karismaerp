@@ -434,6 +434,8 @@ class C_Ics extends CI_Controller
 
     public function ics_do()
     {
+        date_default_timezone_set('Asia/Jakarta');
+
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
@@ -878,7 +880,72 @@ class C_Ics extends CI_Controller
             echo json_encode(['error' => 'Perhitungan error']);
         }
     }
-    public function export_opname()
+
+    public function data_lpb_zahir()
     {
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/dtalbp.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // public function get_lpb()
+    // {
+    //     $data['page_title']         = 'KARISMA - LOGISTIK';
+
+    //     $this->load->view('partial/main/header.php', $data);
+    //     $this->load->view('content/logistik/ics/a.php', $data);
+    //     $this->load->view('partial/main/footer.php');
+    // }
+
+    public function get_lpb()
+    {
+        // Ambil data dari POST form/filter
+        $periode1 = '2025-10-31';
+        $periode2 = '2025-10-31';
+
+        if (empty($periode1) || empty($periode2)) {
+            echo json_encode(['status' => 'error', 'message' => 'Periode belum diisi']);
+            return;
+        }
+
+        // URL endpoint lokal PHP Zahir Digital
+        $url = "https://10.10.10.12/ZahirDigital/LOGISTIK/get_lpb.php";
+
+        // Kirim data POST ke get_lpb.php pakai CURL internal
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, [
+            'periode1' => $periode1,
+            'periode2' => $periode2
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $response = curl_exec($ch);
+
+        if (curl_errno($ch)) {
+            $error_msg = curl_error($ch);
+            curl_close($ch);
+            echo json_encode(['status' => 'error', 'message' => $error_msg]);
+            return;
+        }
+
+        curl_close($ch);
+
+        // Pastikan responnya valid JSON
+        $json = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo json_encode(['status' => 'error', 'message' => 'Respon tidak valid dari server LPB']);
+            return;
+        }
+
+        // Kirim balik ke view / AJAX
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($json));
     }
 }

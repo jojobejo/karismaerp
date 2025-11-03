@@ -28,11 +28,21 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
-                                
-                            <?php if ($this->session->userdata('lv') == '1') : ?>
-                                    <button class="btn btn-success mb-3" data-toggle="modal" data-target="#modalImportCSV">
-                                        <i class="fas fa-file-csv"></i> Import CSV
-                                    </button>
+
+                                <?php if ($this->session->userdata('lv') == '1') : ?>
+                                    <div class="row">
+                                        <div class="col-2">
+                                            <button class="btn btn-success mb-3 btn-block" data-toggle="modal" data-target="#modalImportCSV">
+                                                <i class="fas fa-file-csv"></i> Import CSV
+                                            </button>
+                                        </div>
+                                        <div class="col-2">
+                                            <a class="btn btn-success mb-3 btn-block" href="<?= base_url('data_lpb_zahir') ?>">
+                                                <i class="fas fa-file-csv"></i> Data LPB
+                                            </a>
+                                        </div>
+                                    </div>
+
                                     <!-- Modal Import CSV -->
                                     <div class="modal fade" id="modalImportCSV" tabindex="-1" role="dialog" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
                                         <div class="modal-dialog" role="document">

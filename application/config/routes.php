@@ -106,6 +106,9 @@ $route['ics/import_csv']                            = 'logistik/C_Ics/import_csv
 $route['ics/sc_do_by_date_range']                   = 'logistik/C_Ics/sc_do_by_date_range';
 $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator_operan';
 
+$route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
+$route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
+
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
@@ -139,7 +142,7 @@ $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/inser
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                                 = 'logistik/C_Logistik/create_do';
-$route['faktur_on_site']                                 = 'logistik/C_Logistik/faktur_on_site';
+$route['faktur_on_site']                            = 'logistik/C_Logistik/faktur_on_site';
 $route['edited_rute_do']                            = 'logistik/C_Logistik/edited_rute_do';
 $route['insert_tmp/(:any)/(:any)']                  = 'logistik/C_Logistik/insert_tmp/$1/$2';
 $route['revert_do/(:any)/(:any)']                   = 'logistik/C_Logistik/revert_do/$1/$2';
