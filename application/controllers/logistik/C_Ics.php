@@ -434,6 +434,8 @@ class C_Ics extends CI_Controller
 
     public function ics_do()
     {
+        date_default_timezone_set('Asia/Jakarta');
+
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');

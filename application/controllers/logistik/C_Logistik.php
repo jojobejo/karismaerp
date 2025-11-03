@@ -1093,13 +1093,13 @@ class C_Logistik extends CI_Controller
 
     public function rekam_order_check()
     {
-        $kd = $this->input->post('kd_do');
-        $nolambung = $this->input->post('platno');
-        $tgldeliv = $this->input->post('tgl_krim');
-        $driver = $this->input->post('driver');
-        $datenow = date("Y-m-d");
+        date_default_timezone_set("Asia/Jakarta");
+        $kd         = $this->input->post('kd_do');
+        $nolambung  = $this->input->post('platno');
+        $tgldeliv   = $this->input->post('tgl_krim');
+        $driver     = $this->input->post('driver');
+        $datenow    = date('d/m/Y');
 
-        $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
 
         $getdetail  = $this->M_Logistik->get_do_cust_byfaktur_ics($kd);
@@ -1134,7 +1134,7 @@ class C_Logistik extends CI_Controller
             $insert_batch[] = array(
                 'kd_do'         => $kd,
                 'kd_faktur'     => $det->kd_faktur,
-                'tgl_transaksi' => $tgl,
+                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_transaksi)),
                 'nama_barang'   => $det->nama_barang,
                 'qty'           => $det->qty,
                 'no_lot'        => $det->no_lot,
@@ -1570,8 +1570,6 @@ class C_Logistik extends CI_Controller
                 $nowtoday   = date("Y-m-d");
                 $todaydo    = date("d/m/Y");
 
-
-
                 if ($get_pre_do) {
                     $data_tmp_det_do = [];
                     $kdfaktur = null;
@@ -1584,7 +1582,7 @@ class C_Logistik extends CI_Controller
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
                                 'kd_faktur'     => $det->kd_faktur,
-                                'tgl_transaksi' => $det->tgl_inputer,
+                                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_inputer)),
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
@@ -1592,25 +1590,25 @@ class C_Logistik extends CI_Controller
                                 'qty'           => $det->qty,
                                 'satuan'        => $det->satuan,
                                 'no_lot'        => $det->no_lot,
-                                'tgl_exp'       => $det->tgl_exp,
+                                'tgl_exp'       => date('m/d/Y', strtotime($det->tgl_exp)),
                                 'norut'         => '0',
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
                                 'dt_status'     => '1',
                                 'status'        => '4',
-                                'input_at'      => $nowtoday,
+                                'input_at'      => $todaydo,
                                 'create_at'     => $now
                             );
 
                             $data_onsite_ics[] = array(
                                 'kd_do'             => $kddo,
                                 'kd_faktur'         => $det->kd_faktur,
-                                'tgl_transaksi'     => $det->tgl_inputer,
+                                'tgl_transaksi'     => date('m/d/Y', strtotime($det->tgl_inputer)),
                                 'nama_barang'       => $det->nama_barang,
                                 'qty'               => $det->qty,
                                 'no_lot'            => $det->no_lot,
-                                'exp_date'          => $det->tgl_exp,
-                                'input_at'          => $nowtoday
+                                'exp_date'          => date('m/d/Y', strtotime($det->tgl_exp)),
+                                'input_at'          => $todaydo
                             );
                         }
 
@@ -1699,13 +1697,13 @@ class C_Logistik extends CI_Controller
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         $datado = array(
-            'kd_do' => $kd_do,
-            'nolambung' => $nolambung,
-            'regional' => $kota,
-            'driver' => $driver,
-            'tgl_pengiriman' => $tgldeliv,
-            'tgl_create' => $now,
-            'status'    => '1'
+            'kd_do'             => $kd_do,
+            'nolambung'         => $nolambung,
+            'regional'          => $kota,
+            'driver'            => $driver,
+            'tgl_pengiriman'    => $tgldeliv,
+            'tgl_create'        => $now,
+            'status'            => '1'
         );
 
         $this->M_Logistik->insert_do($datado);

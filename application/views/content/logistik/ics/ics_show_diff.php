@@ -118,7 +118,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -135,6 +135,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -156,6 +159,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
@@ -183,7 +188,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -200,6 +205,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -221,6 +229,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
@@ -248,7 +258,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -265,6 +275,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -286,6 +299,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
@@ -313,7 +328,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -330,6 +345,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -351,6 +369,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
@@ -378,7 +398,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -395,6 +415,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -416,6 +439,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
@@ -443,7 +468,7 @@
                                                         <th colspan="2" class="bg-danger text-white text-center">DO</th>
                                                         <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                                         <th colspan="2" class="bg-success text-white text-center">Fisik</th>
-                                                        <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
+                                                        <th colspan="3" class="align-middle bg-danger text-white text-center">Selisih</th>
                                                         <th rowspan="2" class="align-middle bg-primary text-white text-center">Kordinat</th>
                                                         <th rowspan="2" class="align-middle bg-success text-white text-center">Status</th>
                                                     </tr>
@@ -460,6 +485,9 @@
                                                         <th class="bg-info text-white">Pcs</th>
                                                         <th class="bg-success text-white">Box</th>
                                                         <th class="bg-success text-white">Pcs</th>
+                                                        <th class="bg-danger text-white">Qty</th>
+                                                        <th class="bg-danger text-white">Box</th>
+                                                        <th class="bg-danger text-white">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -481,6 +509,8 @@
                                                             <td><?= $br->fisik_box ?></td>
                                                             <td><?= $br->fisik_pcs ?></td>
                                                             <td><?= $br->qty_selisih ?></td>
+                                                            <td><?= $br->selisih_box ?></td>
+                                                            <td><?= $br->selisih_pcs ?></td>
                                                             <td style="text-align: center;"><?= $br->kordinat ?></td>
                                                             <?php if ($br->status_kesesuaian == 'KLOP') : ?>
                                                                 <td style="text-align: center;">
