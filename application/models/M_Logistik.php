@@ -2295,4 +2295,46 @@ FROM (
     {
         return $this->db->insert('tb_pre_do', $data);
     }
+
+    public function master_gudang()
+    {
+        return $this->db->query("SELECT
+        a.*
+        FROM tb_master_gudang a
+        ")->result();
+    }
+
+    function gudang_generate()
+    {
+        $cd1 = $this->db->query("SELECT MAX(RIGHT(kode_gudang,3)) AS kd_max FROM tb_master_gudang");
+        $kd1 = "";
+        if ($cd1->num_rows() > 0) {
+            foreach ($cd1->result() as $k) {
+                $tmp = ((int)$k->kd_max) + 1;
+                $kd1 = sprintf("%03s", $tmp);
+            }
+        } else {
+            $kd1 = "0001";
+        }
+        date_default_timezone_set('Asia/Jakarta');
+        $kdnk1 = 'QIUGDG' . $kd1;
+        return $kdnk1;
+    }
+
+    public function get_detail_gudang($kd)
+    {
+        return $this->db->query("SELECT
+        a.id,
+        a.nama_barang,
+        a.exp_date,
+        a.qty,
+        a.qty_box,
+        a.qty_pcs,
+        a.lokasi,
+        b.nama_gudang
+        FROM tb_saldo_awal a
+        LEFT JOIN tb_master_gudang b ON b.kode_gudang = a.kode_gudang
+        WHERE a.kode_gudang = '$kd'
+        ")->result();
+    }
 }

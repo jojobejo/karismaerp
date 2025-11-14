@@ -56,9 +56,9 @@
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                                 </div>
-                                <!-- <div class="col-auto">
-                                    <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
-                                </div> -->
+                                <div class="col-auto">
+                                    <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-warehouse"> </i> Gudang</a>
+                                </div>
                             <?php elseif ($akses == 'ics') : ?>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/by_allbarang_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-box"></i> Data All Barang</a>

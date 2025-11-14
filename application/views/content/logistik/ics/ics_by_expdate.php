@@ -50,7 +50,7 @@
                                     <thead>
                                         <tr>
                                             <th rowspan="2" class="align-middle bg-info text-white text-center">#</th>
-                                            <th colspan="2" class="bg-primary text-white text-center">NAMA</th>
+                                            <th colspan="3" class="bg-primary text-white text-center">NAMA</th>
                                             <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
                                             <th colspan="2" class="bg-success text-white text-center">LPB</th>
                                             <th colspan="2" class="bg-danger text-white text-center">DO</th>
@@ -62,6 +62,7 @@
                                         <tr>
                                             <th class="bg-primary text-white">Nama Barang</th>
                                             <th class="bg-primary text-white">Date</th>
+                                            <th class="bg-primary text-white">Gudang</th>
                                             <th class="bg-info text-white">Box</th>
                                             <th class="bg-info text-white">Pcs</th>
                                             <th class="bg-success text-white">Box</th>
@@ -82,6 +83,7 @@
                                                 </td>
                                                 <td><?= $br->nama_barang ?></td>
                                                 <td><?= $br->exp_date ?></td>
+                                                <td><?= $br->nama_gudang ?></td>
                                                 <td><?= $br->saldo_awal_box ?></td>
                                                 <td><?= $br->saldo_awal_pcs ?></td>
                                                 <td><?= $br->in_box ?></td>

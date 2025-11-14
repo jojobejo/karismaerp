@@ -109,11 +109,18 @@ $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 
+// LOGISTIK GUDANG
+$route['gudang']                                    = 'logistik/C_Logistik/master_gudang';
+$route['logistik/add_gudang_ajax']                  = 'logistik/C_Logistik/add_gudang_ajax';
+$route['logistik/update_gudang_ajax']               = 'logistik/C_Logistik/update_gudang_ajax';
+
+$route['detail_gudang/(:any)']                      = 'logistik/C_Logistik/get_detail_gudang/$1';
+
+
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
 $route['stockopname']                               = 'logistik/C_Logistik/stockopname';
-$route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
 $route['detailbarang/(:any)']                       = 'logistik/C_Logistik/detailbarang/$1';
 $route['forminput/(:any)/(:any)']                   = 'logistik/C_Logistik/forminput/$1/$2';
 $route['insertopname']                              = 'logistik/C_Logistik/insertopname';

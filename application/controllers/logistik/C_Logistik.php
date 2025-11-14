@@ -2506,4 +2506,54 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/fakturonsite.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function master_gudang()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['list_gudang']    = $this->M_Logistik->master_gudang();
+        $data['gdg_generate']   = $this->M_Logistik->gudang_generate();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/master_gudang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function add_gudang_ajax()
+    {
+        $nama = $this->input->post('nama_gudang');
+        $kode = $this->input->post('kd_gdg');
+
+        $this->db->insert('tb_master_gudang', ['nama_gudang' => $nama, 'kode_gudang'   => $kode]);
+
+        echo json_encode([
+            'status' => 'ok',
+            'kode_gudang' => $kode,
+            'nama' => $nama
+        ]);
+    }
+
+    public function update_gudang_ajax()
+    {
+        $id   = $this->input->post('id_gudang');
+        $nama = $this->input->post('nama_gudang');
+
+        $this->db->where('kode_gudang', $id)
+            ->update('tb_master_gudang', ['nama_gudang' => $nama]);
+
+        echo json_encode([
+            'status' => 'ok',
+            'id' => $id,
+            'nama' => $nama
+        ]);
+    }
+
+    public function get_detail_gudang($kd)
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['list_br']        = $this->M_Logistik->get_detail_gudang($kd);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/detailed_gdg.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
 }

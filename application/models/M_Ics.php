@@ -65,6 +65,8 @@ class M_Ics extends CI_Model
         x.id,
         x.nama_barang,
         x.exp_date,
+        x.kode_gudang,
+        mg.nama_gudang,
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
@@ -126,7 +128,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , lokasi
+            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , lokasi, kode_gudang
             FROM tb_saldo_awal
             GROUP BY nama_barang, exp_date
         ) x
@@ -150,6 +152,10 @@ class M_Ics extends CI_Model
             FROM tb_master_barang
             GROUP BY nm_barang
         ) mb ON mb.nm_barang = x.nama_barang
+        LEFT JOIN (
+            SELECT nama_gudang as nama_gudang , kode_gudang as kode_gudang 
+            FROM tb_master_gudang
+        ) mg ON mg.kode_gudang = x.kode_gudang
         $where
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
