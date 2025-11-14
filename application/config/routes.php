@@ -113,6 +113,7 @@ $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
 $route['stockopname']                               = 'logistik/C_Logistik/stockopname';
+$route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
 $route['detailbarang/(:any)']                       = 'logistik/C_Logistik/detailbarang/$1';
 $route['forminput/(:any)/(:any)']                   = 'logistik/C_Logistik/forminput/$1/$2';
 $route['insertopname']                              = 'logistik/C_Logistik/insertopname';
@@ -136,6 +137,8 @@ $route['usropname_input']                           = 'logistik/C_Logistik/usrop
 $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
 
+
+
 //LOGISTIK - DO
 $route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
 $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/insert_csv';
@@ -150,7 +153,9 @@ $route['cancel_fk/(:any)/(:any)']                   = 'logistik/C_Logistik/cance
 $route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detail_fk/$1';
 $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
+
 // $route['list_faktur/(:any)/(:any)']              = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
+
 $route['list_faktur/(:any)']                        = 'logistik/C_Logistik/list_faktur_sortby_rute/$1';
 $route['acc_check/(:any)/(:any)/(:any)']            = 'logistik/C_Logistik/acc_check/$1/$2/$3';
 $route['rekam_order_check']                         = 'logistik/C_Logistik/rekam_order_check';
@@ -190,3 +195,7 @@ $route['user_report']                               = 'karyawan_report/C_Report'
 
 // PRICELIST - ONLINE
 $route['pricelist_online']                          = 'keuangan/C_Keuangan/pricelist_online';
+
+
+// SALES TONASE KUBIKASI
+$route['sales_report']                              = 'sales/C_Sales/dashboard_sales';

@@ -60,6 +60,8 @@ class Auth extends CI_Controller
                         redirect('extravaganza');
                     } else if ($key->jobdesk == 'SALES_ONLINE') {
                         redirect('user_report');
+                    } else if ($key->jobdesk == 'SALESCOUNTER') {
+                        redirect('sales_report');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
