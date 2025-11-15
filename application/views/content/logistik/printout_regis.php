@@ -113,6 +113,7 @@
                     <div>Total Customer : <?= $print->totalfaktur ?></div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
                     <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) || ' . $tonase . ' (Ton)' ?></div>
+                    <div>Kubikasi : <?= $print->total_kubikasi . ' (m³) ' ?></div>
                 <?php endforeach; ?>
             </div>
 

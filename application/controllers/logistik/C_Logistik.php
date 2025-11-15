@@ -1312,6 +1312,7 @@ class C_Logistik extends CI_Controller
                 b.tgl_pengiriman,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
+                ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
                 COUNT(DISTINCT a.kd_faktur) AS totalfaktur
             FROM
                 tb_detail_do a
@@ -1383,6 +1384,7 @@ class C_Logistik extends CI_Controller
                 b.tgl_pengiriman,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
+                ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
                 COUNT(DISTINCT a.kd_faktur) AS totalfaktur
             FROM
                 tb_detail_do a
