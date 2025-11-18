@@ -844,6 +844,7 @@ class M_Logistik extends CI_Model
         ) AS x
         ")->result();
     }
+    
     public function getinputopname($user)
     {
         return $this->db->query("SELECT * FROM `tb_ics_opname` WHERE inputer = '$user'

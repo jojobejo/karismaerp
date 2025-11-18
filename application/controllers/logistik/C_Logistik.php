@@ -1312,7 +1312,6 @@ class C_Logistik extends CI_Controller
                 b.tgl_pengiriman,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
-                ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
                 COUNT(DISTINCT a.kd_faktur) AS totalfaktur
             FROM
                 tb_detail_do a
@@ -1384,7 +1383,6 @@ class C_Logistik extends CI_Controller
                 b.tgl_pengiriman,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
-                ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
                 COUNT(DISTINCT a.kd_faktur) AS totalfaktur
             FROM
                 tb_detail_do a
@@ -1892,15 +1890,15 @@ class C_Logistik extends CI_Controller
     {
         $data['page_title'] = 'KARISMA - ICS';
         $result_t1 = $this->M_Logistik->all_barang_match_t1();
-        // $result_t2 = $this->M_Logistik->all_barang_match_t2();
+        $result_t2 = $this->M_Logistik->all_barang_match_t2();
         $resultexp_t1 = $this->M_Logistik->fefo_match_t1();
-        // $resultexp_t2 = $this->M_Logistik->fefo_match_t2();
+        $resultexp_t2 = $this->M_Logistik->fefo_match_t2();
 
         $res_t1 = $result_t1[0];
-        // $res_t2 = $result_t2[0];
+        $res_t2 = $result_t2[0];
 
         $resexp_t1 = $resultexp_t1[0];
-        // $resexp_t2 = $resultexp_t2[0];
+        $resexp_t2 = $resultexp_t2[0];
 
         $data['stat_t1'] = [
             'total_barang'   => $res_t1->total_barang,
@@ -1918,27 +1916,27 @@ class C_Logistik extends CI_Controller
             'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
         ];
 
-        // $data['stat_t2'] = [
-        //     'total_barang'   => $res_t2->total_barang,
-        //     'total_match'    => $res_t2->total_match,
-        //     'total_notmatch' => $res_t2->total_notmatch,
-        //     'persen_match'   => $res_t2->total_barang > 0 ? round(($res_t2->total_match / $res_t2->total_barang) * 100, 2) : 0,
-        //     'persen_notmatch' => $res_t2->total_barang > 0 ? round(($res_t2->total_notmatch / $res_t2->total_barang) * 100, 2) : 0
-        // ];
+        $data['stat_t2'] = [
+            'total_barang'   => $res_t2->total_barang,
+            'total_match'    => $res_t2->total_match,
+            'total_notmatch' => $res_t2->total_notmatch,
+            'persen_match'   => $res_t2->total_barang > 0 ? round(($res_t2->total_match / $res_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t2->total_barang > 0 ? round(($res_t2->total_notmatch / $res_t2->total_barang) * 100, 2) : 0
+        ];
 
-        // $data['statexp_t2'] = [
-        //     'total_barang'   => $resexp_t2->total_barang,
-        //     'total_match'    => $resexp_t2->total_match,
-        //     'total_notmatch' => $resexp_t2->total_notmatch,
-        //     'persen_match'   => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_match / $resexp_t2->total_barang) * 100, 2) : 0,
-        //     'persen_notmatch' => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_notmatch / $resexp_t2->total_barang) * 100, 2) : 0
-        // ];
+        $data['statexp_t2'] = [
+            'total_barang'   => $resexp_t2->total_barang,
+            'total_match'    => $resexp_t2->total_match,
+            'total_notmatch' => $resexp_t2->total_notmatch,
+            'persen_match'   => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_match / $resexp_t2->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t2->total_barang > 0 ? round(($resexp_t2->total_notmatch / $resexp_t2->total_barang) * 100, 2) : 0
+        ];
 
         $data['all_t1'] = $result_t1;
-        // $data['all_t2'] = $result_t2;
+        $data['all_t2'] = $result_t2;
 
         $data['allexp_t1'] = $resultexp_t1;
-        // $data['allexp_t2'] = $resultexp_t2;
+        $data['allexp_t2'] = $resultexp_t2;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/adminstockopname.php', $data);
@@ -2506,6 +2504,56 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/fakturonsite.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function master_gudang()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['list_gudang']    = $this->M_Logistik->master_gudang();
+        $data['gdg_generate']   = $this->M_Logistik->gudang_generate();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/master_gudang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function add_gudang_ajax()
+    {
+        $nama = $this->input->post('nama_gudang');
+        $kode = $this->input->post('kd_gdg');
+
+        $this->db->insert('tb_master_gudang', ['nama_gudang' => $nama, 'kode_gudang'   => $kode]);
+
+        echo json_encode([
+            'status' => 'ok',
+            'kode_gudang' => $kode,
+            'nama' => $nama
+        ]);
+    }
+
+    public function update_gudang_ajax()
+    {
+        $id   = $this->input->post('id_gudang');
+        $nama = $this->input->post('nama_gudang');
+
+        $this->db->where('kode_gudang', $id)
+            ->update('tb_master_gudang', ['nama_gudang' => $nama]);
+
+        echo json_encode([
+            'status' => 'ok',
+            'id' => $id,
+            'nama' => $nama
+        ]);
+    }
+
+    public function get_detail_gudang($kd)
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['list_br']        = $this->M_Logistik->get_detail_gudang($kd);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/detailed_gdg.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 }
