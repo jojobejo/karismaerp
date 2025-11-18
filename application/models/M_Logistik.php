@@ -838,9 +838,9 @@ class M_Logistik extends CI_Model
             SELECT
             a.nama_barang,
             a.exp_date,
-            b.dimensi
+            (b.p*b.l*b.t) as dimensi
             FROM tb_ics a
-            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
         ) AS x
         ")->result();
     }
@@ -851,7 +851,7 @@ class M_Logistik extends CI_Model
     }
     public function getBarangByNama($nama)
     {
-        return $this->db->get_where('tb_mbarang', ['nm_barang' => $nama])->row();
+        return $this->db->get_where('tb_master_barang', ['nm_barang' => $nama])->row();
     }
     public function getDimensi($nama)
     {
@@ -1018,7 +1018,7 @@ class M_Logistik extends CI_Model
             FROM tb_ics
             GROUP BY nama_barang, exp_date
         ) base
-        LEFT JOIN tb_mbarang m ON base.nama_barang = m.nm_barang
+        LEFT JOIN tb_master_barang m ON base.nama_barang = m.nm_barang
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -1106,7 +1106,7 @@ class M_Logistik extends CI_Model
             WHERE tim = '2'
             GROUP BY nama_barang
         ) t2 ON t2.nama_barang = i.nama_barang
-        LEFT JOIN tb_mbarang m ON m.nm_barang = i.nama_barang
+        LEFT JOIN tb_master_barang m ON m.nm_barang = i.nama_barang
         ORDER BY i.nama_barang;")->result();
     }
 
@@ -1187,7 +1187,7 @@ class M_Logistik extends CI_Model
     {
         return $this->db->query("SELECT 
             i.nama_barang,
-            COALESCE(m.kd_system, '-') AS kd_barang,
+            COALESCE(m.kd_system, '-') AS kode_barang,
             COALESCE(z.qty_zahir, 0) AS qty_zahir,
             COALESCE(p.qty_pending, 0) AS qty_pending,
             COALESCE(s.qty_supp, 0) AS qty_supp,
@@ -1221,7 +1221,7 @@ class M_Logistik extends CI_Model
         FROM (
             SELECT DISTINCT nama_barang FROM tb_ics
         ) i
-        LEFT JOIN tb_mbarang m ON m.nm_barang = i.nama_barang
+        LEFT JOIN tb_master_barang m ON m.nm_barang = i.nama_barang
         LEFT JOIN (
             SELECT nama_barang, SUM(qty) AS qty_zahir
             FROM tb_ics
@@ -1264,7 +1264,7 @@ class M_Logistik extends CI_Model
         return $this->db->query("SELECT 
             base.nama_barang,
             base.exp_date,
-            COALESCE(m.kd_system, '-') AS kd_barang,
+            COALESCE(m.kd_system, '-') AS kode_barang,
             COALESCE(base.qty_zahir, 0) AS qty_zahir,
             COALESCE(p.qty_pending, 0) AS qty_pending,
             COALESCE(s.qty_supp, 0) AS qty_supp,
@@ -1300,7 +1300,7 @@ class M_Logistik extends CI_Model
             FROM tb_ics
             GROUP BY nama_barang, exp_date
         ) base
-        LEFT JOIN tb_mbarang m ON m.nm_barang = base.nama_barang
+        LEFT JOIN tb_master_barang m ON m.nm_barang = base.nama_barang
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -1766,7 +1766,7 @@ FROM (
         END AS status_tim2
         FROM
         tb_ics AS a
-        JOIN tb_mbarang AS b ON b.nm_barang = a.nama_barang
+        JOIN tb_master_barang AS b ON b.nm_barang = a.nama_barang
         LEFT JOIN (
             SELECT
                 d.nama_barang,
@@ -1774,7 +1774,7 @@ FROM (
                 SUM(d.qty) AS qty_pending
             FROM
                 tb_ics_do d
-                JOIN tb_mbarang mb ON mb.nm_barang = d.nama_barang
+                JOIN tb_master_barang mb ON mb.nm_barang = d.nama_barang
             WHERE
                 mb.kd_system = '$kdbr'
             GROUP BY
@@ -1839,11 +1839,11 @@ FROM (
                 SUM(a.qty) + COALESCE(pending.qty_pending, 0) AS qty_final,
                 COALESCE(op1.qtyinput_1, 0) AS qtyinput_1
             FROM tb_ics a
-            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
             LEFT JOIN (
                 SELECT d.nama_barang, d.exp_date, SUM(d.qty) AS qty_pending
                 FROM tb_ics_do d
-                JOIN tb_mbarang mb ON mb.nm_barang = d.nama_barang
+                JOIN tb_master_barang mb ON mb.nm_barang = d.nama_barang
                 WHERE mb.kd_system = '$kdbr'
                 GROUP BY d.nama_barang, d.exp_date
             ) AS pending
@@ -1871,7 +1871,7 @@ FROM (
             COALESCE(opname.qty_fisik, 0) AS qty_fisik,
             IF((SUM(a.qty) + COALESCE(pending.qty_pending, 0)) - COALESCE(supp.qty_supp, 0) = COALESCE(opname.qty_fisik, 0), 1, 0) AS status
         FROM tb_ics a
-        JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+        JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
         LEFT JOIN (
             SELECT nama_barang, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -2036,7 +2036,7 @@ FROM (
         return $this->db->query("SELECT
         a.nm_barang AS nama_barang,
         a.kd_system AS kdbarang
-        FROM tb_mbarang a
+        FROM tb_master_barang a
         WHERE a.kd_system = '$kdbarang'
         ")->result();
     }
@@ -2046,7 +2046,7 @@ FROM (
         return $this->db->query("SELECT
         a.*
         FROM tb_req_opname a
-        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        LEFT JOIN tb_master_barang b ON a.nama_barang = b.nm_barang
         WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim' AND a.status = '1'
         ")->result();
     }
@@ -2060,7 +2060,7 @@ FROM (
     {
         return $this->db->select('a.inputer, a.nama_barang, a.exp_date, a.qty, a.qty_box, a.qty_pcs')
             ->from('tb_ics_opname a')
-            ->join('tb_mbarang b', 'b.nm_barang = a.nama_barang')
+            ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
             ->where('a.id', $id)
             ->get()
             ->row();
@@ -2070,7 +2070,7 @@ FROM (
     {
         $this->db->select('COUNT(a.id) AS total_request');
         $this->db->from('tb_req_opname a');
-        $this->db->join('tb_mbarang b', 'b.nm_barang = a.nama_barang', 'left');
+        $this->db->join('tb_master_barang b', 'b.nm_barang = a.nama_barang', 'left');
         $this->db->where('b.kd_system', $kd_system);
         $this->db->where('a.tim', $tim);
         $this->db->where('a.status', '1');
@@ -2092,7 +2092,7 @@ FROM (
         (b.p*b.l*b.t) AS dimensi,
         a.inputer
         FROM tb_ics_opname a
-        LEFT JOIN tb_mbarang b ON a.nama_barang = b.nm_barang
+        LEFT JOIN tb_master_barang b ON a.nama_barang = b.nm_barang
         WHERE b.kd_system = '$kdbarang' AND a.tim = '$tim'
         ")->result();
     }
@@ -2118,7 +2118,7 @@ FROM (
             a.inputer,
             log.keterangan
             FROM tb_ics_opname a
-            JOIN tb_mbarang b ON b.nm_barang = a.nama_barang
+            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
             LEFT JOIN(
                 SELECT nama_barang, exp_date , keterangan
                 FROM tb_log_ics
