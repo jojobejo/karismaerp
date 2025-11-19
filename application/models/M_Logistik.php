@@ -2338,4 +2338,13 @@ FROM (
         WHERE a.kordinat = '$kd'
         ")->result();
     }
+
+    public function get_by_expired()
+    {
+        return $this->db->query("SELECT *
+        FROM tb_ics a
+        WHERE STR_TO_DATE(a.exp_date, '%d/%m/%Y') < CURDATE()
+        AND a.exp_date NOT LIKE '01/01/100' AND AND a.exp_date NOT LIKE '01/01/1000' ;
+        ")->result();
+    }
 }

@@ -2518,6 +2518,16 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function gudang_expired()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['dt_expired']     = $this->M_Logistik->get_by_expired();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/gudang_exp.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function add_gudang_ajax()
     {
         $nama = $this->input->post('nama_gudang');
@@ -2547,6 +2557,7 @@ class C_Logistik extends CI_Controller
         ]);
     }
 
+
     public function get_detail_gudang($kd)
     {
         $data['page_title']     = 'KARISMA - LOGISTIK';
@@ -2556,5 +2567,4 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/detailed_gdg.php', $data);
         $this->load->view('partial/main/footer.php');
     }
-
 }

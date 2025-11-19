@@ -113,6 +113,7 @@ $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 $route['gudang']                                    = 'logistik/C_Logistik/master_gudang';
 $route['logistik/add_gudang_ajax']                  = 'logistik/C_Logistik/add_gudang_ajax';
 $route['logistik/update_gudang_ajax']               = 'logistik/C_Logistik/update_gudang_ajax';
+$route['gudang_expired']                            = 'logistik/C_Logistik/gudang_expired';
 
 $route['detail_gudang/(:any)']                      = 'logistik/C_Logistik/get_detail_gudang/$1';
 

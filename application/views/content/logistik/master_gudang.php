@@ -104,6 +104,9 @@
                         <div class="col-auto">
                             <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-warehouse"> </i> Gudang</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('gudang_expired') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-calendar-times"></i> Gudang Expired</a>
+                        </div>
                     </div>
 
                     <div class="card shadow-sm gudang-card">
