@@ -95,12 +95,35 @@ $query_builder = TRUE;
 // 	'save_queries' => TRUE
 // );
 
+// $db['firebird'] = array(
+// 	'dsn'      => '',
+// 	'hostname' => 'localhost:C:\database\karisma.fdb', // sesuaikan path .fdb kamu
+// 	'username' => 'SYSDBA',
+// 	'password' => 'masterkey',
+// 	'database' => '',
+// 	'dbdriver' => 'ibase',
+// 	'dbprefix' => '',
+// 	'pconnect' => FALSE,
+// 	'db_debug' => TRUE,
+// 	'cache_on' => FALSE,
+// 	'cachedir' => '',
+// 	'char_set' => 'UTF8',
+// 	'dbcollat' => 'UTF8_general_ci',
+// 	'swap_pre' => '',
+// 	'encrypt'  => FALSE,
+// 	'compress' => FALSE,
+// 	'stricton' => FALSE,
+// 	'failover' => array(),
+// 	'save_queries' => TRUE
+// );
+
+
 $db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => 'localhost',
-	'username' => 'u471548307_adminkarisma',
-	'password' => 'v?BQlb>[>6',
-	'database' => 'u471548307_karismaerp',
+	'username' => 'u471548307_adminstock',
+	'password' => '8=SG/@8|Wb3',
+	'database' => 'u471548307_stockopname',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
