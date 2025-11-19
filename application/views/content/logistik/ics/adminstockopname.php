@@ -147,7 +147,7 @@
         const dataTim1 = {
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
-                data: [<?= $stat_t1['persen_match'] ?>, <?= $stat_t1['persen_notmatch'] ?>],
+                data: [<?php echo $stat_t1['persen_match']; ?>, <?php echo $stat_t1['persen_notmatch']; ?>],
                 backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
@@ -171,7 +171,7 @@
         const dataTim2 = {
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
-                data: [<?= $stat_t2['persen_match'] ?>, <?= $stat_t2['persen_notmatch'] ?>],
+                data: [<?php echo $stat_t2['persen_match']; ?>, <?php echo $stat_t2['persen_notmatch']; ?>],
                 backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
@@ -198,7 +198,7 @@
         const dataTim1exp = {
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
-                data: [<?= $statexp_t1['persen_match'] ?>, <?= $statexp_t1['persen_notmatch'] ?>],
+                data: [<?php echo $statexp_t1['persen_match']; ?>, <?php echo $statexp_t1['persen_notmatch']; ?>],
                 backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
@@ -222,7 +222,7 @@
         const dataTim2exp = {
             labels: ['MATCH', 'NOT MATCH'],
             datasets: [{
-                data: [<?= $statexp_t2['persen_match'] ?>, <?= $statexp_t2['persen_notmatch'] ?>],
+                data: [<?php echo $statexp_t2['persen_match']; ?>, <?php echo $statexp_t2['persen_notmatch']; ?>],
                 backgroundColor: ['#3DAF57', '#dc3545'],
             }]
         };
