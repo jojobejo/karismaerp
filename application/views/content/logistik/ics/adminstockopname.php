@@ -141,7 +141,6 @@
     </div>
     <!-- ./wrapper -->
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Pie Chart TIM 1
         const dataTim1 = {
