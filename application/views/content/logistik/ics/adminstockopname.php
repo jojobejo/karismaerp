@@ -141,4 +141,104 @@
     </div>
     <!-- ./wrapper -->
 
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Pie Chart TIM 1
+        const dataTim1 = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $stat_t1['persen_match'] ?>, <?= $stat_t1['persen_notmatch'] ?>],
+                backgroundColor: ['#3DAF57', '#dc3545'],
+            }]
+        };
+
+        const configTim1 = {
+            type: 'pie',
+            data: dataTim1,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim1'), configTim1);
+
+        // Pie Chart TIM 2
+        const dataTim2 = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $stat_t2['persen_match'] ?>, <?= $stat_t2['persen_notmatch'] ?>],
+                backgroundColor: ['#3DAF57', '#dc3545'],
+            }]
+        };
+
+        const configTim2 = {
+            type: 'pie',
+            data: dataTim2,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim2'), configTim2);
+
+
+        // BY EXPIRED DATE
+
+        // Pie Chart TIM 1
+        const dataTim1exp = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $statexp_t1['persen_match'] ?>, <?= $statexp_t1['persen_notmatch'] ?>],
+                backgroundColor: ['#3DAF57', '#dc3545'],
+            }]
+        };
+
+        const configTim1exp = {
+            type: 'pie',
+            data: dataTim1exp,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim1exp'), configTim1exp);
+
+        // Pie Chart TIM 2
+        const dataTim2exp = {
+            labels: ['MATCH', 'NOT MATCH'],
+            datasets: [{
+                data: [<?= $statexp_t2['persen_match'] ?>, <?= $statexp_t2['persen_notmatch'] ?>],
+                backgroundColor: ['#3DAF57', '#dc3545'],
+            }]
+        };
+
+        const configTim2exp = {
+            type: 'pie',
+            data: dataTim2exp,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('pieChartTim2exp'), configTim2exp);
+    </script>
