@@ -86,6 +86,9 @@
                         <div class="col-auto">
                             <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-warehouse"> </i> Dashboard Gudang</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-success w-100 mb-3"></a>
+                        </div>
                     </div>
 
                     <div class="card shadow-sm gudang-card">

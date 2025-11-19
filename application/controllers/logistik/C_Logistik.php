@@ -2556,4 +2556,5 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/detailed_gdg.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
 }

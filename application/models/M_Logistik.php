@@ -2321,6 +2321,7 @@ FROM (
         return $kdnk1;
     }
 
+
     public function get_detail_gudang($kd)
     {
         return $this->db->query("SELECT
@@ -2333,8 +2334,8 @@ FROM (
         a.lokasi,
         b.nama_gudang
         FROM tb_saldo_awal a
-        LEFT JOIN tb_master_gudang b ON b.kode_gudang = a.kode_gudang
-        WHERE a.kode_gudang = '$kd'
+        LEFT JOIN tb_master_gudang b ON b.kode_gudang = a.kordinat
+        WHERE a.kordinat = '$kd'
         ")->result();
     }
 }
