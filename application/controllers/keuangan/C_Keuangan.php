@@ -56,7 +56,7 @@ class C_Keuangan extends CI_Controller
 
         if ($session == 'ADMINKEU') {
             $file_data = fopen($_FILES['csv_file']['tmp_name'], 'r');
-            fgetcsv($file_data); // Skip header row
+            fgetcsv($file_data);
 
             $data = [];
             while ($row = fgetcsv($file_data)) {

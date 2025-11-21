@@ -80,6 +80,10 @@ $route['deletedata/(:any)']                         = 'keuangan/C_Keuangan/delet
 $route['pagination']                                = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
+// STOCK ONLINE GUDANG
+$route['stock']                                     = 'logistik/C_Logistik/stock_control';
+
+
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';

@@ -128,51 +128,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Update History</h3>
-                        </div>
-                        <div class="card-body">
-                            <table id="tbupdate" class="table table-bordered table-striped mt-2">
-                                <thead>
-                                    <tr>
-                                        <td>Nama Gudang</td>
-                                        <td>Last Updated</td>
-                                        <td>#</td>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($updated as $up) :
-                                        date_default_timezone_set("Asia/Jakarta");
-                                        $date_c = date_create($up->updated);
-                                        $date = date_format($date_c, "Y-m-d H:i:s");
-                                        $kd = $up->kdupdate;
-                                        $id = $up->gdgid;
-                                    ?>
-                                        <?php if ($id == 1 || $id == 2 || $id == 3 || $id == 4 || $id == 5) : ?>
-                                            <tr>
-                                                <td><?= $up->gudang ?></td>
-                                                <td><?= format_indo($date) ?></td>
-                                                <td style="width: 10%;">
-                                                    <a href="<?= base_url('gudang/' . $id) ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
-                                                    <a href="<?= base_url('truncateitm/' . $kd . '/' . $id) ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
-                                                </td>
-                                            </tr>
-                                        <?php elseif ($id == 6) : ?>
-                                            <tr>
-                                                <td><?= $up->gudang ?></td>
-                                                <td><?= format_indo($date) ?></td>
-                                                <td style="width: 10%;">
-                                                    <a href="<?= base_url('keuangan') ?>" class="btn btn-primary"><i class="fas fa-home"></i></a>
-                                                </td>
-                                            </tr>
-                                        <?php endif; ?>
 
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 <?php elseif ($this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
                     <div class="card">
                         <div class="card-header">
@@ -211,54 +167,6 @@
                         <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
                     </div>
                 <?php endif; ?>
-                <div class="container-fluid">
-                    <h3>Dashboard Purchasing</h3>
-
-                    <div class="col">
-                        <div class="row">
-                            <div class="col-lg-2 col-6">
-                                <div class="small-box bg-info">
-                                    <div class="inner">
-                                        <h3>150</h3>
-                                        <p>Master Barang</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="ion ion-bag"></i>
-                                    </div>
-                                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                                </div>
-                            </div>
-                            <div class="col-lg-4 col-6">
-                                <div class="small-box bg-info">
-                                    <div class="inner">
-                                        <h3>150</h3>
-                                        <p>Master Barang</p>
-                                    </div>
-                                    <div class="icon">
-                                        <i class="ion ion-bag"></i>
-                                    </div>
-                                    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-lg-3 col-6">
-                            <div class="small-box bg-info">
-                                <div class="inner">
-                                    <h3>150</h3>
-                                    <p>Master Barang</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="ion ion-bag"></i>
-                                </div>
-                                <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                            </div>
-                        </div>
-
-                    </div>
-
-
-                </div>
             </section>
         </div>
         <!-- /.content-wrapper -->

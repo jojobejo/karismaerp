@@ -58,8 +58,8 @@ class Auth extends CI_Controller
                         redirect('stockopname');
                     } else if ($key->jobdesk == 'ADMIN') {
                         redirect('extravaganza');
-                    } else if ($key->jobdesk == 'SALES_ONLINE') {
-                        redirect('user_report');
+                    } else if ($key->jobdesk == 'SALESONLINE') {
+                        redirect('stock');
                     } else if ($key->jobdesk == 'SALESCOUNTER') {
                         redirect('sales_report');
                     }

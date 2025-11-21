@@ -2508,4 +2508,13 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/fakturonsite.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function stock_control()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/stock/stock_control.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
 }
