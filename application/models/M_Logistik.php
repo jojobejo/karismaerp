@@ -830,12 +830,14 @@ class M_Logistik extends CI_Model
     public function getAllICS()
     {
         return $this->db->query("SELECT
+		x.kd_system,
         x.nama_barang,
         x.exp_date,
         x.dimensi
         FROM
         (
             SELECT
+            b.kd_system,
             a.nama_barang,
             a.exp_date,
             (b.p*b.l*b.t) as dimensi
@@ -844,7 +846,7 @@ class M_Logistik extends CI_Model
         ) AS x
         ")->result();
     }
-    
+
     public function getinputopname($user)
     {
         return $this->db->query("SELECT * FROM `tb_ics_opname` WHERE inputer = '$user'
@@ -2061,7 +2063,7 @@ FROM (
     {
         return $this->db->select('a.inputer, a.nama_barang, a.exp_date, a.qty, a.qty_box, a.qty_pcs')
             ->from('tb_ics_opname a')
-            ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
+            // ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
             ->where('a.id', $id)
             ->get()
             ->row();

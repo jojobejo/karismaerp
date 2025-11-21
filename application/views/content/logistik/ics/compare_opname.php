@@ -23,7 +23,7 @@
                         </div>
                     </div>
 
-                    <div class="card card-primary mt-2 mb-2">
+                    <!-- <div class="card card-primary mt-2 mb-2">
                         <div class="card-header">
                             <h5 class="card-title mt-2">Compare Wilayah</h5>
                         </div>
@@ -46,7 +46,7 @@
                             </table>
 
                         </div>
-                    </div>
+                    </div> -->
 
                     <div class="card card-primary mt-2 mb-5">
                         <div class="card-header">

@@ -45,7 +45,7 @@
                             <select id="nama_barang" name="nama_barang" class="form-control" style="width:100%"></select>
                         </div>
 
-                        <div class="form-row d-none" id="dimensi_group" hidden>
+                        <div class="form-row d-none" id="dimensi_group">
                             <div class="form-group col-md-4">
                                 <label>Panjang (cm)</label>
                                 <input type="text" class="form-control" id="p" name="p" readonly>
@@ -58,6 +58,11 @@
                                 <label>Tinggi (cm)</label>
                                 <input type="text" class="form-control" id="t" name="t" readonly>
                             </div>
+                        </div>
+
+                        <div class="form-group d-none" id="kd_system_group">
+                            <label>KD System</label>
+                            <input type="text" class="form-control" id="kd_system" name="kd_system" readonly>
                         </div>
 
                         <div class="form-group d-none" id="exp_date_group">
@@ -136,8 +141,6 @@
                 }
             });
 
-
-
             $('#nama_barang').select2({
                 placeholder: 'Cari nama barang...',
                 ajax: {
@@ -180,6 +183,15 @@
                             $('#exp_date').append('<option value="' + val.exp_date + '">' + val.exp_date + '</option>');
                         });
 
+                        // tampilkan KD System
+                        if (res.dimensi && res.dimensi.kd_system) {
+                            $('#kd_system').val(res.dimensi.kd_system);
+                            $('#kd_system_group').removeClass('d-none');
+                        } else {
+                            $('#kd_system').val('');
+                            $('#kd_system_group').addClass('d-none');
+                        }
+
                         $('#exp_date_group').removeClass('d-none');
 
                         const d = res.dimensi;
@@ -203,8 +215,6 @@
             $('#exp_date').on('change', function() {
                 $('#qty_form').removeClass('d-none');
             });
-
-
 
             $('#btn_submit_manual').on('click', function(e) {
                 e.preventDefault();

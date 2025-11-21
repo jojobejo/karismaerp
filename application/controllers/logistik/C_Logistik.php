@@ -2100,7 +2100,7 @@ class C_Logistik extends CI_Controller
             ->get('tb_ics')
             ->result();
 
-        $dimensi = $this->db->select('p, l, t')
+        $dimensi = $this->db->select('p, l, t,kd_system')
             ->where('nm_barang', $nama_barang)
             ->get('tb_master_barang')
             ->row();
@@ -2109,6 +2109,7 @@ class C_Logistik extends CI_Controller
             'p' => $dimensi ? $dimensi->p : null,
             'l' => $dimensi ? $dimensi->l : null,
             't' => $dimensi ? $dimensi->t : null,
+            'kd_system' => $dimensi ? $dimensi->kd_system : null,
         ];
 
         $result = [
