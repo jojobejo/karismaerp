@@ -9,10 +9,9 @@ class C_Sales extends CI_Controller
         $this->load->model('M_Sales');
     }
 
-
     public function  dashboard_sales()
     {
-        $data['page_title']     = 'DELIVERY ORDER - SALES';
+        $data['page_title']     = 'Sales Dashboard';
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view("content/sales/dashboard_sales");

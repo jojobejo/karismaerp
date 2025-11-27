@@ -62,6 +62,8 @@ class Auth extends CI_Controller
                         redirect('stock');
                     } else if ($key->jobdesk == 'SALESCOUNTER') {
                         redirect('sales_report');
+                    } else if ($key->jobdesk == 'KOSALES') {
+                        redirect('dashboard_sales');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

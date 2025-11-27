@@ -142,7 +142,6 @@ $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delet
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
 
 
-
 //LOGISTIK - DO
 $route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
 $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/insert_csv';
@@ -202,4 +201,5 @@ $route['pricelist_online']                          = 'keuangan/C_Keuangan/price
 
 
 // SALES TONASE KUBIKASI
+$route['dashboard_sales']                           = 'sales/C_Sales/dashboard_sales';
 $route['sales_report']                              = 'sales/C_Sales/dashboard_sales';
