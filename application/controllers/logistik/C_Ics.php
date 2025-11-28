@@ -943,9 +943,46 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        // Kirim balik ke view / AJAX
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode($json));
+    }
+
+    public function pic_barang($pic = null)
+    {
+        date_default_timezone_set('Asia/Jakarta');
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $lokasi = $pic;
+
+        $data['itemtotal']  = $this->M_Ics->total_barang_pic();
+        $data['piclist']    = $this->M_Ics->get_list_barang_pic($lokasi);
+        $data['lokasi']     = $lokasi;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/pic_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function update_pic_lokasi()
+    {
+        $id        = $this->input->post('id');
+        $list_id   = $this->input->post('list_id');
+        $lokasi_baru = $this->input->post('lokasi');
+
+        $arr_id = explode(",", $list_id);
+
+        $this->db->where('id', $id);
+        $this->db->update('tb_saldo_awal', ['lokasi' => $lokasi_baru]);
+
+        $ids_to_delete = array_diff($arr_id, [$id]);
+
+        if (!empty($ids_to_delete)) {
+            $this->db->where_in('id', $ids_to_delete);
+            $this->db->delete('tb_saldo_awal');
+        }
+
+        redirect($_SERVER['HTTP_REFERER']);
     }
 }

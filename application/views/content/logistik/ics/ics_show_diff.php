@@ -51,14 +51,14 @@
                                     <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                                 </div>
                                 <div class="col-auto">
+                                    <a href="<?= base_url('ics/barangpic') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
+                                </div>
+                                <div class="col-auto">
                                     <a href="<?= base_url('ics/export_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-file-export"></i> Export Result </a>
                                 </div>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                                 </div>
-                                <!-- <div class="col-auto">
-                                    <a href="<?= base_url('gudang') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
-                                </div> -->
                             <?php elseif ($akses == 'ics') : ?>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/by_allbarang_ics/') . $tim ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-box"></i> Data All Barang</a>

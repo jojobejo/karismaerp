@@ -113,6 +113,12 @@ $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 
+$route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
+$route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
+
+$route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
+
+
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
@@ -140,7 +146,6 @@ $route['export_compare_allbarang']                  = 'logistik/C_Logistik/expor
 $route['usropname_input']                           = 'logistik/C_Logistik/usropname_input';
 $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
-
 
 
 //LOGISTIK - DO

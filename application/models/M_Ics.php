@@ -1175,4 +1175,42 @@ class M_Ics extends CI_Model
         WHERE a.nama_barang = '$nmbarang' AND a.exp_date = '$expdate'
         ")->result();
     }
+
+    // public function get_list_barang_pic($lokasi = null)
+    // {
+    //     if ($lokasi !== null) {
+    //         $this->db->where('lokasi', $lokasi);
+    //     } else {
+    //         $this->db->where('1=0');
+    //     }
+    //     return $this->db->get('tb_saldo_awal')->result();
+    // }
+
+    public function get_list_barang_pic($lokasi = null)
+    {
+        if ($lokasi !== null) {
+            return $this->db->query("SELECT 
+                GROUP_CONCAT(id) AS daftar_id,
+                nama_barang,
+                exp_date,
+                lokasi,
+                COUNT(*) AS total
+            FROM tb_saldo_awal
+            WHERE lokasi = '$lokasi'
+            GROUP BY nama_barang, exp_date, lokasi
+            ORDER BY nama_barang, exp_date
+        ")->result();
+        }
+        return [];
+    }
+
+    public function total_barang_pic()
+    {
+        return $this->db->query("SELECT
+        lokasi, COUNT(DISTINCT CONCAT(nama_barang, '-', exp_date)) AS total_barang
+        FROM tb_saldo_awal
+        GROUP BY lokasi
+        ORDER BY lokasi
+    ")->result();
+    }
 }

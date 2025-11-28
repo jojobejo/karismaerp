@@ -178,6 +178,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#tbics_pic').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     $('#lsfakturbyrute').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -215,6 +224,55 @@
 
   });
 </script>
+
+<script>
+  $(document).ready(function() {
+
+    $('#tbics_erpss').DataTable({
+      "pageLength": 10,
+      "lengthMenu": [
+        [10, 20, -1],
+        [10, 20, "All"]
+      ],
+      "ordering": true,
+      "responsive": true
+    });
+
+    $('#tbfilterpic').DataTable({
+      "paging": false,
+      "searching": false,
+      "info": false
+    });
+  });
+
+  console.log("CLICK:", $(this).data('ids'));
+
+  $(document).on('click', '.btn-edit-pic', function(e) {
+
+    e.preventDefault();
+
+    let ids = $(this).data('ids');
+    
+    ids = ids.toString();
+    const arr = ids.split(',');
+
+    $('#edit_id').val(arr[0]);
+    $('#edit_list_id').val(ids);
+
+    $('#edit_nama_barang').val($(this).data('namabarang'));
+    $('#edit_lokasi').val($(this).data('lokasi'));
+
+    $('#modalEditPIC').modal('show');
+  });
+</script>
+
+</script>
+
+<script>
+
+</script>
+
+
 
 </body>
 
