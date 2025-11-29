@@ -205,6 +205,8 @@ $route['user_report']                               = 'karyawan_report/C_Report'
 // PRICELIST - ONLINE
 $route['pricelist_online']                          = 'keuangan/C_Keuangan/pricelist_online';
 
-
 // SALES TONASE KUBIKASI
 $route['sales_report']                              = 'sales/C_Sales/dashboard_sales';
+
+// EXPORT
+$route['export-stock']                              = 'logistik/C_ExportStock/export';

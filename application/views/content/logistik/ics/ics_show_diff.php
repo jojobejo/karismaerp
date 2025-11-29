@@ -54,10 +54,10 @@
                                     <a href="<?= base_url('ics/barangpic') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="<?= base_url('ics/export_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-file-export"></i> Export Result </a>
+                                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-eye"></i> Show Diffrent</a>
+                                    <a href="<?= base_url('export-stock') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-file-export"></i> Export Data Expired Date</a>
                                 </div>
                             <?php elseif ($akses == 'ics') : ?>
                                 <div class="col-auto">
