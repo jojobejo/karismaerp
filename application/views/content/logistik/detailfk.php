@@ -114,6 +114,7 @@
 
                                     <tr id="editRow" style="display: none;">
                                         <td colspan="7">
+
                                             <form id="editForm">
                                                 <div class="row">
                                                     <input type="hidden" id="id" name="id" readonly>
@@ -124,13 +125,13 @@
                                                         <input type="number" id="edit_qty" name="qty" class="form-control">
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <input type="text" id="edit_satuan" name="satuan" class="form-control">
+                                                        <input type="text" id="edit_satuan" name="satuan" class="form-control" readonly>
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <input type="text" id="edit_no_lot" name="no_lot" class="form-control">
+                                                        <input type="text" id="edit_no_lot" name="no_lot" class="form-control" readonly>
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <input type="text" id="edit_exp" name="tgl_exp" class="form-control">
+                                                        <input type="text" id="edit_exp" name="tgl_exp" class="form-control" readonly>
                                                     </div>
                                                     <div class="col-md-2">
                                                         <button type="submit" class="btn btn-success">Simpan</button>
@@ -138,6 +139,7 @@
                                                     </div>
                                                 </div>
                                             </form>
+
                                         </td>
                                     </tr>
                                 </tbody>
@@ -200,7 +202,6 @@
                         $("#edit_satuan").val(data.satuan);
                         $("#edit_no_lot").val(data.no_lot);
                         $("#edit_exp").val(data.tgl_exp);
-
                         $("#editRow").insertAfter(row).show();
                     }
                 });

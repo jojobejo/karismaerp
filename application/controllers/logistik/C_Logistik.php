@@ -1850,10 +1850,11 @@ class C_Logistik extends CI_Controller
             'kd_faktur'    => $items->kd_faktur,
             'kd_customer'  => $items->kd_customer,
             'kd_barang'    => $items->kd_barang,
-            'keterangan'   => "Edited:" . $items->kd_faktur . $items->kd_barang,
+            'keterangan'   => "Edited;" . $items->kd_faktur . ";" . $items->kd_barang,
             'edit_by'      => $this->session->userdata('nik'),
             'edit_at'      => date('Y-m-d H:i:s')
         ];
+
         $this->db->insert('tb_editlog_faktur', $log_data);
 
         $data = [
