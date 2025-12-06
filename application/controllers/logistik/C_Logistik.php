@@ -1861,6 +1861,18 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function detail_fk_pnd($kd)
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['detail_fk']      = $this->M_Logistik->detail_pending_fk($kd);
+        $data['customer']       = $this->M_Logistik->det_customer($kd);
+        $data['kdfaktur']       = $kd;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/detail_fk_pnd.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function get_barang()
     {
         $idbarang = $this->input->post('id');

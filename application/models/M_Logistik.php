@@ -778,6 +778,27 @@ class M_Logistik extends CI_Model
         ")->result();
     }
 
+    public function detail_pending_fk($kd)
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.kd_faktur,
+            a.kd_barang,
+            c.nama_barang,
+            a.qty,
+            c.berat as gr_berat,
+            (c.berat/1000) as convert_kg,
+            (a.qty * (c.berat/1000)) AS total_berat,
+            a.satuan,
+            a.no_lot,
+            a.tgl_exp,
+            a.barang_sts
+            FROM tb_pnd_do a
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+
     public function det_customer($kd)
     {
         return $this->db->query("SELECT

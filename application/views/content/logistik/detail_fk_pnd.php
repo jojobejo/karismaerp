@@ -22,24 +22,6 @@
                         ?>
                             <h3 class="ml-4" style="font-weight: bold; font-size: xx-large;"><?= $c->nama_kios ?> || <?= $c->regional ?></h3>
 
-                            <?php if ($status_faktur == 1) : ?>
-                                <h3 class="ml-4"><span class="badge badge-secondary">NOT IN DRAFT</span></h3>
-                            <?php elseif ($status_faktur == 2) : ?>
-                                <h3 class="ml-4"><span class="badge badge-success">ON DRAFT LIST</span></h3>
-                            <?php elseif ($status_faktur == 4) : ?>
-                                <a href="<?= base_url('detail_fk_pnd/' . $kdfaktur) ?>" class="btn btn">
-                                    <h3 class="ml-4"><span class="badge badge-warning">FAKTUR PENDING</span></h3>
-                                </a>
-
-                            <?php endif; ?>
-
-                            <div hidden>
-                                <?php if ($status_upload == '1') : ?>
-                                    <h3 class="ml-4"><span class="badge badge-info">PAGI</span></h3>
-                                <?php else : ?>
-                                    <h3 class="ml-4"><span class="badge badge-dark">SORE</span></h3>
-                                <?php endif; ?>
-                            </div>
                     </div>
                 </div>
             </div>
@@ -48,19 +30,24 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
+                            <div class="mt-2 mb-2">
+                                <div class="row">
+                                    <div class="col-auto">
+                                        <a href="<?= base_url('') ?>" class="btn btn-info">Faktur Terposting</a>
+                                    </div>
+                                </div>
+                            </div>
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
                                         <th>Kode</th>
                                         <th>Nama Barang</th>
                                         <th>QTY</th>
-                                        <th>Gram</th>
-                                        <th>Kilo</th>
-                                        <th>Total Berat Barang</th>
+                                        <th>Total Berat(Kg)</th>
                                         <th>Satuan</th>
                                         <th>No-Lot</th>
                                         <th>Exp Date</th>
-                                        <?php if ($status_faktur == '2') : ?>
+                                        <?php if ($status_faktur == '4') : ?>
                                             <th>#</th>
                                         <?php endif; ?>
                                     </tr>
@@ -71,28 +58,12 @@
                                             <td><?= $det->kd_barang ?></td>
                                             <td><?= $det->nama_barang ?></td>
                                             <td><?= $det->qty ?></td>
-                                            <td><?= number_format($det->gr_berat, 3)  ?></td>
-                                            <td><?= number_format($det->convert_kg, 3) ?></td>
-                                            <td><?= number_format($det->total_berat, 3) ?></td>
+                                            <td><?= number_format($det->total_berat, 2) ?></td>
                                             <td><?= $det->satuan ?></td>
                                             <td><?= $det->no_lot ?></td>
                                             <td><?= $det->tgl_exp ?></td>
-                                            <?php if ($status_faktur == '2') : ?>
+                                            <?php if ($status_faktur == '4') : ?>
                                                 <?php if ($det->barang_sts == '1') : ?>
-                                                    <td>
-                                                        <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
-                                                    </td>
-                                                <?php elseif ($det->barang_sts == '3') : ?>
-                                                    <td colspan="2">
-                                                        <h3><a><span class="badge badge-warning w-100"><i class="fas fa-pause-circle"></i></span></a></h3>
-                                                    </td>
-                                                <?php elseif ($det->barang_sts == '2') : ?>
-                                                    <td colspan="2">
-                                                        <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
-                                                    </td>
-                                                <?php endif; ?>
-                                            <?php else : ?>
-                                                <!-- <?php if ($det->barang_sts == '1') : ?>
                                                     <td style="width: 10%;">
                                                         <div class="row">
                                                             <div class="col">
@@ -113,7 +84,7 @@
                                                     <td colspan="2">
                                                         <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
-                                                <?php endif; ?> -->
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
@@ -152,28 +123,11 @@
                                     </tr>
                                 </tbody>
                             </table>
-                            <?php if ($status_faktur == '1') : ?>
-                                <div class="row">
-                                    <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
-                                    </div>
-                                    <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formlist_pending' ?>" class="btn btn-warning btn-block mt-4 mb-2">Input Pending</a>
-                                    </div>
-                                    <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
-                                    </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-warning btn-block mt-4 mb-2">Iput Pending</a>
                                 </div>
-                            <?php elseif ($status_faktur == '4') : ?>
-                                <div class="row">
-                                    <!-- <div class="col-6">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
-                                    </div> -->
-                                </div>
-                            <?php else : ?>
-                                <a href="<?= base_url('revert_do/') . $kdfaktur . '/' . 'revertdetail' ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
-                            <?php endif; ?>
-
+                            </div>
                         <?php endforeach; ?>
                         </div>
                     </div>

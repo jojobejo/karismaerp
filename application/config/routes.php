@@ -164,6 +164,9 @@ $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/inser
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
 
+//LOGISTIK - DO (FAKTUR PENDING)
+$route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
+
 // $route['list_faktur/(:any)/(:any)']              = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
 
 $route['list_faktur/(:any)']                        = 'logistik/C_Logistik/list_faktur_sortby_rute/$1';
