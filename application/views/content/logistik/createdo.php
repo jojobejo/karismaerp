@@ -214,6 +214,7 @@
                                                     <div class="row">
                                                         <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                                                         <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formlist' ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                                                        <a href="#" class="btn btn-warning btn-block btn-sm btn-open-mbarang" data-id="<?= $l->kd_faktur ?>"><i class="fas fa-hourglass-half"></i></a>
                                                     </div>
                                                 </td>
                                             <?php elseif ($status == 2) : ?>
@@ -230,6 +231,32 @@
                             </table>
                         </div>
                     </div>
+
+                    <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <form action="<?= base_url('') ?>" method="post">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-success">
+                                        <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Master Barang</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label for="modal_nama_barang">Kode Faktur</label>
+                                            <input type="text" name="modal_nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Simpan</button>
+                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                 </div>
             </section>
 
@@ -451,5 +478,35 @@
             });
 
 
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $('.btn-open-mbarang').on('click', function() {
+                const rowId = $(this).data('id');
+
+                $.ajax({
+                    url: "<?= base_url('logistik/get_faktur') ?>",
+                    method: "POST",
+                    data: {
+                        id: rowId
+                    },
+                    dataType: "json",
+                    success: function(data) {
+                        if (!data) {
+                            alert("Data tidak ditemukan.");
+                            return;
+                        }
+
+                        $('#modal_id').val(data.id);
+                        $('#modal_nama_barang').val(data.nama_barang);
+                        $('#modalAddOpname').modal('show');
+                    },
+                    error: function() {
+                        alert('Gagal mengambil data faktur.');
+                    }
+                });
+            });
         });
     </script>

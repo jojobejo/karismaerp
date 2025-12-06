@@ -21,18 +21,20 @@
                             $status_upload = $c->upload_sts;
                         ?>
                             <h3 class="ml-4" style="font-weight: bold; font-size: xx-large;"><?= $c->nama_kios ?> || <?= $c->regional ?></h3>
+
                             <?php if ($status_faktur == 1) : ?>
                                 <h3 class="ml-4"><span class="badge badge-secondary">NOT IN DRAFT</span></h3>
                             <?php elseif ($status_faktur == 2) : ?>
                                 <h3 class="ml-4"><span class="badge badge-success">ON DRAFT LIST</span></h3>
                             <?php endif; ?>
-                            <?php if ($status_upload == '1') : ?>
-                                <h3 class="ml-4"><span class="badge badge-info">PAGI</span></h3>
-                            <?php else : ?>
-                                <h3 class="ml-4"><span class="badge badge-dark">SORE</span></h3>
-                            <?php endif; ?>
 
-
+                            <div hidden>
+                                <?php if ($status_upload == '1') : ?>
+                                    <h3 class="ml-4"><span class="badge badge-info">PAGI</span></h3>
+                                <?php else : ?>
+                                    <h3 class="ml-4"><span class="badge badge-dark">SORE</span></h3>
+                                <?php endif; ?>
+                            </div>
                     </div>
                 </div>
             </div>
@@ -51,10 +53,13 @@
                                         <th>Kilo</th>
                                         <th>Total Berat Barang</th>
                                         <th>Satuan</th>
-                                        <th>Satuan</th>
                                         <th>No-Lot</th>
                                         <th>Exp Date</th>
-                                        <th>#</th>
+                                        <?php if ($status_faktur == '2') : ?>
+                                            <th>#</th>
+                                        <?php elseif ($status_faktur == '4') : ?>
+                                            <th>#</th>
+                                        <?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -83,8 +88,21 @@
                                                         <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
                                                 <?php endif; ?>
+                                            <?php elseif ($status_faktur == '4') : ?>
+                                                <td style="width: 10%;">
+                                                    <div class="row">
+                                                        <div class="col">
+                                                            <button class="btn btn-primary w-100 btn-edit" data-id="<?= $det->id ?>">
+                                                                <i class="fas fa-pencil-alt"></i>
+                                                            </button>
+                                                        </div>
+                                                        <div class="col">
+                                                            <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-hand-paper"></i></a>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                             <?php else : ?>
-                                                <?php if ($det->barang_sts == '1') : ?>
+                                                <!-- <?php if ($det->barang_sts == '1') : ?>
                                                     <td style="width: 10%;">
                                                         <div class="row">
                                                             <div class="col">
@@ -105,7 +123,7 @@
                                                     <td colspan="2">
                                                         <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
-                                                <?php endif; ?>
+                                                <?php endif; ?> -->
                                             <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
@@ -146,10 +164,13 @@
                             </table>
                             <?php if ($status_faktur == '1') : ?>
                                 <div class="row">
-                                    <div class="col-6">
+                                    <div class="col-4">
                                         <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
                                     </div>
-                                    <div class="col-6">
+                                    <div class="col-4">
+                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formlist_pending' ?>" class="btn btn-warning btn-block mt-4 mb-2">Input Pending</a>
+                                    </div>
+                                    <div class="col-4">
                                         <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
                                     </div>
                                 </div>

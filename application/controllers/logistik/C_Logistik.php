@@ -1562,6 +1562,58 @@ class C_Logistik extends CI_Controller
                 redirect('create_do');
                 break;
 
+            case 'formlist_pending':
+
+                date_default_timezone_set("Asia/Jakarta");
+                $get_pre_do = $this->M_Logistik->get_do_cust($kd);
+                $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
+                $kddo       = $this->M_Logistik->generate_kd_do();
+                $now        = date("Y-m-d H:i:s");
+
+                if ($get_pre_do) {
+                    $data_tmp_det_do = [];
+                    $kdfaktur = null;
+                    foreach ($get_pre_do as $g) {
+                        $kdfaktur = $g->kd_faktur;
+                    }
+                    if ($getdetail) {
+                        foreach ($getdetail as $det) {
+                            $data_tmp_det_do[] = array(
+                                'id_pre_do'     => $det->id,
+                                'kd_do'         => $kddo,
+                                'tgl_transaksi' => $det->tgl_inputer,
+                                'kd_faktur'     => $det->kd_faktur,
+                                'kd_rute'       => $det->kd_rute,
+                                'kd_customer'   => $det->kd_customer,
+                                'kd_barang'     => $det->kd_barang,
+                                'nm_barang'     => $det->nama_barang,
+                                'qty'           => $det->qty,
+                                'satuan'        => $det->satuan,
+                                'no_lot'        => $det->no_lot,
+                                'tgl_exp'       => $det->tgl_exp,
+                                'nominal_p'     => $det->nominal_p,
+                                'jtempo'        => $det->jtempo,
+                                'barang_sts'    => $det->barang_sts,
+                                'create_at'     => $now
+                            );
+                        }
+                        if (!empty($data_tmp_det_do)) {
+                            $this->M_Logistik->insert_pnd_batch($data_tmp_det_do);
+                            $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
+                        }
+
+                        $update_pre_do = array(
+                            'data_sts' => '4',
+                            'barang_sts' => '2'
+                        );
+
+                        $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
+                    }
+                }
+
+                redirect('detail_fk_pnd/' . $kdfaktur);
+                break;
+
             case 'formonsite':
 
                 date_default_timezone_set("Asia/Jakarta");
@@ -1638,6 +1690,17 @@ class C_Logistik extends CI_Controller
                 redirect('faktur_on_site');
                 break;
         }
+    }
+
+    public function get_faktur()
+    {
+        $id = $this->input->post('kdfaktur');
+        $this->db->select('a.nama_barang as nama_barang,a.qty as qty,a.satuan as satuan');
+        $this->db->from('tb_pre_do a');
+        $this->db->where('a.kd_faktur', $id);
+        $query = $this->db->get()->row();
+
+        echo json_encode($query);
     }
 
     public function revert_do($kd, $action)

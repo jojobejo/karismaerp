@@ -308,41 +308,37 @@ class C_Ics extends CI_Controller
     public function get_detail_mbarang()
     {
         $id = $this->input->post('id');
-        $this->db->select('i.id,i.nm_barang,i.bhn_aktif,i.satuan,i.p,i.l,i.t,i.berat,i.kubikasi,i.qty_min,i.status');
-        $this->db->from('tb_mbarang i');
+        $this->db->select('i.id as id,i.nm_barang as nama_barang,i.bhn_aktif AS bahan_aktif,i.satuan AS satuan,i.berat AS berat,i.kubikasi AS kubikasi,i.kode_barang AS kode_barang');
+        $this->db->from('tb_master_barang i');
         $this->db->where('i.id', $id);
         $query = $this->db->get()->row();
 
         echo json_encode($query);
     }
 
-    // public function add_master_barang()
-    // {
-    //     $nmbarang       = $this->post('');
-    //     $bhn_aktif      = $this->post('');
-    //     $satuan         = $this->post('');
-    //     $dimensi        = $this->post('');
-    //     $tonase         = $this->post('');
-    //     $kubikasi       = $this->post('');
-    //     $qty_min        = $this->post('');
+    public function edit_master_barang()
+    {
+        $idbarang   = $this->input->post('modal_id');
+        $nmbarang   = $this->input->post('modal_nama_barang');
+        $kdbarang   = $this->input->post('modal_kode_barang');
+        $bhn_aktif  = $this->input->post('modal_bahan_aktif');
+        $satuan     = $this->input->post('modal_satuan');
+        $tonase     = $this->input->post('modal_berat');
+        $kubikasi   = $this->input->post('modal_kubikasi');
 
-    //     $svbarang = array(
-    //         'kd_system'     =>
-    //         'nm_barang'     =>
-    //         'bhn_aktif'     =>
-    //         'satuan'        =>
-    //         'p'             =>
-    //         'l'             =>
-    //         't'             =>
-    //         'berat'         =>
-    //         'kubikasi'      =>
-    //         'qty_min'       =>
-    //         'status'        =>
-    //     );
+        $svbarang = [
+            'nm_barang'   => $nmbarang,
+            'kode_barang' => $kdbarang,
+            'bhn_aktif'   => $bhn_aktif,
+            'satuan'      => $satuan,
+            'berat'       => $tonase,
+            'kubikasi'    => $kubikasi,
+        ];
 
-    //     $this->M_Ics->insert_mbarang_ics($svbarang);
-    //     redirect('ics/master_barang');
-    // }
+        $this->M_Ics->edit_mbarang_ics($idbarang, $svbarang);
+        redirect('ics/master_barang');
+    }
+
 
     public function update_inline()
     {

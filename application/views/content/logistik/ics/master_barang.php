@@ -27,7 +27,7 @@
                                                 <th>Dimensi</th>
                                                 <th>Tonase</th>
                                                 <th>Kubikasi</th>
-                                                <th>Qty Minimal</th>
+                                                <!-- <th>Qty Minimal</th> -->
                                                 <th>#</th>
                                             </tr>
                                         </thead>
@@ -43,7 +43,7 @@
                                                     <td><?= $dimensi ?></td>
                                                     <td><?= $br->berat ?></td>
                                                     <td><?= $br->kubikasi ?></td>
-                                                    <td><?= $br->qty_min ?></td>
+                                                    <!-- <td><?= $br->qty_min ?></td> -->
                                                     <td>
                                                         <a href="#" class="btn btn-sm btn-warning btn-open-mbarang" data-id="<?= $br->id ?>"><i class="fas fa-pen "></i></a>
                                                     </td>
@@ -61,7 +61,7 @@
             <?php if ($this->session->userdata('jobdesk') == 'ADMINICS') : ?>
                 <div class="modal fade" id="modalAddOpname" tabindex="-1" role="dialog" aria-labelledby="modalAddOpnameLabel" aria-hidden="true">
                     <div class="modal-dialog" role="document">
-                        <form action="<?= base_url('ics/save_mbarang') ?>" method="post">
+                        <form action="<?= base_url('ics/save_edit_mbarang') ?>" method="post">
                             <div class="modal-content">
                                 <div class="modal-header bg-success">
                                     <h5 class="modal-title" id="modalAddOpnameLabel"><i class="fas fa-box"></i> Input Data Master Barang</h5>
@@ -71,8 +71,29 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="form-group">
-                                        <label for="nama_barang">Nama Barang</label>
-                                        <input type="text" name="nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+                                        <label for="modal_nama_barang">Nama Barang</label>
+                                        <input type="text" name="modal_nama_barang" id="modal_nama_barang" class="form-control" readonly required>
+                                        <input type="hidden" name="modal_id" id="modal_id" class="form-control" readonly required hidden>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="kode_barang">Kode Barang</label>
+                                        <input type="text" name="modal_kode_barang" id="modal_kode_barang" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bahan_aktif">Bahan Aktif</label>
+                                        <input type="text" name="modal_bahan_aktif" id="modal_bahan_aktif" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="satuan">Satuan</label>
+                                        <input type="text" name="modal_satuan" id="modal_satuan" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="berat">Berat</label>
+                                        <input type="text" name="modal_berat" id="modal_berat" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="kubikasi">Kubikasi</label>
+                                        <input type="text" name="modal_kubikasi" id="modal_kubikasi" class="form-control" required>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
@@ -156,8 +177,18 @@
                     },
                     dataType: "json",
                     success: function(data) {
+                        if (!data) {
+                            alert("Data tidak ditemukan.");
+                            return;
+                        }
+
                         $('#modal_id').val(data.id);
                         $('#modal_nama_barang').val(data.nama_barang);
+                        $('#modal_kode_barang').val(data.kode_barang);
+                        $('#modal_bahan_aktif').val(data.bahan_aktif);
+                        $('#modal_satuan').val(data.satuan);
+                        $('#modal_berat').val(data.berat);
+                        $('#modal_kubikasi').val(data.kubikasi);
                         $('#modalAddOpname').modal('show');
                     },
                     error: function() {
@@ -167,7 +198,6 @@
             });
         });
     </script>
-
 
     <script>
         $(document).ready(function() {
@@ -197,7 +227,7 @@
             });
         });
     </script>
-
+    <!-- 
     <script>
         $('#btnSimpanOpname').on('click', function() {
             if (confirm("Apakah Anda yakin ingin menyimpan semua data ke Opname hari ini? Data akan disalin dari tb_ics.")) {
@@ -219,4 +249,4 @@
                 });
             }
         });
-    </script>
+    </script> -->

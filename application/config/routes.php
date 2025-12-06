@@ -88,6 +88,7 @@ $route['stock']                                     = 'logistik/C_Logistik/stock
 $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
 $route['ics/save_mbarang']                          = 'logistik/C_Ics/add_master_barang';
+$route['ics/save_edit_mbarang']                     = 'logistik/C_Ics/edit_master_barang';
 $route['ics/get_detail_mbarang']                    = 'logistik/C_Ics/get_detail_mbarang';
 $route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_expdate';
 $route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
@@ -147,7 +148,6 @@ $route['usropname_input']                           = 'logistik/C_Logistik/usrop
 $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
 
-
 //LOGISTIK - DO
 $route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
 $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/insert_csv';
@@ -162,6 +162,7 @@ $route['cancel_fk/(:any)/(:any)']                   = 'logistik/C_Logistik/cance
 $route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detail_fk/$1';
 $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
+$route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
 
 // $route['list_faktur/(:any)/(:any)']              = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
 
@@ -210,3 +211,6 @@ $route['sales_report']                              = 'sales/C_Sales/dashboard_s
 
 // EXPORT
 $route['export-stock']                              = 'logistik/C_ExportStock/export';
+
+// SALES KIU KATALOG
+$route['kiu_katalog']                              = 'sales/C_ExportStock/export';

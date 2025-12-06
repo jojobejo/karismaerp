@@ -467,6 +467,11 @@ class M_Logistik extends CI_Model
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
     }
 
+    public function insert_pnd_batch($data)
+    {
+        return $this->db->insert_batch('tb_pnd_do', $data);
+    }
+
     public function insert_fakturfrom_draft_batch($data)
     {
         return $this->db->insert_batch('tb_detail_do', $data);
