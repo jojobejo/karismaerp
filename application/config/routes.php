@@ -166,6 +166,7 @@ $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_f
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
+$route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/create_pending_do/$1';
 
 // $route['list_faktur/(:any)/(:any)']              = 'logistik/C_Logistik/list_faktur_sortby_rute/$1/$2';
 
@@ -179,6 +180,8 @@ $route['print_regis/(:any)']                        = 'logistik/C_Logistik/print
 $route['print_checker/(:any)']                      = 'logistik/C_Logistik/print_checker/$1';
 $route['pnd_br_detpo/(:any)/(:any)/(:any)']         = 'logistik/C_Logistik/pnd_br_detpo/$1/$2/$3';
 $route['get_barang']                                = 'logistik/C_Logistik/get_barang';
+$route['get_barang_pending_detail']                 = 'logistik/C_Logistik/get_barang_pending_detail';
+$route['update_barang_pending']                     = 'logistik/C_Logistik/update_barang_pending';
 $route['update_barang']                             = 'logistik/C_Logistik/update_barang';
 $route['rekam_do']                                  = 'logistik/C_Logistik/rekam_do';
 $route['truncatelog/(:any)/(:any)']                 = 'logistik/C_Logistik/truncatelog/$1/$2';

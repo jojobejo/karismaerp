@@ -21,7 +21,6 @@
                             $status_upload = $c->upload_sts;
                         ?>
                             <h3 class="ml-4" style="font-weight: bold; font-size: xx-large;"><?= $c->nama_kios ?> || <?= $c->regional ?></h3>
-
                     </div>
                 </div>
             </div>
@@ -33,7 +32,10 @@
                             <div class="mt-2 mb-2">
                                 <div class="row">
                                     <div class="col-auto">
-                                        <a href="<?= base_url('') ?>" class="btn btn-info">Faktur Terposting</a>
+                                        <a href="<?= base_url('') ?>" class="btn btn-info">Faktur Awal</a>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a href="<?= base_url('') ?>" class="btn btn-secondary">Faktur Terposting</a>
                                     </div>
                                 </div>
                             </div>
@@ -93,7 +95,6 @@
 
                                     <tr id="editRow" style="display: none;">
                                         <td colspan="7">
-
                                             <form id="editForm">
                                                 <div class="row">
                                                     <input type="hidden" id="id" name="id" readonly>
@@ -101,7 +102,7 @@
                                                         <input type="text" id="edit_nama" name="nm_barang" class="form-control" readonly>
                                                     </div>
                                                     <div class="col-md-2">
-                                                        <input type="number" id="edit_qty" name="qty" class="form-control">
+                                                        <input type="text" id="edit_qty" name="qty" class="form-control">
                                                     </div>
                                                     <div class="col-md-2">
                                                         <input type="text" id="edit_satuan" name="satuan" class="form-control" readonly>
@@ -118,14 +119,13 @@
                                                     </div>
                                                 </div>
                                             </form>
-
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                             <div class="row">
                                 <div class="col-12">
-                                    <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-warning btn-block mt-4 mb-2">Iput Pending</a>
+                                    <a href="<?= base_url('create_pending_do/') . $kdfaktur ?>" class="btn btn-warning btn-block mt-4 mb-2">Iput Pending</a>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -161,7 +161,7 @@
                 var id = row.data("id");
 
                 $.ajax({
-                    url: "<?= base_url('get_barang') ?>",
+                    url: "<?= base_url('get_barang_pending_detail') ?>",
                     type: "POST",
                     data: {
                         id: id
@@ -188,7 +188,7 @@
                 e.preventDefault();
 
                 $.ajax({
-                    url: "<?= base_url('update_barang') ?>",
+                    url: "<?= base_url('update_barang_pending') ?>",
                     type: "POST",
                     data: $(this).serialize(),
                     dataType: "json",

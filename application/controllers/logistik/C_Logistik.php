@@ -1599,7 +1599,6 @@ class C_Logistik extends CI_Controller
                         }
                         if (!empty($data_tmp_det_do)) {
                             $this->M_Logistik->insert_pnd_batch($data_tmp_det_do);
-                            $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
                         }
 
                         $update_pre_do = array(
@@ -1873,6 +1872,20 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function get_barang_pending_detail()
+    {
+        $idbarang = $this->input->post('id');
+
+        $this->db->select('a.*, b.nm_barang');
+        $this->db->from('tb_pnd_do a');
+        $this->db->join('tb_master_barang b', 'b.kode_barang = a.kd_barang', 'left');
+        $this->db->where('a.id', $idbarang);
+
+        $data = $this->db->get()->row();
+
+        echo json_encode($data);
+    }
+
     public function get_barang()
     {
         $idbarang = $this->input->post('id');
@@ -1942,6 +1955,96 @@ class C_Logistik extends CI_Controller
         $this->db->where('id', $idbarang);
         $this->db->update('tb_pre_do', $data);
         echo json_encode(['status' => 'success']);
+    }
+
+    public function update_barang_pending()
+    {
+
+        date_default_timezone_set("Asia/Jakarta");
+        $idbarang  = $this->input->post('id');
+        $items = $this->db->get_where('tb_pnd_do', ['id' => $idbarang])->row();
+
+        $log_data = [
+            'kd_faktur'    => $items->kd_faktur,
+            'kd_customer'  => $items->kd_customer,
+            'kd_barang'    => $items->kd_barang,
+            'keterangan'   => "Edited;" . "fakturpnd;" . $items->kd_faktur . ";" . $items->kd_barang,
+            'edit_by'      => $this->session->userdata('nik'),
+            'edit_at'      => date('Y-m-d H:i:s')
+        ];
+
+        $this->db->insert('tb_editlog_faktur', $log_data);
+
+        $data = [
+            'qty'       => $this->input->post('qty'),
+            'satuan'    => $this->input->post('satuan'),
+            'no_lot'    => $this->input->post('no_lot'),
+            'tgl_exp'   => $this->input->post('tgl_exp')
+        ];
+
+        $this->db->where('id', $idbarang);
+        $this->db->update('tb_pnd_do', $data);
+        echo json_encode(['status' => 'success']);
+    }
+
+    public function create_pending_do($kdfaktur)
+    {
+        date_default_timezone_set("Asia/Jakarta");
+
+        $get_pre_do = $this->M_Logistik->get_detail_pnd_do($kdfaktur);
+        $getdetail  = $this->M_Logistik->get_do_cust_byfaktur_pnd($kdfaktur);
+        $kddo       = $this->M_Logistik->generate_kd_do();
+
+        $now = date("Y-m-d H:i:s");
+
+        if ($get_pre_do) {
+            $data_tmp_det_do = [];
+            $kdfaktur = null;
+
+            foreach ($get_pre_do as $g) {
+                $kdfaktur = $g->kd_faktur;
+            }
+
+            if ($getdetail) {
+                foreach ($getdetail as $det) {
+                    $data_tmp_det_do[] = array(
+                        'id_pre_do'     => $det->id_pre_do,
+                        'kd_do'         => $det->kd_do,
+                        'kd_faktur'     => $det->kd_faktur . "PND",
+                        'tgl_transaksi' => $det->tgl_transaksi,
+                        'kd_rute'       => $det->kd_rute,
+                        'kd_customer'   => $det->kd_customer,
+                        'kd_barang'     => $det->kd_barang,
+                        'nm_barang'     => $det->nm_barang,
+                        'qty'           => $det->qty,
+                        'satuan'        => $det->satuan,
+                        'no_lot'        => $det->no_lot,
+                        'tgl_exp'       => $det->tgl_exp,
+                        'barang_sts'    => 1,
+                        'create_at'     => $now
+                    );
+                }
+
+                if (!empty($data_tmp_det_do)) {
+                    $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
+                }
+
+                $update_pre_do = array(
+                    'barang_sts' => '3'
+                );
+
+                $this->M_Logistik->update_sts_pnd_detail($kdfaktur, $update_pre_do);
+            }
+
+            $datainsert = array(
+                'kd_do'      => $kddo,
+                'kd_faktur'  => $kdfaktur . "PND",
+                'input_at'   => $now
+            );
+
+            $this->M_Logistik->insert_tmp_do($datainsert);
+        }
+        redirect('detail_fk_pnd/' . $kdfaktur);
     }
 
     public function pnd_br_detpo($id, $kd, $action)

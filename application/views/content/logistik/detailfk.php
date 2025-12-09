@@ -158,7 +158,7 @@
                                         <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
                                     </div>
                                     <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formlist_pending' ?>" class="btn btn-warning btn-block mt-4 mb-2">Input Pending</a>
+                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formlist_pending' ?>" class="btn btn-warning btn-block mt-4 mb-2">Input to Pending</a>
                                     </div>
                                     <div class="col-4">
                                         <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>

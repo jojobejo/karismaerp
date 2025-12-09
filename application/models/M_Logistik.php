@@ -462,6 +462,26 @@ class M_Logistik extends CI_Model
         ")->result();
     }
 
+    public function get_detail_pnd_do($kd)
+    {
+        return $this->db->query("SELECT
+            a.*
+            FROM tb_pnd_do a
+            WHERE a.kd_faktur = '$kd'
+            GROUP BY a.kd_faktur
+        ")->result();
+    }
+
+    public function get_do_cust_byfaktur_pnd($kd)
+    {
+        return $this->db->query("SELECT
+            a.*,b.nama_barang
+            FROM tb_pnd_do a
+            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
@@ -534,6 +554,12 @@ class M_Logistik extends CI_Model
     {
         $this->db->where('kd_faktur', $kd);
         return $this->db->update('tb_pre_do', $data);
+    }
+
+    public function update_sts_pnd_detail($kd, $data)
+    {
+        $this->db->where('kd_faktur', $kd);
+        return $this->db->update('tb_pnd_do', $data);
     }
 
     public function updatedsts($id, $data)
