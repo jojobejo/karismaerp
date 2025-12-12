@@ -68,9 +68,7 @@
 
                             <div class="col">
                                 <?php if (!empty($qcount_tonase_kubikasi)) : ?>
-
                                     <?php foreach ($qcount_tonase_kubikasi as $q) : ?>
-
                                         <?php
                                         $tonase_ton = $q->total_tonase_kg / 1000000;
                                         $kubikasi_m3 = round($q->total_kubikasi_m3, 3);
@@ -176,6 +174,7 @@
                             </button>
                         </div>
                     </div>
+
                     <!-- DATA PREPARATION - SALES - LOGISTIK -->
                     <button class="btn btn-primary mb-2 btn-block" onclick="toggleDataPreDO()" id="btnhide"><i class="fas fa-eye"></i> Faktur Penjualan <i class="fas fa-eye"></i> </button>
                     <div class="card" id="pre_do" style="display: none;">
@@ -219,6 +218,13 @@
                                                 </td>
                                             <?php elseif ($status == 2) : ?>
                                                 <td><span class="badge badge-success">ON DRAFT</span></td>
+                                                <td>
+                                                    <div class="row">
+                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                                    </div>
+                                                </td>
+                                            <?php elseif ($status == 4) : ?>
+                                                <td><span class="badge badge-warning">FAKTUR PENDING</span></td>
                                                 <td>
                                                     <div class="row">
                                                         <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>

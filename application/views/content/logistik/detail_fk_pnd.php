@@ -27,110 +27,172 @@
 
             <section class="content">
                 <div class="container-fluid">
+
                     <div class="card">
-                        <div class="card-body">
-                            <div class="mt-2 mb-2">
-                                <div class="row">
-                                    <div class="col-auto">
-                                        <a href="<?= base_url('') ?>" class="btn btn-info">Faktur Awal</a>
-                                    </div>
-                                    <div class="col-auto">
-                                        <a href="<?= base_url('') ?>" class="btn btn-secondary">Faktur Terposting</a>
-                                    </div>
-                                </div>
+                        <div class="card-header ui-sortable-handle" style="cursor: move;">
+                            <h3 class="card-title">
+                                <i class="fas fa-receipt mr-1"></i> Faktur Pending
+                            </h3>
+
+                            <div class="card-tools">
+                                <ul class="nav nav-pills ml-auto">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="#tab-faktur-awal" data-toggle="tab">Faktur Awal</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#tab-faktur-detail" data-toggle="tab">Detail Faktur Pending</a>
+                                    </li>
+                                </ul>
                             </div>
-                            <table id="detbarang" class="table table-striped">
-                                <thead style="background-color: #212529; color:white;">
-                                    <tr>
-                                        <th>Kode</th>
-                                        <th>Nama Barang</th>
-                                        <th>QTY</th>
-                                        <th>Total Berat(Kg)</th>
-                                        <th>Satuan</th>
-                                        <th>No-Lot</th>
-                                        <th>Exp Date</th>
-                                        <?php if ($status_faktur == '4') : ?>
-                                            <th>#</th>
-                                        <?php endif; ?>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($detail_fk as $det) : ?>
-                                        <tr data-id="<?= $det->id ?>">
-                                            <td><?= $det->kd_barang ?></td>
-                                            <td><?= $det->nama_barang ?></td>
-                                            <td><?= $det->qty ?></td>
-                                            <td><?= number_format($det->total_berat, 2) ?></td>
-                                            <td><?= $det->satuan ?></td>
-                                            <td><?= $det->no_lot ?></td>
-                                            <td><?= $det->tgl_exp ?></td>
-                                            <?php if ($status_faktur == '4') : ?>
-                                                <?php if ($det->barang_sts == '1') : ?>
-                                                    <td style="width: 10%;">
+                        </div>
+
+                        <div class="card-body">
+                            <div class="tab-content">
+
+                                <!-- TAB 1 FAKTUR AWAL -->
+                                <div class="tab-pane active" id="tab-faktur-awal">
+                                    <table class="table table-striped">
+                                        <thead style="background-color: #212529; color:white;">
+                                            <tr>
+                                                <th>Kode</th>
+                                                <th>Nama Barang</th>
+                                                <th>QTY</th>
+                                                <th>Total Berat (Kg)</th>
+                                                <th>Satuan</th>
+                                                <th>No Lot</th>
+                                                <th>Expired Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($master_faktur as $mk) : ?>
+                                                <tr>
+                                                    <td><?= $mk->kd_barang ?></td>
+                                                    <td><?= $mk->nama_barang ?></td>
+                                                    <td><?= $mk->qty ?></td>
+                                                    <td><?= $mk->total_berat ?></td>
+                                                    <td><?= $mk->satuan ?></td>
+                                                    <td><?= $mk->no_lot ?></td>
+                                                    <td><?= $mk->tgl_exp ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- TAB 2 DETAIL FAKTUR PENDING -->
+                                <div class="tab-pane" id="tab-faktur-detail">
+                                    <table class="table table-striped">
+                                        <thead style="background-color: #212529; color:white;">
+                                            <tr>
+                                                <th>Kode</th>
+                                                <th>Nama Barang</th>
+                                                <th>QTY</th>
+                                                <th>Total Berat(Kg)</th>
+                                                <th>Satuan</th>
+                                                <th>No-Lot</th>
+                                                <th>Exp Date</th>
+                                                <?php if ($status_faktur == '4') : ?>
+                                                    <th>#</th>
+                                                <?php endif; ?>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            <?php foreach ($detail_fk as $det) : ?>
+                                                <tr data-id="<?= $det->id ?>">
+                                                    <td><?= $det->kd_barang ?></td>
+                                                    <td><?= $det->nama_barang ?></td>
+                                                    <td><?= $det->qty ?></td>
+                                                    <td><?= number_format($det->total_berat, 2) ?></td>
+                                                    <td><?= $det->satuan ?></td>
+                                                    <td><?= $det->no_lot ?></td>
+                                                    <td><?= $det->tgl_exp ?></td>
+
+                                                    <?php if ($status_faktur == '4') : ?>
+                                                        <?php if ($det->barang_sts == '1') : ?>
+                                                            <td style="width: 10%;">
+                                                                <div class="row">
+                                                                    <div class="col">
+                                                                        <button class="btn btn-primary w-100 btn-edit" data-id="<?= $det->id ?>">
+                                                                            <i class="fas fa-pencil-alt"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/pending' ?>" class="btn btn-danger w-100">
+                                                                            <i class="fas fa-hand-paper"></i>
+                                                                        </a>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                        <?php elseif ($det->barang_sts == '3') : ?>
+                                                            <td colspan="2">
+                                                                <h3>
+                                                                    <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/revert' ?>">
+                                                                        <span class="badge badge-warning w-100">
+                                                                            <i class="fas fa-pause-circle"></i>
+                                                                        </span>
+                                                                    </a>
+                                                                </h3>
+                                                            </td>
+
+                                                        <?php elseif ($det->barang_sts == '2') : ?>
+                                                            <td colspan="2">
+                                                                <h3>
+                                                                    <span class="badge badge-success w-100">
+                                                                        <i class="fas fa-certificate"></i>
+                                                                    </span>
+                                                                </h3>
+                                                            </td>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                </tr>
+                                            <?php endforeach; ?>
+
+                                            <!-- ROW EDIT -->
+                                            <tr id="editRow" style="display:none;">
+                                                <td colspan="8">
+                                                    <form id="editForm">
                                                         <div class="row">
-                                                            <div class="col">
-                                                                <button class="btn btn-primary w-100 btn-edit" data-id="<?= $det->id ?>">
-                                                                    <i class="fas fa-pencil-alt"></i>
-                                                                </button>
+                                                            <input type="hidden" id="id" name="id">
+                                                            <div class="col-md-2">
+                                                                <input type="text" id="edit_nama" class="form-control" readonly>
                                                             </div>
-                                                            <div class="col">
-                                                                <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-hand-paper"></i></a>
+                                                            <div class="col-md-2">
+                                                                <input type="text" id="edit_qty" name="qty" class="form-control">
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <input type="text" id="edit_satuan" class="form-control" readonly>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <input type="text" id="edit_no_lot" class="form-control" readonly>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <input type="text" id="edit_exp" class="form-control" readonly>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <button type="submit" class="btn btn-success">Simpan</button>
+                                                                <button type="button" class="btn btn-danger" id="cancelEdit">Batal</button>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                <?php elseif ($det->barang_sts == '3') : ?>
-                                                    <td colspan="2">
-                                                        <h3><a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'revert' ?>"><span class="badge badge-warning w-100"><i class="fas fa-pause-circle"></i></span></a></h3>
-                                                    </td>
-                                                <?php elseif ($det->barang_sts == '2') : ?>
-                                                    <td colspan="2">
-                                                        <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
-                                                    </td>
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
 
-                                    <!-- BARIS EDIT TABEL -->
+                                    <a href="<?= base_url('create_pending_do/') . $kdfaktur ?>" class="btn btn-warning btn-block mt-4 mb-2">
+                                        Input Pending
+                                    </a>
 
-                                    <tr id="editRow" style="display: none;">
-                                        <td colspan="7">
-                                            <form id="editForm">
-                                                <div class="row">
-                                                    <input type="hidden" id="id" name="id" readonly>
-                                                    <div class="col-md-2">
-                                                        <input type="text" id="edit_nama" name="nm_barang" class="form-control" readonly>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <input type="text" id="edit_qty" name="qty" class="form-control">
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <input type="text" id="edit_satuan" name="satuan" class="form-control" readonly>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <input type="text" id="edit_no_lot" name="no_lot" class="form-control" readonly>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <input type="text" id="edit_exp" name="tgl_exp" class="form-control" readonly>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <button type="submit" class="btn btn-success">Simpan</button>
-                                                        <button type="button" class="btn btn-danger" id="cancelEdit">Batal</button>
-                                                    </div>
-                                                </div>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="row">
-                                <div class="col-12">
-                                    <a href="<?= base_url('create_pending_do/') . $kdfaktur ?>" class="btn btn-warning btn-block mt-4 mb-2">Iput Pending</a>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
                         </div>
                     </div>
+
+
+
+                <?php endforeach; ?>
                 </div>
             </section>
         </div>

@@ -187,6 +187,15 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#tbDashboardLogistik').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     $('#lsfakturbyrute').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -252,7 +261,7 @@
     e.preventDefault();
 
     let ids = $(this).data('ids');
-    
+
     ids = ids.toString();
     const arr = ids.split(',');
 

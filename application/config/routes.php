@@ -164,6 +164,8 @@ $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/inser
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
 
+$route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
+
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
 $route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/create_pending_do/$1';
@@ -219,4 +221,4 @@ $route['sales_report']                              = 'sales/C_Sales/dashboard_s
 $route['export-stock']                              = 'logistik/C_ExportStock/export';
 
 // SALES KIU KATALOG
-$route['kiu_katalog']                              = 'sales/C_ExportStock/export';
+$route['kiu_katalog']                               = 'sales/C_ExportStock/export';

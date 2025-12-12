@@ -14,7 +14,9 @@
             <?php $this->load->view('content/logistik/modal/modal_do_upload') ?>
 
             <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+
                 <div class="content-header">
+
                     <div class="container-fluid">
                         <div class="row">
                             <div class="col-auto">
@@ -35,9 +37,14 @@
                             <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                             </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('tonase_report') ?>" class="btn btn-primary mb-2">Tonase Rekap </a>
+                            </div>
                         </div>
                     </div>
+
                 </div>
+
                 <section class="content">
                     <div class="container-fluid">
                         <?php if ($this->session->flashdata('msg')) : ?>

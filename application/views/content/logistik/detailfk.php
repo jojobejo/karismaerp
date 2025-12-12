@@ -30,9 +30,7 @@
                                 <a href="<?= base_url('detail_fk_pnd/' . $kdfaktur) ?>" class="btn btn">
                                     <h3 class="ml-4"><span class="badge badge-warning">FAKTUR PENDING</span></h3>
                                 </a>
-
                             <?php endif; ?>
-
                             <div hidden>
                                 <?php if ($status_upload == '1') : ?>
                                     <h3 class="ml-4"><span class="badge badge-info">PAGI</span></h3>
@@ -48,6 +46,18 @@
                 <div class="container-fluid">
                     <div class="card">
                         <div class="card-body">
+
+                            <?php if ($status_faktur == 4) : ?>
+                                <div class="row">
+                                    <div class="col-4">
+                                        <a href="" id="btnMaster" class="btn btn-info btn-block mb-2">Faktur Master</a>
+                                    </div>
+                                    <div class="col-4">
+                                        <a href="" id="btnPending" class="btn btn-info btn-block mb-2">Detail Faktur Pending</a>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
                             <table id="detbarang" class="table table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
@@ -60,7 +70,7 @@
                                         <th>Satuan</th>
                                         <th>No-Lot</th>
                                         <th>Exp Date</th>
-                                        <?php if ($status_faktur == '2') : ?>
+                                        <?php if ($status_faktur == '4') : ?>
                                             <th>#</th>
                                         <?php endif; ?>
                                     </tr>
@@ -90,20 +100,15 @@
                                                     <td colspan="2">
                                                         <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
+                                                <?php elseif ($det->barang_sts == '4') : ?>
+                                                    <td colspan="2">
+                                                        <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
+                                                    </td>
                                                 <?php endif; ?>
                                             <?php else : ?>
-                                                <!-- <?php if ($det->barang_sts == '1') : ?>
-                                                    <td style="width: 10%;">
-                                                        <div class="row">
-                                                            <div class="col">
-                                                                <button class="btn btn-primary w-100 btn-edit" data-id="<?= $det->id ?>">
-                                                                    <i class="fas fa-pencil-alt"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div class="col">
-                                                                <a href="<?= base_url('pnd_br_detpo/') . $det->id . '/' . $kdfaktur . '/' . 'pending' ?>" class="btn btn-danger w-100"><i class="fas fa-hand-paper"></i></a>
-                                                            </div>
-                                                        </div>
+                                                <?php if ($det->barang_sts == '4') : ?>
+                                                    <td colspan="2">
+                                                        <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
                                                 <?php elseif ($det->barang_sts == '3') : ?>
                                                     <td colspan="2">
@@ -113,7 +118,7 @@
                                                     <td colspan="2">
                                                         <h3><span class="badge badge-success w-100"><i class="fas fa-certificate"></i></span></a></h3>
                                                     </td>
-                                                <?php endif; ?> -->
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>
@@ -152,6 +157,38 @@
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <table class="table table-striped" id="tbfakturmaster">
+                                <thead style="background-color: #212529; color:white;">
+                                    <tr>
+                                        <th>Kode</th>
+                                        <th>Nama Barang</th>
+                                        <th>QTY</th>
+                                        <th>Gram</th>
+                                        <th>Kilo</th>
+                                        <th>Total Berat (Kg)</th>
+                                        <th>Satuan</th>
+                                        <th>No Lot</th>
+                                        <th>Expired Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($master_faktur as $mk) : ?>
+                                        <tr>
+                                            <td><?= $mk->kd_barang ?></td>
+                                            <td><?= $mk->nama_barang ?></td>
+                                            <td><?= $mk->qty ?></td>
+                                            <td><?= number_format($mk->gr_berat, 3)  ?></td>
+                                            <td><?= number_format($mk->convert_kg, 3) ?></td>
+                                            <td><?= $mk->total_berat ?></td>
+                                            <td><?= $mk->satuan ?></td>
+                                            <td><?= $mk->no_lot ?></td>
+                                            <td><?= $mk->tgl_exp ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+
                             <?php if ($status_faktur == '1') : ?>
                                 <div class="row">
                                     <div class="col-4">
@@ -165,11 +202,6 @@
                                     </div>
                                 </div>
                             <?php elseif ($status_faktur == '4') : ?>
-                                <div class="row">
-                                    <!-- <div class="col-6">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
-                                    </div> -->
-                                </div>
                             <?php else : ?>
                                 <a href="<?= base_url('revert_do/') . $kdfaktur . '/' . 'revertdetail' ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
                             <?php endif; ?>
@@ -200,6 +232,41 @@
 
     <script>
         $(document).ready(function() {
+            // default: tampilkan detail faktur, sembunyikan master
+            $("#tbfakturmaster").hide();
+
+            // default: tombol detail aktif
+            $("#btnPending").removeClass("btn-info").addClass("btn-secondary");
+            $("#btnMaster").removeClass("btn-secondary").addClass("btn-info");
+        });
+
+        // tombol master
+        $("#btnMaster").on("click", function(e) {
+            e.preventDefault();
+
+            $("#detbarang").hide();
+            $("#tbfakturmaster").show();
+
+            // ubah warna tombol
+            $("#btnMaster").removeClass("btn-info").addClass("btn-secondary");
+            $("#btnPending").removeClass("btn-secondary").addClass("btn-info");
+        });
+
+        // tombol detail pending
+        $("#btnPending").on("click", function(e) {
+            e.preventDefault();
+
+            $("#tbfakturmaster").hide();
+            $("#detbarang").show();
+
+            // ubah warna tombol
+            $("#btnPending").removeClass("btn-info").addClass("btn-secondary");
+            $("#btnMaster").removeClass("btn-secondary").addClass("btn-info");
+        });
+
+
+        $(document).ready(function() {
+
             $(".btn-edit").on("click", function(e) {
                 e.preventDefault();
 
@@ -252,5 +319,17 @@
                 });
             });
 
+        });
+
+        $("#btnMaster").on("click", function(e) {
+            e.preventDefault();
+            $("#detbarang").hide();
+            $("#tbfakturmaster").show();
+        });
+
+        $("#btnPending").on("click", function(e) {
+            e.preventDefault();
+            $("#tbfakturmaster").hide();
+            $("#detbarang").show();
         });
     </script>

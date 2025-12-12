@@ -1817,6 +1817,9 @@ class C_Logistik extends CI_Controller
             $this->M_Logistik->deletetmp_detdo($kd_do);
             $this->M_Logistik->deletetmp_do($kd_do);
 
+            $this->M_Logistik->deletetmp_do($kd_do);
+            $this->M_Logistik->deletetmp_do($kd_do);
+
             echo json_encode(['msg' => 'success']);
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
@@ -1850,9 +1853,16 @@ class C_Logistik extends CI_Controller
 
     public function detail_fk($kd)
     {
+        if (substr($kd, -3) === 'PND') {
+            $kd_bersih = substr($kd, 0, -3);
+        } else {
+            $kd_bersih = $kd;
+        }
+
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['detail_fk']      = $this->M_Logistik->detail_fk($kd);
         $data['customer']       = $this->M_Logistik->det_customer($kd);
+        $data['master_faktur']  = $this->M_Logistik->get_faktur_master($kd_bersih);
         $data['kdfaktur']       = $kd;
 
         $this->load->view('partial/main/header.php', $data);
@@ -1862,10 +1872,17 @@ class C_Logistik extends CI_Controller
 
     public function detail_fk_pnd($kd)
     {
+        if (substr($kd, -3) === 'PND') {
+            $kd_bersih = substr($kd, 0, -3);
+        } else {
+            $kd_bersih = $kd;
+        }
+
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['detail_fk']      = $this->M_Logistik->detail_pending_fk($kd);
         $data['customer']       = $this->M_Logistik->det_customer($kd);
-        $data['kdfaktur']       = $kd;
+        $data['master_faktur']  = $this->M_Logistik->get_faktur_master($kd_bersih);
+        $data['kdfaktur']       = $kd_bersih;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/detail_fk_pnd.php', $data);
@@ -1999,6 +2016,7 @@ class C_Logistik extends CI_Controller
 
         if ($get_pre_do) {
             $data_tmp_det_do = [];
+            $data_pre_do = [];
             $kdfaktur = null;
 
             foreach ($get_pre_do as $g) {
@@ -2025,8 +2043,32 @@ class C_Logistik extends CI_Controller
                     );
                 }
 
+                foreach ($getdetail as $det) {
+                    $data_pre_do[] = array(
+                        'tgl_inputer'   => $det->tgl_transaksi,
+                        'kd_faktur'     => $det->kd_faktur . "PND",
+                        'kd_rute'       => $det->kd_rute,
+                        'kd_customer'   => $det->kd_customer,
+                        'kd_barang'     => $det->kd_barang,
+                        'nama_barang'   => $det->nm_barang,
+                        'qty'           => $det->qty,
+                        'satuan'        => $det->satuan,
+                        'no_lot'        => $det->no_lot,
+                        'tgl_exp'       => $det->tgl_exp,
+                        'nominal_p'     => $det->nominal_p,
+                        'jtempo'        => $det->jtempo,
+                        'upload_sts'    => '1',
+                        'data_sts'      => '4',
+                        'barang_sts'    => '4'
+                    );
+                }
+
                 if (!empty($data_tmp_det_do)) {
                     $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
+                }
+
+                if (!empty($data_pre_do)) {
+                    $this->M_Logistik->insert_pnd_pre_batch($data_pre_do);
                 }
 
                 $update_pre_do = array(
@@ -2694,6 +2736,15 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/stock/stock_control.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function tonase_report()
+    {
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/tonase_report.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 }
