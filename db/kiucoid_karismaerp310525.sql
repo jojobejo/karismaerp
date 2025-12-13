@@ -43,7 +43,6 @@ CREATE TABLE `tb_customer` (
 --
 -- Dumping data untuk tabel `tb_customer`
 --
-
 INSERT INTO `tb_customer` (`id`, `kd_customer`, `nama_customer`, `nama_kios`, `alamat_kios`, `telp1`, `telp2`, `regional`, `jam_buka_tutup`, `karakteristik_kios`) VALUES
 (2, 'ANDI10', 'Andi Setyawan', 'Andi Setyawan', 'Dsn. Jambu, Rt.007/RW.001 Kel. Tunge, Kec. Wates', '0', '0', 'Kediri', '', ''),
 (3, 'MITR35', 'Sudarman, H', 'Mitra Tani/Sudarman, H', 'Jl. Letjen Suprapto 128, Kel. Jatirejo Kec. Nganjuk, Kab. Nganjuk Kec. Nganjuk, Kab. Nganjuk', '081 335 759 876', '0358 324 622', 'Nganjuk', '', ''),

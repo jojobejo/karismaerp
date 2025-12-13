@@ -1398,32 +1398,12 @@ FROM (
     public function all_barang_match_t1()
     {
         return $this->db->query("SELECT
-        COUNT(DISTINCT ics.nama_barang) AS total_barang,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_match,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_notmatch
+            COUNT(DISTINCT ics.nama_barang) AS total_barang,
+            COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1 ELSE 0 END),0) AS total_match,
+            COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1 ELSE 0 END),0) AS total_notmatch
         FROM
-        (
-            SELECT 
-                nama_barang, 
-                SUM(qty) AS qty_buku
-            FROM tb_ics
-            GROUP BY nama_barang
-        ) AS ics
-        LEFT JOIN (
-            SELECT 
-                nama_barang, 
-                SUM(qty) AS qty_input
-            FROM tb_ics_opname
-            WHERE tim = '1'
-            GROUP BY nama_barang
-        ) AS op
-        ON ics.nama_barang = op.nama_barang;
+        (SELECT nama_barang, SUM(qty) AS qty_buku FROM tb_ics GROUP BY nama_barang) AS ics
+        LEFT JOIN (SELECT nama_barang, SUM(qty) AS qty_input FROM tb_ics_opname WHERE tim = '1' GROUP BY nama_barang) AS op ON ics.nama_barang = op.nama_barang;
         ")->result();
     }
 
@@ -1431,32 +1411,12 @@ FROM (
     public function all_barang_match_t2()
     {
         return $this->db->query("SELECT
-        COUNT(DISTINCT ics.nama_barang) AS total_barang,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_match,
-        SUM(CASE 
-            WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-            ELSE 0
-        END) AS total_notmatch
+            COUNT(DISTINCT ics.nama_barang) AS total_barang,
+            COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1 ELSE 0 END),0) AS total_match,
+            COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1 ELSE 0 END),0) AS total_notmatch
         FROM
-        (
-            SELECT 
-                nama_barang, 
-                SUM(qty) AS qty_buku
-            FROM tb_ics
-            GROUP BY nama_barang
-        ) AS ics
-        LEFT JOIN (
-            SELECT 
-                nama_barang, 
-                SUM(qty) AS qty_input
-            FROM tb_ics_opname
-            WHERE tim = '2'
-            GROUP BY nama_barang
-        ) AS op
-        ON ics.nama_barang = op.nama_barang;
+        (SELECT nama_barang, SUM(qty) AS qty_buku FROM tb_ics GROUP BY nama_barang) AS ics
+        LEFT JOIN (SELECT nama_barang, SUM(qty) AS qty_input FROM tb_ics_opname WHERE tim = '1' GROUP BY nama_barang) AS op ON ics.nama_barang = op.nama_barang;
         ")->result();
     }
 
@@ -1508,67 +1468,34 @@ FROM (
     public function fefo_match_t1()
     {
         return $this->db->query("SELECT
-            COUNT(*) AS total_barang,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_match,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_notmatch
-            FROM
-            (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_buku
-                FROM tb_ics
-                GROUP BY nama_barang, exp_date
-            ) AS ics
-            LEFT JOIN (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_input
-                FROM tb_ics_opname
-                WHERE tim = '1'
-                GROUP BY nama_barang, exp_date
-            ) AS op
-            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
+        COUNT(*) AS total_barang,
+        COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1 ELSE 0 END),0) AS total_match,
+        COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1 ELSE 0 END),0) AS total_notmatch
+        FROM
+        (SELECT nama_barang, exp_date, SUM(qty) AS qty_buku FROM tb_ics GROUP BY nama_barang, exp_date) AS ics
+        LEFT JOIN (SELECT nama_barang, exp_date, SUM(qty) AS qty_input FROM tb_ics_opname 
+        WHERE tim = '1' 
+        GROUP BY nama_barang, exp_date
+        ) AS op
+        ON ics.nama_barang = op.nama_barang
+        AND ics.exp_date = op.exp_date;
         ")->result();
     }
+
     public function fefo_match_t2()
     {
         return $this->db->query("SELECT
-            COUNT(*) AS total_barang,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_match,
-            SUM(CASE 
-                WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1
-                ELSE 0
-            END) AS total_notmatch
-            FROM
-            (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_buku
-                FROM tb_ics
-                GROUP BY nama_barang, exp_date
-            ) AS ics
-            LEFT JOIN (
-                SELECT 
-                    nama_barang, 
-                    exp_date,
-                    SUM(qty) AS qty_input
-                FROM tb_ics_opname
-                WHERE tim = '2'
-                GROUP BY nama_barang, exp_date
-            ) AS op
-            ON ics.nama_barang = op.nama_barang AND ics.exp_date = op.exp_date;
+        COUNT(*) AS total_barang,
+        COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) = ics.qty_buku THEN 1 ELSE 0 END),0) AS total_match,
+        COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1 ELSE 0 END),0) AS total_notmatch
+        FROM
+        (SELECT nama_barang, exp_date, SUM(qty) AS qty_buku FROM tb_ics GROUP BY nama_barang, exp_date) AS ics
+        LEFT JOIN (SELECT nama_barang, exp_date, SUM(qty) AS qty_input FROM tb_ics_opname 
+        WHERE tim = '2' 
+        GROUP BY nama_barang, exp_date
+        ) AS op
+        ON ics.nama_barang = op.nama_barang
+        AND ics.exp_date = op.exp_date;
         ")->result();
     }
 
