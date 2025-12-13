@@ -891,7 +891,7 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_exp()
     {
         return $this->db->query("SELECT 
-        COALESCE(m.kd_system, '-') AS kd_barang,
+		COALESCE(m.kd_barang, '-') AS kd_barang,
         base.nama_barang,
         base.exp_date,
         COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
@@ -913,7 +913,7 @@ class M_Logistik extends CI_Model
             FROM tb_ics
             GROUP BY nama_barang, exp_date
         ) base
-        LEFT JOIN tb_mbarang m ON base.nama_barang = m.nm_barang
+        LEFT JOIN tb_master_barang_all m ON base.nama_barang = m.nama_barang
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -945,7 +945,7 @@ class M_Logistik extends CI_Model
     public function admin_compareuser_all()
     {
         return $this->db->query("SELECT 
-        COALESCE(m.kd_system, '-') AS kd_barang,
+		m.kd_barang as kd_system,
         i.nama_barang,
         COALESCE(t1.qty_fisik_tim1, 0) AS qty_fisik_tim1,
         COALESCE(t2.qty_fisik_tim2, 0) AS qty_fisik_tim2,
@@ -986,8 +986,8 @@ class M_Logistik extends CI_Model
             WHERE tim = '2'
             GROUP BY nama_barang
         ) t2 ON t2.nama_barang = i.nama_barang
-        LEFT JOIN tb_mbarang m ON i.nama_barang = m.nm_barang
-        GROUP BY i.nama_barang, m.kd_system, s.qty_zahir, p.qty_pending, t1.qty_fisik_tim1, t2.qty_fisik_tim2
+        LEFT JOIN tb_master_barang_all m ON i.nama_barang = m.nama_barang
+        GROUP BY i.nama_barang, m.nama_barang, s.qty_zahir, p.qty_pending, t1.qty_fisik_tim1, t2.qty_fisik_tim2
         ORDER BY i.nama_barang;")->result();
     }
 
@@ -1403,10 +1403,10 @@ FROM (
             COALESCE(SUM(CASE WHEN IFNULL(op.qty_input, 0) != ics.qty_buku THEN 1 ELSE 0 END),0) AS total_notmatch
         FROM
         (SELECT nama_barang, SUM(qty) AS qty_buku FROM tb_ics GROUP BY nama_barang) AS ics
-        LEFT JOIN (SELECT nama_barang, SUM(qty) AS qty_input FROM tb_ics_opname WHERE tim = '1' GROUP BY nama_barang) AS op ON ics.nama_barang = op.nama_barang;
+        LEFT JOIN 
+        (SELECT nama_barang, SUM(qty) AS qty_input FROM tb_ics_opname WHERE tim = '1' GROUP BY nama_barang) AS op ON ics.nama_barang = op.nama_barang;
         ")->result();
     }
-
 
     public function all_barang_match_t2()
     {

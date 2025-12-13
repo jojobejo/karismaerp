@@ -46,7 +46,7 @@
                                     <?php foreach ($allbarang as $i => $rowall) : ?>
                                         <tr>
                                             <td style="text-align: center;">
-                                                <a href="<?= base_url('detailtrack/' . $rowall->kd_barang . '/allbarang') ?>" class="btn btn-sm btn-info" title="Detail Tracking">
+                                                <a href="<?= base_url('detailtrack/' . $rowall->kd_system . '/allbarang') ?>" class="btn btn-sm btn-info" title="Detail Tracking">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                             </td>
