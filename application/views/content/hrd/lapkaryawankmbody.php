@@ -10,6 +10,81 @@
     <?php $this->load->view('partial/main/sidebar') ?>
     <?php $this->load->view('content/hrd/modallapkaryawankm') ?>
 
+    <div class="modal fade" id="modalEditKary">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5>Edit Karyawan Keluar Masuk</h5>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+
+          <form id="formEditKary">
+            <div class="modal-body">
+              <input type="hidden" name="id" id="edit_id">
+
+              <div class="row">
+                <div class="col-md-4">
+                  <label>Tanggal</label>
+                  <input type="text" name="tanggal" id="edit_tanggal" class="form-control">
+                </div>
+                <div class="col-md-4">
+                  <label>Nama</label>
+                  <input type="text" name="nama" id="edit_nama" class="form-control">
+                </div>
+                <div class="col-md-4">
+                  <label>Departemen</label>
+                  <input type="text" name="departemen" id="edit_departemen" class="form-control">
+                </div>
+              </div>
+              <div class="row mt-2">
+                <div class="col-md-4">
+                  <label>Jam Keluar</label>
+                  <input type="text" name="jamkeluar" id="edit_jamkeluar" class="form-control">
+                </div>
+                <div class="col-md-4">
+                  <label>Jam Masuk</label>
+                  <input type="text" name="jammasuk" id="edit_jammasuk" class="form-control">
+                </div>
+                <div class="col-md-4">
+                  <label>No. Plat</label>
+                  <input type="text" name="nopol" id="edit_nopol" class="form-control">
+                </div>
+              </div>
+              <div class="mt-2">
+                <label>Status</label>
+                <input type="text" name="status" id="edit_status" class="form-control">
+              </div>
+              <div class="mt-2">
+                <label>Keterangan</label>
+                <textarea name="keterangan" id="edit_keterangan" class="form-control"></textarea>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalHapusKary">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5>Hapus Data</h5>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="hapus_id">
+            <p>Yakin ingin menghapus data ini?</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-danger" id="btnHapusKary">Hapus</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
@@ -37,10 +112,9 @@
               <a href="<?= base_url('ex_lap_kar') ?>" class="btn btn-success"><i class="fas fa-file"></i> Export Excel</a>
             </div>
             <div class="card-body">
-              <table id="tb_lap_distribusi" class="table table-bordered table-striped">
+              <table id="tb_lap_karyawan_masuk_keluar" class="table table-bordered table-striped">
                 <thead>
                   <tr>
-                    <th hidden>id</th>
                     <th>Tanggal</th>
                     <th>Nama</th>
                     <th>Departement</th>
@@ -53,30 +127,6 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <?php foreach ($laporan as $l) : ?>
-
-                    <tr>
-                      <th hidden><?= $l->id ?></th>
-                      <th><?= $l->tanggal ?></th>
-                      <th><?= $l->nama ?></th>
-                      <th><?= $l->departemen ?></th>
-                      <th><?= $l->status ?></th>
-                      <th><?= $l->jamkeluar ?></th>
-                      <th><?= $l->jammasuk ?></th>
-                      <th><?= $l->nopol ?></th>
-                      <th><?= $l->keterangan ?></th>
-                      <th>
-                        <div class="row">
-                          <a href="#" class="btn btn-warning btn-sm " data-toggle="modal" data-target="#editkary<?= $l->id ?>">
-                            <i class="fa fa-solid fa-pencil-alt"></i>
-                          </a>
-                          <a href="#" class="btn btn-danger btn-sm " data-toggle="modal" data-target="#hapuslapkary<?= $l->id ?>">
-                            <i class="fa fa-solid fa-trash-alt"></i>
-                          </a>
-                        </div>
-                      </th>
-                    </tr>
-                  <?php endforeach; ?>
                 </tbody>
               </table>
             </div>

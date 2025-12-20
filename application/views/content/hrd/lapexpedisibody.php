@@ -10,6 +10,97 @@
     <?php $this->load->view('partial/main/sidebar') ?>
     <?php $this->load->view('content/hrd/modallapexpedisi') ?>
 
+    <div class="modal fade" id="modalEditExpedisi">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4>Edit Laporan Expedisi</h4>
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+
+          <form id="formEditExpedisi">
+            <div class="modal-body">
+              <input type="hidden" name="id" id="edit_id">
+
+              <div class="row">
+                <div class="col-md-4">
+                  <label>Tanggal</label>
+                  <input type="date" name="tanggal" id="edit_tanggal" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                  <label>Jam Masuk</label>
+                  <input type="text" name="jammasuk" id="edit_jammasuk" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                  <label>Jam Keluar</label>
+                  <input type="text" name="jamkeluar" id="edit_jamkeluar" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="row mt-2">
+                <div class="col-md-4">
+                  <label>No Pol</label>
+                  <input type="text" name="nopol" id="edit_nopol" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                  <label>Nama Driver</label>
+                  <input type="text" name="namadriver" id="edit_namadriver" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                  <label>No Tlpn</label>
+                  <input type="text" name="notlpndriver" id="edit_notlpndriver" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="row mt-2">
+                <div class="col-md-6">
+                  <label>Perusahaan Pengirim</label>
+                  <input type="text" name="perusahaanpengirim" id="edit_perusahaanpengirim" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label>Nama Barang</label>
+                  <input type="text" name="namabarang" id="edit_namabarang" class="form-control" required>
+                </div>
+              </div>
+
+              <div class="row mt-2">
+                <div class="col-md-6">
+                  <label>Jumlah Barang</label>
+                  <input type="text" name="jumlahbarang" id="edit_jumlahbarang" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label>Keterangan</label>
+                  <input type="text" name="keterangan" id="edit_keterangan" class="form-control" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="modalHapusExpedisi">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4>Hapus Data</h4>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="hapus_id">
+            <p>Data yang dihapus tidak bisa dikembalikan.</p>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-danger" id="btnHapusExpedisi">Hapus</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
 
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
@@ -31,16 +122,26 @@
             </div>
             <?php if ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'LOGISTIK') : ?>
             <?php elseif ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
-              <button type="button" class="btn btn-primary m-2 ml-3" data-toggle="modal" data-target="#addexpedisi">
-                <i class="fas fa-pen"></i>
-                Input Laporan Baru
-              </button>
+              <div class="row">
+                <div class="col-auto">
+                  <button type="button" class="btn btn-primary m-2 ml-3" data-toggle="modal" data-target="#addexpedisi">
+                    <i class="fas fa-pen"></i>
+                    Input Laporan Baru
+                  </button>
+                </div>
+                <div class="col-auto">
+                  <a href="<?= base_url('export_file_laporan_expedisis') ?>" class="btn btn-success m-2">
+                    <i class="fas fa-file"></i>
+                    Export File Excel
+                  </a>
+                </div>
+              </div>
+
             <?php endif; ?>
             <div class="card-body">
-              <table id="tb_lap_distribusi" class="table table-bordered table-striped">
+              <table id="tb_lap_expedisi" class="table table-bordered table-striped">
                 <thead>
                   <tr>
-                    <th hidden>id</th>
                     <th>Tanggal</th>
                     <th>Jam Keluar</th>
                     <th>Jam Masuk</th>
@@ -51,44 +152,14 @@
                     <th>Nama Barang</th>
                     <th>Jumlah Barang</th>
                     <th>Keterangan</th>
-                    <?php if ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'LOGISTIK') : ?>
-                    <?php elseif ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
+                    <?php if ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
                       <th>#</th>
                     <?php endif; ?>
                   </tr>
                 </thead>
-                <tbody>
-                  <?php foreach ($laporan as $l) : ?>
-
-                    <tr>
-                      <th hidden><?= $l->id ?></th>
-                      <th><?= $l->tanggal ?></th>
-                      <th><?= $l->jamkeluar ?></th>
-                      <th><?= $l->jammasuk ?></th>
-                      <th><?= $l->nopol ?></th>
-                      <th><?= $l->namadriver ?></th>
-                      <th><?= $l->notlpndriver ?></th>
-                      <th><?= $l->perusahaanpengirim ?></th>
-                      <th><?= $l->namabarang ?></th>
-                      <th><?= $l->jumlahbarang ?></th>
-                      <th><?= $l->keterangan ?></th>
-                      <?php if ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'LOGISTIK') : ?>
-                      <?php elseif ($this->session->userdata('departemen') != 'LOGISTIK') : ?>
-                        <th>
-                          <div class="row">
-                            <a href="#" class="btn btn-warning btn-sm " data-toggle="modal" data-target="#editexpedisi<?= $l->id ?>">
-                              <i class="fa fa-solid fa-pencil-alt"></i>
-                            </a>
-                            <a href="#" class="btn btn-danger btn-sm " data-toggle="modal" data-target="#hapuslapexpedisi<?= $l->id ?>">
-                              <i class="fa fa-solid fa-trash-alt"></i>
-                            </a>
-                          </div>
-                        </th>
-                      <?php endif; ?>
-                    </tr>
-                  <?php endforeach; ?>
-                </tbody>
+                <tbody></tbody>
               </table>
+
             </div>
           </div>
         </div>

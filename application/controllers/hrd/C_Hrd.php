@@ -192,15 +192,71 @@ class C_Hrd extends CI_Controller
     public function lap_tamu()
     {
         $data['page_title'] = 'KARISMA';
-        $data['laporan']    = $this->M_Hrd->get_all_tamu()->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/laptamubody.php', $data);
         $this->load->view('partial/main/footer.php');
-        $this->load->view('content/hrd/ajaxhrd.php');
+        $this->load->view('content/hrd/ajaxhrd_tamu.php');
     }
 
-    // FUNGSI CRUD
+    public function lap_tamu_serverside()
+    {
+        $list = $this->M_Hrd->get_datatables_tamu();
+        $data = [];
+        $no   = $_POST['start'];
+
+        foreach ($list as $l) {
+            $no++;
+            $row = [];
+
+            $row[] = $l->tanggal;
+            $row[] = $l->nama;
+            $row[] = $l->perusahaan;
+            $row[] = $l->alamat;
+            $row[] = $l->jumlahpersonil;
+            $row[] = $l->tujuan;
+            $row[] = $l->jammasuk;
+            $row[] = $l->jamkeluar;
+            $row[] = $l->keterangan;
+            $row[] = $l->nm_inputer;
+
+            $row[] = '
+                        <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
+                            <i class="fa fa-pencil-alt"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm btn-hapus" data-id="' . $l->id . '">
+                            <i class="fa fa-trash-alt"></i>
+                        </button>
+                    ';
+
+
+            $data[] = $row;
+        }
+
+        echo json_encode([
+            "draw"            => $_POST['draw'],
+            "recordsTotal"    => $this->M_Hrd->count_all_tamu(),
+            "recordsFiltered" => $this->M_Hrd->count_filtered_tamu(),
+            "data"            => $data,
+        ]);
+    }
+
+    public function edit_data_tamu()
+    {
+    }
+
+    public function get_tamu_by_id($id)
+    {
+        $data = $this->db->get_where('tb_tamu', ['id' => $id])->row();
+        echo json_encode($data);
+    }
+
+    public function hapus_tamu()
+    {
+        $id = $this->input->post('id');
+        $this->db->delete('tb_tamu', ['id' => $id]);
+        echo json_encode(['status' => true]);
+    }
 
     public function tambah_lap_tamu()
     {
@@ -214,6 +270,7 @@ class C_Hrd extends CI_Controller
         $jumlahpersonil = $this->input->post('jumlahpersonil');
         $tujuan = $this->input->post('tujuan');
         $keterangan = $this->input->post('keterangan');
+        $nminputer = $this->input->post('nm_inputer');
 
         $data = array(
             'tanggal' => $tgl,
@@ -224,6 +281,7 @@ class C_Hrd extends CI_Controller
             'tujuan' => $tujuan,
             'jammasuk' => $jm,
             'keterangan' => $keterangan,
+            'nm_inputer' => $nminputer,
         );
 
         $this->M_Hrd->addlaptamuhrd($data);
@@ -244,6 +302,7 @@ class C_Hrd extends CI_Controller
         $tujuan = $this->input->post('tujuan');
         $jammasuk = $this->input->post('jammasuk');
         $keterangan = $this->input->post('keterangan');
+        $nmnputer = $this->input->post('nm_inputer');
 
         $data = array(
             'tanggal' => $tanggal,
@@ -255,6 +314,7 @@ class C_Hrd extends CI_Controller
             'jammasuk' => $jammasuk,
             'jamkeluar' => $jm,
             'keterangan' => $keterangan,
+            'nm_inputer' => $nmnputer
         );
 
         $this->M_Hrd->konfirmtamulb($data);
@@ -265,18 +325,18 @@ class C_Hrd extends CI_Controller
     public function edit_lap_tamu()
     {
         $id = $this->input->post('id');
-        $tanggal = $this->input->post('tanggal');
         $nama = $this->input->post('nama');
+        $tanggal = $this->input->post('tanggal');
         $perusahaan = $this->input->post('perusahaan');
         $alamat = $this->input->post('alamat');
-        $jumlahpersonil = $this->input->post('jumlahpersonil');
-        $tujuan = $this->input->post('tujuan');
-        $jammasuk = $this->input->post('jammasuk');
-        $jamkeluar = $this->input->post('jamkeluar');
+        $jumlahpersonil = $this->input->post('personil');
+        $tujuan     = $this->input->post('tujuan');
+        $jammasuk   = $this->input->post('jammasuk');
+        $jamkeluar  = $this->input->post('jamkeluar');
         $keterangan = $this->input->post('keterangan');
+        $inputer    = $this->input->post('inputer');
 
         $data = array(
-            'id' => $id,
             'tanggal' => $tanggal,
             'nama' => $nama,
             'perusahaan' => $perusahaan,
@@ -286,10 +346,12 @@ class C_Hrd extends CI_Controller
             'jammasuk' => $jammasuk,
             'jamkeluar' => $jamkeluar,
             'keterangan' => $keterangan,
+            'nm_inputer' => $inputer,
         );
         $this->M_Hrd->editlaptamu($id, $data);
         redirect('hrd_lap_tamu');
     }
+
     public function hapus_lap_tamu_hrd()
     {
         $id     = $this->input->post('id_isi');
@@ -304,13 +366,66 @@ class C_Hrd extends CI_Controller
     public function lap_karykm()
     {
         $data['page_title'] = 'KARISMA';
-        $data['laporan']    = $this->M_Hrd->get_all_laporan_karykm()->result();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/lapkaryawankmbody.php', $data);
         $this->load->view('partial/main/footer.php');
-        $this->load->view('content/hrd/ajaxhrd.php');
+        $this->load->view('content/hrd/ajaxhrd_karayawanm.php');
     }
+
+    public function lap_karykm_serverside()
+    {
+        $list = $this->M_Hrd->get_datatables_karykm();
+        $data = [];
+
+        foreach ($list as $l) {
+            $row = [];
+
+            $row[] = $l->tanggal;
+            $row[] = $l->nama;
+            $row[] = $l->departemen;
+            $row[] = $l->status;
+            $row[] = $l->jamkeluar;
+            $row[] = $l->jammasuk;
+            $row[] = $l->nopol;
+            $row[] = $l->keterangan;
+
+            $row[] = '
+            <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
+                <i class="fa fa-pencil-alt"></i>
+            </button>
+            <button class="btn btn-danger btn-sm btn-hapus" data-id="' . $l->id . '">
+                <i class="fa fa-trash-alt"></i>
+            </button>
+        ';
+
+            $data[] = $row;
+        }
+
+        echo json_encode([
+            "draw"            => $_POST['draw'],
+            "recordsTotal"    => $this->M_Hrd->count_all_karykm(),
+            "recordsFiltered" => $this->M_Hrd->count_filtered_karykm(),
+            "data"            => $data,
+        ]);
+    }
+
+    public function get_karykm_by_id($id)
+    {
+        $data = $this->db
+            ->get_where('tb_karyawan_keluarmasuk', ['id' => $id])
+            ->row();
+
+        echo json_encode($data);
+    }
+
+    public function hapus_karykm()
+    {
+        $id = $this->input->post('id');
+        $this->db->delete('tb_karyawan_keluarmasuk', ['id' => $id]);
+        echo json_encode(['status' => true]);
+    }
+
 
     // FUNGSI CRUD
     public function tambah_lap_karykm()
@@ -323,6 +438,7 @@ class C_Hrd extends CI_Controller
         $jamkeluar = $this->input->post('jamkeluar');
         $nopol = $this->input->post('nopol');
         $keterangan = $this->input->post('keterangan');
+        $nm_inputer = $this->input->post('nm_inputer');
 
 
         $data = array(
@@ -334,37 +450,36 @@ class C_Hrd extends CI_Controller
             'jamkeluar' => $jamkeluar,
             'nopol' => $nopol,
             'keterangan' => $keterangan,
+            'nm_inputer' => $nm_inputer
 
         );
         $this->M_Hrd->addlapkarykm($data);
         redirect('hrd_lap_Karyawan_KM');
     }
+
     public function edit_lap_karykm()
     {
         $id = $this->input->post('id');
-        $tanggal = $this->input->post('tanggal');
-        $nama = $this->input->post('nama');
-        $departemen = $this->input->post('departemen');
-        $status = $this->input->post('status');
-        $jammasuk = $this->input->post('jammasuk');
-        $jamkeluar = $this->input->post('jamkeluar');
-        $nopol = $this->input->post('nopol');
-        $keterangan = $this->input->post('keterangan');
 
-        $data = array(
-            'id' => $id,
-            'tanggal' => $tanggal,
-            'nama' => $nama,
-            'status' => $status,
-            'departemen' => $departemen,
-            'jammasuk' => $jammasuk,
-            'jamkeluar' => $jamkeluar,
-            'nopol' => $nopol,
-            'keterangan' => $keterangan,
-        );
+        $data = [
+            'tanggal'     => $this->input->post('tanggal'),
+            'nama'        => $this->input->post('nama'),
+            'status'      => $this->input->post('status'),
+            'departemen'  => $this->input->post('departemen'),
+            'jammasuk'    => $this->input->post('jammasuk'),
+            'jamkeluar'   => $this->input->post('jamkeluar'),
+            'nopol'       => $this->input->post('nopol'),
+            'keterangan'  => $this->input->post('keterangan'),
+        ];
+
         $this->M_Hrd->editlapkarykm($id, $data);
-        redirect('hrd_lap_Karyawan_KM');
+
+        echo json_encode([
+            'status' => true
+        ]);
     }
+
+
     public function hapus_lap_karykm()
     {
         $id     = $this->input->post('id_isi');
@@ -383,8 +498,60 @@ class C_Hrd extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/lapexpedisibody.php', $data);
         $this->load->view('partial/main/footer.php');
-        $this->load->view('content/hrd/ajaxhrd.php');
+        $this->load->view('content/hrd/ajaxhrd_lap_expedisi.php');
     }
+
+    public function lap_expedisi_serverside()
+    {
+        $list = $this->M_Hrd->get_datatables_expedisi();
+        $data = [];
+        $no   = $_POST['start'];
+
+        foreach ($list as $l) {
+            $row = [];
+
+            $row[] = $l->tanggal;
+            $row[] = $l->jamkeluar;
+            $row[] = $l->jammasuk;
+            $row[] = $l->nopol;
+            $row[] = $l->namadriver;
+            $row[] = $l->notlpndriver;
+            $row[] = $l->perusahaanpengirim;
+            $row[] = $l->namabarang;
+            $row[] = $l->jumlahbarang;
+            $row[] = $l->keterangan;
+
+            // tombol hanya non LOGISTIK
+            if ($this->session->userdata('departemen') != 'LOGISTIK') {
+                $row[] = '
+                <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
+                    <i class="fa fa-pencil-alt"></i>
+                </button>
+                <button class="btn btn-danger btn-sm btn-hapus" data-id="' . $l->id . '">
+                    <i class="fa fa-trash-alt"></i>
+                </button>
+            ';
+            }
+
+            $data[] = $row;
+        }
+
+        echo json_encode([
+            "draw"            => $_POST['draw'],
+            "recordsTotal"    => $this->M_Hrd->count_all_expedisi(),
+            "recordsFiltered" => $this->M_Hrd->count_filtered_expedisi(),
+            "data"            => $data,
+        ]);
+    }
+
+    public function get_expedisi_by_id($id)
+    {
+        echo json_encode(
+            $this->db->get_where('tb_expedisi', ['id' => $id])->row()
+        );
+    }
+
+
 
     public function kpi_digital()
     {
@@ -424,43 +591,39 @@ class C_Hrd extends CI_Controller
         $this->M_Hrd->addlapexpedisi($data);
         redirect('hrd_lap_expedisi');
     }
+
     public function edit_lap_expedisi()
     {
         $id = $this->input->post('id');
-        $tanggal = $this->input->post('tanggal');
-        $jammasuk = $this->input->post('jammasuk');
-        $jamkeluar = $this->input->post('jamkeluar');
-        $nopol = $this->input->post('nopol');
-        $namadriver = $this->input->post('namadriver');
-        $notlpndriver = $this->input->post('notlpndriver');
-        $perusahaanpengirim = $this->input->post('perusahaanpengirim');
-        $namabarang = $this->input->post('namabarang');
-        $jumlahbarang = $this->input->post('jumlahbarang');
-        $keterangan = $this->input->post('keterangan');
 
-        $data = array(
-            'id' => $id,
-            'tanggal' => $tanggal,
-            'jammasuk' => $jammasuk,
-            'jamkeluar' => $jamkeluar,
-            'nopol' => $nopol,
-            'namadriver' => $namadriver,
-            'notlpndriver' => $notlpndriver,
-            'perusahaanpengirim' => $perusahaanpengirim,
-            'namabarang' => $namabarang,
-            'jumlahbarang' => $jumlahbarang,
-            'keterangan' => $keterangan,
-        );
+        $data = [
+            'tanggal' => $this->input->post('tanggal'),
+            'jammasuk' => $this->input->post('jammasuk'),
+            'jamkeluar' => $this->input->post('jamkeluar'),
+            'nopol' => $this->input->post('nopol'),
+            'namadriver' => $this->input->post('namadriver'),
+            'notlpndriver' => $this->input->post('notlpndriver'),
+            'perusahaanpengirim' => $this->input->post('perusahaanpengirim'),
+            'namabarang' => $this->input->post('namabarang'),
+            'jumlahbarang' => $this->input->post('jumlahbarang'),
+            'keterangan' => $this->input->post('keterangan'),
+        ];
+
         $this->M_Hrd->editlapexpedisi($id, $data);
-        redirect('hrd_lap_expedisi');
+
+        echo json_encode([
+            'status' => true,
+            'message' => 'Data berhasil diperbarui'
+        ]);
     }
+
     public function hapus_lap_expedisi()
     {
-        $id     = $this->input->post('id_isi');
-
-        $this->M_Hrd->hapuslapexpedisi($id);
-        redirect('hrd_lap_expedisi');
+        $id = $this->input->post('id');
+        $this->db->delete('tb_expedisi', ['id' => $id]);
+        echo json_encode(['status' => true]);
     }
+
 
 
     //laporan issue
@@ -749,8 +912,6 @@ class C_Hrd extends CI_Controller
             )
         );
 
-
-
         $excel->setActiveSheetIndex(0)->setCellValue('A1', "Rekap Laporan Keluar Masuk Distribusi");
         $excel->getActiveSheet()->mergeCells('A1:M1');
         $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
@@ -843,6 +1004,258 @@ class C_Hrd extends CI_Controller
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment; filename="laporan_keluar_masuk_distribusi.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+        exit;
+    }
+
+    public function export_data_tamu_all()
+    {
+        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
+        $excel = new PHPExcel();
+        $excel->getProperties()->setCreator('it_karisma')
+            ->setLastModifiedBy('security_hrd_')
+            ->setTitle("Rekap Laporan Tamu")
+            ->setSubject("Rekap Laporan Tamu")
+            ->setDescription("Rekap Laporan Tamu")
+            ->setKeywords("Rekap Laporan Tamu");
+
+        $style_col = array(
+            'font' => array('bold' => true),
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
+
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
+
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "Rekap Laporan Tamu");
+        $excel->getActiveSheet()->mergeCells('A1:K1');
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "TANGGAL");
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "NAMA");
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "PERUSAHAAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', "ALAMAT");
+        $excel->setActiveSheetIndex(0)->setCellValue('F3', "JUMLAH PERSONIL");
+        $excel->setActiveSheetIndex(0)->setCellValue('G3', "TUJUAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('H3', "JAM MASUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('I3', "JAM KELUAR");
+        $excel->setActiveSheetIndex(0)->setCellValue('J3', "KETERANGAN");
+        $excel->setActiveSheetIndex(0)->setCellValue('K3', "INPUTER");
+
+        $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
+
+        $export = $this->M_Hrd->get_all_tamu_lb()->result();
+
+        $no = 1;
+        $numrow = 4;
+        foreach ($export as $data) {
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->tanggal);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->nama);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->perusahaan);
+            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->alamat);
+            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->jumlahpersonil);
+            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->tujuan);
+            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->jammasuk);
+            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->jamkeluar);
+            $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->keterangan);
+            $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->nm_inputer);
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
+            $no++;
+            $numrow++;
+        }
+
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(10);
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(85);
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(35);
+        $excel->getActiveSheet()->getColumnDimension('E')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('F')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('G')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('I')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('J')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('K')->setWidth(15);
+        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        $excel->getActiveSheet(0)->setTitle("Laporan Keluar Masuk Distribusi");
+        $excel->setActiveSheetIndex(0);
+
+        ob_end_clean();
+        ob_start();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="laporan_tamu_loby.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
+        $write->save('php://output');
+        exit;
+    }
+
+    public function export_data_hrd_lap_expedisi()
+    {
+        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
+        $excel = new PHPExcel();
+        $excel->getProperties()->setCreator('it_karisma')
+            ->setLastModifiedBy('security_hrd_')
+            ->setTitle("Rekap Laporan Expedisi")
+            ->setSubject("Rekap Laporan Expedisi")
+            ->setDescription("Rekap Laporan Expedisi")
+            ->setKeywords("Rekap Laporan Expedisi");
+
+        $style_col = array(
+            'font' => array('bold' => true),
+            'alignment' => array(
+                'horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER,
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
+
+        $style_row = array(
+            'alignment' => array(
+                'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER
+            ),
+            'borders' => array(
+                'top' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'right' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'bottom' => array('style'  => PHPExcel_Style_Border::BORDER_THIN),
+                'left' => array('style'  => PHPExcel_Style_Border::BORDER_THIN)
+            )
+        );
+
+        $excel->setActiveSheetIndex(0)->setCellValue('A1', "Rekap Laporan Expedisi");
+        $excel->getActiveSheet()->mergeCells('A1:K1');
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(TRUE);
+        $excel->getActiveSheet()->getStyle('A1')->getFont()->setSize(15);
+        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+
+        $excel->setActiveSheetIndex(0)->setCellValue('A3', "NO");
+        $excel->setActiveSheetIndex(0)->setCellValue('B3', "TANGGAL");
+        $excel->setActiveSheetIndex(0)->setCellValue('C3', "JAM MASUK");
+        $excel->setActiveSheetIndex(0)->setCellValue('D3', "JAM KELUAR");
+        $excel->setActiveSheetIndex(0)->setCellValue('E3', "NOPOL");
+        $excel->setActiveSheetIndex(0)->setCellValue('F3', "NAMA DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('G3', "NO DRIVER");
+        $excel->setActiveSheetIndex(0)->setCellValue('H3', "PERUSAHAAN PENGIRIM");
+        $excel->setActiveSheetIndex(0)->setCellValue('I3', "NAMA BARANG");
+        $excel->setActiveSheetIndex(0)->setCellValue('J3', "JUMLAH BARANG");
+        $excel->setActiveSheetIndex(0)->setCellValue('K3', "KETERANGAN");
+
+        $excel->getActiveSheet()->getStyle('A3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('B3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('C3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('D3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('E3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('F3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('G3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('H3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('I3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
+        $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
+
+        $export = $this->M_Hrd->get_all_laporan_expedisi()->result();
+
+        $no = 1;
+        $numrow = 4;
+        foreach ($export as $data) {
+            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
+            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $data->tanggal);
+            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $data->jammasuk);
+            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $data->jamkeluar);
+            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $data->nopol);
+            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $data->namadriver);
+            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $data->notlpndriver);
+            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $data->perusahaanpengirim);
+            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $data->namabarang);
+            $excel->setActiveSheetIndex(0)->setCellValue('J' . $numrow, $data->jumlahbarang);
+            $excel->setActiveSheetIndex(0)->setCellValue('K' . $numrow, $data->keterangan);
+            $excel->getActiveSheet()->getStyle('A' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('B' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('C' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('D' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('E' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('F' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('G' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('H' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('I' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('J' . $numrow)->applyFromArray($style_row);
+            $excel->getActiveSheet()->getStyle('K' . $numrow)->applyFromArray($style_row);
+            $no++;
+            $numrow++;
+        }
+
+        $excel->getActiveSheet()->getColumnDimension('A')->setWidth(5);
+        $excel->getActiveSheet()->getColumnDimension('B')->setWidth(10);
+        $excel->getActiveSheet()->getColumnDimension('C')->setWidth(85);
+        $excel->getActiveSheet()->getColumnDimension('D')->setWidth(35);
+        $excel->getActiveSheet()->getColumnDimension('E')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('F')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('G')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('H')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('I')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('J')->setWidth(15);
+        $excel->getActiveSheet()->getColumnDimension('K')->setWidth(15);
+        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
+        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
+        $excel->getActiveSheet(0)->setTitle("Laporan Expedisi");
+        $excel->setActiveSheetIndex(0);
+
+        ob_end_clean();
+        ob_start();
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="laporan_expedisi.xlsx"');
         header('Cache-Control: max-age=0');
 
         $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
@@ -985,5 +1398,23 @@ class C_Hrd extends CI_Controller
         );
         //output dalam format JSON
         echo json_encode($output);
+    }
+
+    public function truncate_laporan_distribusi()
+    {
+
+        $this->M_Hrd->truncate_lap_distribusi();
+
+        $this->session->set_flashdata('success', 'Data laporan distribusi berhasil dikosongkan');
+        redirect('hrd_lap_distribusi');
+    }
+
+    public function truncate_laporan_loby()
+    {
+
+        $this->M_Hrd->truncate_lap_tamu();
+
+        $this->session->set_flashdata('success', 'Data laporan distribusi berhasil dikosongkan');
+        redirect('hrd_lap_distribusi');
     }
 }

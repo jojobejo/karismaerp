@@ -153,8 +153,20 @@ $route['edit_karyawan'] = 'hrd/C_Hrd/edit_karyawan';
 $route['add_karyawan'] = 'hrd/C_Hrd/add_karyawan';
 $route['export_laporan_issue'] = 'hrd/C_Hrd/export_laporan_issue';
 $route['ex_lap_kar'] = 'hrd/C_Hrd/export_laporan_karyawan';
-
 $route['export_hrd_lap_distribusi'] = 'hrd/C_Hrd/export_hrd_lap_distribusi';
+
+$route['truncate_laporan_distribusi'] = 'hrd/C_Hrd/truncate_laporan_distribusi';
+$route['lap_tamu_serverside'] = 'hrd/C_Hrd/lap_tamu_serverside';
+$route['get_tamu_by_id/(:any)'] = 'hrd/C_Hrd/get_tamu_by_id/$1';
+$route['export_data_tamu_all'] = 'hrd/C_Hrd/export_data_tamu_all';
+$route['truncate_all_data_tamu'] = 'hrd/C_Hrd/truncate_all_data_tamu';
+$route['lap_karykm_serverside'] = 'hrd/C_Hrd/lap_karykm_serverside';
+$route['get_karykm_by_id/(:any)'] = 'hrd/C_Hrd/get_karykm_by_id/$1';
+$route['hapus_karykm'] = 'hrd/C_Hrd/hapus_karykm';
+$route['lap_expedisi_serverside'] = 'hrd/C_Hrd/lap_expedisi_serverside';
+$route['get_expedisi_by_id/(:any)'] = 'hrd/C_Hrd/get_expedisi_by_id/$1';
+
+$route['export_file_laporan_expedisis'] = 'hrd/C_Hrd/export_data_hrd_lap_expedisi';
 
 //KPI
 $route['dashboardkpi'] = 'kpi/C_Kpi';

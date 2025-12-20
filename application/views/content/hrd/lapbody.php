@@ -69,10 +69,10 @@
                                         <i class="fas fa-file"></i>
                                         Export Data
                                     </a>
-                                    <button type="button" class="btn btn-danger m-2 ml-3">
+                                    <a href="<?= base_url('truncate_laporan_distribusi') ?>" class="btn btn-danger m-2 ml-3">
                                         <i class="fas fa-trash"></i>
                                         Hapus Semua Data
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                             <div class="card-body">

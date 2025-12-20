@@ -4,7 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
  *
  */
 class M_Hrd extends CI_Model
+
 {
+
     public function get_all_laporan()
     {
         return $this->db->query("SELECT a.*
@@ -107,6 +109,7 @@ class M_Hrd extends CI_Model
          FROM tb_expedisi a
          ");
     }
+
     public function addlapexpedisi($data)
     {
         return $this->db->insert('tb_expedisi', $data);
@@ -186,10 +189,10 @@ class M_Hrd extends CI_Model
 
 
 
-    var $table = 'tb_lap_distribusi'; //nama tabel dari database
+    var $table = 'tb_lap_distribusi';
     var $column_order = array('tglkeluar', 'tglmasuk', 'nopol', 'nolambung', 'namadriver', 'namahelper', 'tujuan', 'jamkeluar', 'kmkeluar', 'jammasuk', 'kmmasuk', 'keterangan', 'id'); //field yang ada di table user
-    var $column_search = array('nopol', 'namadriver', 'namahelper', 'tujuan'); //field yang diizin untuk pencarian 
-    var $order = array('id' => 'asc'); // default order 
+    var $column_search = array('nopol', 'namadriver', 'namahelper', 'tujuan');
+    var $order = array('id' => 'asc');
 
     private function _get_datatables_query()
     {
@@ -198,13 +201,10 @@ class M_Hrd extends CI_Model
 
         $i = 0;
 
-        foreach ($this->column_search as $item) // looping awal
-        {
-            if ($_POST['search']['value']) // jika datatable mengirimkan pencarian dengan metode POST
-            {
+        foreach ($this->column_search as $item) {
+            if ($_POST['search']['value']) {
 
-                if ($i === 0) // looping awal
-                {
+                if ($i === 0) {
                     $this->db->group_start();
                     $this->db->like($item, $_POST['search']['value']);
                 } else {
@@ -245,5 +245,209 @@ class M_Hrd extends CI_Model
     {
         $this->db->from($this->table);
         return $this->db->count_all_results();
+    }
+
+    public function truncate_lap_distribusi()
+    {
+        return $this->db->truncate('tb_lap_distribusi');
+    }
+
+    public function truncate_lap_tamu()
+    {
+        return $this->db->truncate('hrd_lap_tamu');
+    }
+
+    var $table1 = 'tb_tamu';
+
+    var $column_order1 = [
+        'tanggal', 'nama', 'perusahaan', 'alamat',
+        'jumlahpersonil', 'tujuan', 'jammasuk', 'jamkeluar',
+        'keterangan', 'nm_inputer'
+    ];
+
+    var $column_search1 = [
+        'nama', 'perusahaan', 'alamat', 'tujuan', 'nm_inputer'
+    ];
+
+    var $order1 = ['id' => 'asc'];
+
+    private function _get_query_tamu()
+    {
+        $this->db->from($this->table1);
+
+        $i = 0;
+        foreach ($this->column_search1 as $item) {
+            if (!empty($_POST['search']['value'])) {
+                if ($i === 0) {
+                    $this->db->group_start();
+                    $this->db->like($item, $_POST['search']['value']);
+                } else {
+                    $this->db->or_like($item, $_POST['search']['value']);
+                }
+
+                if (count($this->column_search1) - 1 == $i) {
+                    $this->db->group_end();
+                }
+            }
+            $i++;
+        }
+
+        if (isset($_POST['order'])) {
+            $this->db->order_by(
+                $this->column_order1[$_POST['order']['0']['column']],
+                $_POST['order']['0']['dir']
+            );
+        } else {
+            $this->db->order_by(
+                key($this->order1),
+                $this->order1[key($this->order1)]
+            );
+        }
+    }
+
+    public function get_datatables_tamu()
+    {
+        $this->_get_query_tamu();
+
+        if ($_POST['length'] != -1) {
+            $this->db->limit($_POST['length'], $_POST['start']);
+        }
+
+        return $this->db->get()->result();
+    }
+
+    public function count_filtered_tamu()
+    {
+        $this->_get_query_tamu();
+        return $this->db->get()->num_rows();
+    }
+
+    public function count_all_tamu()
+    {
+        return $this->db->count_all($this->table1);
+    }
+
+    var $table_karykm = 'tb_karyawan_keluarmasuk';
+
+    var $column_order_karykm = [
+        'tanggal', 'nama', 'departemen', 'status',
+        'jamkeluar', 'jammasuk', 'nopol', 'keterangan'
+    ];
+
+    var $column_search_karykm = [
+        'nama', 'departemen', 'status', 'nopol', 'keterangan'
+    ];
+
+    var $order_karykm = ['id' => 'desc'];
+
+    private function _get_query_karykm()
+    {
+        $this->db->from($this->table_karykm);
+
+        $i = 0;
+        foreach ($this->column_search_karykm as $item) {
+            if (!empty($_POST['search']['value'])) {
+                if ($i === 0) {
+                    $this->db->group_start();
+                    $this->db->like($item, $_POST['search']['value']);
+                } else {
+                    $this->db->or_like($item, $_POST['search']['value']);
+                }
+                if (count($this->column_search_karykm) - 1 == $i) {
+                    $this->db->group_end();
+                }
+            }
+            $i++;
+        }
+
+        if (isset($_POST['order'])) {
+            $this->db->order_by(
+                $this->column_order_karykm[$_POST['order']['0']['column']],
+                $_POST['order']['0']['dir']
+            );
+        } else {
+            $this->db->order_by(
+                key($this->order_karykm),
+                $this->order_karykm[key($this->order_karykm)]
+            );
+        }
+    }
+
+    public function get_datatables_karykm()
+    {
+        $this->_get_query_karykm();
+        if ($_POST['length'] != -1) {
+            $this->db->limit($_POST['length'], $_POST['start']);
+        }
+        return $this->db->get()->result();
+    }
+
+    public function count_filtered_karykm()
+    {
+        $this->_get_query_karykm();
+        return $this->db->get()->num_rows();
+    }
+
+    public function count_all_karykm()
+    {
+        return $this->db->count_all($this->table_karykm);
+    }
+
+    var $table_expedisi = 'tb_expedisi';
+    var $column_order_expedisi = [
+        'tanggal', 'jamkeluar', 'jammasuk', 'nopol', 'namadriver',
+        'notlpndriver', 'perusahaanpengirim', 'namabarang', 'jumlahbarang', 'keterangan'
+    ];
+    var $column_search_expedisi = [
+        'nopol', 'namadriver', 'perusahaanpengirim', 'namabarang'
+    ];
+    var $order_expedisi = ['tanggal' => 'desc'];
+
+    private function _get_query_expedisi()
+    {
+        $this->db->from($this->table_expedisi);
+
+        $i = 0;
+        foreach ($this->column_search_expedisi as $item) {
+            if ($_POST['search']['value']) {
+                if ($i === 0) {
+                    $this->db->group_start();
+                    $this->db->like($item, $_POST['search']['value']);
+                } else {
+                    $this->db->or_like($item, $_POST['search']['value']);
+                }
+                if (count($this->column_search_expedisi) - 1 == $i)
+                    $this->db->group_end();
+            }
+            $i++;
+        }
+
+        if (isset($_POST['order'])) {
+            $this->db->order_by(
+                $this->column_order_expedisi[$_POST['order'][0]['column']],
+                $_POST['order'][0]['dir']
+            );
+        } else {
+            $this->db->order_by(key($this->order_expedisi), $this->order_expedisi[key($this->order_expedisi)]);
+        }
+    }
+
+    public function get_datatables_expedisi()
+    {
+        $this->_get_query_expedisi();
+        if ($_POST['length'] != -1)
+            $this->db->limit($_POST['length'], $_POST['start']);
+        return $this->db->get()->result();
+    }
+
+    public function count_filtered_expedisi()
+    {
+        $this->_get_query_expedisi();
+        return $this->db->get()->num_rows();
+    }
+
+    public function count_all_expedisi()
+    {
+        return $this->db->count_all($this->table_expedisi);
     }
 }
