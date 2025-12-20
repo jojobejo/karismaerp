@@ -30,9 +30,9 @@
                         <div class="col-auto">
                             <a href="<?= base_url('trackingtim/2') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Tracking Stock TIM 2</a>
                         </div> -->
-                        <div class="col-auto">
-                            <a href="<?= base_url('master_barang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Master Barang</a>
-                        </div>
+                        <!-- <div class="col-auto">
+                            <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-tasks"></i> Stock Opname</a>
+                        </div> -->
                         <div class="col-auto">
                             <a href="<?= base_url('compare_opname') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-book-open"></i> Stock Opname Compare</a>
                         </div>
@@ -41,6 +41,9 @@
                         </div>
                         <div class="col-auto">
                             <a href="<?= base_url('request_opname_admin') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-notes-medical"></i> Request Input</a>
+                        </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('final_result') ?>" class="btn btn-md btn-success w-100 mb-3"><i class="fa-solid fa-trophy"></i> Final Result</a>
                         </div>
                     </div>
 

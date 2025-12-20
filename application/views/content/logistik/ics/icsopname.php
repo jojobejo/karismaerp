@@ -136,6 +136,8 @@
                 }
             });
 
+
+
             $('#nama_barang').select2({
                 placeholder: 'Cari nama barang...',
                 ajax: {

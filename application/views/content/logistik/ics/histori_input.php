@@ -13,7 +13,7 @@
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-
+                    <a href="<?= base_url('stockopname') ?>" class="btn btn-md btn-primary mb-2"><i class="fas fa fa-home"></i></a>
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
@@ -26,7 +26,8 @@
                                             <th>Qty</th>
                                             <th>Qty Box</th>
                                             <th>Qty Pcs</th>
-                                            <th>Input At</th>
+                                            <th>#</th>
+                                            <!-- <th style="width: 7%;">#</th> -->
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -37,7 +38,9 @@
                                                 <td><?= $row->qty ?></td>
                                                 <td><?= $row->qty_box ?></td>
                                                 <td><?= $row->qty_pcs ?></td>
-                                                <td><?= $row->input_at ?></td>
+                                                <td style="text-align: center;">
+                                                    <a href="<?= base_url('delete_opname/') . $row->id ?>" class="btn btn-danger"><i class="fas fa-trash"></i></a>
+                                                </td>
                                             </tr>
                                         <?php endforeach ?>
                                     </tbody>

@@ -6,8 +6,6 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class C_Logistik extends CI_Controller
 {
-
-
     function __construct()
     {
         parent::__construct();
@@ -956,22 +954,12 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    public function master_barang()
-    {
-        $data['page_title']     = 'KARISMA - LOGISTIK';
-        $data['master']         = $this->M_Logistik->get_masterbarangall();
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/body_masterbarang.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
     public function create_do()
     {
-        $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['list_faktur'] = $this->M_Logistik->get_data_penjualan_zahir();
-        $data['tmp_faktur'] = $this->M_Logistik->get_tmp_do();
-        $data['generate_do'] = $this->M_Logistik->generate_kd_do();
+        $data['page_title']             = 'KARISMA - LOGISTIK';
+        $data['list_faktur']            = $this->M_Logistik->get_data_penjualan_zahir();
+        $data['tmp_faktur']             = $this->M_Logistik->get_tmp_do();
+        $data['generate_do']            = $this->M_Logistik->generate_kd_do();
         $data['qcount_tonase_kubikasi'] = $this->M_Logistik->get_tonase_kubikasi();
 
         $this->load->view('partial/main/header.php', $data);
@@ -1302,6 +1290,35 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footerprint.php');
     }
 
+    public function print_checker($kd_do)
+    {
+        $query = $this->db->query("SELECT
+            ROW_NUMBER() OVER (ORDER BY a.nama_barang) AS nomor_urut,
+            a.nama_barang,
+            a.no_lot,
+            a.tgl_exp,
+            (b.p*b.l*b.t) AS dimensi,
+            sum(a.qty) AS qty,
+            FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
+            (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
+            FROM tb_detail_do a
+            JOIN tb_master_barang b ON b.kode_barang = a.kd_barang
+            WHERE a.kd_do = '$kd_do'
+            GROUP BY a.kd_barang , a.tgl_exp , a.no_lot");
+
+        $query1 = $this->db->where('kd_do', $kd_do)->limit(1)->get('tb_detail_do');
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['kdo'] = $query1->result();
+        $data['dostatus'] = $query2->result();
+        $data['data_list'] = $query->result();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/printout_checker.php', $data);
+        $this->load->view('partial/main/footerprint.php');
+    }
+
     public function get_driver()
     {
         $data = $this->M_Logistik->select_driver();
@@ -1371,6 +1388,7 @@ class C_Logistik extends CI_Controller
                 break;
 
             case 'formlist':
+
                 date_default_timezone_set("Asia/Jakarta");
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
                 $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
@@ -1719,10 +1737,18 @@ class C_Logistik extends CI_Controller
 
         switch ($action) {
             case 'allbarang':
-                $data['page_title'] = 'Opname Detail Inputer';
-                $data['list1']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
-                $data['list2']      = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
-                $data['nmbarang']   = $this->M_Logistik->get_nmbarang($kdbarang);
+                $data['page_title']     = 'Opname Detail Inputer';
+                $data['list1']          = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim1);
+                $data['list2']          = $this->M_Logistik->list_inputer_by_expdate($kdbarang, $tim2);
+                $data['detailqtyt1']    = $this->M_Logistik->detail_opname_barang($kdbarang, $tim1);
+                $data['detailqtyt2']    = $this->M_Logistik->detail_opname_barang($kdbarang, $tim2);
+                $data['nmbarang']       = $this->M_Logistik->get_nmbarang($kdbarang);
+                $data['opnametodo']     = $this->M_Logistik->getallopnametodo($kdbarang);
+                $data['result_1']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim1);
+                $data['result_2']       = $this->M_Logistik->rekapopnamebarang($kdbarang, $tim2);
+                $data['countreq1']      = $this->M_Logistik->countrequseropname($kdbarang, $tim1);
+                $data['countreq2']      = $this->M_Logistik->countrequseropname($kdbarang, $tim2);
+                $data['kdbarang']       = $kdbarang;
 
                 $this->load->view('partial/main/header.php', $data);
                 $this->load->view('content/logistik/ics/detail_tracking.php', $data);
@@ -1732,14 +1758,73 @@ class C_Logistik extends CI_Controller
         }
     }
 
+    public function final_result_opname()
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+
+        $result_t1 = $this->M_Logistik->final_opname_allbarang_statis();
+        $resultexp_t1 = $this->M_Logistik->final_opname_expdate_statis();
+
+        $res_t1 = $result_t1[0];
+        $resexp_t1 = $resultexp_t1[0];
+
+        $data['stat_t1'] = [
+            'total_barang'   => $res_t1->total_barang,
+            'total_match'    => $res_t1->total_match,
+            'total_notmatch' => $res_t1->total_notmatch,
+            'persen_match'   => $res_t1->total_barang > 0 ? round(($res_t1->total_match / $res_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $res_t1->total_barang > 0 ? round(($res_t1->total_notmatch / $res_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['statexp_t1'] = [
+            'total_barang'   => $resexp_t1->total_barang,
+            'total_match'    => $resexp_t1->total_match,
+            'total_notmatch' => $resexp_t1->total_notmatch,
+            'persen_match'   => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_match / $resexp_t1->total_barang) * 100, 2) : 0,
+            'persen_notmatch' => $resexp_t1->total_barang > 0 ? round(($resexp_t1->total_notmatch / $resexp_t1->total_barang) * 100, 2) : 0
+        ];
+
+        $data['all_t1'] = $result_t1;
+        $data['allexp_t1'] = $resultexp_t1;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/final_result.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function data_final_input_opname()
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['listallbarang']      = $this->M_Logistik->list_final_data();
+        $data['fefo_final']         = $this->M_Logistik->list_final_datafefo();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/final_data.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
     public function compare_opname()
     {
         $data['page_title']         = 'KARISMA - ICS';
         $data['allbarang']          = $this->M_Logistik->admin_compareuser_all();
         $data['expired_date']       = $this->M_Logistik->admin_compareuser_exp();
+        $data['wilayah']            = $this->M_Logistik->get_wilayah();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/compare_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function compare_wilayah($id)
+    {
+        $data['page_title']         = 'KARISMA - ICS';
+        $data['list']               = $this->M_Logistik->list_opname_user_wilayah($id);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/compare_wilayah.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
@@ -1751,6 +1836,17 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/brpending_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
+    }
+
+    public function cek_req_user_opname($kdbarang, $tim)
+    {
+        $data['page_title']     = 'KARISMA - OPNNAME';
+        $data['request']        = $this->M_Logistik->getreqbr_opname($kdbarang, $tim);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/request_user_opname.php', $data);
         $this->load->view('partial/main/footer.php');
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
@@ -1851,6 +1947,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
+            'wilayah'       => $this->session->userdata('wilayah'),
             'input_at'      => date('d/m/Y')
         ];
 
@@ -1908,7 +2005,6 @@ class C_Logistik extends CI_Controller
         redirect('detailtrack/' . $kdbarang . '/allbarang');
     }
 
-
     public function request_opname()
     {
         $nmbarang   = $this->input->post('nama_barang');
@@ -1926,6 +2022,7 @@ class C_Logistik extends CI_Controller
             'qty_pcs'       => $pcs,
             'inputer'       => $this->session->userdata('nama'),
             'tim'           => $this->session->userdata('tim'),
+            'wilayah'       => $this->session->userdata('wilayah'),
             'status'        => '1',
             'acc_with'      => '-',
             'input_at'      => date('d/m/Y')
@@ -1973,6 +2070,7 @@ class C_Logistik extends CI_Controller
                 'qty_pcs'     => $req->qty_pcs,
                 'inputer'     => $req->inputer,
                 'tim'         => $req->tim,
+                'wilayah'     => $req->wilayah,
                 'input_at'    => date('d/m/Y')
             );
 
@@ -2059,6 +2157,33 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
+    public function delete_opname($id)
+    {
+        $getdataopname = $this->M_Logistik->getdataopname($id);
+
+        if (!$getdataopname) {
+            redirect('usropname_input');
+            return;
+        }
+
+        $log = [
+            'nama_user'   => $getdataopname->inputer,
+            'nama_barang' => $getdataopname->nama_barang,
+            'qty'         => $getdataopname->qty,
+            'qty_box'     => $getdataopname->qty_box,
+            'qty_pcs'     => $getdataopname->qty_pcs,
+            'no_lot'      => '-',
+            'exp_date'    => $getdataopname->exp_date,
+            'keterangan'  => 'Delete User Opname',
+            'inputer'     => $this->session->userdata('nik'),
+            'tgl_input'   => date('d/m/Y')
+        ];
+
+        $this->db->insert('tb_log_ics', $log);
+        $this->M_Logistik->deleteopnameinputuser($id);
+        redirect('usropname_input');
+    }
+
     // public function export_compare_allbarang()
     // {
 
@@ -2094,4 +2219,5 @@ class C_Logistik extends CI_Controller
     //     $writer->save('php://output');
     //     exit;
     // }
+
 }

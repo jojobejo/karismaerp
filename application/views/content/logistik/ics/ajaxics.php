@@ -36,6 +36,12 @@
             "aaSorting": [],
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+        $("#tb_dash_allbarang2").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
         $("#tb_timby_expdate").DataTable({
             "responsive": true,
             "lengthChange": false,
@@ -97,6 +103,33 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
         $("#dtrequest_opname").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+        $("#tbopnametodo").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#tbdetailwilyah").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#finalist").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
+        $("#finalqtyexp").DataTable({
             "responsive": true,
             "lengthChange": false,
             "aaSorting": [],
