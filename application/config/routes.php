@@ -154,6 +154,8 @@ $route['add_karyawan'] = 'hrd/C_Hrd/add_karyawan';
 $route['export_laporan_issue'] = 'hrd/C_Hrd/export_laporan_issue';
 $route['ex_lap_kar'] = 'hrd/C_Hrd/export_laporan_karyawan';
 
+$route['export_hrd_lap_distribusi'] = 'hrd/C_Hrd/export_hrd_lap_distribusi';
+
 //KPI
 $route['dashboardkpi'] = 'kpi/C_Kpi';
 $route['dashboardkpiwhat'] = 'kpi/C_Kpi/what';

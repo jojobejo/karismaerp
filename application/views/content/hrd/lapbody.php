@@ -65,6 +65,14 @@
                                         <i class="fas fa-pen"></i>
                                         Cari Data
                                     </button>
+                                    <a href="<?= base_url('export_hrd_lap_distribusi') ?>" class="btn btn-success m-2 ml-3">
+                                        <i class="fas fa-file"></i>
+                                        Export Data
+                                    </a>
+                                    <button type="button" class="btn btn-danger m-2 ml-3">
+                                        <i class="fas fa-trash"></i>
+                                        Hapus Semua Data
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -128,7 +136,7 @@
                                         </form>
                                     </div>
                                 </div>
-                              
+
                                 <div class="card-body">
                                     <table id="tb_lap_distribusia" class="table table-bordered table-striped">
                                         <thead>
