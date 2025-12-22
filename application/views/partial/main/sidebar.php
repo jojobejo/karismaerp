@@ -230,6 +230,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('hrd_lap_paket_pos') ?>" class="nav-link">
+                <i class="nav-icon fa fa-box"></i>
+                <p>
+                  Laporan Penerimaan Paket
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('hrd_lap_issue') ?>" class="nav-link">
                 <i class="nav-icon fa fa-exclamation-triangle"></i>
                 <p>

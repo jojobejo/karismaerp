@@ -165,8 +165,15 @@ $route['get_karykm_by_id/(:any)'] = 'hrd/C_Hrd/get_karykm_by_id/$1';
 $route['hapus_karykm'] = 'hrd/C_Hrd/hapus_karykm';
 $route['lap_expedisi_serverside'] = 'hrd/C_Hrd/lap_expedisi_serverside';
 $route['get_expedisi_by_id/(:any)'] = 'hrd/C_Hrd/get_expedisi_by_id/$1';
-
 $route['export_file_laporan_expedisis'] = 'hrd/C_Hrd/export_data_hrd_lap_expedisi';
+
+$route['hrd_lap_paket_pos'] = 'hrd/C_Hrd/hrd_lap_penerimaan_pos';
+$route['lap_penerimaan_pos_serverside'] = 'hrd/C_Hrd/lap_penerimaan_pos_serverside';
+$route['tambah_penerimaan_paket'] = 'hrd/C_Hrd/tambah_penerimaan_paket';
+$route['konfirmasi_penerimaan_paket'] = 'hrd/C_Hrd/konfirmasi_penerimaan_paket';
+$route['get_paket_by_id/(:any)'] = 'hrd/C_Hrd/get_paket_by_id/$1';
+$route['edit_penerimaan_paket'] = 'hrd/C_Hrd/edit_penerimaan_paket';
+$route['hapus_penerimaan_paket'] = 'hrd/C_Hrd/hapus_penerimaan_paket';
 
 //KPI
 $route['dashboardkpi'] = 'kpi/C_Kpi';

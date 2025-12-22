@@ -1417,4 +1417,180 @@ class C_Hrd extends CI_Controller
         $this->session->set_flashdata('success', 'Data laporan distribusi berhasil dikosongkan');
         redirect('hrd_lap_distribusi');
     }
+
+    public function hrd_lap_penerimaan_pos()
+    {
+        $data['page_title'] = 'Penerimaan POS Paket';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/hrd/getpostpaket.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/hrd/ajaxhrd_pospaket.php');
+    }
+
+    public function lap_penerimaan_pos_serverside()
+    {
+        $list = $this->M_Hrd->get_datatables_get_pos_paket();
+        $data = [];
+
+        foreach ($list as $l) {
+            $row = [];
+
+            // ===== STATUS =====
+            $status_label = ($l->status == 1)
+                ? '<span class="badge badge-success">TELAH DIKONFIRMASI</span>'
+                : '<span class="badge badge-secondary">BELUM DIKONFIRMASI</span>';
+
+            // ===== MAPPING PENERIMA =====
+            switch ($l->kd_penerima) {
+                case 'IKA':
+                case 'SUPRI':
+                    $penerima_raw = 'KEUANGAN';
+                    break;
+
+                case 'LADY':
+                    $penerima_raw = 'PURCHASING';
+                    break;
+
+                default:
+                    $penerima_raw = $l->kd_penerima;
+                    break;
+            }
+
+            // ===== BADGE PENERIMA =====
+            if ($penerima_raw === 'KEUANGAN') {
+                $penerima = '<span class="badge badge-primary">KEUANGAN</span>';
+            } else {
+                $penerima = '<span class="badge badge-info">' . $penerima_raw . '</span>';
+            }
+
+            $row[] = $l->tanggal;
+            $row[] = $l->kd_penerima;
+            $row[] = $penerima;
+            $row[] = $l->keterangan_1;
+            $row[] = $l->tanggal_terima_1;
+            $row[] = $l->tanggal_terima_2;
+            $row[] = $l->jam_terima_1;
+            $row[] = $l->jam_terima_2;
+            $row[] = $status_label;
+
+            $row[] = '
+            <button class="btn btn-success btn-sm btn-konfirmasi"
+                data-toggle="modal"
+                data-target="#modalKonfirmasi"
+                data-id="' . $l->id . '">
+                <i class="fa fa-check"></i>
+            </button>
+
+            <button class="btn btn-warning btn-sm btn-edit"
+                data-id="' . $l->id . '">
+                <i class="fa fa-edit"></i>
+            </button>
+
+            <button class="btn btn-danger btn-sm btn-hapus"
+                data-id="' . $l->id . '">
+                <i class="fa fa-trash"></i>
+            </button>
+        ';
+
+            $data[] = $row;
+        }
+
+        echo json_encode([
+            "draw"            => intval($_POST['draw']),
+            "recordsTotal"    => $this->M_Hrd->count_all_pos_paket(),
+            "recordsFiltered" => $this->M_Hrd->count_filtered_pos_paket(),
+            "data"            => $data,
+        ]);
+    }
+
+
+
+    public function get_paket_by_id($id)
+    {
+        $data = $this->M_Hrd->get_paket_by_id($id);
+        echo json_encode($data);
+    }
+
+    public function edit_penerimaan_paket()
+    {
+        $id = $this->input->post('id');
+
+        $data = [
+            'tanggal'          => $this->input->post('tanggal'),
+            'kd_penerima'      => $this->input->post('kd_penerima'),
+            'keterangan_1'     => $this->input->post('keterangan_1'),
+            'tanggal_terima_1' => $this->input->post('tanggal_terima_1'),
+            'jam_terima_1'     => $this->input->post('jam_terima_1'),
+        ];
+
+        $this->M_Hrd->update_penerimaan_paket($id, $data);
+        echo json_encode(['status' => true]);
+    }
+
+    public function hapus_penerimaan_paket()
+    {
+        $id = $this->input->post('id');
+
+        if (!$id) {
+            echo json_encode(['status' => false]);
+            return;
+        }
+
+        $delete = $this->M_Hrd->hapus_penerimaan_paket($id);
+
+        echo json_encode([
+            'status' => $delete ? true : false
+        ]);
+    }
+
+    public function tambah_penerimaan_paket()
+    {
+        $data = [
+            'tanggal'            => $this->input->post('tanggal'),
+            'kd_penerima'        => $this->input->post('kd_penerima'),
+            'keterangan_1'       => $this->input->post('keterangan_1'),
+            'tanggal_terima_1'   => $this->input->post('tanggal_terima_1'),
+            'tanggal_terima_2'   => $this->input->post('tanggal_terima_2'),
+            'jam_terima_1'       => $this->input->post('jam_terima_1'),
+            'jam_terima_2'       => $this->input->post('jam_terima_2'),
+            'status'             => 'BELUM DITERIMA',
+            'inputer'            => $this->input->post('inputer'),
+        ];
+
+        if (
+            empty($data['tanggal']) ||
+            empty($data['kd_penerima']) ||
+            empty($data['keterangan_1']) ||
+            empty($data['status']) ||
+            empty($data['inputer'])
+        ) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Field wajib belum lengkap'
+            ]);
+            return;
+        }
+
+        $this->M_Hrd->insert_penerimaan_paket($data);
+
+        echo json_encode([
+            'status' => true,
+            'message' => 'Data penerimaan paket berhasil disimpan'
+        ]);
+    }
+
+    public function konfirmasi_penerimaan_paket()
+    {
+        $id = $this->input->post('id');
+
+        $data = [
+            'tanggal_terima_2' => $this->input->post('tanggal_terima_2'),
+            'jam_terima_2'     => $this->input->post('jam_terima_2'),
+            'status'           => 'DITERIMA'
+        ];
+
+        $this->M_Hrd->update_penerimaan_paket($id, $data);
+        redirect('hrd_lap_paket_pos');
+    }
 }
