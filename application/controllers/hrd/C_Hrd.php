@@ -1078,7 +1078,7 @@ class C_Hrd extends CI_Controller
         $excel->getActiveSheet()->getStyle('J3')->applyFromArray($style_col);
         $excel->getActiveSheet()->getStyle('K3')->applyFromArray($style_col);
 
-        $export = $this->M_Hrd->get_all_tamu_lb()->result();
+        $export = $this->M_Hrd->get_all_tamu()->result();
 
         $no = 1;
         $numrow = 4;

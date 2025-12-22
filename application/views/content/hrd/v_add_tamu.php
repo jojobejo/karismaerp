@@ -71,7 +71,7 @@
                                 <div class="form-group">
                                     <div class="row">
                                         <label class="col-sm-3 control-label text-right" for="id_bar">Nama Inputer<span class="required">*</span></label>
-                                        <div class="col-sm-8"><input class="form-control" type="text" id="nm_inputer" name="nm_inputer" value="" /></div>
+                                        <div class="col-sm-8"><input class="form-control" type="text" id="nm_inputer" name="nm_inputer" value="" required /></div>
                                     </div>
                                 </div>
                             </div>
