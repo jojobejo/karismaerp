@@ -71,7 +71,7 @@
     $('#tb_penerimaan_pos').on('click', '.btn-hapus', function() {
         let id = $(this).data('id');
 
-        console.log('ID HAPUS:', id); // debugging sanity check
+        console.log('ID HAPUS:', id);
 
         $('#hapus_id').val(id);
         $('#modalHapus').modal('show');
@@ -107,6 +107,24 @@
 
 
     $('#modalKonfirmasi').on('show.bs.modal', function(e) {
-        $('#konfirmasi_id').val($(e.relatedTarget).data('id'));
+        // Ambil ID dari tombol
+        const id = $(e.relatedTarget).data('id');
+        $('#konfirmasi_id').val(id);
+
+        const now = new Date();
+
+        // ===== TANGGAL (YYYY-MM-DD) =====
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const today = `${year}-${month}-${day}`;
+
+        // ===== JAM (HH.MM) =====
+        const hour = now.getHours();
+        const minute = String(now.getMinutes()).padStart(2, '0');
+        const jamFix = `${hour}.${minute}`;
+
+        $('#konfirmasi_tanggal').val(today);
+        $('#konfirmasi_jam').val(jamFix);
     });
 </script>

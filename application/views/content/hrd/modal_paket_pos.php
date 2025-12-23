@@ -15,17 +15,16 @@
                             <label>Tanggal</label>
                             <input type="date" name="tanggal" class="form-control" required>
                         </div>
-
                         <div class="col-md-6">
                             <label>Penerima</label>
                             <select name="kd_penerima" class="form-control" required>
                                 <option value="">-- Pilih --</option>
-                                <option value="SUPRI">SUPRI</option>
+                                <option value="SUPRIYANTO">SUPRI</option>
                                 <option value="LADY">LADY</option>
                                 <option value="IKA">IKA</option>
+                                <option value="TRI">TRI</option>
                             </select>
                         </div>
-
                     </div>
 
                     <div class="row mt-2">
@@ -89,12 +88,12 @@
 
                     <div class="form-group">
                         <label>Tanggal Diterima Penerima</label>
-                        <input type="date" name="tanggal_terima_2" class="form-control" required>
+                        <input type="date" name="tanggal_terima_2" id="konfirmasi_tanggal" class="form-control" readonly>
                     </div>
 
                     <div class="form-group">
                         <label>Jam Konfirmasi</label>
-                        <input type="text" name="jam_terima_2" class="form-control" required>
+                        <input type="text" name="jam_terima_2" id="konfirmasi_jam" class="form-control" readonly>
                     </div>
                 </div>
 
@@ -108,6 +107,7 @@
         </div>
     </div>
 </div>
+
 
 <div class="modal fade" id="modalHapus">
     <div class="modal-dialog modal-sm">

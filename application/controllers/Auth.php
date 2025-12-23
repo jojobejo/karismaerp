@@ -36,8 +36,14 @@ class Auth extends CI_Controller
                         'departemen'  => $key->departemen,
                         'status'      => "is_login"
                     );
-                    $this->session->set_userdata($data_session);
-                    redirect('dashboard');
+
+                    if ($key->departemen == 'KEUANGAN') {
+                        $this->session->set_userdata($data_session);
+                        redirect('hrd_lap_paket_pos');
+                    } else {
+                        $this->session->set_userdata($data_session);
+                        redirect('dashboard');
+                    }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
                     redirect('Auth');

@@ -475,24 +475,35 @@ class M_Hrd extends CI_Model
 
     var $order_pos = ['tanggal' => 'desc'];
 
-    private function _get_datatables_query_pos()
+    private function _get_datatables_query_pos($user)
     {
         $this->db->from($this->table_pos);
 
-        $i = 0;
-        foreach ($this->column_search_pos as $item) {
-            if ($_POST['search']['value']) {
-                if ($i === 0) {
-                    $this->db->group_start();
-                    $this->db->like($item, $_POST['search']['value']);
-                } else {
-                    $this->db->or_like($item, $_POST['search']['value']);
-                }
-                if (count($this->column_search_pos) - 1 == $i) {
-                    $this->db->group_end();
-                }
-            }
-            $i++;
+        switch ($user) {
+            case 'SUPRIYANTO':
+                $this->db->where('kd_penerima', 'SUPRIYANTO');
+                break;
+            case 'TRI':
+                $this->db->where('kd_penerima', 'TRI');
+                break;
+            case 'IKA':
+                $this->db->where('kd_penerima', 'IKA');
+                break;
+
+            case 'LADY':
+                $this->db->where('kd_penerima', 'LADY');
+                break;
+
+            default:
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY']);
+                break;
+        }
+
+        if (!empty($_POST['search']['value'])) {
+            $this->db->group_start();
+            $this->db->like('keterangan_1', $_POST['search']['value']);
+            $this->db->or_like('kd_penerima', $_POST['search']['value']);
+            $this->db->group_end();
         }
 
         if (isset($_POST['order'])) {
@@ -501,29 +512,35 @@ class M_Hrd extends CI_Model
                 $_POST['order'][0]['dir']
             );
         } else {
-            $this->db->order_by(key($this->order_pos), $this->order_pos[key($this->order_pos)]);
+            $this->db->order_by('tanggal', 'DESC');
         }
     }
 
-    public function get_datatables_get_pos_paket()
+
+    public function get_datatables_get_pos_paket($user)
     {
-        $this->_get_datatables_query_pos();
+        $this->_get_datatables_query_pos($user);
+
         if ($_POST['length'] != -1) {
             $this->db->limit($_POST['length'], $_POST['start']);
         }
+
         return $this->db->get()->result();
     }
 
-    public function count_filtered_pos_paket()
+
+    public function count_all_pos_paket($user)
     {
-        $this->_get_datatables_query_pos();
+        $this->_get_datatables_query_pos($user);
+        return $this->db->count_all_results();
+    }
+
+    public function count_filtered_pos_paket($user)
+    {
+        $this->_get_datatables_query_pos($user);
         return $this->db->get()->num_rows();
     }
 
-    public function count_all_pos_paket()
-    {
-        return $this->db->count_all($this->table_pos);
-    }
 
     public function insert_penerimaan_paket($data)
     {
@@ -550,5 +567,198 @@ class M_Hrd extends CI_Model
         $this->db->delete('tb_terima_paket');
 
         return $this->db->affected_rows();
+    }
+
+    public function insert_header_checklist_kendaraan($data)
+    {
+        $this->db->insert('tb_checklist_kendaraan', $data);
+        return $this->db->insert_id();
+    }
+
+    public function insert_detail_checklist_kendaraan($data)
+    {
+        return $this->db->insert('tb_checklist_kendaraan_detail', $data);
+    }
+
+    public function get_master_parts_checklist_kendaraan()
+    {
+        return [
+            'KABIN' => [
+                'Kaca Depan', 'Kaca Samping L/R', 'Wipper', 'Pintu L/R',
+                'Handle Pintu L/R', 'Talang Air', 'Lampu-lampu', 'Body',
+                'Grill', 'Spion L/R', 'Roda Depan', 'Lain-lain'
+            ],
+            'BOX/BACK' => [
+                'Box Bagian Luar', 'Box Bagian Dalam', 'Pintu Box Belakang',
+                'Pintu Box Samping', 'Accu', 'Lampu-lampu', 'Tangki BBM + Tutup',
+                'Gembok', 'Ban Belakang', 'Ban Serep',
+                'Kebersihan Dalam', 'Kebersihan Luar'
+            ]
+        ];
+    }
+
+    public function get_laporan_checklist_kendaraan($filter)
+    {
+        $this->db->select('
+            h.id,
+            h.tanggal_check,
+            h.driver,
+            h.nopol,
+            h.no_lambung,
+            h.kilometer,
+            SUM(CASE WHEN d.kondisi = "TIDAK BAIK" THEN 1 ELSE 0 END) AS total_tidak_baik
+        ');
+        $this->db->from('tb_checklist_kendaraan h');
+        $this->db->join('tb_checklist_kendaraan_detail d', 'd.checklist_id = h.id', 'left');
+        $this->db->group_by('h.id');
+
+        if (!empty($filter['tanggal_awal'])) {
+            $this->db->where('h.tanggal_check >=', $filter['tanggal_awal']);
+        }
+
+        if (!empty($filter['tanggal_akhir'])) {
+            $this->db->where('h.tanggal_check <=', $filter['tanggal_akhir']);
+        }
+
+        if (!empty($filter['nopol'])) {
+            $this->db->like('h.nopol', $filter['nopol']);
+        }
+
+        if (!empty($filter['driver'])) {
+            $this->db->like('h.driver', $filter['driver']);
+        }
+
+        return $this->db->get()->result();
+    }
+
+    public function get_detail_checklist($checklist_id)
+    {
+        return $this->db
+            ->where('checklist_id', $checklist_id)
+            ->get('tb_checklist_kendaraan_detail')
+            ->result();
+    }
+
+    var $table_checklist_kendaraan = 'tb_checklist_kendaraan h';
+
+    var $column_order_checklist_kendaraan = [
+        null,
+        'tanggal_check',
+        'driver',
+        'nopol',
+        'no_lambung',
+        'kilometer',
+        null,
+        null
+    ];
+
+    var $column_search_checklist_kendaraan = [
+        'driver',
+        'nopol',
+        'no_lambung'
+    ];
+
+    var $order_checklist_kendaraan = ['tanggal_check' => 'desc'];
+
+    private function _get_datatables_query_checklist_kendaraan()
+    {
+        $this->db->select('
+            h.id,
+            h.tanggal_check,
+            h.driver,
+            h.nopol,
+            h.no_lambung,
+            h.kilometer,
+            SUM(CASE WHEN d.kondisi = "TIDAK BAIK" THEN 1 ELSE 0 END) AS total_tidak_baik
+        ');
+        $this->db->from($this->table_checklist_kendaraan);
+        $this->db->join(
+            'tb_checklist_kendaraan_detail d',
+            'd.checklist_id = h.id',
+            'left'
+        );
+        $this->db->group_by('h.id');
+
+        if (!empty($_POST['search']['value'])) {
+            $this->db->group_start();
+            foreach ($this->column_search_checklist_kendaraan as $item) {
+                $this->db->or_like($item, $_POST['search']['value']);
+            }
+            $this->db->group_end();
+        }
+
+        if (isset($_POST['order'])) {
+            $this->db->order_by(
+                $this->column_order_checklist_kendaraan[$_POST['order'][0]['column']],
+                $_POST['order'][0]['dir']
+            );
+        } else {
+            $this->db->order_by(
+                key($this->order_checklist_kendaraan),
+                $this->order_checklist_kendaraan[key($this->order_checklist_kendaraan)]
+            );
+        }
+    }
+
+    public function get_datatables_checklist_kendaraan()
+    {
+        $this->_get_datatables_query_checklist_kendaraan();
+        if ($_POST['length'] != -1)
+            $this->db->limit($_POST['length'], $_POST['start']);
+
+        return $this->db->get()->result();
+    }
+
+    public function count_filtered_checklist_kendaraan()
+    {
+        $this->_get_datatables_query_checklist_kendaraan();
+        return $this->db->get()->num_rows();
+    }
+
+    public function count_all_checklist_kendaraan()
+    {
+        return $this->db
+            ->from($this->table_checklist_kendaraan)
+            ->count_all_results();
+    }
+
+    public function get_checklist_header($id)
+    {
+        return $this->db
+            ->where('id', $id)
+            ->get('tb_checklist_kendaraan')
+            ->row();
+    }
+
+    public function get_checklist_detail_grouped($id)
+    {
+        $query = $this->db
+            ->where('checklist_id', $id)
+            ->order_by('kategori, nama_part')
+            ->get('tb_checklist_kendaraan_detail')
+            ->result();
+
+        $grouped = [];
+        foreach ($query as $row) {
+            $grouped[$row->kategori][] = $row;
+        }
+
+        return $grouped;
+    }
+
+    public function get_exported_checklist_kendaraan()
+    {
+        return $this->db->query("SELECT
+            h.id,
+            h.tanggal_check,
+            h.nopol,
+            h.driver,
+            COUNT(DISTINCT d.kategori) AS total_kategori,
+            COUNT(d.id) AS total_part,
+            SUM(CASE WHEN d.kondisi = 'BAIK' THEN 1 ELSE 0 END) AS total_baik,
+            SUM(CASE WHEN d.kondisi = 'TIDAK BAIK' THEN 1 ELSE 0 END) AS total_tidak_baik
+        FROM tb_checklist_kendaraan h
+        LEFT JOIN tb_checklist_kendaraan_detail d ON d.checklist_id = h.id
+        GROUP BY h.id;")->result();
     }
 }
