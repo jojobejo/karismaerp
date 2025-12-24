@@ -99,7 +99,7 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper m-5">
         <?php foreach ($dostatus as $d) : ?>
-            <div class="header-title">FAKTUR DELIVERY ORDER</div>
+            <div class="header-title"><?= $d->regional ?></div>
             <div class="info-faktur">
                 <?php foreach ($doprintsts as $print) :
                     $tonase = ($print->total_tonase_faktur / 1000);
@@ -110,10 +110,6 @@
                     <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
                     <div>Driver : <?= htmlspecialchars($driver) ?></div>
                     <div>No Lambung : <?= htmlspecialchars($plat) ?></div>
-                    <div>Total Customer : <?= $print->totalfaktur ?></div>
-                    <div>Total Barang : <?= $print->total_barang ?></div>
-                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) || ' . $tonase . ' (Ton)' ?></div>
-                    <div>Kubikasi : <?= $print->total_kubikasi . ' (m³) ' ?></div>
                 <?php endforeach; ?>
             </div>
 

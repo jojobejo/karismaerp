@@ -111,6 +111,9 @@ $route['ics/import_csv']                            = 'logistik/C_Ics/import_csv
 $route['ics/sc_do_by_date_range']                   = 'logistik/C_Ics/sc_do_by_date_range';
 $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator_operan';
 
+$route['ics/gudang']                                = 'logistik/C_Ics/master_gudang';
+$route['ics/gudang_list']                           = 'logistik/C_Ics/gudang_list';
+
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 
@@ -163,6 +166,8 @@ $route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detai
 $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
+
+$route['faktur_bintang']                            = 'logistik/C_Logistik/faktur_bintang';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
 

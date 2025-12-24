@@ -187,6 +187,24 @@
       "autoWidth": false,
       "responsive": true,
     });
+    $('#tbfakturbintang').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
+    $('#forminputer').DataTable({
+      "paging": true,
+      "lengthChange": false,
+      "searching": true,
+      "ordering": false,
+      "info": true,
+      "autoWidth": false,
+      "responsive": true,
+    });
     $('#tbDashboardLogistik').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -278,7 +296,49 @@
 </script>
 
 <script>
+  $(function() {
+    $('#tableGudang').DataTable({
+      processing: true,
+      serverSide: true,
+      ajax: {
+        url: "<?= base_url('ics/gudang_list') ?>",
+        type: "POST"
+      },
+      columns: [{
+          data: null,
+          render: (d, t, r, m) => m.row + m.settings._iDisplayStart + 1
+        },
+        {
+          data: "nama_gudang"
+        },
+        {
+          data: "tipe"
+        },
+        {
+          data: null,
+          render: function(row) {
+            return `
+                    <button class="btn btn-sm btn-info btn-wilayah" data-id="${row.id_gudang}">
+                        Wilayah
+                    </button>
+                    <button class="btn btn-sm btn-danger">
+                        Hapus
+                    </button>`;
+          }
+        }
+      ]
+    });
+  });
+</script>
 
+<script>
+  $('#formGudang').submit(function(e) {
+    e.preventDefault();
+    $.post("<?= base_url('ics/gudang_save') ?>", $(this).serialize(), function() {
+      $('#modalGudang').modal('hide');
+      $('#tableGudang').DataTable().ajax.reload();
+    });
+  });
 </script>
 
 

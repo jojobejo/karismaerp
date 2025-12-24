@@ -213,7 +213,7 @@
                                                     <div class="row">
                                                         <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                                                         <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formlist' ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
-                                                        <a href="#" class="btn btn-warning btn-block btn-sm btn-open-mbarang" data-id="<?= $l->kd_faktur ?>"><i class="fas fa-hourglass-half"></i></a>
+                                                        <!-- <a href="#" class="btn btn-warning btn-block btn-sm btn-open-mbarang" data-id="<?= $l->kd_faktur ?>"><i class="fas fa-hourglass-half"></i></a> -->
                                                     </div>
                                                 </td>
                                             <?php elseif ($status == 2) : ?>
@@ -223,13 +223,13 @@
                                                         <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                                                     </div>
                                                 </td>
-                                            <?php elseif ($status == 4) : ?>
+                                                <!-- <?php elseif ($status == 4) : ?>
                                                 <td><span class="badge badge-warning">FAKTUR PENDING</span></td>
                                                 <td>
                                                     <div class="row">
                                                         <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                                                     </div>
-                                                </td>
+                                                </td> -->
                                             <?php endif; ?>
                                         </tr>
                                     <?php endforeach; ?>

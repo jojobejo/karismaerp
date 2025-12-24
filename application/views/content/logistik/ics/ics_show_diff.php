@@ -48,6 +48,9 @@
                                     <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
                                 </div>
                                 <div class="col-auto">
+                                    <a href="<?= base_url('ics/gudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Master Gudang</a>
+                                </div>
+                                <div class="col-auto">
                                     <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                                 </div>
                                 <div class="col-auto">

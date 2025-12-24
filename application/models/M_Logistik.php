@@ -356,7 +356,7 @@ class M_Logistik extends CI_Model
     public function get_grouped_regions()
     {
         $this->db->select('nama_regional, GROUP_CONCAT(id SEPARATOR ",") as ids');
-        $this->db->from('your_table');
+        $this->db->from('your_table'); // Ganti dengan nama tabel yang sesuai
         $this->db->group_by('nama_regional');
         return $this->db->get()->result();
     }
@@ -391,6 +391,7 @@ class M_Logistik extends CI_Model
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
         $this->db->join('tb_detail_do d', 'd.kd_faktur = a.kd_faktur', 'left');
+        $this->db->where('a.data_sts', 1);
         $this->db->where('d.kd_faktur IS NULL', null, false);
         $this->db->group_by('a.kd_faktur');
 
@@ -461,39 +462,9 @@ class M_Logistik extends CI_Model
         ")->result();
     }
 
-    public function get_detail_pnd_do($kd)
-    {
-        return $this->db->query("SELECT
-            a.*
-            FROM tb_pnd_do a
-            WHERE a.kd_faktur = '$kd'
-            GROUP BY a.kd_faktur
-        ")->result();
-    }
-
-    public function get_do_cust_byfaktur_pnd($kd)
-    {
-        return $this->db->query("SELECT
-            a.*,b.nama_barang
-            FROM tb_pnd_do a
-            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-        ")->result();
-    }
-
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
-    }
-
-    public function insert_pnd_pre_batch($data)
-    {
-        return $this->db->insert_batch('tb_pre_do', $data);
-    }
-
-    public function insert_pnd_batch($data)
-    {
-        return $this->db->insert_batch('tb_pnd_do', $data);
     }
 
     public function insert_fakturfrom_draft_batch($data)
@@ -558,12 +529,6 @@ class M_Logistik extends CI_Model
     {
         $this->db->where('kd_faktur', $kd);
         return $this->db->update('tb_pre_do', $data);
-    }
-
-    public function update_sts_pnd_detail($kd, $data)
-    {
-        $this->db->where('kd_faktur', $kd);
-        return $this->db->update('tb_pnd_do', $data);
     }
 
     public function updatedsts($id, $data)
@@ -803,49 +768,6 @@ class M_Logistik extends CI_Model
             a.barang_sts
             FROM tb_pre_do a
             LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-        ")->result();
-    }
-
-    public function get_faktur_master($kd)
-    {
-        return $this->db->query("SELECT
-            a.id,
-            a.kd_faktur,
-            a.kd_barang,
-            c.nama_barang,
-            a.qty,
-            c.berat as gr_berat,
-            (c.berat/1000) as convert_kg,
-            (a.qty * (c.berat/1000)) AS total_berat,
-            a.satuan,
-            a.no_lot,
-            a.tgl_exp,
-            a.barang_sts
-            FROM tb_pre_do a
-            LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-        ")->result();
-    }
-
-    public function detail_pending_fk($kd)
-    {
-        return $this->db->query("SELECT
-            a.id,
-            a.kd_faktur,
-            a.kd_barang,
-            c.nama_barang,
-            a.qty,
-            c.berat as gr_berat,
-            (c.berat/1000) as convert_kg,
-            (a.qty * (c.berat/1000)) AS total_berat,
-            a.satuan,
-            a.no_lot,
-            a.tgl_exp,
-            a.barang_sts
-            FROM tb_pnd_do a
             LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
@@ -2372,5 +2294,92 @@ FROM (
     public function insert_data($data)
     {
         return $this->db->insert('tb_pre_do', $data);
+    }
+
+    public function insert_pnd_pre_batch($data)
+    {
+        return $this->db->insert_batch('tb_pre_do', $data);
+    }
+
+    public function insert_pnd_batch($data)
+    {
+        return $this->db->insert_batch('tb_pnd_do', $data);
+    }
+
+    public function get_detail_pnd_do($kd)
+    {
+        return $this->db->query("SELECT
+            a.*
+            FROM tb_pnd_do a
+            WHERE a.kd_faktur = '$kd'
+            GROUP BY a.kd_faktur
+        ")->result();
+    }
+
+    public function get_do_cust_byfaktur_pnd($kd)
+    {
+        return $this->db->query("SELECT
+            a.*,b.nama_barang
+            FROM tb_pnd_do a
+            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+
+    public function update_sts_pnd_detail($kd, $data)
+    {
+        $this->db->where('kd_faktur', $kd);
+        return $this->db->update('tb_pnd_do', $data);
+    }
+
+    public function get_faktur_master($kd)
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.kd_faktur,
+            a.kd_barang,
+            c.nama_barang,
+            a.qty,
+            c.berat as gr_berat,
+            (c.berat/1000) as convert_kg,
+            (a.qty * (c.berat/1000)) AS total_berat,
+            a.satuan,
+            a.no_lot,
+            a.tgl_exp,
+            a.barang_sts
+            FROM tb_pre_do a
+            LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+
+    public function detail_pending_fk($kd)
+    {
+        return $this->db->query("SELECT
+            a.id,
+            a.kd_faktur,
+            a.kd_barang,
+            c.nama_barang,
+            a.qty,
+            c.berat as gr_berat,
+            (c.berat/1000) as convert_kg,
+            (a.qty * (c.berat/1000)) AS total_berat,
+            a.satuan,
+            a.no_lot,
+            a.tgl_exp,
+            a.barang_sts
+            FROM tb_pnd_do a
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            WHERE a.kd_faktur = '$kd'
+        ")->result();
+    }
+
+    public function get_faktur_bintang()
+    {
+        return $this->db->query("SELECT a.*
+        FROM tb_pre_do a 
+        WHERE a.kd_customer = 'BINT31' AND data_sts = '1'
+        GROUP BY a.kd_faktur")->result();
     }
 }

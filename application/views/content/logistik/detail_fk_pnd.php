@@ -162,13 +162,13 @@
                                                                 <input type="text" id="edit_qty" name="qty" class="form-control">
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <input type="text" id="edit_satuan" class="form-control" readonly>
+                                                                <input type="text" id="edit_satuan" name="satuan" class="form-control" readonly>
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <input type="text" id="edit_no_lot" class="form-control" readonly>
+                                                                <input type="text" id="edit_no_lot" name="no_lot" class="form-control" readonly>
                                                             </div>
                                                             <div class="col-md-2">
-                                                                <input type="text" id="edit_exp" class="form-control" readonly>
+                                                                <input type="text" id="edit_exp" name="tgl_exp" class="form-control" readonly>
                                                             </div>
                                                             <div class="col-md-2">
                                                                 <button type="submit" class="btn btn-success">Simpan</button>

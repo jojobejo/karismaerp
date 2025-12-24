@@ -60,10 +60,10 @@
                 ?>
                     <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
                     <div>Driver : <?= htmlspecialchars($driver) ?></div>
-                    <div>No Lambung : <?= htmlspecialchars($plat) ?> </div>
+                    <div>No Polisi : <?= htmlspecialchars($plat) ?> </div>
                     <div>Total Customer :<?= $print->totalfaktur ?> </div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
-                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Kg) ' . '||' . ' ' . $tonase . ' (Ton)' ?></div>
+                    <div>Tonase : <?= $tonase . ' (Ton)' ?></div>
                     <div>Kubikasi : <?= $print->total_kubikasi . ' (m³) ' ?></div>
                 <?php endforeach; ?>
             </div>
@@ -121,7 +121,7 @@
                         <tr>
                             <?php if ($show_faktur_info) :
                             ?>
-                                <td class="nama-kios" rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
+                                <td class="nama-kios" rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios . "</br>" . "(" . $row->telp1 . "/" . $row->telp2 . ")" ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                 <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>

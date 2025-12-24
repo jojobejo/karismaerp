@@ -1310,13 +1310,17 @@ class C_Logistik extends CI_Controller
                 b.nolambung,
                 b.driver,
                 b.tgl_pengiriman,
+                d.telp1 as notelp1,
+                d.telp2 as notelp2,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
                 ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
-                COUNT(DISTINCT a.kd_faktur) AS totalfaktur
+                COUNT(DISTINCT a.kd_customer) AS totalfaktur
+                
             FROM
                 tb_detail_do a
             JOIN tb_do b ON b.kd_do = a.kd_do
+            JOIN tb_customer d ON d.kd_customer = a.kd_customer
             JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
             WHERE
                 b.kd_do = '$kd_do'
@@ -2745,6 +2749,16 @@ class C_Logistik extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/tonase_report.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function faktur_bintang()
+    {
+        $data['page_title']           = 'KARISMA - LOGISTIK';
+        $data['fakturbintang']        = $this->M_Logistik->get_faktur_bintang();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/faktur_bintang.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 }

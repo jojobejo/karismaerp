@@ -38,6 +38,9 @@
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                             </div>
                             <div class="col-auto">
+                                <a href="<?= base_url('faktur_bintang') ?>" class="btn btn-info  mb-2">Faktur Bintang</a>
+                            </div>
+                            <div class="col-auto">
                                 <a href="<?= base_url('tonase_report') ?>" class="btn btn-primary mb-2">Tonase Rekap </a>
                             </div>
                         </div>

@@ -1221,4 +1221,56 @@ class M_Ics extends CI_Model
         ORDER BY lokasi
     ")->result();
     }
+
+    public function getGudangServerSide()
+    {
+        $this->db->select('*')
+            ->from('tb_gudang')
+            ->where('is_active', 1);
+
+        if (!empty($_POST['search']['value'])) {
+            $this->db->like('nama_gudang', $_POST['search']['value']);
+        }
+
+        $total = $this->db->count_all_results('', false);
+
+        if ($_POST['length'] != -1) {
+            $this->db->limit($_POST['length'], $_POST['start']);
+        }
+
+        $data = $this->db->get()->result();
+
+        return [
+            "draw" => intval($_POST['draw']),
+            "recordsTotal" => $total,
+            "recordsFiltered" => $total,
+            "data" => $data
+        ];
+    }
+
+    public function getWilayahByGudang($id_gudang)
+    {
+        return $this->db->where('id_gudang', $id_gudang)
+            ->where('is_active', 1)
+            ->get('tb_gudang_wilayah')
+            ->result();
+    }
+
+    public function getBarangByGudangWilayah()
+    {
+        $this->db->select('b.*, g.nama_gudang, w.nama_wilayah')
+            ->from('tb_master_barang_all b')
+            ->join('tb_gudang g', 'g.id_gudang=b.id_gudang', 'left')
+            ->join('tb_gudang_wilayah w', 'w.id_wilayah=b.id_wilayah', 'left');
+
+        if ($this->input->post('id_gudang')) {
+            $this->db->where('b.id_gudang', $this->input->post('id_gudang'));
+        }
+
+        if ($this->input->post('id_wilayah')) {
+            $this->db->where('b.id_wilayah', $this->input->post('id_wilayah'));
+        }
+
+        return $this->db->get()->result();
+    }
 }

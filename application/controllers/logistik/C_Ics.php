@@ -981,4 +981,43 @@ class C_Ics extends CI_Controller
 
         redirect($_SERVER['HTTP_REFERER']);
     }
+
+    public function master_gudang()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/master_gudang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function gudang_list()
+    {
+        $list = $this->M_Ics->getGudangServerSide();
+        echo json_encode($list);
+    }
+
+    public function gudang_save()
+    {
+        $data = [
+            'nama_gudang' => $this->input->post('nama_gudang'),
+            'tipe'        => $this->input->post('tipe'),
+        ];
+        $this->M_Ics->insertGudang($data);
+        echo json_encode(['status' => true]);
+    }
+
+    public function wilayah_by_gudang($id_gudang)
+    {
+        $data = $this->M_Ics->getWilayahByGudang($id_gudang);
+        echo json_encode($data);
+    }
+
+    public function barang_per_gudang()
+    {
+        $list = $this->M_Ics->getBarangByGudangWilayah();
+        echo json_encode($list);
+    }
 }
