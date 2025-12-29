@@ -2382,4 +2382,51 @@ FROM (
         WHERE a.kd_customer = 'BINT31' AND data_sts = '1'
         GROUP BY a.kd_faktur")->result();
     }
+
+    public function get_cust_bintang($id)
+    {
+        return $this->db
+            ->select('
+            tb_pre_do.*,
+            tb_customer.nama_customer
+        ')
+            ->from('tb_pre_do')
+            ->join(
+                'tb_customer',
+                'tb_customer.kd_customer = tb_pre_do.kd_customer',
+                'left'
+            )
+            ->where('tb_pre_do.id', $id)
+            ->get()
+            ->row();
+    }
+
+    public function get_customer_bintang($search = null)
+    {
+        if ($search) {
+            $this->db->like('nama_customer', $search);
+        }
+
+        return $this->db
+            ->limit(20)
+            ->get('tb_customer')
+            ->result();
+    }
+
+    public function update_customer_by_faktur($kd_faktur, $kd_customer)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->update('tb_pre_do', [
+                'kd_customer' => $kd_customer
+            ]);
+    }
+
+    public function get_customer_by_kd($kd_customer)
+    {
+        return $this->db
+            ->where('kd_customer', $kd_customer)
+            ->get('tb_customer')
+            ->row();
+    }
 }

@@ -31,7 +31,13 @@
                                             <td><?= $fb->kd_faktur ?></td>
                                             <td><?= $fb->kd_rute ?></td>
                                             <td><?= $fb->tgl_inputer ?></td>
-                                            <td><?= $fb->id ?></td>
+                                            <td>
+                                                <center>
+                                                    <a href="javascript:void(0)" class="btn btn-primary btn-sm btn-cust-bintang" data-id="<?= $fb->id ?>">
+                                                        <i class="fas fa-plus"></i>
+                                                    </a>
+                                                </center>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -41,12 +47,30 @@
                         <div class="col-8">
                             <div class="card card-outline card-primary">
                                 <div class="card-body">
-                                    <div class="form-group row">
-                                        <label class="col-sm-12 text-left">Tanggal <span class="required">*</span></label>
-                                        <div class="col-sm-12">
-                                            <input class="form-control" type="date" id="tanggal" name="tanggal">
+
+                                    <form id="formEditFaktur">
+                                        <div class="form-group row">
+                                            <label class="col-sm-12">Customer Lama</label>
+                                            <div class="col-sm-12">
+                                                <input class="form-control" id="nmcust" readonly>
+                                            </div>
                                         </div>
-                                    </div>
+
+                                        <div class="form-group row">
+                                            <label class="col-sm-12">Ganti Customer</label>
+                                            <div class="col-sm-12">
+                                                <select class="form-control select2" id="new_kd_customer" name="new_kd_customer" style="width:100%"></select>
+                                                <input type="text" name="kdfaktur" id="kdfaktur" class="form-control" readonly>
+                                                <input type="text" name="id_faktur" id="id_faktur" class="form-control" readonly>
+                                                <input type="hidden" name="kdcust" id="kdcust" class="form-control" readonly>
+                                            </div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-success btn-sm btn-block">
+                                            Simpan Perubahan
+                                        </button>
+                                    </form>
+
                                 </div>
                             </div>
                         </div>
@@ -70,3 +94,80 @@
             <!-- /.control-sidebar -->
         </div>
         <!-- ./wrapper -->
+
+        <script>
+            $(document).on('click', '.btn-cust-bintang', function() {
+                const id = $(this).data('id');
+
+                $.ajax({
+                    url: "<?= base_url('get_fktur_bintang') ?>",
+                    type: "POST",
+                    dataType: "JSON",
+                    data: {
+                        id: id
+                    },
+                    success: function(res) {
+                        if (res.status === 'ok') {
+                            $('#nmcust').val(res.data.nama_customer);
+                            $('#kdfaktur').val(res.data.kd_faktur);
+                            $('#id_faktur').val(res.data.id);
+                            $('#kdcust').val(res.data.kd_customer);
+                            $('#new_kd_customer').val(null).trigger('change');
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+
+                $('#new_kd_customer').on('select2:select', function(e) {
+                    const data = e.params.data;
+                    $('#kdcust').val(data.id);
+                });
+
+            });
+
+            $(document).ready(function() {
+
+                $('.select2').select2({
+                    theme: 'bootstrap4',
+                    placeholder: 'Pilih customer baru',
+                    allowClear: true,
+                    ajax: {
+                        url: "<?= base_url('get_customer_bintang') ?>",
+                        dataType: 'json',
+                        delay: 250,
+                        data: function(params) {
+                            return {
+                                search: params.term
+                            };
+                        },
+                        processResults: function(data) {
+                            return {
+                                results: data
+                            };
+                        },
+                        cache: true
+                    }
+                });
+
+            });
+
+
+            $('#formEditFaktur').on('submit', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: "<?= base_url('update_customer_faktur') ?>",
+                    type: "POST",
+                    dataType: "JSON",
+                    data: $(this).serialize(),
+                    success: function(res) {
+                        if (res.status === 'ok') {
+                            alert('Customer faktur berhasil diubah');
+                            $('#nmcust').val(res.nama_customer);
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+            });
+        </script>

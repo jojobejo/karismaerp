@@ -168,6 +168,9 @@ $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detai
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
 
 $route['faktur_bintang']                            = 'logistik/C_Logistik/faktur_bintang';
+$route['get_fktur_bintang']                         = 'logistik/C_Logistik/get_fktur_bintang';
+$route['get_customer_bintang']                      = 'logistik/C_Logistik/get_customer_bintang';
+$route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
 

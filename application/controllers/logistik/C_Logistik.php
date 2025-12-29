@@ -2761,4 +2761,79 @@ class C_Logistik extends CI_Controller
         $this->load->view('content/logistik/faktur_bintang.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function get_fktur_bintang()
+    {
+        $id = $this->input->post('id');
+
+        if (!$id) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'ID tidak valid'
+            ]);
+            return;
+        }
+
+        $data = $this->M_Logistik->get_cust_bintang($id);
+
+        if ($data) {
+            echo json_encode([
+                'status' => 'ok',
+                'data' => $data
+            ]);
+        } else {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Data tidak ditemukan'
+            ]);
+        }
+    }
+
+    public function get_customer_bintang()
+    {
+        $search     = $this->input->get('search');
+        $data       = $this->M_Logistik->get_customer_bintang($search);
+
+        $result = [];
+        foreach ($data as $d) {
+            $result[] = [
+                'id' => $d->kd_customer,
+                'text' => $d->nama_customer
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function update_customer_faktur()
+    {
+        $kd_faktur = $this->input->post('kd_faktur');
+        $new_kd_customer = $this->input->post('new_kd_customer');
+
+        if (!$kd_faktur || !$new_kd_customer) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Data tidak lengkap'
+            ]);
+            return;
+        }
+
+        $update = $this->M_Logistik->update_customer_by_faktur(
+            $kd_faktur,
+            $new_kd_customer
+        );
+
+        if ($update) {
+            $cust = $this->M_Logistik->get_customer_by_kd($new_kd_customer);
+            echo json_encode([
+                'status' => 'ok',
+                'nama_customer' => $cust->nama_customer
+            ]);
+        } else {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Gagal update faktur'
+            ]);
+        }
+    }
 }
