@@ -2807,7 +2807,7 @@ class C_Logistik extends CI_Controller
 
     public function update_customer_faktur()
     {
-        $kd_faktur = $this->input->post('kd_faktur');
+        $kd_faktur = $this->input->post('kdfaktur');
         $new_kd_customer = $this->input->post('new_kd_customer');
 
         if (!$kd_faktur || !$new_kd_customer) {

@@ -56,15 +56,17 @@
                                             </div>
                                         </div>
 
-                                        <div class="form-group row">
+                                        <div class="form-group row" id="wrap-select-customer" style="display:none">
                                             <label class="col-sm-12">Ganti Customer</label>
                                             <div class="col-sm-12">
                                                 <select class="form-control select2" id="new_kd_customer" name="new_kd_customer" style="width:100%"></select>
-                                                <input type="text" name="kdfaktur" id="kdfaktur" class="form-control" readonly>
-                                                <input type="text" name="id_faktur" id="id_faktur" class="form-control" readonly>
-                                                <input type="hidden" name="kdcust" id="kdcust" class="form-control" readonly>
+
+                                                <input type="hidden" name="kdfaktur" id="kdfaktur">
+                                                <input type="hidden" name="id_faktur" id="id_faktur">
+                                                <input type="hidden" name="kdcust" id="kdcust">
                                             </div>
                                         </div>
+
 
                                         <button type="submit" class="btn btn-success btn-sm btn-block">
                                             Simpan Perubahan
@@ -112,21 +114,28 @@
                             $('#kdfaktur').val(res.data.kd_faktur);
                             $('#id_faktur').val(res.data.id);
                             $('#kdcust').val(res.data.kd_customer);
+
+                            if (res.data.nama_customer) {
+                                $('#wrap-select-customer').slideDown();
+                            }
+
                             $('#new_kd_customer').val(null).trigger('change');
                         } else {
                             alert(res.message);
                         }
                     }
                 });
-
-                $('#new_kd_customer').on('select2:select', function(e) {
-                    const data = e.params.data;
-                    $('#kdcust').val(data.id);
-                });
-
             });
 
+            $('#new_kd_customer').on('select2:select', function(e) {
+                const data = e.params.data;
+                $('#kdcust').val(data.id);
+            });
+
+
+
             $(document).ready(function() {
+                $('#wrap-select-customer').hide();
 
                 $('.select2').select2({
                     theme: 'bootstrap4',
@@ -149,12 +158,12 @@
                         cache: true
                     }
                 });
-
             });
 
 
             $('#formEditFaktur').on('submit', function(e) {
                 e.preventDefault();
+
                 $.ajax({
                     url: "<?= base_url('update_customer_faktur') ?>",
                     type: "POST",
@@ -163,11 +172,12 @@
                     success: function(res) {
                         if (res.status === 'ok') {
                             alert('Customer faktur berhasil diubah');
-                            $('#nmcust').val(res.nama_customer);
+                            location.reload();
                         } else {
                             alert(res.message);
                         }
                     }
                 });
             });
+            
         </script>

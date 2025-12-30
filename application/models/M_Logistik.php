@@ -2388,7 +2388,8 @@ FROM (
         return $this->db
             ->select('
             tb_pre_do.*,
-            tb_customer.nama_customer
+            tb_customer.nama_customer,
+            tb_customer.kd_customer
         ')
             ->from('tb_pre_do')
             ->join(
