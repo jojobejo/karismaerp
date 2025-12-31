@@ -46,7 +46,7 @@
 
                         <div class="card-body">
 
-                            <form method="post" action="<?= base_url('store_checklist_kendaraan') ?>">
+                            <form method="post" action="<?= base_url('store_checklist_kendaraan') ?>" enctype="multipart/form-data">
                                 <div class="card-body">
 
                                     <div class="row">
@@ -88,6 +88,7 @@
                                                     <th>Nama Part</th>
                                                     <th width="180">Kondisi</th>
                                                     <th>Keterangan</th>
+                                                    <th width="200">Foto</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -97,7 +98,9 @@
                                                             <?= $part ?>
                                                             <input type="hidden" name="part[<?= $kategori . $i ?>][nama_part]" value="<?= $part ?>">
                                                             <input type="hidden" name="part[<?= $kategori . $i ?>][kategori]" value="<?= $kategori ?>">
+
                                                         </td>
+
                                                         <td>
                                                             <select name="part[<?= $kategori . $i ?>][kondisi]" class="form-control form-control-sm">
                                                                 <option value="BAIK">BAIK</option>
@@ -106,6 +109,9 @@
                                                         </td>
                                                         <td>
                                                             <input type="text" name="part[<?= $kategori . $i ?>][keterangan]" class="form-control form-control-sm">
+                                                        </td>
+                                                        <td>
+                                                            <input type="file" name="part[<?= $kategori . $i ?>][foto]" class="form-control form-control-sm" accept="image/*">
                                                         </td>
                                                     </tr>
                                                 <?php endforeach ?>

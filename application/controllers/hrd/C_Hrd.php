@@ -1722,6 +1722,9 @@ class C_Hrd extends CI_Controller
     {
         $tanggal = date('Y-m-d');
 
+
+
+
         $header = [
             'tanggal_check' => $tanggal,
             'driver'        => $this->input->post('driver'),
@@ -1730,13 +1733,46 @@ class C_Hrd extends CI_Controller
             'kilometer'     => $this->input->post('kilometer'),
             'inputer'       => $this->input->post('inputer')
         ];
+        $config['upload_path']   = './uploads/checklist_kendaraan/';
+        $config['allowed_types'] = 'jpg|jpeg|png';
+        $config['max_size']      = 2048;
+
+        $this->load->library('upload');
 
         $checklist_id = $this->M_Hrd->insert_header_checklist_kendaraan($header);
 
-        foreach ($this->input->post('part') as $row) {
-            $row['checklist_id'] = $checklist_id;
-            $this->M_Hrd->insert_detail_checklist_kendaraan($row);
+        foreach ($_POST['part'] as $key => $row) {
+
+            $foto = null;
+
+            if (!empty($_FILES['part']['name'][$key]['foto'])) {
+
+                $_FILES['file']['name']     = $_FILES['part']['name'][$key]['foto'];
+                $_FILES['file']['type']     = $_FILES['part']['type'][$key]['foto'];
+                $_FILES['file']['tmp_name'] = $_FILES['part']['tmp_name'][$key]['foto'];
+                $_FILES['file']['error']    = $_FILES['part']['error'][$key]['foto'];
+                $_FILES['file']['size']     = $_FILES['part']['size'][$key]['foto'];
+
+                $config['file_name'] = 'CHK_' . $checklist_id . '_' . time() . '_' . $key;
+                $this->upload->initialize($config);
+
+                if ($this->upload->do_upload('file')) {
+                    $foto = $this->upload->data('file_name');
+                }
+            }
+
+            $detail = [
+                'checklist_id' => $checklist_id,
+                'kategori'     => $row['kategori'],
+                'nama_part'    => $row['nama_part'],
+                'kondisi'      => $row['kondisi'],
+                'keterangan'   => $row['keterangan'],
+                'foto'         => $foto
+            ];
+
+            $this->M_Hrd->insert_detail_checklist_kendaraan($detail);
         }
+
         redirect('hrd_chelklist_kendaraan');
     }
 

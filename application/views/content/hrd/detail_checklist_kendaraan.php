@@ -72,6 +72,7 @@
                                             <th>Nama Part</th>
                                             <th width="150" style="text-align: center;">Kondisi</th>
                                             <th>Keterangan</th>
+                                            <th>Evident</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -88,6 +89,16 @@
                                                     </center>
                                                 </td>
                                                 <td><?= $row->keterangan ?: '-' ?></td>
+                                                <td>
+                                                    <?php if ($row->foto) : ?>
+                                                        <a href="<?= base_url('uploads/checklist_kendaraan/' . $row->foto) ?>" target="_blank">
+                                                            <img src="<?= base_url('uploads/checklist_kendaraan/' . $row->foto) ?>" class="img-thumbnail" style="max-width:80px">
+                                                        </a>
+                                                    <?php else : ?>
+                                                        -
+                                                    <?php endif ?>
+                                                </td>
+
                                             </tr>
                                         <?php endforeach ?>
                                     </tbody>
