@@ -1248,6 +1248,11 @@ class M_Ics extends CI_Model
         ];
     }
 
+    public function insertGudang($data)
+    {
+        $this->db->insert('tb_gudang', $data);
+    }
+
     public function getWilayahByGudang($id_gudang)
     {
         return $this->db->where('id_gudang', $id_gudang)

@@ -113,6 +113,9 @@ $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator
 
 $route['ics/gudang']                                = 'logistik/C_Ics/master_gudang';
 $route['ics/gudang_list']                           = 'logistik/C_Ics/gudang_list';
+$route['ics/gudang_save']                           = 'logistik/C_Ics/gudang_save';
+
+$route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
 
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
