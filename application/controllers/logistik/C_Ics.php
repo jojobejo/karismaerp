@@ -1020,4 +1020,16 @@ class C_Ics extends CI_Controller
         $list = $this->M_Ics->getBarangByGudangWilayah();
         echo json_encode($list);
     }
+
+    public function detail_wilayah($id_gudang)
+    {
+        if (!$id_gudang) show_404();
+
+        $data['gudang']  = $this->M_Ics->getGudangById($id_gudang);
+        $data['wilayah'] = $this->M_Ics->getWilayahByGudang($id_gudang);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/detail_gudang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
 }

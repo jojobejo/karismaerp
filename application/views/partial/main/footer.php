@@ -297,7 +297,7 @@
 
 <script>
   $(function() {
-    $('#tableGudang').DataTable({
+    const table = $('#tableGudang').DataTable({
       processing: true,
       serverSide: true,
       ajax: {
@@ -316,17 +316,47 @@
         },
         {
           data: null,
+          orderable: false,
           render: function(row) {
             return `
-                    <button class="btn btn-sm btn-info btn-wilayah" data-id="${row.id_gudang}">
-                        Wilayah
-                    </button>
-                    <button class="btn btn-sm btn-danger">
-                        Hapus
-                    </button>`;
+                        <a href="<?= base_url('ics/detail_wilayah/') ?>${row.id_gudang}"
+                           class="btn btn-sm btn-info">
+                            Wilayah
+                        </a>
+                        <button class="btn btn-sm btn-danger btn-hapus"
+                                data-id="${row.id_gudang}">
+                            Hapus
+                        </button>
+                    `;
           }
         }
       ]
+    });
+
+    // aksi hapus
+    $('#tableGudang').on('click', '.btn-hapus', function() {
+      const id = $(this).data('id');
+
+      if (!confirm('Hapus gudang ini? Data tidak bisa dikembalikan.')) return;
+
+      $.ajax({
+        url: "<?= base_url('ics/hapus_gudang') ?>",
+        type: "POST",
+        data: {
+          id_gudang: id
+        },
+        dataType: "json",
+        success: function(res) {
+          if (res.status === 'success') {
+            table.ajax.reload(null, false);
+          } else {
+            alert(res.message || 'Gagal menghapus data');
+          }
+        },
+        error: function() {
+          alert('Server error. Infrastruktur lagi capek.');
+        }
+      });
     });
   });
 </script>

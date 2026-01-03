@@ -1278,4 +1278,12 @@ class M_Ics extends CI_Model
 
         return $this->db->get()->result();
     }
+
+    public function getGudangById($id_gudang)
+    {
+        return $this->db
+            ->where('id_gudang', $id_gudang)
+            ->get('tb_gudang')
+            ->row();
+    }
 }
