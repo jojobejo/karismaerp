@@ -27,6 +27,7 @@
                                                 <th>Dimensi</th>
                                                 <th>Tonase</th>
                                                 <th>Kubikasi</th>
+                                                <th>Total Data</th>
                                                 <!-- <th>Qty Minimal</th> -->
                                                 <th>#</th>
                                             </tr>
@@ -43,10 +44,20 @@
                                                     <td><?= $dimensi ?></td>
                                                     <td><?= $br->berat ?></td>
                                                     <td><?= $br->kubikasi ?></td>
+                                                    <td><?= $br->jumlah_barang ?></td>
                                                     <!-- <td><?= $br->qty_min ?></td> -->
+
                                                     <td>
-                                                        <a href="#" class="btn btn-sm btn-warning btn-open-mbarang" data-id="<?= $br->id ?>"><i class="fas fa-pen "></i></a>
+                                                        <div class="row">
+                                                            <div class="col-6">
+                                                                <a href="#" class="btn btn-sm btn-warning btn-open-mbarang btn-block w-100" data-id="<?= $br->id ?>"><i class="fas fa-pen "></i></a>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <a href="<?= base_url('ics/stock_by_kodebr/') . $br->kd_system ?>" class="btn btn-sm btn-info btn-open-mbarang btn-block w-100"><i class="fas fa-eye"></i></a>
+                                                            </div>
+                                                        </div>
                                                     </td>
+
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>

@@ -110,10 +110,17 @@ $route['ics/ics_diffrent']                          = 'logistik/C_Ics/ics_diffre
 $route['ics/import_csv']                            = 'logistik/C_Ics/import_csv_po';
 $route['ics/sc_do_by_date_range']                   = 'logistik/C_Ics/sc_do_by_date_range';
 $route['ics/kalkulatorics']                         = 'logistik/C_Ics/kalkulator_operan';
+$route['ics/detail_barang/(:any)']                  = 'logistik/C_Ics/view_detail_master_barang/$1';
 
 $route['ics/gudang']                                = 'logistik/C_Ics/master_gudang';
 $route['ics/gudang_list']                           = 'logistik/C_Ics/gudang_list';
 $route['ics/gudang_save']                           = 'logistik/C_Ics/gudang_save';
+
+$route['ics/get_wilayah_by_gudang']                 = 'logistik/C_Ics/get_wilayah_by_gudang';
+
+
+$route['ics/update_gudang']                         = 'logistik/C_Ics/update_gudang';
+$route['ics/update_wilayah']                        = 'logistik/C_Ics/update_wilayah';
 
 $route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
 

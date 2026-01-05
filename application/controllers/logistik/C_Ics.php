@@ -233,6 +233,14 @@ class C_Ics extends CI_Controller
             WHERE a.nama_barang = ? AND a.exp_date = ?
             GROUP BY a.nama_barang, a.exp_date", array($nama_barang, $exp_date));
 
+        $data['list_gudang'] = $this->db
+            ->where('is_active', 1)
+            ->get('tb_gudang')->result();
+
+        $data['list_gudang_wilayah'] = $this->db
+            ->where('is_active', 1)
+            ->get('tb_gudang_wilayah')->result();
+
         $data['detail_stok']        = $query->result();
         $data['page_title']         = 'KARISMA - ICS';
         $data['get_barang']         = $this->M_Ics->get_detail_barang($kd);
@@ -243,6 +251,71 @@ class C_Ics extends CI_Controller
         $this->load->view('content/logistik/ics/ajaxics.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function update_gudang()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $opname_id = $this->input->post('opname_id');
+        $id_gudang = $this->input->post('id_gudang');
+
+        if (empty($opname_id) || empty($id_gudang)) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Data tidak lengkap'
+            ]);
+            return;
+        }
+
+        $update = $this->M_Ics->updateGudangByOpname($opname_id, $id_gudang);
+
+        echo json_encode([
+            'status' => $update,
+            'message' => $update ? 'Gudang berhasil diperbarui' : 'Gagal update gudang'
+        ]);
+    }
+
+    public function update_wilayah()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $opname_id  = $this->input->post('opname_id');
+        $id_wilayah = $this->input->post('id_wilayah');
+
+        if (empty($opname_id) || empty($id_wilayah)) {
+            echo json_encode([
+                'status' => false,
+                'message' => 'Data tidak lengkap'
+            ]);
+            return;
+        }
+
+        $update = $this->M_Ics->updateWilayahByOpname($opname_id, $id_wilayah);
+
+        echo json_encode([
+            'status' => $update,
+            'message' => $update ? 'Wilayah berhasil diperbarui' : 'Gagal update wilayah'
+        ]);
+    }
+
+    public function get_wilayah_by_gudang()
+    {
+        $id_gudang = $this->input->post('id_gudang');
+        log_message('error', 'ID GUDANG: ' . $id_gudang);
+
+        $data = $this->M_Ics->getWilayahByGudang($id_gudang);
+        log_message('error', json_encode($data));
+
+        echo json_encode($data);
+    }
+
+
+
+
 
     public function get_detail_by_exp()
     {
@@ -554,6 +627,17 @@ class C_Ics extends CI_Controller
         $query = $this->db->get()->row();
 
         echo json_encode($query);
+    }
+
+    public function view_detail_master_barang($kd)
+    {
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['barang']             = $this->M_Ics->get_barang_detail_by_kd($kd);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/master_barang_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajaxics.php', $data);
     }
 
     public function ics_detail_allbarang($nmbarang)

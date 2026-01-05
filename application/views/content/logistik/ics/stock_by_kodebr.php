@@ -48,8 +48,11 @@
                                                 <th>Selisih</th>
                                                 <th>Fisik BOX</th>
                                                 <th>Fisik PCS</th>
+                                                <th>PIC</th>
+                                                <th>Wilayah</th>
                                                 <th>Kordinat</th>
                                                 <th>Status</th>
+                                                <th>#</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -64,22 +67,61 @@
                                                     <td><?= $br->selisih ?></td>
                                                     <td><?= $br->qty_box ?></td>
                                                     <td><?= $br->qty_pcs ?></td>
-                                                    <td><?= $br->kordinat ?></td>
+                                                    <td><?= $br->PIC ?></td>
+                                                    <td>
+                                                        <?php if ($br->id_gudang == 0) : ?>
+                                                            <button class="btn btn-sm btn-warning btn-update-wilayah w-100" data-toggle="modal" data-target="#modalUpdateGudang" data-id="<?= $br->id ?>">
+                                                                <i class="fas fa-warehouse"></i> Update Gudang
+                                                            </button>
+                                                        <?php else : ?>
+                                                            <?= $br->id_gudang ?>
+                                                        <?php endif; ?>
+                                                    </td>
+
+                                                    <td>
+                                                        <?php if ($br->kordinat == '-' || empty($br->kordinat)) : ?>
+                                                            <button class="btn btn-sm btn-warning btn-update-kordinat w-100" data-toggle="modal" data-target="#modalUpdateWilayah" data-id="<?= $br->id ?>" data-gudang="<?= $br->id_gudang ?>">
+                                                                <i class="fas fa-map-marker-alt"></i> Update Wilayah
+                                                            </button>
+
+                                                        <?php else : ?>
+                                                            <?= $br->kordinat ?>
+                                                        <?php endif; ?>
+                                                    </td>
+
                                                     <?php if ($br->status == '1') : ?>
                                                         <td>
-                                                            <a href="#" class="btn btn-sm btn-success"><i class="fas fa-check"></i></a>
-                                                            <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <a href="#" class="btn btn-sm btn-success w-100"><i class="fas fa-check"></i></a>
                                                         </td>
                                                     <?php else : ?>
+
                                                         <td>
-                                                            <a href="#" class="btn btn-sm btn-danger"><i class="fas fa-times"></i></a>
-                                                            <button class="btn btn-sm btn-info view-detail" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
-                                                                <i class="fas fa-eye"></i>
-                                                            </button>
-                                                            <button class="btn btn-md btn-success btn-add-opname" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
+                                                                        <i class="fas fa-eye"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <td>
+                                                            <a href="#" class="btn btn-sm btn-danger w-100"><i class="fas fa-times"></i></a>
                                                         </td>
                                                     <?php endif; ?>
                                                 </tr>
@@ -268,6 +310,71 @@
                         </div>
                     </div>
 
+                    <!-- Modal Setting Wilayah -->
+                    <div class="modal fade" id="modalUpdateGudang">
+                        <div class="modal-dialog">
+                            <form id="formUpdateGudang">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-warning">
+                                        <h5 class="modal-title">Update Gudang</h5>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="hidden" name="opname_id" id="opname_id_gudang">
+
+                                        <div class="form-group">
+                                            <label>Gudang</label>
+                                            <select name="id_gudang" class="form-control" required>
+                                                <option value="">-- Pilih Gudang --</option>
+                                                <?php foreach ($list_gudang as $g) : ?>
+                                                    <option value="<?= $g->id_gudang ?>">
+                                                        <?= $g->nama_gudang ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn btn-primary">Simpan</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Modal Setting Wilayah Kordinat -->
+                    <!-- Modal Setting Wilayah Gudang -->
+                    <div class="modal fade" id="modalUpdateWilayah">
+                        <div class="modal-dialog">
+                            <form id="formUpdateWilayah">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-warning">
+                                        <h5 class="modal-title">Update Wilayah Gudang</h5>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <!-- hidden, jangan sok tampil -->
+                                        <input type="hidden" name="opname_id" id="opname_id_wilayah">
+                                        <input type="hidden" id="selected_gudang_id">
+
+                                        <div class="form-group">
+                                            <label>Wilayah</label>
+                                            <select name="id_wilayah" id="select_wilayah" class="form-control" required>
+                                                <option value="">-- Pilih Wilayah --</option>
+                                            </select>
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn btn-primary">Simpan</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+
+
+
                 </section>
             </div>
         </div>
@@ -315,6 +422,96 @@
                 $('#tblog_track_barang').show();
                 $('#data_log_do, #data_log_lpb').hide();
             });
+
+            $('.btn-update-wilayah').on('click', function() {
+                let opname_id = $(this).data('id');
+                $('#opname_id_gudang').val(opname_id);
+            });
+
+            $('#formUpdateGudang').on('submit', function(e) {
+                e.preventDefault();
+
+                console.log($(this).serialize());
+
+                $.ajax({
+                    url: "<?= base_url('ics/update_gudang'); ?>",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.status) {
+                            location.reload();
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+
+            });
+
+            $('#formUpdateWilayah').on('submit', function(e) {
+                e.preventDefault();
+
+                console.log($(this).serialize());
+
+                $.ajax({
+                    url: "<?= base_url('ics/update_wilayah'); ?>",
+                    type: "POST",
+                    data: $(this).serialize(),
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.status) {
+                            location.reload();
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+
+            });
+
+            $('.btn-update-kordinat').on('click', function() {
+
+                let saldo_id = $(this).data('id');
+                let idGudang = $(this).data('gudang');
+
+                console.log('ID GUDANG:', idGudang);
+
+                $('#opname_id_wilayah').val(saldo_id);
+                $('#selected_gudang_id').val(idGudang);
+
+                $('#select_wilayah').html('<option value="">Loading...</option>');
+
+                if (!idGudang || idGudang == 0) {
+                    $('#select_wilayah').html('<option value="">Gudang belum ditentukan</option>');
+                    return;
+                }
+
+                $.ajax({
+                    url: "<?= base_url('ics/get_wilayah_by_gudang'); ?>",
+                    type: 'POST',
+                    data: {
+                        id_gudang: idGudang
+                    },
+                    dataType: 'json',
+                    success: function(res) {
+
+                        let opt = '<option value="">-- Pilih Wilayah --</option>';
+
+                        if (res.length > 0) {
+                            $.each(res, function(i, v) {
+                                opt += `<option value="${v.id_wilayah}">${v.nama_wilayah}</option>`;
+                            });
+                        } else {
+                            opt += '<option value="">Wilayah tidak tersedia</option>';
+                        }
+
+                        $('#select_wilayah').html(opt);
+                    }
+                });
+            });
+
+
         });
     </script>
 
@@ -381,6 +578,10 @@
             });
         });
 
+
+
+
+
         $('.btn-add-opname').click(function() {
             const exp_date = $(this).data('exp');
             const nama_barang = $(this).data('nama');
@@ -393,6 +594,10 @@
             $('#modal_id_barang').val(id_barang);
             $('#modal_kdbarang').val(kdbarang);
             $('#modal_dimensi').val(dimensi);
+        });
+
+        $('.btn-update-wilayah').on('click', function() {
+            $('#opname_id_gudang').val($(this).data('id'));
         });
     </script>
 

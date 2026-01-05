@@ -47,6 +47,26 @@ class M_Ics extends CI_Model
         return $this->db->get_where('tb_master_barang', ['kd_system' => $kd])->row();
     }
 
+    public function updateWilayahByOpname($id, $id_wilayah)
+    {
+        return $this->db
+            ->where('id', $id)
+            ->update('tb_saldo_awal', [
+                'kordinat' => $id_wilayah
+            ]);
+    }
+
+    public function updateGudangByOpname($opname_id, $id_gudang)
+    {
+        return $this->db
+            ->where('id', $opname_id)
+            ->update('tb_saldo_awal', [
+                'wilayah_id' => $id_gudang
+            ]);
+    }
+
+
+
     public function getnmbarang($kd)
     {
         $kd = $this->getBarangByKode($kd);
@@ -256,14 +276,38 @@ class M_Ics extends CI_Model
     public function get_master_barang_ics()
     {
         return $this->db->query("SELECT 
-        a.*, 
-        IFNULL(b.lokasi,'-') AS pic,
-        IFNULL(b.kordinat,'-') AS kordinat,
-        IFNULL(b.kordinat1,'-') AS kordinat1
-        FROM tb_master_barang a
-        LEFT JOIN tb_saldo_awal b ON b.nama_barang = a.nm_barang
-        GROUP BY a.nm_barang
-        ORDER BY a.kd_system ASC 
+            a.*,
+            IFNULL(s.jumlah_barang, 0) AS jumlah_barang,
+            IFNULL(s.pic, '-') AS pic,
+            IFNULL(s.kordinat, '-') AS kordinat,
+            IFNULL(s.kordinat1, '-') AS kordinat1
+            FROM tb_master_barang a
+            LEFT JOIN (
+            SELECT 
+                nama_barang,
+                COUNT(*) AS jumlah_barang,
+                MAX(lokasi) AS pic,
+                MAX(kordinat) AS kordinat,
+                MAX(kordinat1) AS kordinat1
+            FROM tb_saldo_awal
+            GROUP BY nama_barang
+        ) s ON s.nama_barang = a.nm_barang
+        ORDER BY a.kd_system ASC;")->result();
+    }
+
+    public function get_barang_detail_by_kd($kd)
+    {
+        return $this->db->query("SELECT
+        a.nm_barang,
+        a.kode_barang,
+        b.exp_date,
+        b.qty,
+        b.lokasi as PIC,
+        b.kordinat,
+        b.kordinat1
+        FROM tb_master_barang a 
+        JOIN tb_saldo_awal b ON b.nama_barang = a.nm_barang
+        WHERE a.kode_barang = '$kd'
         ")->result();
     }
 
@@ -325,8 +369,11 @@ class M_Ics extends CI_Model
             (a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
             COALESCE(opname.qty_opname, 0) - ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             COALESCE(opname.qty_opname, 0) AS ics,
-            opname.qty_box AS qty_box,
-            opname.qty_pcs AS qty_pcs,
+            COALESCE(opname.qty_box,0)AS qty_box,
+            COALESCE(opname.qty_pcs,0)AS qty_pcs,
+            a.lokasi as PIC,
+            a.wilayah_id as id_gudang,
+            a.kordinat1 as id_kordinat1,
             IF(
                 ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
                 1, 0
@@ -388,6 +435,8 @@ class M_Ics extends CI_Model
 
         return $this->db->query($sql, [$nama_barang, $exp_date])->result();
     }
+
+    
 
     public function list_barang_ics_diffrent_a()
     {
