@@ -64,32 +64,32 @@ $route['dashboard'] = 'Dashboard';
 $route['konfirm_tamu'] = 'Dashboard/konfirm_tamu';
 
 //inventaris
-$route['inventaris']                                = 'inventaris/C_Inventaris';
-$route['addinventaris']                             = 'inventaris/C_Inventaris/addinventaris';
-$route['editinventaris']                            = 'inventaris/C_Inventaris/editinventaris';
-$route['hapusinventaris1']                          = 'inventaris/C_Inventaris/hapusinventaris';
-$route['changeowner']                               = 'inventaris/C_Inventaris/changeowner';
-$route['selectowner']                               = 'inventaris/C_Inventaris/selectowner';
+$route['inventaris']                            = 'inventaris/C_Inventaris';
+$route['addinventaris']                         = 'inventaris/C_Inventaris/addinventaris';
+$route['editinventaris']                        = 'inventaris/C_Inventaris/editinventaris';
+$route['hapusinventaris1']                      = 'inventaris/C_Inventaris/hapusinventaris';
+$route['changeowner']                           = 'inventaris/C_Inventaris/changeowner';
+$route['selectowner']                           = 'inventaris/C_Inventaris/selectowner';
 
 //LOGISTIK - TRUK SETTING
-$route['truckoprational']                           = 'logistik/C_Logistik';
-$route['opplat']                                    = 'logistik/C_Logistik/op_plat';
-$route['addplat']                                   = 'logistik/C_Logistik/addplat';
-$route['editplat']                                  = 'logistik/C_Logistik/editplat';
-$route['hapusplat']                                 = 'logistik/C_Logistik/hapusplat';
-$route['driverop']                                  = 'logistik/C_Logistik/driverop';
-$route['tambahdriver']                              = 'logistik/C_Logistik/addriver';
-$route['editdriver']                                = 'logistik/C_Logistik/editdriver';
-$route['hapusdriver']                               = 'logistik/C_Logistik/hapusdriver';
-$route['activedrver/(:any)']                        = 'logistik/C_Logistik/activedrver/$1';
-$route['nonactivedriver/(:any)']                    = 'logistik/C_Logistik/nonactivedriver/$1';
-$route['tambahpenggunadriver']                      = 'logistik/C_Logistik/tambahpenggunadriver';
-$route['editnorut']                                 = 'logistik/C_Logistik/editnorut';
-$route['tambahhelper']                              = 'logistik/C_Logistik/tambahhelper';
-$route['edithelper']                                = 'logistik/C_Logistik/edithelper';
-$route['hapushelper']                               = 'logistik/C_Logistik/hapushelper';
-$route['nonactivehelper/(:any)']                    = 'logistik/C_Logistik/nonactivehelper/$1';
-$route['activehelper/(:any)']                       = 'logistik/C_Logistik/activehelper/$1';
+$route['truckoprational']                       = 'logistik/C_Logistik';
+$route['opplat']                                = 'logistik/C_Logistik/op_plat';
+$route['addplat']                               = 'logistik/C_Logistik/addplat';
+$route['editplat']                              = 'logistik/C_Logistik/editplat';
+$route['hapusplat']                             = 'logistik/C_Logistik/hapusplat';
+$route['driverop']                              = 'logistik/C_Logistik/driverop';
+$route['tambahdriver']                          = 'logistik/C_Logistik/addriver';
+$route['editdriver']                            = 'logistik/C_Logistik/editdriver';
+$route['hapusdriver']                           = 'logistik/C_Logistik/hapusdriver';
+$route['activedrver/(:any)']                    = 'logistik/C_Logistik/activedrver/$1';
+$route['nonactivedriver/(:any)']                = 'logistik/C_Logistik/nonactivedriver/$1';
+$route['tambahpenggunadriver']                  = 'logistik/C_Logistik/tambahpenggunadriver';
+$route['editnorut']                             = 'logistik/C_Logistik/editnorut';
+$route['tambahhelper']                          = 'logistik/C_Logistik/tambahhelper';
+$route['edithelper']                            = 'logistik/C_Logistik/edithelper';
+$route['hapushelper']                           = 'logistik/C_Logistik/hapushelper';
+$route['nonactivehelper/(:any)']                = 'logistik/C_Logistik/nonactivehelper/$1';
+$route['activehelper/(:any)']                   = 'logistik/C_Logistik/activehelper/$1';
 
 $route['tambahhelper']                          = 'logistik/C_Logistik/tambahhelper';
 

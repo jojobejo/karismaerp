@@ -67,6 +67,7 @@
                                             <input type="text" name="no_lambung" class="form-control" required>
                                         </div>
                                     </div>
+
                                     <div class="row mt-3">
                                         <div class="col-md-4">
                                             <label>Kilometer</label>
@@ -81,14 +82,12 @@
                                     <hr>
 
                                     <?php foreach ($parts as $kategori => $items) : ?>
-                                        <h6 class="mt-4 text-primary"><?= $kategori ?></h6>
                                         <table class="table table-sm table-bordered">
                                             <thead class="thead-light">
                                                 <tr>
                                                     <th>Nama Part</th>
                                                     <th width="180">Kondisi</th>
                                                     <th>Keterangan</th>
-                                                    <th width="200">Foto</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -110,17 +109,27 @@
                                                         <td>
                                                             <input type="text" name="part[<?= $kategori . $i ?>][keterangan]" class="form-control form-control-sm">
                                                         </td>
-                                                        <td>
-                                                            <input type="file" name="part[<?= $kategori . $i ?>][foto]" class="form-control form-control-sm" accept="image/*">
-                                                        </td>
                                                     </tr>
                                                 <?php endforeach ?>
                                             </tbody>
                                         </table>
                                     <?php endforeach ?>
 
-                                </div>
+                                    <div class="card shadow mb-3 mt-3">
+                                        <div class="card-header bg-info text-white">
+                                            <strong>Foto Evident Kendaraan</strong>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="col-md-12 mt-3">
+                                                <label>Tambah Foto Kendaraan</label>
+                                                <input type="file" name="foto[]" id="fotoInput" class="form-control" multiple accept="image/*">
+                                            </div>
+                                            <div class="row mt-3" id="previewFoto"></div>
+                                        </div>
+                                    </div>
 
+
+                                </div>
                                 <button class="btn btn-success btn-block">Simpan Checklist</button>
                             </form>
 
@@ -145,3 +154,43 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        let selectedFiles = [];
+
+        document.getElementById('fotoInput').addEventListener('change', function() {
+            const preview = document.getElementById('previewFoto');
+            preview.innerHTML = '';
+            selectedFiles = Array.from(this.files);
+
+            selectedFiles.forEach((file, index) => {
+                if (!file.type.startsWith('image/')) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-3 mb-3';
+                    col.id = 'preview-' + index;
+
+                    col.innerHTML = `
+                <div class="position-relative">
+                    <img src="${e.target.result}" class="img-fluid img-thumbnail">
+                    <button type="button"
+                        class="btn btn-sm btn-danger position-absolute"
+                        style="top:5px; right:5px;"
+                        onclick="removePreview(${index})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+                    preview.appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        function removePreview(index) {
+            selectedFiles.splice(index, 1);
+            document.getElementById('preview-' + index).remove();
+        }
+    </script>

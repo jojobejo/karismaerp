@@ -575,6 +575,20 @@ class M_Hrd extends CI_Model
         return $this->db->insert_id();
     }
 
+    public function insert_foto_checklist($data)
+    {
+        return $this->db->insert('tb_gbrupload_cheklist', $data);
+    }
+
+    public function get_foto_checklist($id_checklist)
+    {
+        return $this->db
+            ->where('id_cheklist', $id_checklist)
+            ->get('tb_gbrupload_cheklist')
+            ->result();
+    }
+
+
     public function insert_detail_checklist_kendaraan($data)
     {
         return $this->db->insert('tb_checklist_kendaraan_detail', $data);

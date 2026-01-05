@@ -1713,6 +1713,7 @@ class C_Hrd extends CI_Controller
         $data['page_title'] = 'Checklist Kendaraan';
         $data['parts'] = $this->M_Hrd->get_master_parts_checklist_kendaraan();
 
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/checklist_kendaraan.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -1722,9 +1723,6 @@ class C_Hrd extends CI_Controller
     {
         $tanggal = date('Y-m-d');
 
-
-
-
         $header = [
             'tanggal_check' => $tanggal,
             'driver'        => $this->input->post('driver'),
@@ -1733,48 +1731,57 @@ class C_Hrd extends CI_Controller
             'kilometer'     => $this->input->post('kilometer'),
             'inputer'       => $this->input->post('inputer')
         ];
-        $config['upload_path']   = './uploads/checklist_kendaraan/';
-        $config['allowed_types'] = 'jpg|jpeg|png';
-        $config['max_size']      = 2048;
-
-        $this->load->library('upload');
 
         $checklist_id = $this->M_Hrd->insert_header_checklist_kendaraan($header);
 
-        foreach ($_POST['part'] as $key => $row) {
-
-            $foto = null;
-
-            if (!empty($_FILES['part']['name'][$key]['foto'])) {
-
-                $_FILES['file']['name']     = $_FILES['part']['name'][$key]['foto'];
-                $_FILES['file']['type']     = $_FILES['part']['type'][$key]['foto'];
-                $_FILES['file']['tmp_name'] = $_FILES['part']['tmp_name'][$key]['foto'];
-                $_FILES['file']['error']    = $_FILES['part']['error'][$key]['foto'];
-                $_FILES['file']['size']     = $_FILES['part']['size'][$key]['foto'];
-
-                $config['file_name'] = 'CHK_' . $checklist_id . '_' . time() . '_' . $key;
-                $this->upload->initialize($config);
-
-                if ($this->upload->do_upload('file')) {
-                    $foto = $this->upload->data('file_name');
-                }
-            }
-
+        foreach ($this->input->post('part') as $row) {
             $detail = [
                 'checklist_id' => $checklist_id,
                 'kategori'     => $row['kategori'],
                 'nama_part'    => $row['nama_part'],
                 'kondisi'      => $row['kondisi'],
-                'keterangan'   => $row['keterangan'],
-                'foto'         => $foto
+                'keterangan'   => $row['keterangan']
             ];
 
             $this->M_Hrd->insert_detail_checklist_kendaraan($detail);
         }
 
+        if (!empty($_FILES['foto']['name'][0])) {
+
+            $config = [
+                'upload_path'   => './uploads/checklist_kendaraan/',
+                'allowed_types' => 'jpg|jpeg|png',
+                'max_size'      => 2048
+            ];
+
+            $this->load->library('upload');
+
+            foreach ($_FILES['foto']['name'] as $i => $name) {
+
+                $_FILES['file']['name']     = $_FILES['foto']['name'][$i];
+                $_FILES['file']['type']     = $_FILES['foto']['type'][$i];
+                $_FILES['file']['tmp_name'] = $_FILES['foto']['tmp_name'][$i];
+                $_FILES['file']['error']    = $_FILES['foto']['error'][$i];
+                $_FILES['file']['size']     = $_FILES['foto']['size'][$i];
+
+                $config['file_name'] = 'CHK_' . $checklist_id . '_' . time() . '_' . $i;
+                $this->upload->initialize($config);
+
+                if ($this->upload->do_upload('file')) {
+                    $file = $this->upload->data();
+
+                    $this->M_Hrd->insert_foto_checklist([
+                        'id_cheklist'  => $checklist_id,
+                        'name_file'    => $file['file_name'],
+                        'path'         => 'uploads/checklist_kendaraan/' . $file['file_name']
+                    ]);
+                }
+            }
+        }
+
         redirect('hrd_chelklist_kendaraan');
     }
+
 
     public function all_laporan_chelist_kendaraan()
     {
@@ -1823,6 +1830,8 @@ class C_Hrd extends CI_Controller
     {
 
         $data['page_title'] = 'Checklist Kendaraan';
+        $data['foto'] = $this->M_Hrd->get_foto_checklist($id);
+
         $data['header'] = $this->M_Hrd->get_checklist_header($id);
         $data['detail'] = $this->M_Hrd->get_checklist_detail_grouped($id);
 

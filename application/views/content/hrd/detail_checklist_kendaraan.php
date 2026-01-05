@@ -104,8 +104,33 @@
                                     </tbody>
                                 </table>
                             </div>
+
+
                         </div>
                     <?php endforeach ?>
+
+                    <div class="card shadow mb-3">
+                        <div class="card-header bg-info text-white">
+                            <strong>Foto Evident Kendaraan</strong>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <?php if (!empty($foto)) : ?>
+                                    <?php foreach ($foto as $f) : ?>
+                                        <div class="col-md-3 mb-3">
+                                            <a href="<?= base_url($f->path) ?>" target="_blank">
+                                                <img src="<?= base_url($f->path) ?>" class="img-fluid img-thumbnail">
+                                            </a>
+                                        </div>
+                                    <?php endforeach ?>
+                                <?php else : ?>
+                                    <div class="col-md-12 text-center text-muted">
+                                        Tidak ada foto
+                                    </div>
+                                <?php endif ?>
+                            </div>
+                        </div>
+                    </div>
 
 
                 </div>
