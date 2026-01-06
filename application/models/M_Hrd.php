@@ -489,15 +489,12 @@ class M_Hrd extends CI_Model
             case 'IKA':
                 $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO']);
                 break;
-
-            case 'LADY':
-                $this->db->where('kd_penerima', 'LADY');
-                break;
-
             case 'MIA':
                 $this->db->where('kd_penerima', 'MIA');
                 break;
-
+            case 'LADY':
+                $this->db->where('kd_penerima', 'LADY');
+                break;
             default:
                 $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY', 'MIA']);
                 break;

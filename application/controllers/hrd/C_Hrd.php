@@ -1557,15 +1557,12 @@ class C_Hrd extends CI_Controller
                 case 'SUPRIYANTO':
                     $penerima_raw = 'KEUANGAN';
                     break;
-
                 case 'LADY':
                     $penerima_raw = 'PURCHASING';
                     break;
-
                 case 'MIA':
                     $penerima_raw = 'MIA';
                     break;
-
                 default:
                     $penerima_raw = $l->kd_penerima;
                     break;

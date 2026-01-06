@@ -281,6 +281,23 @@
                 </p>
               </a>
             </li>
+          <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'MIA') : ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('hrd_lap_paket_pos') ?>" class="nav-link">
+                <i class="nav-icon fa fa-box"></i>
+                <p>
+                  Laporan Paket POS
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
           <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'SALES') : ?>
 
             <li class="nav-item">
