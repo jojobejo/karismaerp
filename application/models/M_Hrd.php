@@ -481,21 +481,25 @@ class M_Hrd extends CI_Model
 
         switch ($user) {
             case 'SUPRIYANTO':
-                $this->db->where('kd_penerima', 'SUPRIYANTO');
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO']);
                 break;
             case 'TRI':
-                $this->db->where('kd_penerima', 'TRI');
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO']);
                 break;
             case 'IKA':
-                $this->db->where('kd_penerima', 'IKA');
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO']);
                 break;
 
             case 'LADY':
                 $this->db->where('kd_penerima', 'LADY');
                 break;
 
+            case 'MIA':
+                $this->db->where('kd_penerima', 'MIA');
+                break;
+
             default:
-                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY']);
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY', 'MIA']);
                 break;
         }
 

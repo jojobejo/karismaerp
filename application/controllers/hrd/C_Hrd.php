@@ -1562,6 +1562,10 @@ class C_Hrd extends CI_Controller
                     $penerima_raw = 'PURCHASING';
                     break;
 
+                case 'MIA':
+                    $penerima_raw = 'MIA';
+                    break;
+
                 default:
                     $penerima_raw = $l->kd_penerima;
                     break;
