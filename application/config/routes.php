@@ -115,23 +115,19 @@ $route['ics/detail_barang/(:any)']                  = 'logistik/C_Ics/view_detai
 $route['ics/gudang']                                = 'logistik/C_Ics/master_gudang';
 $route['ics/gudang_list']                           = 'logistik/C_Ics/gudang_list';
 $route['ics/gudang_save']                           = 'logistik/C_Ics/gudang_save';
-
 $route['ics/get_wilayah_by_gudang']                 = 'logistik/C_Ics/get_wilayah_by_gudang';
-
-
 $route['ics/update_gudang']                         = 'logistik/C_Ics/update_gudang';
 $route['ics/update_wilayah']                        = 'logistik/C_Ics/update_wilayah';
-
 $route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
-
-
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
-
 $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
-
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
+
+// MUTASI BARANG GUDANG
+$route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
+$route['ics/mutasi_barang/input']                   = 'logistik/C_Ics/input_mutasi_barang';
 
 
 // LOGISTIK & OPNAME

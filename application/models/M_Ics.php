@@ -373,6 +373,8 @@ class M_Ics extends CI_Model
             COALESCE(opname.qty_pcs,0)AS qty_pcs,
             a.lokasi as PIC,
             a.wilayah_id as id_gudang,
+			gdg.nama_gudang as nama_gudang,
+            kr.nama_wilayah as nama_wilayah,
             a.kordinat1 as id_kordinat1,
             IF(
                 ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
@@ -380,6 +382,8 @@ class M_Ics extends CI_Model
             ) AS status
         FROM tb_saldo_awal a
         JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+        LEFT JOIN tb_gudang gdg ON gdg.id_gudang = a.wilayah_id
+        LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.kordinat
         LEFT JOIN (
             SELECT nama_barang, exp_date, sum(qty) AS qty_pending
             FROM tb_ics_do
@@ -436,7 +440,7 @@ class M_Ics extends CI_Model
         return $this->db->query($sql, [$nama_barang, $exp_date])->result();
     }
 
-    
+
 
     public function list_barang_ics_diffrent_a()
     {

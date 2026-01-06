@@ -74,7 +74,7 @@
                                                                 <i class="fas fa-warehouse"></i> Update Gudang
                                                             </button>
                                                         <?php else : ?>
-                                                            <?= $br->id_gudang ?>
+                                                            <?= $br->nama_gudang ?>
                                                         <?php endif; ?>
                                                     </td>
 
@@ -85,7 +85,7 @@
                                                             </button>
 
                                                         <?php else : ?>
-                                                            <?= $br->kordinat ?>
+                                                            <?= $br->nama_wilayah ?>
                                                         <?php endif; ?>
                                                     </td>
 

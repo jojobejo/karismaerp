@@ -1116,4 +1116,82 @@ class C_Ics extends CI_Controller
         $this->load->view('content/logistik/ics/detail_gudang.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function mutasi_barang()
+    {
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/mutasi_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function input_mutasi_barang()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['tanggal']    = date('Y-m-d');
+        // $data['ref_mutasi'] = $this->M_Ics->generate_ref_mutasi();
+        // $data['gudang']     = $this->M_Ics->get_gudang();
+
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/input_mutasi_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_mutasi()
+    {
+        $header = [
+            'ref_mutasi'  => $this->input->post('ref_mutasi'),
+            'tgl_mutasi'  => $this->input->post('tanggal'),
+            'dari_gudang' => $this->input->post('dari_gudang'),
+            'ke_gudang'   => $this->input->post('ke_gudang'),
+            'keterangan'  => $this->input->post('keterangan')
+        ];
+
+        $barang = $this->input->post('barang');
+        // barang[index][id_barang], barang[index][qty]
+
+        if ($header['dari_gudang'] == $header['ke_gudang']) {
+            echo json_encode(['status' => 'error', 'msg' => 'Gudang asal dan tujuan tidak boleh sama']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        try {
+
+            $this->M_Ics->insert_mutasi_header($header);
+
+            foreach ($barang as $row) {
+
+                if ($row['qty'] <= 0) continue;
+
+                $this->M_Ics->insert_mutasi_detail(
+                    $header['ref_mutasi'],
+                    $row['id_barang'],
+                    $row['qty']
+                );
+
+                $this->M_Ics->kurangi_stok(
+                    $row['id_barang'],
+                    $header['dari_gudang'],
+                    $row['qty']
+                );
+
+                $this->M_Ics->tambah_stok(
+                    $row['id_barang'],
+                    $header['ke_gudang'],
+                    $row['qty']
+                );
+            }
+
+            $this->db->trans_commit();
+            echo json_encode(['status' => 'success']);
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => 'error', 'msg' => 'Gagal simpan mutasi']);
+        }
+    }
 }
