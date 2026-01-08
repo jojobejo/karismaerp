@@ -124,10 +124,18 @@ $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
+$route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
 $route['ics/mutasi_barang/input']                   = 'logistik/C_Ics/input_mutasi_barang';
+
+$route['ics/ajax_barang_select2']                   = 'logistik/C_Ics/ajax_barang_select2';
+$route['ics/ajax_expired_by_barang']                = 'logistik/C_Ics/ajax_expired_by_barang';
+
+$route['ics/ajax_barang_by_gudang']                 = 'logistik/C_Ics/ajax_barang_by_gudang';
+$route['ics/ajax_exp_by_gudang_barang']             = 'logistik/C_Ics/ajax_exp_by_gudang_barang';
+$route['ics/ajax_get_qty_gudang']                   = 'logistik/C_Ics/ajax_get_qty_gudang';
 
 
 // LOGISTIK & OPNAME

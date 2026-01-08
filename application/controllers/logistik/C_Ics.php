@@ -1109,11 +1109,22 @@ class C_Ics extends CI_Controller
     {
         if (!$id_gudang) show_404();
 
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
         $data['gudang']  = $this->M_Ics->getGudangById($id_gudang);
         $data['wilayah'] = $this->M_Ics->getWilayahByGudang($id_gudang);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_gudang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function barangpergudang()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/barang_pergudang.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -1127,17 +1138,116 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function ajax_barang_select2()
+    {
+        $search = $this->input->get('term');
+        $data   = $this->M_Ics->get_barang_select2($search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->nama_barang,
+                'text' => $row->nama_barang
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_expired_by_barang()
+    {
+        $id_barang = $this->input->get('id_barang');
+
+        $data = $this->M_Ics->get_expired_by_barang($id_barang);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->id,
+                'text' => $row->exp_date
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
     public function input_mutasi_barang()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['tanggal']    = date('Y-m-d');
         // $data['ref_mutasi'] = $this->M_Ics->generate_ref_mutasi();
-        // $data['gudang']     = $this->M_Ics->get_gudang();
+        $data['gudang']     = $this->M_Ics->get_gudang();
 
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/input_mutasi_barang.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_barang_by_gudang()
+    {
+        $search     = $this->input->get('term');
+        $id_gudang  = $this->input->get('id_gudang');
+
+        if (!$id_gudang) {
+            echo json_encode([]);
+            return;
+        }
+
+        $data = $this->M_Ics->get_barang_by_gudang_select2($id_gudang, $search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->nama_barang,
+                'text' => $row->nama_barang
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_exp_by_gudang_barang()
+    {
+        $nama_barang = $this->input->get('nama_barang');
+        $id_gudang   = $this->input->get('id_gudang');
+
+        if (!$nama_barang || !$id_gudang) {
+            echo json_encode([]);
+            return;
+        }
+
+        $data = $this->M_Ics->get_exp_by_gudang_barang($id_gudang, $nama_barang);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->id,
+                'text' => $row->exp_date
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_get_qty_gudang()
+    {
+        $id_gudang    = $this->input->get('id_gudang');
+        $nama_barang  = $this->input->get('nama_barang');
+        $expired_date = $this->input->get('expired_date');
+
+        if (!$id_gudang || !$nama_barang || !$expired_date) {
+            echo json_encode(['qty' => 0]);
+            return;
+        }
+
+        $qty = $this->M_Ics->get_qty_by_gudang_barang_exp(
+            $id_gudang,
+            $nama_barang,
+            $expired_date
+        );
+
+        echo json_encode(['qty' => (int) $qty]);
     }
 
     public function simpan_mutasi()

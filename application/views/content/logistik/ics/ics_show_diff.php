@@ -57,6 +57,9 @@
                                     <a href="<?= base_url('ics/barangpic') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
                                 </div>
                                 <div class="col-auto">
+                                    <a href="<?= base_url('ics/barangpergudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
+                                </div>
+                                <div class="col-auto">
                                     <a href="<?= base_url('ics/mutasi_barang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Mutasi Barang Gudang</a>
                                 </div>
                                 <div class="col-auto">

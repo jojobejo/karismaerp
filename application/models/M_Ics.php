@@ -1339,4 +1339,113 @@ class M_Ics extends CI_Model
             ->get('tb_gudang')
             ->row();
     }
+
+    public function get_gudang()
+    {
+        return $this->db->query("SELECT * FROM tb_gudang
+        ")->result();
+    }
+
+    public function get_barang_select2($search = '')
+    {
+        $this->db->select('nama_barang');
+        $this->db->from('tb_master_barang_all');
+
+        if ($search) {
+            $this->db->like('nama_barang', $search);
+        }
+
+        $this->db->group_by('nama_barang');
+        $this->db->order_by('nama_barang', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+
+    public function get_expired_by_barang($nmbarang)
+    {
+        return $this->db->query("
+        SELECT DISTINCT exp_date, id
+        FROM tb_saldo_awal
+        WHERE nama_barang = ?
+        ORDER BY exp_date ASC
+    ", [$nmbarang])->result();
+    }
+
+    public function get_barang_by_gudang_select2($id_gudang, $search = '')
+    {
+        $this->db->select('a.nama_barang');
+        $this->db->from('tb_saldo_awal a');
+        $this->db->where('a.wilayah_id', $id_gudang);
+
+        if ($search) {
+            $this->db->like('a.nama_barang', $search);
+        }
+
+        $this->db->group_by('a.nama_barang');
+        $this->db->order_by('a.nama_barang', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_exp_by_gudang_barang($id_gudang, $nama_barang)
+    {
+        return $this->db->query("SELECT DISTINCT a.exp_date, 
+        a.id
+        FROM tb_saldo_awal a
+        WHERE a.wilayah_id = ?
+          AND a.nama_barang = ?
+          ", [$id_gudang, $nama_barang])->result();
+    }
+
+    public function get_qty_by_gudang_barang_exp($id_gudang, $nama_barang, $expired_date)
+    {
+        $row = $this->db->query("SELECT
+            x.gudang,
+            x.nama_barang,
+            x.exp_date,
+            (
+                COALESCE(x.saldo_awal_qty, 0)
+                + COALESCE(p.qty_in, 0)
+                - COALESCE(d.qty_out, 0)
+            ) AS qtygudang
+        FROM (
+            SELECT
+                wilayah_id AS gudang,
+                nama_barang,
+                exp_date,
+                SUM(qty) AS saldo_awal_qty
+            FROM tb_saldo_awal
+            WHERE wilayah_id = ?
+            GROUP BY wilayah_id, nama_barang, exp_date
+        ) x
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qty_in
+            FROM tb_ics_po
+            GROUP BY nama_barang, exp_date
+        ) p 
+        ON p.nama_barang = x.nama_barang
+        AND p.exp_date = x.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qty_out
+            FROM tb_ics_do
+            GROUP BY nama_barang, exp_date
+        ) d 
+        ON d.nama_barang = x.nama_barang
+        AND d.exp_date = x.exp_date
+        WHERE x.nama_barang = ? AND x.exp_date = ?
+        ORDER BY x.gudang, x.nama_barang, x.exp_date;
+
+    ", [$id_gudang, $nama_barang, $expired_date])->row();
+
+        return $row ? $row->stok : 0;
+    }
 }
