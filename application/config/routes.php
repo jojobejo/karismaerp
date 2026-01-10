@@ -140,6 +140,7 @@ $route['tambah_lap_expedisi']                   = 'hrd/C_Hrd/tambah_lap_expedisi
 $route['hapus_lap_expedisi']                    = 'hrd/C_Hrd/hapus_lap_expedisi';
 $route['hrd_lap_issue']                         = 'hrd/C_Hrd/lap_issue';
 $route['edit_lap_issue']                        = 'hrd/C_Hrd/edit_lap_issue';
+$route['update_status_issue/(:any)']            = 'hrd/C_Hrd/update_status_issue/$1';
 $route['tambah_lap_issue']                      = 'hrd/C_Hrd/tambah_lap_issue';
 $route['hapus_lap_issue']                       = 'hrd/C_Hrd/hapus_lap_issue';
 $route['search_lap_distribusi']                 = 'hrd/C_Hrd/search_lap_distribusi';

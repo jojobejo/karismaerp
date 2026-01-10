@@ -1,5 +1,4 @@
 <script>
-    
     $('#tb_penerimaan_pos').DataTable({
         processing: true,
         serverSide: true,

@@ -651,6 +651,7 @@ class C_Hrd extends CI_Controller
             'issue' => $issue,
             'lokasi' => $lokasi,
             'nama' => $nama,
+            'status' => '1'
         );
         $this->M_Hrd->addlapissue($data);
         redirect('hrd_lap_issue');
@@ -678,6 +679,14 @@ class C_Hrd extends CI_Controller
         $id     = $this->input->post('id_isi');
 
         $this->M_Inventaris->hapuslapissue($id);
+        redirect('hrd_lap_issue');
+    }
+    public function update_status_issue($id)
+    {
+        $data = array(
+            'status' => '2'
+        );
+        $this->M_Hrd->editlapissue($id, $data);
         redirect('hrd_lap_issue');
     }
     public function search_lap_distribusi()
@@ -1552,13 +1561,15 @@ class C_Hrd extends CI_Controller
 
             // ===== MAPPING PENERIMA =====
             switch ($l->kd_penerima) {
-                case 'TRI':
                 case 'IKA':
                 case 'SUPRIYANTO':
                     $penerima_raw = 'KEUANGAN';
                     break;
                 case 'LADY':
                     $penerima_raw = 'PURCHASING';
+                    break;
+                case 'NITA':
+                    $penerima_raw = 'HRD & GA';
                     break;
                 case 'MIA':
                     $penerima_raw = 'MIA';

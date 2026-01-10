@@ -298,7 +298,8 @@
                 </p>
               </a>
             </li>
-          <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'SALES') : ?>
+
+          <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'HRD & GA') : ?>
 
             <li class="nav-item">
               <a href="<?php echo base_url('hrd_lap_tamu') ?>" class="nav-link">

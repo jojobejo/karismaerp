@@ -1,4 +1,4 @@
-<?php if ($this->session->userdata('departemen') == 'KEUANGAN') : ?>
+<?php if ($this->session->userdata('departemen') == 'KEUANGAN' || $this->session->userdata('departemen') == 'MIA' || $this->session->userdata('departemen') == 'HRD & GA' ) : ?>
 
     <body class="hold-transition sidebar-mini sidebar-collapse">
 
@@ -34,6 +34,7 @@
                             </div>
 
                             <div class="card-body">
+
                                 <table id="tb_penerimaan_pos" class="table table-bordered table-striped">
                                     <thead>
                                         <tr>

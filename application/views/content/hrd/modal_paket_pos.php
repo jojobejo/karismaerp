@@ -22,7 +22,7 @@
                                 <option value="SUPRIYANTO">SUPRI</option>
                                 <option value="LADY">LADY</option>
                                 <option value="IKA">IKA</option>
-                                <option value="TRI">TRI</option>
+                                <option value="NITA">NITA</option>
                                 <option value="MIA">MIA</option>
                             </select>
                         </div>

@@ -43,6 +43,9 @@ class Auth extends CI_Controller
                     } elseif ($key->departemen == 'MIA') {
                         $this->session->set_userdata($data_session);
                         redirect('hrd_lap_paket_pos');
+                    } elseif ($key->departemen == 'HRD & GA') {
+                        $this->session->set_userdata($data_session);
+                        redirect('hrd_lap_paket_pos');
                     } else {
                         $this->session->set_userdata($data_session);
                         redirect('dashboard');
