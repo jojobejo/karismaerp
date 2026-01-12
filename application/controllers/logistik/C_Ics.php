@@ -1054,7 +1054,7 @@ class C_Ics extends CI_Controller
         $arr_id = explode(",", $list_id);
 
         $this->db->where('id', $id);
-        $this->db->update('tb_saldo_awal', ['lokasi' => $lokasi_baru]);
+        $this->db->update('tb_saldo_awal', ['barang_pic' => $lokasi_baru]);
 
         $ids_to_delete = array_diff($arr_id, [$id]);
 
@@ -1175,7 +1175,7 @@ class C_Ics extends CI_Controller
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['tanggal']    = date('Y-m-d');
-        // $data['ref_mutasi'] = $this->M_Ics->generate_ref_mutasi();
+        $data['ref_mutasi'] = $this->M_Ics->generate_noreff();
         $data['gudang']     = $this->M_Ics->get_gudang();
 
 
@@ -1222,8 +1222,8 @@ class C_Ics extends CI_Controller
         $result = [];
         foreach ($data as $row) {
             $result[] = [
-                'id'   => $row->id,
-                'text' => $row->exp_date
+                'id'   => $row->exp_date,     // ← HARUS TANGGAL
+                'text' => date('d/m/Y', strtotime($row->exp_date))
             ];
         }
 
@@ -1236,10 +1236,6 @@ class C_Ics extends CI_Controller
         $nama_barang  = $this->input->get('nama_barang');
         $expired_date = $this->input->get('expired_date');
 
-        if (!$id_gudang || !$nama_barang || !$expired_date) {
-            echo json_encode(['qty' => 0]);
-            return;
-        }
 
         $qty = $this->M_Ics->get_qty_by_gudang_barang_exp(
             $id_gudang,
@@ -1250,58 +1246,213 @@ class C_Ics extends CI_Controller
         echo json_encode(['qty' => (int) $qty]);
     }
 
-    public function simpan_mutasi()
+    public function ajax_add_tmp_mutasi()
     {
-        $header = [
-            'ref_mutasi'  => $this->input->post('ref_mutasi'),
-            'tgl_mutasi'  => $this->input->post('tanggal'),
-            'dari_gudang' => $this->input->post('dari_gudang'),
-            'ke_gudang'   => $this->input->post('ke_gudang'),
-            'keterangan'  => $this->input->post('keterangan')
+        $data = [
+            'nama_barang'  => $this->input->post('nama_barang'),
+            'exp_date'     => $this->input->post('exp_date'),
+            'qty'          => (int)$this->input->post('qty'),
+            'satuan_id'    => $this->input->post('satuan_id'),
+            'user_inputer' => $this->session->userdata('nik')
         ];
 
-        $barang = $this->input->post('barang');
-        // barang[index][id_barang], barang[index][qty]
+        if (!$data['nama_barang'] || !$data['exp_date'] || $data['qty'] <= 0) {
+            echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
+            return;
+        }
 
-        if ($header['dari_gudang'] == $header['ke_gudang']) {
-            echo json_encode(['status' => 'error', 'msg' => 'Gudang asal dan tujuan tidak boleh sama']);
+        $this->M_Ics->insert_tmp_mutasi($data);
+
+        echo json_encode(['status' => true]);
+    }
+
+    public function ajax_list_tmp_mutasi()
+    {
+        $user_id = $this->session->userdata('nik');
+        $data = $this->M_Ics->get_tmp_mutasi_by_user($user_id);
+
+        echo json_encode($data);
+    }
+
+    public function ajax_update_tmp_mutasi()
+    {
+        $id   = $this->input->post('id');
+        $user = $this->session->userdata('nik');
+
+        if (!$id || !$user) {
+            echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
+            return;
+        }
+
+        $this->M_Ics->update_tmp_mutasi(
+            $id,
+            $user,
+            [
+                'exp_date'  => $this->input->post('exp_date'),
+                'qty'       => (int)$this->input->post('qty'),
+                'satuan_id' => (int)$this->input->post('satuan_id')
+            ]
+        );
+
+        echo json_encode(['status' => true, 'msg' => 'Update sukses']);
+    }
+
+
+    public function ajax_delete_tmp_mutasi()
+    {
+        $id   = $this->input->post('id');
+        $user = $this->session->userdata('nik');
+
+        $this->M_Ics->delete_tmp_mutasi($id, $user);
+        echo json_encode(['status' => true]);
+    }
+
+    public function ajax_rekam_mutasi()
+    {
+        $user = $this->session->userdata('nik');
+
+        $post = $this->input->post();
+        if (!$post) {
+            echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
+            return;
+        }
+
+        if (
+            empty($post['tgl_transaksi']) ||
+            empty($post['fromgdg']) ||
+            empty($post['tujuangdg'])
+        ) {
+            echo json_encode(['status' => false, 'msg' => 'Form mutasi belum lengkap']);
+            return;
+        }
+
+
+        $tmp = $this->M_Ics->get_tmp_mutasi_by_user($user);
+
+        if (!$tmp) {
+            echo json_encode([
+                'status' => false,
+                'msg' => 'Data mutasi kosong atau barang tidak valid'
+            ]);
+            return;
+        }
+
+
+        if (!$tmp) {
+            echo json_encode(['status' => false, 'msg' => 'Data mutasi kosong']);
             return;
         }
 
         $this->db->trans_begin();
 
-        try {
+        $header = [
+            'noreff'        => $post['nofresnsi'],
+            'tgl_transaksi' => $post['tgl_transaksi'],
+            'gudang_asal'   => $post['fromgdg'],
+            'gudang_mutasi' => $post['tujuangdg'],
+            'keterangan'    => $post['keterangan_mutasi'],
+            'inputer'       => $user,
+            'input_at'      => date('Y-m-d H:i:s'),
+            'last_action'   => 'CREATE'
+        ];
 
-            $this->M_Ics->insert_mutasi_header($header);
+        $this->db->insert('tb_mutasi', $header);
 
-            foreach ($barang as $row) {
+        $detail = [];
+        foreach ($tmp as $t) {
+            $detail[] = [
+                'noreff'        => $post['nofresnsi'],
+                'tgl_transaksi' => $post['tgl_transaksi'],
+                'gdg_asal'      => $post['fromgdg'],
+                'gdg_mutasi'    => $post['tujuangdg'],
+                'kode_barang'   => $t->kd_barang ?? null,
+                'nama_barang'   => $t->nama_barang,
+                'exp_date'      => $t->exp_date,
+                'qty'           => $t->qty,
+                'satuan'        => $t->satuan_id,
+                'input_by'      => $user,
+                'create_at'     => date('Y-m-d H:i:s'),
+                'last_action'   => 'CREATE'
+            ];
+        }
 
-                if ($row['qty'] <= 0) continue;
+        $this->db->insert_batch('tb_detail_mutasi', $detail);
 
-                $this->M_Ics->insert_mutasi_detail(
-                    $header['ref_mutasi'],
-                    $row['id_barang'],
-                    $row['qty']
-                );
+        $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
 
-                $this->M_Ics->kurangi_stok(
-                    $row['id_barang'],
-                    $header['dari_gudang'],
-                    $row['qty']
-                );
-
-                $this->M_Ics->tambah_stok(
-                    $row['id_barang'],
-                    $header['ke_gudang'],
-                    $row['qty']
-                );
-            }
-
-            $this->db->trans_commit();
-            echo json_encode(['status' => 'success']);
-        } catch (Exception $e) {
+        if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
-            echo json_encode(['status' => 'error', 'msg' => 'Gagal simpan mutasi']);
+            echo json_encode(['status' => false, 'msg' => 'Gagal merekam mutasi']);
+        } else {
+            $this->db->trans_commit();
+            echo json_encode([
+                'status' => true,
+                'msg'    => 'Mutasi berhasil direkam',
+                'noreff' => $post['nofresnsi']
+            ]);
+        }
+    }
+
+
+
+    // LOGISTIK V2
+    public function saldo_stock()
+    {
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['saldo'] = $this->M_Ics->get_saldo();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/stock_saldo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ics_negatice()
+    {
+        $data['saldo'] = $this->saldo->get_negative_stock();
+        $this->load->view('stock/saldo_index', $data);
+    }
+
+    // LPB 
+
+    public function create_lpb()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/lpbform.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function store_lpb()
+    {
+        $header = [
+            'kode_faktur' => $this->input->post('kode_faktur'),
+            'id_gudang'   => $this->input->post('id_gudang'),
+            'tanggal'     => date('Y-m-d'),
+            'status'      => 'DRAFT'
+        ];
+
+        $detail[] = [
+            'kode_faktur'       => $header['kode_faktur'],
+            'kode_barang_system' => $this->input->post('kode_barang_system'),
+            'no_lot'            => $this->input->post('no_lot'),
+            'exp_date'          => $this->input->post('exp_date'),
+            'qty'               => $this->input->post('qty')
+        ];
+
+        $this->db->trans_begin();
+
+        $this->M_Ics->create_header($header);
+        $this->M_Ics->create_detail($detail);
+        $this->M_Ics->post_lpb($header['kode_faktur']);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo "Gagal simpan LPB";
+        } else {
+            $this->db->trans_commit();
+            redirect('stock/saldo');
         }
     }
 }

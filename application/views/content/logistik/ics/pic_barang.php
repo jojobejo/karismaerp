@@ -40,9 +40,9 @@
                                         <tr>
                                             <td><?= $p->nama_barang ?></td>
                                             <td><?= $p->exp_date ?></td>
-                                            <td><?= $p->lokasi ?></td>
+                                            <td><?= $p->barang_pic ?></td>
                                             <td>
-                                                <a href="#" class="btn btn-sm btn-primary btn-edit-pic" data-ids="<?= $p->daftar_id ?>" data-namabarang="<?= $p->nama_barang ?>" data-exp="<?= $p->exp_date ?>" data-lokasi="<?= $p->lokasi ?>">
+                                                <a href="#" class="btn btn-sm btn-primary btn-edit-pic" data-ids="<?= $p->daftar_id ?>" data-namabarang="<?= $p->nama_barang ?>" data-exp="<?= $p->exp_date ?>" data-lokasi="<?= $p->barang_pic ?>">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </a>
                                             </td>
@@ -71,10 +71,10 @@
                                 <tbody>
                                     <?php foreach ($itemtotal as $i) : ?>
                                         <tr>
-                                            <td><?= $i->lokasi ?></td>
+                                            <td><?= $i->barang_pic ?></td>
                                             <td><?= $i->total_barang ?></td>
                                             <td>
-                                                <a href="<?= base_url('ics/barangpic/' . $i->lokasi) ?>" class="btn btn-info btn-block btn-sm">
+                                                <a href="<?= base_url('ics/barangpic/' . $i->barang_pic) ?>" class="btn btn-info btn-block btn-sm">
                                                     <i class="fas fa-filter"></i>
                                                 </a>
                                             </td>

@@ -52,7 +52,7 @@ class M_Ics extends CI_Model
         return $this->db
             ->where('id', $id)
             ->update('tb_saldo_awal', [
-                'kordinat' => $id_wilayah
+                'koordinat_id' => $id_wilayah
             ]);
     }
 
@@ -77,7 +77,7 @@ class M_Ics extends CI_Model
     {
         $where = "";
         if ($pic != "E") {
-            $where = "WHERE x.lokasi = '$pic'";
+            $where = "WHERE x.barang_pic = '$pic'";
         }
 
         return $this->db->query("SELECT
@@ -146,7 +146,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , lokasi
+            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , barang_pic
             FROM tb_saldo_awal
             GROUP BY nama_barang, exp_date
         ) x
@@ -178,7 +178,7 @@ class M_Ics extends CI_Model
     {
         $where = "";
         if ($pic != "E") {
-            $where = "WHERE x.lokasi = '$pic'";
+            $where = "WHERE x.barang_pic = '$pic'";
         }
 
         return $this->db->query("SELECT
@@ -245,7 +245,7 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,lokasi
+            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,barang_pic
             FROM tb_saldo_awal
             GROUP BY nama_barang
         ) x
@@ -286,9 +286,8 @@ class M_Ics extends CI_Model
             SELECT 
                 nama_barang,
                 COUNT(*) AS jumlah_barang,
-                MAX(lokasi) AS pic,
-                MAX(kordinat) AS kordinat,
-                MAX(kordinat1) AS kordinat1
+                MAX(barang_pic) AS pic,
+                MAX(koordinat_id) AS kordinat
             FROM tb_saldo_awal
             GROUP BY nama_barang
         ) s ON s.nama_barang = a.nm_barang
@@ -302,9 +301,8 @@ class M_Ics extends CI_Model
         a.kode_barang,
         b.exp_date,
         b.qty,
-        b.lokasi as PIC,
-        b.kordinat,
-        b.kordinat1
+        b.barang_pic as PIC,
+        b.koordinat_id
         FROM tb_master_barang a 
         JOIN tb_saldo_awal b ON b.nama_barang = a.nm_barang
         WHERE a.kode_barang = '$kd'
@@ -362,7 +360,6 @@ class M_Ics extends CI_Model
             b.p * b.l * b.t AS dimensi,
             a.nama_barang,
             a.exp_date AS expired,
-            a.kordinat,
             a.qty AS qty,
             COALESCE(pending.qty_pending, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
@@ -371,11 +368,10 @@ class M_Ics extends CI_Model
             COALESCE(opname.qty_opname, 0) AS ics,
             COALESCE(opname.qty_box,0)AS qty_box,
             COALESCE(opname.qty_pcs,0)AS qty_pcs,
-            a.lokasi as PIC,
+            a.barang_pic as PIC,
             a.wilayah_id as id_gudang,
 			gdg.nama_gudang as nama_gudang,
             kr.nama_wilayah as nama_wilayah,
-            a.kordinat1 as id_kordinat1,
             IF(
                 ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
                 1, 0
@@ -383,7 +379,7 @@ class M_Ics extends CI_Model
         FROM tb_saldo_awal a
         JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
         LEFT JOIN tb_gudang gdg ON gdg.id_gudang = a.wilayah_id
-        LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.kordinat
+        LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.koordinat_id
         LEFT JOIN (
             SELECT nama_barang, exp_date, sum(qty) AS qty_pending
             FROM tb_ics_do
@@ -510,9 +506,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = 'A'
+        WHERE barang_pic = 'A'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -611,9 +607,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = 'B'
+        WHERE barang_pic = 'B'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -712,9 +708,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = 'C'
+        WHERE barang_pic = 'C'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -813,9 +809,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = 'D'
+        WHERE barang_pic = 'D'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -914,9 +910,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = 'E'
+        WHERE barang_pic = 'E'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -1015,9 +1011,9 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(lokasi) AS lokasi , MAX(kordinat) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
-        WHERE lokasi = '0'
+        WHERE barang_pic = '0'
         GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
@@ -1254,11 +1250,11 @@ class M_Ics extends CI_Model
                 GROUP_CONCAT(id) AS daftar_id,
                 nama_barang,
                 exp_date,
-                lokasi,
+                barang_pic,
                 COUNT(*) AS total
             FROM tb_saldo_awal
-            WHERE lokasi = '$lokasi'
-            GROUP BY nama_barang, exp_date, lokasi
+            WHERE barang_pic = '$lokasi'
+            GROUP BY nama_barang, exp_date, barang_pic
             ORDER BY nama_barang, exp_date
         ")->result();
         }
@@ -1268,10 +1264,10 @@ class M_Ics extends CI_Model
     public function total_barang_pic()
     {
         return $this->db->query("SELECT
-        lokasi, COUNT(DISTINCT CONCAT(nama_barang, '-', exp_date)) AS total_barang
+        barang_pic, COUNT(DISTINCT CONCAT(nama_barang, '-', exp_date)) AS total_barang
         FROM tb_saldo_awal
-        GROUP BY lokasi
-        ORDER BY lokasi
+        GROUP BY barang_pic
+        ORDER BY barang_pic
     ")->result();
     }
 
@@ -1392,11 +1388,11 @@ class M_Ics extends CI_Model
 
     public function get_exp_by_gudang_barang($id_gudang, $nama_barang)
     {
-        return $this->db->query("SELECT DISTINCT a.exp_date, 
-        a.id
-        FROM tb_saldo_awal a
-        WHERE a.wilayah_id = ?
-          AND a.nama_barang = ?
+        return $this->db->query("SELECT DISTINCT exp_date
+            FROM tb_saldo_awal
+            WHERE wilayah_id = ?
+            AND nama_barang = ?
+            ORDER BY exp_date ASC 
           ", [$id_gudang, $nama_barang])->result();
     }
 
@@ -1446,6 +1442,115 @@ class M_Ics extends CI_Model
 
     ", [$id_gudang, $nama_barang, $expired_date])->row();
 
-        return $row ? $row->stok : 0;
+        return $row ? (int)$row->qtygudang : 0;
+    }
+
+    public function insert_tmp_mutasi($data)
+    {
+        return $this->db->insert('tb_tmp_mutasi', $data);
+    }
+
+    public function insert_mutasi($data)
+    {
+        return $this->db->insert('tb_mutasi', $data);
+    }
+    public function insert_log($data)
+    {
+        return $this->db->insert('tb_log_mutasi', $data);
+    }
+    public function clear_tmp($user)
+    {
+        return $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
+    }
+
+
+    public function get_tmp_mutasi_by_user($user_id)
+    {
+
+        $sql = "SELECT 
+        a.id,b.kd_barang,a.nama_barang,a.exp_date,a.qty,a.satuan_id,a.user_inputer
+        FROM tb_tmp_mutasi a
+        LEFT JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
+        WHERE a.user_inputer = '$user_id'";
+        return $this->db->query($sql)->result();
+    }
+
+    public function update_tmp_mutasi($id, $user_id, $data)
+    {
+        return $this->db->where([
+            'id' => $id,
+            'user_inputer' => $user_id
+        ])->update('tb_tmp_mutasi', $data);
+    }
+
+    public function delete_tmp_mutasi($id, $user_id)
+    {
+        return $this->db->where([
+            'id' => $id,
+            'user_inputer' => $user_id
+        ])->delete('tb_tmp_mutasi');
+    }
+
+
+    public function clear_tmp_mutasi($user_id)
+    {
+        return $this->db->where('user_inputer', $user_id)
+            ->delete('tb_tmp_mutasi');
+    }
+
+    // LOGISTIK V2
+
+    protected $view = 'v_saldo_stock';
+
+    public function get_saldo($filter = [])
+    {
+        if (!empty($filter['kode_barang_system'])) {
+            $this->db->where('kode_barang_system', $filter['kode_barang_system']);
+        }
+
+        if (!empty($filter['id_gudang'])) {
+            $this->db->where('id_gudang', $filter['id_gudang']);
+        }
+
+        if (!empty($filter['no_lot'])) {
+            $this->db->where('no_lot', $filter['no_lot']);
+        }
+
+        if (!empty($filter['exp_date'])) {
+            $this->db->where('exp_date', $filter['exp_date']);
+        }
+
+        return $this->db->get($this->view)->result();
+    }
+
+    public function create_header_lpb($data)
+    {
+        return $this->db->insert('ics_lpb_header', $data);
+    }
+
+    public function create_detail_lpn($data)
+    {
+        return $this->db->insert_batch('ics_lpb_detail', $data);
+    }
+
+    public function post_lpb($kode_faktur)
+    {
+        $this->db->where('kode_faktur', $kode_faktur)
+            ->update('ics_lpb_header', ['status' => 'POSTED']);
+    }
+    public function generate_noreff()
+    {
+        $date = date('Ymd');
+
+        $this->db->like('noreff', "KIUMTSI$date", 'after');
+        $this->db->order_by('id', 'DESC');
+        $last = $this->db->get('tb_mutasi')->row();
+
+        $no = 1;
+        if ($last) {
+            $no = (int) substr($last->noreff, -4) + 1;
+        }
+
+        return "KIUMTSI$date" . str_pad($no, 4, '0', STR_PAD_LEFT);
     }
 }
