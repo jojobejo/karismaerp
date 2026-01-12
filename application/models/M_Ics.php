@@ -1553,4 +1553,67 @@ class M_Ics extends CI_Model
 
         return "KIUMTSI$date" . str_pad($no, 4, '0', STR_PAD_LEFT);
     }
+
+    public function query_view_saldo()
+    {
+        return $this->db->query("SELECT
+            g.id_gudang,
+            g.nama_gudang,
+            mb.kd_barang_zahir,
+            mb.kd_barang,
+            sa.nama_barang,
+            sa.exp_date,
+            IFNULL(sa.qty, 0) AS saldo_awal,
+            IFNULL(po.qty_in, 0) AS qty_in,
+            IFNULL(do.qty_out, 0) AS qty_do,
+            IFNULL(mu.qty_mutasi_out, 0) AS qty_mutasi,
+            (
+                IFNULL(sa.qty, 0)
+                + IFNULL(po.qty_in, 0)
+                - IFNULL(do.qty_out, 0)
+                - IFNULL(mu.qty_mutasi_out, 0)
+            ) AS saldo_realtime
+        FROM tb_saldo_awal sa
+        JOIN tb_master_barang_all mb
+            ON mb.kd_barang = sa.kode_barang_system
+        JOIN tb_gudang_wilayah gw
+            ON gw.id_wilayah = sa.wilayah_id
+        JOIN tb_gudang g
+            ON g.id_gudang = gw.id_gudang
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                exp_date,
+                SUM(qty) AS qty_in
+            FROM tb_ics_po
+            WHERE lpb_status = '1'
+            GROUP BY nama_barang, exp_date
+        ) po
+            ON po.nama_barang = sa.nama_barang
+            AND po.exp_date = sa.exp_date
+        LEFT JOIN (
+            SELECT
+                nama_barang,
+                tgl_exp,
+                SUM(qty) AS qty_out
+            FROM tb_detail_do
+            WHERE status = '4'
+            GROUP BY nama_barang, tgl_exp
+        ) do
+            ON do.nama_barang = sa.nama_barang
+            AND do.tgl_exp = sa.exp_date
+        LEFT JOIN (
+            SELECT
+                kode_barang,
+                exp_date,
+                gdg_asal,
+                SUM(qty) AS qty_mutasi_out
+            FROM tb_detail_mutasi
+            GROUP BY kode_barang, exp_date, gdg_asal
+        ) mu
+            ON mu.kode_barang = sa.kode_barang_system
+            AND mu.exp_date = sa.exp_date
+            AND mu.gdg_asal = g.id_gudang
+        ")->result();
+    }
 }
