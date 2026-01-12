@@ -95,7 +95,7 @@ $query_builder = TRUE;
 // 	'save_queries' => TRUE
 // );
 
-$db['det'] = array(
+$db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => 'localhost',
 	'username' => 'u471548307_adminkarisma',
