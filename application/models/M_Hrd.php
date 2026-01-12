@@ -621,6 +621,7 @@ class M_Hrd extends CI_Model
             h.nopol,
             h.no_lambung,
             h.kilometer,
+            h.inputer,
             SUM(CASE WHEN d.kondisi = "TIDAK BAIK" THEN 1 ELSE 0 END) AS total_tidak_baik
         ');
         $this->db->from('tb_checklist_kendaraan h');
@@ -684,6 +685,7 @@ class M_Hrd extends CI_Model
             h.nopol,
             h.no_lambung,
             h.kilometer,
+            h.inputer,
             SUM(CASE WHEN d.kondisi = "TIDAK BAIK" THEN 1 ELSE 0 END) AS total_tidak_baik
         ');
         $this->db->from($this->table_checklist_kendaraan);

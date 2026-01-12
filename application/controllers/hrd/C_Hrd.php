@@ -1824,6 +1824,7 @@ class C_Hrd extends CI_Controller
                 $row->nopol,
                 $row->no_lambung,
                 number_format($row->kilometer),
+                $row->inputer,
                 $status,
                 '<a href="' . base_url('detail_checklist_kendaraan/' . $row->id) . '" 
                 class="btn btn-sm btn-info w-100">Detail</a>'

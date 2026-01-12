@@ -56,6 +56,7 @@
                                         <th>No Lambung</th>
                                         <th>Kilometer</th>
                                         <th>Status</th>
+                                        <th>Inputer</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
