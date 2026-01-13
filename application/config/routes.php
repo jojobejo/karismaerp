@@ -142,6 +142,10 @@ $route['ics/ajax_update_tmp_mutasi']                = 'logistik/C_Ics/ajax_updat
 $route['ics/ajax_delete_tmp_mutasi']                = 'logistik/C_Ics/ajax_delete_tmp_mutasi';
 $route['ics/ajax_rekam_mutasi']                     = 'logistik/C_Ics/ajax_rekam_mutasi';
 
+$route['ics/ajax_filter_mutasi']                    = 'logistik/C_Ics/ajax_filter_mutasi';
+$route['ics/ajax_rollback_mutasi']                  = 'logistik/C_Ics/ajax_rollback_mutasi';
+$route['ics/ajax_unpost_mutasi']                    = 'logistik/C_Ics/ajax_unpost_mutasi';
+
 $route['logistik/stock']                            = 'logistik/C_Ics/saldo_stock';
 $route['logistik/lpb']                              = 'logistik/C_Ics/create_lpb';
 

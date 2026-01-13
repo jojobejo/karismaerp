@@ -1538,6 +1538,51 @@ class M_Ics extends CI_Model
         $this->db->where('kode_faktur', $kode_faktur)
             ->update('ics_lpb_header', ['status' => 'POSTED']);
     }
+
+    public function get_faktur_mutasi()
+    {
+        $sql = "SELECT 
+        a.id,
+        a.keterangan,
+        a.noreff,
+        a.tgl_transaksi,
+        b.nama_gudang as gudang_a,
+        c.nama_gudang as gudang_b,
+        a.status,
+        d.nm_karyawan
+        FROM tb_mutasi a
+        JOIN tb_gudang b ON b.id_gudang = a.gudang_asal
+        JOIN tb_gudang c ON c.id_gudang = a.gudang_mutasi
+        JOIN tb_karyawan d ON d.nik = a.inputer
+        ";
+        return $this->db->query($sql)->result();
+    }
+
+    public function filter_mutasi($gudang, $daterange, $status)
+    {
+        $this->db->select("
+        a.*, 
+        b.nama_gudang gudang_a,
+        c.nama_gudang gudang_b,
+        d.nm_karyawan
+    ");
+        $this->db->from('tb_mutasi a');
+        $this->db->join('tb_gudang b', 'b.id_gudang=a.gudang_asal');
+        $this->db->join('tb_gudang c', 'c.id_gudang=a.gudang_mutasi');
+        $this->db->join('tb_karyawan d', 'd.nik=a.inputer');
+
+        if ($gudang) $this->db->where('a.gudang_asal', $gudang);
+        if ($status) $this->db->where('a.status', $status);
+
+        if ($daterange) {
+            [$start, $end] = explode(' - ', $daterange);
+            $this->db->where('a.tgl_transaksi >=', date('Y-m-d', strtotime($start)));
+            $this->db->where('a.tgl_transaksi <=', date('Y-m-d', strtotime($end)));
+        }
+
+        return $this->db->get()->result();
+    }
+
     public function generate_noreff()
     {
         $date = date('Ymd');

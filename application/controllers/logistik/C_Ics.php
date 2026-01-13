@@ -1131,12 +1131,65 @@ class C_Ics extends CI_Controller
     public function mutasi_barang()
     {
 
-        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['faktur_mutasi']      = $this->M_Ics->get_faktur_mutasi();
+        $data['gudang']             = $this->M_Ics->get_gudang();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/mutasi_barang.php', $data);
         $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ics/ajax_mutasi.php');
     }
+
+    public function ajax_filter_mutasi()
+    {
+        $data = $this->M_Ics->filter_mutasi(
+            $this->input->post('gudang'),
+            $this->input->post('daterange'),
+            $this->input->post('status')
+        );
+
+        foreach ($data as $fm) {
+            echo "<tr>
+            <td>{$fm->tgl_transaksi}</td>
+            <td>{$fm->noreff}</td>
+            <td>{$fm->gudang_a}</td>
+            <td>{$fm->gudang_b}</td>
+            <td>{$fm->keterangan}</td>
+            <td>{$fm->nm_karyawan}</td>
+            <td>{$fm->status}</td>
+            <td>
+                <button class='btn btn-sm btn-warning btn-edit' data-id='{$fm->id}'>Edit</button>
+                <button class='btn btn-sm btn-danger btn-rollback' data-id='{$fm->id}' data-ref='{$fm->noreff}'>Rollback</button>
+                <button class='btn btn-sm btn-secondary btn-unpost' data-id='{$fm->id}'>Unpost</button>
+            </td>
+        </tr>";
+        }
+    }
+
+    public function rollback()
+    {
+        $id = $this->input->post('id');
+
+        $this->db->trans_start();
+
+        $detail = $this->db->get_where('tb_detail_mutasi', ['noref' => $id])->result();
+        foreach ($detail as $d) {
+            $this->db->set('qty', 'qty+' . $d->qty, false)
+                ->where('kode_barang_system', $d->kode_barang)
+                ->update('tb_saldo_awal');
+        }
+
+        $this->db->where('id', $id)
+            ->update('tb_mutasi', [
+                'status' => 'ROLLBACK',
+                'rollback_at' => date('Y-m-d H:i:s')
+            ]);
+
+        $this->db->trans_complete();
+    }
+
+
 
     public function ajax_barang_select2()
     {
@@ -1310,9 +1363,9 @@ class C_Ics extends CI_Controller
     public function ajax_rekam_mutasi()
     {
         $user = $this->session->userdata('nik');
-
         $post = $this->input->post();
-        if (!$post) {
+
+        if (!$post || !$user) {
             echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
             return;
         }
@@ -1326,22 +1379,14 @@ class C_Ics extends CI_Controller
             return;
         }
 
-
         $tmp = $this->M_Ics->get_tmp_mutasi_by_user($user);
-
-        if (!$tmp) {
-            echo json_encode([
-                'status' => false,
-                'msg' => 'Data mutasi kosong atau barang tidak valid'
-            ]);
-            return;
-        }
-
-
         if (!$tmp) {
             echo json_encode(['status' => false, 'msg' => 'Data mutasi kosong']);
             return;
         }
+
+        $IS_HOLD = ($post['tujuangdg'] == '13');
+        $STATUS  = $IS_HOLD ? 'HOLD' : 'POSTED';
 
         $this->db->trans_begin();
 
@@ -1352,46 +1397,82 @@ class C_Ics extends CI_Controller
             'gudang_mutasi' => $post['tujuangdg'],
             'keterangan'    => $post['keterangan_mutasi'],
             'inputer'       => $user,
+            'status'        => $STATUS,
             'input_at'      => date('Y-m-d H:i:s'),
             'last_action'   => 'CREATE'
         ];
-
         $this->db->insert('tb_mutasi', $header);
 
-        $detail = [];
-        foreach ($tmp as $t) {
-            $detail[] = [
-                'noreff'        => $post['nofresnsi'],
-                'tgl_transaksi' => $post['tgl_transaksi'],
-                'gdg_asal'      => $post['fromgdg'],
-                'gdg_mutasi'    => $post['tujuangdg'],
-                'kode_barang'   => $t->kd_barang ?? null,
-                'nama_barang'   => $t->nama_barang,
-                'exp_date'      => $t->exp_date,
-                'qty'           => $t->qty,
-                'satuan'        => $t->satuan_id,
-                'input_by'      => $user,
-                'create_at'     => date('Y-m-d H:i:s'),
-                'last_action'   => 'CREATE'
-            ];
-        }
+        if ($IS_HOLD) {
 
-        $this->db->insert_batch('tb_detail_mutasi', $detail);
+            $hold = [];
+            foreach ($tmp as $t) {
+                $hold[] = [
+                    'noref'         => $post['nofresnsi'],
+                    'kode_barang'   => $t->kd_barang,
+                    'nama_barang'   => $t->nama_barang,
+                    'gudang_asal'   => $post['fromgdg'],
+                    'gudang_tujuan' => $post['tujuangdg'],
+                    'exp_date'      => $t->exp_date,
+                    'qty'           => $t->qty,
+                    'sumber'        => 'MUTASI',
+                    'status'        => 'HOLD',
+                    'input_by'      => $user,
+                    'created_at'    => date('Y-m-d H:i:s')
+                ];
+            }
+            $this->db->insert_batch('tb_stock_hold', $hold);
+        } else {
+
+            $detail = [];
+            foreach ($tmp as $t) {
+                $detail[] = [
+                    'noref'        => $post['nofresnsi'],
+                    'tgl_transaksi' => $post['tgl_transaksi'],
+                    'gdg_asal'     => $post['fromgdg'],
+                    'gdg_mutasi'   => $post['tujuangdg'],
+                    'kode_barang'  => $t->kd_barang,
+                    'nama_barang'  => $t->nama_barang,
+                    'exp_date'     => $t->exp_date,
+                    'qty'          => $t->qty,
+                    'satuan'       => $t->satuan_id,
+                    'input_by'     => $user,
+                    'create_at'    => date('Y-m-d H:i:s'),
+                    'last_action'  => 'CREATE'
+                ];
+            }
+            $this->db->insert_batch('tb_detail_mutasi', $detail);
+        }
 
         $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             echo json_encode(['status' => false, 'msg' => 'Gagal merekam mutasi']);
-        } else {
-            $this->db->trans_commit();
-            echo json_encode([
-                'status' => true,
-                'msg'    => 'Mutasi berhasil direkam',
-                'noreff' => $post['nofresnsi']
-            ]);
+            return;
         }
+
+        $this->db->trans_commit();
+
+        $this->db->insert('tb_log_mutasi', [
+            'noreff'     => $post['nofresnsi'],
+            'aksi'       => $STATUS,
+            'keterangan' => $IS_HOLD
+                ? 'MUTASI HOLD GUDANG ' . $post['fromgdg']
+                : 'MUTASI POSTED GUDANG ' . $post['fromgdg'],
+            'user'       => $user,
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+
+        echo json_encode([
+            'status' => true,
+            'msg'    => $IS_HOLD
+                ? 'Mutasi berhasil direkam sebagai HOLD'
+                : 'Mutasi berhasil direkam',
+            'noreff' => $post['nofresnsi']
+        ]);
     }
+
 
 
 
