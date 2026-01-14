@@ -125,6 +125,7 @@ $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
 $route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
+$route['ics/ajax_barang_pergudang']                 = 'logistik/C_Ics/ajax_barang_pergudang';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';

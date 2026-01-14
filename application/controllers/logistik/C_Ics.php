@@ -1121,12 +1121,24 @@ class C_Ics extends CI_Controller
 
     public function barangpergudang()
     {
-        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $induk = $this->M_Ics->get_gudang_induk();
 
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/barang_pergudang.php', $data);
-        $this->load->view('partial/main/footer.php');
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['gudang'] = $this->M_Ics->get_gudang();
+        $data['id_gudang_induk'] = $induk ? $induk->id_gudang : null;
+
+        $this->load->view('partial/main/header', $data);
+        $this->load->view('content/logistik/ics/barang_pergudang', $data);
+        $this->load->view('partial/main/footer');
     }
+
+    public function ajax_barang_pergudang()
+    {
+        $id_gudang = $this->input->post('id_gudang');
+        $data = $this->M_Ics->barangper_gudang($id_gudang);
+        echo json_encode($data);
+    }
+
 
     public function mutasi_barang()
     {
@@ -1427,21 +1439,35 @@ class C_Ics extends CI_Controller
             $detail = [];
             foreach ($tmp as $t) {
                 $detail[] = [
-                    'noref'        => $post['nofresnsi'],
+                    'noreff'        => $post['nofresnsi'],
                     'tgl_transaksi' => $post['tgl_transaksi'],
-                    'gdg_asal'     => $post['fromgdg'],
-                    'gdg_mutasi'   => $post['tujuangdg'],
-                    'kode_barang'  => $t->kd_barang,
-                    'nama_barang'  => $t->nama_barang,
-                    'exp_date'     => $t->exp_date,
-                    'qty'          => $t->qty,
-                    'satuan'       => $t->satuan_id,
-                    'input_by'     => $user,
-                    'create_at'    => date('Y-m-d H:i:s'),
-                    'last_action'  => 'CREATE'
+                    'gdg_asal'      => $post['fromgdg'],
+                    'gdg_mutasi'    => $post['tujuangdg'],
+                    'kode_barang'   => $t->kd_barang,
+                    'kode_barang_zahir'   => $t->kd_barang_zahir,
+                    'nama_barang'   => $t->nama_barang,
+                    'exp_date'      => $t->exp_date,
+                    'qty'           => $t->qty,
+                    'satuan'        => $t->satuan_id,
+                    'input_by'      => $user,
+                    'create_at'     => date('Y-m-d H:i:s'),
+                    'last_action'   => 'CREATE'
+                ];
+
+                $mutasibr[] = [
+                    'kode_barang_system'    => $t->kd_barang,
+                    'kode_barang_zahir'     => $t->kd_barang_zahir,
+                    'nama_barang'           => $t->nama_barang,
+                    'wilayah_id'            => $post['tujuangdg'],
+                    'koordinat_id'          => '0',
+                    'barang_pic'            => '0',
+                    'qty'                   => '0',
+                    'nolot'                 => 'nolot0',
+                    'exp_date'              => $t->exp_date
                 ];
             }
             $this->db->insert_batch('tb_detail_mutasi', $detail);
+            $this->db->insert_batch('tb_saldo_awal', $mutasibr);
         }
 
         $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');

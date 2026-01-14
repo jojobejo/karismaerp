@@ -12,6 +12,41 @@
             <div class="content-header">
                 <section class="content">
 
+                    <div class="row m-2">
+                        <?php foreach ($gudang as $gdg) : ?>
+                            <div class="col-md-2 col-sm-6 mb-3">
+                                <div class="small-box bg-info gudang-btn" data-id="<?= $gdg->id_gudang ?>" style="cursor:pointer;">
+                                    <div class="inner">
+                                        <h5><?= $gdg->nama_gudang ?></h5>
+                                        <p>Wilayah <?= $gdg->tipe ?></p>
+                                    </div>
+                                    <div class="icon">
+                                        <i class="fas fa-warehouse"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+
+                    </div>
+
+                    <div class="card d-none" id="cardTable">
+                        <div class="card-body">
+                            <table class="table table-bordered table-hover table-sm" id="tb_pergudang">
+                                <thead>
+                                    <tr>
+                                        <th>Nama Barang</th>
+                                        <th>Expired Date</th>
+                                        <th>Qty Tersedia</th>
+                                        <th>Qty Box</th>
+                                        <th>Qty Pcs</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyBarang"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
                 </section>
             </div>
         </div>
@@ -32,3 +67,66 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $(document).on('click', '.gudang-btn', function() {
+            let idGudang = $(this).data('id');
+
+            $('.gudang-btn').removeClass('bg-success');
+            $(this).addClass('bg-success');
+
+            $('#cardTable').removeClass('d-none').hide().fadeIn(200);
+
+            $('#tbodyBarang').html(`
+        <tr>
+            <td colspan="5" class="text-center">Loading data...</td>
+        </tr>
+    `);
+
+            $.ajax({
+                url: "<?= base_url('ics/ajax_barang_pergudang') ?>",
+                type: "POST",
+                data: {
+                    id_gudang: idGudang
+                },
+                dataType: "json",
+                success: function(res) {
+                    let html = '';
+
+                    if (!res || res.length === 0) {
+                        html = `
+                    <tr>
+                        <td colspan="5" class="text-center">Data kosong</td>
+                    </tr>
+                `;
+                    } else {
+                        $.each(res, function(i, v) {
+                            html += `
+                        <tr>
+                            <td>${v.nama_barang}</td>
+                            <td>${v.exp_date}</td>
+                            <td>${v.qty}</td>
+                            <td>${v.qty_box}</td>
+                            <td>${v.qty_pcs}</td>
+                        </tr>
+                    `;
+                        });
+                    }
+
+                    $('#tbodyBarang').hide().html(html).fadeIn(150);
+                }
+            });
+        });
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            let defaultGudang = "<?= $id_gudang_induk ?>";
+
+            if (defaultGudang) {
+                $('.gudang-btn[data-id="' + defaultGudang + '"]').trigger('click');
+                $('.gudang-btn').removeClass('bg-success');
+                $('.gudang-btn[data-id="' + defaultGudang + '"]').addClass('bg-success');
+            }
+        });
+    </script>

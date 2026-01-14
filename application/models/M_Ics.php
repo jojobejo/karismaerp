@@ -44,7 +44,7 @@ class M_Ics extends CI_Model
 
     public function getBarangByKode($kd)
     {
-        return $this->db->get_where('tb_master_barang', ['kd_system' => $kd])->row();
+        return $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd])->row();
     }
 
     public function updateWilayahByOpname($id, $id_wilayah)
@@ -166,10 +166,10 @@ class M_Ics extends CI_Model
             GROUP BY nama_barang, exp_date
         ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_system as kd
-            FROM tb_master_barang
-            GROUP BY nm_barang
-        ) mb ON mb.nm_barang = x.nama_barang
+            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang as kd
+            FROM tb_master_barang_all
+            GROUP BY nama_barang
+        ) mb ON mb.nama_barang = x.nama_barang
         $where
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
@@ -265,10 +265,10 @@ class M_Ics extends CI_Model
             GROUP BY nama_barang
         ) o ON o.nama_barang = x.nama_barang
         LEFT JOIN (
-            SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
-            FROM tb_master_barang
-            GROUP BY nm_barang
-        ) mb ON mb.nm_barang = x.nama_barang
+            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
+            FROM tb_master_barang_all
+            GROUP BY nama_barang
+        ) mb ON mb.nama_barang = x.nama_barang
         $where
         ORDER BY x.nama_barang")->result();
     }
@@ -281,7 +281,7 @@ class M_Ics extends CI_Model
             IFNULL(s.pic, '-') AS pic,
             IFNULL(s.kordinat, '-') AS kordinat,
             IFNULL(s.kordinat1, '-') AS kordinat1
-            FROM tb_master_barang a
+            FROM tb_master_barang_all a
             LEFT JOIN (
             SELECT 
                 nama_barang,
@@ -290,8 +290,8 @@ class M_Ics extends CI_Model
                 MAX(koordinat_id) AS kordinat
             FROM tb_saldo_awal
             GROUP BY nama_barang
-        ) s ON s.nama_barang = a.nm_barang
-        ORDER BY a.kd_system ASC;")->result();
+        ) s ON s.nama_barang = a.nama_barang
+        ORDER BY a.kd_barang ASC;")->result();
     }
 
     public function get_barang_detail_by_kd($kd)
@@ -303,8 +303,8 @@ class M_Ics extends CI_Model
         b.qty,
         b.barang_pic as PIC,
         b.koordinat_id
-        FROM tb_master_barang a 
-        JOIN tb_saldo_awal b ON b.nama_barang = a.nm_barang
+        FROM tb_master_barang_all a 
+        JOIN tb_saldo_awal b ON b.nama_barang = a.nama_barang
         WHERE a.kode_barang = '$kd'
         ")->result();
     }
@@ -312,21 +312,21 @@ class M_Ics extends CI_Model
     public function edit_mbarang_ics($id, $data)
     {
         $this->db->where('id', $id);
-        return $this->db->update('tb_master_barang', $data);
+        return $this->db->update('tb_master_barang_all', $data);
     }
 
     public function get_master_barang_log()
     {
         return $this->db->query("SELECT
         a.id as id,
-        a.nm_barang AS nama_barang,
+        a.nama_barang AS nama_barang,
         b.nama_suplier as nama_suplier,
         a.bhn_aktif as bahan_aktif,
         a.satuan as satuan,
         (a.p*a.l*a.t) as dimensi,
         a.berat as berat,
         a.kubikasi as kubikasi
-        FROM tb_master_barang a
+        FROM tb_master_barang_all a
         LEFT JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
         ")->result();
     }
@@ -335,8 +335,8 @@ class M_Ics extends CI_Model
     {
         return $this->db->query("SELECT
         a.*
-        FROM tb_master_barang a
-        WHERE a.kd_system = '$br'
+        FROM tb_master_barang_all a
+        WHERE a.kd_barang = '$br'
         ")->result();
     }
 
@@ -345,8 +345,8 @@ class M_Ics extends CI_Model
         return $this->db->query("SELECT
         a.exp_date
         FROM tb_saldo_awal a
-        LEFT JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
-        WHERE b.kd_system = '$kd'
+        LEFT JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
+        WHERE b.kd_barang = '$kd'
         GROUP BY a.exp_date
         ")->result();
     }
@@ -356,7 +356,7 @@ class M_Ics extends CI_Model
         return $this->db->query("SELECT
             a.id,
             opname.id AS opname_id,
-            b.kd_system,
+            b.kd_barang,
             b.p * b.l * b.t AS dimensi,
             a.nama_barang,
             a.exp_date AS expired,
@@ -377,7 +377,7 @@ class M_Ics extends CI_Model
                 1, 0
             ) AS status
         FROM tb_saldo_awal a
-        JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+        JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
         LEFT JOIN tb_gudang gdg ON gdg.id_gudang = a.wilayah_id
         LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.koordinat_id
         LEFT JOIN (
@@ -528,10 +528,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -629,10 +629,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -730,10 +730,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -831,10 +831,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -932,10 +932,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -1033,10 +1033,10 @@ class M_Ics extends CI_Model
         GROUP BY nama_barang, exp_date
     ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nm_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_system) AS kd
-        FROM tb_master_barang
-        GROUP BY nm_barang
-    ) mb ON mb.nm_barang = x.nama_barang
+        SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
+        FROM tb_master_barang_all
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -1099,7 +1099,7 @@ class M_Ics extends CI_Model
             c.nama_kios as nm_kios,
             b.kd_rute as rute
         FROM tb_ics_do a
-        LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_master_barang_all m ON m.nama_barang = a.nama_barang
         LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
         LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
@@ -1123,7 +1123,7 @@ class M_Ics extends CI_Model
             MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
             a.lpb_note as note
         FROM tb_ics_po a
-        LEFT JOIN tb_master_barang m ON m.nm_barang = a.nama_barang
+        LEFT JOIN tb_master_barang_all m ON m.nama_barang = a.nama_barang
         WHERE DATE(a.tgl_transaksi) = '$tgl'
         AND (m.p * m.l * m.t) > 0")->result();
     }
@@ -1161,7 +1161,7 @@ class M_Ics extends CI_Model
         COALESCE(opname.qty_opname, 0) -((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
         IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),1,0) AS status
         FROM tb_ics a
-        JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+        JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
         LEFT JOIN 
         (	SELECT nama_barang, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -1336,6 +1336,37 @@ class M_Ics extends CI_Model
             ->row();
     }
 
+    public function barangper_gudang($id_gudang = null)
+    {
+        if ($id_gudang === null) {
+            $induk = $this->get_gudang_induk();
+            $id_gudang = $induk ? $induk->id_gudang : 0;
+        }
+
+        return $this->db->query("SELECT
+            a.*,
+            (b.p*b.l*b.t) AS dimensi,
+            FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
+            MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
+        FROM v_saldo_buku a
+        JOIN tb_master_barang_all b 
+            ON b.kd_barang_zahir = a.kode_barang
+        WHERE a.gudang = ?
+        ORDER BY a.nama_barang ASC
+    ", [$id_gudang])->result();
+    }
+
+
+    public function get_gudang_induk()
+    {
+        return $this->db->query("SELECT id_gudang 
+        FROM tb_gudang
+        WHERE id_gudang = '2'
+        LIMIT 1
+    ")->row();
+    }
+
+
     public function get_gudang()
     {
         return $this->db->query("SELECT * FROM tb_gudang
@@ -1468,7 +1499,7 @@ class M_Ics extends CI_Model
     {
 
         $sql = "SELECT 
-        a.id,b.kd_barang,a.nama_barang,a.exp_date,a.qty,a.satuan_id,a.user_inputer
+        a.id,b.kd_barang,b.kd_barang_zahir,a.nama_barang,a.exp_date,a.qty,a.satuan_id,a.user_inputer
         FROM tb_tmp_mutasi a
         LEFT JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
         WHERE a.user_inputer = '$user_id'";

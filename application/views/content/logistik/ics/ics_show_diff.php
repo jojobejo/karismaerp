@@ -53,14 +53,14 @@
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data PO</a>
                                 </div>
-                                <div class="col-auto">
+                                <!-- <div class="col-auto">
                                     <a href="<?= base_url('logistik/stock') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> LOGISTIK V2</a>
-                                </div>
+                                </div> -->
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/barangpic') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
                                 </div>
                                 <div class="col-auto">
-                                    <a href="<?= base_url('ics/barangpergudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Master Barang PIC</a>
+                                    <a href="<?= base_url('ics/barangpergudang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Barang Per Gudang</a>
                                 </div>
                                 <div class="col-auto">
                                     <a href="<?= base_url('ics/mutasi_barang') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-database"></i> Mutasi Barang Gudang</a>
