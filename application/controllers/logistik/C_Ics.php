@@ -188,7 +188,7 @@ class C_Ics extends CI_Controller
         $data_barang = $this->db
             ->select('a.nama_barang, a.exp_date')
             ->from('tb_saldo_awal a')
-            ->join('tb_master_barang b', 'b.nm_barang = a.nama_barang')
+            ->join('tb_master_barang_all b', 'b.nama_barang = a.nama_barang')
             ->where('a.nama_barang', $kdbarang)
             ->get()
             ->row();
@@ -202,7 +202,7 @@ class C_Ics extends CI_Controller
 
         $query = $this->db->query("SELECT
             a.id,
-            b.kd_system,
+            b.kd_barang,
             a.nama_barang,
             a.exp_date as exp_date,
             (b.p*b.l*b.t) AS dimensi,
@@ -214,7 +214,7 @@ class C_Ics extends CI_Controller
             ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0))- COALESCE(opname.qty_opname, 0) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
-            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+            JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
             LEFT JOIN (
                 SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
                 FROM tb_ics_do
@@ -713,6 +713,18 @@ class C_Ics extends CI_Controller
             'create_at'   => date('Y-m-d H:i:s')
         ];
 
+        $newopname = [
+            'kd_system'   => $kdbarang,
+            'nama_barang' => $nama_barang,
+            'exp_date'    => $expawal,
+            'qty_box'     => $qty_box,
+            'qty_pcs'     => $qty_pcs,
+            'qty'         => $qty_total,
+            'inputer'     => $this->session->userdata('nama'),
+            'input_at'    => date('d/m/Y'),
+            'create_at'   => date('Y-m-d H:i:s')
+        ];
+
         $data_awal = [
             'nama_barang' => $nama_barang,
             'exp_date'    => $expawal,
@@ -731,6 +743,19 @@ class C_Ics extends CI_Controller
             'no_lot'        => '-',
             'exp_date'      => $exp_date,
             'keterangan'    => $keterangan,
+            'inputer'       => $this->session->userdata('nama'),
+            'tgl_input'     => date('d/m/Y'),
+            'create_at'     => date('Y-m-d H:i:s')
+        ];
+
+        $logicsawal_new = [
+            'nama_barang'   => $nama_barang,
+            'qty'           => $qty_total,
+            'qty_box'       => $qty_box,
+            'qty_pcs'       => $qty_pcs,
+            'no_lot'        => '-',
+            'exp_date'      => $exp_date,
+            'keterangan'    => 'expired_new_opname',
             'inputer'       => $this->session->userdata('nama'),
             'tgl_input'     => date('d/m/Y'),
             'create_at'     => date('Y-m-d H:i:s')
@@ -772,6 +797,12 @@ class C_Ics extends CI_Controller
                 $this->db->insert('tb_ics_opname', $dataawal);
                 $this->db->insert('tb_log_ics', $logicsawal);
                 $this->db->insert('tb_saldo_awal', $data_awal);
+                $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
+                redirect('ics/stock_by_kodebr/' . $kdbarang);
+                break;
+            case 'newopname':
+                $this->db->insert('tb_ics_opname', $newopname);
+                $this->db->insert('tb_log_ics', $logicsawal_new);
                 $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
                 redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
@@ -1443,8 +1474,8 @@ class C_Ics extends CI_Controller
                     'tgl_transaksi' => $post['tgl_transaksi'],
                     'gdg_asal'      => $post['fromgdg'],
                     'gdg_mutasi'    => $post['tujuangdg'],
-                    'kode_barang'   => $t->kd_barang,
-                    'kode_barang_zahir'   => $t->kd_barang_zahir,
+                    'kode_barang'   => $t->kode_barang_system,
+                    'kode_barang_zahir'   => $t->kd_barang,
                     'nama_barang'   => $t->nama_barang,
                     'exp_date'      => $t->exp_date,
                     'qty'           => $t->qty,
@@ -1455,8 +1486,8 @@ class C_Ics extends CI_Controller
                 ];
 
                 $mutasibr[] = [
-                    'kode_barang_system'    => $t->kd_barang,
-                    'kode_barang_zahir'     => $t->kd_barang_zahir,
+                    'kode_barang_system'    => $t->kode_barang_system,
+                    'kode_barang_zahir'     => $t->kd_barang,
                     'nama_barang'           => $t->nama_barang,
                     'wilayah_id'            => $post['tujuangdg'],
                     'koordinat_id'          => '0',

@@ -70,7 +70,7 @@ class M_Ics extends CI_Model
     public function getnmbarang($kd)
     {
         $kd = $this->getBarangByKode($kd);
-        return $kd->nm_barang;
+        return $kd->nama_barang;
     }
 
     public function list_barang_ics_expdate($pic)
@@ -369,7 +369,7 @@ class M_Ics extends CI_Model
             COALESCE(opname.qty_box,0)AS qty_box,
             COALESCE(opname.qty_pcs,0)AS qty_pcs,
             a.barang_pic as PIC,
-            a.wilayah_id as id_gudang,
+            a.wilayah_id as id_gudang,  
 			gdg.nama_gudang as nama_gudang,
             kr.nama_wilayah as nama_wilayah,
             IF(
@@ -1348,9 +1348,9 @@ class M_Ics extends CI_Model
             (b.p*b.l*b.t) AS dimensi,
             FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
             MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
-        FROM v_saldo_buku a
+        FROM v_stock_per_gudang a
         JOIN tb_master_barang_all b 
-            ON b.kd_barang_zahir = a.kode_barang
+            ON b.kd_barang = a.kode_barang
         WHERE a.gudang = ?
         ORDER BY a.nama_barang ASC
     ", [$id_gudang])->result();
@@ -1499,7 +1499,7 @@ class M_Ics extends CI_Model
     {
 
         $sql = "SELECT 
-        a.id,b.kd_barang,b.kd_barang_zahir,a.nama_barang,a.exp_date,a.qty,a.satuan_id,a.user_inputer
+        a.id,b.kode_barang_system,b.kd_barang,a.nama_barang,a.exp_date,a.qty,a.satuan_id,a.user_inputer
         FROM tb_tmp_mutasi a
         LEFT JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
         WHERE a.user_inputer = '$user_id'";

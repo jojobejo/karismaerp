@@ -19,7 +19,7 @@
                             <?php foreach ($get_barang as $nm) :
                                 $dimensi = $nm->p * $nm->l * $nm->t;
                             ?>
-                                <h5 class="card-title">Detail Inputer Barang - <b><?= $nm->nm_barang ?></b></h5>
+                                <h5 class="card-title">Detail Inputer Barang - <b><?= $nm->nama_barang ?></b></h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -79,7 +79,7 @@
                                                     </td>
 
                                                     <td>
-                                                        <?php if ($br->kordinat == '-' || empty($br->kordinat)) : ?>
+                                                        <?php if ($br->nama_wilayah == '' || empty($br->nama_wilayah)) : ?>
                                                             <button class="btn btn-sm btn-warning btn-update-kordinat w-100" data-toggle="modal" data-target="#modalUpdateWilayah" data-id="<?= $br->id ?>" data-gudang="<?= $br->id_gudang ?>">
                                                                 <i class="fas fa-map-marker-alt"></i> Update Wilayah
                                                             </button>
@@ -93,10 +93,10 @@
                                                         <td>
                                                             <div class="row">
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_barang ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                                 </div>
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
                                                                 </div>
@@ -110,10 +110,10 @@
                                                         <td>
                                                             <div class="row">
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_system ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
+                                                                    <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_barang ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                                 </div>
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nm_barang ?>">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
                                                                 </div>
@@ -212,11 +212,15 @@
                                             </button>
                                         </div>
                                         <div class="modal-body">
-                                            <input type="hidden" name="nama_barang" value="<?= $nm->nm_barang ?>">
+                                            <input type="hidden" name="nama_barang" value="<?= $nm->nama_barang ?>">
                                             <input type="hidden" name="id" value="<?= $br->opname_id ?>">
-                                            <input type="hidden" name="kdbarang" value="<?= $br->kd_system ?>">
+                                            <input type="hidden" name="kdbarang" value="<?= $br->kd_barang ?>">
                                             <input type="hidden" name="dimensi" value="<?= $br->dimensi ?>">
-                                            <input type="hidden" name="action" value="formbyexp">
+                                            <?php if ($br->opname_id == '') : ?>
+                                                <input type="text" name="action" value="newopname">
+                                            <?php else : ?>
+                                                <input type="text" name="action" value="formbyexp">
+                                            <?php endif; ?>
                                             <div class="form-group">
                                                 <label for="exp_date">Expired Date</label>
                                                 <input type="text" name="exp_date" class="form-control" value="<?= $br->expired ?>" readonly>
@@ -274,10 +278,10 @@
                                         <!-- Nama Barang -->
                                         <div class="form-group" hidden>
                                             <label for="nama_barang">Nama Barang</label>
-                                            <input type="text" name="nama_barang" class="form-control" value="<?= $nm->nm_barang ?>" required readonly>
+                                            <input type="text" name="nama_barang" class="form-control" value="<?= $nm->nama_barang ?>" required readonly>
                                             <input type="text" name="dimensi" class="form-control" value="<?= $dimensi ?>" required readonly>
                                             <input type="text" name="action" class="form-control" value="new_expired" required readonly>
-                                            <input type="text" name="kdbarang" class="form-control" value="<?= $nm->kd_system ?>" required readonly>
+                                            <input type="text" name="kdbarang" class="form-control" value="<?= $nm->kd_barang ?>" required readonly>
                                             <input type="text" name="keterangan_isi" class="form-control" value="input_expired_baru" required readonly>
                                         </div>
                                         <!-- Expired Date -->
