@@ -80,8 +80,8 @@ class M_Ics extends CI_Model
             $where = "WHERE x.barang_pic = '$pic'";
         }
 
-        return $this->db->query("SELECT
-        mb.kd,
+        return $this->db->query("SELECT		
+		mb.kd,
         x.id,
         x.nama_barang,
         x.exp_date,
@@ -146,31 +146,33 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , barang_pic
+            SELECT id,nama_barang, exp_date, SUM(qty) AS saldo_awal_qty , barang_pic,kode_barang_zahir
             FROM tb_saldo_awal
-            GROUP BY nama_barang, exp_date
+            GROUP BY exp_date , kode_barang_zahir
         ) x
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
             FROM tb_ics_po
-            GROUP BY nama_barang, exp_date
-        ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+            GROUP BY exp_date , kd_barang
+        ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-            FROM tb_ics_do
-            GROUP BY nama_barang, exp_date
-        ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+            SELECT nama_barang, tgl_exp, SUM(qty) AS qty_out , kd_barang
+            FROM tb_detail_do
+            WHERE status = '4'
+            GROUP BY tgl_exp,kd_barang
+        ) d ON d.kd_barang = x.kode_barang_zahir AND d.tgl_exp = x.exp_date
         LEFT JOIN (
-            SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_opname,kd_system
             FROM tb_ics_opname
-            GROUP BY nama_barang, exp_date
-        ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+            GROUP BY exp_date , kd_system
+        ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
         LEFT JOIN (
             SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang as kd
             FROM tb_master_barang_all
-            GROUP BY nama_barang
-        ) mb ON mb.nama_barang = x.nama_barang
+            GROUP BY kd_barang
+        ) mb ON mb.kd = x.kode_barang_zahir
         $where
+        -- WHERE x.barang_pic = '0'
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
 
@@ -245,30 +247,31 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
         FROM (
-            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,barang_pic
+            SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,barang_pic,kode_barang_zahir
             FROM tb_saldo_awal
-            GROUP BY nama_barang
+            GROUP BY kode_barang_zahir,nama_barang
         ) x
         LEFT JOIN (
-            SELECT nama_barang,SUM(qty) AS qty_in
+            SELECT nama_barang,SUM(qty) AS qty_in , kd_barang
             FROM tb_ics_po
-            GROUP BY nama_barang
-        ) p ON p.nama_barang = x.nama_barang
+            GROUP BY kd_barang, nama_barang
+        ) p ON p.kd_barang = x.kode_barang_zahir AND p.nama_barang = x.nama_barang
         LEFT JOIN (
-            SELECT nama_barang,SUM(qty) AS qty_out
-            FROM tb_ics_do
-            GROUP BY nama_barang
-        ) d ON d.nama_barang = x.nama_barang
+            SELECT nama_barang,SUM(qty) AS qty_out,kd_barang,status
+            FROM tb_detail_do
+            WHERE status = '4'
+            GROUP BY kd_barang, nama_barang
+        ) d ON d.kd_barang = x.kode_barang_zahir AND d.nama_barang = x.nama_barang
         LEFT JOIN (
-            SELECT nama_barang,SUM(qty) AS qty_opname
+            SELECT nama_barang,SUM(qty) AS qty_opname, kd_system
             FROM tb_ics_opname
-            GROUP BY nama_barang
-        ) o ON o.nama_barang = x.nama_barang
+            GROUP BY kd_system, nama_barang
+        ) o ON o.kd_system = x.kode_barang_zahir AND o.nama_barang = x.nama_barang
         LEFT JOIN (
-            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t
+            SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang
             FROM tb_master_barang_all
-            GROUP BY nama_barang
-        ) mb ON mb.nama_barang = x.nama_barang
+            GROUP BY kd_barang,nama_barang
+        ) mb ON mb.kd_barang = x.kode_barang_zahir AND mb.nama_barang = x.nama_barang
         $where
         ORDER BY x.nama_barang")->result();
     }
@@ -361,10 +364,10 @@ class M_Ics extends CI_Model
             a.nama_barang,
             a.exp_date AS expired,
             a.qty AS qty,
-            COALESCE(pending.qty_pending, 0) AS do,
+            COALESCE(deliv.qty_out, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
-            (a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-            COALESCE(opname.qty_opname, 0) - ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            (a.qty - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - ((a.qty - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             COALESCE(opname.qty_opname, 0) AS ics,
             COALESCE(opname.qty_box,0)AS qty_box,
             COALESCE(opname.qty_pcs,0)AS qty_pcs,
@@ -373,7 +376,7 @@ class M_Ics extends CI_Model
 			gdg.nama_gudang as nama_gudang,
             kr.nama_wilayah as nama_wilayah,
             IF(
-                ((a.qty - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
+                ((a.qty - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
                 1, 0
             ) AS status
         FROM tb_saldo_awal a
@@ -381,15 +384,17 @@ class M_Ics extends CI_Model
         LEFT JOIN tb_gudang gdg ON gdg.id_gudang = a.wilayah_id
         LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.koordinat_id
         LEFT JOIN (
-            SELECT nama_barang, exp_date, sum(qty) AS qty_pending
-            FROM tb_ics_do
-            GROUP BY nama_barang, exp_date
-        ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
-        LEFT JOIN (
             SELECT nama_barang, exp_date, sum(qty) AS qty_po
             FROM tb_ics_po
             GROUP BY nama_barang, exp_date
         ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
+        LEFT JOIN (
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    	) deliv ON deliv.kd_barang = a.kode_barang_zahir AND deliv.exp_date = a.exp_date
         LEFT JOIN (
             SELECT id,nama_barang, exp_date, sum(qty) AS qty_opname , qty_box , qty_pcs
             FROM tb_ics_opname
@@ -609,32 +614,34 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
         FROM tb_saldo_awal
         WHERE barang_pic = 'B'
-        GROUP BY nama_barang, exp_date
+        GROUP BY exp_date , kode_barang_zahir
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
         FROM tb_ics_po
-        GROUP BY nama_barang, exp_date
-    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+        GROUP BY exp_date , kd_barang
+    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-        FROM tb_ics_do
-        GROUP BY nama_barang, exp_date
-    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
         FROM tb_ics_opname
         WHERE wilayah = 'B'
-        GROUP BY nama_barang, exp_date
-    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+        GROUP BY kd_barang, exp_date
+    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY nama_barang
-    ) mb ON mb.nama_barang = x.nama_barang
+        GROUP BY kd_barang
+    ) mb ON mb.kd = x.kode_barang_zahir
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -710,32 +717,34 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
         FROM tb_saldo_awal
         WHERE barang_pic = 'C'
-        GROUP BY nama_barang, exp_date
+        GROUP BY exp_date , kode_barang_zahir
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
         FROM tb_ics_po
-        GROUP BY nama_barang, exp_date
-    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+        GROUP BY exp_date , kd_barang
+    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-        FROM tb_ics_do
-        GROUP BY nama_barang, exp_date
-    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
         FROM tb_ics_opname
         WHERE wilayah = 'C'
-        GROUP BY nama_barang, exp_date
-    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+        GROUP BY kd_barang, exp_date
+    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY nama_barang
-    ) mb ON mb.nama_barang = x.nama_barang
+        GROUP BY kd_barang
+    ) mb ON mb.kd = x.kode_barang_zahir
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -811,32 +820,34 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
         FROM tb_saldo_awal
         WHERE barang_pic = 'D'
-        GROUP BY nama_barang, exp_date
+        GROUP BY exp_date , kode_barang_zahir
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
         FROM tb_ics_po
-        GROUP BY nama_barang, exp_date
-    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+        GROUP BY exp_date , kd_barang
+    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-        FROM tb_ics_do
-        GROUP BY nama_barang, exp_date
-    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
         FROM tb_ics_opname
         WHERE wilayah = 'D'
-        GROUP BY nama_barang, exp_date
-    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+        GROUP BY kd_barang, exp_date
+    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY nama_barang
-    ) mb ON mb.nama_barang = x.nama_barang
+        GROUP BY kd_barang
+    ) mb ON mb.kd = x.kode_barang_zahir
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -912,32 +923,34 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
         FROM tb_saldo_awal
         WHERE barang_pic = 'E'
-        GROUP BY nama_barang, exp_date
+        GROUP BY exp_date , kode_barang_zahir
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
         FROM tb_ics_po
-        GROUP BY nama_barang, exp_date
-    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+        GROUP BY exp_date , kd_barang
+    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-        FROM tb_ics_do
-        GROUP BY nama_barang, exp_date
-    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
         FROM tb_ics_opname
         WHERE wilayah = 'E'
-        GROUP BY nama_barang, exp_date
-    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+        GROUP BY kd_barang, exp_date
+    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY nama_barang
-    ) mb ON mb.nama_barang = x.nama_barang
+        GROUP BY kd_barang
+    ) mb ON mb.kd = x.kode_barang_zahir
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -1013,32 +1026,34 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
         FROM tb_saldo_awal
-        WHERE barang_pic = '0'
-        GROUP BY nama_barang, exp_date
+        WHERE barang_pic = 'A'
+        GROUP BY exp_date , kode_barang_zahir
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
         FROM tb_ics_po
-        GROUP BY nama_barang, exp_date
-    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
+        GROUP BY exp_date , kd_barang
+    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
-        FROM tb_ics_do
-        GROUP BY nama_barang, exp_date
-    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
+        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
+        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
+        FROM tb_detail_do
+        WHERE status = '4'
+        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
+    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
         FROM tb_ics_opname
         WHERE wilayah = '0'
-        GROUP BY nama_barang, exp_date
-    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
+        GROUP BY kd_barang, exp_date
+    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY nama_barang
-    ) mb ON mb.nama_barang = x.nama_barang
+        GROUP BY kd_barang
+    ) mb ON mb.kd = x.kode_barang_zahir
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
