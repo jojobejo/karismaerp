@@ -506,34 +506,32 @@ class M_Ics extends CI_Model
             ELSE 'TIDAK'
         END AS status_kesesuaian
     FROM (
-        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat , kode_barang_zahir
+        SELECT id, nama_barang, exp_date, SUM(qty) AS saldo_awal_qty, MAX(barang_pic) AS lokasi , MAX(koordinat_id) AS kordinat
         FROM tb_saldo_awal
         WHERE barang_pic = 'A'
-        GROUP BY exp_date , kode_barang_zahir
+        GROUP BY nama_barang, exp_date
     ) x
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_in , kd_barang
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_in
         FROM tb_ics_po
-        GROUP BY exp_date , kd_barang
-    ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
+        GROUP BY nama_barang, exp_date
+    ) p ON p.nama_barang = x.nama_barang AND p.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, SUM(qty) AS qty_out,kd_barang,
-        STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y') AS exp_date
-        FROM tb_detail_do
-        WHERE status = '4'
-        GROUP BY kd_barang,STR_TO_DATE(NULLIF(TRIM(tgl_exp), ''), '%d/%m/%Y')
-    ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_out
+        FROM tb_ics_do
+        GROUP BY nama_barang, exp_date
+    ) d ON d.nama_barang = x.nama_barang AND d.exp_date = x.exp_date
     LEFT JOIN (
-        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs , kd_system as kd_barang
+        SELECT nama_barang, exp_date, SUM(qty) AS qty_opname ,qty_box , qty_pcs
         FROM tb_ics_opname
         WHERE wilayah = 'A'
-        GROUP BY kd_barang, exp_date
-    ) o ON o.kd_barang = x.kode_barang_zahir AND o.exp_date = x.exp_date
+        GROUP BY nama_barang, exp_date
+    ) o ON o.nama_barang = x.nama_barang AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
         FROM tb_master_barang_all
-        GROUP BY kd_barang
-    ) mb ON mb.kd = x.kode_barang_zahir
+        GROUP BY nama_barang
+    ) mb ON mb.nama_barang = x.nama_barang
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         (COALESCE(x.saldo_awal_qty, 0) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))

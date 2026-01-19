@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.0
+-- version 5.0.4
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 15 Jan 2026 pada 10.04
--- Versi server: 10.4.27-MariaDB
--- Versi PHP: 7.4.33
+-- Waktu pembuatan: 19 Jan 2026 pada 06.17
+-- Versi server: 10.4.17-MariaDB
+-- Versi PHP: 7.2.34
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -37,7 +37,7 @@ CREATE TABLE `stockopname_master` (
   `expired_date` text NOT NULL,
   `no_lot` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `stockopname_master`
@@ -732,7 +732,7 @@ CREATE TABLE `stockopname_master_box` (
   `expired_date` text NOT NULL,
   `no_lot` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `stockopname_master_box`
@@ -1430,7 +1430,7 @@ CREATE TABLE `stockopname_opname` (
   `input_at` text NOT NULL,
   `wilayah` int(2) NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `stockopname_opname`
@@ -2202,7 +2202,7 @@ CREATE TABLE `stockopname_pending` (
   `no_lot` text NOT NULL,
   `exp_date` text NOT NULL,
   `input_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `stockopname_pending`
@@ -2259,7 +2259,7 @@ CREATE TABLE `tb_barangv2` (
   `gbr_promo1` varchar(255) NOT NULL,
   `gbr_promo2` varchar(255) NOT NULL,
   `gbr_promo3` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_barangv2`
@@ -8027,11 +8027,11 @@ INSERT INTO `tb_barangv2` (`id_barang`, `kode_barang`, `nama_barang`, `nama_supl
 CREATE TABLE `tb_checklist_kendaraan` (
   `id` int(11) NOT NULL,
   `tanggal_check` date NOT NULL,
-  `driver` varchar(100) DEFAULT NULL,
-  `nopol` varchar(20) DEFAULT NULL,
-  `no_lambung` varchar(50) DEFAULT NULL,
+  `driver` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `nopol` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `no_lambung` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `kilometer` int(11) DEFAULT NULL,
-  `inputer` text NOT NULL,
+  `inputer` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -8169,11 +8169,11 @@ INSERT INTO `tb_checklist_kendaraan` (`id`, `tanggal_check`, `driver`, `nopol`, 
 CREATE TABLE `tb_checklist_kendaraan_detail` (
   `id` int(11) NOT NULL,
   `checklist_id` int(11) NOT NULL,
-  `nama_part` varchar(100) DEFAULT NULL,
-  `kondisi` enum('BAIK','TIDAK BAIK') DEFAULT 'BAIK',
-  `keterangan` varchar(255) DEFAULT NULL,
-  `kategori` varchar(50) DEFAULT NULL,
-  `foto` varchar(255) DEFAULT NULL
+  `nama_part` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `kondisi` enum('BAIK','TIDAK BAIK') COLLATE utf8mb4_unicode_ci DEFAULT 'BAIK',
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `kategori` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `foto` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -11058,7 +11058,7 @@ CREATE TABLE `tb_customer` (
   `regional` text DEFAULT NULL,
   `jam_buka_tutup` text NOT NULL,
   `karakteristik_kios` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_customer`
@@ -18971,7 +18971,7 @@ CREATE TABLE `tb_customer_list_undian` (
   `kat_undi` text NOT NULL,
   `noundi` int(12) NOT NULL,
   `nama_customer` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_customer_list_undian`
@@ -19090,7 +19090,7 @@ CREATE TABLE `tb_dailystock` (
   `kd_barang` varchar(25) NOT NULL,
   `gudang` text NOT NULL,
   `qty` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -19104,7 +19104,7 @@ CREATE TABLE `tb_dailystock_global` (
   `kd_barang` varchar(25) NOT NULL,
   `gudang` text NOT NULL,
   `qty` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -19133,7 +19133,7 @@ CREATE TABLE `tb_detail_do` (
   `status` int(2) NOT NULL,
   `input_at` text NOT NULL,
   `create_at` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_detail_do`
@@ -21067,7 +21067,19 @@ INSERT INTO `tb_detail_do` (`id`, `id_pre_do`, `kd_do`, `kd_faktur`, `tgl_transa
 (2034, 12883, 'KIUDO2412250001', 'B25015377', '25/11/2025', 'MLG', 'TANI259', 'QUPRI01', 'Uprise 50 X 100 ml*', 100, 'Btl', '20250307', '1/3/2028', 0, 0, 0, 1, 4, '24/12/2025', '2025-12-24 12:43:18'),
 (2035, 12884, 'KIUDO2412250001', 'B25015377', '25/11/2025', 'MLG', 'TANI259', 'QUPRI02', 'Uprise 20 X 250 ml', 60, 'Btl', '20250520', '1/5/2028', 0, 0, 0, 1, 4, '24/12/2025', '2025-12-24 12:43:18'),
 (2036, 12234, 'KIUDO2412250001', 'B25015238', '22/11/2025', 'MLG', 'SUMB41', 'QSINT01', 'Sintrop 80 WG 40 X 10 X 4 gr', 100, 'Pack', '24RNA1290', '1/7/2026', 0, 0, 0, 1, 4, '24/12/2025', '2025-12-24 12:43:18'),
-(2037, 12235, 'KIUDO2412250001', 'B25015238', '22/11/2025', 'MLG', 'SUMB41', 'QGAPL01', 'Ga Plus 20TB 35 X 10 X 5 gr*', 100, 'Pack', '20250305', '1/3/2029', 0, 0, 0, 1, 4, '24/12/2025', '2025-12-24 12:43:18');
+(2037, 12235, 'KIUDO2412250001', 'B25015238', '22/11/2025', 'MLG', 'SUMB41', 'QGAPL01', 'Ga Plus 20TB 35 X 10 X 5 gr*', 100, 'Pack', '20250305', '1/3/2029', 0, 0, 0, 1, 4, '24/12/2025', '2025-12-24 12:43:18'),
+(2038, 6121, 'KIUDO1601260001', 'D25015491', '16/10/2025', 'MLG', 'KARI01', 'QKARI01', 'Karissnail 6 PL 20 X 500 gr (M2U)', 1200, 'Pack', '29173401', '1/8/2028', 0, 92704999.999982, 30, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2039, 6122, 'KIUDO1601260001', 'D25015491', '16/10/2025', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml', 650, 'Btl', '63373Y4019', '1/10/2029', 0, 92704999.999982, 30, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2040, 6123, 'KIUDO1601260001', 'D25015491', '16/10/2025', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml', 100, 'Btl', '63433U2008', '1/7/2030', 0, 92704999.999982, 30, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2041, 6124, 'KIUDO1601260001', 'D25015491', '16/10/2025', 'MLG', 'KARI01', 'QKALI01', 'Kaliandra 482 EC 20 X 400 ml', 200, 'Btl', '2034U3025', '1/8/2030', 0, 92704999.999982, 30, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2042, 6125, 'KIUDO1601260001', 'D25015491', '16/10/2025', 'MLG', 'KARI01', 'QKALI05', 'Kaliandra 482 EC 50 X 80 ml', 500, 'Btl', '20273U3057', '1/8/2030', 0, 92704999.999982, 30, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2043, 5865, 'KIUDO1601260001', 'D25015350', '13/10/2025', 'MLG', 'TANI57', 'QTRIG01', 'Trigard 75 WP 10 X 10 X 50 gr', 500, 'Pack', 'CBT3EA189X', '1/5/2026', 0, 248050000.00003, 60, 1, 4, '16/01/2026', '2026-01-16 23:09:30'),
+(2044, 5866, 'KIUDO1601260001', 'D25015350', '13/10/2025', 'MLG', 'TANI57', 'QEFFI01', 'Efficon 120 SL 48 X 100 ml', 720, 'Btl', 'S25095601', '1/6/2027', 0, 248050000.00003, 60, 1, 4, '16/01/2026', '2026-01-16 23:09:30'),
+(2045, 5867, 'KIUDO1601260001', 'D25015350', '13/10/2025', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 48, 'Btl', '505011', '1/5/2030', 0, 248050000.00003, 60, 1, 4, '16/01/2026', '2026-01-16 23:09:30'),
+(2046, 5868, 'KIUDO1601260001', 'D25015350', '13/10/2025', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 1116, 'Btl', '505013', '1/5/2030', 0, 248050000.00003, 60, 1, 4, '16/01/2026', '2026-01-16 23:09:30'),
+(2047, 5869, 'KIUDO1601260001', 'D25015350', '13/10/2025', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 36, 'Btl', '506015', '1/6/2030', 0, 248050000.00003, 60, 1, 4, '16/01/2026', '2026-01-16 23:09:30'),
+(2048, 2741, 'KIUDO1601260002', 'B25013918', '29/10/2025', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 200, 'Pack', '60030', '1/10/2025', 0, 4860000.0000216, 0, 1, 4, '16/01/2026', '0000-00-00 00:00:00'),
+(2049, 2742, 'KIUDO1601260002', 'B25013918', '29/10/2025', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 400, 'Pack', '60030', '1/10/2025', 0, 4860000.0000216, 0, 1, 4, '16/01/2026', '0000-00-00 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -21090,7 +21102,7 @@ CREATE TABLE `tb_detail_mutasi` (
   `input_by` text NOT NULL,
   `create_at` text NOT NULL,
   `last_action` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_detail_mutasi`
@@ -21124,18 +21136,18 @@ INSERT INTO `tb_detail_mutasi` (`id`, `noreff`, `tgl_transaksi`, `gdg_asal`, `gd
 CREATE TABLE `tb_det_tracking_driver` (
   `id` int(12) NOT NULL,
   `norut` int(5) NOT NULL,
-  `kd_deliveri` varchar(25) NOT NULL,
-  `tgl_jalan` text NOT NULL,
-  `kd_driver` varchar(25) NOT NULL,
-  `kd_helper` varchar(25) NOT NULL,
-  `kd_truk` varchar(25) NOT NULL,
-  `destinasi` text NOT NULL,
+  `kd_deliveri` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tgl_jalan` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_driver` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_helper` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_truk` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `destinasi` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `jml_kios` int(25) NOT NULL,
   `tonase` double NOT NULL,
   `kubikasi` double NOT NULL,
-  `sts_driver` varchar(25) NOT NULL,
-  `keterangan` text NOT NULL,
-  `nm_toko` text NOT NULL
+  `sts_driver` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_toko` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -21153,7 +21165,7 @@ CREATE TABLE `tb_do` (
   `tgl_pengiriman` date NOT NULL,
   `tgl_create` datetime NOT NULL,
   `status` int(2) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_do`
@@ -21246,7 +21258,9 @@ INSERT INTO `tb_do` (`id`, `kd_do`, `nolambung`, `regional`, `driver`, `tgl_peng
 (84, 'KIUDO1012250001', '-', 'COBA', '-', '0000-00-00', '2025-12-10 13:40:56', 1),
 (85, 'KIUDO1112250001', '-', 'BLICOBALAGI', '-', '0000-00-00', '2025-12-11 11:24:59', 1),
 (86, 'KIUDO1112250002', 'P1111UG', 'SURABAYA', 'Asep', '2025-12-11', '2025-12-11 11:30:10', 2),
-(87, 'KIUDO2412250001', 'asdddsasd', 'coba coba', 'asdddasd', '2025-12-24', '2025-12-24 11:40:40', 2);
+(87, 'KIUDO2412250001', 'asdddsasd', 'coba coba', 'asdddasd', '2025-12-24', '2025-12-24 11:40:40', 2),
+(88, 'KIUDO1601260001', '3233312333', 'Campuran MLG', 'zzzz', '2026-01-16', '2026-01-16 23:09:54', 2),
+(89, 'KIUDO1601260002', 'c1231c', 'aaa', 'cccc', '2026-01-16', '2026-01-16 23:36:36', 2);
 
 -- --------------------------------------------------------
 
@@ -21262,7 +21276,7 @@ CREATE TABLE `tb_editlog_faktur` (
   `keterangan` text NOT NULL,
   `edit_by` text NOT NULL,
   `edit_at` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_editlog_faktur`
@@ -21335,17 +21349,17 @@ INSERT INTO `tb_editlog_faktur` (`id`, `kd_faktur`, `kd_customer`, `kd_barang`, 
 
 CREATE TABLE `tb_expedisi` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `jammasuk` varchar(255) NOT NULL,
-  `jamkeluar` varchar(255) NOT NULL,
-  `nopol` varchar(255) NOT NULL,
-  `namadriver` varchar(255) NOT NULL,
-  `notlpndriver` varchar(255) NOT NULL,
-  `perusahaanpengirim` varchar(255) NOT NULL,
-  `namabarang` varchar(255) NOT NULL,
-  `jumlahbarang` varchar(255) NOT NULL,
-  `keterangan` varchar(255) NOT NULL,
-  `nm_inputer` text NOT NULL
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jammasuk` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jamkeluar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nopol` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `namadriver` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `notlpndriver` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `perusahaanpengirim` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `namabarang` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jumlahbarang` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_inputer` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -23152,8 +23166,8 @@ INSERT INTO `tb_expedisi` (`id`, `tanggal`, `jammasuk`, `jamkeluar`, `nopol`, `n
 CREATE TABLE `tb_gbrupload_cheklist` (
   `id_upload` int(11) NOT NULL,
   `id_cheklist` int(11) NOT NULL,
-  `name_file` text NOT NULL,
-  `path` text NOT NULL,
+  `name_file` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `path` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `tgl_create` date NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -23167,7 +23181,7 @@ CREATE TABLE `tb_gdg_kordinat` (
   `id` int(11) NOT NULL,
   `kd_kordinat` varchar(25) DEFAULT NULL,
   `nm_wilayah` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_gdg_kordinat`
@@ -23202,7 +23216,7 @@ CREATE TABLE `tb_gudang` (
   `tipe` enum('INDUK','ECERAN','EXPIRED') NOT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_gudang`
@@ -23232,7 +23246,7 @@ CREATE TABLE `tb_gudang_wilayah` (
   `id_gudang` int(11) NOT NULL,
   `nama_wilayah` varchar(100) NOT NULL,
   `is_active` tinyint(1) DEFAULT 1
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_gudang_wilayah`
@@ -23279,7 +23293,7 @@ CREATE TABLE `tb_ics` (
   `qty_pcs` int(11) NOT NULL,
   `pic` varchar(2) NOT NULL,
   `input_at` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_ics`
@@ -23349,7 +23363,7 @@ CREATE TABLE `tb_ics_do` (
   `no_lot` text NOT NULL,
   `exp_date` text NOT NULL,
   `input_at` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_ics_do`
@@ -25234,7 +25248,19 @@ INSERT INTO `tb_ics_do` (`id`, `kd_do`, `kd_faktur`, `tgl_transaksi`, `nama_bara
 (2022, 'KIUDO2412250001', 'B25015377', '01/01/1970', 'Uprise 50 X 100 ml*', 100, '20250307', '01/03/2028', '24/12/2025'),
 (2023, 'KIUDO2412250001', 'B25015377', '01/01/1970', 'Uprise 20 X 250 ml', 60, '20250520', '01/05/2028', '24/12/2025'),
 (2024, 'KIUDO2412250001', 'B25015238', '01/01/1970', 'Sintrop 80 WG 40 X 10 X 4 gr', 100, '24RNA1290', '01/07/2026', '24/12/2025'),
-(2025, 'KIUDO2412250001', 'B25015238', '01/01/1970', 'Ga Plus 20TB 35 X 10 X 5 gr*', 100, '20250305', '01/03/2029', '24/12/2025');
+(2025, 'KIUDO2412250001', 'B25015238', '01/01/1970', 'Ga Plus 20TB 35 X 10 X 5 gr*', 100, '20250305', '01/03/2029', '24/12/2025'),
+(2026, 'KIUDO1601260001', 'D25015491', '01/01/1970', 'Karissnail 6 PL 20 X 500 gr (M2U)', 1200, '29173401', '01/08/2028', '16/01/2026'),
+(2027, 'KIUDO1601260001', 'D25015491', '01/01/1970', 'Alfatox 50 EC 50 X 80 ml', 650, '63373Y4019', '01/10/2029', '16/01/2026'),
+(2028, 'KIUDO1601260001', 'D25015491', '01/01/1970', 'Alfatox 50 EC 50 X 80 ml', 100, '63433U2008', '01/07/2030', '16/01/2026'),
+(2029, 'KIUDO1601260001', 'D25015491', '01/01/1970', 'Kaliandra 482 EC 20 X 400 ml', 200, '2034U3025', '01/08/2030', '16/01/2026'),
+(2030, 'KIUDO1601260001', 'D25015491', '01/01/1970', 'Kaliandra 482 EC 50 X 80 ml', 500, '20273U3057', '01/08/2030', '16/01/2026'),
+(2031, 'KIUDO1601260001', 'D25015350', '01/01/1970', 'Trigard 75 WP 10 X 10 X 50 gr', 500, 'CBT3EA189X', '01/05/2026', '16/01/2026'),
+(2032, 'KIUDO1601260001', 'D25015350', '01/01/1970', 'Efficon 120 SL 48 X 100 ml', 720, 'S25095601', '01/06/2027', '16/01/2026'),
+(2033, 'KIUDO1601260001', 'D25015350', '01/01/1970', 'Round Up 486 SL 12 X 1 ltr', 48, '505011', '01/05/2030', '16/01/2026'),
+(2034, 'KIUDO1601260001', 'D25015350', '01/01/1970', 'Round Up 486 SL 12 X 1 ltr', 1116, '505013', '01/05/2030', '16/01/2026'),
+(2035, 'KIUDO1601260001', 'D25015350', '01/01/1970', 'Round Up 486 SL 12 X 1 ltr', 36, '506015', '01/06/2030', '16/01/2026'),
+(2036, 'KIUDO1601260002', 'B25013918', '01/01/1970', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 200, '60030', '01/10/2025', '16/01/2026'),
+(2037, 'KIUDO1601260002', 'B25013918', '01/01/1970', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 400, '60030', '01/10/2025', '16/01/2026');
 
 -- --------------------------------------------------------
 
@@ -25255,7 +25281,7 @@ CREATE TABLE `tb_ics_opname` (
   `wilayah` text NOT NULL,
   `input_at` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_ics_opname`
@@ -25285,7 +25311,7 @@ INSERT INTO `tb_ics_opname` (`id`, `kd_system`, `nama_barang`, `exp_date`, `qty`
 (21, 'QPASS01', 'Passxone 276 SL 20 X 1 ltr', '01/04/2027', 1000, 50, 0, 'Admin ICS 1', '0', 'A', '15/01/2026', '2026-01-15 08:37:40'),
 (22, 'QJAGU37', 'Jagung Pertiwi 2 20 X 1 kg', '01/02/2026', 1000, 50, 0, 'Admin ICS 1', '0', '0', '15/01/2026', '2026-01-15 08:37:40'),
 (23, 'QMANO01', 'Manohara 20 X 1 kg', '01/07/2029', 1000, 50, 0, 'Admin ICS 1', '0', '0', '15/01/2026', '2026-01-15 08:37:40'),
-(24, 'QMETI02', 'Metindo 40 SP 40 X 200 gr', '01/08/2030', 1000, 25, 0, 'Admin ICS 1', '0', 'A', '15/01/2026', '2026-01-15 08:37:40'),
+(24, 'QMETI02', 'Metindo 40 SP 40 X 200 gr', '01/08/2030', 200, 5, 0, 'Admin ICS', '0', 'A', '16/01/2026', '2026-01-16 15:35:57'),
 (25, 'QMETI07', 'Metindo 40 SP 40 X 400 gr', '01/09/2030', 2480, 62, 0, 'Admin ICS 3', '0', 'C', '15/01/2026', '2026-01-15 08:37:40'),
 (26, 'QSPON07', 'Spontas 450 SL 20 X 500 ml', '01/01/2030', 1000, 50, 0, 'Admin ICS 1', '0', 'A', '15/01/2026', '2026-01-15 08:37:40'),
 (27, 'QKENM03', 'Ken-Mida 12/50 EC 24 X 500 ml', '01/07/2026', 480, 20, 0, 'Admin ICS 2', '0', 'B', '15/01/2026', '2026-01-15 08:37:40'),
@@ -25327,7 +25353,7 @@ CREATE TABLE `tb_ics_po` (
   `input_at` text NOT NULL,
   `lpb_status` int(2) NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_ics_po`
@@ -25599,7 +25625,7 @@ CREATE TABLE `tb_ics_supp` (
   `qty` int(11) NOT NULL,
   `no_lot` text NOT NULL,
   `exp_date` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -25609,10 +25635,10 @@ CREATE TABLE `tb_ics_supp` (
 
 CREATE TABLE `tb_issue` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `issue` varchar(255) NOT NULL,
-  `lokasi` varchar(255) NOT NULL,
-  `nama` varchar(255) NOT NULL,
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `issue` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `lokasi` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` int(2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -25646,7 +25672,7 @@ CREATE TABLE `tb_karyawan` (
   `tim` int(11) NOT NULL,
   `wilayah` int(11) NOT NULL,
   `akses_lv` int(2) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_karyawan`
@@ -25707,15 +25733,15 @@ INSERT INTO `tb_karyawan` (`id`, `nik`, `nm_karyawan`, `departemen`, `jobdesk`, 
 
 CREATE TABLE `tb_karyawan_keluarmasuk` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `nama` varchar(255) NOT NULL,
-  `departemen` varchar(255) NOT NULL,
-  `status` varchar(255) NOT NULL,
-  `jamkeluar` varchar(255) NOT NULL,
-  `jammasuk` varchar(255) NOT NULL,
-  `nopol` text NOT NULL,
-  `keterangan` varchar(255) NOT NULL,
-  `nm_inputer` text NOT NULL
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `departemen` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jamkeluar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jammasuk` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nopol` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_inputer` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -27864,7 +27890,7 @@ CREATE TABLE `tb_kd_system_stock` (
   `id` int(11) NOT NULL,
   `kd_system` varchar(25) NOT NULL,
   `nama_barang` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -27874,19 +27900,19 @@ CREATE TABLE `tb_kd_system_stock` (
 
 CREATE TABLE `tb_lap_distribusi` (
   `id` int(255) NOT NULL,
-  `nopol` varchar(255) NOT NULL,
-  `nolambung` varchar(255) NOT NULL,
-  `namadriver` varchar(255) NOT NULL,
-  `namahelper` varchar(255) NOT NULL,
-  `tujuan` text NOT NULL,
-  `tglkeluar` text NOT NULL,
-  `jamkeluar` varchar(255) NOT NULL,
-  `kmkeluar` text NOT NULL,
-  `tglmasuk` text NOT NULL,
-  `jammasuk` varchar(255) NOT NULL,
-  `kmmasuk` varchar(255) NOT NULL,
-  `keterangan` varchar(255) NOT NULL,
-  `inputer` varchar(255) NOT NULL,
+  `nopol` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nolambung` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `namadriver` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `namahelper` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tujuan` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tglkeluar` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jamkeluar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kmkeluar` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tglmasuk` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jammasuk` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kmmasuk` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `inputer` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -30586,7 +30612,7 @@ CREATE TABLE `tb_log_do` (
   `keterangan` text NOT NULL,
   `inputer` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_log_do`
@@ -30682,7 +30708,9 @@ INSERT INTO `tb_log_do` (`id_log`, `kd_do`, `tgl_input`, `keterangan`, `inputer`
 (87, 'KIUDO2611250002', '26/11/2025', 'POST - FAKTUR', 'Admin Gudang', '2025-11-26 03:59:51'),
 (88, 'KIUDO2611250003', '26/11/2025', 'POST - FAKTUR', 'Admin Gudang', '2025-11-26 04:01:30'),
 (89, 'KIUDO1112250002', '11/12/2025', 'POST - FAKTUR', 'Admin Gudang', '2025-12-11 06:52:52'),
-(90, 'KIUDO2412250001', '24/12/2025', 'POST - FAKTUR', 'Admin Gudang', '2025-12-24 05:43:57');
+(90, 'KIUDO2412250001', '24/12/2025', 'POST - FAKTUR', 'Admin Gudang', '2025-12-24 05:43:57'),
+(91, 'KIUDO1601260001', '16/01/2026', 'POST - FAKTUR', 'Admin Gudang', '2026-01-16 16:28:52'),
+(92, 'KIUDO1601260002', '16/01/2026', 'POST - FAKTUR', 'Admin Gudang', '2026-01-16 16:37:10');
 
 -- --------------------------------------------------------
 
@@ -30703,7 +30731,7 @@ CREATE TABLE `tb_log_ics` (
   `inputer` varchar(25) NOT NULL,
   `tgl_input` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_log_ics`
@@ -31210,7 +31238,8 @@ INSERT INTO `tb_log_ics` (`id`, `nama_user`, `nama_barang`, `qty`, `qty_box`, `q
 (497, '', 'Abacel 18 EC 40 X 250 ml', 2000, 50, 0, '-', '01/12/2026', 'zzzzz', 'Admin ICS 1', '15/01/2026', '2026-01-15 06:55:09'),
 (498, '', 'Abacel 18 EC 40 X 250 ml', 5, 0, 5, '-', '12/01/2026', 'asdddsa', 'Admin ICS 1', '15/01/2026', '2026-01-15 07:55:12'),
 (499, '', 'Abacel 18 EC 40 X 250 ml', 400, 10, 0, '-', '01/12/2026', 'expired_new_opname', 'Admin ICS 1', '15/01/2026', '2026-01-15 07:58:10'),
-(500, '', 'Abacel 18 EC 50 X 100 ml', 300, 0, 300, '-', '01/05/2028', 'z', 'Admin ICS', '15/01/2026', '2026-01-15 08:39:26');
+(500, '', 'Abacel 18 EC 50 X 100 ml', 300, 0, 300, '-', '01/05/2028', 'z', 'Admin ICS', '15/01/2026', '2026-01-15 08:39:26'),
+(501, '', 'Metindo 40 SP 40 X 200 gr', 200, 5, 0, '-', '01/08/2030', 'input', 'Admin ICS', '16/01/2026', '2026-01-16 15:35:57');
 
 -- --------------------------------------------------------
 
@@ -31225,7 +31254,7 @@ CREATE TABLE `tb_log_mutasi` (
   `keterangan` text DEFAULT NULL,
   `user` varchar(100) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_log_mutasi`
@@ -31269,7 +31298,7 @@ CREATE TABLE `tb_master_barang` (
   `status` int(3) NOT NULL,
   `kordinat` text NOT NULL,
   `akses_lv` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_master_barang`
@@ -37052,7 +37081,7 @@ CREATE TABLE `tb_master_barang_all` (
   `qty_min` int(11) NOT NULL,
   `id_gudang` int(11) DEFAULT NULL,
   `id_wilayah` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_master_barang_all`
@@ -37979,7 +38008,7 @@ INSERT INTO `tb_master_barang_all` (`id`, `kd_barang`, `kode_barang_system`, `na
 (916, 'AGIBB01', 'KIUBR00937', 'Gibbersip 20 TB 100 X 10 X 5 gr', 'MAJUM01', '-', 'Pack', 100, 10, 1, 1, 0, 0, 0, 0),
 (917, 'QGIBG01', 'KIUBR04276', 'Gibgro 10 SP 24 x 40 x 1 gr', 'NUFAR01', 'Asam Giberelat', 'Pack', 24, 40, 1, 2.2, 0.0000129, 0, 0, 0),
 (918, 'QGIBG02', 'KIUBR04277', 'Gibgro 20 T 10 X 10 X 5 gr', 'NUFAR01', 'Asam Giberelat', 'Pack', 10, 10, 1, 9.5, 0.0000468, 0, 0, 0),
-(919, 'QGIBG03', 'KIUBR04278', 'Gibgro 10 SP 25 X 40 X 1 gr', 'NUFAR01', 'Asam Giberelat', 'Pack', 25, 40, 1, 2.1, 0.0000113, 0, 0, 0),
+(919, 'AGIBG03', 'KIUBR04278', 'Gibgro 10 SP 25 X 40 X 1 gr', 'NUFAR01', 'Asam Giberelat', 'Pack', 25, 40, 1, 2.1, 0.0000113, 0, 0, 0),
 (920, 'QGRIB01', 'KIUBR04351', 'Gibraz 20/125 OD 100 X 80 ml', 'SARAN04', 'Nitenpiram + Abamektin', 'Btl', 100, 1, 1, 117, 0.000288, 0, 0, 0),
 (921, 'QGRIB02', 'KIUBR04352', 'Gibraz 20/125 OD 50 X 200 ml', 'NONAM01', 'Nitenpiram + Abamektin', 'Btl', 50, 1, 1, 266, 0.0006008, 0, 0, 0),
 (922, 'QGITA01', 'KIUBR04280', 'Gita 80 WP 20 X 1 kg', 'GLOBA01', 'Mankozeb', 'Pack', 20, 1, 1, 1017.5, 0.0029952, 0, 0, 0),
@@ -42746,7 +42775,7 @@ CREATE TABLE `tb_mbarang` (
   `nm_barang` varchar(255) NOT NULL,
   `dimensi` int(11) NOT NULL,
   `status` int(3) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_mbarang`
@@ -43435,7 +43464,7 @@ CREATE TABLE `tb_mutasi` (
   `status` enum('POSTED','UNPOST','ROLLBACK','HOLD') NOT NULL,
   `input_at` text NOT NULL,
   `last_action` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_mutasi`
@@ -43455,8 +43484,8 @@ INSERT INTO `tb_mutasi` (`id`, `noreff`, `tgl_transaksi`, `gudang_asal`, `gudang
 
 CREATE TABLE `tb_order_tracking_driver` (
   `id` int(11) NOT NULL,
-  `kd_order` varchar(25) NOT NULL,
-  `tgl_jalan` text NOT NULL,
+  `kd_order` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tgl_jalan` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -43481,7 +43510,7 @@ CREATE TABLE `tb_pemenang` (
   `noundi` int(12) NOT NULL,
   `nama_win` text NOT NULL,
   `ket_undi` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_pemenang`
@@ -43556,7 +43585,7 @@ CREATE TABLE `tb_pnd_do` (
   `jtempo` int(11) NOT NULL,
   `barang_sts` int(2) NOT NULL,
   `create_at` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_pnd_do`
@@ -43582,7 +43611,7 @@ CREATE TABLE `tb_po_pending` (
   `qty_order` int(12) NOT NULL,
   `qty_order_success` int(12) NOT NULL,
   `qty_kurang` int(12) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -43609,7 +43638,7 @@ CREATE TABLE `tb_pre_do` (
   `data_sts` int(2) NOT NULL,
   `barang_sts` int(2) NOT NULL,
   `create_at` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_pre_do`
@@ -43630,8 +43659,8 @@ INSERT INTO `tb_pre_do` (`id`, `kdupdate`, `tgl_inputer`, `kd_faktur`, `kd_rute`
 (12, 'KIUDO1511250001', '4/10/2025', 'A25001975', 'JLS', 'GANE01', 'QGAME01', 'Gamectin 30 EC 100 X 100 ml*', 10, 'Btl', '2025SM0404', '1/4/2030', 300000.00002973, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (13, 'KIUDO1511250001', '4/10/2025', 'A25001976', 'PROB', 'YUWA01', 'QINDO04', 'Indoban 250 EC 20 X 250 ml*', 11, 'Btl', '235001', '1/6/2028', 1500000.0000486, 0, '1', 2, 1, '0000-00-00 00:00:00'),
 (14, 'KIUDO1511250001', '4/10/2025', 'A25001976', 'PROB', 'YUWA01', 'QGAME03', 'Gamectin 30 EC 20 X 500 ml*', 5, 'Btl', '2024SM0710', '1/7/2029', 1500000.0000486, 0, '1', 2, 1, '0000-00-00 00:00:00'),
-(15, 'KIUDO1511250001', '4/10/2025', 'A25001977', 'JUBS', 'NNAM01', 'QGAME02', 'Gamectin 30 EC 40 X 250 ml*', 5, 'Btl', '2024SM0710', '1/7/2029', 625000.00003694, 0, '1', 2, 1, '0000-00-00 00:00:00'),
-(16, 'KIUDO1511250001', '4/10/2025', 'A25001977', 'JUBS', 'NNAM01', 'QGAME01', 'Gamectin 30 EC 100 X 100 ml*', 10, 'Btl', '2025SM0404', '1/4/2030', 625000.00003694, 0, '1', 2, 1, '0000-00-00 00:00:00'),
+(15, 'KIUDO1511250001', '4/10/2025', 'A25001977', 'JUBS', 'NNAM01', 'QGAME02', 'Gamectin 30 EC 40 X 250 ml*', 5, 'Btl', '2024SM0710', '1/7/2029', 625000.00003694, 0, '1', 1, 1, '0000-00-00 00:00:00'),
+(16, 'KIUDO1511250001', '4/10/2025', 'A25001977', 'JUBS', 'NNAM01', 'QGAME01', 'Gamectin 30 EC 100 X 100 ml*', 10, 'Btl', '2025SM0404', '1/4/2030', 625000.00003694, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (17, 'KIUDO1511250001', '4/10/2025', 'A25001978', 'JUBS', 'ONLI01', 'QTERM01', 'Termikon 15 EC 20 X 400 ml', 1, 'Btl', '48070211', '1/7/2029', 33837.000016216, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (18, 'KIUDO1511250001', '6/10/2025', 'A25001979', 'JUBS', 'ONLI01', 'QTERM01', 'Termikon 15 EC 20 X 400 ml', 1, 'Btl', '48070211', '1/7/2029', 33837.000016216, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (19, 'KIUDO1511250001', '6/10/2025', 'A25001980', 'JUBS', 'ONLI01', 'QSINT01', 'Sintrop 80 WG 40 X 10 X 4 gr', 1, 'Pack', '24RNA1290', '1/7/2026', 17955.000024324, 0, '1', 1, 1, '0000-00-00 00:00:00'),
@@ -46367,8 +46396,8 @@ INSERT INTO `tb_pre_do` (`id`, `kdupdate`, `tgl_inputer`, `kd_faktur`, `kd_rute`
 (2738, 'KIUDO1511250001', '29/10/2025', 'B25013917', 'JUBS', 'FAST07', 'QLUDE01', 'Ludes 50 EC 50 X 100 ml*', 250, 'Btl', '29193201', '1/10/2026', 70374999.999999, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (2739, 'KIUDO1511250001', '29/10/2025', 'B25013917', 'JUBS', 'FAST07', 'QBENA01', 'Benang Pe mlg*', 1250, 'Kg', '0', '1/1/1000', 70374999.999999, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (2740, 'KIUDO1511250001', '29/10/2025', 'B25013917', 'JUBS', 'FAST07', 'QSPRA32', 'Sprayer Hokita 30 X 1 ltr', 31, 'Pcs', '0', '1/1/1000', 70374999.999999, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(2741, 'KIUDO1511250001', '29/10/2025', 'B25013918', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr*', 200, 'Pack', '060266', '1/1/2027', 4860000.0000216, 0, '1', 1, 1, '0000-00-00 00:00:00'),
-(2742, 'KIUDO1511250001', '29/10/2025', 'B25013918', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr*', 400, 'Pack', '060269', '1/1/2027', 4860000.0000216, 0, '1', 1, 1, '0000-00-00 00:00:00'),
+(2741, 'KIUDO1511250001', '29/10/2025', 'B25013918', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr*', 200, 'Pack', '60030', '1/10/2025', 4860000.0000216, 0, '1', 3, 1, '0000-00-00 00:00:00'),
+(2742, 'KIUDO1511250001', '29/10/2025', 'B25013918', 'SBY', 'DEDI01', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr*', 400, 'Pack', '60030', '1/10/2025', 4860000.0000216, 0, '1', 3, 1, '0000-00-00 00:00:00'),
 (2743, 'KIUDO1511250001', '29/10/2025', 'B25013919', 'BWI-2', 'CAHA01', 'QBENA01', 'Benang Pe mlg*', 100, 'Kg', '0', '1/1/1000', 4249999.9999712, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (2744, 'KIUDO1511250001', '29/10/2025', 'B25013920', 'BWI-2', 'UTAM01', 'QMUTU02', 'Mutual 25/25 WP 40 X 250 gr*', 80, 'Pack', '2023ES0410', '1/4/2028', 10799999.99997, 60, '1', 1, 1, '0000-00-00 00:00:00'),
 (2745, 'KIUDO1511250001', '29/10/2025', 'B25013921', 'BWI-1', 'MUST05', 'QMETI07', 'Metindo 40 SP 40 X 400 gr', 40, 'Pack', '056957', '1/5/2030', 4917500.0000198, 30, '1', 1, 1, '0000-00-00 00:00:00'),
@@ -49484,11 +49513,11 @@ INSERT INTO `tb_pre_do` (`id`, `kdupdate`, `tgl_inputer`, `kd_faktur`, `kd_rute`
 (5862, 'KIUDO1511250001', '13/10/2025', 'D25015349', 'SBY', 'JAYA38', 'QMEGA13', 'Megaloman 30 EC 20 X 400 ml', 4, 'Btl', '2025061B', '1/9/2028', 10655000.000001, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (5863, 'KIUDO1511250001', '13/10/2025', 'D25015349', 'SBY', 'JAYA38', 'QQIUM03', 'Qiumex 36 EC 20 X 500 ml*', 40, 'Btl', '20250602', '1/6/2030', 10655000.000001, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (5864, 'KIUDO1511250001', '13/10/2025', 'D25015349', 'SBY', 'JAYA38', 'QQIUM07', 'Qiumex 36 EC 10 X 1 ltr*', 20, 'Btl', '20250806', '1/8/2030', 10655000.000001, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(5865, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QTRIG01', 'Trigard 75 WP 10 X 10 X 50 gr', 500, 'Pack', 'CBT3EA189X', '1/5/2026', 248050000.00003, 60, '1', 1, 1, '0000-00-00 00:00:00'),
-(5866, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QEFFI01', 'Efficon 120 SL 48 X 100 ml', 720, 'Btl', 'S25095601', '1/6/2027', 248050000.00003, 60, '1', 1, 1, '0000-00-00 00:00:00'),
-(5867, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 48, 'Btl', '505011', '1/5/2030', 248050000.00003, 60, '1', 1, 1, '0000-00-00 00:00:00'),
-(5868, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 1116, 'Btl', '505013', '1/5/2030', 248050000.00003, 60, '1', 1, 1, '0000-00-00 00:00:00'),
-(5869, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 36, 'Btl', '506015', '1/6/2030', 248050000.00003, 60, '1', 1, 1, '0000-00-00 00:00:00'),
+(5865, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QTRIG01', 'Trigard 75 WP 10 X 10 X 50 gr', 500, 'Pack', 'CBT3EA189X', '1/5/2026', 248050000.00003, 60, '1', 3, 1, '0000-00-00 00:00:00'),
+(5866, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QEFFI01', 'Efficon 120 SL 48 X 100 ml', 720, 'Btl', 'S25095601', '1/6/2027', 248050000.00003, 60, '1', 3, 1, '0000-00-00 00:00:00'),
+(5867, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 48, 'Btl', '505011', '1/5/2030', 248050000.00003, 60, '1', 3, 1, '0000-00-00 00:00:00'),
+(5868, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 1116, 'Btl', '505013', '1/5/2030', 248050000.00003, 60, '1', 3, 1, '0000-00-00 00:00:00'),
+(5869, 'KIUDO1511250001', '13/10/2025', 'D25015350', 'MLG', 'TANI57', 'QROUN01', 'Round Up 486 SL 12 X 1 ltr', 36, 'Btl', '506015', '1/6/2030', 248050000.00003, 60, '1', 3, 1, '0000-00-00 00:00:00'),
 (5870, 'KIUDO1511250001', '13/10/2025', 'D25015351', 'SBY', 'UMAT01', 'QALFA02', 'Alfatox 50 EC 40 X 200 ml*', 200, 'Btl', '63255U0021', '1/2/2030', 5899999.9999847, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (5871, 'KIUDO1511250001', '13/10/2025', 'D25015352', 'SBY', 'SALA01', 'QAMEG01', 'Amegu 200 SL 20 X 1 ltr*', 40, 'Btl', '250629001000', '1/6/2030', 4720000.0000477, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (5872, 'KIUDO1511250001', '13/10/2025', 'D25015352', 'SBY', 'SALA01', 'QPOTT09', 'Pot Tray Dexxan 100 X 200 lubang', 200, 'Pcs', '0', '1/1/1000', 4720000.0000477, 0, '1', 1, 1, '0000-00-00 00:00:00'),
@@ -49741,11 +49770,11 @@ INSERT INTO `tb_pre_do` (`id`, `kdupdate`, `tgl_inputer`, `kd_faktur`, `kd_rute`
 (6118, 'KIUDO1511250001', '16/10/2025', 'D25015489', 'BWI-3', 'ILYA01', 'QDEKA04', 'Dekapirim 400 SC 20 X 500 ml', 40, 'Btl', '2536', '1/6/2028', 18400000.000023, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (6119, 'KIUDO1511250001', '16/10/2025', 'D25015490', 'P-2', 'SAKD02', 'QAGXA02', 'Agxanazol 200/150 SC 20 X 250 ml*', 20, 'Btl', '20240910', '1/11/2028', 3500000.0000468, 0, '1', 1, 1, '0000-00-00 00:00:00'),
 (6120, 'KIUDO1511250001', '16/10/2025', 'D25015490', 'P-2', 'SAKD02', 'QFONI01', 'Fonium 200 SL 20 X 1 ltr', 20, 'Btl', '223300003', '1/5/2029', 3500000.0000468, 0, '1', 1, 1, '0000-00-00 00:00:00'),
-(6121, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKARI01', 'Karissnail 6 PL 20 X 500 gr (M2U)*', 1200, 'Pack', '29173401', '1/8/2028', 92704999.999982, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(6122, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml*', 650, 'Btl', '63373Y4019', '1/10/2029', 92704999.999982, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(6123, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml*', 100, 'Btl', '63433U2008', '1/7/2030', 92704999.999982, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(6124, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKALI01', 'Kaliandra 482 EC 20 X 400 ml*', 200, 'Btl', '2034U3025', '1/8/2030', 92704999.999982, 30, '1', 1, 1, '0000-00-00 00:00:00'),
-(6125, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKALI05', 'Kaliandra 482 EC 50 X 80 ml*', 500, 'Btl', '20273U3057', '1/8/2030', 92704999.999982, 30, '1', 1, 1, '0000-00-00 00:00:00'),
+(6121, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKARI01', 'Karissnail 6 PL 20 X 500 gr (M2U)*', 1200, 'Pack', '29173401', '1/8/2028', 92704999.999982, 30, '1', 3, 1, '0000-00-00 00:00:00'),
+(6122, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml*', 650, 'Btl', '63373Y4019', '1/10/2029', 92704999.999982, 30, '1', 3, 1, '0000-00-00 00:00:00'),
+(6123, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QALFA04', 'Alfatox 50 EC 50 X 80 ml*', 100, 'Btl', '63433U2008', '1/7/2030', 92704999.999982, 30, '1', 3, 1, '0000-00-00 00:00:00'),
+(6124, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKALI01', 'Kaliandra 482 EC 20 X 400 ml*', 200, 'Btl', '2034U3025', '1/8/2030', 92704999.999982, 30, '1', 3, 1, '0000-00-00 00:00:00'),
+(6125, 'KIUDO1511250001', '16/10/2025', 'D25015491', 'MLG', 'KARI01', 'QKALI05', 'Kaliandra 482 EC 50 X 80 ml*', 500, 'Btl', '20273U3057', '1/8/2030', 92704999.999982, 30, '1', 3, 1, '0000-00-00 00:00:00'),
 (6126, 'KIUDO1511250001', '16/10/2025', 'D25015492', 'MLG', 'KARI01', 'QALFA02', 'Alfatox 50 EC 40 X 200 ml*', 80, 'Btl', '63255U0021', '1/2/2030', 7774999.9999955, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (6127, 'KIUDO1511250001', '16/10/2025', 'D25015492', 'MLG', 'KARI01', 'QALFA01', 'Alfatox 50 EC 20 X 400 ml*', 100, 'Btl', '63513U2010', '1/7/2030', 7774999.9999955, 30, '1', 1, 1, '0000-00-00 00:00:00'),
 (6128, 'KIUDO1511250001', '16/10/2025', 'D25015493', 'BLI-2', 'TANI251', 'QJAGU29', 'Jagung NK 7328 20 X 1 kg', 500, 'Pack', '20823973', '7/9/2026', 55500000, 0, '1', 1, 1, '0000-00-00 00:00:00'),
@@ -57949,7 +57978,7 @@ CREATE TABLE `tb_qty_lot` (
   `no_lot` text NOT NULL,
   `exp_date` text NOT NULL,
   `suplier` varchar(25) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -57971,7 +58000,7 @@ CREATE TABLE `tb_req_opname` (
   `acc_with` text NOT NULL,
   `input_at` text NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -57983,7 +58012,7 @@ CREATE TABLE `tb_rutecs` (
   `id_rute` int(11) NOT NULL,
   `kd_rute` text NOT NULL,
   `keterangan` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_rutecs`
@@ -58039,7 +58068,7 @@ CREATE TABLE `tb_saldo_awal` (
   `qty` decimal(10,0) NOT NULL,
   `nolot` text NOT NULL,
   `exp_date` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_saldo_awal`
@@ -58076,7 +58105,7 @@ INSERT INTO `tb_saldo_awal` (`id`, `kode_barang_system`, `kode_barang_zahir`, `n
 (28, 'KIUBR05503', 'QPAKE12', 'Paket Ampuh Ken-Mida 12/50 EC 250 ml + Kenmectin 39 EC 250 ml 24 X 1 paket', 6, 0, 'B', '47', '10320', '01/03/2025'),
 (29, 'KIUBR00940', 'AGIBG03', 'Gibgro 10 SP 25 X 40 X 1 gr', 2, 0, 'A', '24', '2411015', '01/11/2029'),
 (30, 'KIUBR04759', 'QKRES07', 'Kresnatop 500 SC 20 X 1 ltr', 2, 0, 'C', '1000', '50110003', '01/01/2030'),
-(31, 'KIUBR01507', 'AMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 2, 0, 'A', '1000', '60030', '01/10/2025'),
+(31, 'KIUBR01507', 'QMETS01', 'Metsulindo Plus 80 WP 8 X 25 X 40 gr', 2, 0, 'A', '1000', '60030', '01/10/2025'),
 (32, 'KIUBR04386', 'QHEXA07', 'Hexacar 100 SC 25 X 500 ml', 2, 0, 'A', '1000', '23122902', '01/11/2028'),
 (33, 'KIUBR06468', 'QTIEZ01', 'Tiezene 80 WP 20 X 1 kg', 2, 0, '0', '1000', '0', '1/1/1000'),
 (34, 'KIUBR06469', 'QTIEZ02', 'Tiezene 80 WP 40 X 500 gr', 2, 0, '0', '1000', '0', '1/1/1000'),
@@ -58130,7 +58159,7 @@ CREATE TABLE `tb_schedule_dirut` (
   `keterangan` text NOT NULL,
   `create_at` text NOT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_schedule_dirut`
@@ -58164,14 +58193,14 @@ INSERT INTO `tb_schedule_dirut` (`id`, `tanggal`, `jam`, `suplier`, `pic`, `esti
 
 CREATE TABLE `tb_service_truk` (
   `id` int(11) NOT NULL,
-  `kd_truk` varchar(50) NOT NULL,
-  `no_pol` varchar(50) NOT NULL,
+  `kd_truk` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `no_pol` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `thn_kendaran` int(5) NOT NULL,
-  `png_jawab` text NOT NULL,
+  `png_jawab` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `km_sekarang` int(25) NOT NULL,
   `km_sebelum` int(25) NOT NULL,
   `update_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `update_sblm` text NOT NULL
+  `update_sblm` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -58224,7 +58253,7 @@ CREATE TABLE `tb_stock_hold` (
   `input_by` varchar(20) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `released_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_stock_hold`
@@ -58248,7 +58277,7 @@ CREATE TABLE `tb_stock_status` (
   `gudang` text NOT NULL,
   `last_update` datetime NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_stock_status`
@@ -58273,7 +58302,7 @@ CREATE TABLE `tb_suplier` (
   `no_telpon` text NOT NULL,
   `no_fax` text NOT NULL,
   `email` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data untuk tabel `tb_suplier`
@@ -58547,16 +58576,16 @@ INSERT INTO `tb_suplier` (`id`, `kd_suplier`, `nama_suplier`, `alamat_suplier`, 
 
 CREATE TABLE `tb_tamu` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `nama` varchar(255) NOT NULL,
-  `perusahaan` varchar(255) NOT NULL,
-  `alamat` varchar(255) NOT NULL,
-  `jumlahpersonil` varchar(255) NOT NULL,
-  `tujuan` varchar(255) NOT NULL,
-  `jammasuk` text NOT NULL,
-  `jamkeluar` varchar(255) NOT NULL,
-  `keterangan` varchar(255) NOT NULL,
-  `nm_inputer` text NOT NULL
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `perusahaan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `alamat` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jumlahpersonil` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tujuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jammasuk` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jamkeluar` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_inputer` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -60556,16 +60585,16 @@ INSERT INTO `tb_tamu` (`id`, `tanggal`, `nama`, `perusahaan`, `alamat`, `jumlahp
 
 CREATE TABLE `tb_tamu_lby` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `nama` text NOT NULL,
-  `perusahaan` varchar(255) NOT NULL,
-  `alamat` varchar(255) NOT NULL,
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `perusahaan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `alamat` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `jumlahpersonil` int(12) NOT NULL,
-  `tujuan` varchar(255) NOT NULL,
-  `jammasuk` text NOT NULL,
-  `jamkeluar` text NOT NULL,
-  `keterangan` varchar(255) NOT NULL,
-  `nm_inputer` text NOT NULL
+  `tujuan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jammasuk` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jamkeluar` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_inputer` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -60576,16 +60605,16 @@ CREATE TABLE `tb_tamu_lby` (
 
 CREATE TABLE `tb_terima_paket` (
   `id` int(11) NOT NULL,
-  `tanggal` text NOT NULL,
-  `kd_penerima` varchar(25) NOT NULL,
-  `keterangan_1` text NOT NULL,
-  `keterangan_2` text NOT NULL,
-  `tanggal_terima_1` text NOT NULL,
-  `tanggal_terima_2` text NOT NULL,
-  `jam_terima_1` text NOT NULL,
-  `jam_terima_2` text NOT NULL,
+  `tanggal` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_penerima` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan_1` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan_2` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tanggal_terima_1` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tanggal_terima_2` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jam_terima_1` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jam_terima_2` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` int(2) NOT NULL,
-  `inputer` text NOT NULL,
+  `inputer` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -60641,15 +60670,7 @@ CREATE TABLE `tb_tmp_detaildo` (
   `jtempo` int(11) NOT NULL,
   `barang_sts` int(2) NOT NULL,
   `create_at` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data untuk tabel `tb_tmp_detaildo`
---
-
-INSERT INTO `tb_tmp_detaildo` (`id`, `id_pre_do`, `kd_do`, `kd_faktur`, `tgl_transaksi`, `kd_rute`, `kd_customer`, `kd_barang`, `nm_barang`, `qty`, `satuan`, `no_lot`, `tgl_exp`, `nominal_p`, `jtempo`, `barang_sts`, `create_at`) VALUES
-(2, 15, 'KIUDO1501260001', 'A25001977', '4/10/2025', 'JUBS', 'NNAM01', 'QGAME02', 'Gamectin 30 EC 40 X 250 ml', 5, 'Btl', '2024SM0710', '1/7/2029', 625000.00003694, 0, 1, '2026-01-15 13:50:16'),
-(3, 16, 'KIUDO1501260001', 'A25001977', '4/10/2025', 'JUBS', 'NNAM01', 'QGAME01', 'Gamectin 30 EC 100 X 100 ml', 10, 'Btl', '2025SM0404', '1/4/2030', 625000.00003694, 0, 1, '2026-01-15 13:50:16');
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -60664,14 +60685,7 @@ CREATE TABLE `tb_tmp_do` (
   `kd_faktur` varchar(25) DEFAULT NULL,
   `input_at` datetime NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data untuk tabel `tb_tmp_do`
---
-
-INSERT INTO `tb_tmp_do` (`id`, `norut_do`, `kd_do`, `kd_faktur`, `input_at`, `create_at`) VALUES
-(2, 0, 'KIUDO1501260001', 'A25001977', '2026-01-15 13:50:16', '2026-01-15 06:50:16');
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -60681,20 +60695,20 @@ INSERT INTO `tb_tmp_do` (`id`, `norut_do`, `kd_do`, `kd_faktur`, `input_at`, `cr
 
 CREATE TABLE `tb_tmp_lap_distribusi` (
   `id_lap_dis` int(12) NOT NULL,
-  `kd_deliveri` varchar(25) NOT NULL,
-  `tgl_jalan` text NOT NULL,
-  `kd_driver` varchar(25) NOT NULL,
-  `kd_helper` varchar(25) NOT NULL,
-  `kd_truk` varchar(25) NOT NULL,
-  `destinasi` text NOT NULL,
-  `tgl_masuk` text NOT NULL,
-  `jm_masuk` text NOT NULL,
+  `kd_deliveri` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tgl_jalan` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_driver` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_helper` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_truk` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `destinasi` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tgl_masuk` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jm_masuk` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `km_masuk` int(12) NOT NULL,
-  `tgl_keluar` text NOT NULL,
-  `jm_keluar` text NOT NULL,
+  `tgl_keluar` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `jm_keluar` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `km_keluar` int(12) NOT NULL,
-  `status` text NOT NULL,
-  `keterangan` text NOT NULL
+  `status` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `keterangan` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -60732,7 +60746,7 @@ CREATE TABLE `tb_tmp_mutasi` (
   `satuan_id` int(11) NOT NULL,
   `user_inputer` varchar(25) NOT NULL,
   `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -60742,11 +60756,11 @@ CREATE TABLE `tb_tmp_mutasi` (
 
 CREATE TABLE `tb_truck` (
   `id` int(11) NOT NULL,
-  `nm_plat` varchar(25) NOT NULL,
-  `no_plat` varchar(25) NOT NULL,
-  `kd_driver` varchar(25) NOT NULL,
-  `nm_driver` text NOT NULL,
-  `status` varchar(25) NOT NULL
+  `nm_plat` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `no_plat` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kd_driver` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nm_driver` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -60759,7 +60773,7 @@ CREATE TABLE `tb_truk` (
   `id` int(11) NOT NULL,
   `nolambung` varchar(25) DEFAULT NULL,
   `noplat` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -60769,15 +60783,15 @@ CREATE TABLE `tb_truk` (
 
 CREATE TABLE `tb_user` (
   `id` int(11) NOT NULL,
-  `nik` varchar(30) NOT NULL,
-  `kode_user` varchar(25) NOT NULL,
-  `nama_user` text NOT NULL,
-  `nama_lengkap` text NOT NULL,
-  `departemen` text NOT NULL,
-  `alamat` text NOT NULL,
-  `tgl_lahir` text NOT NULL,
-  `username` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
+  `nik` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `kode_user` varchar(25) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama_user` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nama_lengkap` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `departemen` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `alamat` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tgl_lahir` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `akses_lv` int(2) NOT NULL,
   `create_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -60957,9 +60971,184 @@ CREATE TABLE `trashbin_do` (
   `tgl_exp` text NOT NULL,
   `upload_sts` text NOT NULL,
   `create_at` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_show_diff_ics`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_show_diff_ics` (
+`kd` varchar(30)
+,`nama_barang` text
+,`barang_pic` varchar(11)
+,`exp_date` text
+,`saldo_awal` decimal(32,0)
+,`qty_in` decimal(32,0)
+,`qty_out` decimal(32,0)
+,`qty_sistem` decimal(34,0)
+,`qty_fisik` decimal(32,0)
+,`qty_selisih` decimal(35,0)
+,`saldo_awal_box` decimal(33,0)
+,`saldo_awal_pcs` decimal(32,0)
+,`in_box` decimal(33,0)
+,`in_pcs` decimal(32,0)
+,`out_box` decimal(33,0)
+,`out_pcs` decimal(32,0)
+,`saldo_akhir_box` decimal(35,0)
+,`saldo_akhir_pcs` decimal(34,0)
+,`selisih_box` decimal(36,0)
+,`selisih_pcs` decimal(35,0)
+,`status_kesesuaian` varchar(9)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_in`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_in` (
+`kode_barang` varchar(50)
+,`nama_barang` text
+,`exp_date` text
+,`gudang` int(11)
+,`qty` decimal(32,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_mutasi_in`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_mutasi_in` (
+`kode_barang` varchar(50)
+,`nama_barang` text
+,`exp_date` text
+,`gudang` int(11)
+,`qty` decimal(32,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_mutasi_out`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_mutasi_out` (
+`kode_barang` varchar(50)
+,`nama_barang` text
+,`exp_date` text
+,`gudang` int(11)
+,`qty` decimal(33,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_out`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_out` (
+`kode_barang` varchar(25)
+,`nama_barang` text
+,`exp_date` text
+,`gudang` int(11)
+,`qty` decimal(33,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_per_gudang`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_per_gudang` (
+`kode_barang` varchar(50)
+,`nama_barang` mediumtext
+,`exp_date` mediumtext
+,`gudang` int(11)
+,`qty` decimal(55,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Stand-in struktur untuk tampilan `v_stock_saldo_awal`
+-- (Lihat di bawah untuk tampilan aktual)
+--
+CREATE TABLE `v_stock_saldo_awal` (
+`kode_barang` varchar(30)
+,`nama_barang` text
+,`exp_date` text
+,`gudang` int(11)
+,`qty` decimal(10,0)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_show_diff_ics`
+--
+DROP TABLE IF EXISTS `v_show_diff_ics`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_show_diff_ics`  AS SELECT `sa`.`kd_barang` AS `kd`, `sa`.`nama_barang` AS `nama_barang`, `sa`.`barang_pic` AS `barang_pic`, `sa`.`exp_date` AS `exp_date`, coalesce(`sa`.`saldo_awal`,0) AS `saldo_awal`, coalesce(`qi`.`qty_in`,0) AS `qty_in`, coalesce(`qo`.`qty_out`,0) AS `qty_out`, coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0) AS `qty_sistem`, coalesce(`qf`.`qty_fisik`,0) AS `qty_fisik`, coalesce(`qf`.`qty_fisik`,0) - (coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0)) AS `qty_selisih`, floor(coalesce(`sa`.`saldo_awal`,0) / nullif(`dim`.`dimensi`,0)) AS `saldo_awal_box`, coalesce(`sa`.`saldo_awal`,0) MOD nullif(`dim`.`dimensi`,0) AS `saldo_awal_pcs`, floor(coalesce(`qi`.`qty_in`,0) / nullif(`dim`.`dimensi`,0)) AS `in_box`, coalesce(`qi`.`qty_in`,0) MOD nullif(`dim`.`dimensi`,0) AS `in_pcs`, floor(coalesce(`qo`.`qty_out`,0) / nullif(`dim`.`dimensi`,0)) AS `out_box`, coalesce(`qo`.`qty_out`,0) MOD nullif(`dim`.`dimensi`,0) AS `out_pcs`, floor(coalesce(coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0),0) / nullif(`dim`.`dimensi`,0)) AS `saldo_akhir_box`, coalesce(coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0),0) MOD nullif(`dim`.`dimensi`,0) AS `saldo_akhir_pcs`, floor(coalesce(`qf`.`qty_fisik`,0) - coalesce(coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0),0) / nullif(`dim`.`dimensi`,0)) AS `selisih_box`, coalesce(`qf`.`qty_fisik`,0) - coalesce(coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0),0) MOD nullif(`dim`.`dimensi`,0) AS `selisih_pcs`, CASE WHEN coalesce(`sa`.`saldo_awal`,0) + coalesce(`qi`.`qty_in`,0) - coalesce(`qo`.`qty_out`,0) = coalesce(`qf`.`qty_fisik`,0) THEN 'KLOP' ELSE 'DIFFERENT' END AS `status_kesesuaian` FROM (((((select `tb_saldo_awal`.`kode_barang_zahir` AS `kd_barang`,`tb_saldo_awal`.`nama_barang` AS `nama_barang`,`tb_saldo_awal`.`barang_pic` AS `barang_pic`,`tb_saldo_awal`.`exp_date` AS `exp_date`,sum(`tb_saldo_awal`.`qty`) AS `saldo_awal` from `tb_saldo_awal` group by `tb_saldo_awal`.`kode_barang_zahir`,`tb_saldo_awal`.`nama_barang`,`tb_saldo_awal`.`barang_pic`,`tb_saldo_awal`.`exp_date`) `sa` left join (select `tb_master_barang_all`.`kd_barang` AS `kd_barang`,`tb_master_barang_all`.`p` * `tb_master_barang_all`.`l` * `tb_master_barang_all`.`t` AS `dimensi` from `tb_master_barang_all`) `dim` on(`dim`.`kd_barang` = `sa`.`kd_barang`)) left join (select `tb_ics_po`.`kd_barang` AS `kd_barang`,`tb_ics_po`.`exp_date` AS `exp_date`,sum(`tb_ics_po`.`qty`) AS `qty_in` from `tb_ics_po` group by `tb_ics_po`.`kd_barang`,`tb_ics_po`.`exp_date`) `qi` on(`qi`.`kd_barang` = `sa`.`kd_barang` and `qi`.`exp_date` = `sa`.`exp_date`)) left join (select `tb_detail_do`.`kd_barang` AS `kd_barang`,str_to_date(nullif(trim(`tb_detail_do`.`tgl_exp`),''),'%d/%m/%Y') AS `exp_date`,sum(`tb_detail_do`.`qty`) AS `qty_out` from `tb_detail_do` where `tb_detail_do`.`status` = '4' and `tb_detail_do`.`tgl_exp` is not null and `tb_detail_do`.`tgl_exp` <> '' group by `tb_detail_do`.`kd_barang`,str_to_date(nullif(trim(`tb_detail_do`.`tgl_exp`),''),'%d/%m/%Y')) `qo` on(`qo`.`kd_barang` = `sa`.`kd_barang` and `qo`.`exp_date` = `sa`.`exp_date`)) left join (select `tb_ics_opname`.`kd_system` AS `kd_barang`,`tb_ics_opname`.`exp_date` AS `exp_date`,sum(`tb_ics_opname`.`qty`) AS `qty_fisik` from `tb_ics_opname` group by `tb_ics_opname`.`kd_system`,`tb_ics_opname`.`exp_date`) `qf` on(`qf`.`kd_barang` = `sa`.`kd_barang` and `qf`.`exp_date` = `sa`.`exp_date`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_in`
+--
+DROP TABLE IF EXISTS `v_stock_in`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_in`  AS SELECT `p`.`kd_barang` AS `kode_barang`, `p`.`nama_barang` AS `nama_barang`, `p`.`exp_date` AS `exp_date`, `sa`.`wilayah_id` AS `gudang`, sum(`p`.`qty`) AS `qty` FROM (`tb_ics_po` `p` join `tb_saldo_awal` `sa` on(`sa`.`kode_barang_zahir` = `p`.`kd_barang` and `sa`.`exp_date` = `p`.`exp_date`)) GROUP BY `p`.`kd_barang`, `p`.`nama_barang`, `p`.`exp_date`, `sa`.`wilayah_id` ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_mutasi_in`
+--
+DROP TABLE IF EXISTS `v_stock_mutasi_in`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_mutasi_in`  AS SELECT `m`.`kode_barang_zahir` AS `kode_barang`, `m`.`nama_barang` AS `nama_barang`, `m`.`exp_date` AS `exp_date`, `m`.`gdg_mutasi` AS `gudang`, sum(`m`.`qty`) AS `qty` FROM `tb_detail_mutasi` AS `m` GROUP BY `m`.`kode_barang_zahir`, `m`.`nama_barang`, `m`.`exp_date`, `m`.`gdg_mutasi` ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_mutasi_out`
+--
+DROP TABLE IF EXISTS `v_stock_mutasi_out`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_mutasi_out`  AS SELECT `m`.`kode_barang_zahir` AS `kode_barang`, `m`.`nama_barang` AS `nama_barang`, `m`.`exp_date` AS `exp_date`, `m`.`gdg_asal` AS `gudang`, sum(`m`.`qty`) * -1 AS `qty` FROM `tb_detail_mutasi` AS `m` GROUP BY `m`.`kode_barang_zahir`, `m`.`nama_barang`, `m`.`exp_date`, `m`.`gdg_asal` ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_out`
+--
+DROP TABLE IF EXISTS `v_stock_out`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_out`  AS SELECT `d`.`kd_barang` AS `kode_barang`, `d`.`nama_barang` AS `nama_barang`, `d`.`tgl_exp` AS `exp_date`, `sa`.`wilayah_id` AS `gudang`, sum(`d`.`qty`) * -1 AS `qty` FROM (`tb_detail_do` `d` join `tb_saldo_awal` `sa` on(`sa`.`kode_barang_zahir` = `d`.`kd_barang` and `sa`.`exp_date` = `d`.`tgl_exp`)) WHERE `d`.`status` = '4' GROUP BY `d`.`kd_barang`, `d`.`nama_barang`, `d`.`tgl_exp`, `sa`.`wilayah_id` ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_per_gudang`
+--
+DROP TABLE IF EXISTS `v_stock_per_gudang`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_per_gudang`  AS SELECT `stock_flow`.`kode_barang` AS `kode_barang`, `stock_flow`.`nama_barang` AS `nama_barang`, `stock_flow`.`exp_date` AS `exp_date`, `stock_flow`.`gudang` AS `gudang`, sum(`stock_flow`.`qty`) AS `qty` FROM (select `v_stock_saldo_awal`.`kode_barang` AS `kode_barang`,`v_stock_saldo_awal`.`nama_barang` AS `nama_barang`,`v_stock_saldo_awal`.`exp_date` AS `exp_date`,`v_stock_saldo_awal`.`gudang` AS `gudang`,`v_stock_saldo_awal`.`qty` AS `qty` from `v_stock_saldo_awal` union all select `v_stock_in`.`kode_barang` AS `kode_barang`,`v_stock_in`.`nama_barang` AS `nama_barang`,`v_stock_in`.`exp_date` AS `exp_date`,`v_stock_in`.`gudang` AS `gudang`,`v_stock_in`.`qty` AS `qty` from `v_stock_in` union all select `v_stock_out`.`kode_barang` AS `kode_barang`,`v_stock_out`.`nama_barang` AS `nama_barang`,`v_stock_out`.`exp_date` AS `exp_date`,`v_stock_out`.`gudang` AS `gudang`,`v_stock_out`.`qty` AS `qty` from `v_stock_out` union all select `v_stock_mutasi_out`.`kode_barang` AS `kode_barang`,`v_stock_mutasi_out`.`nama_barang` AS `nama_barang`,`v_stock_mutasi_out`.`exp_date` AS `exp_date`,`v_stock_mutasi_out`.`gudang` AS `gudang`,`v_stock_mutasi_out`.`qty` AS `qty` from `v_stock_mutasi_out` union all select `v_stock_mutasi_in`.`kode_barang` AS `kode_barang`,`v_stock_mutasi_in`.`nama_barang` AS `nama_barang`,`v_stock_mutasi_in`.`exp_date` AS `exp_date`,`v_stock_mutasi_in`.`gudang` AS `gudang`,`v_stock_mutasi_in`.`qty` AS `qty` from `v_stock_mutasi_in`) AS `stock_flow` GROUP BY `stock_flow`.`kode_barang`, `stock_flow`.`nama_barang`, `stock_flow`.`exp_date`, `stock_flow`.`gudang` ;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur untuk view `v_stock_saldo_awal`
+--
+DROP TABLE IF EXISTS `v_stock_saldo_awal`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stock_saldo_awal`  AS SELECT `sa`.`kode_barang_zahir` AS `kode_barang`, `sa`.`nama_barang` AS `nama_barang`, `sa`.`exp_date` AS `exp_date`, `sa`.`wilayah_id` AS `gudang`, `sa`.`qty` AS `qty` FROM `tb_saldo_awal` AS `sa` ;
 
 --
 -- Indexes for dumped tables
@@ -61504,7 +61693,7 @@ ALTER TABLE `tb_dailystock_global`
 -- AUTO_INCREMENT untuk tabel `tb_detail_do`
 --
 ALTER TABLE `tb_detail_do`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2038;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2050;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_detail_mutasi`
@@ -61522,7 +61711,7 @@ ALTER TABLE `tb_det_tracking_driver`
 -- AUTO_INCREMENT untuk tabel `tb_do`
 --
 ALTER TABLE `tb_do`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=88;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_editlog_faktur`
@@ -61570,7 +61759,7 @@ ALTER TABLE `tb_ics`
 -- AUTO_INCREMENT untuk tabel `tb_ics_do`
 --
 ALTER TABLE `tb_ics_do`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2026;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2038;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_ics_opname`
@@ -61624,13 +61813,13 @@ ALTER TABLE `tb_lap_distribusi`
 -- AUTO_INCREMENT untuk tabel `tb_log_do`
 --
 ALTER TABLE `tb_log_do`
-  MODIFY `id_log` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
+  MODIFY `id_log` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_ics`
 --
 ALTER TABLE `tb_log_ics`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=501;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=502;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_mutasi`
@@ -61768,13 +61957,13 @@ ALTER TABLE `tb_terima_paket`
 -- AUTO_INCREMENT untuk tabel `tb_tmp_detaildo`
 --
 ALTER TABLE `tb_tmp_detaildo`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_tmp_do`
 --
 ALTER TABLE `tb_tmp_do`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_tmp_lap_distribusi`
