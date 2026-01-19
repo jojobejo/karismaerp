@@ -106,7 +106,6 @@
                                                             <a href="#" class="btn btn-sm btn-success w-100"><i class="fas fa-check"></i></a>
                                                         </td>
                                                     <?php else : ?>
-
                                                         <td>
                                                             <div class="row">
                                                                 <div class="col-6">
@@ -119,7 +118,6 @@
                                                                 </div>
                                                             </div>
                                                         </td>
-
                                                         <td>
                                                             <a href="#" class="btn btn-sm btn-danger w-100"><i class="fas fa-times"></i></a>
                                                         </td>
@@ -217,9 +215,9 @@
                                             <input type="hidden" name="kdbarang" value="<?= $br->kd_barang ?>">
                                             <input type="hidden" name="dimensi" value="<?= $br->dimensi ?>">
                                             <?php if ($br->opname_id == '') : ?>
-                                                <input type="text" name="action" value="newopname">
+                                                <input type="hidden" name="action" value="newopname">
                                             <?php else : ?>
-                                                <input type="text" name="action" value="formbyexp">
+                                                <input type="hidden" name="action" value="formbyexp">
                                             <?php endif; ?>
                                             <div class="form-group">
                                                 <label for="exp_date">Expired Date</label>

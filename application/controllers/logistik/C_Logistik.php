@@ -1134,7 +1134,8 @@ class C_Logistik extends CI_Controller
             $insert_batch[] = array(
                 'kd_do'         => $kd,
                 'kd_faktur'     => $det->kd_faktur,
-                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_transaksi)),
+                'tgl_transaksi' => $det->tgl_transaksi,
+                'kd_barang'     => $det->kd_barang,
                 'nama_barang'   => $det->nama_barang,
                 'qty'           => $det->qty,
                 'no_lot'        => $det->no_lot,

@@ -1319,7 +1319,7 @@ class C_Ics extends CI_Controller
         foreach ($data as $row) {
             $result[] = [
                 'id'   => $row->exp_date,     // ← HARUS TANGGAL
-                'text' => date('d/m/Y', strtotime($row->exp_date))
+                'text' => $row->exp_date
             ];
         }
 

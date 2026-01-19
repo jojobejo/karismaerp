@@ -488,6 +488,7 @@ class M_Logistik extends CI_Model
         a.kd_do,
         a.kd_faktur,
         a.tgl_transaksi,
+        a.kd_barang,
         a.nama_barang,
         a.qty,
         a.tgl_exp,
