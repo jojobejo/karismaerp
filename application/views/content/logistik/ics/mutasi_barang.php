@@ -83,6 +83,10 @@
                                             <span class="badge badge-info">
                                                 <i class="fas fa-clock"></i> UNPOST
                                             </span>
+                                        <?php elseif ($fm->status == 'HOLD') : ?>
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-pause"></i> HOLD
+                                            </span>
                                         <?php else : ?>
                                             <span class="badge badge-danger">
                                                 <i class="fas fa-undo"></i> ROLLBACK
@@ -91,22 +95,70 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <button class="btn btn-sm btn-warning btn-edit" data-id="<?= $fm->id ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-
-                                        <button class="btn btn-sm btn-danger btn-rollback" data-id="<?= $fm->id ?>">
-                                            <i class="fas fa-undo"></i>
-                                        </button>
-
-                                        <button class="btn btn-sm btn-secondary btn-unpost" data-id="<?= $fm->id ?>">
-                                            <i class="fas fa-ban"></i>
-                                        </button>
+                                        <?php if ($fm->status == 'POSTED') : ?>
+                                            <button class="btn btn-sm btn-info btn-detail" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning btn-unpost" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger btn-delete" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        <?php elseif ($fm->status == 'UNPOST') : ?>
+                                            <button class="btn btn-sm btn-info btn-detail" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger btn-unpost" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        <?php elseif ($fm->status == 'HOLD') : ?>
+                                            <button class="btn btn-sm btn-info btn-detail" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-success btn-rollback" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-thumbs-up"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger btn-unpost" data-id="<?= $fm->noreff ?>">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        <?php else : ?>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+
+                    <div class="modal fade" id="modalDetailMutasi" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Detail Mutasi</h5>
+                                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <div id="infoMutasi"></div>
+
+                                    <table class="table table-sm table-bordered mt-2">
+                                        <thead>
+                                            <tr>
+                                                <th>Kode</th>
+                                                <th>Barang</th>
+                                                <th>Exp</th>
+                                                <th>Qty</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="detailMutasiBody"></tbody>
+                                    </table>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 

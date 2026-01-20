@@ -691,14 +691,13 @@ class C_Ics extends CI_Controller
         $expawal     = date('d/m/Y', strtotime($exp_date));
 
         $data = [
+            'kd_system'   => $kdbarang,
             'nama_barang' => $nama_barang,
             'exp_date'    => $exp_date,
+            'qty'         => $qty_total,
             'qty_box'     => $qty_box,
             'qty_pcs'     => $qty_pcs,
-            'qty'         => $qty_total,
-            'inputer'     => $this->session->userdata('nama'),
             'input_at'    => date('d/m/Y'),
-            'create_at'   => date('Y-m-d H:i:s')
         ];
 
         $dataawal = [
@@ -776,38 +775,38 @@ class C_Ics extends CI_Controller
 
         switch ($action) {
             case 'dashboard':
-                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_ics', $data);
                 $this->db->insert('tb_log_ics', $logics);
                 $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
                 redirect('ics');
                 break;
             case 'formdetail':
-                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_ics', $data);
                 $this->db->insert('tb_log_ics', $logics);
                 $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
                 redirect('ics/ics_stock_controller/' . $id);
                 break;
             case 'formbyexp':
-                $this->db->update('tb_ics_opname', $data, ['id' => $id]);
+                $this->db->update('tb_ics', $data, ['id' => $id]);
                 $this->db->insert('tb_log_ics', $logics);
                 $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
                 redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
             case 'new_expired':
-                $this->db->insert('tb_ics_opname', $dataawal);
+                $this->db->insert('tb_ics', $dataawal);
                 $this->db->insert('tb_log_ics', $logicsawal);
                 $this->db->insert('tb_saldo_awal', $data_awal);
                 $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
                 redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
             case 'newopname':
-                $this->db->insert('tb_ics_opname', $newopname);
+                $this->db->insert('tb_ics', $newopname);
                 $this->db->insert('tb_log_ics', $logicsawal_new);
                 $this->session->set_flashdata('success', 'Data opname berhasil diperbarui.');
                 redirect('ics/stock_by_kodebr/' . $kdbarang);
                 break;
             case 'diffrent':
-                $this->db->insert('tb_ics_opname', $data);
+                $this->db->insert('tb_ics', $data);
                 $this->db->insert('tb_log_ics', $logics);
                 $this->session->set_flashdata('success', 'Data opname berhasil disimpan.');
                 redirect('ics/ics_diffrent');
@@ -1274,7 +1273,6 @@ class C_Ics extends CI_Controller
         $data['ref_mutasi'] = $this->M_Ics->generate_noreff();
         $data['gudang']     = $this->M_Ics->get_gudang();
 
-
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/input_mutasi_barang.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -1428,7 +1426,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $IS_HOLD = ($post['tujuangdg'] == '13');
+        $IS_HOLD = ($post['tujuangdg'] == '10');
         $STATUS  = $IS_HOLD ? 'HOLD' : 'POSTED';
 
         $this->db->trans_begin();
@@ -1449,6 +1447,7 @@ class C_Ics extends CI_Controller
         if ($IS_HOLD) {
 
             $hold = [];
+            $detail = [];
             foreach ($tmp as $t) {
                 $hold[] = [
                     'noref'         => $post['nofresnsi'],
@@ -1463,8 +1462,24 @@ class C_Ics extends CI_Controller
                     'input_by'      => $user,
                     'created_at'    => date('Y-m-d H:i:s')
                 ];
+                $detail[] = [
+                    'noreff'        => $post['nofresnsi'],
+                    'tgl_transaksi' => $post['tgl_transaksi'],
+                    'gdg_asal'      => $post['fromgdg'],
+                    'gdg_mutasi'    => $post['tujuangdg'],
+                    'kode_barang'   => $t->kode_barang_system,
+                    'kode_barang_zahir'   => $t->kd_barang,
+                    'nama_barang'   => $t->nama_barang,
+                    'exp_date'      => $t->exp_date,
+                    'qty'           => $t->qty,
+                    'satuan'        => $t->satuan_id,
+                    'input_by'      => $user,
+                    'create_at'     => date('Y-m-d H:i:s'),
+                    'last_action'   => 'CREATE'
+                ];
             }
             $this->db->insert_batch('tb_stock_hold', $hold);
+            $this->db->insert_batch('tb_detail_mutasi', $detail);
         } else {
 
             $detail = [];
@@ -1484,21 +1499,8 @@ class C_Ics extends CI_Controller
                     'create_at'     => date('Y-m-d H:i:s'),
                     'last_action'   => 'CREATE'
                 ];
-
-                $mutasibr[] = [
-                    'kode_barang_system'    => $t->kode_barang_system,
-                    'kode_barang_zahir'     => $t->kd_barang,
-                    'nama_barang'           => $t->nama_barang,
-                    'wilayah_id'            => $post['tujuangdg'],
-                    'koordinat_id'          => '0',
-                    'barang_pic'            => '0',
-                    'qty'                   => '0',
-                    'nolot'                 => 'nolot0',
-                    'exp_date'              => $t->exp_date
-                ];
             }
             $this->db->insert_batch('tb_detail_mutasi', $detail);
-            $this->db->insert_batch('tb_saldo_awal', $mutasibr);
         }
 
         $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
@@ -1528,6 +1530,118 @@ class C_Ics extends CI_Controller
                 : 'Mutasi berhasil direkam',
             'noreff' => $post['nofresnsi']
         ]);
+    }
+
+    public function ajax_detail_mutasi()
+    {
+        $noreff = $this->input->post('noreff');
+
+        if (!$noreff) {
+            echo json_encode(['status' => false, 'msg' => 'No Ref tidak valid']);
+            return;
+        }
+
+        $header = $this->M_Ics->get_mutasi_header($noreff);
+        if (!$header) {
+            echo json_encode(['status' => false, 'msg' => 'Data mutasi tidak ditemukan']);
+            return;
+        }
+
+        $detail = $this->M_Ics->get_mutasi_detail($noreff, $header->status);
+
+        echo json_encode([
+            'status' => true,
+            'header' => $header,
+            'detail' => $detail
+        ]);
+    }
+
+    public function ajax_unpost_mutasi()
+    {
+        $noreff = $this->input->post('noreff');
+        if (!$noreff) {
+            echo json_encode(['status' => false, 'msg' => 'No ref tidak valid']);
+            return;
+        }
+
+        $this->db->where('noreff', $noreff)
+            ->update('tb_mutasi', [
+                'status' => 'UNPOSTED'
+            ]);
+
+        $this->db->insert('tb_log_mutasi', [
+            'noreff' => $noreff,
+            'aksi' => 'UNPOST',
+            'keterangan' => 'UNPOST MUTASI',
+            'user' => $this->session->userdata('nik')
+        ]);
+
+        echo json_encode(['status' => true, 'msg' => 'Mutasi berhasil di-unpost']);
+    }
+
+    public function ajax_delete_mutasi()
+    {
+        $noreff = $this->input->post('noreff');
+        if (!$noreff) {
+            echo json_encode(['status' => false, 'msg' => 'No ref tidak valid']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $this->db->where('noreff', $noreff)->delete('tb_detail_mutasi');
+        $this->db->where('noreff', $noreff)->delete('tb_mutasi');
+
+        $this->db->insert('tb_log_mutasi', [
+            'noreff' => $noreff,
+            'aksi' => 'DELETE',
+            'keterangan' => 'DELETE MUTASI',
+            'user' => $this->session->userdata('nik')
+        ]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'msg' => 'Gagal menghapus mutasi']);
+        } else {
+            $this->db->trans_commit();
+            echo json_encode(['status' => true, 'msg' => 'Mutasi berhasil dihapus']);
+        }
+    }
+
+    public function ajax_rollback_mutasi()
+    {
+        $noreff = $this->input->post('noreff');
+        if (!$noreff) {
+            echo json_encode(['status' => false, 'msg' => 'No ref tidak valid']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $this->db->where('noreff', $noreff)
+            ->update('tb_mutasi', [
+                'status' => 'POSTED'
+            ]);
+
+        $this->db->where('noreff', $noreff)
+            ->update('tb_detail_mutasi', [
+                'gdg_mutasi' => 2
+            ]);
+
+        $this->db->insert('tb_log_mutasi', [
+            'noreff' => $noreff,
+            'aksi' => 'ROLLBACK',
+            'keterangan' => 'ROLLBACK MUTASI KE GUDANG 2',
+            'user' => $this->session->userdata('nik')
+        ]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'msg' => 'Rollback gagal']);
+        } else {
+            $this->db->trans_commit();
+            echo json_encode(['status' => true, 'msg' => 'Rollback berhasil']);
+        }
     }
 
 
