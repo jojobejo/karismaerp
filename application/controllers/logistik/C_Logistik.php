@@ -1043,6 +1043,9 @@ class C_Logistik extends CI_Controller
         $data['datatc'] = $querytc->result();
         $data['doprintsts'] = $querysts;
 
+        $data['driver']     = $this->M_Logistik->getalldriver();
+        $data['truck']      = $this->M_Logistik->getallplat();
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -2621,21 +2624,23 @@ class C_Logistik extends CI_Controller
             $tgl_inputer    = trim($row[0]);
             $kd_faktur      = trim($row[1]);
             $kd_rute        = trim($row[2]);
-            $kd_customer    = trim($row[3]);
-            $kd_barang      = trim($row[4]);
-            $nama_barang    = trim($row[5]);
-            $qty            = trim($row[6]);
-            $satuan         = trim($row[7]);
-            $no_lot         = trim($row[8]);
-            $tgl_exp        = trim($row[9]);
-            $nominal_p      = trim($row[10]);
-            $jtempo         = trim($row[11]);
+            $salesman       = trim($row[3]);
+            $kd_customer    = trim($row[4]);
+            $kd_barang      = trim($row[5]);
+            $nama_barang    = trim($row[6]);
+            $qty            = trim($row[7]);
+            $satuan         = trim($row[8]);
+            $no_lot         = trim($row[9]);
+            $tgl_exp        = trim($row[10]);
+            $nominal_p      = trim($row[11]);
+            $jtempo         = trim($row[12]);
 
             $row_data = [
                 'kdupdate'          => $kdupdate,
                 'tgl_inputer'       => $tgl_inputer,
                 'kd_faktur'         => $kd_faktur,
                 'kd_rute'           => $kd_rute,
+                'salesman'          => $salesman,
                 'kd_customer'       => $kd_customer,
                 'kd_barang'         => $kd_barang,
                 'nama_barang'       => $nama_barang,

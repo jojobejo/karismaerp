@@ -83,7 +83,6 @@ $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock
 // STOCK ONLINE GUDANG
 $route['stock']                                     = 'logistik/C_Logistik/stock_control';
 
-
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
 $route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
@@ -147,15 +146,14 @@ $route['ics/ajax_detail_mutasi']                    = 'logistik/C_Ics/ajax_detai
 $route['ics/ajax_rollback_mutasi']                  = 'logistik/C_Ics/ajax_rollback_mutasi';
 $route['ics/ajax_delete_mutasi']                    = 'logistik/C_Ics/ajax_delete_mutasi';
 $route['ics/ajax_unpost_mutasi']                    = 'logistik/C_Ics/ajax_unpost_mutasi';
-
-
-
 $route['ics/ajax_filter_mutasi']                    = 'logistik/C_Ics/ajax_filter_mutasi';
-$route['ics/ajax_rollback_mutasi']                  = 'logistik/C_Ics/ajax_rollback_mutasi';
-$route['ics/ajax_unpost_mutasi']                    = 'logistik/C_Ics/ajax_unpost_mutasi';
+
 
 $route['logistik/stock']                            = 'logistik/C_Ics/saldo_stock';
 $route['logistik/lpb']                              = 'logistik/C_Ics/create_lpb';
+
+// LOGISTIK - DISTRIBUSI
+$route['logistik/distibusi']                        = 'logistik/C_Distribusi';
 
 
 // LOGISTIK & OPNAME

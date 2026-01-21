@@ -144,7 +144,12 @@
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
                                                         </div>
-                                                        <input type="text" class="form-control" placeholder="Driver" value="" name="driver_isi" id="driver_isi">
+                                                        <select name="driver_isi" id="driver_isi" class="form-control" required>
+                                                            <option value="" selected disabled>-- Pilih Driver --</option>
+                                                            <?php foreach ($driver as $driver) : ?>
+                                                                <option value="<?= $driver->kd_driver ?>"><?= $driver->nama_driver ?></option>
+                                                            <?php endforeach ?>
+                                                        </select>
                                                     </div>
                                                 </div>
 
@@ -153,9 +158,15 @@
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
                                                         </div>
-                                                        <input type="text" class="form-control" placeholder="Plat Nomor" value="" name="plat_isi" id="plat_isi">
+                                                        <select name="truck_isi" id="truck_isi" class="form-control" required>
+                                                            <option value="" selected disabled>-- Pilih Kendaraan --</option>
+                                                            <?php foreach ($truck as $truck) : ?>
+                                                                <option value="<?= $truck->id ?>"><?= $truck->nm_truk ?></option>
+                                                            <?php endforeach ?>
+                                                        </select>
                                                     </div>
                                                 </div>
+
                                             </div>
                                         <?php else : ?>
                                         <?php endif; ?>
@@ -286,6 +297,7 @@
                                                         <i class="fas fa-check-double"></i> Rekam Draft Order
                                                     </button>
                                                 </div>
+
                                                 <div class="col">
                                                     <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Order
@@ -406,7 +418,7 @@
             $("#draftpost").on('click', function() {
                 var kd_do = $("#do_isi").val().trim();
                 var tgl_krim = $("#tgl_isi").val();
-                var platno = $("#plat_isi").val();
+                var platno = $("#truck_isi").val();
                 var driver = $("#driver_isi").val();
 
                 $("input").css("border", "");

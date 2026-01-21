@@ -16,6 +16,8 @@
 </script>
 
 <script>
+    console.log('ajax_mutasi loaded');
+
     $(document).on('click', '.btn-detail', function() {
         let noreff = $(this).data('id');
 
@@ -108,8 +110,11 @@
     });
 
 
-    $(document).on('click', '.btn-rollback', function() {
+    $(document).on('click', '.btn-rollback', function(e) {
+        e.preventDefault();
+
         let noreff = $(this).data('id');
+        console.log('rollback', noreff);
 
         Swal.fire({
             title: 'ROLLBACK MUTASI?',
@@ -119,15 +124,22 @@
             confirmButtonText: 'Rollback'
         }).then((res) => {
             if (res.isConfirmed) {
-                $.post('<?= base_url("ics/ajax_rollback_mutasi") ?>', {
-                    noreff
-                }, function(r) {
-                    Swal.fire(r.msg, '', r.status ? 'success' : 'error');
-                    if (r.status) location.reload();
-                }, 'json');
+                $.ajax({
+                    url: '<?= base_url("ics/ajax_rollback_mutasi") ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        noreff
+                    },
+                    success: function(r) {
+                        Swal.fire(r.msg, '', r.status ? 'success' : 'error');
+                        if (r.status) location.reload();
+                    }
+                });
             }
         });
     });
+
 
 
     function badgeStatus(status) {

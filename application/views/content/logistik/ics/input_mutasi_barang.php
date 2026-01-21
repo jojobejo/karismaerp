@@ -258,6 +258,11 @@
                 });
             }
 
+            $(document).ready(function() {
+                $('#fromgdg').val(2).trigger('change');
+            });
+
+
             // GUDANG DIPILIH
             $('#fromgdg').on('change', function() {
                 let id_gudang = $(this).val();
@@ -267,10 +272,35 @@
                 $('#qtygudang').val('');
                 $('#select_exp').val(null).trigger('change');
 
+                // reset tujuan gudang
+                $('#tujuangdg option').prop('disabled', false).show();
+
                 if (id_gudang) {
+                    // sembunyikan gudang yang sama
+                    $('#tujuangdg option[value="' + id_gudang + '"]')
+                        .prop('disabled', true)
+                        .hide();
+
+                    // reset pilihan jika sama
+                    $('#tujuangdg').val(null);
+
                     initSelectBarang(id_gudang);
                 }
             });
+
+
+            // $('#fromgdg').on('change', function() {
+            //     let id_gudang = $(this).val();
+            //     let nama_gudang = $('#fromgdg option:selected').text();
+
+            //     $('#gudang_aktif').val(nama_gudang);
+            //     $('#qtygudang').val('');
+            //     $('#select_exp').val(null).trigger('change');
+
+            //     if (id_gudang) {
+            //         initSelectBarang(id_gudang);
+            //     }
+            // });
 
             // BARANG LOAD EXPIRED
             $('#select_barang').on('change', function() {

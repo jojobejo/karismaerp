@@ -109,7 +109,7 @@
                                             <button class="btn btn-sm btn-info btn-detail" data-id="<?= $fm->noreff ?>">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-danger btn-unpost" data-id="<?= $fm->noreff ?>">
+                                            <button class="btn btn-sm btn-danger btn-delete" data-id="<?= $fm->noreff ?>">
                                                 <i class="fas fa-ban"></i>
                                             </button>
                                         <?php elseif ($fm->status == 'HOLD') : ?>
@@ -119,7 +119,7 @@
                                             <button class="btn btn-sm btn-success btn-rollback" data-id="<?= $fm->noreff ?>">
                                                 <i class="fas fa-thumbs-up"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-danger btn-unpost" data-id="<?= $fm->noreff ?>">
+                                            <button class="btn btn-sm btn-danger btn-delete" data-id="<?= $fm->noreff ?>">
                                                 <i class="fas fa-ban"></i>
                                             </button>
                                         <?php else : ?>
