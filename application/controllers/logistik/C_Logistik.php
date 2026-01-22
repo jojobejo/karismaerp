@@ -1102,6 +1102,9 @@ class C_Logistik extends CI_Controller
         $tgldeliv   = $this->input->post('tgl_krim');
         $driver     = $this->input->post('driver');
         $datenow    = date('d/m/Y');
+        $dateprenow = date("Y-m-d");
+        $kd_faktur_list = [];
+
 
         $data['tanggal_now']        = date('d/m/Y');
 
@@ -1145,7 +1148,10 @@ class C_Logistik extends CI_Controller
                 'exp_date'      => date('m/d/Y', strtotime($det->tgl_exp)),
                 'input_at'      => date('d/m/Y')
             );
+            $kd_faktur_list[] = $det->kd_faktur;
+            $kd_faktur_list = array_unique($kd_faktur_list);
         }
+        $this->M_Logistik->update_pre_do_delivery_at($kd_faktur_list, $dateprenow);
 
         $this->M_Logistik->insert_batch_do_detail_ics($insert_batch);
         $this->M_Logistik->insertlog_do($datalog);

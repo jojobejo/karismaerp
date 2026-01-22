@@ -16,12 +16,25 @@ class C_Distribusi extends CI_Controller
     public function index()
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
-        $data['total_tonase']       = $this->M_Distribusi->total_tonase_by_rute();
+        $data['total_tonase']       = $this->M_Distribusi->tonase_all_do_done();
+        $data['all_rute']             = $this->M_Distribusi->all_rute();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/distribusi.php', $data);
         $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/ajax_distribusi.php');
     }
+
+    public function get_ploting_rute()
+    {
+        $rute    = $this->input->post('rute');
+        $tanggal = $this->input->post('tanggal');
+
+        $data = $this->M_Distribusi->ploting_rute($rute, $tanggal);
+
+        echo json_encode($data);
+    }
+
 
     public function detail_list_faktur()
     {

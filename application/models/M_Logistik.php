@@ -394,6 +394,7 @@ class M_Logistik extends CI_Model
         $this->db->where('a.data_sts', 1);
         $this->db->where('d.kd_faktur IS NULL', null, false);
         $this->db->group_by('a.kd_faktur');
+        $this->db->order_by('total_barang','DESC');
 
         $query = $this->db->get();
         return $query->result();
@@ -496,6 +497,15 @@ class M_Logistik extends CI_Model
         FROM tb_detail_do a
         WHERE a.kd_do = '$kd'")->result();
     }
+
+    public function update_pre_do_delivery_at($kd_faktur_list, $dateprenow)
+    {
+        $this->db->where_in('kd_faktur', $kd_faktur_list);
+        return $this->db->update('tb_pre_do', [
+            'delivery_at' => $dateprenow
+        ]);
+    }
+
 
     public function det_do_cust($kd)
     {

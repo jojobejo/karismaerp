@@ -154,6 +154,7 @@ $route['logistik/lpb']                              = 'logistik/C_Ics/create_lpb
 
 // LOGISTIK - DISTRIBUSI
 $route['logistik/distibusi']                        = 'logistik/C_Distribusi';
+$route['logistik/distibusi/get_ploting_rute']       = 'logistik/C_Distribusi/get_ploting_rute';
 
 
 // LOGISTIK & OPNAME

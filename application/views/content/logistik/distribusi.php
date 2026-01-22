@@ -51,8 +51,39 @@
                             <?php endforeach; ?>
                         </tbody>
                     </table>
-                </div>
+                    <div class="mt-4">
+                        <div class="row">
+                            <div class="col-md">
+                                <label>Rute</label>
+                                <select name="s_rute" id="s_rute" class="form-control">
+                                    <option value="">-- Semua Rute --</option>
+                                    <?php foreach ($all_rute as $rute) : ?>
+                                        <option value="<?= $rute->kd_rute ?>"><?= $rute->kd_rute ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md">
+                                <label>Rentang Tanggal</label>
+                                <input type="text" id="filter_tanggal" class="form-control" placeholder="YYYY-MM-DD - YYYY-MM-DD">
+                            </div>
+                        </div>
+                    </div>
 
+                    <hr>
+
+                    <table class="table table-bordered table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>Rute</th>
+                                <th>Tanggal Pengiriman</th>
+                            </tr>
+                        </thead>
+                        <tbody id="result_data">
+                            <tr>
+                                <td colspan="2" class="text-center">Silakan pilih filter</td>
+                            </tr>
+                        </tbody>
+                    </table>
             </section>
 
         </div>
@@ -72,3 +103,11 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $('#filter_tanggal').daterangepicker({
+            locale: {
+                format: 'YYYY-MM-DD'
+            }
+        });
+    </script>
