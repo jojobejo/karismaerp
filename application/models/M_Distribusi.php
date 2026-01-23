@@ -43,6 +43,45 @@ class M_Distribusi extends CI_Model
         ORDER BY tonase_terkirim DESC;")->result();
     }
 
+    public function get_driver_rute_matrix($tanggal)
+    {
+        $rute = $this->db->get('tb_rutecs')->result();
+        $driver = $this->db->get('tb_op_driver')->result();
+        $this->db->select('driver, regional, COUNT(*) as total');
+        $this->db->from('tb_do');
+        $this->db->where('status', '2');
+
+        if (!empty($tanggal)) {
+            $tgl = explode(' - ', $tanggal);
+            $this->db->where('tgl_pengiriman >=', $tgl[0]);
+            $this->db->where('tgl_pengiriman <=', $tgl[1]);
+        }
+
+        $this->db->group_by(['driver', 'regional']);
+        $do = $this->db->get()->result();
+
+        $map = [];
+        foreach ($do as $d) {
+            $map[$d->driver][$d->regional] = $d->total;
+        }
+
+        $data = [];
+        foreach ($driver as $drv) {
+            $row = [
+                'kd_driver'   => $drv->kd_driver,
+                'nama_driver' => $drv->nama_driver,
+                'rute'        => $map[$drv->kd_driver] ?? []
+            ];
+            $data[] = $row;
+        }
+
+        return [
+            'rute' => $rute,
+            'data' => $data
+        ];
+    }
+
+
     public function all_driver()
     {
         return $this->db->query("SELECT * 
@@ -110,5 +149,36 @@ class M_Distribusi extends CI_Model
             AND do.status = '2'
             AND YEARWEEK(do.tgl_pengiriman, 1) = YEARWEEK(CURDATE(), 1)
         ORDER BY d.nama_driver;")->result();
+    }
+
+    public function tmplate()
+    {
+        return $this->db->query("")->result();
+    }
+
+    public function total_tonase()
+    {
+        return $this->db->query("SELECT 
+            ROUND(SUM(b.berat * d.qty) / 1000000, 3) AS total_tonase
+        FROM tb_detail_do d
+        JOIN tb_master_barang_all b 
+            ON b.kd_barang = d.kd_barang
+        JOIN tb_do o 
+            ON o.kd_do = d.kd_do
+        WHERE o.tgl_pengiriman BETWEEN '2026-01-01' AND '2026-01-31' AND o.status = '2'")->result();
+    }
+
+    public function tonase_terkirim()
+    {
+        return $this->db->query("SELECT 
+            ROUND(SUM(b.berat * d.qty) / 1000000, 3) AS tonase_terkirim
+        FROM tb_detail_do d
+        JOIN tb_master_barang_all b 
+            ON b.kd_barang = d.kd_barang
+        JOIN tb_do o 
+            ON o.kd_do = d.kd_do
+        WHERE d.status = '4'
+        AND o.tgl_pengiriman BETWEEN '2026-01-01' AND '2026-01-31' AND o.status = '2';
+        ")->result();
     }
 }

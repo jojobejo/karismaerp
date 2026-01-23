@@ -35,6 +35,12 @@ class C_Distribusi extends CI_Controller
         echo json_encode($data);
     }
 
+    public function driver_rute_matrix()
+    {
+        $tanggal = $this->input->post('tanggal');
+        $result = $this->M_Distribusi->get_driver_rute_matrix($tanggal);
+        echo json_encode($result);
+    }
 
     public function detail_list_faktur()
     {
