@@ -66,15 +66,7 @@
       "responsive": true,
     });
 
-    $('#tbtotal_tonase').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
+   
     $('#tbpricelist').DataTable({
       "paging": true,
       "lengthChange": false,

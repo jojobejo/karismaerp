@@ -81,6 +81,30 @@ class M_Distribusi extends CI_Model
         ];
     }
 
+    public function get_driver_ready($tanggal, $rute)
+    {
+        $tgl = explode(' - ', $tanggal);
+
+        // subquery: driver yang SUDAH dipakai
+        $sub = $this->db->select('driver')
+            ->from('tb_do')
+            ->where('status', '2')
+            ->where('regional', $rute)
+            ->where('tgl_pengiriman >=', $tgl[0])
+            ->where('tgl_pengiriman <=', $tgl[1])
+            ->group_by('driver')
+            ->get_compiled_select();
+
+        // main query: driver yang BELUM ada di subquery
+        $this->db->select('kd_driver, nama_driver');
+        $this->db->from('tb_op_driver');
+        $this->db->where("kd_driver NOT IN ($sub)", null, false);
+        $this->db->order_by('nama_driver', 'ASC');
+
+        return $this->db->get()->result();
+    }
+
+
 
     public function all_driver()
     {
