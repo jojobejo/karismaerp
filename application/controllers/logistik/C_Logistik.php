@@ -1151,12 +1151,32 @@ class C_Logistik extends CI_Controller
             $kd_faktur_list[] = $det->kd_faktur;
             $kd_faktur_list = array_unique($kd_faktur_list);
         }
-        $this->M_Logistik->update_pre_do_delivery_at($kd_faktur_list, $dateprenow);
 
+        $this->M_Logistik->update_pre_do_delivery_at($kd_faktur_list, $dateprenow);
         $this->M_Logistik->insert_batch_do_detail_ics($insert_batch);
         $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
+
+        // $compareData = $this->M_Logistik->get_detail_do_not_exist_saldo_awal($kd);
+        // $insert_batch_saldo_awal = [];
+        // foreach ($compareData as $row) {
+        //     $insert_batch_saldo_awal[] = [
+        //         'kode_barang_system' => $row->kode_barang_system,
+        //         'kode_barang_zahir'  => $row->kode_barang_zahir,
+        //         'nama_barang'        => $row->nama_barang,
+        //         'wilayah_id'         => '2',
+        //         'koordinat_id'       => '0',
+        //         'barang_pic'         => '0',
+        //         'qty'                => $row->qty,
+        //         'nolot'              => $row->nolot,
+        //         'exp_date'           => $row->exp_date
+        //     ];
+        // }
+        // if (!empty($insert_batch_saldo_awal)) {
+        //     $this->db->insert_batch('tb_saldo_awal', $insert_batch_saldo_awal);
+        // }
+
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
     }
 

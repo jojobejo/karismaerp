@@ -394,7 +394,7 @@ class M_Logistik extends CI_Model
         $this->db->where('a.data_sts', 1);
         $this->db->where('d.kd_faktur IS NULL', null, false);
         $this->db->group_by('a.kd_faktur');
-        $this->db->order_by('total_barang','DESC');
+        $this->db->order_by('total_barang', 'DESC');
 
         $query = $this->db->get();
         return $query->result();
@@ -482,6 +482,32 @@ class M_Logistik extends CI_Model
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
+
+    public function get_detail_do_not_exist_saldo_awal($kd_faktur)
+    {
+        $sql = "SELECT
+            m.kode_barang_system as kode_barang_system ,
+            d.kd_barang AS kode_barang_zahir,
+            d.nama_barang AS nama_barang,
+            s.wilayah_id AS wilayah_id,
+            s.koordinat_id AS koordinat_id,
+            s.barang_pic AS barang_pic,
+            d.qty AS qty,
+            d.no_lot AS nolot,
+            DATE_FORMAT(STR_TO_DATE(d.tgl_exp, '%m/%d/%Y'),'%m/%d/%Y') AS exp_date
+        FROM tb_detail_do d
+        LEFT JOIN tb_saldo_awal s
+            ON s.kode_barang_zahir = d.kd_barang
+        AND s.exp_date = DATE_FORMAT(
+                STR_TO_DATE(d.tgl_exp, '%m/%d/%Y'),
+                '%m/%d/%Y')
+        LEFT JOIN tb_master_barang_all m
+            ON m.kd_barang = d.kd_barang
+        WHERE d.kd_do = '$kd_faktur'
+        AND s.exp_date IS NULL;";
+        return $this->db->query($sql, [$kd_faktur])->result();
+    }
+
 
     public function get_do_cust_byfaktur_ics($kd)
     {

@@ -74,26 +74,52 @@
                                         <tr>
                                             <th>No LPB</th>
                                             <th>Tgl Transaksi</th>
+                                            <th>Kode Barang</th>
                                             <th>Nama Barang</th>
                                             <th>Expired Date</th>
                                             <th>Qty</th>
                                             <th>Box</th>
                                             <th>Pcs</th>
                                             <th>Note LPB</th>
+                                            <?php if ($po->dimensi = '0') : ?>
+                                                <th>Status</th>
+                                                <th>#</th>
+                                            <?php else : ?>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
 
                                     <tbody>
-                                        <?php foreach ($ics_po as $po) : ?>
+                                        <?php foreach ($ics_po as $po) :
+                                            $status = $po->status;
+                                            if ($status = '1') {
+                                                $status = 'BELUM DATANG';
+                                            } else {
+                                                $status = 'DONE';
+                                            }
+                                        ?>
                                             <tr>
                                                 <td><?= $po->kd_faktur ?></td>
                                                 <td><?= $po->tgl_transaksi ?></td>
+                                                <td><?= $po->kd_barang ?></td>
                                                 <td><?= $po->nama_barang ?></td>
                                                 <td><?= $po->exp_date ?></td>
                                                 <td><?= $po->qty ?></td>
                                                 <td><?= $po->qty_box ?></td>
                                                 <td><?= $po->qty_pcs ?></td>
                                                 <td><?= $po->note ?></td>
+                                                <?php if ($po->dimensi = '0') : ?>
+
+                                                <?php else : ?>
+                                                    <td><?= $status ?></td>
+                                                    <td>
+                                                        <?php if ($status = 'BELUM DATANG') : ?>
+                                                            <a href="#" class="btn btn-success btn-sm btn-block"><i class="fas fa-check"></i></a>
+                                                        <?php else : ?>
+                                                            <a href="#" class="btn btn-danger btn-sm btn-block"><i class="fas fa-check"></i></a>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                <?php endif; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>

@@ -529,8 +529,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -637,8 +638,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -745,8 +747,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -853,8 +856,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -961,8 +965,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -1069,8 +1074,9 @@ class M_Ics extends CI_Model
         GROUP BY kode_barang_zahir, exp_date
     ) x
     LEFT JOIN (
-        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in
+        SELECT kd_barang,nama_barang, exp_date, SUM(qty) AS qty_in , lpb_status
         FROM tb_ics_po
+        WHERE lpb_status = '2'
         GROUP BY kd_barang, exp_date
     ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
     LEFT JOIN (
@@ -1184,6 +1190,26 @@ class M_Ics extends CI_Model
         LEFT JOIN tb_master_barang_all m ON m.nama_barang = a.nama_barang
         WHERE DATE(a.tgl_transaksi) = '$tgl'
         AND (m.p * m.l * m.t) > 0")->result();
+    }
+
+    public function list_po()
+    {
+        return $this->db->query("SELECT		
+            a.id,
+            a.kd_barang as kd_barang,
+            a.kd_faktur_lpb as kd_faktur,
+            a.tgl_transaksi,
+            a.nama_barang,
+            a.qty,
+            a.exp_date,
+            COALESCE((m.p * m.l * m.t),0) AS dimensi,
+            FLOOR(a.qty / (m.p * m.l * m.t)) AS qty_box,
+            MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
+            a.lpb_note as note,
+            a.lpb_status as status
+        FROM tb_ics_po a
+        LEFT JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+        ")->result();
     }
 
     public function get_br_name($idbarang)
@@ -1461,8 +1487,8 @@ class M_Ics extends CI_Model
     public function get_barang_by_gudang_select2($id_gudang, $search = '')
     {
         $this->db->select('a.nama_barang');
-        $this->db->from('tb_saldo_awal a');
-        $this->db->where('a.wilayah_id', $id_gudang);
+        $this->db->from('v_stock_per_gudang a');
+        $this->db->where('a.gudang', $id_gudang);
 
         if ($search) {
             $this->db->like('a.nama_barang', $search);
@@ -1478,8 +1504,8 @@ class M_Ics extends CI_Model
     public function get_exp_by_gudang_barang($id_gudang, $nama_barang)
     {
         return $this->db->query("SELECT DISTINCT exp_date
-            FROM tb_saldo_awal
-            WHERE wilayah_id = ?
+            FROM v_stock_per_gudang
+            WHERE gudang = ?
             AND nama_barang = ?
             ORDER BY exp_date ASC 
           ", [$id_gudang, $nama_barang])->result();
@@ -1498,13 +1524,13 @@ class M_Ics extends CI_Model
             ) AS qtygudang
         FROM (
             SELECT
-                wilayah_id AS gudang,
+                gudang AS gudang,
                 nama_barang,
                 exp_date,
                 SUM(qty) AS saldo_awal_qty
-            FROM tb_saldo_awal
-            WHERE wilayah_id = ?
-            GROUP BY wilayah_id, nama_barang, exp_date
+            FROM v_stock_per_gudang
+            WHERE gudang = ?
+            GROUP BY gudang, nama_barang, exp_date
         ) x
         LEFT JOIN (
             SELECT
@@ -1551,7 +1577,6 @@ class M_Ics extends CI_Model
     {
         return $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
     }
-
 
     public function get_tmp_mutasi_by_user($user_id)
     {
