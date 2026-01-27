@@ -1024,7 +1024,7 @@ class C_Logistik extends CI_Controller
         FROM
             tb_detail_do a
         JOIN tb_do b ON b.kd_do = a.kd_do
-        JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
+        JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
         WHERE
             b.kd_do = '$kd_do'
         GROUP BY
@@ -1035,16 +1035,16 @@ class C_Logistik extends CI_Controller
 
         $query3 = $this->db->where('kd_do', $kd_do)->get('tb_detail_do');
 
-        $data['page_title']  = 'KARISMA - LOGISTIK';
-        $data['kdo'] = $query1->result();
-        $data['dostatus'] = $query2->result();
-        $data['dostatuss'] = $query3->result();
-        $data['data_list'] = $query->result();
-        $data['datatc'] = $querytc->result();
-        $data['doprintsts'] = $querysts;
+        $data['page_title']     = 'KARISMA - LOGISTIK';
+        $data['kdo']            = $query1->result();
+        $data['dostatus']       = $query2->result();
+        $data['dostatuss']      = $query3->result();
+        $data['data_list']      = $query->result();
+        $data['datatc']         = $querytc->result();
+        $data['doprintsts']     = $querysts;
 
-        $data['driver']     = $this->M_Logistik->getalldriver();
-        $data['truck']      = $this->M_Logistik->getallplat();
+        $data['driver']         = $this->M_Logistik->getalldriver();
+        $data['truck']          = $this->M_Logistik->getallplat();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
@@ -1691,6 +1691,7 @@ class C_Logistik extends CI_Controller
                                 'kd_do'             => $kddo,
                                 'kd_faktur'         => $det->kd_faktur,
                                 'tgl_transaksi'     => date('m/d/Y', strtotime($det->tgl_inputer)),
+                                'kd_barang'         => $det->kd_barang,
                                 'nama_barang'       => $det->nama_barang,
                                 'qty'               => $det->qty,
                                 'no_lot'            => $det->no_lot,

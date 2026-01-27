@@ -865,7 +865,7 @@ class C_Ics extends CI_Controller
                 'qty'             => $row[5],
                 'lpb_note'        => $row[6],
                 'input_at'        => $now,
-                'lpb_status'      => '1'
+                'lpb_status'      => '2'
             ];
 
             // $exists_opname = $this->db->get_where('tb_ics', [
