@@ -81,11 +81,8 @@
                                             <th>Box</th>
                                             <th>Pcs</th>
                                             <th>Note LPB</th>
-                                            <?php if ($po->dimensi = '0') : ?>
-                                                <th>Status</th>
-                                                <th>#</th>
-                                            <?php else : ?>
-                                            <?php endif; ?>
+                                            <th>Status</th>
+                                            <th>#</th>
                                         </tr>
                                     </thead>
 
