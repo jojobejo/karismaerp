@@ -402,30 +402,33 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
-        $this->db->select("
-        a.tgl_inputer,
-        a.kd_faktur,
-        b.nama_customer,
-        b.nama_kios,
-        b.alamat_kios,
-        b.regional,
-        a.kd_rute,
-        c.keterangan AS keterangan_rute,
-        COUNT(DISTINCT a.kd_barang) AS total_barang,
-        a.data_sts
-    ", false);
+        $subQuery = $this->db
+            ->select('1', false)
+            ->from('tb_detail_do d')
+            ->where('d.kd_faktur = a.kd_faktur')
+            ->get_compiled_select();
+
+        $this->db->select([
+            'a.tgl_inputer',
+            'a.kd_faktur',
+            'b.nama_customer',
+            'b.nama_kios',
+            'b.alamat_kios',
+            'b.regional',
+            'a.kd_rute',
+            'c.keterangan AS keterangan_rute',
+            'COUNT(DISTINCT a.kd_barang) AS total_barang',
+            'a.data_sts'
+        ], false);
 
         $this->db->from('tb_pre_do a');
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-        $this->db->join('tb_detail_do d', 'd.kd_faktur = a.kd_faktur', 'left');
-        $this->db->join('tb_master_barang_all m', 'm.kd_barang = a.kd_barang', 'left');
 
         $this->db->where('a.data_sts', '1');
-        $this->db->where('d.kd_faktur IS NULL', null, false);
+        $this->db->where("NOT EXISTS ($subQuery)", null, false);
 
         $this->db->group_by('a.kd_faktur');
-        $this->db->having('COUNT(DISTINCT a.kd_barang) = COUNT(DISTINCT m.kd_barang)', null, false);
         $this->db->order_by('total_barang', 'DESC');
 
         return $this->db->get()->result();
