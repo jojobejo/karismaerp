@@ -533,29 +533,35 @@
 
         $("#btnPrintOrder").on('click', function() {
             var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val().trim();
-            var platno = $("#plat_isi").val().trim();
-            var driver = $("#driver_isi").val().trim();
+            var tgl_krim = $("#tgl_isi").val();
+            var driver = $("#driver_isi").val();
+            var platno = $("#truck_isi").val();
 
-            if (!tgl_krim || !platno || !driver) {
+            $(".form-control").css("border", "");
+
+            if (!tgl_krim || !driver || !platno) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
+
                 if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
-                if (!platno) $("#plat_isi").css("border", "2px solid red");
                 if (!driver) $("#driver_isi").css("border", "2px solid red");
+                if (!platno) $("#truck_isi").css("border", "2px solid red");
                 return;
             }
+
             var printUrl = "<?= base_url('print_do/') ?>" + kd_do +
                 "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
                 "&driver=" + encodeURIComponent(driver) +
                 "&plat=" + encodeURIComponent(platno);
+
             window.open(printUrl, "_blank");
         });
 
+
         $("#btnPrintRegis").on('click', function() {
             var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val().trim();
-            var platno = $("#plat_isi").val().trim();
-            var driver = $("#driver_isi").val().trim();
+            var tgl_krim = $("#tgl_isi").val();
+            var driver = $("#driver_isi").val();
+            var platno = $("#truck_isi").val();
 
             if (!tgl_krim || !platno || !driver) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
@@ -587,9 +593,9 @@
 
         $("#btnPrintChecker").on('click', function() {
             var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val().trim();
-            var platno = $("#plat_isi").val().trim();
-            var driver = $("#driver_isi").val().trim();
+            var tgl_krim = $("#tgl_isi").val();
+            var driver = $("#driver_isi").val();
+            var platno = $("#truck_isi").val();
 
             if (!tgl_krim || !platno || !driver) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
