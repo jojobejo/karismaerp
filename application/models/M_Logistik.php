@@ -402,10 +402,23 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
-        $subQuery = $this->db
+        // Subquery 1: faktur sudah masuk tb_detail_do
+        $subDetail = $this->db
             ->select('1', false)
             ->from('tb_detail_do d')
             ->where('d.kd_faktur = a.kd_faktur')
+            ->get_compiled_select();
+
+        // Subquery 2: barang di pre_do yang TIDAK ADA di master barang
+        $subBarang = $this->db
+            ->select('1', false)
+            ->from('tb_pre_do x')
+            ->where('x.kd_faktur = a.kd_faktur')
+            ->where('NOT EXISTS (
+            SELECT 1 
+            FROM tb_master_barang_all m 
+            WHERE m.kd_barang = x.kd_barang
+        )', null, false)
             ->get_compiled_select();
 
         $this->db->select([
@@ -426,7 +439,12 @@ class M_Logistik extends CI_Model
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
 
         $this->db->where('a.data_sts', '1');
-        $this->db->where("NOT EXISTS ($subQuery)", null, false);
+
+        // Tidak boleh sudah jadi DO
+        $this->db->where("NOT EXISTS ($subDetail)", null, false);
+
+        // Tidak boleh ada barang yang tidak ada di master
+        $this->db->where("NOT EXISTS ($subBarang)", null, false);
 
         $this->db->group_by('a.kd_faktur');
         $this->db->order_by('total_barang', 'DESC');
