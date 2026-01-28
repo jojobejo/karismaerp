@@ -321,6 +321,7 @@ class C_Ics extends CI_Controller
     {
         $nama_barang = $this->input->post('nama_barang');
         $exp_date = $this->input->post('exp_date');
+        $kd_barang = $this->input->post('kd_barang');
 
         $data_do = $this->db->select('a.kd_faktur AS kd_faktur,a.tgl_transaksi AS tgl_transaksi,a.qty AS qty,
         c.nama_customer AS nm_customer, 
@@ -1079,24 +1080,48 @@ class C_Ics extends CI_Controller
 
     public function update_pic_lokasi()
     {
-        $id        = $this->input->post('id');
-        $list_id   = $this->input->post('list_id');
-        $lokasi_baru = $this->input->post('lokasi');
+        $id           = $this->input->post('id');
+        $list_id      = $this->input->post('list_id');
+        $lokasi_baru  = $this->input->post('lokasi');
 
         $arr_id = explode(",", $list_id);
+        $ids_lama = array_diff($arr_id, [$id]);
 
-        $this->db->where('id', $id);
-        $this->db->update('tb_saldo_awal', ['barang_pic' => $lokasi_baru]);
+        $this->db->trans_begin();
 
-        $ids_to_delete = array_diff($arr_id, [$id]);
+        try {
+            $this->db->where('id', $id);
+            $this->db->update('tb_saldo_awal', [
+                'barang_pic' => $lokasi_baru
+            ]);
+            if (!empty($ids_lama)) {
+                $data_lama = $this->db
+                    ->where_in('id', $ids_lama)
+                    ->get('tb_saldo_awal')
+                    ->result_array();
+                if (!empty($data_lama)) {
+                    foreach ($data_lama as &$row) {
+                        unset($row['id']);
+                        $row['created_at'] = date('Y-m-d H:i:s'); // kalau perlu
+                    }
+                    $this->db->insert_batch('tb_ics', $data_lama);
+                    $this->db->where_in('id', $ids_lama);
+                    $this->db->delete('tb_saldo_awal');
+                }
+            }
+            if ($this->db->trans_status() === FALSE) {
+                throw new Exception('DB Error');
+            }
 
-        if (!empty($ids_to_delete)) {
-            $this->db->where_in('id', $ids_to_delete);
-            $this->db->delete('tb_saldo_awal');
+            $this->db->trans_commit();
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            log_message('error', 'Update PIC Lokasi gagal: ' . $e->getMessage());
         }
 
         redirect($_SERVER['HTTP_REFERER']);
     }
+
 
     public function master_gudang()
     {

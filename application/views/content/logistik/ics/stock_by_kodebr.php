@@ -96,7 +96,7 @@
                                                                     <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_barang ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                                 </div>
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-kode="<?= $nm->kd_barang ?>">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
                                                                 </div>
@@ -112,7 +112,7 @@
                                                                     <button class="btn btn-md btn-success btn-add-opname w-100" data-toggle="modal" data-target="#modalAddOpname<?= $br->opname_id ?>" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-id="<?= $br->opname_id ?>" data-kdbarang="<?= $br->kd_barang ?>" data-dimensi="<?= $br->dimensi ?>"><i class="fas fa-plus"></i></button>
                                                                 </div>
                                                                 <div class="col-6">
-                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>">
+                                                                    <button class="btn btn-sm btn-info view-detail w-100" data-exp="<?= $br->expired ?>" data-nama="<?= $nm->nama_barang ?>" data-kode="<?= $nm->kd_barang ?>">
                                                                         <i class="fas fa-eye"></i>
                                                                     </button>
                                                                 </div>
@@ -522,13 +522,15 @@
             $('.view-detail').click(function() {
                 const nama_barang = $(this).data('nama');
                 const exp_date = $(this).data('exp');
+                const kd_barang = $(this).data('kode');
 
                 $.ajax({
                     url: "<?= base_url('ics/get_detail_by_exp') ?>",
                     type: "POST",
                     data: {
                         nama_barang: nama_barang,
-                        exp_date: exp_date
+                        exp_date: exp_date,
+                        kd_barang : kd_barang
                     },
                     dataType: "json",
                     success: function(res) {
