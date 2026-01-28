@@ -313,43 +313,71 @@ class C_Ics extends CI_Controller
         echo json_encode($data);
     }
 
-
-
-
-
     public function get_detail_by_exp()
     {
-        $nama_barang = $this->input->post('nama_barang');
-        $exp_date = $this->input->post('exp_date');
-        $kd_barang = $this->input->post('kd_barang');
+        $nama_barang = $this->input->post('nama_barang', true);
+        $exp_date    = $this->input->post('exp_date', true);
+        $kd_barang   = $this->input->post('kd_barang', true);
 
-        $data_do = $this->db->select('a.kd_faktur AS kd_faktur,a.tgl_transaksi AS tgl_transaksi,a.qty AS qty,
-        c.nama_customer AS nm_customer, 
-        c.nama_kios AS nm_kios')
+        $subquery = $this->db
+            ->select([
+                'a.kd_faktur',
+                'a.tgl_transaksi',
+                'a.kd_barang',
+                'a.exp_date',
+                'SUM(a.qty) AS qty'
+            ])
             ->from('tb_ics_do a')
-            ->join('tb_pre_do b', 'b.kd_faktur = a.kd_faktur', 'left')
-            ->join('tb_customer c', 'c.kd_customer = b.kd_customer', 'left')
-            ->where('a.nama_barang', $nama_barang)
+            ->where('a.kd_barang', $kd_barang)
             ->where('a.exp_date', $exp_date)
-            ->group_by('a.kd_faktur')
-            ->get()->result();
+            ->group_by(['a.kd_faktur', 'a.kd_barang', 'a.exp_date'])
+            ->get_compiled_select();
 
+        $data_do = $this->db
+            ->select([
+                'x.kd_faktur',
+                'x.tgl_transaksi',
+                'x.qty',
+                'c.nama_customer AS nm_customer',
+                'x.kd_barang',
+                'x.exp_date'
+            ])
+            ->from("($subquery) x", false)
+            ->join('tb_pre_do b', 'b.kd_faktur = x.kd_faktur', 'left')
+            ->join('tb_customer c', 'c.kd_customer = b.kd_customer', 'left')
+            ->group_by(['x.kd_faktur', 'x.kd_barang', 'x.exp_date'])
+            ->get()
+            ->result();
 
-        $data_po = $this->db->select('kd_faktur_lpb, tgl_transaksi, qty , input_at')
+        $data_po = $this->db
+            ->select([
+                'kd_faktur_lpb',
+                'tgl_transaksi',
+                'qty',
+                'input_at'
+            ])
             ->from('tb_ics_po')
             ->where('nama_barang', $nama_barang)
             ->where('exp_date', $exp_date)
-            ->get()->result();
+            ->get()
+            ->result();
 
-        $data_log = $this->db->select('inputer, tgl_input, qty , keterangan')
+        $data_log = $this->db
+            ->select([
+                'inputer',
+                'tgl_input',
+                'qty',
+                'keterangan'
+            ])
             ->from('tb_log_ics')
             ->where('nama_barang', $nama_barang)
             ->where('exp_date', $exp_date)
-            ->get()->result();
+            ->get()
+            ->result();
 
         echo json_encode([
-            'data_do' => $data_do,
-            'data_po' => $data_po,
+            'data_do'  => $data_do,
+            'data_po'  => $data_po,
             'data_log' => $data_log
         ]);
     }
@@ -1080,46 +1108,40 @@ class C_Ics extends CI_Controller
 
     public function update_pic_lokasi()
     {
-        $id           = $this->input->post('id');
-        $list_id      = $this->input->post('list_id');
-        $lokasi_baru  = $this->input->post('lokasi');
+        $id_list   = $this->input->post('list_id'); // comma separated id
+        $kd_barang = $this->input->post('kd_barang');
+        $exp_date  = $this->input->post('expdate');
+        $lokasi    = $this->input->post('lokasi');
 
-        $arr_id = explode(",", $list_id);
-        $ids_lama = array_diff($arr_id, [$id]);
+        if (!$id_list || !$kd_barang || !$exp_date) {
+            echo json_encode([
+                'status' => false,
+                'msg' => 'Data tidak lengkap'
+            ]);
+            return;
+        }
+
+        $ids = explode(',', $id_list);
 
         $this->db->trans_begin();
 
-        try {
-            $this->db->where('id', $id);
-            $this->db->update('tb_saldo_awal', [
-                'barang_pic' => $lokasi_baru
-            ]);
-            if (!empty($ids_lama)) {
-                $data_lama = $this->db
-                    ->where_in('id', $ids_lama)
-                    ->get('tb_saldo_awal')
-                    ->result_array();
-                if (!empty($data_lama)) {
-                    foreach ($data_lama as &$row) {
-                        unset($row['id']);
-                        $row['created_at'] = date('Y-m-d H:i:s'); // kalau perlu
-                    }
-                    $this->db->insert_batch('tb_ics', $data_lama);
-                    $this->db->where_in('id', $ids_lama);
-                    $this->db->delete('tb_saldo_awal');
-                }
-            }
-            if ($this->db->trans_status() === FALSE) {
-                throw new Exception('DB Error');
-            }
+        $this->M_Ics->update_pic_saldo_awal($ids, $lokasi);
+        $this->M_Ics->update_pic_ics($kd_barang, $exp_date, $lokasi);
 
-            $this->db->trans_commit();
-        } catch (Exception $e) {
+        if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
-            log_message('error', 'Update PIC Lokasi gagal: ' . $e->getMessage());
+            echo json_encode([
+                'status' => false,
+                'msg' => 'Update gagal'
+            ]);
+        } else {
+            $this->db->trans_commit();
+            echo json_encode([
+                'status' => true,
+                'msg' => 'PIC berhasil diupdate'
+            ]);
         }
-
-        redirect($_SERVER['HTTP_REFERER']);
+        redirect('ics/barangpic');
     }
 
 

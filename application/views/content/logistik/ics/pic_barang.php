@@ -42,7 +42,7 @@
                                             <td><?= $p->exp_date ?></td>
                                             <td><?= $p->barang_pic ?></td>
                                             <td>
-                                                <a href="#" class="btn btn-sm btn-primary btn-edit-pic" data-ids="<?= $p->daftar_id ?>" data-namabarang="<?= $p->nama_barang ?>" data-exp="<?= $p->exp_date ?>" data-lokasi="<?= $p->barang_pic ?>">
+                                                <a href="#" class="btn btn-sm btn-primary btn-edit-pic" data-ids="<?= $p->daftar_id ?>" data-namabarang="<?= $p->nama_barang ?>" data-exp="<?= $p->exp_date ?>" data-lokasi="<?= $p->barang_pic ?>" data-kdbarang="<?= $p->kd_barang ?>">
                                                     <i class="fas fa-pencil-alt"></i>
                                                 </a>
                                             </td>
@@ -102,8 +102,10 @@
                         <form method="post" action="<?= base_url('ics/update_pic_lokasi'); ?>">
                             <div class="modal-body">
 
-                                <input type="hidden" name="id" id="edit_id">
-                                <input type="hidden" name="list_id" id="edit_list_id">
+                                <input type="text" name="id" id="edit_id">
+                                <input type="text" name="list_id" id="edit_list_id">
+                                <input type="text" name="kd_barang" id="kd_barang">
+                                <input type="text" name="expdate" id="expdate">
 
                                 <div class="form-group">
                                     <label>Nama Barang</label>
@@ -151,3 +153,29 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $('#btnSavePIC').on('click', function() {
+
+            $.ajax({
+                url: base_url('ics/update_pic_lokasi'),
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    list_id: $('#edit_list_id').val(),
+                    kd_barang: $('#kd_barang').val(),
+                    expdate: $('#expdate').val(),
+                    lokasi: $('#edit_lokasi').val()
+                },
+                success: function(res) {
+                    if (res.status) {
+                        $('#modalEditPIC').modal('hide');
+                        location.reload();
+                    } else {
+                        alert(res.msg);
+                    }
+                }
+            });
+
+        });
+    </script>

@@ -66,7 +66,7 @@
       "responsive": true,
     });
 
-   
+
     $('#tbpricelist').DataTable({
       "paging": true,
       "lengthChange": false,
@@ -291,6 +291,8 @@
 
     $('#edit_nama_barang').val($(this).data('namabarang'));
     $('#edit_lokasi').val($(this).data('lokasi'));
+    $('#kd_barang').val($(this).data('kdbarang'));
+    $('#expdate').val($(this).data('exp'));
 
     $('#modalEditPIC').modal('show');
   });

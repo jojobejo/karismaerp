@@ -1330,6 +1330,7 @@ class M_Ics extends CI_Model
         if ($lokasi !== null) {
             return $this->db->query("SELECT 
                 GROUP_CONCAT(id) AS daftar_id,
+                kode_barang_zahir as kd_barang,
                 nama_barang,
                 exp_date,
                 barang_pic,
@@ -1342,6 +1343,25 @@ class M_Ics extends CI_Model
         }
         return [];
     }
+
+    public function update_pic_saldo_awal($ids, $lokasi)
+    {
+        $this->db->where_in('id', $ids);
+        return $this->db->update('tb_saldo_awal', [
+            'barang_pic' => $lokasi
+        ]);
+    }
+
+    public function update_pic_ics($kd_barang, $exp_date, $lokasi)
+    {
+        $this->db->where('kd_system', $kd_barang);
+        $this->db->where('exp_date', $exp_date);
+        return $this->db->update('tb_ics', [
+            'pic' => $lokasi
+        ]);
+    }
+
+
 
     public function total_barang_pic()
     {
