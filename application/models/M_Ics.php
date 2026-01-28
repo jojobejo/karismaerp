@@ -156,14 +156,13 @@ class M_Ics extends CI_Model
             GROUP BY exp_date , kd_barang
         ) p ON p.kd_barang = x.kode_barang_zahir AND p.exp_date = x.exp_date
         LEFT JOIN (
-            SELECT nama_barang, tgl_exp, SUM(qty) AS qty_out , kd_barang
-            FROM tb_detail_do
-            WHERE status = '4'
-            GROUP BY tgl_exp,kd_barang
-        ) d ON d.kd_barang = x.kode_barang_zahir AND d.tgl_exp = x.exp_date
+            SELECT nama_barang, exp_date, SUM(qty) AS qty_out , kd_barang
+            FROM tb_ics_do
+            GROUP BY exp_date,kd_barang
+        ) d ON d.kd_barang = x.kode_barang_zahir AND d.exp_date = x.exp_date
         LEFT JOIN (
             SELECT nama_barang, exp_date, SUM(qty) AS qty_opname,kd_system
-            FROM tb_ics_opname
+            FROM tb_ics
             GROUP BY exp_date , kd_system
         ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
         LEFT JOIN (
@@ -172,7 +171,7 @@ class M_Ics extends CI_Model
             GROUP BY kd_barang
         ) mb ON mb.kd = x.kode_barang_zahir
         $where
-        -- WHERE x.barang_pic = '0'
+        -- WHERE x.barang_pic = 'A'
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
 
@@ -249,31 +248,30 @@ class M_Ics extends CI_Model
         FROM (
             SELECT id,nama_barang,SUM(qty) AS saldo_awal_qty,barang_pic,kode_barang_zahir
             FROM tb_saldo_awal
-            GROUP BY kode_barang_zahir,nama_barang
+            GROUP BY kode_barang_zahir
         ) x
         LEFT JOIN (
-            SELECT nama_barang,SUM(qty) AS qty_in , kd_barang
+            SELECT nama_barang,SUM(qty) AS qty_in , kd_barang 
             FROM tb_ics_po
-            GROUP BY kd_barang, nama_barang
-        ) p ON p.kd_barang = x.kode_barang_zahir AND p.nama_barang = x.nama_barang
+            GROUP BY kd_barang
+        ) p ON p.kd_barang = x.kode_barang_zahir
         LEFT JOIN (
-            SELECT nama_barang,SUM(qty) AS qty_out,kd_barang,status
-            FROM tb_detail_do
-            WHERE status = '4'
-            GROUP BY kd_barang, nama_barang
-        ) d ON d.kd_barang = x.kode_barang_zahir AND d.nama_barang = x.nama_barang
+            SELECT nama_barang,SUM(qty) AS qty_out,kd_barang
+            FROM tb_ics_do
+            GROUP BY kd_barang
+        ) d ON d.kd_barang = x.kode_barang_zahir
         LEFT JOIN (
             SELECT nama_barang,SUM(qty) AS qty_opname, kd_system
-            FROM tb_ics_opname
+            FROM tb_ics
             GROUP BY kd_system, nama_barang
-        ) o ON o.kd_system = x.kode_barang_zahir AND o.nama_barang = x.nama_barang
+        ) o ON o.kd_system = x.kode_barang_zahir
         LEFT JOIN (
             SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang
             FROM tb_master_barang_all
             GROUP BY kd_barang,nama_barang
-        ) mb ON mb.kd_barang = x.kode_barang_zahir AND mb.nama_barang = x.nama_barang
+        ) mb ON mb.kd_barang = x.kode_barang_zahir
         $where
-        ORDER BY x.nama_barang")->result();
+        ORDER BY x.nama_barang;")->result();
     }
 
     public function get_master_barang_ics()
