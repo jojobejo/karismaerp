@@ -102,10 +102,10 @@
                         <form method="post" action="<?= base_url('ics/update_pic_lokasi'); ?>">
                             <div class="modal-body">
 
-                                <input type="text" name="id" id="edit_id">
-                                <input type="text" name="list_id" id="edit_list_id">
-                                <input type="text" name="kd_barang" id="kd_barang">
-                                <input type="text" name="expdate" id="expdate">
+                                <input type="hidden" name="id" id="edit_id">
+                                <input type="hidden" name="list_id" id="edit_list_id">
+                                <input type="hidden" name="kd_barang" id="kd_barang">
+                                <input type="hidden" name="expdate" id="expdate">
 
                                 <div class="form-group">
                                     <label>Nama Barang</label>
