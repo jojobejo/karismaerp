@@ -20,9 +20,9 @@ class C_Distribusi extends CI_Controller
         $data['all_rute']             = $this->M_Distribusi->all_rute();
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/distribusi.php', $data);
+        $this->load->view('content/logistik/distribusi/distribusi.php', $data);
         $this->load->view('partial/main/footer.php');
-        $this->load->view('content/logistik/ajax_distribusi.php');
+        $this->load->view('content/logistik/distribusi/ajax_distribusi.php');
     }
 
     public function get_ploting_rute()

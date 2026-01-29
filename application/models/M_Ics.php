@@ -1440,23 +1440,24 @@ class M_Ics extends CI_Model
 
     public function barangper_gudang($id_gudang = null)
     {
-        if ($id_gudang === null) {
-            $induk = $this->get_gudang_induk();
-            $id_gudang = $induk ? $induk->id_gudang : 0;
+        if (!$id_gudang) {
+            return []; // stop eksekusi kalau kosong
         }
 
-        return $this->db->query("SELECT
+        return $this->db->query("
+        SELECT
             a.*,
             (b.p*b.l*b.t) AS dimensi,
             FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
             MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
         FROM v_stock_per_gudang a
-        JOIN tb_master_barang_all b 
+        JOIN tb_master_barang_all b
             ON b.kd_barang = a.kode_barang
         WHERE a.gudang = ?
         ORDER BY a.nama_barang ASC
     ", [$id_gudang])->result();
     }
+
 
 
     public function get_gudang_induk()

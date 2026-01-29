@@ -26,26 +26,26 @@
                                 </div>
                             </div>
                         <?php endforeach; ?>
-
                     </div>
 
                     <div class="card d-none" id="cardTable">
                         <div class="card-body">
-                            <table class="table table-bordered table-hover table-sm" id="tb_pergudang">
-                                <thead>
-                                    <tr>
-                                        <th>Nama Barang</th>
-                                        <th>Expired Date</th>
-                                        <th>Qty Tersedia</th>
-                                        <th>Qty Box</th>
-                                        <th>Qty Pcs</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbodyBarang"></tbody>
-                            </table>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover table-sm w-100" id="tb_pergudang">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th>Nama Barang</th>
+                                            <th>Expired Date</th>
+                                            <th>Qty Tersedia</th>
+                                            <th>Qty Box</th>
+                                            <th>Qty Pcs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyBarang"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-
 
                 </section>
             </div>
@@ -69,13 +69,43 @@
     <!-- ./wrapper -->
 
     <script>
+        let tbPergudang = null;
+
+        function initDataTable() {
+            if ($.fn.DataTable.isDataTable('#tb_pergudang')) {
+                $('#tb_pergudang').DataTable().destroy();
+            }
+
+            tbPergudang = $('#tb_pergudang').DataTable({
+                paging: true,
+                searching: true,
+                ordering: true,
+                responsive: true,
+                pageLength: 10,
+                language: {
+                    search: "Cari:",
+                    lengthMenu: "Tampil _MENU_ data",
+                    info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                    paginate: {
+                        next: "Next",
+                        previous: "Prev"
+                    },
+                    zeroRecords: "Data tidak ditemukan"
+                }
+            });
+        }
+
         $(document).on('click', '.gudang-btn', function() {
             let idGudang = $(this).data('id');
 
             $('.gudang-btn').removeClass('bg-success');
             $(this).addClass('bg-success');
 
-            $('#cardTable').removeClass('d-none').hide().fadeIn(200);
+            $('#cardTable').removeClass('d-none').hide().fadeIn(150);
+
+            if ($.fn.DataTable.isDataTable('#tb_pergudang')) {
+                $('#tb_pergudang').DataTable().clear().destroy();
+            }
 
             $('#tbodyBarang').html(`
         <tr>
@@ -105,21 +135,20 @@
                         <tr>
                             <td>${v.nama_barang}</td>
                             <td>${v.exp_date}</td>
-                            <td>${v.qty}</td>
-                            <td>${v.qty_box}</td>
-                            <td>${v.qty_pcs}</td>
+                            <td class="text-right">${v.qty}</td>
+                            <td class="text-right">${v.qty_box}</td>
+                            <td class="text-right">${v.qty_pcs}</td>
                         </tr>
                     `;
                         });
                     }
 
-                    $('#tbodyBarang').hide().html(html).fadeIn(150);
+                    $('#tbodyBarang').html(html);
+                    initDataTable();
                 }
             });
         });
-    </script>
 
-    <script>
         $(document).ready(function() {
             let defaultGudang = "<?= $id_gudang_induk ?>";
 

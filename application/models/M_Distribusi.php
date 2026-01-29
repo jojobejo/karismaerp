@@ -45,24 +45,33 @@ class M_Distribusi extends CI_Model
 
     public function get_driver_rute_matrix($tanggal)
     {
-        $rute = $this->db->get('tb_rutecs')->result();
+        $rute   = $this->db->get('tb_rutecs')->result();
         $driver = $this->db->get('tb_op_driver')->result();
-        $this->db->select('driver, regional, COUNT(*) as total');
-        $this->db->from('tb_do');
-        $this->db->where('status', '2');
+
+        $this->db->select('
+        a.driver AS driver,
+        b.kd_rute AS rute,
+        COUNT(DISTINCT a.kd_do) AS total
+    ');
+        $this->db->from('tb_do a');
+        $this->db->join('tb_detail_do b', 'b.kd_do = a.kd_do');
+        $this->db->where('a.status !=', '1');
+        $this->db->where('b.status !=', '1');
+        $this->db->where('a.regional !=', 'onsite');
 
         if (!empty($tanggal)) {
             $tgl = explode(' - ', $tanggal);
-            $this->db->where('tgl_pengiriman >=', $tgl[0]);
-            $this->db->where('tgl_pengiriman <=', $tgl[1]);
+            $this->db->where('a.tgl_pengiriman >=', $tgl[0]);
+            $this->db->where('a.tgl_pengiriman <=', $tgl[1]);
         }
 
-        $this->db->group_by(['driver', 'regional']);
+        $this->db->group_by(['a.driver', 'b.kd_rute']);
         $do = $this->db->get()->result();
 
         $map = [];
         foreach ($do as $d) {
-            $map[$d->driver][$d->regional] = $d->total;
+            // format: map[driver][rute] = total
+            $map[$d->driver][$d->rute] = (int)$d->total;
         }
 
         $data = [];
@@ -80,6 +89,7 @@ class M_Distribusi extends CI_Model
             'data' => $data
         ];
     }
+
 
     public function get_driver_ready($tanggal, $rute)
     {

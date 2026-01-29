@@ -1214,9 +1214,16 @@ class C_Ics extends CI_Controller
     public function ajax_barang_pergudang()
     {
         $id_gudang = $this->input->post('id_gudang');
+
+        if (!$id_gudang || $id_gudang == 'undefined') {
+            $induk = $this->M_Ics->get_gudang_induk();
+            $id_gudang = $induk ? $induk->id_gudang : null;
+        }
+
         $data = $this->M_Ics->barangper_gudang($id_gudang);
         echo json_encode($data);
     }
+
 
 
     public function mutasi_barang()
