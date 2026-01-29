@@ -70,7 +70,7 @@ class M_Ics extends CI_Model
     public function getnmbarang($kd)
     {
         $kd = $this->getBarangByKode($kd);
-        return $kd->nama_barang;
+        return $kd->kd_barang;
     }
 
     public function list_barang_ics_expdate($pic)
@@ -352,7 +352,7 @@ class M_Ics extends CI_Model
         ")->result();
     }
 
-    public function tracking_br_diffrent_by_expdate($nmbarang)
+    public function tracking_br_diffrent_by_expdate($kdbarang)
     {
         return $this->db->query("SELECT
             a.id,
@@ -361,10 +361,10 @@ class M_Ics extends CI_Model
             b.p * b.l * b.t AS dimensi,
             a.nama_barang,
             a.exp_date AS expired,
-            (COALESCE(a.qty,0) - COALESCE(mutasi.qty_mutasi,0)) AS qty,
+            (COALESCE(sum(a.qty),0) - COALESCE(mutasi.qty_mutasi,0)) AS qty,
             COALESCE(deliv.qty_out, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
-            ((COALESCE(a.qty,0)-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
+            ((COALESCE(sum(a.qty),0)-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
             COALESCE(opname.qty_opname, 0) - (((a.qty-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
             COALESCE(opname.qty_opname, 0) AS ics,
             COALESCE(opname.qty_box,0)AS qty_box,
@@ -374,7 +374,7 @@ class M_Ics extends CI_Model
 			gdg.nama_gudang as nama_gudang,
             kr.nama_wilayah as nama_wilayah,
             IF(
-                ((COALESCE(a.qty,0) - COALESCE(mutasi.qty_mutasi,0) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
+                ((COALESCE(sum(a.qty),0) - COALESCE(mutasi.qty_mutasi,0) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),
                 1, 0
             ) AS status
 		
@@ -409,7 +409,7 @@ class M_Ics extends CI_Model
             GROUP BY kode_barang_zahir,exp_date
         ) mutasi ON mutasi.kode_barang_zahir = a.kode_barang_zahir AND mutasi.exp_date = a.exp_date
         
-        WHERE a.nama_barang = '$nmbarang'
+        WHERE a.kode_barang_zahir = '$kdbarang'
         GROUP BY a.kode_barang_zahir, a.exp_date")->result();
     }
 
@@ -1169,6 +1169,48 @@ class M_Ics extends CI_Model
             AND (m.p * m.l * m.t) > 0
             GROUP BY a.kd_faktur , a.nama_barang , a.exp_date, a.no_lot, b.kd_rute , b.kd_customer 
         ")->result();
+    }
+
+    public function list_all_do()
+    {
+        return $this->db->query("SELECT 
+    x.tgl_transaksi,
+    x.kd_faktur,
+    x.nama_barang,
+    x.qty,
+    x.qty_box,
+    x.qty_pcs,
+    x.no_lot,
+    x.exp_date,
+    c.nama_kios AS nm_kios,
+    d.kd_rute   AS rute
+FROM (
+    SELECT
+        a.tgl_transaksi,
+        a.kd_faktur,
+        a.kd_barang,
+        a.nama_barang,
+        SUM(a.qty) AS qty,
+        FLOOR(SUM(a.qty) / (m.p * m.l * m.t)) AS qty_box,
+        MOD(SUM(a.qty), (m.p * m.l * m.t))    AS qty_pcs,
+        a.no_lot,
+        a.exp_date
+    FROM tb_ics_do a
+    LEFT JOIN tb_master_barang_all m 
+        ON m.kd_barang = a.kd_barang
+    GROUP BY a.kd_faktur, a.kd_barang, a.exp_date
+) x
+LEFT JOIN (
+    SELECT 
+        kd_faktur,
+        MAX(kd_customer) AS kd_customer,
+        MAX(kd_rute)     AS kd_rute
+    FROM tb_detail_do
+    GROUP BY kd_faktur
+) d ON d.kd_faktur = x.kd_faktur
+LEFT JOIN tb_customer c 
+    ON c.kd_customer = d.kd_customer;
+")->result();
     }
 
     public function list_po_today($tgl)

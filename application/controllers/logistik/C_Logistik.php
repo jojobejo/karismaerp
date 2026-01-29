@@ -1315,7 +1315,7 @@ class C_Logistik extends CI_Controller
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur, a.tgl_transaksi, c.nm_barang, a.no_lot, 
+                a.kd_faktur, a.tgl_transaksi, c.nama_barang as nm_barang, a.no_lot, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,d.jam_buka_tutup AS jam_buka_tutup, d.karakteristik_kios AS karakteristik_kios,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
@@ -1326,9 +1326,9 @@ class C_Logistik extends CI_Controller
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
-                JOIN tb_do b ON b.kd_do = a.kd_do
-                JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
-                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                LEFT JOIN tb_do b ON b.kd_do = a.kd_do
+                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+                LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
                 ORDER BY a.norut
@@ -1349,9 +1349,9 @@ class C_Logistik extends CI_Controller
                 
             FROM
                 tb_detail_do a
-            JOIN tb_do b ON b.kd_do = a.kd_do
-            JOIN tb_customer d ON d.kd_customer = a.kd_customer
-            JOIN tb_master_barang c ON c.nm_barang = a.nama_barang
+            LEFT JOIN tb_do b ON b.kd_do = a.kd_do
+            LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
             WHERE
                 b.kd_do = '$kd_do'
             GROUP BY
@@ -1378,7 +1378,7 @@ class C_Logistik extends CI_Controller
     {
         $query = $this->db->query("SELECT 
 				a.norut, d.nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur, a.tgl_transaksi, c.nm_barang, a.no_lot, 
+                a.kd_faktur, a.tgl_transaksi, c.nama_barang as nm_barang, a.no_lot, 
                 a.tgl_exp, a.satuan,a.nominal_p AS valuep, a.jtempo AS tempo,
                 a.status, a.kd_do,d.jam_buka_tutup AS jam_buka_tutup, d.karakteristik_kios AS karakteristik_kios,
                 (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
@@ -1390,9 +1390,9 @@ class C_Logistik extends CI_Controller
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
                 AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
                 FROM tb_detail_do a
-                JOIN tb_do b ON b.kd_do = a.kd_do
-                JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
-                JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                LEFT JOIN tb_do b ON b.kd_do = a.kd_do
+                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+                LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
                 ORDER BY a.norut
@@ -1403,8 +1403,8 @@ class C_Logistik extends CI_Controller
                 a.kd_faktur,a.tgl_transaksi, a.nominal_p , a.jtempo, 
                 a.tgl_exp, a.satuan, a.status, a.kd_do,d.alamat_kios
                 FROM tb_detail_do a
-                JOIN tb_customer d ON d.kd_customer = a.kd_customer
-                JOIN tb_do b ON b.kd_do = a.kd_do
+                LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
+                LEFT JOIN tb_do b ON b.kd_do = a.kd_do
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_faktur
                 ORDER BY a.norut
@@ -1422,8 +1422,8 @@ class C_Logistik extends CI_Controller
                 COUNT(DISTINCT a.kd_faktur) AS totalfaktur
             FROM
                 tb_detail_do a
-            JOIN tb_do b ON b.kd_do = a.kd_do
-            JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            LEFT JOIN tb_do b ON b.kd_do = a.kd_do
+            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
             WHERE
                 b.kd_do = '$kd_do'
             GROUP BY
@@ -1456,7 +1456,7 @@ class C_Logistik extends CI_Controller
             FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
             (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
             FROM tb_detail_do a
-            JOIN tb_master_barang b ON b.nm_barang = a.nama_barang
+            LEFT JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
             WHERE a.kd_do = '$kd_do'
             GROUP BY a.kd_barang , a.tgl_exp , a.no_lot");
 

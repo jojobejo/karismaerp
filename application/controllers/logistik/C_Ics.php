@@ -186,10 +186,11 @@ class C_Ics extends CI_Controller
     {
         $kdbarang = $this->M_Ics->getnmbarang($kd);
         $data_barang = $this->db
-            ->select('a.nama_barang, a.exp_date')
+            ->select('a.kode_barang_zahir, a.exp_date')
             ->from('tb_saldo_awal a')
-            ->join('tb_master_barang_all b', 'b.nama_barang = a.nama_barang')
-            ->where('a.nama_barang', $kdbarang)
+            ->join('tb_master_barang_all b', 'b.kd_barang = a.kode_barang_zahir')
+            ->where('a.kode_barang_zahir', $kdbarang)
+            ->group_by('a.exp_date')
             ->get()
             ->row();
 
@@ -197,7 +198,7 @@ class C_Ics extends CI_Controller
             show_404();
         }
 
-        $nama_barang = $data_barang->nama_barang;
+        $kdmaster    = $data_barang->kode_barang_zahir;
         $exp_date    = $data_barang->exp_date;
 
         $query = $this->db->query("SELECT
@@ -214,24 +215,24 @@ class C_Ics extends CI_Controller
             ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0))- COALESCE(opname.qty_opname, 0) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
-            JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
+            JOIN tb_master_barang_all b ON b.kd_barang = a.kode_barang_zahir
             LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_pending , kd_barang
                 FROM tb_ics_do
-                GROUP BY nama_barang, exp_date
-            ) pending ON pending.nama_barang = a.nama_barang AND pending.exp_date = a.exp_date
+                GROUP BY kd_barang, exp_date
+            ) pending ON pending.kd_barang = a.kode_barang_zahir AND pending.exp_date = a.exp_date
             LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_po
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_po , kd_barang
                 FROM tb_ics_po
-                GROUP BY nama_barang, exp_date
-            ) purchase ON purchase.nama_barang = a.nama_barang AND purchase.exp_date = a.exp_date
+                GROUP BY kd_barang, exp_date
+            ) purchase ON purchase.kd_barang = a.kode_barang_zahir AND purchase.exp_date = a.exp_date
             LEFT JOIN (
-                SELECT nama_barang, exp_date, SUM(qty) AS qty_opname
-                FROM tb_ics_opname
-                GROUP BY nama_barang, exp_date
-            ) opname ON opname.nama_barang = a.nama_barang AND opname.exp_date = a.exp_date
-            WHERE a.nama_barang = ? AND a.exp_date = ?
-            GROUP BY a.nama_barang, a.exp_date", array($nama_barang, $exp_date));
+                SELECT nama_barang, exp_date, SUM(qty) AS qty_opname , kd_system
+                FROM tb_ics
+                GROUP BY kd_system, exp_date
+            ) opname ON opname.kd_system = a.kode_barang_zahir AND opname.exp_date = a.exp_date
+            WHERE a.kode_barang_zahir = ? AND a.exp_date = ?
+            GROUP BY a.kode_barang_zahir, a.exp_date", array($kdmaster, $exp_date));
 
         $data['list_gudang'] = $this->db
             ->where('is_active', 1)
@@ -244,7 +245,7 @@ class C_Ics extends CI_Controller
         $data['detail_stok']        = $query->result();
         $data['page_title']         = 'KARISMA - ICS';
         $data['get_barang']         = $this->M_Ics->get_detail_barang($kd);
-        $data['list_stock_by_exp']  = $this->M_Ics->tracking_br_diffrent_by_expdate($kdbarang);
+        $data['list_stock_by_exp']  = $this->M_Ics->tracking_br_diffrent_by_expdate($kdmaster);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/stock_by_kodebr.php', $data);
@@ -537,7 +538,8 @@ class C_Ics extends CI_Controller
         $data['page_title']         = 'KARISMA - LOGISTIK';
         $tgl                        = date('d/m/Y');
         $data['tanggal_now']        = date('d/m/Y');
-        $data['ics_do']             = $this->M_Ics->list_do_today($tgl);
+        // $data['ics_do']             = $this->M_Ics->list_do_today($tgl);
+        $data['ics_do']             = $this->M_Ics->list_all_do();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icsdo.php', $data);
