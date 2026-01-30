@@ -217,6 +217,7 @@
       "autoWidth": false,
       "responsive": true,
     });
+   
     $('#lsfakturbyrute').DataTable({
       "paging": true,
       "lengthChange": false,

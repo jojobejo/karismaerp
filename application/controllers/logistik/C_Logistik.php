@@ -1018,8 +1018,8 @@ class C_Logistik extends CI_Controller
             b.nolambung,
             b.driver,
             COUNT(DISTINCT a.kd_barang) AS total_barang,
-            ROUND(SUM(a.qty * m.berat) / 1000000,3) AS total_tonase_faktur,
-            ROUND(SUM(a.qty * ((m.p * m.l * m.t) / 1000000)),3) AS total_kubikasi,
+                ROUND(SUM(a.qty * m.berat)/1000000,2) AS total_tonase_faktur,
+                ROUND(SUM(a.qty * m.kubikasi),2) AS total_kubikasi,
             COUNT(DISTINCT a.kd_customer) AS totalfaktur
             FROM tb_detail_do a
             JOIN tb_do b
@@ -1029,6 +1029,8 @@ class C_Logistik extends CI_Controller
             WHERE b.kd_do = '$kd_do'
             GROUP BY b.id,b.kd_do,b.regional,b.nolambung,b.driver;
         ");
+
+
 
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
 
@@ -1330,19 +1332,20 @@ class C_Logistik extends CI_Controller
                 LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot , a.tgl_exp
-                ORDER BY a.norut;
+                ORDER BY d.nama_kios ASC;
             ", array($kd_do));
 
         $querysts = $this->db->query("SELECT
                 b.kd_do,
                 b.regional,
-                b.nolambung,
-                b.driver,   
+                plat.noplat,
+                plat.nm_truk,
+                driver.nama_driver,   
                 b.tgl_pengiriman,
                 d.telp1 as notelp1,
                 d.telp2 as notelp2,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
-                ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
+                ROUND(SUM(a.qty * c.berat)/1000000,2) AS total_tonase_faktur,
                 ROUND(SUM(a.qty * c.kubikasi),2) AS total_kubikasi,
                 COUNT(DISTINCT a.kd_customer) AS totalfaktur
             FROM
@@ -1350,6 +1353,8 @@ class C_Logistik extends CI_Controller
             LEFT JOIN tb_do b ON b.kd_do = a.kd_do
             LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
             LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            LEFT JOIN tb_op_plat plat ON plat.id = b.nolambung
+            LEFT JOIN tb_op_driver driver ON driver.kd_driver = b.driver
             WHERE
                 b.kd_do = '$kd_do'
             GROUP BY
@@ -1361,9 +1366,7 @@ class C_Logistik extends CI_Controller
         $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
         $data['kdo'] = $query1->result();
         $data['dostatus'] = $query2->result();
-
         $data['data_list'] = $query->result();
-
         $data['doprintsts'] = $querysts;
 
         $this->load->view('partial/main/header.php', $data);
@@ -1666,7 +1669,7 @@ class C_Logistik extends CI_Controller
                                 'id_pre_do'     => $det->id,
                                 'kd_do'         => $kddo,
                                 'kd_faktur'     => $det->kd_faktur,
-                                'tgl_transaksi' => date('m/d/Y', strtotime($det->tgl_inputer)),
+                                'tgl_transaksi' => $det->tgl_inputer,
                                 'kd_rute'       => $det->kd_rute,
                                 'kd_customer'   => $det->kd_customer,
                                 'kd_barang'     => $det->kd_barang,
@@ -1687,7 +1690,7 @@ class C_Logistik extends CI_Controller
                             $data_onsite_ics[] = array(
                                 'kd_do'             => $kddo,
                                 'kd_faktur'         => $det->kd_faktur,
-                                'tgl_transaksi'     => date('m/d/Y', strtotime($det->tgl_inputer)),
+                                'tgl_transaksi'     => $det->tgl_inputer,
                                 'kd_barang'         => $det->kd_barang,
                                 'nama_barang'       => $det->nama_barang,
                                 'qty'               => $det->qty,

@@ -171,7 +171,6 @@ class M_Ics extends CI_Model
             GROUP BY kd_barang
         ) mb ON mb.kd = x.kode_barang_zahir
         $where
-        -- WHERE x.barang_pic = 'A'
         ORDER BY x.nama_barang, x.exp_date;")->result();
     }
 

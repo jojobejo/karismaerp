@@ -53,7 +53,7 @@
 
             <div class="info-faktur">
                 <?php foreach ($doprintsts as $print) :
-                    $tonase = ($print->total_tonase_faktur / 1000);
+                    $tonase = ($print->total_tonase_faktur / 10000);
                     $tgl_kirim = $this->input->get('tgl_kirim');
                     $driver = $this->input->get('driver');
                     $plat = $this->input->get('plat');
@@ -63,7 +63,7 @@
                     <div>No Polisi : <?= htmlspecialchars($plat) ?> </div>
                     <div>Total Customer :<?= $print->totalfaktur ?> </div>
                     <div>Total Barang : <?= $print->total_barang ?></div>
-                    <div>Tonase : <?= $tonase . ' (Ton)' ?></div>
+                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Ton)' ?></div>
                     <div>Kubikasi : <?= $print->total_kubikasi . ' (m³) ' ?></div>
                 <?php endforeach; ?>
             </div>
