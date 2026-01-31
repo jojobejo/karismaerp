@@ -38,10 +38,18 @@
         }
 
         tr {
-            page-break-inside: avoid;
-            /* hindari baris terpotong */
-            page-break-after: auto;
+            page-break-inside: auto;
         }
+
+        td,
+        th {
+            page-break-inside: auto;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+        
     }
 </style>
 
