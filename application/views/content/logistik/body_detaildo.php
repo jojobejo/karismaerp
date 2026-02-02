@@ -44,11 +44,13 @@
                 </div>
 
                 <section class="content">
+
                     <div class="container-fluid">
                         <div class="card">
                             <div class="card-header bg-primary text-white">
                                 <h3 class="card-title">Rencana Pengiriman Barang</h3>
                             </div>
+
                             <div class="card-body">
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
                                     <div class="row mb-4">
@@ -77,7 +79,6 @@
                                     </div>
                                 <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
                                 <?php endif; ?>
-
                                 <?php foreach ($kdo as $k) : ?>
 
                                     <?php $this->load->view('content/logistik/modal/modal_detail_do'); ?>
@@ -174,7 +175,6 @@
                                     <?php endif; ?>
                                 <?php endforeach; ?>
                                 <!-- END FORM -->
-
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
@@ -186,7 +186,7 @@
                                                 <th colspan="2">Data Kios</th>
                                                 <th rowspan="2">Rute</th>
                                                 <th colspan="2">TTB</th>
-                                                <th rowspan="2">No</th>
+                                                <!-- <th rowspan="2">No</th> -->
                                                 <th rowspan="2">Nama Barang</th>
                                                 <th rowspan="2">No Lot</th>
                                                 <th colspan="2">Qty</th>
@@ -249,7 +249,7 @@
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>
                                                     <?php endif; ?>
-                                                    <td><?= $norut_counter++ ?></td>
+                                                    <!-- <td><?= $norut_counter++ ?></td> -->
                                                     <td><?= $row->nm_barang ?></td>
                                                     <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
                                                     <td><?= $row->qty_box ?></td>
@@ -394,10 +394,11 @@
                                         </tbody>
                                     </table>
                                 <?php endif; ?>
-
                             </div>
+
                         </div>
                     </div>
+
                 </section>
             </div>
         <?php endforeach; ?>
