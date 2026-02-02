@@ -1336,26 +1336,66 @@ class C_Logistik extends CI_Controller
 
     public function print_do($kd_do)
     {
-        $query = $this->db->query("SELECT 
-				a.norut, d.nama_customer as nama_kios, d.telp1, d.telp2, a.kd_rute ,d.regional, a.id,
-                a.kd_faktur, a.tgl_transaksi, c.nama_barang as nm_barang, a.no_lot, 
-                a.tgl_exp, a.satuan, a.status, a.kd_do,d.jam_buka_tutup AS jam_buka_tutup, d.karakteristik_kios AS karakteristik_kios,
-                (SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot ) AS qty,
-                (c.p*c.l*c.t) AS dimensi,
-                FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)) AS qty_box,
-                ((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot)-((FLOOR((SELECT SUM(f.qty) FROM tb_detail_do f WHERE a.kd_faktur = f.kd_faktur 
-                AND a.kd_barang = f.kd_barang AND a.no_lot = f.no_lot )/(c.p*c.l*c.t)))*(c.p*c.l*c.t))) AS qty_pcs
-                FROM tb_detail_do a
-                LEFT JOIN tb_do b ON b.kd_do = a.kd_do
-                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
-                LEFT JOIN tb_customer d ON d.kd_customer = a.kd_customer
-                WHERE b.kd_do = '$kd_do'
-                GROUP BY a.kd_barang , a.no_lot , a.tgl_exp
-                ORDER BY d.nama_customer ASC;
-            ", array($kd_do));
+        $query = $this->db->query("SELECT
+            x.norut,
+            d.nama_customer               AS nama_kios,
+            d.telp1,
+            d.telp2,
+            x.kd_rute,
+            d.regional,
+            x.id,
+            x.kd_faktur,
+            x.tgl_transaksi,
+            c.nama_barang                AS nm_barang,
+            x.no_lot,
+            x.tgl_exp,
+            x.satuan,
+            x.status,
+            x.kd_do,
+            d.jam_buka_tutup              AS jam_buka_tutup,
+            d.karakteristik_kios          AS karakteristik_kios,
+            x.qty,
+            (c.p * c.l * c.t)             AS dimensi,
+            FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
+            (x.qty % (c.p * c.l * c.t))   AS qty_pcs
+        FROM (
+            SELECT
+                a.id,
+                a.norut,
+                a.kd_do,
+                a.kd_customer,
+                a.kd_rute,
+                a.kd_faktur,
+                a.tgl_transaksi,
+                a.kd_barang,
+                a.no_lot,
+                a.tgl_exp,
+                a.satuan,
+                a.status,
+                SUM(a.qty) AS qty
+            FROM tb_detail_do a
+            LEFT JOIN tb_do b ON b.kd_do = a.kd_do
+            WHERE b.kd_do = '$kd_do'
+            GROUP BY
+                a.id,
+                a.norut,
+                a.kd_do,
+                a.kd_customer,
+                a.kd_rute,
+                a.kd_faktur,
+                a.tgl_transaksi,
+                a.kd_barang,
+                a.no_lot,
+                a.tgl_exp,
+                a.satuan,
+                a.status
+        ) x
+        LEFT JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
+        LEFT JOIN tb_customer d ON d.kd_customer = x.kd_customer
+        ORDER BY
+            d.nama_customer ASC,
+            x.kd_faktur ASC,
+            c.nama_barang ASC;", array($kd_do));
 
         $querysts = $this->db->query("SELECT
                 b.kd_do,
