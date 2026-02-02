@@ -1320,13 +1320,11 @@ class C_Logistik extends CI_Controller
                         'create_at'     => $now
                     );
                 }
-
                 if (!empty($data_tmp_det_do)) {
                     $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
                 }
-
                 $update_pre_do = array(
-                    'data_sts' => '2'
+                    'data_sts' => '3'
                 );
                 $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
             }
