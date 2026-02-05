@@ -46,6 +46,11 @@
                                                 <i class="fas fa-file-csv"></i> Data LPB
                                             </a>
                                         </div>
+                                        <div class="col-2">
+                                            <a class="btn btn-success mb-3 btn-block" href="<?= base_url('ics/retur') ?>">
+                                                <i class="fas fa-file-csv"></i> Data Retur
+                                            </a>
+                                        </div>
                                     </div>
 
                                     <!-- Modal Import CSV -->

@@ -137,7 +137,15 @@ $route['ics/retur/add_detail']                      = 'logistik/C_Ics/ajax_retur
 $route['ics/retur/list_detail']                     = 'logistik/C_Ics/ajax_retur_list_detail';
 $route['ics/retur/delete_detail']                   = 'logistik/C_Ics/ajax_retur_delete_detail';
 $route['ics/retur/rekam_penjualan']                 = 'logistik/C_Ics/ajax_retur_rekam_penjualan';
-
+$route['ics/retur/rekam_pembelian']                 = 'logistik/C_Ics/ajax_retur_rekam_pembelian';
+$route['ics/retur/detail_retur']                    = 'logistik/C_Ics/detail_retur';
+$route['ics/retur/detail_retur/(:any)']             = 'logistik/C_Ics/detail_retur/$1';
+$route['ics/retur/pembelian/faktur_select2']        = 'logistik/C_Ics/ajax_retur_pembelian_faktur_select2';
+$route['ics/retur/pembelian/barang_select2']        = 'logistik/C_Ics/ajax_retur_pembelian_barang_select2';
+$route['ics/retur/pembelian/exp_select2']           = 'logistik/C_Ics/ajax_retur_pembelian_exp_select2';
+$route['ics/retur/pembelian/add_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_add_detail';
+$route['ics/retur/pembelian/list_detail']           = 'logistik/C_Ics/ajax_retur_pembelian_list_detail';
+$route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur_pembelian_delete_detail';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
@@ -284,4 +292,3 @@ $route['export-stock']                              = 'logistik/C_ExportStock/ex
 
 // SALES KIU KATALOG
 $route['kiu_katalog']                               = 'sales/C_ExportStock/export';
-

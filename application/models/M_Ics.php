@@ -1575,6 +1575,57 @@ LEFT JOIN tb_customer c
         return $this->db->get()->result();
     }
 
+    public function get_retur_pembelian_faktur_select2($search = '')
+    {
+        $this->db->select('kd_faktur_lpb as kd_faktur');
+        $this->db->from('tb_ics_po');
+
+        if ($search) {
+            $this->db->like('kd_faktur_lpb', $search);
+        }
+
+        $this->db->group_by('kd_faktur_lpb');
+        $this->db->order_by('kd_faktur_lpb', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_retur_pembelian_barang_by_faktur_select2($kd_faktur, $search = '')
+    {
+        $this->db->select('kd_barang, nama_barang');
+        $this->db->from('tb_ics_po');
+        $this->db->where('kd_faktur_lpb', $kd_faktur);
+
+        if ($search) {
+            $this->db->like('nama_barang', $search);
+        }
+
+        $this->db->group_by(['kd_barang', 'nama_barang']);
+        $this->db->order_by('nama_barang', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_retur_pembelian_exp_by_faktur_barang($kd_faktur, $kd_barang, $search = '')
+    {
+        $this->db->select('exp_date');
+        $this->db->from('tb_ics_po');
+        $this->db->where('kd_faktur_lpb', $kd_faktur);
+        $this->db->where('kd_barang', $kd_barang);
+
+        if ($search) {
+            $this->db->like('exp_date', $search);
+        }
+
+        $this->db->group_by('exp_date');
+        $this->db->order_by('exp_date', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
     public function get_retur_barang_by_faktur_select2($kd_faktur, $search = '')
     {
         $this->db->select('kd_barang, nama_barang');
@@ -1786,10 +1837,40 @@ LEFT JOIN tb_customer c
             ->get()
             ->result();
     }
+
+    public function get_retur_dashboard()
+    {
+        $sub = $this->db
+            ->select('kd_retur, COUNT(kd_barang) AS total_barang')
+            ->from('tb_detail_retur_barang')
+            ->group_by('kd_retur')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select('r.id, r.kd_retur, r.type_retur, r.keterangan, r.status, r.input_at, COALESCE(d.total_barang, 0) AS total_barang')
+            ->from('tb_retur_barang r')
+            ->join("($sub) d", 'd.kd_retur = r.kd_retur', 'left', false)
+            ->order_by('r.input_at', 'DESC')
+            ->get()
+            ->result();
+    }
+
+    public function get_retur_detail_by_kd($kd_retur)
+    {
+        return $this->db
+            ->select('kd_faktur, kd_barang, no_lot, tgl_expired, qty')
+            ->from('tb_detail_retur_barang')
+            ->where('kd_retur', $kd_retur)
+            ->order_by('tgl_input', 'DESC')
+            ->get()
+            ->result();
+    }
+
     public function insert_log($data)
     {
         return $this->db->insert('tb_log_mutasi', $data);
     }
+
     public function clear_tmp($user)
     {
         return $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');

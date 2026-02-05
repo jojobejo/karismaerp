@@ -17,41 +17,109 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
-                                <div class="row">
-                                    <div class="col-auto">
-                                        <a class="btn btn-primary mb-3" href="<?= base_url('ics/icspo') ?>">
-                                            <i class="fas fa-home"></i>
-                                        </a>
+                                <?php if ($this->session->userdata('jobdesk') == 'ADMINLOGLPB') : ?>
+                                    <div class="row">
+                                        <div class="col-auto">
+                                            <a class="btn btn-primary mb-3" href="<?= base_url('ics/icspo') ?>">
+                                                <i class="fas fa-home"></i>
+                                            </a>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a class="btn btn-secondary mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">
+                                                <i class="fas fa-file-csv"></i> Retur
+                                            </a>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a class="btn btn-success mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">
+                                                <i class="fas fa-file-csv"></i> Retur Penjualan
+                                            </a>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a class="btn btn-success mb-3 " href="<?= base_url('ics/retur/pembelian') ?>">
+                                                <i class="fas fa-file-csv"></i> Retur Pembelian
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class="col-auto">
-                                        <a class="btn btn-secondary mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">
-                                            <i class="fas fa-file-csv"></i> Retur
-                                        </a>
+                                <?php else : ?>
+                                    <div class="row">
+                                        <div class="col-auto">
+                                            <a class="btn btn-primary mb-3" href="<?= base_url('ics/icspo') ?>">
+                                                <i class="fas fa-home"></i>
+                                            </a>
+                                        </div>
+                                        <div class="col-auto">
+                                            <a class="btn btn-secondary mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">
+                                                <i class="fas fa-file-csv"></i> Retur
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class="col-auto">
-                                        <a class="btn btn-success mb-3 " href="<?= base_url('ics/retur/penjualan') ?>">
-                                            <i class="fas fa-file-csv"></i> Retur Penjualan
-                                        </a>
-                                    </div>
-                                    <div class="col-auto">
-                                        <a class="btn btn-success mb-3 " href="<?= base_url('ics/retur/pembelian') ?>">
-                                            <i class="fas fa-file-csv"></i> Retur Pembelian
-                                        </a>
-                                    </div>
-                                </div>
-
-                                <table class="table table-bordered" id="tb_ics_po">
+                                <?php endif; ?>
+                                <table class="table table-bordered" id="tb_retur_all">
                                     <thead class="bg-primary text-white text-center">
                                         <tr>
                                             <th>Tanggal Retur</th>
                                             <th>Retur</th>
                                             <th>Note Retur</th>
-                                            <th>Total Barang</th>
-                                            <th>Status</th>
-                                            <th>#</th>
+                                            <th class="text-small text-nowrap">Total Barang</th>
+                                            <th class="text-small text-nowrap">Status</th>
+                                            <th class="text-small text-nowrap">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        <?php if (!empty($retur_all)) : ?>
+                                            <?php foreach ($retur_all as $row) : ?>
+                                                <tr>
+                                                    <td>
+                                                        <?php
+                                                        if ($row->input_at) {
+                                                            $ts = strtotime($row->input_at);
+                                                            $hari = [
+                                                                'Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'
+                                                            ];
+                                                            $bulan = [
+                                                                1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                                                                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                                                            ];
+                                                            $hariNama = $hari[(int)date('w', $ts)];
+                                                            $bulanNama = $bulan[(int)date('n', $ts)];
+                                                            echo $hariNama . ', ' . date('d', $ts) . ' ' . $bulanNama . ' ' . date('Y', $ts);
+                                                        }
+                                                        ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php if ((int)$row->type_retur === 1) : ?>
+                                                            <a class="btn btn-sm btn-info" href="<?= base_url('ics/retur/pembelian') ?>" title="Retur Pembelian">
+                                                                <i class="fas fa-truck-loading"></i> Retur Pembelian
+                                                            </a>
+                                                        <?php elseif ((int)$row->type_retur === 2) : ?>
+                                                            <a class="btn btn-sm btn-success" href="<?= base_url('ics/retur/penjualan') ?>" title="Retur Penjualan">
+                                                                <i class="fas fa-shopping-cart"></i> Retur Penjualan
+                                                            </a>
+                                                        <?php else : ?>
+                                                            <span class="btn btn-sm btn-secondary" title="Retur">
+                                                                <i class="fas fa-exchange-alt"></i>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td><?= $row->keterangan ?></td>
+                                                    <td class="text-center"><?= (int)$row->total_barang ?></td>
+                                                    <td class="text-center">
+                                                        <?php if ((string)$row->status === '1') : ?>
+                                                            <span class="badge badge-success">Done</span>
+                                                        <?php elseif ((string)$row->status === '2') : ?>
+                                                            <span class="badge badge-warning">Pending</span>
+                                                        <?php else : ?>
+                                                            <span class="badge badge-secondary"><?= $row->status ?></span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <a class="btn btn-sm btn-primary" href="<?= base_url('ics/retur/detail_retur/' . $row->kd_retur) ?>">
+                                                            Detail
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
                                     </tbody>
                                 </table>
 
@@ -78,3 +146,25 @@
         <!-- /.control-sidebar -->
     </div>
     <!-- ./wrapper -->
+
+    <script>
+        $(function() {
+            $('#tb_retur_all').DataTable({
+                pageLength: 25,
+                order: [
+                    [0, 'desc']
+                ],
+                columnDefs: [{
+                        targets: [3, 4, 5],
+                        width: '1%',
+                        className: 'text-center text-nowrap'
+                    },
+                    {
+                        targets: [1],
+                        width: '1%',
+                        className: 'text-center text-nowrap'
+                    }
+                ]
+            });
+        });
+    </script>
