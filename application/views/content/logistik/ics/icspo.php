@@ -13,23 +13,28 @@
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-                    <div class="row">
-                        <div class="col-auto">
-                            <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+
+                    <?php if ($this->session->userdata('lv') == '1') : ?>
+                        <div class="row">
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
-                        </div>
-                        <div class="col-auto">
-                            <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
-                        </div>
-                    </div>
+                    <?php else : ?>
+                    <?php endif; ?>
 
                     <div class="card">
                         <div class="card-body">
                             <div class="container-fluid">
 
                                 <?php if ($this->session->userdata('lv') == '1') : ?>
+
                                     <div class="row">
                                         <div class="col-2">
                                             <button class="btn btn-success mb-3 btn-block" data-toggle="modal" data-target="#modalImportCSV">
@@ -66,6 +71,54 @@
                                             </form>
                                         </div>
                                     </div>
+
+                                <?php elseif ($this->session->userdata('lv') == '2') : ?>
+
+                                    <div class="row">
+                                        <div class="col-2">
+                                            <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
+                                        </div>
+                                        <div class="col-2">
+                                            <button class="btn btn-success mb-3 btn-block" data-toggle="modal" data-target="#modalImportCSV">
+                                                <i class="fas fa-file-csv"></i> Import CSV
+                                            </button>
+                                        </div>
+
+                                        <div class="col-2">
+                                            <a class="btn btn-success mb-3 btn-block" href="<?= base_url('ics/retur') ?>">
+                                                <i class="fas fa-file-csv"></i> Retur
+                                            </a>
+                                        </div>
+                                        <div class="col-2">
+                                            <a class="btn btn-success mb-3 btn-block" href="<?= base_url('ics/icspo') ?>">
+                                                <i class="fas fa-file-csv"></i> Mutasi Barang
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal fade" id="modalImportCSV" tabindex="-1" role="dialog" aria-labelledby="modalImportCSVLabel" aria-hidden="true">
+                                        <div class="modal-dialog" role="document">
+                                            <form action="<?= base_url('ics/import_csv') ?>" method="post" enctype="multipart/form-data">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-success">
+                                                        <h5 class="modal-title">Import Data PO dari CSV</h5>
+                                                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="form-group">
+                                                            <label for="file_csv">Pilih File CSV</label>
+                                                            <input type="file" name="file_csv" class="form-control" required accept=".csv">
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-success">Import</button>
+                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
                                 <?php else : ?>
                                 <?php endif; ?>
 

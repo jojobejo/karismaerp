@@ -1251,6 +1251,21 @@ LEFT JOIN tb_customer c
         ")->result();
     }
 
+    // public function list_po()
+    // {
+    //     return $this->db->query("SELECT		
+    //         a.id,
+    //         a.deskripsi as deskripsi,
+    //         a.kd_faktur_lpb as kd_faktur,
+    //         a.tgl_transaksi,          
+    //         a.lpb_note as note,
+    //         a.lpb_status as status
+    //     FROM tb_ics_po a
+    //     LEFT JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+    //     GROUP BY a.kd_faktur_lpb
+    //     ")->result();
+    // }
+
     public function get_br_name($idbarang)
     {
         return $this->db->query("SELECT
@@ -1544,6 +1559,76 @@ LEFT JOIN tb_customer c
     ", [$nmbarang])->result();
     }
 
+    public function get_retur_faktur_select2($search = '')
+    {
+        $this->db->select('kd_faktur');
+        $this->db->from('tb_ics_do');
+
+        if ($search) {
+            $this->db->like('kd_faktur', $search);
+        }
+
+        $this->db->group_by('kd_faktur');
+        $this->db->order_by('kd_faktur', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_retur_barang_by_faktur_select2($kd_faktur, $search = '')
+    {
+        $this->db->select('kd_barang, nama_barang');
+        $this->db->from('tb_ics_do');
+        $this->db->where('kd_faktur', $kd_faktur);
+
+        if ($search) {
+            $this->db->like('nama_barang', $search);
+        }
+
+        $this->db->group_by(['kd_barang', 'nama_barang']);
+        $this->db->order_by('nama_barang', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_retur_lot_by_faktur_barang($kd_faktur, $kd_barang, $search = '')
+    {
+        $this->db->select('no_lot');
+        $this->db->from('tb_ics_do');
+        $this->db->where('kd_faktur', $kd_faktur);
+        $this->db->where('kd_barang', $kd_barang);
+
+        if ($search) {
+            $this->db->like('no_lot', $search);
+        }
+
+        $this->db->group_by('no_lot');
+        $this->db->order_by('no_lot', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
+    public function get_retur_exp_by_faktur_barang_lot($kd_faktur, $kd_barang, $no_lot, $search = '')
+    {
+        $this->db->select('exp_date');
+        $this->db->from('tb_ics_do');
+        $this->db->where('kd_faktur', $kd_faktur);
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->where('no_lot', $no_lot);
+
+        if ($search) {
+            $this->db->like('exp_date', $search);
+        }
+
+        $this->db->group_by('exp_date');
+        $this->db->order_by('exp_date', 'ASC');
+        $this->db->limit(20);
+
+        return $this->db->get()->result();
+    }
+
     public function get_barang_by_gudang_select2($id_gudang, $search = '')
     {
         $this->db->select('a.nama_barang');
@@ -1628,6 +1713,78 @@ LEFT JOIN tb_customer c
     public function insert_mutasi($data)
     {
         return $this->db->insert('tb_mutasi', $data);
+    }
+
+    public function insert_retur_detail($data)
+    {
+        return $this->db->insert('tb_detail_retur_barang', $data);
+    }
+
+    public function delete_retur_detail($id)
+    {
+        return $this->db->where('id', $id)->delete('tb_detail_retur_barang');
+    }
+
+    public function update_retur_detail_status_by_kd_retur($kd_retur, $retur_type = 2, $status = '1')
+    {
+        $this->db->where('kd_retur', $kd_retur)
+            ->where('retur_type', $retur_type)
+            ->where('status_data', 2)
+            ->update('tb_detail_retur_barang', ['status_data' => $status]);
+
+        return $this->db->affected_rows();
+    }
+
+    public function insert_retur_header($data)
+    {
+        return $this->db->insert('tb_retur_barang', $data);
+    }
+
+    public function get_latest_retur_header_by_type($type_retur)
+    {
+        return $this->db
+            ->where('type_retur', $type_retur)
+            ->order_by('input_at', 'DESC')
+            ->limit(1)
+            ->get('tb_retur_barang')
+            ->row();
+    }
+
+    public function generate_kd_retur_by_type($type_retur)
+    {
+        $prefix = ($type_retur == 1) ? 'QRTUR01' : 'QRTUR02';
+        $today = date('dmY');
+        $base = $prefix . $today;
+
+        $last = $this->db
+            ->select('kd_retur')
+            ->where('type_retur', $type_retur)
+            ->like('kd_retur', $base, 'after')
+            ->order_by('kd_retur', 'DESC')
+            ->limit(1)
+            ->get('tb_retur_barang')
+            ->row();
+
+        if ($last && !empty($last->kd_retur)) {
+            $last_no = (int)substr($last->kd_retur, -3);
+            $next_no = $last_no + 1;
+            return $base . str_pad($next_no, 3, '0', STR_PAD_LEFT);
+        }
+
+        return $base . '001';
+    }
+
+    public function get_retur_detail($retur_type = 2, $status_data = 2)
+    {
+        return $this->db
+            ->select('d.id, d.kd_faktur, d.kd_barang, m.nama_barang, d.tgl_expired, d.no_lot, d.qty')
+            ->from('tb_detail_retur_barang d')
+            ->join('tb_master_barang_all m', 'm.kd_barang = d.kd_barang', 'left')
+            ->where('d.retur_type', $retur_type)
+            ->where('d.status_data', $status_data)
+            ->order_by('d.tgl_input', 'DESC')
+            ->get()
+            ->result();
     }
     public function insert_log($data)
     {

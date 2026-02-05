@@ -66,6 +66,8 @@ class Auth extends CI_Controller
                         redirect('kiu_katalog');
                     } else if ($key->jobdesk == 'DISTRIBUSI') {
                         redirect('logistik/distibusi');
+                    } else if ($key->jobdesk == 'ADMINLOGLPB') {
+                        redirect('ics/icspo');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

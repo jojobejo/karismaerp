@@ -126,6 +126,19 @@ $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic
 $route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
 $route['ics/ajax_barang_pergudang']                 = 'logistik/C_Ics/ajax_barang_pergudang';
 
+$route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
+$route['ics/retur/penjualan']                       = 'logistik/C_Ics/retur_penjualan';
+$route['ics/retur/pembelian']                       = 'logistik/C_Ics/retur_pembelian';
+$route['ics/retur/faktur_select2']                  = 'logistik/C_Ics/ajax_retur_faktur_select2';
+$route['ics/retur/barang_select2']                  = 'logistik/C_Ics/ajax_retur_barang_select2';
+$route['ics/retur/lot_select2']                     = 'logistik/C_Ics/ajax_retur_lot_select2';
+$route['ics/retur/exp_select2']                     = 'logistik/C_Ics/ajax_retur_exp_select2';
+$route['ics/retur/add_detail']                      = 'logistik/C_Ics/ajax_retur_add_detail';
+$route['ics/retur/list_detail']                     = 'logistik/C_Ics/ajax_retur_list_detail';
+$route['ics/retur/delete_detail']                   = 'logistik/C_Ics/ajax_retur_delete_detail';
+$route['ics/retur/rekam_penjualan']                 = 'logistik/C_Ics/ajax_retur_rekam_penjualan';
+
+
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
 $route['ics/mutasi_barang/input']                   = 'logistik/C_Ics/input_mutasi_barang';
@@ -237,6 +250,11 @@ $route['update_norut']                              = 'logistik/C_Logistik/updat
 $route['save_do']                                   = 'logistik/C_Logistik/save_do';
 $route['custupdate']                                = 'logistik/C_Logistik/custupdate';
 
+
+
+// COBA API
+$route['getdata_kiupo']                             = 'api/C_Api';
+
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';
 $route['act_schedule/(:any)']                       = 'schedule/C_Schedule/act_schedule/$1';
@@ -266,3 +284,4 @@ $route['export-stock']                              = 'logistik/C_ExportStock/ex
 
 // SALES KIU KATALOG
 $route['kiu_katalog']                               = 'sales/C_ExportStock/export';
+

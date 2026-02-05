@@ -1750,8 +1750,246 @@ class C_Ics extends CI_Controller
         $this->load->view('stock/saldo_index', $data);
     }
 
-    // LPB 
+    // RETUR
 
+    public function dash_retur()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/dashretur.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function retur_penjualan()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['kd_retur']   = $this->M_Ics->generate_kd_retur_by_type(2);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/returform.php', $data);
+        $this->load->view('content/logistik/ics/ajax_retur.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_retur_faktur_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $search = $this->input->get('term', true);
+        $data   = $this->M_Ics->get_retur_faktur_select2($search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->kd_faktur,
+                'text' => $row->kd_faktur
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_retur_barang_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $search    = $this->input->get('term', true);
+        $kd_faktur = $this->input->get('kd_faktur', true);
+
+        if (!$kd_faktur) {
+            echo json_encode([]);
+            return;
+        }
+
+        $data = $this->M_Ics->get_retur_barang_by_faktur_select2($kd_faktur, $search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->kd_barang,
+                'text' => $row->nama_barang
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_retur_lot_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $search    = $this->input->get('term', true);
+        $kd_faktur = $this->input->get('kd_faktur', true);
+        $kd_barang = $this->input->get('kd_barang', true);
+
+        if (!$kd_faktur || !$kd_barang) {
+            echo json_encode([]);
+            return;
+        }
+
+        $data = $this->M_Ics->get_retur_lot_by_faktur_barang($kd_faktur, $kd_barang, $search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->no_lot,
+                'text' => $row->no_lot
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_retur_exp_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $search    = $this->input->get('term', true);
+        $kd_faktur = $this->input->get('kd_faktur', true);
+        $kd_barang = $this->input->get('kd_barang', true);
+        $no_lot    = $this->input->get('no_lot', true);
+
+        if (!$kd_faktur || !$kd_barang || !$no_lot) {
+            echo json_encode([]);
+            return;
+        }
+
+        $data = $this->M_Ics->get_retur_exp_by_faktur_barang_lot($kd_faktur, $kd_barang, $no_lot, $search);
+
+        $result = [];
+        foreach ($data as $row) {
+            $result[] = [
+                'id'   => $row->exp_date,
+                'text' => $row->exp_date
+            ];
+        }
+
+        echo json_encode($result);
+    }
+
+    public function ajax_retur_add_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $kd_faktur   = $this->input->post('kd_faktur', true);
+        $kd_barang   = $this->input->post('kd_barang', true);
+        $no_lot      = $this->input->post('no_lot', true);
+        $tgl_expired = $this->input->post('tgl_expired', true);
+        $qty         = (int)$this->input->post('qty', true);
+
+        if (!$kd_faktur || !$kd_barang || !$no_lot || !$tgl_expired || $qty <= 0) {
+            echo json_encode(['status' => false, 'message' => 'Data belum lengkap']);
+            return;
+        }
+
+        $retur_type = 2;
+        $kd_retur = $this->M_Ics->generate_kd_retur_by_type($retur_type);
+
+        $data = [
+            'kd_retur'    => $kd_retur,
+            'retur_type'  => 2,
+            'kd_faktur'   => $kd_faktur,
+            'kd_barang'   => $kd_barang,
+            'no_lot'      => $no_lot,
+            'tgl_expired' => $tgl_expired,
+            'qty'         => $qty,
+            'status_data' => 2,
+            'tgl_input'   => date('Y-m-d H:i:s')
+        ];
+
+        $ok = $this->M_Ics->insert_retur_detail($data);
+
+        echo json_encode([
+            'status'  => (bool)$ok,
+            'message' => $ok ? 'Data retur tersimpan' : 'Gagal menyimpan data'
+        ]);
+    }
+
+    public function ajax_retur_list_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $data = $this->M_Ics->get_retur_detail(2, 2);
+        echo json_encode($data);
+    }
+
+    public function ajax_retur_delete_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $id = $this->input->post('id', true);
+        if (!$id) {
+            echo json_encode(['status' => false, 'message' => 'ID tidak valid']);
+            return;
+        }
+
+        $ok = $this->M_Ics->delete_retur_detail($id);
+        echo json_encode([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data terhapus' : 'Gagal menghapus data'
+        ]);
+    }
+
+    public function ajax_retur_rekam_penjualan()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $kd_retur = $this->input->post('kd_retur', true);
+        $keterangan = $this->input->post('keterangan', true);
+        $tgl_transaksi = $this->input->post('tgl_transaksi', true);
+
+        if (!$kd_retur) {
+            echo json_encode(['status' => false, 'message' => 'No referensi belum diisi']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $updated = $this->M_Ics->update_retur_detail_status_by_kd_retur($kd_retur, 2, '1');
+        if ($updated > 0) {
+            $inputAt = $tgl_transaksi ? ($tgl_transaksi . ' ' . date('H:i:s')) : date('Y-m-d H:i:s');
+            $data = [
+                'type_retur' => '2',
+                'kd_retur'   => $kd_retur,
+                'keterangan' => $keterangan,
+                'status'     => '1',
+                'input_by'   => $this->session->userdata('nik'),
+                'input_at'   => $inputAt,
+                'create_at'  => date('Y-m-d H:i:s')
+            ];
+            $okInsert = $this->M_Ics->insert_retur_header($data);
+        } else {
+            $okInsert = false;
+        }
+
+        if ($this->db->trans_status() === FALSE || !$okInsert) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'message' => 'Gagal rekam retur penjualan']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        echo json_encode(['status' => true, 'message' => 'Retur penjualan tersimpan']);
+    }
+
+    // LPB 
     public function create_lpb()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
