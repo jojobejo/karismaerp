@@ -257,6 +257,13 @@
             "autoWidth": false,
         }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
 
+        $("#tbretur_track_barang").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "aaSorting": [],
+            "autoWidth": false,
+        }).buttons().container().appendTo('#example1_wrapper .col-md-6:eq(0)');
+
         $("#tblpb_track_barang").DataTable({
             "responsive": true,
             "lengthChange": false,

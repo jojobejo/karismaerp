@@ -151,11 +151,9 @@
                         </div>
                         <hr>
                         <div class="table-responsive">
-
                             <div class="mt-2 text-muted small">
                                 Menampilkan distribusi driver berdasarkan rute <strong>(status DO = selesai)</strong>
                             </div>
-
                             <table class="table table-bordered table-striped" id="tbl_driver_rute">
                                 <thead id="thead_rute"></thead>
                                 <tbody id="tbody_driver"></tbody>

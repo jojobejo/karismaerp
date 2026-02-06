@@ -94,20 +94,28 @@ class M_Ics extends CI_Model
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
+        COALESCE(rjual.qty_rjual, 0) AS qty_rjual,
+        COALESCE(rbeli.qty_rbeli, 0) AS qty_rbeli,
         (
             COALESCE(x.saldo_awal_qty, 0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         FLOOR(COALESCE(o.qty_opname, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS fisik_box,
@@ -117,7 +125,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -125,7 +135,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -133,14 +145,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) +
+            COALESCE(rjual.qty_rjual, 0) -
+            COALESCE(rbeli.qty_rbeli, 0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -170,8 +186,20 @@ class M_Ics extends CI_Model
             FROM tb_master_barang_all
             GROUP BY kd_barang
         ) mb ON mb.kd = x.kode_barang_zahir
+        LEFT JOIN (
+            SELECT kd_faktur , kd_barang , tgl_expired , SUM(qty) as qty_rjual 
+            FROM tb_detail_retur_barang
+            WHERE retur_type = '2' AND status_data = '1'
+            GROUP BY kd_barang , tgl_expired
+        ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+        LEFT JOIN (
+            SELECT kd_faktur , kd_barang , tgl_expired , SUM(qty) as qty_rbeli 
+            FROM tb_detail_retur_barang
+            WHERE retur_type = '1' AND status_data = '1'
+            GROUP BY kd_barang , tgl_expired
+        ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
         $where
-        ORDER BY x.nama_barang, x.exp_date;")->result();
+        ORDER BY x.nama_barang, x.exp_date")->result();
     }
 
     public function list_barang_ics_allbarang($pic)
@@ -363,8 +391,12 @@ class M_Ics extends CI_Model
             (COALESCE(sum(a.qty),0) - COALESCE(mutasi.qty_mutasi,0)) AS qty,
             COALESCE(deliv.qty_out, 0) AS do,
             COALESCE(purchase.qty_po, 0) AS po,
-            ((COALESCE(sum(a.qty),0)-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0) AS qty_all,
-            COALESCE(opname.qty_opname, 0) - (((a.qty-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
+            COALESCE(rjual.qty_rjual, 0) AS qty_rjual,
+            COALESCE(rbeli.qty_rbeli, 0) AS qty_rbeli,
+            ((COALESCE(sum(a.qty),0)-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0) +
+            COALESCE(rjual.qty_rjual, 0) - COALESCE(rbeli.qty_rbeli, 0) AS qty_all,
+            COALESCE(opname.qty_opname, 0) - (((a.qty-COALESCE(mutasi.qty_mutasi,0)) - COALESCE(deliv.qty_out, 0)) + COALESCE(purchase.qty_po, 0)) +
+            COALESCE(rjual.qty_rjual, 0) - COALESCE(rbeli.qty_rbeli, 0) AS selisih,
             COALESCE(opname.qty_opname, 0) AS ics,
             COALESCE(opname.qty_box,0)AS qty_box,
             COALESCE(opname.qty_pcs,0)AS qty_pcs,
@@ -407,7 +439,18 @@ class M_Ics extends CI_Model
             WHERE gdg_mutasi != '2'
             GROUP BY kode_barang_zahir,exp_date
         ) mutasi ON mutasi.kode_barang_zahir = a.kode_barang_zahir AND mutasi.exp_date = a.exp_date
-        
+        LEFT JOIN (
+        	SELECT kd_retur , kd_barang , SUM(qty) AS qty_rjual , tgl_expired
+            FROM tb_detail_retur_barang
+            WHERE retur_type = '2' AND status_data = '1'
+            GROUP BY kd_barang , tgl_expired
+        ) rjual ON rjual.kd_barang = a.kode_barang_zahir AND rjual.tgl_expired = a.exp_date
+		LEFT JOIN (
+        	SELECT kd_retur , kd_barang , SUM(qty) AS qty_rbeli , tgl_expired
+            FROM tb_detail_retur_barang
+            WHERE retur_type = '1' AND status_data = '1'
+            GROUP BY kd_barang , tgl_expired
+        ) rbeli ON rbeli.kd_barang = a.kode_barang_zahir AND rbeli.tgl_expired = a.exp_date
         WHERE a.kode_barang_zahir = '$kdbarang'
         GROUP BY a.kode_barang_zahir, a.exp_date")->result();
     }
@@ -461,27 +504,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -491,7 +542,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -499,7 +552,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -507,14 +562,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -552,7 +611,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -570,27 +641,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -600,7 +679,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -608,7 +689,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -616,14 +699,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -661,7 +748,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -679,27 +778,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -709,7 +816,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -717,7 +826,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -725,14 +836,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -770,7 +885,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -788,27 +915,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -818,7 +953,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -826,7 +963,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -834,14 +973,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -879,7 +1022,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -897,27 +1052,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -927,7 +1090,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -935,7 +1100,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -943,14 +1110,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -988,7 +1159,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -1006,27 +1189,35 @@ class M_Ics extends CI_Model
         COALESCE(x.saldo_awal_qty, 0) AS saldo_awal_qty,
         FLOOR(COALESCE(x.saldo_awal_qty, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_box,
         MOD(COALESCE(x.saldo_awal_qty, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_awal_pcs,
-        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,
+        COALESCE(mutasi.qty_mutasi,0) as qty_mutasi,       
         COALESCE(p.qty_in, 0) AS qty_in,
         FLOOR(COALESCE(p.qty_in, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS in_box,
         MOD(COALESCE(p.qty_in, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS in_pcs,
+        COALESCE(rjual.qty_rjual,0) as qty_rjual,
+        COALESCE(rbeli.qty_rbeli,0) as qty_rbeli,
         COALESCE(d.qty_out, 0) AS qty_out,
         FLOOR(COALESCE(d.qty_out, 0) / NULLIF(mb.p * mb.l * mb.t, 0)) AS out_box,
         MOD(COALESCE(d.qty_out, 0), NULLIF(mb.p * mb.l * mb.t, 0)) AS out_pcs,
         (
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) AS saldo_akhir_qty,
         FLOOR((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) + 
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_box,
         MOD((
             COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
             COALESCE(p.qty_in, 0) -
-            COALESCE(d.qty_out, 0)
+            COALESCE(d.qty_out, 0) + 
+            COALESCE(rjual.qty_rjual,0) - 
+            COALESCE(rbeli.qty_rbeli,0)
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS saldo_akhir_pcs,
         COALESCE(o.qty_opname, 0) AS fisik_ics,
         COALESCE(o.qty_box, 0) AS fisik_box,
@@ -1036,7 +1227,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) AS qty_selisih,
         FLOOR((
@@ -1044,7 +1237,9 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ) / NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_box,
         MOD((
@@ -1052,14 +1247,18 @@ class M_Ics extends CI_Model
             (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             )
         ), NULLIF(mb.p * mb.l * mb.t, 0)) AS selisih_pcs,
         CASE
             WHEN (
                 COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0) +
                 COALESCE(p.qty_in, 0) -
-                COALESCE(d.qty_out, 0)
+                COALESCE(d.qty_out, 0) + 
+                COALESCE(rjual.qty_rjual,0) - 
+                COALESCE(rbeli.qty_rbeli,0)
             ) = COALESCE(o.qty_opname, 0)
             THEN 'KLOP'
             ELSE 'TIDAK'
@@ -1097,7 +1296,19 @@ class M_Ics extends CI_Model
         FROM tb_detail_mutasi
         WHERE gdg_mutasi != '2'
         GROUP BY kode_barang_zahir,exp_date
-    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date
+    ) mutasi on mutasi.kode_barang_zahir = x.kode_barang_zahir AND mutasi.exp_date = x.exp_date    
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rjual
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '2'
+        GROUP BY kd_barang , tgl_expired
+    ) rjual ON rjual.kd_barang = x.kode_barang_zahir AND rjual.tgl_expired = x.exp_date
+    LEFT JOIN(
+        SELECT kd_faktur , kd_barang , no_lot , tgl_expired , sum(qty) as qty_rbeli
+        FROM tb_detail_retur_barang
+        WHERE status_data = '1' AND retur_type = '1'
+        GROUP BY kd_barang , tgl_expired
+    ) rbeli ON rbeli.kd_barang = x.kode_barang_zahir AND rbeli.tgl_expired = x.exp_date
     WHERE (
         COALESCE(o.qty_opname, 0) - 
         ((COALESCE(x.saldo_awal_qty, 0) - COALESCE(mutasi.qty_mutasi,0)) + COALESCE(p.qty_in, 0) - COALESCE(d.qty_out, 0))
@@ -1124,15 +1335,13 @@ class M_Ics extends CI_Model
         FROM tb_ics_opname o
         LEFT JOIN tb_ics i 
             ON o.nama_barang = i.nama_barang AND o.exp_date = i.exp_date
-        GROUP BY o.nama_barang, o.exp_date
-    ";
+        GROUP BY o.nama_barang, o.exp_date";
         return $this->db->query($sql)->result();
     }
 
     public function compareAllBarang()
     {
-        $sql = "
-        SELECT 
+        $sql = "SELECT 
             o.nama_barang,
             SUM(o.qty) AS qty_fisik,
             IFNULL(SUM(i.qty), 0) AS qty_saldo,
@@ -1140,8 +1349,7 @@ class M_Ics extends CI_Model
         FROM tb_ics_opname o
         LEFT JOIN tb_ics i 
             ON o.nama_barang = i.nama_barang
-        GROUP BY o.nama_barang
-    ";
+        GROUP BY o.nama_barang";
         return $this->db->query($sql)->result();
     }
 

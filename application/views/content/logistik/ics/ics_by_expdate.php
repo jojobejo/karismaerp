@@ -54,6 +54,7 @@
                                             <th colspan="2" class="bg-info text-white text-center">Saldo Awal</th>
                                             <th colspan="2" class="bg-success text-white text-center">LPB</th>
                                             <th colspan="2" class="bg-danger text-white text-center">DO</th>
+                                            <th colspan="2" class="bg-success text-white text-center">RETUR</th>
                                             <th colspan="2" class="bg-info text-white text-center">Sistem</th>
                                             <th colspan="2" class="bg-success text-white text-center">Fisik</th>
                                             <th rowspan="2" class="align-middle bg-info text-white text-center">Selisih</th>
@@ -68,6 +69,8 @@
                                             <th class="bg-success text-white">Pcs</th>
                                             <th class="bg-danger text-white">Box</th>
                                             <th class="bg-danger text-white">Pcs</th>
+                                            <th class="bg-success text-white">Jual</th>
+                                            <th class="bg-success text-white">Beli</th>
                                             <th class="bg-info text-white">Box</th>
                                             <th class="bg-info text-white">Pcs</th>
                                             <th class="bg-success text-white">Box</th>
@@ -88,6 +91,8 @@
                                                 <td><?= $br->in_box ?></td>
                                                 <td><?= $br->out_box ?></td>
                                                 <td><?= $br->out_pcs ?></td>
+                                                <td><?= $br->qty_rjual ?></td>
+                                                <td><?= $br->qty_rbeli ?></td>
                                                 <td><?= $br->saldo_akhir_box ?></td>
                                                 <td><?= $br->saldo_akhir_pcs ?></td>
                                                 <td><?= $br->fisik_box ?></td>

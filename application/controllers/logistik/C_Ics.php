@@ -376,9 +376,28 @@ class C_Ics extends CI_Controller
             ->get()
             ->result();
 
+        $data_retur = $this->db
+            ->select([
+                'r.kd_faktur',
+                'r.tgl_input AS tgl_transaksi',
+                'm.nama_barang',
+                'r.qty'
+            ])
+            ->from('tb_detail_retur_barang r')
+            ->join(
+                'tb_master_barang_all m',
+                'm.kd_barang = r.kd_barang',
+                'left'
+            )
+            ->where('r.kd_barang', $kd_barang)
+            ->where('r.tgl_expired', $exp_date)
+            ->get()
+            ->result();
+
         echo json_encode([
             'data_do'  => $data_do,
             'data_po'  => $data_po,
+            'data_retur'  => $data_retur,
             'data_log' => $data_log
         ]);
     }

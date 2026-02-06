@@ -194,7 +194,6 @@
                 }
             });
         }
-
         $('#filter_tanggal_driver').on('change', loadMatrix);
     });
 </script>

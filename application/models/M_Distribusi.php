@@ -52,7 +52,8 @@ class M_Distribusi extends CI_Model
         a.driver AS driver,
         b.kd_rute AS rute,
         COUNT(DISTINCT a.kd_do) AS total
-    ');
+        ');
+
         $this->db->from('tb_do a');
         $this->db->join('tb_detail_do b', 'b.kd_do = a.kd_do');
         $this->db->where('a.status !=', '1');
@@ -70,7 +71,6 @@ class M_Distribusi extends CI_Model
 
         $map = [];
         foreach ($do as $d) {
-            // format: map[driver][rute] = total
             $map[$d->driver][$d->rute] = (int)$d->total;
         }
 

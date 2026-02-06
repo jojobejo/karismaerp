@@ -43,6 +43,8 @@
                                                 <th>Qty</th>
                                                 <th>DO</th>
                                                 <th>LPB</th>
+                                                <th>Retur Jual</th>
+                                                <th>Retur Beli</th>
                                                 <th>Qty All</th>
                                                 <th>Fisik Qty</th>
                                                 <th>Selisih</th>
@@ -62,6 +64,8 @@
                                                     <td><?= $br->qty ?></td>
                                                     <td><?= $br->do ?></td>
                                                     <td><?= $br->po ?></td>
+                                                    <td><?= $br->qty_rjual ?></td>
+                                                    <td><?= $br->qty_rbeli ?></td>
                                                     <td><?= $br->qty_all ?></td>
                                                     <td><?= $br->ics ?></td>
                                                     <td><?= $br->selisih ?></td>
@@ -145,6 +149,9 @@
                                     <a href="#" class="btn btn-primary" id="btnShowLPB">LPB</a>
                                 </div>
                                 <div class="col-auto">
+                                    <a href="#" class="btn btn-primary" id="btnShowretur">Retur</a>
+                                </div>
+                                <div class="col-auto">
                                     <a href="#" class="btn btn-primary" id="btnShowLogInpt">Log Input</a>
                                 </div>
                             </div>
@@ -158,6 +165,21 @@
                                             <th>Tgl Transaksi</th>
                                             <th>Nama Customer</th>
                                             <th>Nama Kios</th>
+                                            <th>Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+
+                            <div id="data_log_retur" style="display: none;">
+                                <table class="table table-bordered table-sm mb-2" id="tbretur_track_barang" style="display: none;">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Kode Faktur</th>
+                                            <th>Tgl Transaksi</th>
+                                            <th>Nama Barang</th>
                                             <th>Qty</th>
                                         </tr>
                                     </thead>
@@ -402,27 +424,33 @@
                 $(this).removeClass('btn-info').addClass('btn-secondary');
             });
 
-            $('#btnShowDO, #btnShowLPB, #btnShowLogInpt').on('click', function() {
-                $('#btnShowDO, #btnShowLPB, #btnShowLogInpt').removeClass('btn-secondary').addClass('btn-primary');
+            $('#btnShowDO, #btnShowLPB, #btnShowretur, #btnShowLogInpt').on('click', function() {
+                $('#btnShowDO, #btnShowLPB, #btnShowretur, #btnShowLogInpt').removeClass('btn-secondary').addClass('btn-primary');
                 $(this).removeClass('btn-primary').addClass('btn-secondary');
             });
 
             $('#btnShowDO').click(function() {
                 $('#data_log_do').show();
                 $('#tbdo_track_barang').show();
-                $('#data_log_lpb, #data_log_inpt').hide();
+                $('#data_log_lpb, #data_log_retur, #data_log_inpt').hide();
             });
 
             $('#btnShowLPB').click(function() {
                 $('#data_log_lpb').show();
                 $('#tblpb_track_barang').show();
-                $('#data_log_do, #data_log_inpt').hide();
+                $('#data_log_do, #data_log_retur, #data_log_inpt').hide();
+            });
+
+            $('#btnShowretur').click(function() {
+                $('#data_log_retur').show();
+                $('#tbretur_track_barang').show();
+                $('#data_log_do, #data_log_lpb, #data_log_inpt').hide();
             });
 
             $('#btnShowLogInpt').click(function() {
                 $('#data_log_inpt').show();
                 $('#tblog_track_barang').show();
-                $('#data_log_do, #data_log_lpb').hide();
+                $('#data_log_do, #data_log_lpb, #data_log_retur').hide();
             });
 
             $('.btn-update-wilayah').on('click', function() {
@@ -530,13 +558,14 @@
                     data: {
                         nama_barang: nama_barang,
                         exp_date: exp_date,
-                        kd_barang : kd_barang
+                        kd_barang: kd_barang
                     },
                     dataType: "json",
                     success: function(res) {
                         $('#card_detail').show();
 
                         $('#tbdo_track_barang tbody').html('');
+                        $('#tbretur_track_barang tbody').html('');
                         $('#tblpb_track_barang tbody').html('');
                         $('#tblog_track_barang tbody').html('');
 
@@ -564,6 +593,18 @@
                         </tr>`;
                         });
                         $('#tblpb_track_barang tbody').html(po_html);
+
+                        let retur_html = '';
+                        $.each(res.data_retur, function(i, item) {
+                            retur_html += `<tr>
+                            <td>${i + 1}</td>
+                            <td>${item.kd_faktur || '-'}</td>
+                            <td>${item.tgl_transaksi || '-'}</td>
+                            <td>${item.nama_barang || '-'}</td>
+                            <td>${item.qty || 0}</td>
+                        </tr>`;
+                        });
+                        $('#tbretur_track_barang tbody').html(retur_html);
 
                         let log_html = '';
                         $.each(res.data_log, function(i, item) {
