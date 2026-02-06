@@ -26,13 +26,11 @@
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-
                     <div class="row mb-2">
                         <div class="col-4">
                             <a href="<?= base_url('ics/retur') ?>" class="btn btn-md  btn-primary"><i class="fas fa-home"></i></a>
                         </div>
                     </div>
-
                     <div class="row">
                         <div class="col-4">
                             <div class="card">
@@ -46,10 +44,6 @@
                                         <select name="select_barang" id="select_barang" class="form-control"></select>
                                     </div>
                                     <input name="kode_barang" id="kode_barang" class="form-control" value="" readonly hidden>
-                                    <div class="form-group">
-                                        <label>LOT</label>
-                                        <select name="nolot_isi" id="nolot_isi" class="form-control"></select>
-                                    </div>
                                     <div class="form-group">
                                         <label>Expired Date</label>
                                         <select name="select_exp" id="select_exp" class="form-control"></select>
@@ -102,7 +96,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <a href="#" class="btn btn-success btn-block" id="rekamreturpenjualan"> Rekam</a>
+                                    <a href="#" class="btn btn-success btn-block" id="rekamreturpembelian"> Rekam</a>
                                 </div>
 
                             </div>
