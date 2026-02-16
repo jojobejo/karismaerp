@@ -67,11 +67,41 @@
                         <div class="col-auto">
                             <a href="<?= base_url('histori_driver') ?>" class="btn btn-primary mb-2">Histori Driver</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('logistik/distibusi/list_faktur_status') ?>" class="btn btn-success mb-2">List Faktur Terkirim / Belum</a>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <section class="content">
+                <div class="card">
+                    <div class="card-body">
+                        <table id="faktur_result" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Total Faktur</th>
+                                    <th>Terkirim</th>
+                                    <th>Pending</th>
+                                    <th>% Terkirim</th>
+                                    <th>% Pending</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($faktur as $f) : ?>
+                                    <tr>
+                                        <td><?= $f->total_faktur ?></td>
+                                        <td><?= $f->total_terkirim ?></td>
+                                        <td><?= $f->total_belum ?></td>
+                                        <td><?= $f->persen_terkirim ?></td>
+                                        <td><?= $f->persen_belum_terkirim ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-body">
                         <table id="tbtotal_tonase" class="table table-bordered table-striped">

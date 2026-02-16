@@ -32,6 +32,8 @@
 <script src="<?php echo base_url('assets/plugins/datatables-buttons/js/buttons.html5.min.js') ?>"></script>
 <script src="<?php echo base_url('assets/plugins/datatables-buttons/js/buttons.print.min.js') ?>"></script>
 <script src="<?php echo base_url('assets/plugins/datatables-buttons/js/buttons.colVis.min.js') ?>"></script>
+<!-- SweetAlert2 -->
+<script src="<?php echo base_url('assets/plugins/sweetalert2/sweetalert2.all.js') ?>"></script>
 <!-- bs-custom-file-input -->
 <script src="<?php echo base_url('assets/plugins/bs-custom-file-input/bs-custom-file-input.min.js') ?>"></script>
 <!-- Select2 -->

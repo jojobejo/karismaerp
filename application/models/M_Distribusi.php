@@ -24,6 +24,30 @@ class M_Distribusi extends CI_Model
         ORDER BY tonase_terkirim DESC;
         ")->result();
     }
+
+    public function persentase_faktur()
+    {
+        return $this->db->query("SELECT
+            total_faktur,
+            total_terkirim,
+            total_belum,
+            
+            IF(total_faktur = 0, 0,
+                ROUND((total_terkirim / total_faktur) * 100, 2)
+            ) AS persen_terkirim,
+            
+            IF(total_faktur = 0, 0,
+                ROUND((total_belum / total_faktur) * 100, 2)
+            ) AS persen_belum_terkirim
+
+        FROM (
+            SELECT
+                COUNT(DISTINCT kd_faktur) AS total_faktur,
+                COUNT(DISTINCT CASE WHEN data_sts = '3' THEN kd_faktur END) AS total_terkirim,
+                COUNT(DISTINCT CASE WHEN data_sts = '1' THEN kd_faktur END) AS total_belum
+            FROM tb_pre_do
+        ) x;")->result();
+    }
     public function total_tonase_by_rute()
     {
         return $this->db->query("SELECT
@@ -189,6 +213,55 @@ class M_Distribusi extends CI_Model
     {
         return $this->db->query("")->result();
     }
+
+    public function get_list_faktur_by_status($status)
+    {
+        $this->db->select([
+            'c.kd_do AS kode_do',
+            'a.kd_faktur',
+            'a.kd_rute',
+            'a.kd_customer',
+            'b.nama_customer',
+            'b.nama_kios',
+            'b.regional',
+            "DATE_FORMAT(
+            STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'),
+            '%d/%m/%Y'
+        ) AS tgl_inputer_fmt",
+            'COUNT(DISTINCT a.kd_barang) AS total_item',
+            'SUM(a.qty) AS total_qty'
+        ], false);
+        $this->db->from('tb_pre_do a');
+        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'left');
+        if ($status == 3) {
+            $this->db->join(
+                'tb_ics_do c',
+                'c.kd_faktur = a.kd_faktur AND c.kd_do IS NOT NULL AND c.kd_do != ""',
+                'inner'
+            );
+        } else {
+            $this->db->join(
+                'tb_ics_do c',
+                'c.kd_faktur = a.kd_faktur',
+                'left'
+            );
+        }
+        $this->db->where('a.data_sts', $status);
+        $this->db->group_by([
+            'a.kd_faktur',
+            'a.kd_rute',
+            'a.kd_customer',
+            'b.nama_customer',
+            'b.nama_kios',
+            'b.regional',
+            'a.tgl_inputer'
+        ]);
+        $this->db->order_by("STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y')", 'DESC', false);
+        $this->db->order_by('a.kd_faktur', 'DESC');
+
+        return $this->db->get()->result();
+    }
+
 
     public function total_tonase()
     {

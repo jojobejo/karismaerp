@@ -356,4 +356,248 @@ class M_Keuangan extends CI_Model
         FROM so_pricelist_barang
         ")->result();
     }
+
+    private function master_barang_base_query($search = '')
+    {
+        $this->db->select("
+            id,
+            COALESCE(kd_barang) AS kode_barang,
+            COALESCE(kode_barang_system) AS kode_barang_system,
+            COALESCE(nama_barang) AS nama_barang,
+            COALESCE(bhn_aktif, '') AS bahan_aktif,
+            COALESCE(satuan, '') AS satuan,
+            COALESCE(berat, 0) AS berat,
+            COALESCE(kubikasi, 0) AS kubikasi,
+            (COALESCE(p, 0) * COALESCE(l, 0) * COALESCE(t, 0)) AS dimensi
+        ", false);
+        $this->db->from('tb_master_barang_all');
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('COALESCE(kd_barang, kode_barang_system)', $search, 'both', false);
+            $this->db->or_like('COALESCE(nama_barang)', $search, 'both', false);
+            $this->db->or_like('bhn_aktif', $search);
+            $this->db->or_like('satuan', $search);
+            $this->db->group_end();
+        }
+    }
+
+    private function master_barang_columns()
+    {
+        return $this->db->list_fields('tb_master_barang_all');
+    }
+
+    private function build_master_barang_payload($input)
+    {
+        $columns = $this->master_barang_columns();
+        $data = [];
+
+        if (in_array('kd_barang', $columns, true)) {
+            $data['kd_barang'] = $input['kode_barang'];
+        }
+        if (in_array('kode_barang', $columns, true)) {
+            $data['kode_barang'] = $input['kode_barang'];
+        }
+        if (in_array('kd_system', $columns, true)) {
+            $data['kd_system'] = $input['kode_barang'];
+        }
+        if (in_array('nama_barang', $columns, true)) {
+            $data['nama_barang'] = $input['nama_barang'];
+        }
+        if (in_array('nm_barang', $columns, true)) {
+            $data['nm_barang'] = $input['nama_barang'];
+        }
+        if (in_array('bhn_aktif', $columns, true)) {
+            $data['bhn_aktif'] = $input['bahan_aktif'];
+        }
+        if (in_array('satuan', $columns, true)) {
+            $data['satuan'] = $input['satuan'];
+        }
+        if (in_array('berat', $columns, true)) {
+            $data['berat'] = $input['berat'];
+        }
+        if (in_array('kubikasi', $columns, true)) {
+            $data['kubikasi'] = $input['kubikasi'];
+        }
+        if (in_array('p', $columns, true)) {
+            $data['p'] = $input['p'];
+        }
+        if (in_array('l', $columns, true)) {
+            $data['l'] = $input['l'];
+        }
+        if (in_array('t', $columns, true)) {
+            $data['t'] = $input['t'];
+        }
+
+        return $data;
+    }
+
+    public function master_barang_all($limit = null, $offset = 0, $search = '')
+    {
+        $this->master_barang_base_query($search);
+        $this->db->order_by('COALESCE(nama_barang)', 'ASC', false);
+
+        if ($limit !== null && (int)$limit > 0) {
+            $this->db->limit((int)$limit, (int)$offset);
+        }
+
+        return $this->db->get()->result();
+    }
+
+    public function master_barang_count_all()
+    {
+        return $this->db->count_all('tb_master_barang_all');
+    }
+
+    public function master_barang_count_filtered($search = '')
+    {
+        $this->master_barang_base_query($search);
+        return $this->db->count_all_results();
+    }
+
+    public function master_barang_by_id($id)
+    {
+        return $this->db->query("
+            SELECT
+                id,
+                COALESCE(kd_barang, kode_barang_system) AS kode_barang,
+                COALESCE(nama_barang) AS nama_barang,
+                COALESCE(bhn_aktif, '') AS bahan_aktif,
+                COALESCE(satuan, '') AS satuan,
+                COALESCE(berat, 0) AS berat,
+                COALESCE(kubikasi, 0) AS kubikasi,
+                COALESCE(p, 0) AS p,
+                COALESCE(l, 0) AS l,
+                COALESCE(t, 0) AS t
+            FROM tb_master_barang_all
+            WHERE id = ?
+            LIMIT 1
+        ", [(int)$id])->row();
+    }
+
+    public function master_barang_store($input)
+    {
+        $data = $this->build_master_barang_payload($input);
+        return $this->db->insert('tb_master_barang_all', $data);
+    }
+
+    public function master_barang_update($id, $input)
+    {
+        $data = $this->build_master_barang_payload($input);
+        return $this->db->where('id', (int)$id)->update('tb_master_barang_all', $data);
+    }
+
+    public function master_barang_delete($id)
+    {
+        return $this->db->where('id', (int)$id)->delete('tb_master_barang_all');
+    }
+
+    private function master_customer_base_query($search = '')
+    {
+        $this->db->select('
+            id,
+            COALESCE(kd_customer, "") AS kd_customer,
+            COALESCE(nama_customer, "") AS nama_customer,
+            COALESCE(nama_kios, "") AS nama_kios,
+            COALESCE(alamat_kios, "") AS alamat_kios,
+            COALESCE(telp1, "") AS telp1,
+            COALESCE(telp2, "") AS telp2,
+            COALESCE(regional, "") AS regional,
+            COALESCE(jam_buka_tutup, "") AS jam_buka_tutup,
+            COALESCE(karakteristik_kios, "") AS karakteristik_kios
+        ', false);
+        $this->db->from('tb_customer');
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('kd_customer', $search);
+            $this->db->or_like('nama_customer', $search);
+            $this->db->or_like('nama_kios', $search);
+            $this->db->or_like('alamat_kios', $search);
+            $this->db->or_like('telp1', $search);
+            $this->db->or_like('telp2', $search);
+            $this->db->or_like('regional', $search);
+            $this->db->or_like('jam_buka_tutup', $search);
+            $this->db->or_like('karakteristik_kios', $search);
+            $this->db->group_end();
+        }
+    }
+
+    public function master_customer_all($limit = null, $offset = 0, $search = '')
+    {
+        $this->master_customer_base_query($search);
+        $this->db->order_by('nama_customer', 'ASC');
+
+        if ($limit !== null && (int)$limit > 0) {
+            $this->db->limit((int)$limit, (int)$offset);
+        }
+
+        return $this->db->get()->result();
+    }
+
+    public function master_customer_count_all()
+    {
+        return $this->db->count_all('tb_customer');
+    }
+
+    public function master_customer_count_filtered($search = '')
+    {
+        $this->master_customer_base_query($search);
+        return $this->db->count_all_results();
+    }
+
+    public function master_customer_by_id($id)
+    {
+        return $this->db->query("
+            SELECT
+                id,
+                COALESCE(kd_customer, '') AS kd_customer,
+                COALESCE(nama_customer, '') AS nama_customer,
+                COALESCE(nama_kios, '') AS nama_kios,
+                COALESCE(alamat_kios, '') AS alamat_kios,
+                COALESCE(telp1, '') AS telp1,
+                COALESCE(telp2, '') AS telp2,
+                COALESCE(regional, '') AS regional,
+                COALESCE(jam_buka_tutup, '') AS jam_buka_tutup,
+                COALESCE(karakteristik_kios, '') AS karakteristik_kios
+            FROM tb_customer
+            WHERE id = ?
+            LIMIT 1
+        ", [(int)$id])->row();
+    }
+
+    public function master_customer_store($input)
+    {
+        return $this->db->insert('tb_customer', [
+            'kd_customer'        => $input['kd_customer'],
+            'nama_customer'      => $input['nama_customer'],
+            'nama_kios'          => $input['nama_kios'],
+            'alamat_kios'        => $input['alamat_kios'],
+            'telp1'              => $input['telp1'],
+            'telp2'              => $input['telp2'],
+            'regional'           => $input['regional'],
+            'jam_buka_tutup'     => $input['jam_buka_tutup'],
+            'karakteristik_kios' => $input['karakteristik_kios'],
+        ]);
+    }
+
+    public function master_customer_update($id, $input)
+    {
+        return $this->db->where('id', (int)$id)->update('tb_customer', [
+            'kd_customer'        => $input['kd_customer'],
+            'nama_customer'      => $input['nama_customer'],
+            'nama_kios'          => $input['nama_kios'],
+            'alamat_kios'        => $input['alamat_kios'],
+            'telp1'              => $input['telp1'],
+            'telp2'              => $input['telp2'],
+            'regional'           => $input['regional'],
+            'jam_buka_tutup'     => $input['jam_buka_tutup'],
+            'karakteristik_kios' => $input['karakteristik_kios'],
+        ]);
+    }
+
+    public function master_customer_delete($id)
+    {
+        return $this->db->where('id', (int)$id)->delete('tb_customer');
+    }
 }

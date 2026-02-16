@@ -197,9 +197,17 @@
                                 <tbody>
                                     <?php foreach ($list_faktur as $l) :
                                         $status = $l->data_sts;
+                                        if (!empty($l->tgl_inputer_fmt)) {
+                                            $tgl_inputer = $l->tgl_inputer_fmt;
+                                        } elseif (!empty($l->tgl_inputer)) {
+                                            $date_obj = DateTime::createFromFormat('j/n/Y', $l->tgl_inputer);
+                                            $tgl_inputer = $date_obj ? $date_obj->format('d/m/Y') : '-';
+                                        } else {
+                                            $tgl_inputer = '-';
+                                        }
                                     ?>
                                         <tr>
-                                            <td><?= $l->tgl_inputer ?></td>
+                                            <td><?= $tgl_inputer ?></td>
                                             <td><?= $l->kd_faktur ?></td>
                                             <td><?= $l->nama_customer ?></td>
                                             <td><?= $l->nama_kios ?></td>

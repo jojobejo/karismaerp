@@ -402,14 +402,12 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
-        // Subquery 1: faktur sudah masuk tb_detail_do
+
         $subDetail = $this->db
             ->select('1', false)
             ->from('tb_detail_do d')
             ->where('d.kd_faktur = a.kd_faktur')
             ->get_compiled_select();
-
-        // Subquery 2: barang di pre_do yang TIDAK ADA di master barang
         $subBarang = $this->db
             ->select('1', false)
             ->from('tb_pre_do x')
@@ -420,9 +418,9 @@ class M_Logistik extends CI_Model
             WHERE m.kd_barang = x.kd_barang
         )', null, false)
             ->get_compiled_select();
-
         $this->db->select([
             'a.tgl_inputer',
+            "DATE_FORMAT(STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'), '%d/%m/%Y') AS tgl_inputer_fmt",
             'a.kd_faktur',
             'b.nama_customer',
             'b.nama_kios',
@@ -433,25 +431,92 @@ class M_Logistik extends CI_Model
             'COUNT(DISTINCT a.kd_barang) AS total_barang',
             'a.data_sts'
         ], false);
-
         $this->db->from('tb_pre_do a');
         $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
         $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-
         $this->db->where('a.data_sts', '1');
-
-        // Tidak boleh sudah jadi DO
         $this->db->where("NOT EXISTS ($subDetail)", null, false);
-
-        // Tidak boleh ada barang yang tidak ada di master
         $this->db->where("NOT EXISTS ($subBarang)", null, false);
-
         $this->db->group_by('a.kd_faktur');
-        $this->db->order_by('total_barang', 'DESC');
-
+        $this->db->order_by("STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y')", 'DESC', false);
         return $this->db->get()->result();
     }
 
+    public function get_master_barang_not_listed()
+    {
+        return $this->db->query("SELECT 
+            a.tgl_inputer,
+            DATE_FORMAT(STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'), '%d/%m/%Y') AS tgl_inputer_fmt,
+            a.kd_faktur,
+            b.nama_customer,
+            b.nama_kios,
+            a.kd_barang,
+            a.nama_barang,
+            COUNT(*) AS total_row
+        FROM tb_pre_do a
+        INNER JOIN tb_customer b
+            ON b.kd_customer = a.kd_customer
+        LEFT JOIN tb_master_barang_all m
+            ON m.kd_barang = a.kd_barang
+        WHERE m.kd_barang IS NULL
+        GROUP BY a.kd_faktur, a.kd_barang
+        ORDER BY STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y') DESC, a.kd_faktur DESC;")->result();
+    }
+
+    public function update_kd_barang_pre_do_by_faktur($kd_faktur, $old_kd_barang, $new_kd_barang)
+    {
+        $this->db->where('kd_faktur', $kd_faktur);
+        $this->db->where('kd_barang', $old_kd_barang);
+        $this->db->update('tb_pre_do', [
+            'kd_barang' => $new_kd_barang
+        ]);
+
+        return $this->db->affected_rows();
+    }
+
+    public function get_barang_not_listed()
+    {
+        return $this->db->query("SELECT
+            a.tgl_inputer,
+            DATE_FORMAT(
+                STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'),
+                '%d/%m/%Y'
+            ) AS tgl_inputer_fmt,
+            a.kd_faktur,
+            b.nama_customer,
+            b.nama_kios,
+            b.alamat_kios,
+            b.regional,
+            a.kd_rute,
+            c.keterangan AS keterangan_rute,
+            COUNT(DISTINCT a.kd_barang) AS total_barang,
+            a.data_sts,
+            'Master Barang Tidak Ada' AS status_validasi
+        FROM tb_pre_do a
+        INNER JOIN tb_customer b
+            ON b.kd_customer = a.kd_customer
+        INNER JOIN tb_rutecs c
+            ON c.kd_rute = a.kd_rute
+        AND EXISTS (
+            SELECT 1
+            FROM tb_pre_do x
+            LEFT JOIN tb_master_barang_all m 
+                ON m.kd_barang = x.kd_barang
+            WHERE x.kd_faktur = a.kd_faktur
+            AND m.kd_barang IS NULL
+        )
+        GROUP BY 
+            a.kd_faktur,
+            a.tgl_inputer,
+            b.nama_customer,
+            b.nama_kios,
+            b.alamat_kios,
+            b.regional,
+            a.kd_rute,
+            c.keterangan,
+            a.data_sts
+        ORDER BY STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y') DESC;")->result();
+    }
 
     // public function get_list_by_rute($rute)
     // {
@@ -694,7 +759,7 @@ class M_Logistik extends CI_Model
             FROM tb_tmp_do a
             JOIN tb_pre_do b ON b.kd_faktur = a.kd_faktur
             JOIN tb_customer c ON c.kd_customer = b.kd_customer
-            GROUP by a.kd_faktur
+            GROUP BY a.kd_faktur
         ")->result();
     }
     public function getkdfaktur($kd)
@@ -711,6 +776,14 @@ class M_Logistik extends CI_Model
     {
         $this->db->where('id', $id);
         return $this->db->update('tb_detail_do', $data);
+    }
+
+    public function update_note_faktur($kd_faktur, $note_faktur)
+    {
+        $this->db->where('kd_faktur', $kd_faktur);
+        return $this->db->update('tb_detail_do', [
+            'note_faktur' => $note_faktur
+        ]);
     }
 
     public function update_checker_detail_done($kd, $sts, $data)
@@ -750,6 +823,7 @@ class M_Logistik extends CI_Model
             FROM tb_detail_do 
             WHERE kd_do = a.kd_do
         ) > 0
+        ORDER BY a.tgl_create DESC
         ")->result();
     }
 
@@ -894,6 +968,28 @@ class M_Logistik extends CI_Model
         $this->db->select('*');
         $this->db->from('tb_op_plat');
         return $this->db->get()->result_array();
+    }
+
+    public function get_driver_name_by_kd($kd_driver)
+    {
+        return $this->db
+            ->select('nama_driver')
+            ->from('tb_op_driver')
+            ->where('kd_driver', $kd_driver)
+            ->limit(1)
+            ->get()
+            ->row();
+    }
+
+    public function get_truck_plate_by_id($truck_id)
+    {
+        return $this->db
+            ->select('noplat')
+            ->from('tb_op_plat')
+            ->where('id', $truck_id)
+            ->limit(1)
+            ->get()
+            ->row();
     }
 
     public function getbarangics()

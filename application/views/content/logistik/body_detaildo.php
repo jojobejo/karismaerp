@@ -80,15 +80,13 @@
                                 <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
                                 <?php endif; ?>
                                 <?php foreach ($kdo as $k) : ?>
-
                                     <?php $this->load->view('content/logistik/modal/modal_detail_do'); ?>
-
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
                                         <div>: <?= $k->kd_do ?></div>
                                         <?php foreach ($dostatus as $ds) : $date = date('d/m/Y') ?>
                                             <div class="col-auto" hidden>
-                                                <input type="text" class="form-control" value="<?= $ds->kd_do ?>" name="print_kdo" id="print_kdo">
+                                                <input type="text" class="form-control" value="<?= $ds->driver ?>" name="print_driver" id="print_driver">
                                                 <input type="text" class="form-control" value="<?= $date ?>" name="print_tgl" id="print_tgl">
                                                 <input type="text" class="form-control" value="<?= $ds->nolambung ?>" name="print_plat" id="print_plat">
                                                 <input type="text" class="form-control" value="<?= $ds->status ?>" name="print_status" id="print_status">
@@ -139,8 +137,26 @@
                                                         <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
                                                     </div>
                                                 </div>
+                                            </div>
 
+                                            <div class="row mb-2">
                                                 <div class="col-md">
+                                                    <div class="d-flex align-items-center flex-wrap gap-3 pt-2">
+                                                        <span class="me-3 fw-semibold">Pilih Pengiriman:</span>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman" id="pengiriman_kantor" value="expedisi_kantor" checked>
+                                                            <label class="form-check-label" for="pengiriman_kantor">Expedisi Kantor</label>
+                                                        </div>
+                                                        <div class="form-check form-check-inline">
+                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman" id="pengiriman_luar" value="expedisi_luar">
+                                                            <label class="form-check-label" for="pengiriman_luar">Expedisi Luar</label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mb-2">
+                                                <div class="col-md" id="select_driver_wrapper">
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-truck"></i></span>
@@ -154,7 +170,7 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="col-md">
+                                                <div class="col-md" id="select_truck_wrapper">
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
@@ -168,6 +184,23 @@
                                                     </div>
                                                 </div>
 
+                                                <div class="col-md d-none" id="input_driver_luar_wrapper">
+                                                    <div class="input-group">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                                        </div>
+                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi" placeholder="Nama Driver">
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md d-none" id="input_truck_luar_wrapper">
+                                                    <div class="input-group">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text"><i class="fas fa-truck-moving"></i></span>
+                                                        </div>
+                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi" placeholder="No Lambung Truk">
+                                                    </div>
+                                                </div>
                                             </div>
                                         <?php else : ?>
                                         <?php endif; ?>
@@ -187,11 +220,11 @@
                                                 <th rowspan="2">Rute</th>
                                                 <th colspan="2">TTB</th>
                                                 <!-- <th rowspan="2">No</th> -->
+                                                <th rowspan="2">NOTE FAKTUR</th>
                                                 <th rowspan="2">Nama Barang</th>
                                                 <th rowspan="2">No Lot</th>
                                                 <th colspan="2">Qty</th>
                                                 <th rowspan="2">Qty</th>
-
                                             </tr>
                                             <tr>
                                                 <th>Nama Kios</th>
@@ -239,7 +272,16 @@
                                                     ?>
                                                         <?php if ($d->status == '1') : ?>
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
-                                                                <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                                <div class="row">
+                                                                    <div class="col-6">
+                                                                        <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
+                                                                    </div>
+                                                                    <div class="col-6">
+                                                                        <button type="button" class="btn btn-sm btn-block btn-primary btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>">
+                                                                            <i class="fas fa-envelope"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
                                                             </td>
                                                         <?php elseif ($d->status == '2') : ?>
                                                         <?php endif; ?>
@@ -248,6 +290,8 @@
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->note_faktur != '' ? $row->note_faktur : '-' ?></td>
+
                                                     <?php endif; ?>
                                                     <!-- <td><?= $norut_counter++ ?></td> -->
                                                     <td><?= $row->nm_barang ?></td>
@@ -255,36 +299,7 @@
                                                     <td><?= $row->qty_box ?></td>
                                                     <td><?= $row->qty_pcs ?></td>
                                                     <td><?= $row->qty ?></td>
-                                                    <!-- <?php if ($d->status == '1') : ?>
-                                                    <?php if ($row->status == '2') : ?>
-                                                        <td><a href="#" class="btn btn-sm btn-block btn-success"></a></td>
-                                                    <?php elseif ($row->status == '3') : ?>
-                                                        <td><a href="#" class="btn btn-sm btn-block btn-danger"></a></td>
-                                                    <?php elseif ($row->status == '1') : ?>
-                                                        <td><a href="#" class="btn btn-sm btn-block btn-warning"></a></td>
-                                                    <?php endif; ?>
-                                                <?php elseif ($d->status == '2') : ?>
-                                                <?php endif; ?>
 
-                                                <?php if ($d->status == '1') : ?>
-                                                    <?php if ($row->status == '2') : ?>
-                                                        <td>
-                                                            <a href="#" class="btn btn-info"><i class="fas fa-thumbs-up"></i></a>
-                                                            <a href="<?= base_url('acc_check/' . $row->id . '/' . "3" . '/' . $row->kd_do) ?>" class="btn btn-warning"><i class="fas fa-undo"></i></a>
-                                                        </td>
-                                                    <?php elseif ($row->status == "3") : ?>
-                                                        <td>
-                                                            <a href="#" class="btn btn-danger"><i class="fas fa-times-circle"></i></a>
-                                                            <a href="<?= base_url('acc_check/' . $row->id . '/' . "3" . '/' . $row->kd_do) ?>" class="btn btn-warning"><i class="fas fa-undo"></i></a>
-                                                        </td>
-                                                    <?php elseif ($row->status == "1") : ?>
-                                                        <td>
-                                                            <a href="<?= base_url('acc_check/' . $row->id . '/' . "1" . '/' . $row->kd_do) ?>" class="btn btn-success"><i class="fas fa-check-circle"></i></a>
-                                                            <a href="<?= base_url('acc_check/' . $row->id . '/' . "2" . '/' . $row->kd_do) ?>" class="btn btn-danger"><i class="fas fa-times-circle"></i></a>
-                                                        </td>
-                                                    <?php endif; ?>
-                                                <?php elseif ($d->status == '2') : ?>
-                                                    <?php endif; ?> -->
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
@@ -414,40 +429,131 @@
         </aside>
     </div>
 
+    <div class="modal fade" id="modal_note_faktur" tabindex="-1" role="dialog" aria-labelledby="modalNoteFakturLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="<?= current_url(); ?>" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalNoteFakturLabel">Update Note Faktur</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="kd_faktur" id="modal_kd_faktur">
+                        <div class="form-group">
+                            <label for="modal_note_faktur_input">Note Faktur</label>
+                            <input type="text" class="form-control" name="note_faktur" id="modal_note_faktur_input" placeholder="Input note faktur" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function getJenisPengiriman() {
+            return $("input[name='jenis_pengiriman']:checked").val() || "expedisi_kantor";
+        }
+
+        function isExpedisiLuar() {
+            return getJenisPengiriman() === "expedisi_luar";
+        }
+
+        function getDriverValue() {
+            if (isExpedisiLuar()) {
+                return ($("#driver_luar_isi").val() || "").trim();
+            }
+            return $("#driver_isi").val();
+        }
+
+        function getTruckValue() {
+            if (isExpedisiLuar()) {
+                return ($("#truck_luar_isi").val() || "").trim();
+            }
+            return $("#truck_isi").val();
+        }
+
+        function togglePengirimanFields() {
+            var luar = isExpedisiLuar();
+
+            if (luar) {
+                $("#select_driver_wrapper, #select_truck_wrapper").addClass("d-none");
+                $("#input_driver_luar_wrapper, #input_truck_luar_wrapper").removeClass("d-none");
+                $("#driver_isi, #truck_isi").prop("required", false);
+                $("#driver_luar_isi, #truck_luar_isi").prop("required", true);
+            } else {
+                $("#select_driver_wrapper, #select_truck_wrapper").removeClass("d-none");
+                $("#input_driver_luar_wrapper, #input_truck_luar_wrapper").addClass("d-none");
+                $("#driver_isi, #truck_isi").prop("required", true);
+                $("#driver_luar_isi, #truck_luar_isi").prop("required", false);
+            }
+        }
+
+        function resetFieldBorder() {
+            $(".form-control").css("border", "");
+        }
+
+        function validatePengirimanInput(tgl_krim, driver, platno) {
+            var valid = true;
+            var luar = isExpedisiLuar();
+
+            if (!tgl_krim) {
+                $("#tgl_isi").css("border", "2px solid red");
+                valid = false;
+            }
+
+            if (!driver) {
+                if (luar) {
+                    $("#driver_luar_isi").css("border", "2px solid red");
+                } else {
+                    $("#driver_isi").css("border", "2px solid red");
+                }
+                valid = false;
+            }
+
+            if (!platno) {
+                if (luar) {
+                    $("#truck_luar_isi").css("border", "2px solid red");
+                } else {
+                    $("#truck_isi").css("border", "2px solid red");
+                }
+                valid = false;
+            }
+
+            return valid;
+        }
+
         $(document).ready(function() {
+            togglePengirimanFields();
+            $("input[name='jenis_pengiriman']").on("change", togglePengirimanFields);
+
+            $("#modal_note_faktur").on("show.bs.modal", function(event) {
+                var button = $(event.relatedTarget);
+                var kdFaktur = button.data("kd_faktur") || "";
+                var noteFaktur = button.data("note_faktur") || "";
+
+                $("#modal_kd_faktur").val(kdFaktur);
+                $("#modal_note_faktur_input").val(noteFaktur);
+            });
+
             $("#draftpost").on('click', function() {
                 var kd_do = $("#do_isi").val().trim();
                 var tgl_krim = $("#tgl_isi").val();
-                var platno = $("#truck_isi").val();
-                var driver = $("#driver_isi").val();
+                var platno = getTruckValue();
+                var driver = getDriverValue();
+                var jenis_pengiriman = getJenisPengiriman();
 
-                $("input").css("border", "");
+                resetFieldBorder();
 
-                if (!tgl_krim && !platno && !driver) {
-                    alert('Semua field masih kosong.');
-                    $("input").css("border", "2px solid red");
+                if (!validatePengirimanInput(tgl_krim, driver, platno)) {
+                    alert("Lengkapi semua field terlebih dahulu.");
                     return;
                 }
-
-                var isValid = true;
-                if (!tgl_krim) {
-                    alert('Tanggal Kirim harus diisi.');
-                    $("#tgl_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-                if (!platno) {
-                    alert('Plat Nomor harus diisi.');
-                    $("#plat_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-                if (!driver) {
-                    alert('Nama Driver harus diisi.');
-                    $("#driver_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-
-                if (!isValid) return;
 
                 $.ajax({
                     url: "<?= base_url('rekam_order_check') ?>",
@@ -456,7 +562,8 @@
                         kd_do: kd_do,
                         tgl_krim: tgl_krim,
                         platno: platno,
-                        driver: driver
+                        driver: driver,
+                        jenis_pengiriman: jenis_pengiriman
                     },
                     dataType: "JSON",
                     success: function(data) {
@@ -523,7 +630,7 @@
             var status = $("#print_status").val();
             var plat = $("#print_plat").val();
             var tgl = $("#print_tgl").val();
-            var drive = $("#print_kdo").val();
+            var drive = $("#print_driver").val();
 
             var printUrl = "<?= base_url('print_do/') ?>" + kd_do +
                 "?tgl_kirim=" + encodeURIComponent(tgl) +
@@ -535,17 +642,13 @@
         $("#btnPrintOrder").on('click', function() {
             var kd_do = $(this).data('kd');
             var tgl_krim = $("#tgl_isi").val();
-            var driver = $("#driver_isi").val();
-            var platno = $("#truck_isi").val();
+            var driver = getDriverValue();
+            var platno = getTruckValue();
 
-            $(".form-control").css("border", "");
+            resetFieldBorder();
 
-            if (!tgl_krim || !driver || !platno) {
+            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
-
-                if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
-                if (!driver) $("#driver_isi").css("border", "2px solid red");
-                if (!platno) $("#truck_isi").css("border", "2px solid red");
                 return;
             }
 
@@ -561,14 +664,12 @@
         $("#btnPrintRegis").on('click', function() {
             var kd_do = $(this).data('kd');
             var tgl_krim = $("#tgl_isi").val();
-            var driver = $("#driver_isi").val();
-            var platno = $("#truck_isi").val();
+            var driver = getDriverValue();
+            var platno = getTruckValue();
 
-            if (!tgl_krim || !platno || !driver) {
+            resetFieldBorder();
+            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
-                if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
-                if (!platno) $("#plat_isi").css("border", "2px solid red");
-                if (!driver) $("#driver_isi").css("border", "2px solid red");
                 return;
             }
             var printUrl = "<?= base_url('print_regis/') ?>" + kd_do +
@@ -583,7 +684,7 @@
             var status = $("#print_status").val();
             var plat = $("#print_plat").val();
             var tgl = $("#print_tgl").val();
-            var drive = $("#print_kdo").val();
+            var drive = $("#print_driver").val();
 
             var printUrl = "<?= base_url('print_regis/') ?>" + kd_do +
                 "?tgl_kirim=" + encodeURIComponent(tgl) +
@@ -595,14 +696,12 @@
         $("#btnPrintChecker").on('click', function() {
             var kd_do = $(this).data('kd');
             var tgl_krim = $("#tgl_isi").val();
-            var driver = $("#driver_isi").val();
-            var platno = $("#truck_isi").val();
+            var driver = getDriverValue();
+            var platno = getTruckValue();
 
-            if (!tgl_krim || !platno || !driver) {
+            resetFieldBorder();
+            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
                 alert("Lengkapi semua field terlebih dahulu sebelum print.");
-                if (!tgl_krim) $("#tgl_isi").css("border", "2px solid red");
-                if (!platno) $("#plat_isi").css("border", "2px solid red");
-                if (!driver) $("#driver_isi").css("border", "2px solid red");
                 return;
             }
             var printUrl = "<?= base_url('print_checker/') ?>" + kd_do +
@@ -617,7 +716,7 @@
             var status = $("#print_status").val();
             var plat = $("#print_plat").val();
             var tgl = $("#print_tgl").val();
-            var drive = $("#print_kdo").val();
+            var drive = $("#print_driver").val();
 
             var printUrl = "<?= base_url('print_checker/') ?>" + kd_do +
                 "?tgl_kirim=" + encodeURIComponent(tgl) +

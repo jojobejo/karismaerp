@@ -599,20 +599,314 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang()
     {
-        $user   = $this->session->userdata('jobdesk');
+        $data['page_title']         = 'KARISMA';
 
-        if ($user == 'ADMINKEU') {
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/master_barang.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('content/keuangan/ajax/ajax_master_barang.php', $data);
+    }
 
-            $data['page_title']         = 'KARISMA';
-            $data['barang']             = $this->M_Keuangan->master_barang();
+    private function response_json($payload = [], $code = 200)
+    {
+        $this->output
+            ->set_status_header($code)
+            ->set_content_type('application/json')
+            ->set_output(json_encode($payload));
+    }
 
-            $this->load->view('partial/main/header.php', $data);
-            $this->load->view('content/keuangan/detail_lot.php', $data);
-            $this->load->view('partial/main/footergdg.php');
-        } elseif ($user == 'LOGISTIK') {
-        } else {
-            return redirect('');
+    private function master_barang_payload()
+    {
+        return [
+            'kode_barang' => trim((string)$this->input->post('kode_barang', true)),
+            'nama_barang' => trim((string)$this->input->post('nama_barang', true)),
+            'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
+            'satuan'      => trim((string)$this->input->post('satuan', true)),
+            'berat'       => (float)$this->input->post('berat', true),
+            'kubikasi'    => (float)$this->input->post('kubikasi', true),
+            'p'           => (int)$this->input->post('p', true),
+            'l'           => (int)$this->input->post('l', true),
+            't'           => (int)$this->input->post('t', true),
+        ];
+    }
+
+    public function master_barang_list()
+    {
+        $draw   = (int)$this->input->post('draw');
+        $start  = (int)$this->input->post('start');
+        $length = (int)$this->input->post('length');
+        $searchInput = $this->input->post('search');
+        $search = '';
+        if (is_array($searchInput) && isset($searchInput['value'])) {
+            $search = trim((string)$searchInput['value']);
         }
+
+        if ($length <= 0) {
+            $length = 10;
+        }
+
+        $rows = $this->M_Keuangan->master_barang_all($length, $start, $search);
+        $data = [];
+
+        foreach ($rows as $row) {
+            $data[] = [
+                'kode_barang' => $row->kode_barang,
+                'nama_barang' => $row->nama_barang,
+                'bahan_aktif' => $row->bahan_aktif,
+                'satuan'      => $row->satuan,
+                'berat'       => $row->berat,
+                'kubikasi'    => $row->kubikasi,
+                'dimensi'     => $row->dimensi,
+                'aksi'        => '<button type="button" class="btn btn-sm btn-warning btn-edit-master mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
+                                  <button type="button" class="btn btn-sm btn-danger btn-delete-master" data-id="' . (int)$row->id . '" data-nama="' . html_escape($row->nama_barang) . '"><i class="fas fa-trash"></i></button>',
+            ];
+        }
+
+        $this->response_json([
+            'draw'            => $draw,
+            'recordsTotal'    => $this->M_Keuangan->master_barang_count_all(),
+            'recordsFiltered' => $this->M_Keuangan->master_barang_count_filtered($search),
+            'data'            => $data,
+        ]);
+    }
+
+    public function master_barang_detail()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $detail = $this->M_Keuangan->master_barang_by_id($id);
+        if (!$detail) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan.',
+            ], 404);
+        }
+
+        $this->response_json([
+            'status' => true,
+            'data' => $detail,
+        ]);
+    }
+
+    public function master_barang_store()
+    {
+        $payload = $this->master_barang_payload();
+        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang dan nama barang wajib diisi.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_barang_store($payload);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master barang berhasil disimpan.' : 'Gagal menyimpan data.',
+        ], $ok ? 200 : 500);
+    }
+
+    public function master_barang_update()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $payload = $this->master_barang_payload();
+        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang dan nama barang wajib diisi.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master barang berhasil diupdate.' : 'Gagal update data.',
+        ], $ok ? 200 : 500);
+    }
+
+    public function master_barang_delete()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_barang_delete($id);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master barang berhasil dihapus.' : 'Gagal menghapus data.',
+        ], $ok ? 200 : 500);
+    }
+
+    public function master_customer()
+    {
+        $data['page_title'] = 'KARISMA';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/master_customer.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('content/keuangan/ajax/ajax_master_customer.php', $data);
+    }
+
+    private function master_customer_payload()
+    {
+        return [
+            'kd_customer'         => trim((string)$this->input->post('kd_customer', true)),
+            'nama_customer'       => trim((string)$this->input->post('nama_customer', true)),
+            'nama_kios'           => trim((string)$this->input->post('nama_kios', true)),
+            'alamat_kios'         => trim((string)$this->input->post('alamat_kios', true)),
+            'telp1'               => trim((string)$this->input->post('telp1', true)),
+            'telp2'               => trim((string)$this->input->post('telp2', true)),
+            'regional'            => trim((string)$this->input->post('regional', true)),
+            'jam_buka_tutup'      => trim((string)$this->input->post('jam_buka_tutup', true)),
+            'karakteristik_kios'  => trim((string)$this->input->post('karakteristik_kios', true)),
+        ];
+    }
+
+    public function master_customer_list()
+    {
+        $draw   = (int)$this->input->post('draw');
+        $start  = (int)$this->input->post('start');
+        $length = (int)$this->input->post('length');
+        $searchInput = $this->input->post('search');
+        $search = '';
+        if (is_array($searchInput) && isset($searchInput['value'])) {
+            $search = trim((string)$searchInput['value']);
+        }
+
+        if ($length <= 0) {
+            $length = 10;
+        }
+
+        $rows = $this->M_Keuangan->master_customer_all($length, $start, $search);
+        $data = [];
+
+        foreach ($rows as $row) {
+            $data[] = [
+                'kd_customer'        => $row->kd_customer,
+                'nama_customer'      => $row->nama_customer,
+                'nama_kios'          => $row->nama_kios,
+                'alamat_kios'        => $row->alamat_kios,
+                'telp1'              => $row->telp1,
+                'telp2'              => $row->telp2,
+                'regional'           => $row->regional,
+                'jam_buka_tutup'     => $row->jam_buka_tutup,
+                'karakteristik_kios' => $row->karakteristik_kios,
+                'aksi'               => '<button type="button" class="btn btn-sm btn-warning btn-edit-customer mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
+                                          <button type="button" class="btn btn-sm btn-danger btn-delete-customer" data-id="' . (int)$row->id . '" data-nama="' . html_escape($row->nama_customer) . '"><i class="fas fa-trash"></i></button>',
+            ];
+        }
+
+        $this->response_json([
+            'draw'            => $draw,
+            'recordsTotal'    => $this->M_Keuangan->master_customer_count_all(),
+            'recordsFiltered' => $this->M_Keuangan->master_customer_count_filtered($search),
+            'data'            => $data,
+        ]);
+    }
+
+    public function master_customer_detail()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $detail = $this->M_Keuangan->master_customer_by_id($id);
+        if (!$detail) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Data tidak ditemukan.',
+            ], 404);
+        }
+
+        $this->response_json([
+            'status' => true,
+            'data' => $detail,
+        ]);
+    }
+
+    public function master_customer_store()
+    {
+        $payload = $this->master_customer_payload();
+        if ($payload['kd_customer'] === '' || $payload['nama_customer'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode customer dan nama customer wajib diisi.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_customer_store($payload);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master customer berhasil disimpan.' : 'Gagal menyimpan data.',
+        ], $ok ? 200 : 500);
+    }
+
+    public function master_customer_update()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $payload = $this->master_customer_payload();
+        if ($payload['kd_customer'] === '' || $payload['nama_customer'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode customer dan nama customer wajib diisi.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_customer_update($id, $payload);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master customer berhasil diupdate.' : 'Gagal update data.',
+        ], $ok ? 200 : 500);
+    }
+
+    public function master_customer_delete()
+    {
+        $id = (int)$this->input->post('id', true);
+        if ($id <= 0) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'ID tidak valid.',
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->master_customer_delete($id);
+
+        $this->response_json([
+            'status' => (bool)$ok,
+            'message' => $ok ? 'Data master customer berhasil dihapus.' : 'Gagal menghapus data.',
+        ], $ok ? 200 : 500);
     }
 
     public function pricelist_online()

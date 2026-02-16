@@ -32,13 +32,19 @@
                                 <a href="<?= base_url('faktur_on_site') ?>" class="btn btn-success mb-2">Faktur Cash / On Site</a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/master_barang') ?>" class="btn btn-info mb-2">Master Barang</a>
+                                <a href="<?= base_url('master_barang') ?>" class="btn btn-info mb-2">Master Barang</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('master_customer') ?>" class="btn btn-primary mb-2">Master Customer</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">Add Delivery Order</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('faktur_bintang') ?>" class="btn btn-info  mb-2">Faktur Bintang</a>
+                            </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('view_faktur_not_list') ?>" class="btn btn-warning mb-2">Faktur Barang Belum Terdaftar</a>
                             </div>
                             <div class="col-auto">
                                 <a href="<?= base_url('tonase_report') ?>" class="btn btn-primary mb-2">Tonase Rekap </a>

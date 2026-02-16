@@ -60,20 +60,16 @@
             <div class="header-title-rute">RUTE : <?= $d->regional ?></div>
 
             <div class="info-faktur">
-                <?php foreach ($doprintsts as $print) :
-                    $tonase = ($print->total_tonase_faktur / 10000);
-                    $tgl_kirim = $this->input->get('tgl_kirim');
-                    $driver = $this->input->get('driver');
-                    $plat = $this->input->get('plat');
+                <?php
+                $tgl_kirim = $this->input->get('tgl_kirim');
                 ?>
-                    <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
-                    <div>Driver : <?= htmlspecialchars($driver) ?></div>
-                    <div>No Polisi : <?= htmlspecialchars($plat) ?> </div>
-                    <div>Total Customer :<?= $print->totalfaktur ?> </div>
-                    <div>Total Barang : <?= $print->total_barang ?></div>
-                    <div>Tonase : <?= $print->total_tonase_faktur . ' (Ton)' ?></div>
-                    <div>Kubikasi : <?= $print->total_kubikasi . ' (m³) ' ?></div>
-                <?php endforeach; ?>
+                <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
+                <div>Driver : <?= htmlspecialchars($doprintsts->nama_driver) ?></div>
+                <div>No Polisi : <?= htmlspecialchars($doprintsts->noplat) ?></div>
+                <div>Total Customer :<?= $doprintsts->totalfaktur ?> </div>
+                <div>Total Barang : <?= $doprintsts->total_barang ?></div>
+                <div>Tonase : <?= $doprintsts->total_tonase_faktur . ' (Ton)' ?></div>
+                <div>Kubikasi : <?= $doprintsts->total_kubikasi . ' (m³) ' ?></div>
             </div>
 
             <table class="table table-bordered" id="tb_checker_do">

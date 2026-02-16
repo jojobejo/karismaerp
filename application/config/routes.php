@@ -83,12 +83,28 @@ $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock
 // STOCK ONLINE GUDANG
 $route['stock']                                     = 'logistik/C_Logistik/stock_control';
 
+// MASTER BARANG
+$route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
+$route['master_barang/list']                        = 'keuangan/C_Keuangan/master_barang_list';
+$route['master_barang/detail']                      = 'keuangan/C_Keuangan/master_barang_detail';
+$route['master_barang/store']                       = 'keuangan/C_Keuangan/master_barang_store';
+$route['master_barang/update']                      = 'keuangan/C_Keuangan/master_barang_update';
+$route['master_barang/delete']                      = 'keuangan/C_Keuangan/master_barang_delete';
+$route['master_customer']                           = 'keuangan/C_Keuangan/master_customer';
+$route['master_customer/list']                      = 'keuangan/C_Keuangan/master_customer_list';
+$route['master_customer/detail']                    = 'keuangan/C_Keuangan/master_customer_detail';
+$route['master_customer/store']                     = 'keuangan/C_Keuangan/master_customer_store';
+$route['master_customer/update']                    = 'keuangan/C_Keuangan/master_customer_update';
+$route['master_customer/delete']                    = 'keuangan/C_Keuangan/master_customer_delete';
+
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
+
 $route['ics/master_barang']                         = 'logistik/C_Ics/master_barang';
 $route['ics/save_mbarang']                          = 'logistik/C_Ics/add_master_barang';
 $route['ics/save_edit_mbarang']                     = 'logistik/C_Ics/edit_master_barang';
 $route['ics/get_detail_mbarang']                    = 'logistik/C_Ics/get_detail_mbarang';
+
 $route['ics/by_expdate']                            = 'logistik/C_Ics/ics_by_expdate';
 $route['ics/by_allbarang']                          = 'logistik/C_Ics/ics_by_allbarang';
 $route['ics/updateinline']                          = 'logistik/C_Ics/update_inline';
@@ -178,6 +194,9 @@ $route['logistik/distibusi']                        = 'logistik/C_Distribusi';
 $route['logistik/distibusi/get_ploting_rute']       = 'logistik/C_Distribusi/get_ploting_rute';
 $route['logistik/distibusi/driver_rute_matrix']     = 'logistik/C_Distribusi/driver_rute_matrix';
 $route['logistik/distibusi/driver_ready']           = 'logistik/C_Distribusi/driver_ready';
+$route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/list_faktur_status';
+$route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
+$route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
 
 
 // LOGISTIK & OPNAME
@@ -214,6 +233,9 @@ $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/inser
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
 $route['create_do']                                 = 'logistik/C_Logistik/create_do';
+$route['view_faktur_not_list']                      = 'logistik/C_Logistik/view_faktur_not_list';
+$route['ajax_view_faktur_not_list']                 = 'logistik/C_Logistik/ajax_view_faktur_not_list';
+$route['ajax_update_kd_barang_not_list']            = 'logistik/C_Logistik/ajax_update_kd_barang_not_list';
 $route['faktur_on_site']                            = 'logistik/C_Logistik/faktur_on_site';
 $route['edited_rute_do']                            = 'logistik/C_Logistik/edited_rute_do';
 $route['insert_tmp/(:any)/(:any)']                  = 'logistik/C_Logistik/insert_tmp/$1/$2';
