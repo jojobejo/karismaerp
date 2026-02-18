@@ -79,6 +79,7 @@ class M_Hrd extends CI_Model
         FROM tb_tamu a
         ");
     }
+
     //karyawan keluar masuk 
 
     public function get_all_laporan_karykm()
@@ -777,5 +778,30 @@ class M_Hrd extends CI_Model
         FROM tb_checklist_kendaraan h
         LEFT JOIN tb_checklist_kendaraan_detail d ON d.checklist_id = h.id
         GROUP BY h.id;")->result();
+    
+    public function insertchedule($data)
+    {
+        return $this->db->insert('tb_schedule_dirut', $data);
+    }
+    public function getdataschedule()
+    {
+        return $this->db->query("SELECT a.*
+        FROM tb_schedule_dirut a
+        ");
+    }
+    public function editchedule($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('tb_schedule_dirut', $data);
+    }
+    public function reschedule($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('tb_schedule_dirut', $data);
+    }
+    public function deleteschedule($id)
+    {
+        return $this->db->delete('tb_schedule_dirut', array("id" => $id));
+
     }
 }

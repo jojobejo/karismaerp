@@ -50,6 +50,4 @@ class C_Pelanggan extends CI_Controller
         $this->load->view('content/pelanggan/bodyreview.php', $data);
         $this->load->view('partial/main/footer.php');
     }
-
-    
 }
