@@ -201,7 +201,7 @@
                         </div>
                     </div>
                 </div> -->
-
+                <!-- 
                 <div class="card">
                     <div class="card-body">
 
@@ -243,7 +243,7 @@
                         </table>
 
                     </div>
-                </div>
+                </div> -->
 
 
             </section>

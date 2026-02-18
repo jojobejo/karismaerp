@@ -138,8 +138,6 @@ class M_Distribusi extends CI_Model
         return $this->db->get()->result();
     }
 
-
-
     public function all_driver()
     {
         return $this->db->query("SELECT * 
@@ -286,6 +284,29 @@ class M_Distribusi extends CI_Model
             ON o.kd_do = d.kd_do
         WHERE d.status = '4'
         AND o.tgl_pengiriman BETWEEN '2026-01-01' AND '2026-01-31' AND o.status = '2';
+        ")->result();
+    }
+
+    public function detail_tonase_rute($rute)
+    {
+        return $this->db->query("SELECT
+        a.kd_faktur,
+        a.kd_customer,
+        COUNT(a.kd_barang) AS total_barang,
+        COALESCE(ROUND(SUM(b.berat * a.qty) / 1000000, 3), 0) AS total_tonase,
+        CASE 
+            WHEN a.data_sts = '3' THEN 'Terkirim'
+            WHEN a.data_sts = '1' THEN 'Belum Terkirim'
+            ELSE 'Status Tidak Dikenal'
+        END AS keterangan_status
+    FROM tb_pre_do a
+    LEFT JOIN tb_master_barang_all b 
+        ON a.kd_barang = b.kd_barang
+    WHERE a.kd_rute = '$rute'
+    GROUP BY 
+        a.kd_faktur,
+        a.kd_customer,
+        a.data_sts;
         ")->result();
     }
 }

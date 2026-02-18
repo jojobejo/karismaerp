@@ -197,6 +197,10 @@ $route['logistik/distibusi/driver_ready']           = 'logistik/C_Distribusi/dri
 $route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/list_faktur_status';
 $route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
 $route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
+$route['logistik/distibusi/ajax_detail_tonase_by_rute'] = 'logistik/C_Distribusi/ajax_detail_tonase_by_rute';
+
+$route['distibusi/detail_rute/(:any)']              = 'logistik/C_Distribusi/detail_rute/$1';
+$route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/detail_tonase_by_rute/$1';
 
 
 // LOGISTIK & OPNAME
@@ -279,8 +283,6 @@ $route['get_tmpdonorut']                            = 'logistik/C_Logistik/get_t
 $route['update_norut']                              = 'logistik/C_Logistik/update_norut';
 $route['save_do']                                   = 'logistik/C_Logistik/save_do';
 $route['custupdate']                                = 'logistik/C_Logistik/custupdate';
-
-
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
