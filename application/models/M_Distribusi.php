@@ -212,29 +212,37 @@ class M_Distribusi extends CI_Model
         return $this->db->query("")->result();
     }
 
-    public function get_list_faktur_by_status($status)
+    public function get_list_do_by_status($status)
     {
         $this->db->select([
             'c.kd_do AS kode_do',
             'a.kd_faktur',
             'a.kd_rute',
             'a.kd_customer',
-            'b.nama_customer',
+            'a.nama_barang',
+            'a.qty',
+            'a.tgl_exp',
             'b.nama_kios',
-            'b.regional',
             "DATE_FORMAT(
             STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'),
             '%d/%m/%Y'
-        ) AS tgl_inputer_fmt",
-            'COUNT(DISTINCT a.kd_barang) AS total_item',
-            'SUM(a.qty) AS total_qty'
+        ) AS tgl_inputer_fmt"
         ], false);
+
         $this->db->from('tb_pre_do a');
-        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'left');
+
+        $this->db->join(
+            'tb_customer b',
+            'b.kd_customer = a.kd_customer',
+            'left'
+        );
+
         if ($status == 3) {
             $this->db->join(
                 'tb_ics_do c',
-                'c.kd_faktur = a.kd_faktur AND c.kd_do IS NOT NULL AND c.kd_do != ""',
+                'c.kd_faktur = a.kd_faktur 
+             AND c.kd_do IS NOT NULL 
+             AND c.kd_do != ""',
                 'inner'
             );
         } else {
@@ -244,17 +252,24 @@ class M_Distribusi extends CI_Model
                 'left'
             );
         }
+
         $this->db->where('a.data_sts', $status);
+
         $this->db->group_by([
             'a.kd_faktur',
             'a.kd_rute',
             'a.kd_customer',
-            'b.nama_customer',
-            'b.nama_kios',
-            'b.regional',
-            'a.tgl_inputer'
+            'a.kd_barang',
+            'a.tgl_exp',
+            'a.no_lot'
         ]);
-        $this->db->order_by("STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y')", 'DESC', false);
+
+        $this->db->order_by(
+            "STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y')",
+            'DESC',
+            false
+        );
+
         $this->db->order_by('a.kd_faktur', 'DESC');
 
         return $this->db->get()->result();

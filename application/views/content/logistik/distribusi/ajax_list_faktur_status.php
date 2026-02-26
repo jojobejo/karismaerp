@@ -27,12 +27,12 @@
                 const tgl = escapeHtml(row.tgl_inputer_fmt ? row.tgl_inputer_fmt : '-');
                 const faktur = escapeHtml(row.kd_faktur ? row.kd_faktur : '-');
                 const kodeDo = escapeHtml(row.kode_do ? row.kode_do : '-');
-                const customer = escapeHtml(row.nama_customer ? row.nama_customer : '-');
+                const customer = escapeHtml(row.kd_customer ? row.kd_customer : '-');
                 const kios = escapeHtml(row.nama_kios ? row.nama_kios : '-');
                 const rute = escapeHtml(row.kd_rute ? row.kd_rute : '-');
-                const regional = escapeHtml(row.regional ? row.regional : '-');
-                const totalItem = row.total_item ? row.total_item : 0;
-                const totalQty = row.total_qty ? row.total_qty : 0;
+                const namaBarang = escapeHtml(row.nama_barang ? row.nama_barang : '-');
+                const qty = escapeHtml(row.qty ? row.qty : '0');
+                const tglExp = escapeHtml(row.tgl_exp ? row.tgl_exp : '-');
                 html += `
                     <tr>
                         <td>${index + 1}</td>
@@ -42,9 +42,9 @@
                         <td>${customer}</td>
                         <td>${kios}</td>
                         <td>${rute}</td>
-                        <td>${regional}</td>
-                        <td>${totalItem}</td>
-                        <td>${totalQty}</td>
+                        <td>${namaBarang}</td>
+                        <td>${qty}</td>
+                        <td>${tglExp}</td>
                         <td>${statusBadge(status)}</td>
                     </tr>
                 `;

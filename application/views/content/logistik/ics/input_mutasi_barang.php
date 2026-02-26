@@ -26,8 +26,16 @@
         <?php $this->load->view('partial/main/sidebar') ?>
 
         <div class="content-wrapper">
+
+
             <div class="content-header">
                 <section class="content">
+
+                    <div class="row mb-2">
+                        <div class="col-auto">
+                            <a href="<?= base_url('ics/mutasi_barang') ?>" class="btn btn-md btn-primary">Dashboard Mutasi</a>
+                        </div>
+                    </div>
 
                     <div class="row">
                         <div class="col-4">

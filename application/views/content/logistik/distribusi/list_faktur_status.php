@@ -62,12 +62,12 @@
                                     <th>Tanggal Input</th>
                                     <th>Kode Faktur</th>
                                     <th>Kode DO</th>
-                                    <th>Nama Customer</th>
+                                    <th>Kode Customer</th>
                                     <th>Kios</th>
                                     <th>Rute</th>
-                                    <th>Regional</th>
-                                    <th>Total Item</th>
-                                    <th>Total Qty</th>
+                                    <th>Nama Barang</th>
+                                    <th>Qty</th>
+                                    <th>Tgl Exp</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>

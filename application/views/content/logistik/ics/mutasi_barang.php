@@ -12,6 +12,9 @@
 
             <div class="row m-2 ">
                 <div class="col-auto">
+                    <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary">Dashboard</a>
+                </div>
+                <div class="col-auto">
                     <a href="<?= base_url('ics/mutasi_barang/input') ?>" class="btn btn-md btn-success">Input Data</a>
                 </div>
             </div>
@@ -19,6 +22,7 @@
             <div class="card m-3">
                 <div class="card-body">
                     <div class="row mb-3">
+
                         <div class="col-md-3">
                             <label>Gudang Asal</label>
                             <select id="filter_gudang" class="form-control">

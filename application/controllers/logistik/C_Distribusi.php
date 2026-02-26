@@ -81,7 +81,7 @@ class C_Distribusi extends CI_Controller
             $status = '1';
         }
 
-        $data = $this->M_Distribusi->get_list_faktur_by_status($status);
+        $data = $this->M_Distribusi->get_list_do_by_status($status);
 
         echo json_encode([
             'status' => true,
