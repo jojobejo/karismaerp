@@ -1047,9 +1047,59 @@ class C_Ics extends CI_Controller
     {
         $data['page_title']         = 'KARISMA - LOGISTIK';
 
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['lpb'] = $this->M_Logistik->get_data_po($date1, $date2);
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/dtalbp.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function save_qty_diterima()
+    {
+        // Ambil data dari POST
+        $post_data = [
+            'no_po'        => $this->input->post('no_po',        TRUE),
+            'kd_barang'    => $this->input->post('kd_barang',    TRUE),
+            'qty_diterima' => $this->input->post('qty_masuk',    TRUE),  // nama field di form: qty_masuk
+            'no_lot'       => $this->input->post('no_lot',       TRUE),
+            'exp_date'     => $this->input->post('exp_date',     TRUE),
+        ];
+
+        // Validasi dasar
+        if (empty($post_data['no_po']) || empty($post_data['kd_barang']) || $post_data['qty_diterima'] === '') {
+            // Jika request AJAX
+            if ($this->input->is_ajax_request()) {
+                echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap.']);
+                return;
+            }
+            $this->session->set_flashdata('error', 'Data tidak lengkap, gagal menyimpan.');
+            redirect('ics/icspo');
+            return;
+        }
+
+        $simpan = $this->Ics_po_model->save_detail_lpb($post_data);
+
+        // Response AJAX
+        if ($this->input->is_ajax_request()) {
+            if ($simpan) {
+                echo json_encode(['status' => 'success', 'message' => 'Data berhasil disimpan.']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data.']);
+            }
+            return;
+        }
+
+        // Response form POST biasa
+        if ($simpan) {
+            $this->session->set_flashdata('success', 'Data penerimaan berhasil disimpan.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menyimpan data penerimaan.');
+        }
+
+        redirect('ics/icspo');
     }
 
     // public function get_lpb()

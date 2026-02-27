@@ -2619,4 +2619,82 @@ FROM (
             ->get('tb_customer')
             ->row();
     }
+
+    public function get_data_po($date1 = null, $date2 = null)
+    {
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.tgl_transaksi,
+            pp.kd_suplier,
+            pp.kd_barang,
+            pp.satuan,
+            pp.qty,
+            pp.status,
+            mb.nama_barang,
+            COALESCE(SUM(dl.qty_diterima), 0) AS qty_masuk
+        ');
+        $this->db->from('tb_pre_po pp');
+
+        // JOIN ke master barang untuk ambil nama_barang
+        $this->db->join(
+            'tb_master_barang_all mb',
+            'mb.kd_barang = pp.kd_barang',
+            'left'
+        );
+
+        // JOIN ke tb_detail_lpb untuk hitung total qty yang sudah masuk
+        $this->db->join(
+            'tb_detail_lpb dl',
+            'dl.no_po = pp.no_po AND dl.kd_barang = pp.kd_barang',
+            'left'
+        );
+
+        // Filter tanggal jika diberikan
+        if (!empty($date1) && !empty($date2)) {
+            $this->db->where('pp.tgl_transaksi >=', $date1);
+            $this->db->where('pp.tgl_transaksi <=', $date2);
+        }
+
+        // GROUP BY diperlukan karena ada SUM
+        $this->db->group_by('pp.id_pre_po');
+
+        $this->db->order_by('pp.id_pre_po', 'DESC');
+
+        $query = $this->db->get();
+        return $query->result_array();
+    }
+
+    public function save_detail_lpb($data)
+    {
+        $insert = [
+            'no_po'        => $data['no_po'],
+            'kd_barang'    => $data['kd_barang'],
+            'qty_diterima' => (int) $data['qty_diterima'],
+            'no_lot'       => $data['no_lot']   ?? null,
+            'exp_date'     => !empty($data['exp_date']) ? $data['exp_date'] : null,
+            'create_at'    => date('Y-m-d H:i:s'),
+        ];
+
+        return $this->db->insert('tb_detail_lpb', $insert);
+    }
+
+    public function get_detail_by_po($no_po)
+    {
+        $this->db->select('
+            dl.*,
+            mb.nama_barang
+        ');
+        $this->db->from('tb_detail_lpb dl');
+        $this->db->join(
+            'tb_master_barang_all mb',
+            'mb.kd_barang = dl.kd_barang',
+            'left'
+        );
+        $this->db->where('dl.no_po', $no_po);
+        $this->db->order_by('dl.id_detail_lpb', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
 }
