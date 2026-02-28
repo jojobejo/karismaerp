@@ -135,6 +135,7 @@ $route['ics/update_gudang']                         = 'logistik/C_Ics/update_gud
 $route['ics/update_wilayah']                        = 'logistik/C_Ics/update_wilayah';
 $route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
+$route['save_qty_diterima']                         = 'logistik/C_Ics/save_qty_diterima';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';

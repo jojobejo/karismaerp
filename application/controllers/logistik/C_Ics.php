@@ -1,3 +1,4 @@
+<!-- ini file controller saya controller/logistik/C_ics.php -->
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -1045,11 +1046,10 @@ class C_Ics extends CI_Controller
 
     public function data_lpb_zahir()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
-
+        $data['page_title']   = 'KARISMA - LOGISTIK';
+        $data['list_satuan']  = $this->db->get('tb_satuan')->result_array(); // tambah ini
         $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
-
         $data['lpb'] = $this->M_Logistik->get_data_po($date1, $date2);
 
         $this->load->view('partial/main/header.php', $data);
@@ -1059,47 +1059,38 @@ class C_Ics extends CI_Controller
 
     public function save_qty_diterima()
     {
-        // Ambil data dari POST
-        $post_data = [
-            'no_po'        => $this->input->post('no_po',        TRUE),
-            'kd_barang'    => $this->input->post('kd_barang',    TRUE),
-            'qty_diterima' => $this->input->post('qty_masuk',    TRUE),  // nama field di form: qty_masuk
-            'no_lot'       => $this->input->post('no_lot',       TRUE),
-            'exp_date'     => $this->input->post('exp_date',     TRUE),
-        ];
+        $no_po     = $this->input->post('no_po',     TRUE);
+        $kd_barang = $this->input->post('kd_barang', TRUE);
+        $rows      = $this->input->post('rows');
 
-        // Validasi dasar
-        if (empty($post_data['no_po']) || empty($post_data['kd_barang']) || $post_data['qty_diterima'] === '') {
-            // Jika request AJAX
-            if ($this->input->is_ajax_request()) {
-                echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap.']);
-                return;
-            }
-            $this->session->set_flashdata('error', 'Data tidak lengkap, gagal menyimpan.');
-            redirect('ics/icspo');
+        if (empty($no_po) || empty($kd_barang) || empty($rows)) {
+            $this->session->set_flashdata('error', 'Data tidak lengkap.');
+            redirect('data_lpb_zahir');
             return;
         }
 
-        $simpan = $this->Ics_po_model->save_detail_lpb($post_data);
-
-        // Response AJAX
-        if ($this->input->is_ajax_request()) {
-            if ($simpan) {
-                echo json_encode(['status' => 'success', 'message' => 'Data berhasil disimpan.']);
-            } else {
-                echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan data.']);
-            }
-            return;
+        $insert_batch = [];
+        foreach ($rows as $row) {
+            if (empty($row['qty_diterima'])) continue;
+            $insert_batch[] = [
+                'no_po'        => $no_po,
+                'kd_barang'    => $kd_barang,
+                'qty_diterima' => (int) $row['qty_diterima'],
+                'satuan'       => $row['satuan']   ?? null,
+                'no_lot'       => $row['no_lot']   ?: null,
+                'exp_date'     => !empty($row['exp_date']) ? $row['exp_date'] : null,
+                'create_at'    => date('Y-m-d H:i:s'),
+            ];
         }
 
-        // Response form POST biasa
-        if ($simpan) {
-            $this->session->set_flashdata('success', 'Data penerimaan berhasil disimpan.');
+        if (!empty($insert_batch)) {
+            $this->db->insert_batch('tb_detail_lpb', $insert_batch);
+            $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
         } else {
-            $this->session->set_flashdata('error', 'Gagal menyimpan data penerimaan.');
+            $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
         }
 
-        redirect('ics/icspo');
+        redirect('data_lpb_zahir');
     }
 
     // public function get_lpb()

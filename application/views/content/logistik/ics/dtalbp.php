@@ -1,3 +1,4 @@
+<!-- ini file view/content/logistik/ics/datalpb.php saya  -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -159,105 +160,96 @@
 <!-- ================================================================
      MODAL INPUT PENERIMAAN BARANG
 ================================================================ -->
-<div class="modal fade" id="modalInputQty" tabindex="-1" role="dialog" aria-labelledby="modalInputQtyLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md" role="document">
+<!-- MODAL INPUT PENERIMAAN BARANG -->
+<div class="modal fade" id="modalInputQty" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
 
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="modalInputQtyLabel">
+                <h5 class="modal-title">
                     <i class="fas fa-plus-circle mr-2"></i> Input Penerimaan Barang
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Tutup">
-                    <span aria-hidden="true">&times;</span>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
                 </button>
             </div>
 
             <div class="modal-body">
-                <!-- Form POST ke controller save_qty_diterima -->
-                <form id="formInputQty" action="<?= base_url('ics/save_qty_diterima') ?>" method="post">
 
-                    <!-- ---- Informasi Read Only ---- -->
-                    <div class="form-group row align-items-center">
-                        <label class="col-sm-4 col-form-label font-weight-bold">No PO</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control-plaintext font-weight-bold text-primary"
-                                   id="modal_no_po" name="no_po" readonly>
-                        </div>
+                <!-- Informasi Read Only -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">No PO</label>
+                        <input type="text" class="form-control-plaintext font-weight-bold text-primary" id="modal_no_po" readonly>
                     </div>
-
-                    <div class="form-group row align-items-center">
-                        <label class="col-sm-4 col-form-label font-weight-bold">Kode Barang</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control-plaintext"
-                                   id="modal_kd_barang" name="kd_barang" readonly>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">Kode Barang</label>
+                        <input type="text" class="form-control-plaintext" id="modal_kd_barang" readonly>
                     </div>
-
-                    <div class="form-group row align-items-center">
-                        <label class="col-sm-4 col-form-label font-weight-bold">Nama Barang</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control-plaintext text-muted"
-                                   id="modal_nama_barang" readonly>
-                        </div>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">Nama Barang</label>
+                        <input type="text" class="form-control-plaintext text-muted" id="modal_nama_barang" readonly>
                     </div>
+                </div>
 
-                    <div class="form-group row align-items-center">
-                        <label class="col-sm-4 col-form-label font-weight-bold">Qty Order</label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control-plaintext"
-                                   id="modal_qty_order" readonly>
-                        </div>
-                    </div>
+                <hr class="my-2">
 
-                    <hr class="my-2">
+                <!-- Tabel Input Multiple Row -->
+                <form id="formInputQty" action="<?= base_url('save_qty_diterima') ?>" method="post">
+                    <input type="hidden" name="no_po"     id="form_no_po">
+                    <input type="hidden" name="kd_barang" id="form_kd_barang">
 
-                    <!-- ---- Input yang bisa diisi ---- -->
-                    <div class="form-group row align-items-center">
-                        <label for="input_qty_diterima" class="col-sm-4 col-form-label font-weight-bold">
-                            Qty Diterima <span class="text-danger">*</span>
-                        </label>
-                        <div class="col-sm-8">
-                            <input type="number" class="form-control border-success"
-                                   id="input_qty_diterima" name="qty_masuk"
-                                   min="1" placeholder="Masukkan qty diterima" required>
-                        </div>
-                    </div>
+                    <table class="table table-bordered table-sm" id="tabelInputBaris">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width:160px;">Qty Diterima <span class="text-danger">*</span></th>
+                                <th style="width:130px;">Satuan <span class="text-danger">*</span></th>
+                                <th style="width:160px;">No Lot</th>
+                                <th style="width:160px;">Exp Date</th>
+                                <th style="width:50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bodyInputBaris">
+                            <!-- baris pertama default -->
+                            <tr>
+                                <td><input type="number" class="form-control form-control-sm" name="rows[0][qty_diterima]" min="1" required></td>
+                                <td>
+                                    <select class="form-control form-control-sm" name="rows[0][satuan]" required>
+                                        <option value="">-- Pilih --</option>
+                                        <?php foreach ($list_satuan as $s) : ?>
+                                            <option value="<?= $s['nm_satuan'] ?>"><?= $s['nm_satuan'] ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm" name="rows[0][no_lot]" placeholder="No Lot"></td>
+                                <td><input type="date" class="form-control form-control-sm" name="rows[0][exp_date]"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-danger btn-hapus-baris" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                    <div class="form-group row align-items-center">
-                        <label for="input_no_lot" class="col-sm-4 col-form-label font-weight-bold">
-                            No Lot
-                        </label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control"
-                                   id="input_no_lot" name="no_lot"
-                                   placeholder="Masukkan no lot / batch">
-                        </div>
-                    </div>
-
-                    <div class="form-group row align-items-center">
-                        <label for="input_exp_date" class="col-sm-4 col-form-label font-weight-bold">
-                            Exp Date
-                        </label>
-                        <div class="col-sm-8">
-                            <input type="date" class="form-control"
-                                   id="input_exp_date" name="exp_date">
-                        </div>
-                    </div>
+                    <button type="button" class="btn btn-sm btn-info" id="btnTambahBaris">
+                        <i class="fas fa-plus"></i> Tambah Baris
+                    </button>
 
                 </form>
-            </div><!-- /.modal-body -->
+            </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">
                     <i class="fas fa-times mr-1"></i> Batal
                 </button>
                 <button type="submit" form="formInputQty" class="btn btn-success">
-                    <i class="fas fa-save mr-1"></i> Simpan
+                    <i class="fas fa-save mr-1"></i> Simpan Semua
                 </button>
             </div>
 
-        </div><!-- /.modal-content -->
-    </div><!-- /.modal-dialog -->
+        </div>
+    </div>
 </div>
 <!-- ================================================================ -->
 
@@ -265,24 +257,74 @@
 <script>
 $(document).ready(function () {
 
-    // Saat tombol plus diklik, isi data ke dalam modal
+    // Isi data modal saat tombol plus diklik
     $('.btn-input-qty').on('click', function () {
         $('#modal_no_po').val($(this).data('no-po'));
         $('#modal_kd_barang').val($(this).data('kd-barang'));
         $('#modal_nama_barang').val($(this).data('nama-barang'));
-        $('#modal_qty_order').val($(this).data('qty-order'));
+        $('#form_no_po').val($(this).data('no-po'));
+        $('#form_kd_barang').val($(this).data('kd-barang'));
 
-        // Reset field input setiap modal dibuka
-        $('#input_qty_diterima').val('');
-        $('#input_no_lot').val('');
-        $('#input_exp_date').val('');
+        // Reset tabel ke 1 baris kosong
+        resetTabel();
     });
 
-    // Auto-dismiss alert setelah 4 detik
-    setTimeout(function () {
-        $('.alert').fadeOut('slow');
-    }, 4000);
+    // Tambah baris baru
+    $('#btnTambahBaris').on('click', function () {
+        tambahBaris();
+    });
 
+    // Hapus baris (delegasi karena baris dinamis)
+    $('#bodyInputBaris').on('click', '.btn-hapus-baris', function () {
+        $(this).closest('tr').remove();
+        reindexBaris();
+        updateTombolHapus();
+    });
+
+    function tambahBaris() {
+        var idx   = $('#bodyInputBaris tr').length;
+        var opts  = $('#bodyInputBaris tr:first select').html(); // salin option dari baris pertama
+        var baris = `
+            <tr>
+                <td><input type="number" class="form-control form-control-sm" name="rows[${idx}][qty_diterima]" min="1" required></td>
+                <td><select class="form-control form-control-sm" name="rows[${idx}][satuan]" required><option value="">-- Pilih --</option>${opts}</select></td>
+                <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][no_lot]" placeholder="No Lot"></td>
+                <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][exp_date]"></td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-danger btn-hapus-baris">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+        $('#bodyInputBaris').append(baris);
+        updateTombolHapus();
+    }
+
+    function reindexBaris() {
+        $('#bodyInputBaris tr').each(function (i) {
+            $(this).find('input, select').each(function () {
+                var name = $(this).attr('name');
+                if (name) {
+                    $(this).attr('name', name.replace(/\[\d+\]/, '[' + i + ']'));
+                }
+            });
+        });
+    }
+
+    function updateTombolHapus() {
+        var rows = $('#bodyInputBaris tr');
+        rows.find('.btn-hapus-baris').prop('disabled', rows.length === 1);
+    }
+
+    function resetTabel() {
+        $('#bodyInputBaris tr:not(:first)').remove();
+        $('#bodyInputBaris tr:first input').val('');
+        $('#bodyInputBaris tr:first select').val('');
+        updateTombolHapus();
+    }
+
+    // Auto-dismiss alert
+    setTimeout(function () { $('.alert').fadeOut('slow'); }, 4000);
 });
 </script>
 
