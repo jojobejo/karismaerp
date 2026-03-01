@@ -2644,9 +2644,9 @@ FROM (
             'left'
         );
 
-        // JOIN ke tb_detail_lpb untuk hitung total qty yang sudah masuk
+        // JOIN ke tb_po_received untuk hitung total qty yang sudah masuk
         $this->db->join(
-            'tb_detail_lpb dl',
+            'tb_po_received dl',
             'dl.no_po = pp.no_po AND dl.kd_barang = pp.kd_barang',
             'left'
         );
@@ -2677,7 +2677,7 @@ FROM (
             'create_at'    => date('Y-m-d H:i:s'),
         ];
 
-        return $this->db->insert('tb_detail_lpb', $insert);
+        return $this->db->insert('tb_po_received', $insert);
     }
 
     public function get_detail_by_po($no_po)
@@ -2686,7 +2686,7 @@ FROM (
             dl.*,
             mb.nama_barang
         ');
-        $this->db->from('tb_detail_lpb dl');
+        $this->db->from('tb_po_received dl');
         $this->db->join(
             'tb_master_barang_all mb',
             'mb.kd_barang = dl.kd_barang',
@@ -2711,7 +2711,7 @@ FROM (
             dl.exp_date,
             dl.create_at
         ');
-        $this->db->from('tb_detail_lpb dl');
+        $this->db->from('tb_po_received dl');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = dl.kd_barang', 'left');
 
         if (!empty($date1) && !empty($date2)) {

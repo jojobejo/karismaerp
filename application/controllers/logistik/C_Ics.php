@@ -1084,7 +1084,7 @@ class C_Ics extends CI_Controller
         }
 
         if (!empty($insert_batch)) {
-            $this->db->insert_batch('tb_detail_lpb', $insert_batch);
+            $this->db->insert_batch('tb_po_received', $insert_batch);
             $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
