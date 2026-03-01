@@ -2697,4 +2697,29 @@ FROM (
 
         return $this->db->get()->result_array();
     }
+
+    public function get_riwayat_barang_masuk($date1 = null, $date2 = null)
+    {
+        $this->db->select('
+            dl.id_detail_lpb,
+            dl.no_po,
+            dl.kd_barang,
+            mb.nama_barang,
+            dl.qty_diterima,
+            dl.satuan,
+            dl.no_lot,
+            dl.exp_date,
+            dl.create_at
+        ');
+        $this->db->from('tb_detail_lpb dl');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = dl.kd_barang', 'left');
+
+        if (!empty($date1) && !empty($date2)) {
+            $this->db->where('DATE(dl.create_at) >=', $date1);
+            $this->db->where('DATE(dl.create_at) <=', $date2);
+        }
+
+        $this->db->order_by('dl.id_detail_lpb', 'DESC');
+        return $this->db->get()->result_array();
+    }
 }

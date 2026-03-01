@@ -1046,8 +1046,8 @@ class C_Ics extends CI_Controller
 
     public function data_lpb_zahir()
     {
-        $data['page_title']   = 'KARISMA - LOGISTIK';
-        $data['list_satuan']  = $this->db->get('tb_satuan')->result_array(); // tambah ini
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['list_satuan'] = $this->db->order_by('nm_satuan', 'ASC')->get('tb_satuan')->result_array();
         $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
         $data['lpb'] = $this->M_Logistik->get_data_po($date1, $date2);
@@ -1092,6 +1092,37 @@ class C_Ics extends CI_Controller
 
         redirect('data_lpb_zahir');
     }
+    
+    public function po_selesai()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - PO Selesai';
+        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/po_selesai.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function riwayat_barang_masuk()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - Riwayat Barang Masuk';
+        $data['riwayat']    = $this->M_Logistik->get_riwayat_barang_masuk($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/riwayat_barang_masuk.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
 
     // public function get_lpb()
     // {
