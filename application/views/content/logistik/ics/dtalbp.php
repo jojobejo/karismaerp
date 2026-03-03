@@ -122,7 +122,8 @@
                                                     data-no-po="<?= htmlspecialchars($row['no_po']       ?? '') ?>"
                                                     data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>"
                                                     data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '') ?>"
-                                                    data-qty-order="<?= number_format($qty_order) ?>"
+                                                    data-qty-order="<?= $qty_order ?>"
+                                                    data-sisa="<?= $sisa ?>"
                                                     data-toggle="modal"
                                                     data-target="#modalInputQty">
                                                     <i class="fas fa-plus"></i>
@@ -191,6 +192,7 @@
                 <form id="formInputQty" action="<?= base_url('save_qty_diterima') ?>" method="post">
                     <input type="hidden" name="no_po"     id="form_no_po">
                     <input type="hidden" name="kd_barang" id="form_kd_barang">
+                    <input type="hidden" id="form_sisa" value="0">
 
                     <table class="table table-bordered table-sm" id="tabelInputBaris">
                         <thead class="thead-light">
@@ -274,7 +276,24 @@ $(document).ready(function () {
         $('#modal_nama_barang').val($(this).data('nama-barang'));
         $('#form_no_po').val($(this).data('no-po'));
         $('#form_kd_barang').val($(this).data('kd-barang'));
+        $('#form_sisa').val($(this).data('sisa'));
         resetTabel();
+    });
+
+    $('#formInputQty').on('submit', function (e) {
+        var sisa       = parseInt($('#form_sisa').val()) || 0;
+        var totalInput = 0;
+
+        $('#bodyInputBaris tr').each(function () {
+            var qty = parseInt($(this).find('input[name*="qty_diterima"]').val()) || 0;
+            totalInput += qty;
+        });
+
+        if (totalInput > sisa) {
+            e.preventDefault();
+            alert('Total qty diterima (' + totalInput + ') melebihi sisa qty yang belum terpenuhi (' + sisa + '). Silakan periksa kembali.');
+            return false;
+        }
     });
 
     $('#btnTambahBaris').on('click', function () { tambahBaris(); });
