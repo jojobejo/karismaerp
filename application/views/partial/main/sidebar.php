@@ -3,50 +3,20 @@
     <!-- Brand Logo -->
     <a href="<?php echo base_url('dashboard') ?>" class="brand-link">
       <img src="<?php echo base_url("assets/images/Karisma.png") ?>" style="width: 50px; height: 30px;" alt="Karisma Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
-      <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama_user') ?><br></span>
+      <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
 
-
-    <?php $idsession = $this->session->userdata('akses_lv') ?>
     <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <!-- Add icons to the links using the .nav-icon class
-          with font-awesome or any other icon font library -->
-
-          <!-- START AKSES LV 1 -->
-          <?php if ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'IT') : ?>
+    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('inventaris') ?>" class="nav-link">
-                <i class="nav-icon fas fa-desktop"></i>
+              <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
+                <i class="nav-icon fas fa-quran"></i>
                 <p>
-                  Inventaris
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('faktur_pending') ?>" class="nav-link">
-                <i class="nav-icon far fa-life-ring"></i>
-                <p>
-                  Ticketing
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('userAdmin') ?>" class="nav-link">
-                <i class="nav-icon fa fa-user"></i>
-                <p>
-                  User List
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('ratingreview') ?>" class="nav-link">
-                <i class="nav-icon fa fa-user"></i>
-                <p>
-                  Review Rating
+                  Daily Stock Product
                 </p>
               </a>
             </li>
@@ -58,55 +28,20 @@
                 </p>
               </a>
             </li>
-            <!-- END AKSES LV 1 -->
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
 
-            <!-- START AKSES LV 1 USER ADM LOGISTIK -->
-          <?php elseif ($this->session->userdata('akses_lv') == '1' && $this->session->userdata('departemen') == 'LOGISTIK') : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINGA') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('truckoprational') ?>" class="nav-link">
-                <i class="nav-icon fas fa-warehouse"></i>
+              <a href="<?php echo base_url('schedule_direktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book"></i>
                 <p>
-                  Truck Oprational
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('deliveriorder') ?>" class="nav-link">
-                <i class="nav-icon fa fa-shipping-fast"></i>
-                <p>
-                  Deleveri Order
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('tmp_logistik_distribusi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-truck"></i>
-                <p>
-                  Data Logistik Distribusi
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('tracking_driver') ?>" class="nav-link">
-                <i class="nav-icon fa fa-route"></i>
-                <p>
-                  Driver Tracking
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_distribusi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-file"></i>
-                <p>
-                  Laporan Distribusi
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_expedisi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-truck-loading"></i>
-                <p>
-                  Laporan Expedisi
+                  Jadwal Tamu
                 </p>
               </a>
             </li>
@@ -118,64 +53,27 @@
                 </p>
               </a>
             </li>
-
-            <!-- END AKSES LV 1 USER LOGISTIK -->
-
-            <!-- START AKSES LV 2 USER HRD -->
-          <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'HRD GA' && $this->session->userdata('username') == 'HRD1' || $this->session->userdata('username') == 'HRD2' || $this->session->userdata('username') == 'HRD3') : ?>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '5' && $this->session->userdata('jobdesk') == 'DIREKTUR') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_distribusi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-car-side"></i>
+              <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book"></i>
                 <p>
-                  Laporan Distribusi
+                  Daily Stock Product
                 </p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_tamu') ?>" class="nav-link">
-                <i class="nav-icon fa fa-id-badge"></i>
+              <a href="<?php echo base_url('schedule_direktur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-user-friends"></i>
                 <p>
-                  Laporan Tamu
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_data_truk') ?>" class="nav-link">
-                <i class="nav-icon fa fa-tools"></i>
-                <p>
-                  Data Service Truk
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_Karyawan_KM') ?>" class="nav-link">
-                <i class="nav-icon fa fa-people-arrows"></i>
-                <p>
-                  Laporan Karyawan K-M
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_expedisi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-truck-loading"></i>
-                <p>
-                  Laporan Expedisi
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_issue') ?>" class="nav-link">
-                <i class="nav-icon fa fa-exclamation-triangle"></i>
-                <p>
-                  Laporan Issue
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('hrd_all_karyawan') ?>" class="nav-link">
-                <i class="nav-icon fa fa-users"></i>
-                <p>
-                  Data Karyawan
+                  Jadwal Tamu
                 </p>
               </a>
             </li>
@@ -187,48 +85,102 @@
                 </p>
               </a>
             </li>
-
-          <?php elseif ($this->session->userdata('akses_lv') == '2' && $this->session->userdata('departemen') == 'HRD GA' && $this->session->userdata('username') == 'HRD4') : ?>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_distribusi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-car-side"></i>
+              <a href="<?php echo base_url('logistik') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
                 <p>
-                  Laporan Distribusi
+                  Dashboard
                 </p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('tmp_logistik_distribusi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-truck"></i>
+              <a href="<?php echo base_url('create_do') ?>" class="nav-link">
+                <i class="nav-icon fas fa-pen-fancy"></i>
                 <p>
-                  Data Logistik Distribusi
+                  Create DO
                 </p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_add_tamu') ?>" class="nav-link">
-                <i class="nav-icon fa fa-id-badge"></i>
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
-                  Laporan Tamu
+                  Log Out
+                </p>
+              </a>
+            </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINICS') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('ics/ics_diffrent') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
                 </p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_Karyawan_KM') ?>" class="nav-link">
-                <i class="nav-icon fa fa-people-arrows"></i>
+              <a href="<?php echo base_url('ics/master_barang') ?>" class="nav-link">
+                <i class="nav-icon fas fa-database"></i>
                 <p>
-                  Laporan Karyawan K-M
+                  Master Barang
                 </p>
               </a>
             </li>
             <li class="nav-item">
-              <a href="<?php echo base_url('hrd_lap_expedisi') ?>" class="nav-link">
-                <i class="nav-icon fa fa-truck-loading"></i>
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
-                  Laporan Expedisi
+                  Log Out
                 </p>
               </a>
             </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'STOCKOPNAME') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('s') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
               <a href="<?php echo base_url('hrd_chelklist_kendaraan') ?>" class="nav-link">
                 <i class="nav-icon fa fa-car"></i>
@@ -248,8 +200,10 @@
             <li class="nav-item">
               <a href="<?php echo base_url('hrd_lap_issue') ?>" class="nav-link">
                 <i class="nav-icon fa fa-exclamation-triangle"></i>
+              <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
                 <p>
-                  Laporan Issue
+                  Dashboard
                 </p>
               </a>
             </li>
@@ -309,6 +263,14 @@
                 </p>
               </a>
             </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php else : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
@@ -317,14 +279,10 @@
                 </p>
               </a>
             </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php endif; ?>
 
-            <!-- END AKSES LV2 USER ADMLOBY -->
-          <?php endif; ?>
-
-
-
-      </nav>
-      <!-- /.sidebar-menu -->
-    </div>
     <!-- /.sidebar -->
   </aside>

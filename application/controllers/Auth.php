@@ -8,12 +8,14 @@ class Auth extends CI_Controller
         parent::__construct();
         $this->load->model('M_Auth');
     }
+
     function index()
     {
         $this->load->view("partial/login/header");
         $this->load->view("content/login/body");
         $this->load->view("partial/login/footer");
     }
+
     function process()
     {
         $username = $this->input->post('user_isi');
@@ -27,29 +29,54 @@ class Auth extends CI_Controller
             foreach ($check_password as $key) {
                 if ($key->username == $username && password_verify($password, $key->password)) {
                     $data_session = array(
-                        'id'          => $key->id,
-                        'username'    => $key->username,
-                        'kduser'      => $key->kode_user,
-                        'subdepartemen' => $key->sub_departemen,
-                        'nama_user'   => $key->nama_user,
-                        'akses_lv'    => $key->akses_lv,
-                        'departemen'  => $key->departemen,
-                        'status'      => "is_login"
+                        'id'            => $key->id,
+                        'nik'           => $key->nik,
+                        'departemen'    => $key->departemen,
+                        'lv'            => $key->akses_lv,
+                        'jobdesk'       => $key->jobdesk,
+                        'nama'          => $key->nm_karyawan,
+                        'tim'           => $key->tim,
+                        'wilayah'       => $key->wilayah
                     );
-
+                  
                     if ($key->departemen == 'KEUANGAN') {
                         $this->session->set_userdata($data_session);
                         redirect('hrd_lap_paket_pos');
-                    } elseif ($key->departemen == 'MIA') {
+                    } else if ($key->departemen == 'MIA') {
                         $this->session->set_userdata($data_session);
                         redirect('hrd_lap_paket_pos');
-                    } elseif ($key->departemen == 'HRD & GA') {
+                    } else if ($key->departemen == 'HRD & GA') {
                         $this->session->set_userdata($data_session);
                         redirect('hrd_lap_paket_pos');
-                    } else {
-                        $this->session->set_userdata($data_session);
+                    } else if ($key->jobdesk == 'LOGISTIK') {
+                        redirect('logistik');
+                    } else if ($key->jobdesk == 'ADMINICS') {
+                        redirect('ics/ics_diffrent');
+                    } else if ($key->jobdesk == 'ADMINKEU') {
+                        redirect('keuangan');
+                    } else if ($key->jobdesk == 'ADMINPURCHASING') {
+                        redirect('keuangan');
+                    } else if ($key->jobdesk == 'DIREKTUR') {
                         redirect('dashboard');
-                    }
+                    } else if ($key->jobdesk == 'ADMINGA') {
+                        redirect('schedule_direktur');
+                    } else if ($key->jobdesk == 'ADMINKEUTC') {
+                        redirect('keuangan');
+                    } else if ($key->jobdesk == 'STOCKOPNAME') {
+                        redirect('stockopname');
+                    } else if ($key->jobdesk == 'ADMIN') {
+                        redirect('extravaganza');
+                    } else if ($key->jobdesk == 'SALESONLINE') {
+                        redirect('stock');
+                    } else if ($key->jobdesk == 'SALESCOUNTER') {
+                        redirect('sales_report');
+                    } else if ($key->jobdesk == 'SALES') {
+                        redirect('kiu_katalog');
+                    } else if ($key->jobdesk == 'DISTRIBUSI') {
+                        redirect('logistik/distibusi');
+                    } else if ($key->jobdesk == 'ADMINLOGLPB') {
+                        redirect('ics/icspo');
+                    } 
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
                     redirect('Auth');
