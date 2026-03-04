@@ -331,11 +331,11 @@ class M_Hrd extends CI_Model
 
     var $column_order_karykm = [
         'tanggal', 'nama', 'departemen', 'status',
-        'jamkeluar', 'jammasuk', 'nopol', 'keterangan'
+        'jamkeluar', 'jammasuk', 'nopol', 'keterangan', 'nm_inputer'
     ];
 
     var $column_search_karykm = [
-        'nama', 'departemen', 'status', 'nopol', 'keterangan'
+        'nama', 'departemen', 'status', 'nopol', 'keterangan', 'nm_inputer'
     ];
 
     var $order_karykm = ['id' => 'desc'];
@@ -496,7 +496,7 @@ class M_Hrd extends CI_Model
                 $this->db->where('kd_penerima', 'LADY');
                 break;
             default:
-                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY', 'MIA','NITA']);
+                $this->db->where_in('kd_penerima', ['TRI', 'IKA', 'SUPRIYANTO', 'LADY', 'MIA', 'NITA']);
                 break;
         }
 

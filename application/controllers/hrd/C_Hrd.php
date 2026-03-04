@@ -389,6 +389,7 @@ class C_Hrd extends CI_Controller
             $row[] = $l->jammasuk;
             $row[] = $l->nopol;
             $row[] = $l->keterangan;
+            $row[] = $l->nm_inputer;
 
             $row[] = '
             <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
@@ -1595,6 +1596,7 @@ class C_Hrd extends CI_Controller
             $row[] = $l->jam_terima_1;
             $row[] = $l->jam_terima_2;
             $row[] = $status_label;
+            $row[] = $l->inputer;
 
             if ($this->session->userdata('departemen') == 'KEUANGAN') {
                 $row[] = '

@@ -123,6 +123,7 @@
                     <th>Jam Masuk</th>
                     <th>No. Plat</th>
                     <th>Keterangan</th>
+                    <th>Keterangan</th>
                     <th>#</th>
                   </tr>
                 </thead>
