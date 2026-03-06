@@ -257,6 +257,16 @@ $route['update_customer_faktur']                    = 'logistik/C_Logistik/updat
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
 
+//LOGISTIK - Checker
+$route['checker']                 = 'logistik/C_Checker/index';
+$route['checker/arsip']           = 'logistik/C_Checker/arsip';
+$route['checker/store']           = 'logistik/C_Checker/store';
+$route['checker/start']           = 'logistik/C_Checker/start';
+$route['checker/update_progres']  = 'logistik/C_Checker/update_progres';
+$route['checker/done']            = 'logistik/C_Checker/done';
+$route['checker/update_admlog']   = 'logistik/C_Checker/update_admlog';
+$route['checker/archive']         = 'logistik/C_Checker/archive';
+
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
 $route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/create_pending_do/$1';
