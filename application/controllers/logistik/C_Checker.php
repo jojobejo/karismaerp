@@ -1,13 +1,11 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-class C_Bongkaran extends CI_Controller
+class C_Checker extends CI_Controller
 {
-    // Mapping jobdesk -> role
     const ROLE_CHECKER    = 'CHECKER';
-    const ROLE_ADMLOG     = 'LOGISTIK';
+    const ROLE_ADMLOG     = 'ADMLOG';       // ← jobdesk untuk Admin Logistik
     const ROLE_MANAGER_WH = 'MANAGERWH';
-    const ROLE_VIEW_ONLY  = ['DIREKTUR', 'SALES'];
 
     public function __construct()
     {
@@ -15,16 +13,18 @@ class C_Bongkaran extends CI_Controller
         $this->load->model('M_Checker');
         $this->load->library('session');
         $this->load->helper('url');
-
-        // Pastikan user sudah login
-        if (!$this->session->userdata('nik')) {
-            redirect('auth/login');
-        }
+        if (!$this->session->userdata('nik')) redirect('Auth');
     }
 
-    private function jobdesk()
+    private function role()
     {
         return strtoupper($this->session->userdata('jobdesk'));
+    }
+
+    private function nama()
+    {
+        // Auth.php menyimpan dengan key 'nama' bukan 'nm_karyawan'
+        return $this->session->userdata('nama');
     }
 
     // ----------------------------------------------------------------
@@ -32,14 +32,18 @@ class C_Bongkaran extends CI_Controller
     // ----------------------------------------------------------------
     public function index()
     {
-        $data['page_title'] = 'KARISMA - Bongkaran';
-        $data['list']       = $this->M_Checker->get_list();
-        $data['jobdesk']    = $this->jobdesk();
-        $data['nik']        = $this->session->userdata('nik');
-        $data['kode_baru']  = $this->M_Checker->generate_kode();
+        $nik = $this->session->userdata('nik');
+        $data['page_title']    = 'KARISMA - Aktivitas Warehouse';
+        $data['bongkaran']     = $this->M_Checker->get_list();
+        $data['list_kk']       = $this->M_Checker->get_list_kk();
+        $data['list_lk']       = $this->M_Checker->get_list_lk();
+        $data['role']          = $this->role();
+        $data['nik']           = $nik;
+        $data['kode_baru']     = $this->M_Checker->generate_kode();
+        $data['my_active_id']  = $this->M_Checker->get_active_id_by_checker($nik);
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/bongkaran/index.php', $data);
+        $this->load->view('content/logistik/checker/index.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -48,146 +52,194 @@ class C_Bongkaran extends CI_Controller
     // ----------------------------------------------------------------
     public function arsip()
     {
-        if ($this->jobdesk() !== self::ROLE_MANAGER_WH) {
-            show_error('Akses ditolak', 403);
-        }
+        if ($this->role() !== self::ROLE_MANAGER_WH) { show_error('Akses ditolak', 403); }
 
-        $data['page_title'] = 'KARISMA - Arsip Bongkaran';
-        $data['list']       = $this->M_Checker->get_arsip();
-        $data['jobdesk']    = $this->jobdesk();
+        $data['page_title']    = 'KARISMA - Arsip Warehouse';
+        $data['arsip_bongkar'] = $this->M_Checker->get_arsip_bongkaran();
+        $data['arsip_kk']      = $this->M_Checker->get_arsip_kk();
+        $data['arsip_lk']      = $this->M_Checker->get_arsip_lk();
+        $data['role']          = $this->role();
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/bongkaran/arsip.php', $data);
+        $this->load->view('content/logistik/checker/arsip.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    // ----------------------------------------------------------------
-    // MANAGER WH: buat bongkaran baru
-    // ----------------------------------------------------------------
+    // ================================================================
+    // AJAX: BONGKARAN
+    // ================================================================
+
     public function store()
     {
-        if ($this->jobdesk() !== self::ROLE_MANAGER_WH) {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
-
-        $data = [
+        $ok = $this->M_Checker->create([
             'kode_bongkar' => $this->M_Checker->generate_kode(),
             'keterangan'   => $this->input->post('keterangan', true),
             'status'       => 'MENUNGGU',
-            'created_by'   => $this->session->userdata('nm_karyawan'),
+            'created_by'   => $this->nama(),
             'created_at'   => date('Y-m-d H:i:s'),
-        ];
-
-        $ok = $this->M_Checker->create($data);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran berhasil dibuat' : 'Gagal membuat bongkaran']);
+        ]);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran berhasil dibuat' : 'Gagal']);
     }
 
-    // ----------------------------------------------------------------
-    // CHECKER: start bongkaran
-    // ----------------------------------------------------------------
     public function start()
     {
-        if ($this->jobdesk() !== self::ROLE_CHECKER) {
+        if ($this->role() !== self::ROLE_CHECKER) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
+        $nik = $this->session->userdata('nik');
+        $id  = (int)$this->input->post('id');
 
-        $id = (int) $this->input->post('id');
-
-        if ($this->M_Checker->is_taken($id)) {
-            echo json_encode(['status' => false, 'msg' => 'Bongkaran ini sudah diambil checker lain']);
-            return;
+        // Blokir jika checker ini masih punya job aktif yang belum done
+        $active = $this->M_Checker->get_active_id_by_checker($nik);
+        if ($active !== null) {
+            echo json_encode(['status' => false, 'msg' => 'Anda masih memiliki bongkaran aktif yang belum selesai']); return;
         }
-
-        $ok = $this->M_Checker->start(
-            $id,
-            $this->session->userdata('nik'),
-            $this->session->userdata('nm_karyawan')
-        );
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Berhasil start' : 'Gagal start']);
+        // Blokir jika bongkaran ini sudah diambil checker lain
+        if ($this->M_Checker->is_taken($id)) {
+            echo json_encode(['status' => false, 'msg' => 'Bongkaran sudah diambil checker lain']); return;
+        }
+        $ok = $this->M_Checker->start($id, $nik, $this->nama());
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Start berhasil' : 'Gagal start']);
     }
 
-    // ----------------------------------------------------------------
-    // CHECKER: update progres
-    // ----------------------------------------------------------------
     public function update_progres()
     {
-        if ($this->jobdesk() !== self::ROLE_CHECKER) {
+        if ($this->role() !== self::ROLE_CHECKER) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
-
-        $id      = (int) $this->input->post('id');
-        $progres = (int) $this->input->post('progres');
-
-        // Pastikan hanya checker yang mengambil job ini yang bisa update
+        $id      = (int)$this->input->post('id');
+        $progres = (int)$this->input->post('progres');
         $checker = $this->M_Checker->get_checker($id);
         if (!$checker || $checker['nik_checker'] !== $this->session->userdata('nik')) {
-            echo json_encode(['status' => false, 'msg' => 'Anda bukan checker untuk bongkaran ini']);
-            return;
+            echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
         }
-
         $ok = $this->M_Checker->update_progres($id, $progres);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Progres diperbarui' : 'Gagal update progres']);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Progres diperbarui' : 'Gagal']);
     }
 
-    // ----------------------------------------------------------------
-    // CHECKER: done
-    // ----------------------------------------------------------------
     public function done()
     {
-        if ($this->jobdesk() !== self::ROLE_CHECKER) {
+        if ($this->role() !== self::ROLE_CHECKER) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
-
-        $id      = (int) $this->input->post('id');
+        $id      = (int)$this->input->post('id');
         $checker = $this->M_Checker->get_checker($id);
-
         if (!$checker || $checker['nik_checker'] !== $this->session->userdata('nik')) {
-            echo json_encode(['status' => false, 'msg' => 'Anda bukan checker untuk bongkaran ini']);
-            return;
+            echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
         }
-
         $ok = $this->M_Checker->checker_done($id);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran selesai' : 'Gagal']);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran selesai!' : 'Gagal']);
     }
 
-    // ----------------------------------------------------------------
-    // ADMLOG: update jalur & status
-    // ----------------------------------------------------------------
-    public function update_admlog()
+    public function update_status_bongkaran()
     {
-        if ($this->jobdesk() !== self::ROLE_ADMLOG) {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id     = (int)$this->input->post('id');
+        $status = $this->input->post('status', true);
+        $ok     = $this->M_Checker->update_status($id, $status);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Status diperbarui' : 'Gagal']);
+    }
+
+    public function archive_all_today()
+    {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
 
-        $id   = (int) $this->input->post('id');
-        $data = [];
-
-        if ($this->input->post('jalur_kk') !== null) $data['jalur_kk'] = $this->input->post('jalur_kk', true);
-        if ($this->input->post('jalur_lk') !== null) $data['jalur_lk'] = $this->input->post('jalur_lk', true);
-        if ($this->input->post('status')   !== null) $data['status']   = $this->input->post('status',   true);
-
-        $ok = $this->M_Checker->update_admlog($id, $data);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data diperbarui' : 'Gagal update']);
-    }
-
-    // ----------------------------------------------------------------
-    // MANAGER WH: archive
-    // ----------------------------------------------------------------
-    public function archive()
-    {
-        if ($this->jobdesk() !== self::ROLE_MANAGER_WH) {
-            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
-        }
-
-        $id = (int) $this->input->post('id');
-        $bongkaran = $this->M_Checker->get_by_id($id);
-
-        if (!$bongkaran || $bongkaran['status'] !== 'DONE') {
-            echo json_encode(['status' => false, 'msg' => 'Hanya bongkaran berstatus DONE yang bisa diarsipkan']);
+        $result = $this->M_Checker->archive_all_today($this->nama());
+        $total  = $result['bongkaran'] + $result['kk'] + $result['lk'];
+        if ($total === 0) {
+            echo json_encode(['status' => false, 'msg' => 'Tidak ada data DONE hari ini yang bisa diarsipkan']);
             return;
         }
+        echo json_encode([
+            'status' => true,
+            'msg'    => "Berhasil diarsipkan — Bongkaran: {$result['bongkaran']}, KK: {$result['kk']}, LK: {$result['lk']} data",
+        ]);
+    }
 
-        $ok = $this->M_Checker->archive($id, $this->session->userdata('nm_karyawan'));
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data berhasil diarsipkan' : 'Gagal arsip']);
+    // ================================================================
+    // AJAX: LOADING KK  (ADMLOG yang input & update)
+    // ================================================================
+
+    public function store_kk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $ok = $this->M_Checker->create_kk([
+            'tgl'         => date('Y-m-d'),
+            'keterangan'  => $this->input->post('keterangan', true),
+            'status'      => 'MENUNGGU',
+            'created_by'  => $this->nama(),
+        ]);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data KK ditambahkan' : 'Gagal']);
+    }
+
+    public function update_kk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id   = (int)$this->input->post('id');
+        $data = [];
+        if ($this->input->post('keterangan') !== null) $data['keterangan'] = $this->input->post('keterangan', true);
+        if ($this->input->post('status')     !== null) $data['status']     = $this->input->post('status',     true);
+        $ok = $this->M_Checker->update_kk($id, $data);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'KK diperbarui' : 'Gagal']);
+    }
+
+    public function archive_kk()
+    {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $ok = $this->M_Checker->archive_kk((int)$this->input->post('id'), $this->nama());
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'KK diarsipkan' : 'Gagal']);
+    }
+
+    // ================================================================
+    // AJAX: LOADING LK  (ADMLOG yang input & update)
+    // ================================================================
+
+    public function store_lk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $ok = $this->M_Checker->create_lk([
+            'tgl'        => date('Y-m-d'),
+            'keterangan' => $this->input->post('keterangan', true),
+            'status'     => 'MENUNGGU',
+            'created_by' => $this->nama(),
+        ]);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data LK ditambahkan' : 'Gagal']);
+    }
+
+    public function update_lk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id   = (int)$this->input->post('id');
+        $data = [];
+        if ($this->input->post('keterangan') !== null) $data['keterangan'] = $this->input->post('keterangan', true);
+        if ($this->input->post('status')     !== null) $data['status']     = $this->input->post('status',     true);
+        $ok = $this->M_Checker->update_lk($id, $data);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'LK diperbarui' : 'Gagal']);
+    }
+
+    public function archive_lk()
+    {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $ok = $this->M_Checker->archive_lk((int)$this->input->post('id'), $this->nama());
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'LK diarsipkan' : 'Gagal']);
     }
 }

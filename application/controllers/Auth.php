@@ -68,6 +68,14 @@ class Auth extends CI_Controller
                         redirect('logistik/distibusi');
                     } else if ($key->jobdesk == 'ADMINLOGLPB') {
                         redirect('ics/icspo');
+                    } else if ($key->jobdesk == 'ADMLOG') {
+                        redirect('checker');
+                    } else if ($key->jobdesk == 'CHECKER') {
+                        redirect('checker');
+                    } else if ($key->jobdesk == 'MANAGERWH') {
+                        redirect('checker');
+                    } else if ($key->jobdesk == 'SALES') {
+                        redirect('checker');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
