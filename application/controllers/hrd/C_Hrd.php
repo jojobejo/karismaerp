@@ -1858,4 +1858,348 @@ class C_Hrd extends CI_Controller
         $this->load->view('content/hrd/detail_checklist_kendaraan.php');
         $this->load->view('partial/main/footer.php');
     }
+
+    public function ajax_truck_checkup_list()
+    {
+        $rows = $this->M_Hrd->get_truck_checkup_list(100);
+        echo json_encode([
+            'status' => true,
+            'data'   => $rows
+        ]);
+    }
+
+    public function ajax_truck_checkup_detail($id)
+    {
+        $header = $this->M_Hrd->get_truck_checkup_header($id);
+
+        if (!$header) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Data checkup tidak ditemukan'
+            ]);
+            return;
+        }
+
+        $detail = $this->M_Hrd->get_truck_checkup_detail($id);
+
+        echo json_encode([
+            'status' => true,
+            'data'   => [
+                'header' => $header,
+                'detail' => $detail
+            ]
+        ]);
+    }
+
+    public function ajax_truck_checkup_save()
+    {
+        $nopol     = trim($this->input->post('no_polisi'));
+        $tanggal   = trim($this->input->post('tanggal_check'));
+        $jam       = trim($this->input->post('jam_check'));
+        $kilometer = (int) $this->input->post('kilometer');
+        $rawItems  = $this->input->post('items_json');
+        $items     = json_decode($rawItems, true);
+
+        if (
+            $nopol === '' ||
+            $tanggal === '' ||
+            $jam === '' ||
+            $kilometer <= 0 ||
+            !is_array($items) ||
+            count($items) === 0
+        ) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Field wajib belum lengkap'
+            ]);
+            return;
+        }
+
+        $uploadDir = FCPATH . 'uploads/checklist_kendaraan/';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0777, true);
+        }
+
+        $username = $this->session->userdata('username');
+        if (empty($username)) {
+            $username = 'system';
+        }
+
+        $this->db->trans_begin();
+
+        $header = [
+            'nopol'         => $nopol,
+            'tanggal'       => $tanggal,
+            'jam'           => $jam,
+            'kilometer'     => $kilometer,
+            'input_by'      => $username
+        ];
+
+        $checklistId = $this->M_Hrd->insert_truck_checkup_header($header);
+        if (!$checklistId) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Gagal menyimpan header checkup'
+            ]);
+            return;
+        }
+
+        $this->load->library('upload');
+
+        foreach ($items as $idx => $item) {
+            $idKategori = isset($item['id_kategori']) ? (int) $item['id_kategori'] : 0;
+            $idDetail   = isset($item['id_detail_kat']) ? (int) $item['id_detail_kat'] : 0;
+            $kondisiRaw = isset($item['status']) ? strtoupper(trim($item['status'])) : 'BAIK';
+            $keterangan = isset($item['keterangan']) ? trim($item['keterangan']) : '';
+            $fileKey    = isset($item['file_key']) ? trim($item['file_key']) : '';
+
+            if ($idKategori <= 0 || $idDetail <= 0) {
+                continue;
+            }
+
+            $kondisi = $kondisiRaw === 'TIDAK BAIK' ? 'TIDAK BAIK' : 'BAIK';
+            $fotoFile = null;
+
+            if ($fileKey !== '' && isset($_FILES[$fileKey]) && !empty($_FILES[$fileKey]['name'])) {
+                $_FILES['single_file'] = $_FILES[$fileKey];
+
+                $config = [
+                    'upload_path'   => $uploadDir,
+                    'allowed_types' => 'jpg|jpeg|png|webp',
+                    'max_size'      => 4096,
+                    'file_name'     => 'TRUCK_' . $checklistId . '_' . $idx . '_' . time()
+                ];
+
+                $this->upload->initialize($config);
+                if ($this->upload->do_upload('single_file')) {
+                    $uploadData = $this->upload->data();
+                    $fotoFile = $uploadData['file_name'];
+                } else {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => false,
+                        'message' => strip_tags($this->upload->display_errors())
+                    ]);
+                    return;
+                }
+            }
+
+            $detail = [
+                'id_ckup'      => $checklistId,
+                'id_kategori'  => $idKategori,
+                'id_detail_kat' => $idDetail,
+                'status'       => $kondisi,
+                'keterangan'   => $keterangan,
+                'evident'      => $fotoFile,
+                'input_by'     => $username
+            ];
+
+            $this->M_Hrd->insert_truck_checkup_detail($detail);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Gagal menyimpan data checkup'
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
+        echo json_encode([
+            'status'  => true,
+            'message' => 'General checkup truk berhasil disimpan'
+        ]);
+    }
+
+    public function ajax_truck_master_checklist()
+    {
+        $rows = $this->M_Hrd->get_master_checkup_join();
+        $grouped = [];
+
+        foreach ($rows as $row) {
+            $idKategori = (int) $row->id_kategori;
+            if (!isset($grouped[$idKategori])) {
+                $grouped[$idKategori] = [
+                    'id_kategori' => $idKategori,
+                    'nm_kategori' => $row->nm_kategori,
+                    'details'     => []
+                ];
+            }
+
+            if (!empty($row->id_detail_kat)) {
+                $grouped[$idKategori]['details'][] = [
+                    'id_detail_kat' => (int) $row->id_detail_kat,
+                    'nm_detail'     => $row->nm_detail
+                ];
+            }
+        }
+
+        echo json_encode([
+            'status' => true,
+            'data'   => array_values($grouped)
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_list()
+    {
+        echo json_encode([
+            'status' => true,
+            'data'   => $this->M_Hrd->get_mekanik_kategori_all()
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_save()
+    {
+        $id = (int) $this->input->post('id_kategori');
+        $nmKategori = trim($this->input->post('nm_kategori'));
+
+        if ($nmKategori === '') {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Nama kategori wajib diisi'
+            ]);
+            return;
+        }
+
+        if ($id > 0) {
+            $exists = $this->M_Hrd->get_mekanik_kategori_by_id($id);
+            if (!$exists) {
+                echo json_encode([
+                    'status'  => false,
+                    'message' => 'Data kategori tidak ditemukan'
+                ]);
+                return;
+            }
+
+            $ok = $this->M_Hrd->update_mekanik_kategori($id, [
+                'nm_kategori' => $nmKategori
+            ]);
+        } else {
+            $ok = $this->M_Hrd->insert_mekanik_kategori([
+                'nm_kategori' => $nmKategori
+            ]);
+        }
+
+        echo json_encode([
+            'status'  => (bool) $ok,
+            'message' => $ok ? 'Kategori berhasil disimpan' : 'Gagal menyimpan kategori'
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_delete()
+    {
+        $id = (int) $this->input->post('id_kategori');
+
+        if ($id <= 0) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'ID kategori tidak valid'
+            ]);
+            return;
+        }
+
+        $totalDetail = $this->M_Hrd->count_mekanik_detail_by_kategori($id);
+        if ($totalDetail > 0) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Kategori tidak bisa dihapus karena masih punya detail'
+            ]);
+            return;
+        }
+
+        $ok = $this->M_Hrd->delete_mekanik_kategori($id);
+        echo json_encode([
+            'status'  => (bool) $ok,
+            'message' => $ok ? 'Kategori berhasil dihapus' : 'Gagal menghapus kategori'
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_detail_list()
+    {
+        echo json_encode([
+            'status' => true,
+            'data'   => $this->M_Hrd->get_mekanik_kategori_detail_all()
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_detail_save()
+    {
+        $id = (int) $this->input->post('id_detail_kat');
+        $idKategori = (int) $this->input->post('id_kategori');
+        $nmDetail = trim($this->input->post('nm_detail'));
+
+        if ($idKategori <= 0 || $nmDetail === '') {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Kategori dan nama detail wajib diisi'
+            ]);
+            return;
+        }
+
+        $kategori = $this->M_Hrd->get_mekanik_kategori_by_id($idKategori);
+        if (!$kategori) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Kategori tidak ditemukan'
+            ]);
+            return;
+        }
+
+        if ($id > 0) {
+            $exists = $this->M_Hrd->get_mekanik_kategori_detail_by_id($id);
+            if (!$exists) {
+                echo json_encode([
+                    'status'  => false,
+                    'message' => 'Detail kategori tidak ditemukan'
+                ]);
+                return;
+            }
+
+            $ok = $this->M_Hrd->update_mekanik_kategori_detail($id, [
+                'id_kategori' => $idKategori,
+                'nm_detail'   => $nmDetail
+            ]);
+        } else {
+            $ok = $this->M_Hrd->insert_mekanik_kategori_detail([
+                'id_kategori' => $idKategori,
+                'nm_detail'   => $nmDetail
+            ]);
+        }
+
+        echo json_encode([
+            'status'  => (bool) $ok,
+            'message' => $ok ? 'Detail kategori berhasil disimpan' : 'Gagal menyimpan detail kategori'
+        ]);
+    }
+
+    public function ajax_mekanik_kategori_detail_delete()
+    {
+        $id = (int) $this->input->post('id_detail_kat');
+
+        if ($id <= 0) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'ID detail kategori tidak valid'
+            ]);
+            return;
+        }
+
+        $ok = $this->M_Hrd->delete_mekanik_kategori_detail($id);
+        echo json_encode([
+            'status'  => (bool) $ok,
+            'message' => $ok ? 'Detail kategori berhasil dihapus' : 'Gagal menghapus detail kategori'
+        ]);
+    }
+
+    public function hrd_truck_cek()
+    {
+        $data['page_title'] = 'General Checkup Truk';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/hrd/hrd_truck_cek.php');
+        $this->load->view('partial/main/footer.php');
+    }
 }

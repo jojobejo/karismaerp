@@ -778,4 +778,163 @@ class M_Hrd extends CI_Model
         LEFT JOIN tb_checklist_kendaraan_detail d ON d.checklist_id = h.id
         GROUP BY h.id;")->result();
     }
+
+    public function get_truck_checkup_list($limit = 50)
+    {
+        return $this->db->query("
+            SELECT
+                h.id_ckup,
+                h.nopol,
+                h.tanggal,
+                h.jam,
+                h.kilometer,
+                h.input_by,
+                COUNT(d.id_detail) AS total_item,
+                SUM(CASE WHEN UPPER(d.status) = 'TIDAK BAIK' THEN 1 ELSE 0 END) AS total_problem
+            FROM tb_checkup_mekanik h
+            LEFT JOIN tb_checkup_mekanik_detail d ON d.id_ckup = h.id_ckup
+            GROUP BY h.id_ckup
+            ORDER BY h.id_ckup DESC
+            LIMIT " . (int) $limit . "
+        ")->result();
+    }
+
+    public function get_truck_checkup_header($id)
+    {
+        return $this->db
+            ->where('id_ckup', (int) $id)
+            ->get('tb_checkup_mekanik')
+            ->row();
+    }
+
+    public function get_truck_checkup_detail($id)
+    {
+        return $this->db->query("
+            SELECT
+                d.id_detail,
+                d.id_ckup,
+                d.id_kategori,
+                d.id_detail_kat,
+                d.status,
+                d.keterangan,
+                d.evident,
+                k.nm_kategori,
+                kd.nm_detail
+            FROM tb_checkup_mekanik_detail d
+            LEFT JOIN tb_checkup_mekanik_kategori k ON k.id_kategori = d.id_kategori
+            LEFT JOIN tb_checkup_mekanik_kategori_detail kd ON kd.id_detail_kat = d.id_detail_kat
+            WHERE d.id_ckup = " . (int) $id . "
+            ORDER BY k.id_kategori ASC, kd.id_detail_kat ASC
+        ")->result();
+    }
+
+    public function insert_truck_checkup_header($data)
+    {
+        $this->db->insert('tb_checkup_mekanik', $data);
+        return $this->db->insert_id();
+    }
+
+    public function insert_truck_checkup_detail($data)
+    {
+        return $this->db->insert('tb_checkup_mekanik_detail', $data);
+    }
+
+    public function get_mekanik_kategori_all()
+    {
+        return $this->db
+            ->order_by('id_kategori', 'asc')
+            ->get('tb_checkup_mekanik_kategori')
+            ->result();
+    }
+
+    public function get_mekanik_kategori_by_id($id)
+    {
+        return $this->db
+            ->where('id_kategori', (int) $id)
+            ->get('tb_checkup_mekanik_kategori')
+            ->row();
+    }
+
+    public function insert_mekanik_kategori($data)
+    {
+        return $this->db->insert('tb_checkup_mekanik_kategori', $data);
+    }
+
+    public function update_mekanik_kategori($id, $data)
+    {
+        return $this->db
+            ->where('id_kategori', (int) $id)
+            ->update('tb_checkup_mekanik_kategori', $data);
+    }
+
+    public function delete_mekanik_kategori($id)
+    {
+        return $this->db
+            ->where('id_kategori', (int) $id)
+            ->delete('tb_checkup_mekanik_kategori');
+    }
+
+    public function count_mekanik_detail_by_kategori($id)
+    {
+        return $this->db
+            ->where('id_kategori', (int) $id)
+            ->from('tb_checkup_mekanik_kategori_detail')
+            ->count_all_results();
+    }
+
+    public function get_mekanik_kategori_detail_all()
+    {
+        return $this->db->query("
+            SELECT
+                d.id_detail_kat,
+                d.id_kategori,
+                d.nm_detail,
+                k.nm_kategori
+            FROM tb_checkup_mekanik_kategori_detail d
+            LEFT JOIN tb_checkup_mekanik_kategori k ON k.id_kategori = d.id_kategori
+            ORDER BY d.id_kategori ASC, d.id_detail_kat ASC
+        ")->result();
+    }
+
+    public function get_mekanik_kategori_detail_by_id($id)
+    {
+        return $this->db
+            ->where('id_detail_kat', (int) $id)
+            ->get('tb_checkup_mekanik_kategori_detail')
+            ->row();
+    }
+
+    public function insert_mekanik_kategori_detail($data)
+    {
+        return $this->db->insert('tb_checkup_mekanik_kategori_detail', $data);
+    }
+
+    public function update_mekanik_kategori_detail($id, $data)
+    {
+        return $this->db
+            ->where('id_detail_kat', (int) $id)
+            ->update('tb_checkup_mekanik_kategori_detail', $data);
+    }
+
+    public function delete_mekanik_kategori_detail($id)
+    {
+        return $this->db
+            ->where('id_detail_kat', (int) $id)
+            ->delete('tb_checkup_mekanik_kategori_detail');
+    }
+
+    public function get_master_checkup_join()
+    {
+        return $this->db->query("
+            SELECT
+                k.id_kategori,
+                k.nm_kategori,
+                d.id_detail_kat,
+                d.nm_detail
+            FROM tb_checkup_mekanik_kategori k
+            LEFT JOIN tb_checkup_mekanik_kategori_detail d
+                ON d.id_kategori = k.id_kategori
+            ORDER BY k.id_kategori ASC, d.id_detail_kat ASC
+        ")->result();
+    }
 }

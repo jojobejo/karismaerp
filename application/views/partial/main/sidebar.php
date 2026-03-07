@@ -148,6 +148,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('hrd_truck_cek') ?>" class="nav-link">
+                <i class="nav-icon fa fa-tools"></i>
+                <p>
+                  General Checkup Truck
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('hrd_lap_Karyawan_KM') ?>" class="nav-link">
                 <i class="nav-icon fa fa-people-arrows"></i>
                 <p>
