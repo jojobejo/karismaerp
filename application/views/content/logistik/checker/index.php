@@ -30,6 +30,13 @@
                         </button>
                     </div>
                     <?php endif; ?>
+                    <?php if (in_array($role, ['SALESCK','DIREKTURCK'])) : ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
+                            <i class="fas fa-archive mr-1"></i> Lihat Arsip
+                        </a>
+                    </div>
+                    <?php endif; ?>
                     <?php if ($role === 'ADMLOG') : ?>
                     <div class="col-auto">
                         <button class="btn btn-info" data-toggle="modal" data-target="#modalTambahKK">
@@ -169,6 +176,7 @@
                                     <th>Mulai</th>
                                     <th>Selesai</th>
                                     <th>Progres</th>
+                                    <th>Durasi</th>
                                     <th>Status</th>
                                     <?php if (in_array($role, ['CHECKER','MANAGERWH','ADMLOG'])) : ?>
                                     <th class="text-center">Aksi</th>
@@ -198,6 +206,33 @@
                                         <div class="progress-bar <?= $progres==100?'bg-success':'bg-warning' ?>"
                                              style="width:<?= $progres ?>%"><?= $progres ?>%</div>
                                     </div>
+                                </td>
+                                <td class="text-center" style="min-width:100px;">
+                                    <?php
+                                    if ($is_taken && !empty($b['waktu_mulai'])) {
+                                        $mulai = strtotime($b['waktu_mulai']);
+                                        $akhir = (!empty($b['waktu_selesai']) && $b['status_checker'] === 'DONE')
+                                                 ? strtotime($b['waktu_selesai'])
+                                                 : time();
+                                        $selisih = $akhir - $mulai;
+                                        if ($selisih > 0) {
+                                            $jam   = floor($selisih / 3600);
+                                            $menit = floor(($selisih % 3600) / 60);
+                                            if ($jam > 0) {
+                                                echo '<small>' . $jam . ' jam ' . $menit . ' menit</small>';
+                                            } else {
+                                                echo '<small>' . $menit . ' menit</small>';
+                                            }
+                                            if ($b['status_checker'] !== 'DONE') {
+                                                echo ' <span class="badge badge-warning" style="font-size:9px;">live</span>';
+                                            }
+                                        } else {
+                                            echo '<small class="text-muted">-</small>';
+                                        }
+                                    } else {
+                                        echo '<small class="text-muted">-</small>';
+                                    }
+                                    ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($role === 'ADMLOG' && !$is_done) : ?>
@@ -232,7 +267,7 @@
                                                         <option value="<?= $p ?>" <?= $progres==$p?'selected':'' ?>><?= $p ?>%</option>
                                                     <?php endforeach; ?>
                                                 </select>
-                                                <button class="btn btn-sm btn-warning btn-update-progres mr-5" data-id="<?= $b['id'] ?>">
+                                                <button class="btn btn-sm btn-warning btn-update-progres mr-1" data-id="<?= $b['id'] ?>">
                                                     <i class="fas fa-sync"></i>
                                                 </button>
                                                 <button class="btn btn-sm btn-primary btn-done" data-id="<?= $b['id'] ?>">
@@ -309,7 +344,14 @@
                                 </td>
                                 <?php if (in_array($role, ['ADMLOG','MANAGERWH'])) : ?>
                                 <td class="text-center">
-                                    <?php if ($role === 'ADMLOG') : ?>
+                                    <?php if (in_array($role, ['SALES','DIREKTUR'])) : ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
+                            <i class="fas fa-archive mr-1"></i> Lihat Arsip
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($role === 'ADMLOG') : ?>
                                         <button class="btn btn-sm btn-info btn-simpan-lk" data-id="<?= $lk['id'] ?>">
                                             <i class="fas fa-save"></i> Simpan
                                         </button>
@@ -368,7 +410,14 @@
                                 </td>
                                 <?php if (in_array($role, ['ADMLOG','MANAGERWH'])) : ?>
                                 <td class="text-center">
-                                    <?php if ($role === 'ADMLOG') : ?>
+                                    <?php if (in_array($role, ['SALES','DIREKTUR'])) : ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
+                            <i class="fas fa-archive mr-1"></i> Lihat Arsip
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($role === 'ADMLOG') : ?>
                                         <button class="btn btn-sm btn-info btn-simpan-kk" data-id="<?= $kk['id'] ?>">
                                             <i class="fas fa-save"></i> Simpan
                                         </button>
@@ -584,8 +633,8 @@ $(document).ready(function () {
     $('#btnArchiveAll').on('click', function () {
         Swal.fire({
             title: 'Archive Aktivitas Hari Ini?',
-            html: 'Semua data <b>Bongkaran, Loading KK, dan Loading LK</b> hari ini akan diarsipkan.<br><br>' +
-                  '<small class="text-danger">Semua bongkaran harus sudah berstatus <b>DONE</b>.</small>',
+            html: 'Semua aktivitas yang sudah <b>DONE</b> akan diarsipkan,<br>tidak terbatas hari ini saja.<br>' +
+                  '<small class="text-muted">Data yang belum DONE tidak akan terpengaruh.</small>',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',

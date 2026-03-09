@@ -245,12 +245,12 @@
         "ordering": false, "info": true, "autoWidth": false, "responsive": true,
     });
     $('#tabelArsipKK').DataTable({
-        "paging": true, "searching": true, "ordering": false,
-        "info": true, "autoWidth": false, "responsive": true,
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
     });
     $('#tabelArsipLK').DataTable({
-        "paging": true, "searching": true, "ordering": false,
-        "info": true, "autoWidth": false, "responsive": true,
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
     });
   });
 </script>

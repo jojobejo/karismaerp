@@ -7,6 +7,7 @@ class M_Checker extends CI_Model
     {
         parent::__construct();
         $this->load->database();
+        date_default_timezone_set('Asia/Jakarta'); // WIB UTC+7
     }
 
     // ================================================================
@@ -161,30 +162,29 @@ class M_Checker extends CI_Model
     }
 
     // ================================================================
-    // ARCHIVE SEMUA AKTIVITAS HARI INI (1 tombol oleh Manager WH)
+    // ARCHIVE SEMUA YANG SUDAH DONE (tidak terbatas hari ini)
     // ================================================================
-    public function archive_all_today($by)
+    public function archive_all_done($by)
     {
-        $today     = date('Y-m-d');
-        $now       = date('Y-m-d H:i:s');
-        $data_arc  = ['is_archived' => 1, 'archived_at' => $now, 'archived_by' => $by];
+        $now      = date('Y-m-d H:i:s');
+        $data_arc = ['is_archived' => 1, 'archived_at' => $now, 'archived_by' => $by];
 
+        // Bongkaran: semua status DONE belum diarsipkan
         $this->db->where('is_archived', 0)
-                ->where('status', 'DONE')
-                ->where('DATE(created_at)', $today)
-                ->update('tb_bongkaran', $data_arc);
+                 ->where('status', 'DONE')
+                 ->update('tb_bongkaran', $data_arc);
         $b = $this->db->affected_rows();
 
+        // Loading KK: semua status DONE belum diarsipkan
         $this->db->where('is_archived', 0)
-                ->where('status', 'DONE')
-                ->where('DATE(created_at)', $today)
-                ->update('tb_loading_kk', $data_arc);
+                 ->where('status', 'DONE')
+                 ->update('tb_loading_kk', $data_arc);
         $k = $this->db->affected_rows();
 
+        // Loading LK: semua status DONE belum diarsipkan
         $this->db->where('is_archived', 0)
-                ->where('status', 'DONE')
-                ->where('DATE(tgl)', $today)
-                ->update('tb_loading_lk', $data_arc);
+                 ->where('status', 'DONE')
+                 ->update('tb_loading_lk', $data_arc);
         $l = $this->db->affected_rows();
 
         return ['bongkaran' => $b, 'kk' => $k, 'lk' => $l];

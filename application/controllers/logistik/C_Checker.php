@@ -4,8 +4,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class C_Checker extends CI_Controller
 {
     const ROLE_CHECKER    = 'CHECKER';
-    const ROLE_ADMLOG     = 'ADMLOG';       // ← jobdesk untuk Admin Logistik
+    const ROLE_ADMLOG     = 'ADMLOG';
     const ROLE_MANAGER_WH = 'MANAGERWH';
+    const ROLE_SALES      = 'SALESCK';
+    const ROLE_DIREKTUR   = 'DIREKTURCK';
+
+    private function canView()
+    {
+        return in_array($this->role(), [
+            self::ROLE_CHECKER, self::ROLE_ADMLOG, self::ROLE_MANAGER_WH,
+            self::ROLE_SALES, self::ROLE_DIREKTUR,
+        ]);
+    }
 
     public function __construct()
     {
@@ -13,6 +23,7 @@ class C_Checker extends CI_Controller
         $this->load->model('M_Checker');
         $this->load->library('session');
         $this->load->helper('url');
+        date_default_timezone_set('Asia/Jakarta'); // WIB UTC+7
         if (!$this->session->userdata('nik')) redirect('Auth');
     }
 
@@ -32,6 +43,7 @@ class C_Checker extends CI_Controller
     // ----------------------------------------------------------------
     public function index()
     {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
         $nik = $this->session->userdata('nik');
         $data['page_title']    = 'KARISMA - Aktivitas Warehouse';
         $data['bongkaran']     = $this->M_Checker->get_list();
@@ -52,7 +64,7 @@ class C_Checker extends CI_Controller
     // ----------------------------------------------------------------
     public function arsip()
     {
-        if ($this->role() !== self::ROLE_MANAGER_WH) { show_error('Akses ditolak', 403); }
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
 
         $data['page_title']    = 'KARISMA - Arsip Warehouse';
         $data['arsip_bongkar'] = $this->M_Checker->get_arsip_bongkaran();
@@ -151,10 +163,11 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
 
-        $result = $this->M_Checker->archive_all_today($this->nama());
+        $result = $this->M_Checker->archive_all_done($this->nama());
         $total  = $result['bongkaran'] + $result['kk'] + $result['lk'];
+
         if ($total === 0) {
-            echo json_encode(['status' => false, 'msg' => 'Tidak ada data DONE hari ini yang bisa diarsipkan']);
+            echo json_encode(['status' => false, 'msg' => 'Tidak ada data DONE yang belum diarsipkan']);
             return;
         }
         echo json_encode([
