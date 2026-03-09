@@ -1897,20 +1897,36 @@ class C_Hrd extends CI_Controller
         $tanggal   = trim($this->input->post('tanggal_check'));
         $jam       = trim($this->input->post('jam_check'));
         $kilometer = (int) $this->input->post('kilometer');
+        $inputBy   = trim($this->input->post('inmpuuter'));
         $rawItems  = $this->input->post('items_json');
         $items     = json_decode($rawItems, true);
 
-        if (
-            $nopol === '' ||
-            $tanggal === '' ||
-            $jam === '' ||
-            $kilometer <= 0 ||
-            !is_array($items) ||
-            count($items) === 0
-        ) {
+        $missing = [];
+        if ($nopol === '') {
+            $missing[] = 'no_polisi';
+        }
+        if ($tanggal === '') {
+            $missing[] = 'tanggal_check';
+        }
+        if ($jam === '') {
+            $missing[] = 'jam_check';
+        }
+        if ($kilometer <= 0) {
+            $missing[] = 'kilometer';
+        }
+
+        if (!empty($missing)) {
             echo json_encode([
                 'status'  => false,
-                'message' => 'Field wajib belum lengkap'
+                'message' => 'Field wajib belum lengkap: ' . implode(', ', $missing)
+            ]);
+            return;
+        }
+
+        if (!is_array($items) || count($items) === 0) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Detail checklist tidak ditemukan'
             ]);
             return;
         }
@@ -1920,9 +1936,11 @@ class C_Hrd extends CI_Controller
             @mkdir($uploadDir, 0777, true);
         }
 
-        $username = $this->session->userdata('username');
-        if (empty($username)) {
-            $username = 'system';
+        if ($inputBy === '') {
+            $inputBy = $this->session->userdata('username');
+        }
+        if (empty($inputBy)) {
+            $inputBy = 'system';
         }
 
         $this->db->trans_begin();
@@ -1932,7 +1950,7 @@ class C_Hrd extends CI_Controller
             'tanggal'       => $tanggal,
             'jam'           => $jam,
             'kilometer'     => $kilometer,
-            'input_by'      => $username
+            'input_by'      => $inputBy
         ];
 
         $checklistId = $this->M_Hrd->insert_truck_checkup_header($header);
@@ -1959,29 +1977,45 @@ class C_Hrd extends CI_Controller
             }
 
             $kondisi = $kondisiRaw === 'TIDAK BAIK' ? 'TIDAK BAIK' : 'BAIK';
-            $fotoFile = null;
+            $fotoFile = '';
 
-            if ($fileKey !== '' && isset($_FILES[$fileKey]) && !empty($_FILES[$fileKey]['name'])) {
-                $_FILES['single_file'] = $_FILES[$fileKey];
+            if ($fileKey !== '' && isset($_FILES[$fileKey])) {
+                $fileError = isset($_FILES[$fileKey]['error']) ? (int) $_FILES[$fileKey]['error'] : UPLOAD_ERR_NO_FILE;
+                $fileName  = isset($_FILES[$fileKey]['name']) ? trim($_FILES[$fileKey]['name']) : '';
+                $tmpName   = isset($_FILES[$fileKey]['tmp_name']) ? trim($_FILES[$fileKey]['tmp_name']) : '';
 
-                $config = [
-                    'upload_path'   => $uploadDir,
-                    'allowed_types' => 'jpg|jpeg|png|webp',
-                    'max_size'      => 4096,
-                    'file_name'     => 'TRUCK_' . $checklistId . '_' . $idx . '_' . time()
-                ];
+                // Lewati proses upload jika memang tidak ada file yang dipilih.
+                if ($fileError !== UPLOAD_ERR_NO_FILE) {
+                    if ($fileError !== UPLOAD_ERR_OK || $fileName === '' || $tmpName === '') {
+                        $this->db->trans_rollback();
+                        echo json_encode([
+                            'status'  => false,
+                            'message' => 'File evident gagal diupload'
+                        ]);
+                        return;
+                    }
 
-                $this->upload->initialize($config);
-                if ($this->upload->do_upload('single_file')) {
-                    $uploadData = $this->upload->data();
-                    $fotoFile = $uploadData['file_name'];
-                } else {
-                    $this->db->trans_rollback();
-                    echo json_encode([
-                        'status'  => false,
-                        'message' => strip_tags($this->upload->display_errors())
-                    ]);
-                    return;
+                    $_FILES['single_file'] = $_FILES[$fileKey];
+
+                    $config = [
+                        'upload_path'   => $uploadDir,
+                        'allowed_types' => 'jpg|jpeg|png|webp',
+                        'max_size'      => 4096,
+                        'file_name'     => 'TRUCK_' . $checklistId . '_' . $idx . '_' . time()
+                    ];
+
+                    $this->upload->initialize($config);
+                    if ($this->upload->do_upload('single_file')) {
+                        $uploadData = $this->upload->data();
+                        $fotoFile = $uploadData['file_name'];
+                    } else {
+                        $this->db->trans_rollback();
+                        echo json_encode([
+                            'status'  => false,
+                            'message' => strip_tags($this->upload->display_errors())
+                        ]);
+                        return;
+                    }
                 }
             }
 
@@ -1992,7 +2026,7 @@ class C_Hrd extends CI_Controller
                 'status'       => $kondisi,
                 'keterangan'   => $keterangan,
                 'evident'      => $fotoFile,
-                'input_by'     => $username
+                'input_by'     => $inputBy
             ];
 
             $this->M_Hrd->insert_truck_checkup_detail($detail);
