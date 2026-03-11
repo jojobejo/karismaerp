@@ -26,7 +26,7 @@
 
         <section class="content">
             <div class="container-fluid">
-                <?php $this->load->view('kmt/_partial/alert') ?>
+                <?php $this->load->view('partial/main/alert') ?>
 
                 <div class="mb-3">
                     <a href="<?= base_url('kmt/retur/tambah') ?>" class="btn btn-danger btn-sm">
