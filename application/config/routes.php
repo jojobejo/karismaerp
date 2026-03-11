@@ -284,6 +284,59 @@ $route['update_norut']                              = 'logistik/C_Logistik/updat
 $route['save_do']                                   = 'logistik/C_Logistik/save_do';
 $route['custupdate']                                = 'logistik/C_Logistik/custupdate';
 
+// Dashboard
+$route['kmt/dashboard']        = 'kmt/Dashboard/index';
+$route['kmt/dashboard/filter'] = 'kmt/Dashboard/filter';
+
+// ---- KMT Omset ----
+$route['kmt/omset']                = 'kmt/Omset/index';
+$route['kmt/omset/tambah']         = 'kmt/Omset/tambah';
+$route['kmt/omset/simpan']         = 'kmt/Omset/simpan';
+$route['kmt/omset/edit/(:num)']    = 'kmt/Omset/edit/$1';
+$route['kmt/omset/update/(:num)']  = 'kmt/Omset/update/$1';
+$route['kmt/omset/hapus/(:num)']   = 'kmt/Omset/hapus/$1';
+
+// ---- KMT Operasional ----
+$route['kmt/operasional']                = 'kmt/Operasional/index';
+$route['kmt/operasional/tambah']         = 'kmt/Operasional/tambah';
+$route['kmt/operasional/simpan']         = 'kmt/Operasional/simpan';
+$route['kmt/operasional/edit/(:num)']    = 'kmt/Operasional/edit/$1';
+$route['kmt/operasional/update/(:num)']  = 'kmt/Operasional/update/$1';
+$route['kmt/operasional/hapus/(:num)']   = 'kmt/Operasional/hapus/$1';
+
+// ---- KMT DCA ----
+$route['kmt/dca']                = 'kmt/Dca/index';
+$route['kmt/dca/tambah']         = 'kmt/Dca/tambah';
+$route['kmt/dca/simpan']         = 'kmt/Dca/simpan';
+$route['kmt/dca/edit/(:num)']    = 'kmt/Dca/edit/$1';
+$route['kmt/dca/update/(:num)']  = 'kmt/Dca/update/$1';
+$route['kmt/dca/hapus/(:num)']   = 'kmt/Dca/hapus/$1';
+
+// ---- KMT Promo / Peralatan ----
+$route['kmt/promo']                = 'kmt/Promo/index';
+$route['kmt/promo/tambah']         = 'kmt/Promo/tambah';
+$route['kmt/promo/simpan']         = 'kmt/Promo/simpan';
+$route['kmt/promo/edit/(:num)']    = 'kmt/Promo/edit/$1';
+$route['kmt/promo/update/(:num)']  = 'kmt/Promo/update/$1';
+$route['kmt/promo/hapus/(:num)']   = 'kmt/Promo/hapus/$1';
+
+// ---- KMT Gaji ----
+$route['kmt/gaji']                = 'kmt/Gaji/index';
+$route['kmt/gaji/tambah']         = 'kmt/Gaji/tambah';
+$route['kmt/gaji/simpan']         = 'kmt/Gaji/simpan';
+$route['kmt/gaji/edit/(:num)']    = 'kmt/Gaji/edit/$1';
+$route['kmt/gaji/update/(:num)']  = 'kmt/Gaji/update/$1';
+$route['kmt/gaji/hapus/(:num)']   = 'kmt/Gaji/hapus/$1';
+
+// ---- KMT Retur ----
+$route['kmt/retur']                = 'kmt/Retur/index';
+$route['kmt/retur/tambah']         = 'kmt/Retur/tambah';
+$route['kmt/retur/simpan']         = 'kmt/Retur/simpan';
+$route['kmt/retur/edit/(:num)']    = 'kmt/Retur/edit/$1';
+$route['kmt/retur/update/(:num)']  = 'kmt/Retur/update/$1';
+$route['kmt/retur/hapus/(:num)']   = 'kmt/Retur/hapus/$1';
+
+
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
 

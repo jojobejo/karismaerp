@@ -4,7 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Auth extends CI_Controller
 {
     function __construct()
-    {
+    {   
         parent::__construct();
         $this->load->model('M_Auth');
     }
@@ -68,6 +68,12 @@ class Auth extends CI_Controller
                         redirect('logistik/distibusi');
                     } else if ($key->jobdesk == 'ADMINLOGLPB') {
                         redirect('ics/icspo');
+                    } else if ($key->jobdesk == 'KADEPKS') {
+                        redirect('kmt/dashboard');
+                    } else if ($key->jobdesk == 'ABM') {
+                        redirect('kmt/dashboard');
+                    } else if ($key->jobdesk == 'ADMKEU') {
+                        redirect('kmt/dashboard');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
