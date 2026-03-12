@@ -11,18 +11,18 @@ class Operasional extends CI_Controller {
     }
 
     private function get_id_wilayah_filter() {
-        return ((int)$this->session->userdata('akses_lv') === 3)
-            ? (int)$this->session->userdata('id_wilayah')
+        return ((int)$this->session->userdata('lv') === 3)
+            ? (int)$this->session->userdata('wilayah')
             : null;
     }
 
     // Cek akses: hanya ABM & KADEP yang bisa input operasional
     // ADMIN tidak bisa input
     private function cek_bisa_input() {
-        $lv = (int)$this->session->userdata('akses_lv');
+        $lv = (int)$this->session->userdata('lv');
         if ($lv === 2) { // ADMIN
             $this->session->set_flashdata('error', 'Admin tidak dapat menginput data operasional.');
-            redirect('content/kmt/operasional');
+            redirect('kmt/operasional');
         }
     }
 
@@ -51,7 +51,7 @@ class Operasional extends CI_Controller {
             'id_wilayah'   => $id_wilayah,
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -67,8 +67,8 @@ class Operasional extends CI_Controller {
         $data = [
             'title'        => 'Tambah Biaya Operasional',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'     => (int)$this->session->userdata('lv'),
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -112,7 +112,7 @@ class Operasional extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
-        redirect('content/kmt/operasional');
+        redirect('kmt/operasional');
     }
 
     // ----------------------------------------------------------------
@@ -124,18 +124,18 @@ class Operasional extends CI_Controller {
         if (!$row) { show_404(); return; }
 
         // ABM hanya bisa edit data wilayah sendiri
-        $lv = (int)$this->session->userdata('akses_lv');
-        if ($lv === 3 && $row['id_wilayah'] != $this->session->userdata('id_wilayah')) {
+        $lv = (int)$this->session->userdata('lv');
+        if ($lv === 3 && $row['id_wilayah'] != $this->session->userdata('wilayah')) {
             $this->session->set_flashdata('error', 'Anda tidak bisa mengedit data wilayah lain.');
-            redirect('content/kmt/operasional');
+            redirect('kmt/operasional');
         }
 
         $data = [
             'title'           => 'Edit Biaya Operasional',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'akses_lv'        => $lv,
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'        => $lv,
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('content/kmt/operasional/form', $data);
     }
@@ -166,7 +166,7 @@ class Operasional extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
-        redirect('content/kmt/operasional');
+        redirect('kmt/operasional');
     }
 
     // ----------------------------------------------------------------
@@ -179,6 +179,6 @@ class Operasional extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
-        redirect('content/kmt/operasional');
+        redirect('kmt/operasional');
     }
 }

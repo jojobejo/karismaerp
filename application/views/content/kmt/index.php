@@ -1,3 +1,4 @@
+<!-- dashboard.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -75,18 +76,30 @@
                                 <div class="col-md-3 col-sm-6">
                                     <div class="form-group mb-0">
                                         <label><i class="fas fa-map-marker-alt"></i> Wilayah</label>
-                                        <select name="id_wilayah" class="form-control form-control-sm select2"
-                                                style="width:100%" <?= $is_abm ? 'disabled' : '' ?>>
-                                            <?php if (!$is_abm): ?>
+
+                                        <?php if ($lv === 3): ?>
+                                            <?php
+                                                // Cari nama wilayah ABM
+                                                $nama_wil = '-';
+                                                foreach ($wilayah_list as $w) {
+                                                    if ($w['id'] == $id_wilayah) { $nama_wil = $w['nama_wilayah']; break; }
+                                                }
+                                            ?>
+                                            <!-- Nilai tetap dikirim saat form submit -->
+                                            <input type="hidden" name="id_wilayah" value="<?= $id_wilayah ?>">
+                                            <input type="text" class="form-control form-control-sm"
+                                                value="<?= htmlspecialchars($nama_wil) ?>" disabled>
+                                        <?php else: ?>
+                                            <select name="id_wilayah" class="form-control form-control-sm select2" style="width:100%">
                                                 <option value="">-- Semua Wilayah --</option>
-                                            <?php endif; ?>
-                                            <?php foreach ($wilayah_list as $w): ?>
-                                                <option value="<?= $w['id'] ?>"
-                                                    <?= ($id_wilayah == $w['id']) ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($w['nama_wilayah']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
+                                                <?php foreach ($wilayah_list as $w): ?>
+                                                    <option value="<?= $w['id'] ?>"
+                                                        <?= ($id_wilayah == $w['id']) ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($w['nama_wilayah']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 

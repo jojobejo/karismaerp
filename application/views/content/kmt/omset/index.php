@@ -38,7 +38,7 @@
                 <?php $this->load->view('partial/main/alert') ?>
 
                 <!-- Tombol Tambah — hanya KADEP -->
-                <?php if ($akses_lv == 1): ?>
+                <?php if ($lv == 1): ?>
                 <div class="mb-3">
                     <a href="<?= base_url('kmt/omset/tambah') ?>" class="btn btn-success btn-sm">
                         <i class="fas fa-plus mr-1"></i> Tambah Omset
@@ -122,7 +122,7 @@
                                             <?= number_format($row['penj_inc_ppn_neto'], 0, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
-                                            <?php if ($akses_lv == 1): ?>
+                                            <?php if ($lv == 1): ?>
                                             <a href="<?= base_url('kmt/omset/edit/' . $row['id']) ?>"
                                                class="btn btn-xs btn-warning" title="Edit">
                                                 <i class="fas fa-edit"></i>

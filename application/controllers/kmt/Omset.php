@@ -12,16 +12,16 @@ class Omset extends CI_Controller {
 
     // Cek akses — ABM tidak bisa input omset
     private function cek_bukan_abm() {
-        if ((int)$this->session->userdata('akses_lv') === 3) {
+        if ((int)$this->session->userdata('lv') === 3) {
             $this->session->set_flashdata('error', 'Anda tidak memiliki akses ke menu ini.');
-            redirect('content/kmt/dashboard');
+            redirect('kmt/dashboard');
         }
     }
 
     // Wilayah filter sesuai level
     private function get_id_wilayah_filter() {
-        return ((int)$this->session->userdata('akses_lv') === 3)
-            ? (int)$this->session->userdata('id_wilayah')
+        return ((int)$this->session->userdata('lv') === 3)
+            ? (int)$this->session->userdata('wilayah')
             : null;
     }
 
@@ -52,7 +52,7 @@ class Omset extends CI_Controller {
             'id_wilayah'   => $id_wilayah,
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -69,7 +69,7 @@ class Omset extends CI_Controller {
         $data = [
             'title'        => 'Tambah Data Omset',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -133,7 +133,7 @@ class Omset extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
-        redirect('content/kmt/omset');
+        redirect('kmt/omset/');
     }
 
     // ----------------------------------------------------------------
@@ -149,7 +149,7 @@ class Omset extends CI_Controller {
             'title'        => 'Edit Data Omset',
             'row'          => $row,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
         $this->load->view('content/kmt/omset/form', $data);
     }
@@ -193,7 +193,7 @@ class Omset extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
-        redirect('content/kmt/omset');
+        redirect('kmt/omset');
     }
 
     // ----------------------------------------------------------------
@@ -206,6 +206,6 @@ class Omset extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
-        redirect('content/kmt/omset');
+        redirect('kmt/omset');
     }
 }

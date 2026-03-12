@@ -14,8 +14,8 @@ class Dca extends CI_Controller {
     }
 
     private function get_id_wilayah_filter() {
-        return ((int)$this->session->userdata('akses_lv') === 3)
-            ? (int)$this->session->userdata('id_wilayah') : null;
+        return ((int)$this->session->userdata('lv') === 3)
+            ? (int)$this->session->userdata('wilayah') : null;
     }
 
     public function index() {
@@ -40,7 +40,7 @@ class Dca extends CI_Controller {
             'id_wilayah'   => $id_wilayah,
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -52,8 +52,8 @@ class Dca extends CI_Controller {
         $data = [
             'title'        => 'Tambah Data DCA',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'     => (int)$this->session->userdata('lv'),
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/form', $data);
@@ -93,7 +93,7 @@ class Dca extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
-        redirect('content/kmt/dca');
+        redirect('kmt/dca');
     }
 
     public function edit($id) {
@@ -103,8 +103,8 @@ class Dca extends CI_Controller {
             'title'           => 'Edit Data DCA',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'akses_lv'        => (int)$this->session->userdata('akses_lv'),
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'        => (int)$this->session->userdata('lv'),
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('content/kmt/dca/form', $data);
     }
@@ -132,7 +132,7 @@ class Dca extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
-        redirect('content/kmt/dca');
+        redirect('kmt/dca');
     }
 
     public function hapus($id) {
@@ -141,6 +141,6 @@ class Dca extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
-        redirect('content/kmt/dca');
+        redirect('kmt/dca');
     }
 }

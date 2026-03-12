@@ -4,12 +4,12 @@
  * Reusable filter bar — include di setiap halaman index
  *
  * Required vars dari controller:
- *   $tahun, $bulan (optional), $id_wilayah, $wilayah_list, $akses_lv
+ *   $tahun, $bulan (optional), $id_wilayah, $wilayah_list, $lv
  *   $filter_url  — base url tujuan GET, contoh: base_url('kmt/omset')
  *   $show_bulan  — bool, tampilkan filter bulan atau tidak (default true)
  */
 $show_bulan = isset($show_bulan) ? $show_bulan : true;
-$is_abm     = ((int)$akses_lv === 3);
+$is_abm     = ((int)$lv === 3);
 ?>
 <div class="card card-outline card-primary mb-3">
     <div class="card-header py-2">

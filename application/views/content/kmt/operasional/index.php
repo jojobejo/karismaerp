@@ -1,3 +1,4 @@
+<!-- operasional/index.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -35,7 +36,7 @@
                 <?php $this->load->view('partial/main/alert')?>
 
                 <!-- Tombol Tambah — KADEP & ABM -->
-                <?php if ($akses_lv != 2): ?>
+                <?php if ($lv != 2): ?>
                 <div class="mb-3">
                     <a href="<?= base_url('kmt/operasional/tambah') ?>" class="btn btn-warning btn-sm">
                         <i class="fas fa-plus mr-1"></i> Tambah Biaya
@@ -107,7 +108,7 @@
                                             <?= number_format($row['total_biaya'], 0, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
-                                            <?php if ($akses_lv != 2): ?>
+                                            <?php if ($lv != 2): ?>
                                             <a href="<?= base_url('kmt/operasional/edit/' . $row['id']) ?>"
                                                class="btn btn-xs btn-warning" title="Edit">
                                                 <i class="fas fa-edit"></i>

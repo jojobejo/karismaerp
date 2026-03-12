@@ -15,25 +15,27 @@ class Dashboard extends CI_Controller {
     }
 
     public function index() {
-        // Ambil filter dari GET, default tahun sekarang
-        $tahun      = $this->input->get('tahun')      ?? date('Y');
-        $id_wilayah = $this->input->get('id_wilayah') ?? null;
+        $lv    = (int)$this->session->userdata('lv');
+        $tahun = $this->input->get('tahun') ?? date('Y');
 
-        // ABM hanya bisa lihat wilayah sendiri
-        if ((int)$this->session->userdata('akses_lv') === 3) {
-            $id_wilayah = $this->session->userdata('id_wilayah');
+        // ABM (lv 3) paksa wilayah dari session, tidak bisa diubah via GET
+        if ($lv === 3) {
+            $id_wilayah = (int)$this->session->userdata('wilayah');
+        } else {
+            $id_wilayah = $this->input->get('id_wilayah');
+            $id_wilayah = $id_wilayah ? (int)$id_wilayah : null;
         }
 
-        // Pastikan integer atau null
-        $id_wilayah = $id_wilayah ? (int)$id_wilayah : null;
+        $data['title']            = 'Dashboard KMT CORN';
+        $data['tahun']            = $tahun;
+        $data['id_wilayah']       = $id_wilayah;
+        $data['lv']               = $lv;
+        $data['wilayah_list']     = $this->M_Kmt->get_wilayah();
+        $data['ytd']              = $this->M_Kmt->get_ytd($tahun, $id_wilayah);
+        $data['summary']          = $this->M_Kmt->get_summary_cards($tahun, $id_wilayah);
 
-        $data['title']             = 'Dashboard KMT CORN';
-        $data['tahun']             = $tahun;
-        $data['id_wilayah']        = $id_wilayah;
-        $data['wilayah_list']      = $this->M_Kmt->get_wilayah();
-        $data['ytd']               = $this->M_Kmt->get_ytd($tahun, $id_wilayah);
-        $data['summary']           = $this->M_Kmt->get_summary_cards($tahun, $id_wilayah);
-        $data['cost_per_wilayah']  = $this->M_Kmt->get_cost_per_hasil_wilayah($tahun);
+        // ABM hanya lihat wilayahnya, selain ABM lihat semua
+        $data['cost_per_wilayah'] = $this->M_Kmt->get_cost_per_hasil_wilayah($tahun, $id_wilayah);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/index', $data);

@@ -29,7 +29,7 @@
                 <?php
                 $is_edit = isset($row);
                 $action  = $is_edit ? base_url('kmt/dca/update/'.$row['id']) : base_url('kmt/dca/simpan');
-                $lv      = (int)$akses_lv;
+                $lv      = (int)$lv;
                 ?>
 
                 <form action="<?= $action ?>" method="POST">

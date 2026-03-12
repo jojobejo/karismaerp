@@ -15,9 +15,9 @@ class Gaji extends CI_Controller {
         parent::__construct();
         if (!$this->session->userdata('logged_in')) redirect('login');
         // Hanya KADEP yang bisa akses gaji
-        if ((int)$this->session->userdata('akses_lv') > 1) {
+        if ((int)$this->session->userdata('lv') > 1) {
             $this->session->set_flashdata('error', 'Hanya KADEP yang dapat mengakses menu Gaji.');
-            redirect('content/kmt/dashboard');
+            redirect('kmt/dashboard');
         }
         $this->load->model('M_Kmt');
         $this->load->library('form_validation');
@@ -48,7 +48,7 @@ class Gaji extends CI_Controller {
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'tahun'        => $tahun,
             'id_wilayah'   => $id_wilayah,
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -61,7 +61,7 @@ class Gaji extends CI_Controller {
             'title'        => 'Tambah Data Gaji',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'bulan_cols'   => $this->bulan_cols,
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
         $this->load->view('content/kmt/gaji/form', $data);
     }
@@ -96,7 +96,7 @@ class Gaji extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
-        redirect('content/kmt/gaji');
+        redirect('kmt/gaji');
     }
 
     public function edit($id) {
@@ -107,7 +107,7 @@ class Gaji extends CI_Controller {
             'row'          => $row,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'bulan_cols'   => $this->bulan_cols,
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
         $this->load->view('content/kmt/gaji/form', $data);
     }
@@ -133,7 +133,7 @@ class Gaji extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
-        redirect('content/kmt/gaji');
+        redirect('kmt/gaji');
     }
 
     public function hapus($id) {
@@ -142,6 +142,6 @@ class Gaji extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
-        redirect('content/kmt/gaji');
+        redirect('kmt/gaji');
     }
 }

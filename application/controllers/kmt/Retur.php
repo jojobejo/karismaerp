@@ -11,8 +11,8 @@ class Retur extends CI_Controller {
     }
 
     private function get_id_wilayah_filter() {
-        return ((int)$this->session->userdata('akses_lv') === 3)
-            ? (int)$this->session->userdata('id_wilayah') : null;
+        return ((int)$this->session->userdata('lv') === 3)
+            ? (int)$this->session->userdata('wilayah') : null;
     }
 
     public function index() {
@@ -39,7 +39,7 @@ class Retur extends CI_Controller {
             'id_wilayah'   => $id_wilayah,
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
-            'akses_lv'     => (int)$this->session->userdata('akses_lv'),
+            'lv'     => (int)$this->session->userdata('lv'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -51,8 +51,8 @@ class Retur extends CI_Controller {
         $data = [
             'title'           => 'Tambah Data Retur',
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'akses_lv'        => (int)$this->session->userdata('akses_lv'),
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'        => (int)$this->session->userdata('lv'),
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -90,7 +90,7 @@ class Retur extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
-        redirect('content/kmt/retur');
+        redirect('kmt/retur');
     }
 
     public function edit($id) {
@@ -100,8 +100,8 @@ class Retur extends CI_Controller {
             'title'           => 'Edit Data Retur',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'akses_lv'        => (int)$this->session->userdata('akses_lv'),
-            'id_wilayah_user' => $this->session->userdata('id_wilayah'),
+            'lv'        => (int)$this->session->userdata('lv'),
+            'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('content/kmt/retur/form', $data);
     }
@@ -126,7 +126,7 @@ class Retur extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
-        redirect('content/kmt/retur');
+        redirect('kmt/retur');
     }
 
     public function hapus($id) {
@@ -135,6 +135,6 @@ class Retur extends CI_Controller {
         } else {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
-        redirect('content/kmt/retur');
+        redirect('kmt/retur');
     }
 }

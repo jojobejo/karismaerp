@@ -1,3 +1,4 @@
+<!-- fomm.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -74,7 +75,7 @@
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Wilayah <span class="text-danger">*</span></label>
-                                        <?php $lv = (int)$akses_lv; ?>
+                                        <?php $lv = (int)$lv; ?>
                                         <select name="id_wilayah" class="form-control form-control-sm"
                                                 <?= $lv === 3 ? 'disabled' : '' ?> required>
                                             <option value="">-- Pilih --</option>
