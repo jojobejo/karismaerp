@@ -30,12 +30,25 @@
             <div class="container-fluid">
                 <?php $this->load->view('partial/main/alert') ?>
 
-                <div class="mb-3">
-                    <a href="<?= base_url('kmt/dca/tambah') ?>" class="btn btn-info btn-sm">
-                        <i class="fas fa-plus mr-1"></i> Tambah DCA
-                    </a>
-                </div>
+                <div class="mb-3 d-flex justify-content-between">
 
+                    <div>
+                        <a href="<?= base_url('kmt/dca/tambah') ?>" class="btn btn-info btn-sm">
+                            <i class="fas fa-plus mr-1"></i> Tambah DCA
+                        </a>
+                    </div>
+
+                    <div>
+                        <a href="<?= base_url('kmt/dca/export')
+                                . '?tahun=' . $tahun
+                                . '&bulan=' . $bulan
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                        class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        </a>
+                    </div>
+
+                </div>
                 <?php $this->load->view('partial/main/filter', [
                     'filter_url' => base_url('kmt/dca'),
                     'show_bulan' => true,

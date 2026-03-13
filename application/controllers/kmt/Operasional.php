@@ -169,4 +169,65 @@ class Operasional extends CI_Controller {
         }
         redirect('kmt/operasional');
     }
+
+    public function export() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+
+        $list = $this->M_Kmt->get_operasional_list($filter);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Operasional');
+
+        $headers = ['No','Tanggal','Wilayah','Nama','Hotel','Per Diem','Entertainment',
+                    'Communication','ATK','Gasoline','Sparepart','Toll/Parkir',
+                    'Transportasi','Pos/Paket','Tambah Angin','Tambal Ban',
+                    'Indekost','Lain-lain','Total'];
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
+        }
+
+        $sheet->getStyle('A1:S1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+
+        $fields = ['hotel','per_diem','entertainment','communication','atk','gasoline',
+                'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
+                'tambah_angin','tambal_ban','indekost','lain_lain'];
+
+        foreach ($list as $i => $row) {
+            $r = $i + 2;
+            $sheet->setCellValueByColumnAndRow(1,  $r, $i + 1);
+            $sheet->setCellValueByColumnAndRow(2,  $r, date('d/m/Y', strtotime($row['tanggal'])));
+            $sheet->setCellValueByColumnAndRow(3,  $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(4,  $r, $row['nama']);
+            $col = 5;
+            foreach ($fields as $f) {
+                $sheet->setCellValueByColumnAndRow($col++, $r, $row[$f] ?? 0);
+            }
+            $sheet->setCellValueByColumnAndRow($col, $r, $row['total_biaya']);
+        }
+
+        foreach (range('A', 'S') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Operasional_KMT_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }

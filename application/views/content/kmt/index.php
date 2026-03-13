@@ -173,6 +173,16 @@
                 </div>
                 <!-- /.row info boxes -->
 
+                <!-- Tombol Export -->
+                <div class="mb-3">
+                    <a href="<?= base_url('kmt/dashboard/export')
+                            . '?tahun='       . $tahun
+                            . '&id_wilayah='  . ($id_wilayah ?? '') ?>"
+                    class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel mr-1"></i> Export Excel
+                    </a>
+                </div>
+
                 <!-- ============================
                      TABEL YTD BULANAN
                 ============================= -->

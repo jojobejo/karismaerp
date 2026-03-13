@@ -28,10 +28,23 @@
             <div class="container-fluid">
                 <?php $this->load->view('partial/main/alert') ?>
 
-                <div class="mb-3">
-                    <a href="<?= base_url('kmt/gaji/tambah') ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus mr-1"></i> Tambah Karyawan
-                    </a>
+                <div class="mb-3 d-flex justify-content-between">
+
+                    <div>
+                        <a href="<?= base_url('kmt/gaji/tambah') ?>" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus mr-1"></i> Tambah Karyawan
+                        </a>
+                    </div>
+
+                    <div>
+                        <a href="<?= base_url('kmt/gaji/export')
+                                . '?tahun=' . $tahun
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                        class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        </a>
+                    </div>
+
                 </div>
 
                 <!-- Filter (tanpa bulan) -->

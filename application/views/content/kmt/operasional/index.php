@@ -35,14 +35,30 @@
 
                 <?php $this->load->view('partial/main/alert')?>
 
-                <!-- Tombol Tambah — KADEP & ABM -->
-                <?php if ($lv != 2): ?>
-                <div class="mb-3">
-                    <a href="<?= base_url('kmt/operasional/tambah') ?>" class="btn btn-warning btn-sm">
-                        <i class="fas fa-plus mr-1"></i> Tambah Biaya
-                    </a>
+                <!-- Tombol Action -->
+                <div class="mb-3 d-flex justify-content-between">
+
+                    <div>
+                        <!-- Tombol Tambah — KADEP & ABM -->
+                        <?php if ($lv != 2): ?>
+                        <a href="<?= base_url('kmt/operasional/tambah') ?>" class="btn btn-warning btn-sm">
+                            <i class="fas fa-plus mr-1"></i> Tambah Biaya
+                        </a>
+                        <?php endif; ?>
+                    </div>
+
+                    <div>
+                        <!-- Tombol Export Excel -->
+                        <a href="<?= base_url('kmt/operasional/export')
+                                . '?tahun=' . $tahun
+                                . '&bulan=' . $bulan
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                            class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        </a>
+                    </div>
+
                 </div>
-                <?php endif; ?>
 
                 <!-- Filter -->
                 <?php $this->load->view('partial/main/filter', [

@@ -37,14 +37,28 @@
 
                 <?php $this->load->view('partial/main/alert') ?>
 
-                <!-- Tombol Tambah — hanya KADEP -->
-                <?php if ($lv == 1): ?>
-                <div class="mb-3">
-                    <a href="<?= base_url('kmt/omset/tambah') ?>" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus mr-1"></i> Tambah Omset
-                    </a>
+                <!-- Tombol Action -->
+                <div class="mb-3 d-flex justify-content-between">
+
+                    <div>
+                        <?php if ($lv == 1): ?>
+                        <a href="<?= base_url('kmt/omset/tambah') ?>" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus mr-1"></i> Tambah Omset
+                        </a>
+                        <?php endif; ?>
+                    </div>
+
+                    <div>
+                        <a href="<?= base_url('kmt/omset/export')
+                                . '?tahun=' . $tahun
+                                . '&bulan=' . $bulan
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                            class="btn btn-success btn-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        </a>
+                    </div>
+
                 </div>
-                <?php endif; ?>
 
                 <!-- Filter -->
                 <?php $this->load->view('partial/main/filter', [

@@ -208,4 +208,63 @@ class Omset extends CI_Controller {
         }
         redirect('kmt/omset');
     }
+
+    public function export() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+
+        $list = $this->M_Kmt->get_omset_list($filter);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Omset');
+
+        // Header
+        $headers = ['No','Tanggal','Wilayah','Nama Toko','Kota','Produk',
+                    'Sales SO','Qty','Penj Inc PPN Neto'];
+        foreach ($headers as $i => $h) {
+            $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
+        }
+
+        // Style header
+        $sheet->getStyle('A1:I1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+
+        // Data
+        foreach ($list as $i => $row) {
+            $r = $i + 2;
+            $sheet->setCellValueByColumnAndRow(1, $r, $i + 1);
+            $sheet->setCellValueByColumnAndRow(2, $r, date('d/m/Y', strtotime($row['tanggal'])));
+            $sheet->setCellValueByColumnAndRow(3, $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(4, $r, $row['nama_toko']);
+            $sheet->setCellValueByColumnAndRow(5, $r, $row['kota'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(6, $r, $row['produk']);
+            $sheet->setCellValueByColumnAndRow(7, $r, $row['sales_so'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(8, $r, $row['quantity']);
+            $sheet->setCellValueByColumnAndRow(9, $r, $row['penj_inc_ppn_neto']);
+        }
+
+        // Auto width kolom
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Omset_KMT_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }
