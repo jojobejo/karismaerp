@@ -34,7 +34,7 @@
                     </a>
                 </div>
 
-                <<?php $this->load->view('partial/main/filter', [
+                <?php $this->load->view('partial/main/filter', [
                     'filter_url' => base_url('kmt/retur'),
                     'show_bulan' => true,
                 ]); ?>

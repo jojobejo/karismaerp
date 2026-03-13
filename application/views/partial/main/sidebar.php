@@ -200,6 +200,49 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
+    <?php elseif ($this->session->userdata('lv') == '2' && $this->session->userdata('jobdesk') == 'ADMKEU') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('kmt/dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="<?php echo base_url('kmt/operasional') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cogs"></i>
+                <p>Operasional</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="<?php echo base_url('kmt/dca') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-alt"></i>
+                <p>DCA</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="<?php echo base_url('kmt/promo') ?>" class="nav-link">
+                <i class="nav-icon fas fa-bullhorn"></i>
+                <p>Promo / Peralatan</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>Log Out</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'KADEPKS') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->

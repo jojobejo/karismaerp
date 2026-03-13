@@ -85,7 +85,7 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="tblGaji" class="table table-bordered table-striped table-hover table-sm mb-0">
+                            <table id="tblGaji" class="table table-bordered table-striped table-hover table-sm mb-0" style="width:100%; white-space:nowrap;">
                                 <thead style="background:#1f3864;color:#fff;">
                                     <tr>
                                         <th>#</th><th>Wilayah</th><th>Nama</th><th>Posisi</th><th>Status</th>

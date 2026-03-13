@@ -106,7 +106,10 @@ class Dca extends CI_Controller {
             'lv'        => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
+
+        $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/form', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function update($id) {

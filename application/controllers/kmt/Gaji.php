@@ -63,7 +63,10 @@ class Gaji extends CI_Controller {
             'bulan_cols'   => $this->bulan_cols,
             'lv'     => (int)$this->session->userdata('lv'),
         ];
+
+        $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/gaji/form', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function simpan() {
@@ -109,7 +112,10 @@ class Gaji extends CI_Controller {
             'bulan_cols'   => $this->bulan_cols,
             'lv'     => (int)$this->session->userdata('lv'),
         ];
+
+        $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/gaji/form', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function update($id) {

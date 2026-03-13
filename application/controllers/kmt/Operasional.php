@@ -15,17 +15,6 @@ class Operasional extends CI_Controller {
             ? (int)$this->session->userdata('wilayah')
             : null;
     }
-
-    // Cek akses: hanya ABM & KADEP yang bisa input operasional
-    // ADMIN tidak bisa input
-    private function cek_bisa_input() {
-        $lv = (int)$this->session->userdata('lv');
-        if ($lv === 2) { // ADMIN
-            $this->session->set_flashdata('error', 'Admin tidak dapat menginput data operasional.');
-            redirect('kmt/operasional');
-        }
-    }
-
     // ----------------------------------------------------------------
     // INDEX
     // ----------------------------------------------------------------
@@ -63,7 +52,7 @@ class Operasional extends CI_Controller {
     // TAMBAH
     // ----------------------------------------------------------------
     public function tambah() {
-        $this->cek_bisa_input();
+
         $data = [
             'title'        => 'Tambah Biaya Operasional',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
@@ -77,7 +66,6 @@ class Operasional extends CI_Controller {
     }
 
     public function simpan() {
-        $this->cek_bisa_input();
 
         $this->form_validation->set_rules('tanggal',   'Tanggal', 'required');
         $this->form_validation->set_rules('nama',      'Nama',    'required');
@@ -119,7 +107,6 @@ class Operasional extends CI_Controller {
     // EDIT
     // ----------------------------------------------------------------
     public function edit($id) {
-        $this->cek_bisa_input();
         $row = $this->M_Kmt->get_operasional_by_id($id);
         if (!$row) { show_404(); return; }
 
@@ -137,11 +124,13 @@ class Operasional extends CI_Controller {
             'lv'        => $lv,
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
+
+        $this->load->view('partial/main/header.php', $data);;
         $this->load->view('content/kmt/operasional/form', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function update($id) {
-        $this->cek_bisa_input();
 
         $fields = ['hotel','per_diem','entertainment','communication','atk','gasoline',
                    'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
@@ -173,7 +162,6 @@ class Operasional extends CI_Controller {
     // HAPUS
     // ----------------------------------------------------------------
     public function hapus($id) {
-        $this->cek_bisa_input();
         if ($this->M_Kmt->delete_operasional($id)) {
             $this->session->set_flashdata('success', 'Data berhasil dihapus.');
         } else {
