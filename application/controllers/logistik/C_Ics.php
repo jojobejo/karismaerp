@@ -568,14 +568,33 @@ class C_Ics extends CI_Controller
 
     public function ics_po()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
-        $tgl                        = date('d/m/Y');
-        $data['tanggal_now']        = date('d/m/Y');
-        // $data['ics_po']             = $this->M_Ics->list_po_today($tgl);
-        $data['ics_po']             = $this->M_Ics->list_po();
+       $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icspo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function detail_po()
+    {
+        // Ambil dari query string manual
+        $no_po = $this->input->get('no_po');
+        $no_po = urldecode($no_po);
+
+        if (empty($no_po)) redirect('ics/icspo');
+
+        $data['page_title'] = 'KARISMA - Detail PO';
+        $data['no_po']      = $no_po;
+        $data['detail']     = $this->M_Logistik->get_detail_by_po($no_po);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/detail_po.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 

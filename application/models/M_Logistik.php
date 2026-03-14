@@ -2637,29 +2637,25 @@ FROM (
         ');
         $this->db->from('tb_pre_po pp');
 
-        // JOIN ke master barang untuk ambil nama_barang
         $this->db->join(
             'tb_master_barang_all mb',
             'mb.kd_barang = pp.kd_barang',
             'left'
         );
 
-        // JOIN ke tb_po_received untuk hitung total qty yang sudah masuk
         $this->db->join(
             'tb_po_received dl',
             'dl.no_po = pp.no_po AND dl.kd_barang = pp.kd_barang',
             'left'
         );
 
-        // Filter tanggal jika diberikan
+        // Filter tanggal dengan STR_TO_DATE karena format kolom adalah dd/MM/yyyy
         if (!empty($date1) && !empty($date2)) {
-            $this->db->where('pp.tgl_transaksi >=', $date1);
-            $this->db->where('pp.tgl_transaksi <=', $date2);
+            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') >=", $date1);
+            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') <=", $date2);
         }
 
-        // GROUP BY diperlukan karena ada SUM
         $this->db->group_by('pp.id_pre_po');
-
         $this->db->order_by('pp.id_pre_po', 'DESC');
 
         $query = $this->db->get();
