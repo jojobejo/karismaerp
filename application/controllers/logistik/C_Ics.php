@@ -1,3 +1,4 @@
+<!-- ini file controller saya controller/logistik/C_ics.php -->
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -1045,12 +1046,83 @@ class C_Ics extends CI_Controller
 
     public function data_lpb_zahir()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['list_satuan'] = $this->db->order_by('nm_satuan', 'ASC')->get('tb_satuan')->result_array();
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+        $data['lpb'] = $this->M_Logistik->get_data_po($date1, $date2);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/dtalbp.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function save_qty_diterima()
+    {
+        $no_po     = $this->input->post('no_po',     TRUE);
+        $kd_barang = $this->input->post('kd_barang', TRUE);
+        $rows      = $this->input->post('rows');
+
+        if (empty($no_po) || empty($kd_barang) || empty($rows)) {
+            $this->session->set_flashdata('error', 'Data tidak lengkap.');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $insert_batch = [];
+        foreach ($rows as $row) {
+            if (empty($row['qty_diterima'])) continue;
+            $insert_batch[] = [
+                'no_po'        => $no_po,
+                'kd_barang'    => $kd_barang,
+                'qty_diterima' => (int) $row['qty_diterima'],
+                'satuan'       => $row['satuan']   ?? null,
+                'no_lot'       => $row['no_lot']   ?: null,
+                'exp_date'     => !empty($row['exp_date']) ? $row['exp_date'] : null,
+                'create_at'    => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        if (!empty($insert_batch)) {
+            $this->db->insert_batch('tb_po_received', $insert_batch);
+            $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
+        } else {
+            $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
+        }
+
+        redirect('data_lpb_zahir');
+    }
+    
+    public function po_selesai()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - PO Selesai';
+        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/po_selesai.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function riwayat_barang_masuk()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - Riwayat Barang Masuk';
+        $data['riwayat']    = $this->M_Logistik->get_riwayat_barang_masuk($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/riwayat_barang_masuk.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
 
     // public function get_lpb()
     // {
