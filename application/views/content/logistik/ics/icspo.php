@@ -1,4 +1,5 @@
 <!-- icspo.php -->
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -15,7 +16,7 @@
             <div class="content-header">
                 <section class="content">
 
-                    <?php if ($this->session->userdata('lv') == '1') : ?>
+                    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
                         <div class="row">
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
@@ -26,6 +27,9 @@
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
                             </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('ics/retur') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data Retur</a>
+                            </div>
                         </div>
                     <?php else : ?>
                     <?php endif; ?>
@@ -34,14 +38,14 @@
                         <div class="card-body">
                             <div class="container-fluid">
 
-                                <?php if ($this->session->userdata('lv') == '1') : ?>
+                                <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS') : ?>
 
                                     <div class="row">
-                                        <div class="col-2">
+                                        <!-- <div class="col-2">
                                             <button class="btn btn-success mb-3 btn-block" data-toggle="modal" data-target="#modalImportCSV">
                                                 <i class="fas fa-file-csv"></i> Import CSV
                                             </button>
-                                        </div>
+                                        </div> -->
                                         <div class="col-2">
                                             <a class="btn btn-success mb-3 btn-block" href="<?= base_url('data_lpb_zahir') ?>">
                                                 <i class="fas fa-file-csv"></i> Data LPB
