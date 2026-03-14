@@ -148,8 +148,6 @@ class Dca extends CI_Controller {
     }
 
     public function export() {
-        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
@@ -160,58 +158,46 @@ class Dca extends CI_Controller {
 
         $list = $this->M_Kmt->get_dca_list($filter);
 
-        $style_col = array(
-            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
-            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-            'fill' => array('type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => array('rgb' => '1F3864')),
-            'borders' => array('top' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'right' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'bottom' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'left' => array('style' => PHPExcel_Style_Border::BORDER_THIN))
-        );
-        $style_row = array(
-            'alignment' => array('vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-            'borders' => array('top' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'right' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'bottom' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'left' => array('style' => PHPExcel_Style_Border::BORDER_THIN))
-        );
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('DCA');
 
-        $excel = new PHPExcel();
-        $excel->setActiveSheetIndex(0)->setCellValue('A1', 'Rekap DCA KMT CORN - Tahun ' . $tahun);
-        $excel->getActiveSheet()->mergeCells('A1:I1');
-        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-
-        $headers = ['NO','TANGGAL','WILAYAH','ABM','URAIAN','UM','REFUND','REAL BIAYA','TOTAL'];
+        $headers = ['No','Tanggal','Wilayah','ABM','Uraian','UM','Refund','Real Biaya','Total'];
         foreach ($headers as $i => $h) {
-            $col = chr(65 + $i);
-            $excel->setActiveSheetIndex(0)->setCellValue($col . '3', $h);
-            $excel->getActiveSheet()->getStyle($col . '3')->applyFromArray($style_col);
+            $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
         }
 
-        $no = 1; $numrow = 4;
-        foreach ($list as $row) {
-            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
-            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, date('d/m/Y', strtotime($row['tanggal_dca'])));
-            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $row['nama_wilayah'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $row['abm'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $row['uraian']);
-            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $row['um']);
-            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $row['refund']);
-            $excel->setActiveSheetIndex(0)->setCellValue('H' . $numrow, $row['real_biaya']);
-            $excel->setActiveSheetIndex(0)->setCellValue('I' . $numrow, $row['total_biaya']);
-            foreach (['A','B','C','D','E','F','G','H','I'] as $col) {
-                $excel->getActiveSheet()->getStyle($col . $numrow)->applyFromArray($style_row);
-            }
-            $no++; $numrow++;
+        $sheet->getStyle('A1:I1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+
+        foreach ($list as $i => $row) {
+            $r = $i + 2;
+            $sheet->setCellValueByColumnAndRow(1, $r, $i + 1);
+            $sheet->setCellValueByColumnAndRow(2, $r, date('d/m/Y', strtotime($row['tanggal_dca'])));
+            $sheet->setCellValueByColumnAndRow(3, $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(4, $r, $row['abm'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(5, $r, $row['uraian']);
+            $sheet->setCellValueByColumnAndRow(6, $r, $row['um']);
+            $sheet->setCellValueByColumnAndRow(7, $r, $row['refund']);
+            $sheet->setCellValueByColumnAndRow(8, $r, $row['real_biaya']);
+            $sheet->setCellValueByColumnAndRow(9, $r, $row['total_biaya']);
         }
 
-        $widths = ['A'=>5,'B'=>12,'C'=>15,'D'=>20,'E'=>40,'F'=>15,'G'=>15,'H'=>15,'I'=>15];
-        foreach ($widths as $col => $w) $excel->getActiveSheet()->getColumnDimension($col)->setWidth($w);
-        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
-        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
-        $excel->getActiveSheet(0)->setTitle('DCA KMT');
-        $excel->setActiveSheetIndex(0);
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'DCA_KMT_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="DCA_KMT_' . $tahun . '.xlsx"');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
-        $write->save('php://output');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 }

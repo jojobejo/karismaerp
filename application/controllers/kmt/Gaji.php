@@ -152,8 +152,6 @@ class Gaji extends CI_Controller {
     }
 
     public function export() {
-        include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
-
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $id_wilayah = $this->input->get('id_wilayah') ?? null;
 
@@ -162,73 +160,56 @@ class Gaji extends CI_Controller {
 
         $list = $this->M_Kmt->get_gaji_list($filter);
 
-        $style_col = array(
-            'font' => array('bold' => true, 'color' => array('rgb' => 'FFFFFF')),
-            'alignment' => array('horizontal' => PHPExcel_Style_Alignment::HORIZONTAL_CENTER, 'vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-            'fill' => array('type' => PHPExcel_Style_Fill::FILL_SOLID, 'color' => array('rgb' => '1F3864')),
-            'borders' => array('top' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'right' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'bottom' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'left' => array('style' => PHPExcel_Style_Border::BORDER_THIN))
-        );
-        $style_row = array(
-            'alignment' => array('vertical' => PHPExcel_Style_Alignment::VERTICAL_CENTER),
-            'borders' => array('top' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'right' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'bottom' => array('style' => PHPExcel_Style_Border::BORDER_THIN),'left' => array('style' => PHPExcel_Style_Border::BORDER_THIN))
-        );
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Gaji');
 
-        $excel = new PHPExcel();
-        $excel->setActiveSheetIndex(0)->setCellValue('A1', 'Rekap Gaji KMT CORN - Tahun ' . $tahun);
-        $excel->getActiveSheet()->mergeCells('A1:T1');
-        $excel->getActiveSheet()->getStyle('A1')->getFont()->setBold(true)->setSize(14);
-        $excel->getActiveSheet()->getStyle('A1')->getAlignment()->setHorizontal(PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
-
-        $headers = ['NO','WILAYAH','NAMA','POSISI','STATUS','TGL MULAI','TGL RESIGN',
-                    'JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES','TOTAL'];
+        $headers = ['No','Wilayah','Nama','Posisi','Status','Tgl Mulai','Tgl Resign',
+                    'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des','Total'];
         foreach ($headers as $i => $h) {
-            $col = \PHPExcel_Cell::stringFromColumnIndex($i);
-            $excel->setActiveSheetIndex(0)->setCellValue($col . '3', $h);
-            $excel->getActiveSheet()->getStyle($col . '3')->applyFromArray($style_col);
+            $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
         }
+
+        $sheet->getStyle('A1:T1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
 
         $bulan_cols = ['gaji_jan','gaji_feb','gaji_mar','gaji_apr','gaji_mei','gaji_jun',
                     'gaji_jul','gaji_agu','gaji_sep','gaji_okt','gaji_nov','gaji_des'];
 
-        $no = 1; $numrow = 4;
-        foreach ($list as $row) {
+        foreach ($list as $i => $row) {
+            $r = $i + 2;
             $total = 0;
-            foreach ($bulan_cols as $bc) $total += (float)($row[$bc] ?? 0);
+            foreach ($bulan_cols as $col) $total += (float)($row[$col] ?? 0);
 
-            $excel->setActiveSheetIndex(0)->setCellValue('A' . $numrow, $no);
-            $excel->setActiveSheetIndex(0)->setCellValue('B' . $numrow, $row['nama_wilayah'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('C' . $numrow, $row['nama']);
-            $excel->setActiveSheetIndex(0)->setCellValue('D' . $numrow, $row['posisi'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('E' . $numrow, $row['status'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('F' . $numrow, $row['tgl_mulai'] ?? '-');
-            $excel->setActiveSheetIndex(0)->setCellValue('G' . $numrow, $row['tgl_resign'] ?? '-');
-            $colIdx = 7; // H = index 7
+            $sheet->setCellValueByColumnAndRow(1,  $r, $i + 1);
+            $sheet->setCellValueByColumnAndRow(2,  $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(3,  $r, $row['nama']);
+            $sheet->setCellValueByColumnAndRow(4,  $r, $row['posisi'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(5,  $r, $row['status'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(6,  $r, $row['tgl_mulai'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(7,  $r, $row['tgl_resign'] ?? '-');
+            $col = 8;
             foreach ($bulan_cols as $bc) {
-                $col = \PHPExcel_Cell::stringFromColumnIndex($colIdx++);
-                $excel->setActiveSheetIndex(0)->setCellValue($col . $numrow, $row[$bc] ?? 0);
+                $sheet->setCellValueByColumnAndRow($col++, $r, $row[$bc] ?? 0);
             }
-            $col = \PHPExcel_Cell::stringFromColumnIndex($colIdx);
-            $excel->setActiveSheetIndex(0)->setCellValue($col . $numrow, $total);
-
-            for ($c = 0; $c <= 19; $c++) {
-                $excel->getActiveSheet()->getStyle(\PHPExcel_Cell::stringFromColumnIndex($c) . $numrow)->applyFromArray($style_row);
-            }
-            $no++; $numrow++;
+            $sheet->setCellValueByColumnAndRow($col, $r, $total);
         }
 
-        $widths = [5,15,25,15,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,15];
-        foreach ($widths as $i => $w) {
-            $excel->getActiveSheet()->getColumnDimension(\PHPExcel_Cell::stringFromColumnIndex($i))->setWidth($w);
+        foreach (range('A', 'T') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
         }
-        $excel->getActiveSheet()->getDefaultRowDimension()->setRowHeight(-1);
-        $excel->getActiveSheet()->getPageSetup()->setOrientation(PHPExcel_Worksheet_PageSetup::ORIENTATION_LANDSCAPE);
-        $excel->getActiveSheet(0)->setTitle('Gaji KMT');
-        $excel->setActiveSheetIndex(0);
+
+        $filename = 'Gaji_KMT_' . $tahun . '.xlsx';
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="Gaji_KMT_' . $tahun . '.xlsx"');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-        $write = PHPExcel_IOFactory::createWriter($excel, 'Excel2007');
-        $write->save('php://output');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 }
