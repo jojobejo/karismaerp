@@ -298,6 +298,13 @@
             </li>
 
             <li class="nav-item">
+              <a href="<?php echo base_url('kmt/others') ?>" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>Others</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>Log Out</p>

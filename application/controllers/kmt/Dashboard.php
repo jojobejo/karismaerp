@@ -26,7 +26,7 @@ class Dashboard extends CI_Controller {
             $id_wilayah = $id_wilayah ? (int)$id_wilayah : null;
         }
 
-        $data['title']            = 'Dashboard KMT CORN';
+        $data['page_title']       = 'Dashboard KMT CORN';
         $data['tahun']            = $tahun;
         $data['id_wilayah']       = $id_wilayah;
         $data['lv']               = $lv;

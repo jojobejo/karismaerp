@@ -41,7 +41,7 @@ class Gaji extends CI_Controller {
         }
 
         $data = [
-            'title'        => 'Data Gaji KMT CORN',
+            'page_title'        => 'Data Gaji KMT CORN',
             'list'         => $list,
             'summary'      => $summary,
             'bulan_cols'   => $this->bulan_cols,
@@ -58,7 +58,7 @@ class Gaji extends CI_Controller {
 
     public function tambah() {
         $data = [
-            'title'        => 'Tambah Data Gaji',
+            'page_title'        => 'Tambah Data Gaji',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'bulan_cols'   => $this->bulan_cols,
             'lv'     => (int)$this->session->userdata('lv'),
@@ -106,7 +106,7 @@ class Gaji extends CI_Controller {
         $row = $this->M_Kmt->get_gaji_by_id($id);
         if (!$row) { show_404(); return; }
         $data = [
-            'title'        => 'Edit Data Gaji',
+            'page_title'        => 'Edit Data Gaji',
             'row'          => $row,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'bulan_cols'   => $this->bulan_cols,

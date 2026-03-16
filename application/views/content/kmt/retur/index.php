@@ -29,13 +29,6 @@
                 <?php $this->load->view('partial/main/alert') ?>
 
                 <div class="mb-3 d-flex justify-content-between">
-
-                    <div>
-                        <a href="<?= base_url('kmt/retur/tambah') ?>" class="btn btn-danger btn-sm">
-                            <i class="fas fa-plus mr-1"></i> Tambah Retur
-                        </a>
-                    </div>
-
                     <div>
                         <a href="<?= base_url('kmt/retur/export')
                                 . '?tahun=' . $tahun

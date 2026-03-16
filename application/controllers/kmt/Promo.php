@@ -28,7 +28,7 @@ class Promo extends CI_Controller {
         $total_biaya = array_sum(array_column($list, 'total_biaya'));
 
         $data = [
-            'title'        => 'Promo Material / Peralatan',
+            'page_title'        => 'Promo Material / Peralatan',
             'list'         => $list,
             'total_biaya'  => $total_biaya,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
@@ -47,7 +47,7 @@ class Promo extends CI_Controller {
 
     public function tambah() {
         $data = [
-            'title'           => 'Tambah Promo Material / Peralatan',
+            'page_title'           => 'Tambah Promo Material / Peralatan',
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'        => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
@@ -99,7 +99,7 @@ class Promo extends CI_Controller {
         $row = $this->M_Kmt->get_promo_by_id($id);
         if (!$row) { show_404(); return; }
         $data = [
-            'title'           => 'Edit Promo Material / Peralatan',
+            'page_title'           => 'Edit Promo Material / Peralatan',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'        => (int)$this->session->userdata('lv'),

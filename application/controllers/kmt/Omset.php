@@ -43,7 +43,7 @@ class Omset extends CI_Controller {
         $total_omset = array_sum(array_column($list, 'penj_inc_ppn_neto'));
 
         $data = [
-            'title'        => 'Data Omset KMT CORN',
+            'page_title'        => 'Data Omset KMT CORN',
             'list'         => $list,
             'total_omset'  => $total_omset,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
@@ -67,7 +67,7 @@ class Omset extends CI_Controller {
         $this->cek_bukan_abm(); // ABM tidak bisa input omset
 
         $data = [
-            'title'        => 'Tambah Data Omset',
+            'page_title'        => 'Tambah Data Omset',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'lv'     => (int)$this->session->userdata('lv'),
         ];
@@ -146,12 +146,15 @@ class Omset extends CI_Controller {
         if (!$row) { show_404(); return; }
 
         $data = [
-            'title'        => 'Edit Data Omset',
+            'page_title'        => 'Edit Data Omset',
             'row'          => $row,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'lv'     => (int)$this->session->userdata('lv'),
         ];
+
+        $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/omset/form', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function update($id) {
@@ -207,6 +210,74 @@ class Omset extends CI_Controller {
             $this->session->set_flashdata('error', 'Gagal menghapus data.');
         }
         redirect('kmt/omset');
+    }
+
+    public function retur($id_omset) {
+        $omset = $this->M_Kmt->get_omset_by_id($id_omset);
+        if (!$omset) { show_404(); return; }
+
+        $list_retur = $this->M_Kmt->get_retur_by_omset($id_omset);
+        $summary    = $this->M_Kmt->get_summary_retur_omset($id_omset);
+
+        $data = [
+            'page_title'  => 'Retur - ' . $omset['nama_toko'],
+            'omset'       => $omset,
+            'list_retur'  => $list_retur,
+            'summary'     => $summary,
+            'lv'          => (int)$this->session->userdata('lv'),
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/kmt/omset/retur', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // ----------------------------------------------------------------
+    // SIMPAN RETUR
+    // ----------------------------------------------------------------
+    public function simpan_retur() {
+        $id_omset = (int)$this->input->post('id_omset');
+        $omset    = $this->M_Kmt->get_omset_by_id($id_omset);
+        if (!$omset) { show_404(); return; }
+
+        $tgl = $this->input->post('tanggal_retur');
+        $insert = [
+            'id_omset'       => $id_omset,
+            'id_wilayah'     => $omset['id_wilayah'],
+            'bulan'          => (int)date('m', strtotime($tgl)),
+            'tahun'          => (int)date('Y', strtotime($tgl)),
+            'tanggal_retur'  => $tgl,
+            'no_retur'       => $this->input->post('no_retur'),
+            'nama_toko'      => $omset['nama_toko'],
+            'produk'         => $omset['produk'],
+            'quantity'       => (float)$this->input->post('quantity'),
+            'nilai_retur'    => (float)str_replace('.', '', $this->input->post('nilai_retur') ?? 0),
+            'kurangi_target' => (int)$this->input->post('kurangi_target'),
+            'keterangan'     => $this->input->post('keterangan'),
+            'created_by'     => $this->session->userdata('id_user'),
+        ];
+
+        if ($this->M_Kmt->insert_retur($insert)) {
+            $this->session->set_flashdata('success', 'Retur berhasil disimpan.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menyimpan retur.');
+        }
+        redirect('kmt/omset/retur/' . $id_omset);
+    }
+
+    // ----------------------------------------------------------------
+    // HAPUS RETUR
+    // ----------------------------------------------------------------
+    public function hapus_retur($id) {
+        $retur    = $this->M_Kmt->get_retur_by_id($id);
+        $id_omset = $retur['id_omset'] ?? null;
+
+        if ($this->M_Kmt->delete_retur($id)) {
+            $this->session->set_flashdata('success', 'Retur berhasil dihapus.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menghapus retur.');
+        }
+        redirect($id_omset ? 'kmt/omset/retur/' . $id_omset : 'kmt/omset');
     }
 
     public function export() {

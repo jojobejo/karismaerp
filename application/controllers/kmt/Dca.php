@@ -31,7 +31,7 @@ class Dca extends CI_Controller {
         $total_biaya = array_sum(array_column($list, 'total_biaya'));
 
         $data = [
-            'title'        => 'Data DCA KMT CORN',
+            'page_title'   => 'Data DCA KMT CORN',
             'list'         => $list,
             'total_biaya'  => $total_biaya,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
@@ -50,7 +50,7 @@ class Dca extends CI_Controller {
 
     public function tambah() {
         $data = [
-            'title'        => 'Tambah Data DCA',
+            'page_title'        => 'Tambah Data DCA',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'lv'     => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
@@ -100,10 +100,10 @@ class Dca extends CI_Controller {
         $row = $this->M_Kmt->get_dca_by_id($id);
         if (!$row) { show_404(); return; }
         $data = [
-            'title'           => 'Edit Data DCA',
+            'page_title'      => 'Edit Data DCA',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'lv'        => (int)$this->session->userdata('lv'),
+            'lv'              => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
 

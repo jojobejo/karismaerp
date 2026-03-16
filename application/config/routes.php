@@ -295,6 +295,9 @@ $route['kmt/omset/simpan']         = 'kmt/Omset/simpan';
 $route['kmt/omset/edit/(:num)']    = 'kmt/Omset/edit/$1';
 $route['kmt/omset/update/(:num)']  = 'kmt/Omset/update/$1';
 $route['kmt/omset/hapus/(:num)']   = 'kmt/Omset/hapus/$1';
+$route['kmt/omset/retur/(:num)']       = 'kmt/Omset/retur/$1';
+$route['kmt/omset/simpan_retur']       = 'kmt/Omset/simpan_retur';
+$route['kmt/omset/hapus_retur/(:num)'] = 'kmt/Omset/hapus_retur/$1';
 
 // ---- KMT Operasional ----
 $route['kmt/operasional']                = 'kmt/Operasional/index';
@@ -335,6 +338,14 @@ $route['kmt/retur/simpan']         = 'kmt/Retur/simpan';
 $route['kmt/retur/edit/(:num)']    = 'kmt/Retur/edit/$1';
 $route['kmt/retur/update/(:num)']  = 'kmt/Retur/update/$1';
 $route['kmt/retur/hapus/(:num)']   = 'kmt/Retur/hapus/$1';
+
+// ---- KMT Others ----
+$route['kmt/others']               = 'kmt/Others/index';
+$route['kmt/others/tambah']        = 'kmt/Others/tambah';
+$route['kmt/others/simpan']        = 'kmt/Others/simpan';
+$route['kmt/others/edit/(:num)']   = 'kmt/Others/edit/$1';
+$route['kmt/others/update/(:num)'] = 'kmt/Others/update/$1';
+$route['kmt/others/hapus/(:num)']  = 'kmt/Others/hapus/$1';
 
 
 // COBA API

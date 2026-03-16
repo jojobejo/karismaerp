@@ -1,23 +1,18 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
-
     <div class="preloader flex-column justify-content-center align-items-center">
-        <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>"
-             alt="KarismaLogo" height="150" width="300">
+        <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" height="150" width="300">
     </div>
-
     <?php $this->load->view('partial/main/navbar') ?>
     <?php $this->load->view('partial/main/sidebar') ?>
 
     <div class="content-wrapper">
-
-        <!-- Header -->
         <div class="content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
                     <div class="col-sm-6">
                         <h1 class="m-0">
-                            <i class="fas fa-shopping-cart text-success"></i> Data Omset
+                            <i class="fas fa-ellipsis-h text-secondary"></i> Data Others
                             <small class="text-muted">KMT CORN</small>
                         </h1>
                     </div>
@@ -25,7 +20,7 @@
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url() ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('kmt/dashboard') ?>">KMT</a></li>
-                            <li class="breadcrumb-item active">Omset</li>
+                            <li class="breadcrumb-item active">Others</li>
                         </ol>
                     </div>
                 </div>
@@ -37,55 +32,47 @@
 
                 <?php $this->load->view('partial/main/alert') ?>
 
-                <!-- Tombol Action -->
-                <div class="mb-3 d-flex justify-content-between">
-
-                    <div>
-                        <?php if ($lv == 1): ?>
-                        <a href="<?= base_url('kmt/omset/tambah') ?>" class="btn btn-success btn-sm">
-                            <i class="fas fa-plus mr-1"></i> Tambah Omset
-                        </a>
-
-                        <a href="<?= base_url('kmt/retur') ?>" class="btn btn-danger btn-sm">
-                            <i class="fas fa-undo mr-1"></i> Retur
-                        </a>
-                        <?php endif; ?>
-                    </div>
-
-                    <div>
-                        <a href="<?= base_url('kmt/omset/export')
-                                . '?tahun=' . $tahun
-                                . '&bulan=' . $bulan
-                                . '&id_wilayah=' . $id_wilayah ?>"
-                            class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel mr-1"></i> Export Excel
-                        </a>
-                    </div>
-
+                <!-- Tombol Aksi -->
+                <div class="mb-3">
+                    <a href="<?= base_url('kmt/others/tambah') ?>" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-plus mr-1"></i> Tambah Others
+                    </a>
+                    <a href="<?= base_url('kmt/others/export')
+                              . '?tahun=' . $tahun
+                              . '&bulan=' . $bulan
+                              . '&id_wilayah=' . $id_wilayah ?>"
+                       class="btn btn-success btn-sm ml-1">
+                        <i class="fas fa-file-excel mr-1"></i> Export Excel
+                    </a>
                 </div>
 
                 <!-- Filter -->
                 <?php $this->load->view('partial/main/filter', [
-                    'filter_url' => base_url('kmt/omset'),
-                    'show_bulan' => true,
+                    'filter_url'   => base_url('kmt/others'),
+                    'show_bulan'   => true,
+                    'tahun'        => $tahun,
+                    'bulan'        => $bulan,
+                    'id_wilayah'   => $id_wilayah,
+                    'wilayah_list' => $wilayah_list,
+                    'lv'     => $lv,
                 ]); ?>
 
-                <!-- Summary Card -->
+                <!-- Summary -->
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <div class="info-box bg-success shadow-sm">
-                            <span class="info-box-icon"><i class="fas fa-money-bill-wave"></i></span>
+                        <div class="info-box bg-secondary shadow-sm">
+                            <span class="info-box-icon"><i class="fas fa-file-invoice-dollar"></i></span>
                             <div class="info-box-content">
-                                <span class="info-box-text">Total Omset (Filter)</span>
+                                <span class="info-box-text">Total Biaya Others</span>
                                 <span class="info-box-number">
-                                    Rp <?= number_format($total_omset, 0, ',', '.') ?>
+                                    Rp <?= number_format($total_biaya, 0, ',', '.') ?>
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="info-box bg-info shadow-sm">
-                            <span class="info-box-icon"><i class="fas fa-list-ol"></i></span>
+                            <span class="info-box-icon"><i class="fas fa-list"></i></span>
                             <div class="info-box-content">
                                 <span class="info-box-text">Jumlah Transaksi</span>
                                 <span class="info-box-number"><?= count($list) ?></span>
@@ -95,10 +82,10 @@
                 </div>
 
                 <!-- Tabel -->
-                <div class="card card-outline card-success">
+                <div class="card card-outline card-secondary">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-table mr-1"></i> Daftar Omset — <?= $tahun ?>
+                            <i class="fas fa-table mr-1"></i> Daftar Others — <?= $tahun ?>
                             <?php if ($bulan): ?>
                                 <span class="badge badge-info"><?= $nama_bulan[$bulan] ?></span>
                             <?php endif; ?>
@@ -106,68 +93,49 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table id="tblOmset" class="table table-bordered table-striped table-hover table-sm mb-0">
+                            <table id="tblOthers" class="table table-bordered table-striped table-hover table-sm mb-0">
                                 <thead style="background:#1f3864;color:#fff;">
                                     <tr>
                                         <th width="40">#</th>
                                         <th>Tanggal</th>
                                         <th>Wilayah</th>
-                                        <th>Nama Toko</th>
-                                        <th>Kota</th>
-                                        <th>Produk</th>
-                                        <th>Sales SO</th>
-                                        <th class="text-right">Qty</th>
-                                        <th class="text-right">Penj. Inc PPN Neto</th>
-                                        <th class="text-center">Retur</th>
+                                        <th>Uraian</th>
+                                        <th class="text-right">Total Biaya</th>
                                         <th width="80">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($list as $i => $row): ?>
                                     <tr>
-                                        <td><?= $i + 1 ?></td>
+                                        <td class="text-center"><?= $i + 1 ?></td>
                                         <td><?= date('d/m/Y', strtotime($row['tanggal'])) ?></td>
                                         <td>
                                             <span class="badge badge-secondary">
                                                 <?= htmlspecialchars($row['nama_wilayah'] ?? '-') ?>
                                             </span>
                                         </td>
-                                        <td><?= htmlspecialchars($row['nama_toko']) ?></td>
-                                        <td><?= htmlspecialchars($row['kota'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($row['produk']) ?></td>
-                                        <td><?= htmlspecialchars($row['sales_so'] ?? '-') ?></td>
-                                        <td class="text-right"><?= number_format($row['quantity'], 2, ',', '.') ?></td>
+                                        <td><?= htmlspecialchars($row['uraian']) ?></td>
                                         <td class="text-right font-weight-bold">
-                                            <?= number_format($row['penj_inc_ppn_neto'], 0, ',', '.') ?>
+                                            <?= number_format($row['total_biaya'], 0, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
-                                            <a href="<?= base_url('kmt/omset/retur/' . $row['id']) ?>"
-                                            class="btn btn-xs btn-info" title="Lihat Retur">
-                                                <i class="fas fa-undo"></i>
-                                            </a>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if ($lv == 1): ?>
-                                            <a href="<?= base_url('kmt/omset/edit/' . $row['id']) ?>"
+                                            <a href="<?= base_url('kmt/others/edit/' . $row['id']) ?>"
                                                class="btn btn-xs btn-warning" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <a href="<?= base_url('kmt/omset/hapus/' . $row['id']) ?>"
+                                            <a href="<?= base_url('kmt/others/hapus/' . $row['id']) ?>"
                                                class="btn btn-xs btn-danger btn-hapus" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </a>
-                                            <?php else: ?>
-                                            <span class="text-muted small">-</span>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                                 <tfoot style="background:#f4f4f4;font-weight:bold;">
                                     <tr>
-                                        <td colspan="8" class="text-right">TOTAL:</td>
+                                        <td colspan="4" class="text-right">TOTAL:</td>
                                         <td class="text-right">
-                                            <?= number_format($total_omset, 0, ',', '.') ?>
+                                            <?= number_format($total_biaya, 0, ',', '.') ?>
                                         </td>
                                         <td></td>
                                     </tr>
@@ -193,21 +161,18 @@
 
 <script>
 $(function () {
-    $('#tblOmset').DataTable({
+    $('#tblOthers').DataTable({
         responsive: true,
         pageLength: 25,
         order: [[1, 'desc']],
         columnDefs: [
-            { targets: [7, 8], className: 'dt-right' },
-            { targets: [9],    orderable: false }
+            { targets: [4], className: 'dt-right' },
+            { targets: [5], orderable: false }
         ],
-        language: {
-            url: '<?= base_url('assets/plugins/datatables/id.json') ?>'
-        }
+        language: { url: '<?= base_url('assets/plugins/datatables/id.json') ?>' }
     });
 
-    // Konfirmasi hapus
-    $(document).on('click', '.btn-hapus', function(e) {
+    $(document).on('click', '.btn-hapus', function (e) {
         e.preventDefault();
         var url = $(this).attr('href');
         Swal.fire({
@@ -219,7 +184,7 @@ $(function () {
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Ya, Hapus!',
             cancelButtonText: 'Batal'
-        }).then(function(result) {
+        }).then(function (result) {
             if (result.isConfirmed) window.location.href = url;
         });
     });

@@ -374,15 +374,41 @@ class M_Kmt extends CI_Model {
     // ================================================================
     // RETUR
     // ================================================================
+    // Ganti method get_retur_list — tambah join ke omset
     public function get_retur_list($filter = []) {
-        $this->db->select('r.*, w.nama_wilayah');
+        $this->db->select('r.*, w.nama_wilayah, o.nomor as no_faktur, o.sales_so, o.se');
         $this->db->from('tbkmt_retur r');
         $this->db->join('tbkmt_wilayah w', 'w.id = r.id_wilayah', 'left');
+        $this->db->join('tbkmt_omset o', 'o.id = r.id_omset', 'left');
         if (!empty($filter['tahun']))      $this->db->where('r.tahun', $filter['tahun']);
         if (!empty($filter['bulan']))      $this->db->where('r.bulan', $filter['bulan']);
         if (!empty($filter['id_wilayah'])) $this->db->where('r.id_wilayah', $filter['id_wilayah']);
+        if (!empty($filter['id_omset']))   $this->db->where('r.id_omset', $filter['id_omset']);
         $this->db->order_by('r.tanggal_retur', 'DESC');
         return $this->db->get()->result_array();
+    }
+
+    // Ambil retur berdasarkan id_omset
+    public function get_retur_by_omset($id_omset) {
+        $this->db->select('r.*, w.nama_wilayah');
+        $this->db->from('tbkmt_retur r');
+        $this->db->join('tbkmt_wilayah w', 'w.id = r.id_wilayah', 'left');
+        $this->db->where('r.id_omset', $id_omset);
+        $this->db->order_by('r.tanggal_retur', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    // Summary retur per omset (total nilai retur yang mengurangi & tidak)
+    public function get_summary_retur_omset($id_omset) {
+        $this->db->select('
+            SUM(nilai_retur) as total_retur,
+            SUM(CASE WHEN kurangi_target = 1 THEN nilai_retur ELSE 0 END) as retur_kurangi,
+            SUM(CASE WHEN kurangi_target = 0 THEN nilai_retur ELSE 0 END) as retur_tidak,
+            COUNT(id) as jumlah
+        ');
+        $this->db->from('tbkmt_retur');
+        $this->db->where('id_omset', $id_omset);
+        return $this->db->get()->row_array();
     }
 
     public function get_retur_by_id($id) {
@@ -415,5 +441,41 @@ class M_Kmt extends CI_Model {
         if ($id_wilayah) $this->db->where('r.id_wilayah', $id_wilayah);
         $this->db->group_by('r.id_wilayah');
         return $this->db->get()->result_array();
+    }
+
+    // ================================================================
+    // OTHERS
+    // ================================================================
+    public function get_others_list($filter = []) {
+        $this->db->select('o.*, w.nama_wilayah');
+        $this->db->from('tbkmt_others o');
+        $this->db->join('tbkmt_wilayah w', 'w.id = o.id_wilayah', 'left');
+        if (!empty($filter['tahun']))      $this->db->where('o.tahun', $filter['tahun']);
+        if (!empty($filter['bulan']))      $this->db->where('o.bulan', $filter['bulan']);
+        if (!empty($filter['id_wilayah'])) $this->db->where('o.id_wilayah', $filter['id_wilayah']);
+        $this->db->order_by('o.tanggal', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    public function get_others_by_id($id) {
+        $this->db->select('o.*, w.nama_wilayah');
+        $this->db->from('tbkmt_others o');
+        $this->db->join('tbkmt_wilayah w', 'w.id = o.id_wilayah', 'left');
+        $this->db->where('o.id', $id);
+        return $this->db->get()->row_array();
+    }
+
+    public function insert_others($data) {
+        $data['created_at'] = date('Y-m-d H:i:s');
+        return $this->db->insert('tbkmt_others', $data);
+    }
+
+    public function update_others($id, $data) {
+        $this->db->where('id', $id);
+        return $this->db->update('tbkmt_others', $data);
+    }
+
+    public function delete_others($id) {
+        return $this->db->delete('tbkmt_others', ['id' => $id]);
     }
 }

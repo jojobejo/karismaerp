@@ -31,7 +31,7 @@ class Operasional extends CI_Controller {
         $total_biaya = array_sum(array_column($list, 'total_biaya'));
 
         $data = [
-            'title'        => 'Data Operasional KMT CORN',
+            'page_title'        => 'Data Operasional KMT CORN',
             'list'         => $list,
             'total_biaya'  => $total_biaya,
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
@@ -54,7 +54,7 @@ class Operasional extends CI_Controller {
     public function tambah() {
 
         $data = [
-            'title'        => 'Tambah Biaya Operasional',
+            'page_title'        => 'Tambah Biaya Operasional',
             'wilayah_list' => $this->M_Kmt->get_wilayah(),
             'lv'     => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
@@ -118,7 +118,7 @@ class Operasional extends CI_Controller {
         }
 
         $data = [
-            'title'           => 'Edit Biaya Operasional',
+            'page_title'           => 'Edit Biaya Operasional',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'        => $lv,

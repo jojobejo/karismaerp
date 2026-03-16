@@ -29,7 +29,7 @@ class Retur extends CI_Controller {
         $summary      = $this->M_Kmt->get_summary_retur($tahun, $id_wilayah ?: null);
 
         $data = [
-            'title'        => 'Data Retur KMT CORN',
+            'page_title'        => 'Data Retur KMT CORN',
             'list'         => $list,
             'total_retur'  => $total_retur,
             'summary'      => $summary,
@@ -49,7 +49,7 @@ class Retur extends CI_Controller {
 
     public function tambah() {
         $data = [
-            'title'           => 'Tambah Data Retur',
+            'page_title'           => 'Tambah Data Retur',
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'        => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
@@ -97,7 +97,7 @@ class Retur extends CI_Controller {
         $row = $this->M_Kmt->get_retur_by_id($id);
         if (!$row) { show_404(); return; }
         $data = [
-            'title'           => 'Edit Data Retur',
+            'page_title'           => 'Edit Data Retur',
             'row'             => $row,
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'        => (int)$this->session->userdata('lv'),
