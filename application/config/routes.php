@@ -140,6 +140,7 @@ $route['save_qty_diterima']                         = 'logistik/C_Ics/save_qty_d
 $route['po_selesai']                                = 'logistik/C_Ics/po_selesai';
 $route['riwayat_barang_masuk']                      = 'logistik/C_Ics/riwayat_barang_masuk';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
+$route['ics/detail_po']                             = 'logistik/C_Ics/detail_po';
 $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';

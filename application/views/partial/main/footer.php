@@ -127,15 +127,15 @@
       "responsive": true,
     });
 
-    $('#tb_ics_po').DataTable({
-      "paging": true,
-      "lengthChange": false,
-      "searching": true,
-      "ordering": false,
-      "info": true,
-      "autoWidth": false,
-      "responsive": true,
-    });
+    // $('#tb_ics_po').DataTable({
+    //   "paging": true,
+    //   "lengthChange": false,
+    //   "searching": true,
+    //   "ordering": false,
+    //   "info": true,
+    //   "autoWidth": false,
+    //   "responsive": true,
+    // });
     $('#tbgudang').DataTable({
       "paging": true,
       "lengthChange": false,
