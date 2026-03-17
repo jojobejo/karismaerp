@@ -1057,6 +1057,63 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function sync_po_pre_do()
+    {
+        $url = "https://10.10.10.26/kiu_po/get_po";
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $err) {
+            $this->session->set_flashdata('error', 'Gagal akses API: ' . ($err ?: 'Unknown error'));
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        if ($httpCode >= 400) {
+            $this->session->set_flashdata('error', 'Gagal akses API. HTTP ' . $httpCode);
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $json = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->session->set_flashdata('error', 'Respon API tidak valid (bukan JSON).');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $items = $json['data'] ?? $json['result'] ?? $json['rows'] ?? $json['po'] ?? $json;
+        if (!is_array($items)) {
+            $this->session->set_flashdata('error', 'Format data API tidak sesuai.');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $result = $this->M_Ics->sync_pre_po_from_api($items);
+
+        if (!empty($result['error'])) {
+            $err = is_array($result['error']) ? ($result['error']['message'] ?? json_encode($result['error'])) : $result['error'];
+            $this->session->set_flashdata('error', 'Gagal simpan ke database: ' . $err);
+        } else {
+            $this->session->set_flashdata(
+                'success',
+                "Sync berhasil. Baru: {$result['inserted']}, Update: {$result['updated']}, Dilewati: {$result['skipped']}."
+            );
+        }
+
+        redirect('data_lpb_zahir');
+    }
+
     public function save_qty_diterima()
     {
         $no_po     = $this->input->post('no_po',     TRUE);
