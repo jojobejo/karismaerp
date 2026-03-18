@@ -252,7 +252,6 @@
         "paging": true, "lengthChange": true, "searching": true,
         "ordering": false, "info": true, "autoWidth": false, "responsive": true,
     });
-  });
 </script>
 
 <script type="text/javascript">

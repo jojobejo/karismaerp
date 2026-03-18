@@ -38,6 +38,16 @@ class M_Checker extends CI_Model
         return $this->db->get_where('tb_bongkaran', ['id' => $id])->row_array();
     }
 
+    // Daftar karyawan dengan jobdesk CHECKER (untuk dropdown MANAGERCK)
+    public function get_list_checker()
+    {
+        return $this->db
+            ->select('nik, nm_karyawan')
+            ->where('jobdesk', 'CHECKER')
+            ->order_by('nm_karyawan', 'ASC')
+            ->get('tb_karyawan')->result_array();
+    }
+
     // Ambil id_bongkaran yang sedang aktif (PROSES) milik checker ini
     public function get_active_id_by_checker($nik)
     {
@@ -116,6 +126,26 @@ class M_Checker extends CI_Model
     // ================================================================
     // LOADING KK
     // ================================================================
+    public function generate_kode_kk()
+    {
+        $prefix = 'KK' . date('dmy');
+        $last   = $this->db->like('kode', $prefix, 'after')
+                            ->order_by('id', 'DESC')->limit(1)
+                            ->get('tb_loading_kk')->row();
+        $urut = $last ? ((int) substr($last->kode, -4)) + 1 : 1;
+        return $prefix . str_pad($urut, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function generate_kode_lk()
+    {
+        $prefix = 'LK' . date('dmy');
+        $last   = $this->db->like('kode', $prefix, 'after')
+                            ->order_by('id', 'DESC')->limit(1)
+                            ->get('tb_loading_lk')->row();
+        $urut = $last ? ((int) substr($last->kode, -4)) + 1 : 1;
+        return $prefix . str_pad($urut, 4, '0', STR_PAD_LEFT);
+    }
+
     public function get_list_kk()
     {
         return $this->db->where('is_archived', 0)->order_by('id', 'ASC')->get('tb_loading_kk')->result_array();
@@ -126,9 +156,38 @@ class M_Checker extends CI_Model
         return $this->db->where('is_archived', 1)->order_by('archived_at', 'DESC')->get('tb_loading_kk')->result_array();
     }
 
-    public function create_kk($data)        { return $this->db->insert('tb_loading_kk', $data); }
+    public function get_kk_by_id($id)
+    {
+        return $this->db->get_where('tb_loading_kk', ['id' => $id])->row_array();
+    }
 
-    public function update_kk($id, $data)   { return $this->db->where('id', $id)->update('tb_loading_kk', $data); }
+    public function create_kk($data)      { return $this->db->insert('tb_loading_kk', $data); }
+    public function update_kk($id, $data) { return $this->db->where('id', $id)->update('tb_loading_kk', $data); }
+
+    public function start_kk($id, $nik, $nama)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_kk', [
+            'status'       => 'PROSES_LOADING',
+            'nik_checker'  => $nik,
+            'nm_checker'   => $nama,
+            'waktu_mulai'  => date('Y-m-d H:i:s'),
+            'progres'      => 0,
+        ]);
+    }
+
+    public function update_progres_kk($id, $progres)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_kk', ['progres' => $progres]);
+    }
+
+    public function done_kk($id)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_kk', [
+            'status'        => 'DONE',
+            'progres'       => 100,
+            'waktu_selesai' => date('Y-m-d H:i:s'),
+        ]);
+    }
 
     public function archive_kk($id, $by)
     {
@@ -150,9 +209,38 @@ class M_Checker extends CI_Model
         return $this->db->where('is_archived', 1)->order_by('archived_at', 'DESC')->get('tb_loading_lk')->result_array();
     }
 
-    public function create_lk($data)        { return $this->db->insert('tb_loading_lk', $data); }
+    public function get_lk_by_id($id)
+    {
+        return $this->db->get_where('tb_loading_lk', ['id' => $id])->row_array();
+    }
 
-    public function update_lk($id, $data)   { return $this->db->where('id', $id)->update('tb_loading_lk', $data); }
+    public function create_lk($data)      { return $this->db->insert('tb_loading_lk', $data); }
+    public function update_lk($id, $data) { return $this->db->where('id', $id)->update('tb_loading_lk', $data); }
+
+    public function start_lk($id, $nik, $nama)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_lk', [
+            'status'       => 'PROSES_LOADING',
+            'nik_checker'  => $nik,
+            'nm_checker'   => $nama,
+            'waktu_mulai'  => date('Y-m-d H:i:s'),
+            'progres'      => 0,
+        ]);
+    }
+
+    public function update_progres_lk($id, $progres)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_lk', ['progres' => $progres]);
+    }
+
+    public function done_lk($id)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_lk', [
+            'status'        => 'DONE',
+            'progres'       => 100,
+            'waktu_selesai' => date('Y-m-d H:i:s'),
+        ]);
+    }
 
     public function archive_lk($id, $by)
     {
@@ -189,4 +277,23 @@ class M_Checker extends CI_Model
 
         return ['bongkaran' => $b, 'kk' => $k, 'lk' => $l];
     }
+
+    // Cek apakah checker ini punya job aktif di KK atau LK (PROSES_LOADING)
+    public function get_active_loading_by_checker($nik)
+    {
+        $kk = $this->db->where('nik_checker', $nik)
+                    ->where('status', 'PROSES_LOADING')
+                    ->where('is_archived', 0)
+                    ->get('tb_loading_kk')->row();
+        if ($kk) return 'KK';
+
+        $lk = $this->db->where('nik_checker', $nik)
+                    ->where('status', 'PROSES_LOADING')
+                    ->where('is_archived', 0)
+                    ->get('tb_loading_lk')->row();
+        if ($lk) return 'LK';
+
+        return null;
+    }
+
 }

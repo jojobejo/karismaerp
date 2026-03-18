@@ -258,18 +258,24 @@ $route['update_customer_faktur']                    = 'logistik/C_Logistik/updat
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
 
 //LOGISTIK - Checker
-$route['checker']                                   = 'logistik/C_Checker/index';
-$route['checker/arsip']                             = 'logistik/C_Checker/arsip';
-$route['checker/store']                             = 'logistik/C_Checker/store';
-$route['checker/start']                             = 'logistik/C_Checker/start';
-$route['checker/update_progres']                    = 'logistik/C_Checker/update_progres';
-$route['checker/done']                              = 'logistik/C_Checker/done';
-$route['checker/update_status_bongkaran']           = 'logistik/C_Checker/update_status_bongkaran';
-$route['checker/archive_all_today']                 = 'logistik/C_Checker/archive_all_today';
-$route['checker/store_kk']                          = 'logistik/C_Checker/store_kk';
-$route['checker/update_kk']                         = 'logistik/C_Checker/update_kk';
-$route['checker/store_lk']                          = 'logistik/C_Checker/store_lk';
-$route['checker/update_lk']                         = 'logistik/C_Checker/update_lk';
+$route['checker']                          = 'logistik/C_Checker/index';
+$route['checker/arsip']                    = 'logistik/C_Checker/arsip';
+$route['checker/store']                    = 'logistik/C_Checker/store';
+$route['checker/start']                    = 'logistik/C_Checker/start';
+$route['checker/update_progres']           = 'logistik/C_Checker/update_progres';
+$route['checker/done']                     = 'logistik/C_Checker/done';
+$route['checker/update_status_bongkaran']  = 'logistik/C_Checker/update_status_bongkaran';
+$route['checker/archive_all_today']        = 'logistik/C_Checker/archive_all_today';
+$route['checker/store_kk']                 = 'logistik/C_Checker/store_kk';
+$route['checker/update_kk']                = 'logistik/C_Checker/update_kk';
+$route['checker/store_lk']                 = 'logistik/C_Checker/store_lk';
+$route['checker/update_lk']                = 'logistik/C_Checker/update_lk';
+$route['checker/start_lk']                 = 'logistik/C_Checker/start_lk';
+$route['checker/update_progres_lk']        = 'logistik/C_Checker/update_progres_lk';
+$route['checker/done_lk']                  = 'logistik/C_Checker/done_lk';
+$route['checker/start_kk']                 = 'logistik/C_Checker/start_kk';
+$route['checker/update_progres_kk']        = 'logistik/C_Checker/update_progres_kk';
+$route['checker/done_kk']                  = 'logistik/C_Checker/done_kk';
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
