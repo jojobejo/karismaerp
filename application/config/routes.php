@@ -314,6 +314,7 @@ $route['kmt/dca/simpan']         = 'kmt/Dca/simpan';
 $route['kmt/dca/edit/(:num)']    = 'kmt/Dca/edit/$1';
 $route['kmt/dca/update/(:num)']  = 'kmt/Dca/update/$1';
 $route['kmt/dca/hapus/(:num)']   = 'kmt/Dca/hapus/$1';
+$route['kmt/dca/tambah_kegiatan'] = 'kmt/Dca/tambah_kegiatan';
 
 // ---- KMT Promo / Peralatan ----
 $route['kmt/promo']                = 'kmt/Promo/index';

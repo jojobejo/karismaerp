@@ -213,6 +213,13 @@
             </li>
 
             <li class="nav-item">
+              <a href="<?php echo base_url('kmt/omset') ?>" class="nav-link">
+                <i class="nav-icon fas fa-chart-line"></i>
+                <p>Omset</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
               <a href="<?php echo base_url('kmt/operasional') ?>" class="nav-link">
                 <i class="nav-icon fas fa-cogs"></i>
                 <p>Operasional</p>
@@ -230,6 +237,13 @@
               <a href="<?php echo base_url('kmt/promo') ?>" class="nav-link">
                 <i class="nav-icon fas fa-bullhorn"></i>
                 <p>Promo / Peralatan</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="<?php echo base_url('kmt/others') ?>" class="nav-link">
+                <i class="far fa-circle nav-icon"></i>
+                <p>Others</p>
               </a>
             </li>
 
@@ -291,13 +305,6 @@
             </li>
 
             <li class="nav-item">
-              <a href="<?php echo base_url('kmt/retur') ?>" class="nav-link">
-                <i class="nav-icon fas fa-undo"></i>
-                <p>Retur</p>
-              </a>
-            </li>
-
-            <li class="nav-item">
               <a href="<?php echo base_url('kmt/others') ?>" class="nav-link">
                 <i class="far fa-circle nav-icon"></i>
                 <p>Others</p>
@@ -334,9 +341,9 @@
             </li>
 
             <li class="nav-item">
-              <a href="<?php echo base_url('kmt/promo') ?>" class="nav-link">
-                <i class="nav-icon fas fa-bullhorn"></i>
-                <p>Promo / Peralatan</p>
+              <a href="<?php echo base_url('kmt/dca') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-alt"></i>
+                <p>DCA</p>
               </a>
             </li>
 

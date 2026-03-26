@@ -38,53 +38,68 @@ class M_Kmt extends CI_Model {
     // ================================================================
     // DASHBOARD - Agregasi per bulan
     // ================================================================
-    public function get_omset_per_bulan($tahun, $id_wilayah = null) {
+    public function get_omset_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $this->db->select('bulan, SUM(penj_inc_ppn_neto) as total_omset');
         $this->db->from('tbkmt_omset');
         $this->db->where('tahun', $tahun);
+        $this->db->where('bulan >=', (int)$bln_dari);
+        $this->db->where('bulan <=', (int)$bln_sampai);
         if ($id_wilayah) $this->db->where('id_wilayah', $id_wilayah);
         $this->db->group_by('bulan');
         $this->db->order_by('bulan', 'ASC');
         return $this->db->get()->result_array();
     }
 
-    public function get_operasional_per_bulan($tahun, $id_wilayah = null) {
+    // Ganti method get_operasional_per_bulan
+    public function get_operasional_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $this->db->select('bulan, SUM(total_biaya) as total_operasional');
         $this->db->from('tbkmt_operasional');
         $this->db->where('tahun', $tahun);
+        $this->db->where('bulan >=', (int)$bln_dari);
+        $this->db->where('bulan <=', (int)$bln_sampai);
         if ($id_wilayah) $this->db->where('id_wilayah', $id_wilayah);
         $this->db->group_by('bulan');
         return $this->db->get()->result_array();
     }
 
-    public function get_dca_per_bulan($tahun, $id_wilayah = null) {
+    // Ganti method get_dca_per_bulan
+    public function get_dca_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $this->db->select('bulan, SUM(total_biaya) as total_dca');
         $this->db->from('tbkmt_dca');
         $this->db->where('tahun', $tahun);
+        $this->db->where('bulan >=', (int)$bln_dari);
+        $this->db->where('bulan <=', (int)$bln_sampai);
         if ($id_wilayah) $this->db->where('id_wilayah', $id_wilayah);
         $this->db->group_by('bulan');
         return $this->db->get()->result_array();
     }
 
-    public function get_peralatan_per_bulan($tahun, $id_wilayah = null) {
+    // Ganti method get_peralatan_per_bulan
+    public function get_peralatan_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $this->db->select('bulan, SUM(total_biaya) as total_peralatan');
         $this->db->from('tbkmt_promo_material');
         $this->db->where('tahun', $tahun);
+        $this->db->where('bulan >=', (int)$bln_dari);
+        $this->db->where('bulan <=', (int)$bln_sampai);
         if ($id_wilayah) $this->db->where('id_wilayah', $id_wilayah);
         $this->db->group_by('bulan');
         return $this->db->get()->result_array();
     }
 
-    public function get_others_per_bulan($tahun, $id_wilayah = null) {
+    // Ganti method get_others_per_bulan
+    public function get_others_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $this->db->select('bulan, SUM(total_biaya) as total_others');
         $this->db->from('tbkmt_others');
         $this->db->where('tahun', $tahun);
+        $this->db->where('bulan >=', (int)$bln_dari);
+        $this->db->where('bulan <=', (int)$bln_sampai);
         if ($id_wilayah) $this->db->where('id_wilayah', $id_wilayah);
         $this->db->group_by('bulan');
         return $this->db->get()->result_array();
     }
 
-    public function get_gaji_per_bulan($tahun, $id_wilayah = null) {
+    // Ganti method get_gaji_per_bulan
+    public function get_gaji_per_bulan($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
         $bulan_col = [
             1=>'gaji_jan', 2=>'gaji_feb', 3=>'gaji_mar', 4=>'gaji_apr',
             5=>'gaji_mei', 6=>'gaji_jun', 7=>'gaji_jul', 8=>'gaji_agu',
@@ -92,6 +107,8 @@ class M_Kmt extends CI_Model {
         ];
         $result = [];
         foreach ($bulan_col as $no_bulan => $col) {
+            // Skip bulan di luar range
+            if ($no_bulan < (int)$bln_dari || $no_bulan > (int)$bln_sampai) continue;
             $this->db->select("$no_bulan as bulan, COALESCE(SUM($col), 0) as total_gaji");
             $this->db->from('tbkmt_gaji');
             $this->db->where('tahun', $tahun);
@@ -102,16 +119,21 @@ class M_Kmt extends CI_Model {
         return $result;
     }
 
-    public function get_ytd($tahun, $id_wilayah = null) {
-        $omset       = $this->index_by_bulan($this->get_omset_per_bulan($tahun, $id_wilayah),       'total_omset');
-        $operasional = $this->index_by_bulan($this->get_operasional_per_bulan($tahun, $id_wilayah), 'total_operasional');
-        $dca         = $this->index_by_bulan($this->get_dca_per_bulan($tahun, $id_wilayah),         'total_dca');
-        $peralatan   = $this->index_by_bulan($this->get_peralatan_per_bulan($tahun, $id_wilayah),   'total_peralatan');
-        $others      = $this->index_by_bulan($this->get_others_per_bulan($tahun, $id_wilayah),      'total_others');
-        $gaji        = $this->index_by_bulan($this->get_gaji_per_bulan($tahun, $id_wilayah),        'total_gaji');
+    // Ganti method get_ytd — tambah parameter bln_dari & bln_sampai
+    public function get_ytd($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
+        $bln_dari   = max(1,  (int)$bln_dari);
+        $bln_sampai = min(12, (int)$bln_sampai);
+
+        $omset       = $this->index_by_bulan($this->get_omset_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai),       'total_omset');
+        $operasional = $this->index_by_bulan($this->get_operasional_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai), 'total_operasional');
+        $dca         = $this->index_by_bulan($this->get_dca_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai),         'total_dca');
+        $peralatan   = $this->index_by_bulan($this->get_peralatan_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai),   'total_peralatan');
+        $others      = $this->index_by_bulan($this->get_others_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai),      'total_others');
+        $gaji        = $this->index_by_bulan($this->get_gaji_per_bulan($tahun, $id_wilayah, $bln_dari, $bln_sampai),        'total_gaji');
 
         $data = [];
-        for ($b = 1; $b <= 12; $b++) {
+        // Hanya tampilkan bulan dalam range
+        for ($b = $bln_dari; $b <= $bln_sampai; $b++) {
             $o  = $omset[$b]       ?? 0;
             $op = $operasional[$b] ?? 0;
             $d  = $dca[$b]         ?? 0;
@@ -136,8 +158,9 @@ class M_Kmt extends CI_Model {
         return $data;
     }
 
-    public function get_summary_cards($tahun, $id_wilayah = null) {
-        $ytd = $this->get_ytd($tahun, $id_wilayah);
+    // Ganti method get_summary_cards
+    public function get_summary_cards($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
+        $ytd = $this->get_ytd($tahun, $id_wilayah, $bln_dari, $bln_sampai);
         $s = array_fill_keys(['total_omset','total_biaya','total_gaji','total_operasional'], 0);
         foreach ($ytd as $row) {
             $s['total_omset']       += $row['omset'];
@@ -150,11 +173,17 @@ class M_Kmt extends CI_Model {
         return $s;
     }
 
-    public function get_cost_per_hasil_wilayah($tahun) {
-        $wilayah_list = $this->get_wilayah();
+    // Ganti method get_cost_per_hasil_wilayah
+    public function get_cost_per_hasil_wilayah($tahun, $id_wilayah = null, $bln_dari = 1, $bln_sampai = 12) {
+        $wilayah_list = $id_wilayah
+            ? [$this->get_wilayah_by_id($id_wilayah)]
+            : $this->get_wilayah();
+
         $result = [];
         foreach ($wilayah_list as $w) {
-            $ytd = $this->get_ytd($tahun, $w['id']);
+            if (empty($w)) continue;
+            $ytd = $this->get_ytd($tahun, $w['id'], $bln_dari, $bln_sampai);
+
             $q = [1=>0,2=>0,3=>0,4=>0];
             $q_omset = [1=>0,2=>0,3=>0,4=>0];
             foreach ($ytd as $row) {
@@ -252,7 +281,10 @@ class M_Kmt extends CI_Model {
     // DCA
     // ================================================================
     public function get_dca_list($filter = []) {
-        $this->db->select('d.*, w.nama_wilayah');
+        $this->db->select('d.*, w.nama_wilayah,
+            (SELECT SUM(dd.total_biaya) FROM tbkmt_dca_detail dd WHERE dd.id_dca = d.id) as total_biaya_detail,
+            (SELECT COUNT(dd.id) FROM tbkmt_dca_detail dd WHERE dd.id_dca = d.id) as jumlah_kegiatan
+        ');
         $this->db->from('tbkmt_dca d');
         $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
         if (!empty($filter['tahun']))      $this->db->where('d.tahun', $filter['tahun']);
@@ -478,4 +510,40 @@ class M_Kmt extends CI_Model {
     public function delete_others($id) {
         return $this->db->delete('tbkmt_others', ['id' => $id]);
     }
+
+    // ================================================================
+    // DCA KEGIATAN MASTER
+    // ================================================================
+    public function get_dca_kegiatan() {
+        $this->db->order_by('id', 'ASC');
+        return $this->db->get('tbkmt_dca_kegiatan')->result_array();
+    }
+
+    public function insert_dca_kegiatan($nama, $created_by) {
+        return $this->db->insert('tbkmt_dca_kegiatan', [
+            'nama_kegiatan' => $nama,
+            'is_custom'     => 1,
+            'created_by'    => $created_by,
+        ]);
+    }
+
+    // ================================================================
+    // DCA DETAIL
+    // ================================================================
+    public function get_dca_detail($id_dca) {
+        $this->db->select('d.*, k.nama_kegiatan as nm_kegiatan_master');
+        $this->db->from('tbkmt_dca_detail d');
+        $this->db->join('tbkmt_dca_kegiatan k', 'k.id = d.id_kegiatan', 'left');
+        $this->db->where('d.id_dca', $id_dca);
+        return $this->db->get()->result_array();
+    }
+
+    public function insert_dca_detail($data_arr) {
+        // $data_arr = array of rows
+        return $this->db->insert_batch('tbkmt_dca_detail', $data_arr);
+    }
+
+    public function delete_dca_detail($id_dca) {
+        return $this->db->delete('tbkmt_dca_detail', ['id_dca' => $id_dca]);
+    }  
 }

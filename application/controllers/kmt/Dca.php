@@ -48,11 +48,13 @@ class Dca extends CI_Controller {
         $this->load->view('partial/main/footer.php');
     }
 
+    // Ganti method tambah() — kirim kegiatan_list
     public function tambah() {
         $data = [
-            'page_title'        => 'Tambah Data DCA',
-            'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'lv'     => (int)$this->session->userdata('lv'),
+            'page_title'      => 'Tambah Data DCA',
+            'wilayah_list'    => $this->M_Kmt->get_wilayah(),
+            'kegiatan_list'   => $this->M_Kmt->get_dca_kegiatan(),
+            'lv'              => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('partial/main/header.php', $data);
@@ -61,34 +63,72 @@ class Dca extends CI_Controller {
     }
 
     public function simpan() {
-        $this->form_validation->set_rules('tanggal_dca','Tanggal', 'required');
-        $this->form_validation->set_rules('id_wilayah', 'Wilayah', 'required|integer');
-        $this->form_validation->set_rules('uraian',     'Uraian',  'required');
+        $this->form_validation->set_rules('tanggal_dca', 'Tanggal', 'required');
+        $this->form_validation->set_rules('id_wilayah',  'Wilayah', 'required|integer');
 
         if ($this->form_validation->run() === FALSE) {
             $this->tambah(); return;
         }
 
-        $tgl     = $this->input->post('tanggal_dca');
-        $real    = (float)str_replace('.','', $this->input->post('real_biaya') ?? 0);
-        $um      = (float)str_replace('.','', $this->input->post('um') ?? 0);
-        $refund  = (float)str_replace('.','', $this->input->post('refund') ?? 0);
+        $tgl = $this->input->post('tanggal_dca');
 
-        $insert = [
+        // Ambil array detail dari form
+        $id_kegiatan   = $this->input->post('id_kegiatan')   ?? [];
+        $nama_kegiatan = $this->input->post('nama_kegiatan') ?? [];
+        $um_arr        = $this->input->post('um_detail')     ?? [];
+        $refund_arr    = $this->input->post('refund_detail') ?? [];
+        $real_arr      = $this->input->post('real_detail')   ?? [];
+        $ket_arr       = $this->input->post('ket_detail')    ?? [];
+
+        // Hitung total dari semua detail
+        $total_semua = 0;
+        foreach ($real_arr as $i => $real) {
+            $r = (float)str_replace('.', '', $real ?? 0);
+            $f = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
+            $total_semua += ($r - $f);
+        }
+
+        // Simpan header DCA
+        $insert_dca = [
             'tanggal_dca' => $tgl,
             'bulan'       => (int)date('m', strtotime($tgl)),
             'tahun'       => (int)date('Y', strtotime($tgl)),
             'id_wilayah'  => (int)$this->input->post('id_wilayah'),
             'abm'         => $this->input->post('abm'),
-            'uraian'      => $this->input->post('uraian'),
-            'um'          => $um,
-            'refund'      => $refund,
-            'real_biaya'  => $real,
-            'total_biaya' => $real - $refund,
+            'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
+            'um'          => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $um_arr)),
+            'refund'      => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $refund_arr)),
+            'real_biaya'  => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $real_arr)),
+            'total_biaya' => $total_semua,
             'created_by'  => $this->session->userdata('id_user'),
         ];
 
-        if ($this->M_Kmt->insert_dca($insert)) {
+        if ($this->M_Kmt->insert_dca($insert_dca)) {
+            $id_dca = $this->db->insert_id();
+
+            // Simpan detail per kegiatan
+            $detail_rows = [];
+            foreach ($id_kegiatan as $i => $id_k) {
+                $real   = (float)str_replace('.', '', $real_arr[$i]   ?? 0);
+                $refund = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
+                if ($real <= 0) continue; // skip baris kosong
+
+                $detail_rows[] = [
+                    'id_dca'        => $id_dca,
+                    'id_kegiatan'   => $id_k ?: null,
+                    'nama_kegiatan' => $nama_kegiatan[$i] ?? '-',
+                    'um'            => (float)str_replace('.', '', $um_arr[$i] ?? 0),
+                    'refund'        => $refund,
+                    'real_biaya'    => $real,
+                    'total_biaya'   => $real - $refund,
+                    'keterangan'    => $ket_arr[$i] ?? '',
+                ];
+            }
+
+            if (!empty($detail_rows)) {
+                $this->M_Kmt->insert_dca_detail($detail_rows);
+            }
+
             $this->session->set_flashdata('success', 'Data DCA berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
@@ -96,12 +136,16 @@ class Dca extends CI_Controller {
         redirect('kmt/dca');
     }
 
+    // Ganti method edit()
     public function edit($id) {
         $row = $this->M_Kmt->get_dca_by_id($id);
         if (!$row) { show_404(); return; }
+
         $data = [
             'page_title'      => 'Edit Data DCA',
             'row'             => $row,
+            'detail'          => $this->M_Kmt->get_dca_detail($id),
+            'kegiatan_list'   => $this->M_Kmt->get_dca_kegiatan(),
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'lv'              => (int)$this->session->userdata('lv'),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
@@ -112,10 +156,23 @@ class Dca extends CI_Controller {
         $this->load->view('partial/main/footer.php');
     }
 
+    // Ganti method update()
     public function update($id) {
-        $tgl    = $this->input->post('tanggal_dca');
-        $real   = (float)str_replace('.','', $this->input->post('real_biaya') ?? 0);
-        $refund = (float)str_replace('.','', $this->input->post('refund') ?? 0);
+        $tgl = $this->input->post('tanggal_dca');
+
+        $id_kegiatan   = $this->input->post('id_kegiatan')   ?? [];
+        $nama_kegiatan = $this->input->post('nama_kegiatan') ?? [];
+        $um_arr        = $this->input->post('um_detail')     ?? [];
+        $refund_arr    = $this->input->post('refund_detail') ?? [];
+        $real_arr      = $this->input->post('real_detail')   ?? [];
+        $ket_arr       = $this->input->post('ket_detail')    ?? [];
+
+        $total_semua = 0;
+        foreach ($real_arr as $i => $real) {
+            $r = (float)str_replace('.', '', $real ?? 0);
+            $f = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
+            $total_semua += ($r - $f);
+        }
 
         $update = [
             'tanggal_dca' => $tgl,
@@ -123,19 +180,65 @@ class Dca extends CI_Controller {
             'tahun'       => (int)date('Y', strtotime($tgl)),
             'id_wilayah'  => (int)$this->input->post('id_wilayah'),
             'abm'         => $this->input->post('abm'),
-            'uraian'      => $this->input->post('uraian'),
-            'um'          => (float)str_replace('.','', $this->input->post('um') ?? 0),
-            'refund'      => $refund,
-            'real_biaya'  => $real,
-            'total_biaya' => $real - $refund,
+            'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
+            'um'          => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $um_arr)),
+            'refund'      => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $refund_arr)),
+            'real_biaya'  => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $real_arr)),
+            'total_biaya' => $total_semua,
         ];
 
         if ($this->M_Kmt->update_dca($id, $update)) {
+            // Hapus detail lama, insert baru
+            $this->M_Kmt->delete_dca_detail($id);
+
+            $detail_rows = [];
+            foreach ($id_kegiatan as $i => $id_k) {
+                $real   = (float)str_replace('.', '', $real_arr[$i]   ?? 0);
+                $refund = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
+                if ($real <= 0) continue;
+
+                $detail_rows[] = [
+                    'id_dca'        => $id,
+                    'id_kegiatan'   => $id_k ?: null,
+                    'nama_kegiatan' => $nama_kegiatan[$i] ?? '-',
+                    'um'            => (float)str_replace('.', '', $um_arr[$i] ?? 0),
+                    'refund'        => $refund,
+                    'real_biaya'    => $real,
+                    'total_biaya'   => $real - $refund,
+                    'keterangan'    => $ket_arr[$i] ?? '',
+                ];
+            }
+
+            if (!empty($detail_rows)) {
+                $this->M_Kmt->insert_dca_detail($detail_rows);
+            }
+
             $this->session->set_flashdata('success', 'Data DCA berhasil diperbarui.');
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
         redirect('kmt/dca');
+    }
+
+    // Tambah method tambah_kegiatan() — AJAX add kegiatan custom
+    public function tambah_kegiatan() {
+        $nama = trim($this->input->post('nama_kegiatan'));
+        if (empty($nama)) {
+            echo json_encode(['status' => 'error', 'msg' => 'Nama kegiatan tidak boleh kosong']);
+            return;
+        }
+
+        // Cek duplikat
+        $cek = $this->db->get_where('tbkmt_dca_kegiatan', ['nama_kegiatan' => $nama])->row();
+        if ($cek) {
+            echo json_encode(['status' => 'exists', 'id' => $cek->id, 'nama' => $cek->nama_kegiatan]);
+            return;
+        }
+
+        $this->M_Kmt->insert_dca_kegiatan($nama, $this->session->userdata('id_user'));
+        $new_id = $this->db->insert_id();
+
+        echo json_encode(['status' => 'ok', 'id' => $new_id, 'nama' => $nama]);
     }
 
     public function hapus($id) {

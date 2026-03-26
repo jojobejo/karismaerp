@@ -44,9 +44,7 @@
                 ============================= -->
                 <div class="card card-outline card-primary">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-filter"></i> Filter Data
-                        </h3>
+                        <h3 class="card-title"><i class="fas fa-filter"></i> Filter Data</h3>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                 <i class="fas fa-minus"></i>
@@ -56,9 +54,11 @@
                     <div class="card-body">
                         <form method="GET" action="<?= base_url('kmt/dashboard') ?>" id="formFilter">
                             <div class="row align-items-end">
-                                <div class="col-md-3 col-sm-6">
+
+                                <!-- Tahun -->
+                                <div class="col-md-2 col-sm-6">
                                     <div class="form-group mb-0">
-                                        <label><i class="fas fa-calendar"></i> Tahun</label>
+                                        <label><i class="fas fa-calendar mr-1"></i> Tahun</label>
                                         <select name="tahun" class="form-control form-control-sm select2" style="width:100%">
                                             <?php for ($y = date('Y'); $y >= 2022; $y--): ?>
                                                 <option value="<?= $y ?>" <?= ($tahun == $y) ? 'selected' : '' ?>>
@@ -69,23 +69,49 @@
                                     </div>
                                 </div>
 
-                                <?php
-                                // ABM tidak bisa ganti wilayah
-                                $is_abm = ((int)$this->session->userdata('akses_lv') === 3);
-                                ?>
+                                <!-- Bulan Dari -->
+                                <div class="col-md-2 col-sm-6">
+                                    <div class="form-group mb-0">
+                                        <label><i class="fas fa-calendar-alt mr-1"></i> Dari Bulan</label>
+                                        <select name="bln_dari" class="form-control form-control-sm" id="selBlnDari">
+                                            <?php
+                                            $nm_bln = ['','Januari','Februari','Maret','April','Mei','Juni',
+                                                    'Juli','Agustus','September','Oktober','November','Desember'];
+                                            for ($m = 1; $m <= 12; $m++):
+                                            ?>
+                                                <option value="<?= $m ?>" <?= ($bln_dari == $m) ? 'selected' : '' ?>>
+                                                    <?= $nm_bln[$m] ?>
+                                                </option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Bulan Sampai -->
+                                <div class="col-md-2 col-sm-6">
+                                    <div class="form-group mb-0">
+                                        <label><i class="fas fa-calendar-alt mr-1"></i> Sampai Bulan</label>
+                                        <select name="bln_sampai" class="form-control form-control-sm" id="selBlnSampai">
+                                            <?php for ($m = 1; $m <= 12; $m++): ?>
+                                                <option value="<?= $m ?>" <?= ($bln_sampai == $m) ? 'selected' : '' ?>>
+                                                    <?= $nm_bln[$m] ?>
+                                                </option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Wilayah -->
                                 <div class="col-md-3 col-sm-6">
                                     <div class="form-group mb-0">
-                                        <label><i class="fas fa-map-marker-alt"></i> Wilayah</label>
-
+                                        <label><i class="fas fa-map-marker-alt mr-1"></i> Wilayah</label>
                                         <?php if ($lv === 3): ?>
                                             <?php
-                                                // Cari nama wilayah ABM
-                                                $nama_wil = '-';
-                                                foreach ($wilayah_list as $w) {
-                                                    if ($w['id'] == $id_wilayah) { $nama_wil = $w['nama_wilayah']; break; }
-                                                }
+                                            $nama_wil = '-';
+                                            foreach ($wilayah_list as $w) {
+                                                if ($w['id'] == $id_wilayah) { $nama_wil = $w['nama_wilayah']; break; }
+                                            }
                                             ?>
-                                            <!-- Nilai tetap dikirim saat form submit -->
                                             <input type="hidden" name="id_wilayah" value="<?= $id_wilayah ?>">
                                             <input type="text" class="form-control form-control-sm"
                                                 value="<?= htmlspecialchars($nama_wil) ?>" disabled>
@@ -103,13 +129,26 @@
                                     </div>
                                 </div>
 
+                                <!-- Submit -->
                                 <div class="col-md-2 col-sm-12 mt-2 mt-md-0">
                                     <button type="submit" class="btn btn-primary btn-sm btn-block">
-                                        <i class="fas fa-search"></i> Tampilkan
+                                        <i class="fas fa-search mr-1"></i> Tampilkan
                                     </button>
                                 </div>
+
                             </div>
                         </form>
+
+                        <!-- Label periode aktif -->
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Menampilkan periode:
+                                <strong class="text-primary">
+                                    <?= $nm_bln[$bln_dari] ?> — <?= $nm_bln[$bln_sampai] ?> <?= $tahun ?>
+                                </strong>
+                            </small>
+                        </div>
                     </div>
                 </div>
                 <!-- /.card filter -->
@@ -177,9 +216,12 @@
                 <div class="mb-3">
                     <a href="<?= base_url('kmt/dashboard/export')
                             . '?tahun='       . $tahun
+                            . '&bln_dari='    . $bln_dari
+                            . '&bln_sampai='  . $bln_sampai
                             . '&id_wilayah='  . ($id_wilayah ?? '') ?>"
                     class="btn btn-success btn-sm">
                         <i class="fas fa-file-excel mr-1"></i> Export Excel
+                        <small>(<?= $nm_bln[$bln_dari] ?>–<?= $nm_bln[$bln_sampai] ?> <?= $tahun ?>)</small>
                     </a>
                 </div>
 
@@ -415,6 +457,22 @@ $(function () {
         searching: false,
         ordering: true,
         info:     false,
+    });
+
+    $('#selBlnDari').on('change', function () {
+        var dari    = parseInt($(this).val());
+        var sampai  = parseInt($('#selBlnSampai').val());
+        if (dari > sampai) {
+            $('#selBlnSampai').val($(this).val());
+        }
+    });
+
+    $('#selBlnSampai').on('change', function () {
+        var sampai = parseInt($(this).val());
+        var dari   = parseInt($('#selBlnDari').val());
+        if (sampai < dari) {
+            $('#selBlnDari').val($(this).val());
+        }
     });
 
     // Select2 untuk filter
