@@ -259,6 +259,7 @@ $route['tonase_report']                             = 'logistik/C_Logistik/tonas
 
 //LOGISTIK - Checker
 $route['checker']                          = 'logistik/C_Checker/index';
+$route['checker/dashboard']                = 'logistik/C_Checker/dashboard';
 $route['checker/arsip']                    = 'logistik/C_Checker/arsip';
 $route['checker/store']                    = 'logistik/C_Checker/store';
 $route['checker/start']                    = 'logistik/C_Checker/start';

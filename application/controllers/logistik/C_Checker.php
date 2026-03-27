@@ -4,11 +4,11 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 class C_Checker extends CI_Controller
 {
     const ROLE_CHECKER    = 'CHECKER';
-    const ROLE_MANAGERCK  = 'MANAGERCK';   // Manager Checker — bisa start banyak, bisa input nama checker
+    const ROLE_MANAGERCK  = 'MANAGERCK';
     const ROLE_ADMLOG     = 'ADMLOG';
     const ROLE_MANAGER_WH = 'MANAGERWH';
     const ROLE_SALES      = 'SALES';
-    const ROLE_DIREKTUR   = 'DIREKTUR';
+    const ROLE_DIREKTUR   = 'DIREKTURCK';
 
     // Apakah role ini termasuk "doer" (bisa start/jalankan bongkaran & loading)
     private function isDoer()
@@ -97,6 +97,26 @@ class C_Checker extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/arsip.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // ----------------------------------------------------------------
+    // HALAMAN DASHBOARD
+    // ----------------------------------------------------------------
+    public function dashboard()
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+
+        $data['page_title'] = 'KARISMA - Dashboard Warehouse';
+        $data['role']       = $this->role();
+
+        // Ambil semua data aktif (belum diarsip)
+        $data['bongkaran'] = $this->M_Checker->get_list();
+        $data['list_lk']   = $this->M_Checker->get_list_lk();
+        $data['list_kk']   = $this->M_Checker->get_list_kk();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/dashboard.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
