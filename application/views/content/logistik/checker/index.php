@@ -75,11 +75,11 @@ tr.row-pending { background:#fafafa !important; }
                             <i class="fas fa-plus"></i> Tambah Loading LK
                         </button>
                     </div>
-                    <div class="col-auto">
+                    <!-- <div class="col-auto">
                         <button class="btn btn-danger" id="btnArchiveAll">
                             <i class="fas fa-box-archive mr-1"></i> Archive Aktivitas Hari Ini
                         </button>
-                    </div>
+                    </div> -->
                     <div class="col-auto">
                         <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
                             <i class="fas fa-archive"></i> Lihat Arsip

@@ -77,7 +77,7 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'SALESCK') {
                         redirect('checker');
                     } else if ($key->jobdesk == 'DIREKTURCK') {
-                        redirect('checker'); 
+                        redirect('checker/dashboard'); 
                     } else if ($key->jobdesk == 'MANAGERCK') {
                         redirect('checker');
                     }

@@ -6,6 +6,10 @@
       <span class="brand-text font-weight-light">Halo , <?= $this->session->userdata('nama') ?><br></span>
     </a>
 
+    <?php 
+    $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK'];
+    ?>
+
     <!-- Sidebar -->
     <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
       <div class="sidebar">
@@ -200,7 +204,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-      <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'DIREKTURCK') : ?>
+      <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), $allowed_roles)) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -215,9 +219,9 @@
             </li>
             <li class="nav-item">
               <a href="<?php echo base_url('checker') ?>" class="nav-link">
-                <i class="nav-icon fas fa-home"></i>
+                <i class="nav-icon fas fa-warehouse"></i>
                 <p>
-                  Wirehouse Activity
+                  Warehouse Activity
                 </p>
               </a>
             </li>

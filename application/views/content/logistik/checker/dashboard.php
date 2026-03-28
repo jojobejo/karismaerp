@@ -161,13 +161,21 @@
                 ============================================================ -->
                 <div class="row align-items-center mb-3">
                     <div class="col">
-                        <h4 class="mb-0"><i class="fas fa-warehouse mr-2 text-primary"></i> Dashboard Warehouse</h4>
+                        <h4 class="mb-0">
+                            <i class="fas fa-warehouse mr-2 text-primary"></i> Dashboard Warehouse
+                        </h4>
                         <small class="text-muted"><?= date('l, d F Y — H:i') ?> WIB</small>
                     </div>
-                    <div class="col-auto">
-                        <a href="<?= base_url('checker') ?>" class="btn btn-sm btn-outline-secondary mr-2">
-                            <i class="fas fa-list mr-1"></i> Ke Halaman Kerja
+
+                    <div class="col-auto d-flex align-items-center">
+                        <a href="<?= base_url('checker/arsip') ?>" class="btn btn-sm btn-secondary mr-2">
+                            <i class="fas fa-archive mr-1"></i> Arsip
                         </a>
+
+                        <a href="<?= base_url('checker') ?>" class="btn btn-sm btn-outline-secondary mr-2">
+                            <i class="fas fa-list mr-1"></i> Halaman Kerja
+                        </a>
+
                         <button class="btn btn-sm btn-outline-primary" onclick="location.reload()">
                             <i class="fas fa-sync-alt mr-1"></i> Refresh
                         </button>
