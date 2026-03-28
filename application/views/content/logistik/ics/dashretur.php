@@ -86,21 +86,40 @@
                                                         }
                                                         ?>
                                                     </td>
-                                                    <td>
-                                                        <?php if ((int)$row->type_retur === 1) : ?>
-                                                            <a class="btn btn-sm btn-info" href="<?= base_url('ics/retur/pembelian') ?>" title="Retur Pembelian">
-                                                                <i class="fas fa-truck-loading"></i> Retur Pembelian
-                                                            </a>
-                                                        <?php elseif ((int)$row->type_retur === 2) : ?>
-                                                            <a class="btn btn-sm btn-success" href="<?= base_url('ics/retur/penjualan') ?>" title="Retur Penjualan">
-                                                                <i class="fas fa-shopping-cart"></i> Retur Penjualan
-                                                            </a>
-                                                        <?php else : ?>
-                                                            <span class="btn btn-sm btn-secondary" title="Retur">
-                                                                <i class="fas fa-exchange-alt"></i>
-                                                            </span>
-                                                        <?php endif; ?>
-                                                    </td>
+                                                    <?php if ($this->session->userdata('jobdesk') == 'ADMINLOGLPB') : ?>
+                                                        <td>
+                                                            <?php if ((int)$row->type_retur === 1) : ?>
+                                                                <a class="btn btn-sm btn-info" href="<?= base_url('ics/retur/pembelian') ?>" title="Retur Pembelian">
+                                                                    <i class="fas fa-truck-loading"></i> Retur Pembelian
+                                                                </a>
+                                                            <?php elseif ((int)$row->type_retur === 2) : ?>
+                                                                <a class="btn btn-sm btn-success" href="<?= base_url('ics/retur/penjualan') ?>" title="Retur Penjualan">
+                                                                    <i class="fas fa-shopping-cart"></i> Retur Penjualan
+                                                                </a>
+                                                            <?php else : ?>
+                                                                <span class="btn btn-sm btn-secondary" title="Retur">
+                                                                    <i class="fas fa-exchange-alt"></i>
+                                                                </span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    <?php else : ?>
+                                                        <td>
+                                                            <?php if ((int)$row->type_retur === 1) : ?>
+                                                                <a class="btn btn-sm btn-info" href="#" title="Retur Pembelian">
+                                                                    <i class="fas fa-truck-loading"></i> Retur Pembelian
+                                                                </a>
+                                                            <?php elseif ((int)$row->type_retur === 2) : ?>
+                                                                <a class="btn btn-sm btn-success" href="#" title="Retur Penjualan">
+                                                                    <i class="fas fa-shopping-cart"></i> Retur Penjualan
+                                                                </a>
+                                                            <?php else : ?>
+                                                                <span class="btn btn-sm btn-secondary" title="Retur">
+                                                                    <i class="fas fa-exchange-alt"></i>
+                                                                </span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    <?php endif; ?>
+
                                                     <td><?= $row->keterangan ?></td>
                                                     <td class="text-center"><?= (int)$row->total_barang ?></td>
                                                     <td class="text-center">

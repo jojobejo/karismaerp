@@ -2619,4 +2619,103 @@ FROM (
             ->get('tb_customer')
             ->row();
     }
+
+    public function get_data_po($date1 = null, $date2 = null)
+    {
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.tgl_transaksi,
+            pp.kd_suplier,
+            pp.kd_barang,
+            pp.satuan,
+            pp.qty,
+            pp.status,
+            mb.nama_barang,
+            COALESCE(SUM(dl.qty_diterima), 0) AS qty_masuk
+        ');
+        $this->db->from('tb_pre_po pp');
+
+        $this->db->join(
+            'tb_master_barang_all mb',
+            'mb.kd_barang = pp.kd_barang',
+            'left'
+        );
+
+        $this->db->join(
+            'tb_po_received dl',
+            'dl.no_po = pp.no_po AND dl.kd_barang = pp.kd_barang',
+            'left'
+        );
+
+        // Filter tanggal dengan STR_TO_DATE karena format kolom adalah dd/MM/yyyy
+        if (!empty($date1) && !empty($date2)) {
+            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') >=", $date1);
+            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') <=", $date2);
+        }
+
+        $this->db->group_by('pp.id_pre_po');
+        $this->db->order_by('pp.id_pre_po', 'DESC');
+
+        $query = $this->db->get();
+        return $query->result_array();
+    }
+
+    public function save_detail_lpb($data)
+    {
+        $insert = [
+            'no_po'        => $data['no_po'],
+            'kd_barang'    => $data['kd_barang'],
+            'qty_diterima' => (int) $data['qty_diterima'],
+            'no_lot'       => $data['no_lot']   ?? null,
+            'exp_date'     => !empty($data['exp_date']) ? $data['exp_date'] : null,
+            'create_at'    => date('Y-m-d H:i:s'),
+        ];
+
+        return $this->db->insert('tb_po_received', $insert);
+    }
+
+    public function get_detail_by_po($no_po)
+    {
+        $this->db->select('
+            dl.*,
+            mb.nama_barang
+        ');
+        $this->db->from('tb_po_received dl');
+        $this->db->join(
+            'tb_master_barang_all mb',
+            'mb.kd_barang = dl.kd_barang',
+            'left'
+        );
+        $this->db->where('dl.no_po', $no_po);
+        $this->db->order_by('dl.id_detail_lpb', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_riwayat_barang_masuk($date1 = null, $date2 = null)
+    {
+        $this->db->select('
+            dl.id_detail_lpb,
+            dl.no_po,
+            dl.kd_barang,
+            mb.nama_barang,
+            dl.qty_diterima,
+            dl.satuan,
+            dl.no_lot,
+            dl.exp_date,
+            dl.create_at
+        ');
+        $this->db->from('tb_po_received dl');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = dl.kd_barang', 'left');
+
+        if (!empty($date1) && !empty($date2)) {
+            $this->db->where('DATE(dl.create_at) >=', $date1);
+            $this->db->where('DATE(dl.create_at) <=', $date2);
+        }
+
+        $this->db->order_by('dl.id_detail_lpb', 'DESC');
+        return $this->db->get()->result_array();
+    }
 }

@@ -1,3 +1,4 @@
+<!-- ini file controller saya controller/logistik/C_ics.php -->
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -567,14 +568,33 @@ class C_Ics extends CI_Controller
 
     public function ics_po()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
-        $tgl                        = date('d/m/Y');
-        $data['tanggal_now']        = date('d/m/Y');
-        // $data['ics_po']             = $this->M_Ics->list_po_today($tgl);
-        $data['ics_po']             = $this->M_Ics->list_po();
+       $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icspo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function detail_po()
+    {
+        // Ambil dari query string manual
+        $no_po = $this->input->get('no_po');
+        $no_po = urldecode($no_po);
+
+        if (empty($no_po)) redirect('ics/icspo');
+
+        $data['page_title'] = 'KARISMA - Detail PO';
+        $data['no_po']      = $no_po;
+        $data['detail']     = $this->M_Logistik->get_detail_by_po($no_po);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/detail_po.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -1045,12 +1065,140 @@ class C_Ics extends CI_Controller
 
     public function data_lpb_zahir()
     {
-        $data['page_title']         = 'KARISMA - LOGISTIK';
+        $data['page_title']  = 'KARISMA - LOGISTIK';
+        $data['list_satuan'] = $this->db->order_by('nm_satuan', 'ASC')->get('tb_satuan')->result_array();
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+        $data['lpb'] = $this->M_Logistik->get_data_po($date1, $date2);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/dtalbp.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function sync_po_pre_do()
+    {
+        $url = "https://10.10.10.26/kiu_po/get_po";
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $response = curl_exec($ch);
+        $err = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $err) {
+            $this->session->set_flashdata('error', 'Gagal akses API: ' . ($err ?: 'Unknown error'));
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        if ($httpCode >= 400) {
+            $this->session->set_flashdata('error', 'Gagal akses API. HTTP ' . $httpCode);
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $json = json_decode($response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->session->set_flashdata('error', 'Respon API tidak valid (bukan JSON).');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $items = $json['data'] ?? $json['result'] ?? $json['rows'] ?? $json['po'] ?? $json;
+        if (!is_array($items)) {
+            $this->session->set_flashdata('error', 'Format data API tidak sesuai.');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $result = $this->M_Ics->sync_pre_po_from_api($items);
+
+        if (!empty($result['error'])) {
+            $err = is_array($result['error']) ? ($result['error']['message'] ?? json_encode($result['error'])) : $result['error'];
+            $this->session->set_flashdata('error', 'Gagal simpan ke database: ' . $err);
+        } else {
+            $this->session->set_flashdata(
+                'success',
+                "Sync berhasil. Baru: {$result['inserted']}, Update: {$result['updated']}, Dilewati: {$result['skipped']}."
+            );
+        }
+
+        redirect('data_lpb_zahir');
+    }
+
+    public function save_qty_diterima()
+    {
+        $no_po     = $this->input->post('no_po',     TRUE);
+        $kd_barang = $this->input->post('kd_barang', TRUE);
+        $rows      = $this->input->post('rows');
+
+        if (empty($no_po) || empty($kd_barang) || empty($rows)) {
+            $this->session->set_flashdata('error', 'Data tidak lengkap.');
+            redirect('data_lpb_zahir');
+            return;
+        }
+
+        $insert_batch = [];
+        foreach ($rows as $row) {
+            if (empty($row['qty_diterima'])) continue;
+            $insert_batch[] = [
+                'no_po'        => $no_po,
+                'kd_barang'    => $kd_barang,
+                'qty_diterima' => (int) $row['qty_diterima'],
+                'satuan'       => $row['satuan']   ?? null,
+                'no_lot'       => $row['no_lot']   ?: null,
+                'exp_date'     => !empty($row['exp_date']) ? $row['exp_date'] : null,
+                'create_at'    => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        if (!empty($insert_batch)) {
+            $this->db->insert_batch('tb_po_received', $insert_batch);
+            $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
+        } else {
+            $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
+        }
+
+        redirect('data_lpb_zahir');
+    }
+
+    public function po_selesai()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - PO Selesai';
+        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/po_selesai.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function riwayat_barang_masuk()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - Riwayat Barang Masuk';
+        $data['riwayat']    = $this->M_Logistik->get_riwayat_barang_masuk($date1, $date2);
+        $data['date1']      = $date1;
+        $data['date2']      = $date2;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/riwayat_barang_masuk.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
 
     // public function get_lpb()
     // {
