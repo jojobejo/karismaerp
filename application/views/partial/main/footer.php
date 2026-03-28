@@ -227,8 +227,31 @@
       "autoWidth": false,
       "responsive": true,
     });
-    bsCustomFileInput.init();
-  });
+
+    $('#tabelBongkaran').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
+    $('#tabelKK').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
+    $('#tabelLK').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
+    $('#tabelArsip').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
+    $('#tabelArsipKK').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
+    $('#tabelArsipLK').DataTable({
+        "paging": true, "lengthChange": true, "searching": true,
+        "ordering": false, "info": true, "autoWidth": false, "responsive": true,
+    });
 </script>
 
 <script type="text/javascript">
