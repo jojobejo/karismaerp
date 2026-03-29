@@ -29,13 +29,17 @@
                 <?php $this->load->view('partial/main/alert') ?>
 
                 <div class="mb-3 d-flex justify-content-between">
-
+ 
                     <div>
                         <a href="<?= base_url('kmt/gaji/tambah') ?>" class="btn btn-primary btn-sm">
                             <i class="fas fa-plus mr-1"></i> Tambah Karyawan
                         </a>
+                
+                        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#modalImport">
+                            <i class="fas fa-file-import mr-1"></i> Import Excel
+                        </button>
                     </div>
-
+                
                     <div>
                         <a href="<?= base_url('kmt/gaji/export')
                                 . '?tahun=' . $tahun
@@ -44,7 +48,7 @@
                             <i class="fas fa-file-excel mr-1"></i> Export Excel
                         </a>
                     </div>
-
+                
                 </div>
 
                 <!-- Filter (tanpa bulan) -->
@@ -152,6 +156,14 @@
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
+
+<?php $this->load->view('content/kmt/modal/modal_import', [
+    'import_url'   => base_url('kmt/gaji/import'),
+    'template_url' => base_url('kmt/gaji/template_gaji'),
+    'import_title' => 'Import Data Gaji dari Excel',
+    'import_note'  => 'Kolom wajib: id_wilayah, nama, tahun. Satu baris = satu karyawan per tahun.',
+]); ?>
+
 <script>
 $(function(){
     $('#tblGaji').DataTable({responsive:true,pageLength:25,scrollX:true,

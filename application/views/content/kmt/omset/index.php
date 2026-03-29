@@ -45,13 +45,17 @@
                         <a href="<?= base_url('kmt/omset/tambah') ?>" class="btn btn-success btn-sm">
                             <i class="fas fa-plus mr-1"></i> Tambah Omset
                         </a>
-
+                
                         <a href="<?= base_url('kmt/retur') ?>" class="btn btn-danger btn-sm">
                             <i class="fas fa-undo mr-1"></i> Retur
                         </a>
+                
+                        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalImport">
+                            <i class="fas fa-file-import mr-1"></i> Import Excel
+                        </button>
                         <?php endif; ?>
                     </div>
-
+                
                     <div>
                         <a href="<?= base_url('kmt/omset/export')
                                 . '?tahun=' . $tahun
@@ -190,6 +194,15 @@
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
+
+<?php if ($lv == 1): ?>
+<?php $this->load->view('content/kmt/modal/modal_import', [
+    'import_url'   => base_url('kmt/omset/import'),
+    'template_url' => base_url('kmt/omset/template_omset'),
+    'import_title' => 'Import Data Omset dari Excel',
+    'import_note'  => 'Kolom wajib: tanggal, id_wilayah, nama_toko, produk, quantity, penj_inc_ppn_neto.',
+]); ?>
+<?php endif; ?>
 
 <script>
 $(function () {

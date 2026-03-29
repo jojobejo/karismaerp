@@ -338,4 +338,286 @@ class Omset extends CI_Controller {
         $writer->save('php://output');
         exit;
     }
+
+    public function template_omset()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Import Omset');
+ 
+        // ------- Baris 1: nama field (KEY untuk mapping, jangan diubah) -------
+        $fields = [
+            'A' => 'tanggal',        'B' => 'id_wilayah',   'C' => 'nama_toko',
+            'D' => 'kota',           'E' => 'produk',        'F' => 'sales_so',
+            'G' => 'quantity',       'H' => 'unit',          'I' => 'harga_inc_ppn',
+            'J' => 'penj_dpp_neto',  'K' => 'penj_inc_ppn_neto',
+            'L' => 'nomor',          'M' => 'no_urut',       'N' => 'kode',
+            'O' => 'sc',             'P' => 'se',            'Q' => 'wilayah_se',
+            'R' => 'merk',           'S' => 'jenis',         'T' => 'box',
+            'U' => 'ltr_kg',         'V' => 'keterangan',
+            'W' => 'tgl_kirim',      'X' => 'no_retur',      'Y' => 'tgl_retur',
+        ];
+ 
+        // ------- Baris 2: label ramah untuk pengguna -------
+        $labels = [
+            'A' => 'Tanggal (YYYY-MM-DD)*', 'B' => 'ID Wilayah*',    'C' => 'Nama Toko*',
+            'D' => 'Kota',                  'E' => 'Produk*',          'F' => 'Sales SO',
+            'G' => 'Quantity*',             'H' => 'Unit',             'I' => 'Harga Inc PPN',
+            'J' => 'Penj DPP Neto',         'K' => 'Penj Inc PPN Neto*',
+            'L' => 'Nomor Faktur',          'M' => 'No Urut',         'N' => 'Kode',
+            'O' => 'SC',                    'P' => 'SE',               'Q' => 'Wilayah SE',
+            'R' => 'Merk',                  'S' => 'Jenis',            'T' => 'Box',
+            'U' => 'Ltr/Kg',                'V' => 'Keterangan',
+            'W' => 'Tgl Kirim (YYYY-MM-DD)','X' => 'No Retur',        'Y' => 'Tgl Retur (YYYY-MM-DD)',
+        ];
+ 
+        foreach ($fields as $col => $field) {
+            $sheet->setCellValue("{$col}1", $field);
+            $sheet->setCellValue("{$col}2", $labels[$col]);
+        }
+ 
+        // Style baris 1 (biru tua)
+        $sheet->getStyle('A1:Y1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 9],
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+ 
+        // Style baris 2 (biru muda)
+        $sheet->getStyle('A2:Y2')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '2E75B6']],
+            'alignment' => ['horizontal' => 'center', 'wrapText' => true],
+        ]);
+        $sheet->getRowDimension(2)->setRowHeight(30);
+ 
+        // Contoh data baris 3
+        $example = [
+            'A' => date('Y-m-d'), 'B' => '1',              'C' => 'Toko Maju Jaya',
+            'D' => 'Semarang',    'E' => 'CORN A 1KG',      'F' => 'Budi Santoso',
+            'G' => '10',          'H' => 'SAK',             'I' => '55000',
+            'J' => '500000',      'K' => '550000',           'L' => 'INV/2025/001',
+            'M' => '1',           'N' => 'KMT-001',         'O' => '',
+            'P' => '',            'Q' => '',                 'R' => 'KARISMA',
+            'S' => 'CORN',        'T' => '2',               'U' => '10',
+            'V' => 'Contoh data - hapus baris ini sebelum import',
+            'W' => '', 'X' => '', 'Y' => '',
+        ];
+ 
+        foreach ($example as $col => $val) {
+            $sheet->setCellValue("{$col}3", $val);
+        }
+ 
+        $sheet->getStyle('A3:Y3')->applyFromArray([
+            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'E8F4FD']],
+            'font' => ['italic' => true, 'color' => ['rgb' => '777777']],
+        ]);
+ 
+        // Auto width & freeze header
+        foreach (array_keys($fields) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->freezePane('A3');
+ 
+        // Sheet Petunjuk
+        $guide = $spreadsheet->createSheet();
+        $guide->setTitle('Petunjuk');
+        $rows = [
+            1  => ['PETUNJUK PENGISIAN TEMPLATE IMPORT OMSET', true, 14],
+            3  => ['1. Kolom bertanda (*) wajib diisi, kolom lain opsional.', false, 11],
+            4  => ['2. Format tanggal: YYYY-MM-DD  (contoh: 2025-01-15)', false, 11],
+            5  => ['3. Baris 1 (biru tua) = nama field untuk sistem. JANGAN diubah/dihapus.', false, 11],
+            6  => ['4. Baris 2 (biru muda) = label keterangan. JANGAN diubah/dihapus.', false, 11],
+            7  => ['5. Isi data mulai baris ke-3.', false, 11],
+            8  => ['6. Hapus baris contoh (baris 3) sebelum upload jika tidak dipakai.', false, 11],
+            9  => ['7. Angka (quantity, harga, dll): tulis angka murni tanpa titik/koma ribuan.', false, 11],
+            10 => ['8. id_wilayah: sesuaikan dengan ID wilayah pada sistem.', false, 11],
+            11 => ['9. Jika tidak ada retur, kolom no_retur & tgl_retur dikosongkan.', false, 11],
+        ];
+        foreach ($rows as $r => [$txt, $bold, $size]) {
+            $guide->setCellValue("A{$r}", $txt);
+            $guide->getStyle("A{$r}")->getFont()->setBold($bold)->setSize($size);
+        }
+        $guide->getColumnDimension('A')->setWidth(80);
+ 
+        $spreadsheet->setActiveSheetIndex(0);
+ 
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="Template_Import_Omset.xlsx"');
+        header('Cache-Control: max-age=0');
+ 
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+ 
+    // ----------------------------------------------------------------
+    // IMPORT OMSET DARI EXCEL
+    // ----------------------------------------------------------------
+    public function import()
+    {
+        $this->cek_bukan_abm();
+ 
+        // Validasi file upload
+        $file = $_FILES['file_excel'] ?? null;
+ 
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('error', 'File tidak ditemukan atau gagal diupload.');
+            redirect('kmt/omset');
+        }
+ 
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['xlsx', 'xls'])) {
+            $this->session->set_flashdata('error', 'Format file harus .xlsx atau .xls');
+            redirect('kmt/omset');
+        }
+ 
+        try {
+            // Baca file Excel
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($file['tmp_name']);
+            $sheet       = $spreadsheet->getActiveSheet();
+            $rows        = $sheet->toArray(null, true, true, false); // index 0-based
+ 
+            if (count($rows) < 3) {
+                $this->session->set_flashdata('error', 'File kosong atau tidak memiliki data (minimal 1 baris data setelah header).');
+                redirect('kmt/omset');
+            }
+ 
+            // Baris 0 (index): nama field → mapping kolom
+            $field_names = array_map('trim', $rows[0]); // baris ke-1 di Excel = index 0 di array
+            // Baris 1 (index): label → skip
+            // Data mulai baris 2 (index)
+ 
+            $insert_batch = [];
+            $errors       = [];
+            $skipped      = 0;
+            $inserted     = 0;
+ 
+            for ($i = 2; $i < count($rows); $i++) {
+                $row    = $rows[$i];
+                $line   = $i + 1; // nomor baris di Excel (human-readable)
+ 
+                // Buat array asosiatif field => nilai
+                $data = [];
+                foreach ($field_names as $col_idx => $field) {
+                    $data[$field] = isset($row[$col_idx]) ? trim((string)$row[$col_idx]) : '';
+                }
+ 
+                // Skip baris kosong sepenuhnya
+                if (empty(array_filter($data))) {
+                    $skipped++;
+                    continue;
+                }
+ 
+                // ---- Validasi wajib ----
+                $err = [];
+                if (empty($data['tanggal']))           $err[] = 'tanggal wajib diisi';
+                if (empty($data['id_wilayah']))        $err[] = 'id_wilayah wajib diisi';
+                if (empty($data['nama_toko']))         $err[] = 'nama_toko wajib diisi';
+                if (empty($data['produk']))            $err[] = 'produk wajib diisi';
+                if (!is_numeric($data['quantity'] ?? '')) $err[] = 'quantity harus angka';
+                if (!is_numeric($data['penj_inc_ppn_neto'] ?? '')) $err[] = 'penj_inc_ppn_neto harus angka';
+ 
+                if (!empty($err)) {
+                    $errors[] = "Baris {$line}: " . implode(', ', $err);
+                    continue;
+                }
+ 
+                // ---- Normalisasi tanggal ----
+                // Support format YYYY-MM-DD dan DD/MM/YYYY
+                $tanggal = $this->_parse_tanggal($data['tanggal']);
+                if (!$tanggal) {
+                    $errors[] = "Baris {$line}: format tanggal tidak valid ({$data['tanggal']})";
+                    continue;
+                }
+ 
+                $tgl_kirim = !empty($data['tgl_kirim'])  ? $this->_parse_tanggal($data['tgl_kirim'])  : null;
+                $tgl_retur = !empty($data['tgl_retur'])  ? $this->_parse_tanggal($data['tgl_retur'])  : null;
+ 
+                $insert_batch[] = [
+                    'no_urut'           => $data['no_urut']    ?: null,
+                    'kode'              => $data['kode']       ?: null,
+                    'bulan'             => (int)date('m', strtotime($tanggal)),
+                    'tahun'             => (int)date('Y', strtotime($tanggal)),
+                    'tanggal'           => $tanggal,
+                    'nomor'             => $data['nomor']      ?: null,
+                    'inputer'           => $this->session->userdata('nama'),
+                    'no_retur'          => $data['no_retur']   ?: null,
+                    'tgl_retur'         => $tgl_retur,
+                    'sales_so'          => $data['sales_so']   ?: null,
+                    'sc'                => $data['sc']         ?: null,
+                    'se'                => $data['se']         ?: null,
+                    'wilayah_se'        => $data['wilayah_se'] ?: null,
+                    'id_wilayah'        => (int)$data['id_wilayah'],
+                    'nama_toko'         => $data['nama_toko'],
+                    'kota'              => $data['kota']       ?: null,
+                    'merk'              => $data['merk']       ?: null,
+                    'jenis'             => $data['jenis']      ?: null,
+                    'produk'            => $data['produk'],
+                    'quantity'          => (float)str_replace(',', '.', $data['quantity']),
+                    'unit'              => $data['unit']       ?: null,
+                    'box'               => (float)($data['box']     ?? 0),
+                    'ltr_kg'            => (float)($data['ltr_kg']  ?? 0),
+                    'harga_inc_ppn'     => (float)str_replace(['.', ','], ['', '.'], $data['harga_inc_ppn'] ?? 0),
+                    'penj_dpp_neto'     => (float)str_replace(['.', ','], ['', '.'], $data['penj_dpp_neto'] ?? 0),
+                    'penj_inc_ppn_neto' => (float)str_replace(['.', ','], ['', '.'], $data['penj_inc_ppn_neto']),
+                    'keterangan'        => $data['keterangan'] ?: null,
+                    'tgl_kirim'         => $tgl_kirim,
+                    'created_by'        => $this->session->userdata('id_user'),
+                    'created_at'        => date('Y-m-d H:i:s'),
+                ];
+                $inserted++;
+            }
+ 
+            // Simpan ke database
+            if (!empty($insert_batch)) {
+                $this->M_Kmt->import_batch_omset($insert_batch);
+            }
+ 
+            // Buat pesan hasil
+            $msg  = "Import selesai. <strong>{$inserted}</strong> data berhasil diimpor.";
+            if ($skipped > 0) $msg .= " <strong>{$skipped}</strong> baris kosong dilewati.";
+            if (!empty($errors)) {
+                $msg .= "<br><strong>" . count($errors) . " baris gagal:</strong><ul>";
+                foreach ($errors as $e) $msg .= "<li>{$e}</li>";
+                $msg .= "</ul>";
+                $this->session->set_flashdata('warning', $msg);
+            } else {
+                $this->session->set_flashdata('success', $msg);
+            }
+ 
+        } catch (\Exception $e) {
+            $this->session->set_flashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+        }
+ 
+        redirect('kmt/omset');
+    }
+ 
+    // ---- Helper: parse berbagai format tanggal ----
+    private function _parse_tanggal($str)
+    {
+        $str = trim($str);
+        if (empty($str)) return null;
+ 
+        // Format YYYY-MM-DD
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $str)) {
+            return $str;
+        }
+        // Format DD/MM/YYYY
+        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $str, $m)) {
+            return "{$m[3]}-{$m[2]}-{$m[1]}";
+        }
+        // Format Excel serial number (angka bulat)
+        if (is_numeric($str)) {
+            try {
+                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$str);
+                return $date->format('Y-m-d');
+            } catch (\Exception $e) {}
+        }
+        // Fallback strtotime
+        $ts = strtotime($str);
+        return $ts ? date('Y-m-d', $ts) : null;
+    }
 }

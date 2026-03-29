@@ -331,6 +331,10 @@ $route['kmt/gaji/simpan']         = 'kmt/Gaji/simpan';
 $route['kmt/gaji/edit/(:num)']    = 'kmt/Gaji/edit/$1';
 $route['kmt/gaji/update/(:num)']  = 'kmt/Gaji/update/$1';
 $route['kmt/gaji/hapus/(:num)']   = 'kmt/Gaji/hapus/$1';
+$route['kmt/omset/import']         = 'kmt/Omset/import';
+$route['kmt/omset/template_omset'] = 'kmt/Omset/template_omset';
+$route['kmt/gaji/import']          = 'kmt/Gaji/import';
+$route['kmt/gaji/template_gaji']   = 'kmt/Gaji/template_gaji';
 
 // ---- KMT Retur ----
 $route['kmt/retur']                = 'kmt/Retur/index';

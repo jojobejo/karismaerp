@@ -241,6 +241,17 @@ class M_Kmt extends CI_Model {
         return $this->db->delete('tbkmt_omset', ['id' => $id]);
     }
 
+    public function import_batch_omset(array $data): bool
+    {
+        if (empty($data)) return true;
+ 
+        // Insert per chunk 200 baris agar tidak overload query
+        foreach (array_chunk($data, 200) as $chunk) {
+            $this->db->insert_batch('tbkmt_omset', $chunk);
+        }
+        return true;
+    }
+
     // ================================================================
     // OPERASIONAL
     // ================================================================
@@ -386,6 +397,16 @@ class M_Kmt extends CI_Model {
 
     public function delete_gaji($id) {
         return $this->db->delete('tbkmt_gaji', ['id' => $id]);
+    }
+
+    public function import_batch_gaji(array $data): bool
+    {
+        if (empty($data)) return true;
+ 
+        foreach (array_chunk($data, 200) as $chunk) {
+            $this->db->insert_batch('tbkmt_gaji', $chunk);
+        }
+        return true;
     }
 
     public function get_total_gaji_per_bulan_wilayah($tahun, $id_wilayah = null) {
