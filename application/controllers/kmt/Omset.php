@@ -292,60 +292,202 @@ class Omset extends CI_Controller {
         redirect($id_omset ? 'kmt/omset/retur/' . $id_omset : 'kmt/omset');
     }
 
-    public function export() {
+    public function export()
+    {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
-
+ 
         $filter = ['tahun' => $tahun];
         if ($bulan)      $filter['bulan']      = $bulan;
         if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
-
+ 
         $list = $this->M_Kmt->get_omset_list($filter);
-
+ 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+        $sheet       = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Omset');
-
-        // Header
-        $headers = ['No','Tanggal','Wilayah','Nama Toko','Kota','Produk',
-                    'Sales SO','Qty','Penj Inc PPN Neto'];
-        foreach ($headers as $i => $h) {
-            $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
+ 
+        // ── Definisi kolom: [header label => key dari $row] ──
+        $columns = [
+            'No'                  => null,           // nomor urut manual
+            'No Urut'             => 'no_urut',
+            'Kode'                => 'kode',
+            'Tanggal'             => 'tanggal',
+            'Bulan'               => 'bulan',
+            'Tahun'               => 'tahun',
+            'Nomor Faktur'        => 'nomor',
+            'Inputer'             => 'inputer',
+            'No Retur'            => 'no_retur',
+            'Tgl Retur'           => 'tgl_retur',
+            'Sales SO'            => 'sales_so',
+            'SC'                  => 'sc',
+            'SE'                  => 'se',
+            'Wilayah SE'          => 'wilayah_se',
+            'Wilayah'             => 'nama_wilayah',
+            'Nama Toko'           => 'nama_toko',
+            'Kontak Person'       => 'kontak_person',
+            'Alamat'              => 'alamat',
+            'Kota'                => 'kota',
+            'Merk'                => 'merk',
+            'Jenis'               => 'jenis',
+            'Golongan'            => 'golongan',
+            'Point'               => 'point',
+            'Fokus'               => 'fokus',
+            'Kode Produk'         => 'kode_produk',
+            'Produk'              => 'produk',
+            'Quantity'            => 'quantity',
+            'Unit'                => 'unit',
+            'Box'                 => 'box',
+            'Ltr/Kg'              => 'ltr_kg',
+            'Harga Inc. PPN'      => 'harga_inc_ppn',
+            'Penj DPP Neto'       => 'penj_dpp_neto',
+            'Penj Inc PPN Neto'   => 'penj_inc_ppn_neto',
+            'Keterangan'          => 'keterangan',
+            'Tgl Kirim'           => 'tgl_kirim',
+        ];
+ 
+        $headers    = array_keys($columns);
+        $field_keys = array_values($columns);
+        $total_col  = count($headers);
+ 
+        // ── Tulis header baris 1 ──
+        foreach ($headers as $i => $label) {
+            $sheet->setCellValueByColumnAndRow($i + 1, 1, $label);
         }
-
-        // Style header
-        $sheet->getStyle('A1:I1')->applyFromArray([
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
-            'alignment' => ['horizontal' => 'center'],
+ 
+        // ── Style header ──
+        $last_col_letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($total_col);
+        $sheet->getStyle("A1:{$last_col_letter}1")->applyFromArray([
+            'font' => [
+                'bold'  => true,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType'   => 'solid',
+                'startColor' => ['rgb' => '1F3864'],
+            ],
+            'alignment' => [
+                'horizontal' => 'center',
+                'vertical'   => 'center',
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color'       => ['rgb' => 'FFFFFF'],
+                ],
+            ],
         ]);
-
-        // Data
+        $sheet->getRowDimension(1)->setRowHeight(20);
+ 
+        // ── Tulis data ──
+        $total_omset = 0;
+ 
         foreach ($list as $i => $row) {
             $r = $i + 2;
-            $sheet->setCellValueByColumnAndRow(1, $r, $i + 1);
-            $sheet->setCellValueByColumnAndRow(2, $r, date('d/m/Y', strtotime($row['tanggal'])));
-            $sheet->setCellValueByColumnAndRow(3, $r, $row['nama_wilayah'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(4, $r, $row['nama_toko']);
-            $sheet->setCellValueByColumnAndRow(5, $r, $row['kota'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(6, $r, $row['produk']);
-            $sheet->setCellValueByColumnAndRow(7, $r, $row['sales_so'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(8, $r, $row['quantity']);
-            $sheet->setCellValueByColumnAndRow(9, $r, $row['penj_inc_ppn_neto']);
+ 
+            foreach ($field_keys as $col_idx => $key) {
+                $col_num = $col_idx + 1;
+ 
+                if ($key === null) {
+                    // Kolom "No" → nomor urut
+                    $sheet->setCellValueByColumnAndRow($col_num, $r, $i + 1);
+                    continue;
+                }
+ 
+                $val = $row[$key] ?? null;
+ 
+                // Format tanggal
+                if (in_array($key, ['tanggal', 'tgl_retur', 'tgl_kirim']) && !empty($val)) {
+                    $val = date('d/m/Y', strtotime($val));
+                }
+ 
+                $sheet->setCellValueByColumnAndRow($col_num, $r, $val);
+            }
+ 
+            $total_omset += (float)($row['penj_inc_ppn_neto'] ?? 0);
         }
-
-        // Auto width kolom
-        foreach (range('A', 'I') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+ 
+        // ── Baris TOTAL di bawah data ──
+        $total_row = count($list) + 2;
+ 
+        // Cari index kolom Penj Inc PPN Neto
+        $neto_col_idx   = array_search('penj_inc_ppn_neto', $field_keys);
+        $neto_col_num   = $neto_col_idx + 1;
+        $neto_col_letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($neto_col_num);
+ 
+        // Label TOTAL
+        $sheet->setCellValueByColumnAndRow($neto_col_num - 1, $total_row, 'TOTAL:');
+        $sheet->getStyleByColumnAndRow($neto_col_num - 1, $total_row)
+              ->getFont()->setBold(true);
+        $sheet->getStyleByColumnAndRow($neto_col_num - 1, $total_row)
+              ->getAlignment()->setHorizontal('right');
+ 
+        // Nilai total
+        $sheet->setCellValueByColumnAndRow($neto_col_num, $total_row, $total_omset);
+        $sheet->getStyleByColumnAndRow($neto_col_num, $total_row)
+              ->getFont()->setBold(true);
+ 
+        // ── Format angka untuk kolom numerik ──
+        $numeric_keys = ['quantity','box','ltr_kg','harga_inc_ppn','penj_dpp_neto','penj_inc_ppn_neto','point'];
+        foreach ($field_keys as $col_idx => $key) {
+            if (!in_array($key, $numeric_keys)) continue;
+            $col_num = $col_idx + 1;
+            $col_letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col_num);
+ 
+            // Format ribuan untuk kolom uang
+            if (in_array($key, ['harga_inc_ppn','penj_dpp_neto','penj_inc_ppn_neto'])) {
+                $fmt = '#,##0';
+            } else {
+                $fmt = '#,##0.##';
+            }
+ 
+            if (count($list) > 0) {
+                $sheet->getStyle("{$col_letter}2:{$col_letter}" . (count($list) + 1))
+                      ->getNumberFormat()->setFormatCode($fmt);
+            }
+            // Format total row juga
+            $sheet->getStyleByColumnAndRow($col_num, $total_row)
+                  ->getNumberFormat()->setFormatCode($fmt);
         }
-
-        $filename = 'Omset_KMT_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
-
+ 
+        // ── Style zebra stripe (baris genap sedikit berbeda) ──
+        for ($r = 2; $r <= count($list) + 1; $r++) {
+            $style_arr = [
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                        'color'       => ['rgb' => 'D0D0D0'],
+                    ],
+                ],
+            ];
+            if ($r % 2 === 0) {
+                $style_arr['fill'] = [
+                    'fillType'   => 'solid',
+                    'startColor' => ['rgb' => 'F5F8FF'],
+                ];
+            }
+            $sheet->getStyle("A{$r}:{$last_col_letter}{$r}")->applyFromArray($style_arr);
+        }
+ 
+        // ── Auto width semua kolom ──
+        foreach (range(1, $total_col) as $col_num) {
+            $col_letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col_num);
+            $sheet->getColumnDimension($col_letter)->setAutoSize(true);
+        }
+ 
+        // ── Freeze header ──
+        $sheet->freezePane('A2');
+ 
+        // ── Nama file ──
+        $nama_bulan = ['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        $suffix_bulan = $bulan ? '_' . $nama_bulan[(int)$bulan] : '';
+        $filename = "Omset_KMT_{$tahun}{$suffix_bulan}.xlsx";
+ 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-
+ 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
@@ -393,16 +535,15 @@ class Omset extends CI_Controller {
         }
  
         // Style baris 1 (biru tua)
-        $sheet->getStyle('A1:Y1')->applyFromArray([
+        $sheet->getStyle('A1:AE1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 9],
             'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
             'alignment' => ['horizontal' => 'center'],
         ]);
  
-        // Style baris 2 (biru muda)
+        // Style baris 2 (tanpa warna)
         $sheet->getStyle('A2:Y2')->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '2E75B6']],
+            'font' => ['bold' => true],
             'alignment' => ['horizontal' => 'center', 'wrapText' => true],
         ]);
         $sheet->getRowDimension(2)->setRowHeight(30);
@@ -428,8 +569,7 @@ class Omset extends CI_Controller {
         }
  
         $sheet->getStyle('A3:Y3')->applyFromArray([
-            'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'E8F4FD']],
-            'font' => ['italic' => true, 'color' => ['rgb' => '777777']],
+            'font' => ['italic' => true],
         ]);
  
         // Auto width & freeze header
