@@ -167,6 +167,22 @@
                                     </div>
                                 </div>
 
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Kontak Person</label>
+                                        <input type="text" name="kontak_person" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['kontak_person'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label>Alamat</label>
+                                        <input type="text" name="alamat" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['alamat'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -200,6 +216,38 @@
                                         <label>Jenis</label>
                                         <input type="text" name="jenis" class="form-control form-control-sm"
                                                value="<?= $is_edit ? htmlspecialchars($row['jenis'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Golongan</label>
+                                        <input type="text" name="golongan" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['golongan'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Point</label>
+                                        <input type="number" step="0.01" name="point" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? ($row['point'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Fokus</label>
+                                        <input type="text" name="fokus" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['fokus'] ?? '') : '' ?>">
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>Kode Produk</label>
+                                        <input type="text" name="kode_produk" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['kode_produk'] ?? '') : '' ?>">
                                     </div>
                                 </div>
 

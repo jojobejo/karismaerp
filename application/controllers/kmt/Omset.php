@@ -120,6 +120,12 @@ class Omset extends CI_Controller {
             'unit'             => $this->input->post('unit'),
             'box'              => (float)$this->input->post('box'),
             'ltr_kg'           => (float)$this->input->post('ltr_kg'),
+            'kontak_person'    => $this->input->post('kontak_person') ?: null,
+            'alamat'           => $this->input->post('alamat')        ?: null,
+            'golongan'         => $this->input->post('golongan')      ?: null,
+            'point'            => (float)$this->input->post('point'),
+            'fokus'            => $this->input->post('fokus')         ?: null,
+            'kode_produk'      => $this->input->post('kode_produk')   ?: null,
             'harga_inc_ppn'    => $harga,
             'penj_dpp_neto'    => $dpp,
             'penj_inc_ppn_neto'=> $ppn,
@@ -189,6 +195,12 @@ class Omset extends CI_Controller {
             'penj_inc_ppn_neto'=> (float)str_replace('.','', $this->input->post('penj_inc_ppn_neto')),
             'keterangan'       => $this->input->post('keterangan'),
             'tgl_kirim'        => $this->input->post('tgl_kirim') ?: null,
+            'kontak_person'    => $this->input->post('kontak_person') ?: null,
+            'alamat'           => $this->input->post('alamat')        ?: null,
+            'golongan'         => $this->input->post('golongan')      ?: null,
+            'point'            => (float)$this->input->post('point'),
+            'fokus'            => $this->input->post('fokus')         ?: null,
+            'kode_produk'      => $this->input->post('kode_produk')   ?: null,
         ];
 
         if ($this->M_Kmt->update_omset($id, $update)) {
@@ -356,19 +368,23 @@ class Omset extends CI_Controller {
             'R' => 'merk',           'S' => 'jenis',         'T' => 'box',
             'U' => 'ltr_kg',         'V' => 'keterangan',
             'W' => 'tgl_kirim',      'X' => 'no_retur',      'Y' => 'tgl_retur',
+            'Z'  => 'kontak_person','AA' => 'alamat',       'AB' => 'golongan',
+            'AC' => 'point',        'AD' => 'fokus',        'AE' => 'kode_produk',
         ];
  
         // ------- Baris 2: label ramah untuk pengguna -------
         $labels = [
-            'A' => 'Tanggal (YYYY-MM-DD)*', 'B' => 'ID Wilayah*',    'C' => 'Nama Toko*',
+            'A' => 'Tanggal (YYYY-MM-DD)*', 'B' => 'ID Wilayah*',      'C' => 'Nama Toko*',
             'D' => 'Kota',                  'E' => 'Produk*',          'F' => 'Sales SO',
             'G' => 'Quantity*',             'H' => 'Unit',             'I' => 'Harga Inc PPN',
             'J' => 'Penj DPP Neto',         'K' => 'Penj Inc PPN Neto*',
-            'L' => 'Nomor Faktur',          'M' => 'No Urut',         'N' => 'Kode',
+            'L' => 'Nomor Faktur',          'M' => 'No Urut',          'N' => 'Kode',
             'O' => 'SC',                    'P' => 'SE',               'Q' => 'Wilayah SE',
             'R' => 'Merk',                  'S' => 'Jenis',            'T' => 'Box',
             'U' => 'Ltr/Kg',                'V' => 'Keterangan',
-            'W' => 'Tgl Kirim (YYYY-MM-DD)','X' => 'No Retur',        'Y' => 'Tgl Retur (YYYY-MM-DD)',
+            'W' => 'Tgl Kirim (YYYY-MM-DD)','X' => 'No Retur',         'Y' => 'Tgl Retur (YYYY-MM-DD)',
+            'Z' => 'Kontak Person',         'AA' => 'Alamat Toko',     'AB' => 'Golongan',
+            'AC' => 'Point',                'AD' => 'Fokus',           'AE' => 'Kode Produk',
         ];
  
         foreach ($fields as $col => $field) {
@@ -393,15 +409,18 @@ class Omset extends CI_Controller {
  
         // Contoh data baris 3
         $example = [
-            'A' => date('Y-m-d'), 'B' => '1',              'C' => 'Toko Maju Jaya',
+            'A' => date('Y-m-d'), 'B' => '1',               'C' => 'Toko Maju Jaya',
             'D' => 'Semarang',    'E' => 'CORN A 1KG',      'F' => 'Budi Santoso',
             'G' => '10',          'H' => 'SAK',             'I' => '55000',
-            'J' => '500000',      'K' => '550000',           'L' => 'INV/2025/001',
+            'J' => '500000',      'K' => '550000',          'L' => 'INV/2025/001',
             'M' => '1',           'N' => 'KMT-001',         'O' => '',
-            'P' => '',            'Q' => '',                 'R' => 'KARISMA',
+            'P' => '',            'Q' => '',                'R' => 'KARISMA',
             'S' => 'CORN',        'T' => '2',               'U' => '10',
             'V' => 'Contoh data - hapus baris ini sebelum import',
-            'W' => '', 'X' => '', 'Y' => '',
+            'W' => '',            'X' => '',                'Y' => '',
+            'Z'  => '',           'AA' => 'Jl. Contoh No. 1, Semarang',
+            'AB' => 'A',          'AC' => '0',             'AD' => 'CORN',
+            'AE' => 'PRD-001',
         ];
  
         foreach ($example as $col => $val) {
@@ -458,7 +477,6 @@ class Omset extends CI_Controller {
     {
         $this->cek_bukan_abm();
  
-        // Validasi file upload
         $file = $_FILES['file_excel'] ?? null;
  
         if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
@@ -472,116 +490,30 @@ class Omset extends CI_Controller {
             redirect('kmt/omset');
         }
  
+        // Salin file ke folder sementara yang bisa diakses
+        $tmp_dir  = FCPATH . 'assets/uploads/tmp/';
+        if (!is_dir($tmp_dir)) mkdir($tmp_dir, 0755, true);
+        $tmp_path = $tmp_dir . uniqid('omset_') . '.' . $ext;
+ 
+        if (!move_uploaded_file($file['tmp_name'], $tmp_path)) {
+            $this->session->set_flashdata('error', 'Gagal memindahkan file upload.');
+            redirect('kmt/omset');
+        }
+ 
         try {
-            // Baca file Excel
-            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($file['tmp_name']);
-            $reader->setReadDataOnly(true);
-            $spreadsheet = $reader->load($file['tmp_name']);
-            $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray(null, true, true, false); // index 0-based
+            $result = $this->_baca_excel_omset($tmp_path, $ext);
  
-            if (count($rows) < 3) {
-                $this->session->set_flashdata('error', 'File kosong atau tidak memiliki data (minimal 1 baris data setelah header).');
-                redirect('kmt/omset');
+            if (!empty($result['data'])) {
+                $this->M_Kmt->import_batch_omset($result['data']);
             }
  
-            // Baris 0 (index): nama field → mapping kolom
-            $field_names = array_map('trim', $rows[0]); // baris ke-1 di Excel = index 0 di array
-            // Baris 1 (index): label → skip
-            // Data mulai baris 2 (index)
+            $inserted = count($result['data']);
+            $msg = "Import selesai (<em>{$result['format']}</em>). <strong>{$inserted}</strong> data berhasil diimpor.";
+            if ($result['skipped'] > 0) $msg .= " <strong>{$result['skipped']}</strong> baris kosong dilewati.";
  
-            $insert_batch = [];
-            $errors       = [];
-            $skipped      = 0;
-            $inserted     = 0;
- 
-            for ($i = 2; $i < count($rows); $i++) {
-                $row    = $rows[$i];
-                $line   = $i + 1; // nomor baris di Excel (human-readable)
- 
-                // Buat array asosiatif field => nilai
-                $data = [];
-                foreach ($field_names as $col_idx => $field) {
-                    $data[$field] = isset($row[$col_idx]) ? trim((string)$row[$col_idx]) : '';
-                }
- 
-                // Skip baris kosong sepenuhnya
-                if (empty(array_filter($data))) {
-                    $skipped++;
-                    continue;
-                }
- 
-                // ---- Validasi wajib ----
-                $err = [];
-                if (empty($data['tanggal']))           $err[] = 'tanggal wajib diisi';
-                if (empty($data['id_wilayah']))        $err[] = 'id_wilayah wajib diisi';
-                if (empty($data['nama_toko']))         $err[] = 'nama_toko wajib diisi';
-                if (empty($data['produk']))            $err[] = 'produk wajib diisi';
-                if (!is_numeric($data['quantity'] ?? '')) $err[] = 'quantity harus angka';
-                if (!is_numeric($data['penj_inc_ppn_neto'] ?? '')) $err[] = 'penj_inc_ppn_neto harus angka';
- 
-                if (!empty($err)) {
-                    $errors[] = "Baris {$line}: " . implode(', ', $err);
-                    continue;
-                }
- 
-                // ---- Normalisasi tanggal ----
-                // Support format YYYY-MM-DD dan DD/MM/YYYY
-                $tanggal = $this->_parse_tanggal($data['tanggal']);
-                if (!$tanggal) {
-                    $errors[] = "Baris {$line}: format tanggal tidak valid ({$data['tanggal']})";
-                    continue;
-                }
- 
-                $tgl_kirim = !empty($data['tgl_kirim'])  ? $this->_parse_tanggal($data['tgl_kirim'])  : null;
-                $tgl_retur = !empty($data['tgl_retur'])  ? $this->_parse_tanggal($data['tgl_retur'])  : null;
- 
-                $insert_batch[] = [
-                    'no_urut'           => $data['no_urut']    ?: null,
-                    'kode'              => $data['kode']       ?: null,
-                    'bulan'             => (int)date('m', strtotime($tanggal)),
-                    'tahun'             => (int)date('Y', strtotime($tanggal)),
-                    'tanggal'           => $tanggal,
-                    'nomor'             => $data['nomor']      ?: null,
-                    'inputer'           => $this->session->userdata('nama'),
-                    'no_retur'          => $data['no_retur']   ?: null,
-                    'tgl_retur'         => $tgl_retur,
-                    'sales_so'          => $data['sales_so']   ?: null,
-                    'sc'                => $data['sc']         ?: null,
-                    'se'                => $data['se']         ?: null,
-                    'wilayah_se'        => $data['wilayah_se'] ?: null,
-                    'id_wilayah'        => (int)$data['id_wilayah'],
-                    'nama_toko'         => $data['nama_toko'],
-                    'kota'              => $data['kota']       ?: null,
-                    'merk'              => $data['merk']       ?: null,
-                    'jenis'             => $data['jenis']      ?: null,
-                    'produk'            => $data['produk'],
-                    'quantity'          => (float)str_replace(',', '.', $data['quantity']),
-                    'unit'              => $data['unit']       ?: null,
-                    'box'               => (float)($data['box']     ?? 0),
-                    'ltr_kg'            => (float)($data['ltr_kg']  ?? 0),
-                    'harga_inc_ppn'     => (float)str_replace(['.', ','], ['', '.'], $data['harga_inc_ppn'] ?? 0),
-                    'penj_dpp_neto'     => (float)str_replace(['.', ','], ['', '.'], $data['penj_dpp_neto'] ?? 0),
-                    'penj_inc_ppn_neto' => (float)str_replace(['.', ','], ['', '.'], $data['penj_inc_ppn_neto']),
-                    'keterangan'        => $data['keterangan'] ?: null,
-                    'tgl_kirim'         => $tgl_kirim,
-                    'created_by'        => $this->session->userdata('id_user'),
-                    'created_at'        => date('Y-m-d H:i:s'),
-                ];
-                $inserted++;
-            }
- 
-            // Simpan ke database
-            if (!empty($insert_batch)) {
-                $this->M_Kmt->import_batch_omset($insert_batch);
-            }
- 
-            // Buat pesan hasil
-            $msg  = "Import selesai. <strong>{$inserted}</strong> data berhasil diimpor.";
-            if ($skipped > 0) $msg .= " <strong>{$skipped}</strong> baris kosong dilewati.";
-            if (!empty($errors)) {
-                $msg .= "<br><strong>" . count($errors) . " baris gagal:</strong><ul>";
-                foreach ($errors as $e) $msg .= "<li>{$e}</li>";
+            if (!empty($result['errors'])) {
+                $msg .= "<br><strong>" . count($result['errors']) . " baris gagal/warning:</strong><ul>";
+                foreach ($result['errors'] as $e) $msg .= "<li>{$e}</li>";
                 $msg .= "</ul>";
                 $this->session->set_flashdata('warning', $msg);
             } else {
@@ -590,34 +522,351 @@ class Omset extends CI_Controller {
  
         } catch (\Exception $e) {
             $this->session->set_flashdata('error', 'Gagal membaca file: ' . $e->getMessage());
+        } finally {
+            // Hapus file sementara
+            if (file_exists($tmp_path)) @unlink($tmp_path);
         }
  
         redirect('kmt/omset');
     }
  
-    // ---- Helper: parse berbagai format tanggal ----
-    private function _parse_tanggal($str)
+    // ================================================================
+    // Core reader — pakai ReadFilter untuk hemat memori
+    // ================================================================
+    private function _baca_excel_omset(string $path, string $ext): array
+    {
+        // ---- ReadFilter: hanya kolom A s/d AJ (kolom 1-36) ----
+        $filter = new class implements \PhpOffice\PhpSpreadsheet\Reader\IReadFilter {
+            public function readCell($columnAddress, $row, $worksheetName = '') {
+                // Izinkan semua baris, tapi kolom hanya s/d AJ (kolom ke-36)
+                $col = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($columnAddress);
+                return $col <= 36;
+            }
+        };
+ 
+        if ($ext === 'xls') {
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
+        } else {
+            $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+        }
+ 
+        $reader->setReadFilter($filter);
+        $reader->setReadDataOnly(false); // false agar tanggal terbaca
+        $reader->setLoadSheetsOnly(['OMSET']); // hanya load sheet OMSET kalau ada
+ 
+        try {
+            $spreadsheet = $reader->load($path);
+        } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+            // Kalau sheet OMSET tidak ada, load semua sheet lalu ambil aktif
+            if ($ext === 'xls') {
+                $reader2 = new \PhpOffice\PhpSpreadsheet\Reader\Xls();
+            } else {
+                $reader2 = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+            }
+            $reader2->setReadFilter($filter);
+            $reader2->setReadDataOnly(false);
+            $spreadsheet = $reader2->load($path);
+        }
+ 
+        $sheet = $spreadsheet->getActiveSheet();
+ 
+        // Baca baris 1 dan 2 untuk deteksi format
+        $row1_vals = [];
+        $row2_vals = [];
+        foreach ($sheet->getRowIterator(1, 2) as $rowIdx => $rowObj) {
+            $cells = [];
+            foreach ($rowObj->getCellIterator('A', 'AJ') as $cell) {
+                $cells[] = $cell->getFormattedValue();
+            }
+            if ($rowIdx === 1) $row1_vals = $cells;
+            if ($rowIdx === 2) $row2_vals = $cells;
+        }
+ 
+        // Deteksi format: template sistem atau file perusahaan
+        $is_template = !empty($row1_vals)
+            && in_array('tanggal', array_map('strtolower', array_map('trim', $row1_vals)));
+ 
+        if ($is_template) {
+            return $this->_proses_format_template($sheet, $row1_vals);
+        } else {
+            return $this->_proses_format_perusahaan($sheet);
+        }
+    }
+ 
+    // ================================================================
+    // FORMAT A — Template sistem (field names di baris 1)
+    // ================================================================
+    private function _proses_format_template($sheet, array $field_names): array
+    {
+        $insert_batch = [];
+        $errors       = [];
+        $skipped      = 0;
+ 
+        foreach ($sheet->getRowIterator(3) as $rowObj) {
+            $line  = $rowObj->getRowIndex();
+            $cells = [];
+            foreach ($rowObj->getCellIterator('A', 'AJ') as $cell) {
+                $cells[] = $cell->getValue();
+            }
+ 
+            $data = [];
+            foreach ($field_names as $i => $field) {
+                $data[trim($field)] = isset($cells[$i]) ? trim((string)$cells[$i]) : '';
+            }
+ 
+            if (empty(array_filter($data))) { $skipped++; continue; }
+ 
+            $err = [];
+            if (empty($data['tanggal']))    $err[] = 'tanggal wajib';
+            if (empty($data['id_wilayah'])) $err[] = 'id_wilayah wajib';
+            if (empty($data['nama_toko']))  $err[] = 'nama_toko wajib';
+            if (empty($data['produk']))     $err[] = 'produk wajib';
+            if (!empty($err)) { $errors[] = "Baris {$line}: " . implode(', ', $err); continue; }
+ 
+            $tanggal   = $this->_parse_tgl($data['tanggal']);
+            $tgl_kirim = $this->_parse_tgl($data['tgl_kirim'] ?? '');
+            $tgl_retur = $this->_parse_tgl($data['tgl_retur'] ?? '');
+            if (!$tanggal) { $errors[] = "Baris {$line}: format tanggal tidak valid"; continue; }
+ 
+            $insert_batch[] = $this->_build_row_template($data, $tanggal, $tgl_kirim, $tgl_retur);
+        }
+ 
+        return ['data' => $insert_batch, 'errors' => $errors, 'skipped' => $skipped, 'format' => 'Template Sistem'];
+    }
+ 
+    // ================================================================
+    // FORMAT B — File Excel asli perusahaan
+    //
+    // Pemetaan kolom (0-based) dari header row 2:
+    //  0=No Urut  1=Kode     4=Tanggal       5=Nomor    6=Inputer
+    //  7=No Retur 8=Tgl Retur 9=Sales SO     10=SC      11=SE
+    //  12=Wilayah SE  13=Wilayah ABM  15=Nama Toko  18=Kota
+    //  19=Merk    20=Jenis   26=Nama Barang  27=Quantity 28=Unit
+    //  29=Box     30=Ltr/Kg  31=Harga        32=Penj DPP 33=Penj Inc PPN
+    //  34=Keterangan  35=Tgl Kirim
+    // ================================================================
+    private function _proses_format_perusahaan($sheet): array
+    {
+        $wilayah_list = $this->M_Kmt->get_wilayah();
+        $wilayah_map  = [];
+        foreach ($wilayah_list as $w) {
+            $wilayah_map[strtoupper(trim($w['nama_wilayah']))] = (int)$w['id'];
+        }
+ 
+        $insert_batch = [];
+        $errors       = [];
+        $skipped      = 0;
+ 
+        foreach ($sheet->getRowIterator(3) as $rowObj) {
+            $line  = $rowObj->getRowIndex();
+            $cells = [];
+            foreach ($rowObj->getCellIterator('A', 'AJ') as $cell) {
+                $cells[] = $cell->getValue();
+            }
+            // Pad sampai 36 kolom agar index aman
+            $cells = array_pad(array_slice($cells, 0, 36), 36, null);
+ 
+            // Skip baris kosong
+            $meaningful = array_filter(
+                array_slice($cells, 0, 36),
+                fn($v) => $v !== null && trim((string)$v) !== ''
+            );
+            if (empty($meaningful)) { $skipped++; continue; }
+ 
+            // ── Ambil nilai tiap kolom (index 0-based sesuai tabel di atas) ──
+            $no_urut        = $this->_s($cells[0]);
+            $kode           = $this->_s($cells[1]);
+            // $cells[2] = No, $cells[3] = Bulan — tidak dipakai (dihitung ulang)
+            $tanggal        = $this->_parse_excel_val($cells[4]);
+            $nomor          = $this->_s($cells[5]);
+            $inputer        = $this->_s($cells[6]);
+            $no_retur       = $this->_s($cells[7]);
+            $tgl_retur      = $this->_parse_excel_val($cells[8]);
+            $sales_so       = $this->_s($cells[9]);
+            $sc             = $this->_s($cells[10]);
+            $se             = $this->_s($cells[11]);
+            $wilayah_se     = $this->_s($cells[12]);
+            $wilayah_abm    = strtoupper(trim($this->_s($cells[13])));
+            // $cells[14] = Kode toko
+            $nama_toko      = $this->_s($cells[15]);
+            $kontak_person  = $this->_s($cells[16]);   // ✅ FIX: was cells[36]
+            $alamat         = $this->_s($cells[17]);   // ✅ FIX: was cells[37]
+            $kota           = $this->_s($cells[18]);
+            $merk           = $this->_s($cells[19]);
+            $jenis          = $this->_s($cells[20]);
+            $golongan       = $this->_s($cells[21]);   // ✅ FIX: was cells[38] — kolom "Gol"
+            // $cells[22] = Prod (kategori produk)
+            $point          = is_numeric($cells[23]) ? (float)$cells[23] : 0; // ✅ FIX: was cells[39]
+            $fokus          = $this->_s($cells[24]);   // ✅ FIX: was cells[40]
+            $kode_produk    = $this->_s($cells[25]);   // ✅ FIX: was cells[41] — kolom "Kode" barang
+            $produk         = $this->_s($cells[26]);   // Nama Barang
+            $quantity       = is_numeric($cells[27]) ? (float)$cells[27] : 0;
+            $unit           = $this->_s($cells[28]);
+            $box            = is_numeric($cells[29]) ? (float)$cells[29] : 0;
+            $ltr_kg         = is_numeric($cells[30]) ? (float)$cells[30] : 0;
+            $harga          = is_numeric($cells[31]) ? (float)$cells[31] : 0;
+            $penj_dpp       = is_numeric($cells[32]) ? (float)$cells[32] : 0;
+            $penj_neto      = is_numeric($cells[33]) ? (float)$cells[33] : 0;
+            $keterangan     = $this->_s($cells[34]);
+            $tgl_kirim      = $this->_parse_excel_val($cells[35]);
+ 
+            // ── Validasi ──
+            $err = [];
+            if (!$tanggal)         $err[] = 'tanggal tidak valid';
+            if (empty($nama_toko)) $err[] = 'nama_toko kosong';
+            if (empty($produk))    $err[] = 'produk/nama_barang kosong';
+            if (!empty($err)) { $errors[] = "Baris {$line}: " . implode(', ', $err); continue; }
+ 
+            // ── Mapping wilayah (exact match dulu, lalu partial) ──
+            $id_wilayah = $wilayah_map[$wilayah_abm] ?? null;
+            if (!$id_wilayah) {
+                foreach ($wilayah_map as $nm => $id) {
+                    if (strpos($wilayah_abm, $nm) !== false || strpos($nm, $wilayah_abm) !== false) {
+                        $id_wilayah = $id; break;
+                    }
+                }
+            }
+            if (!$id_wilayah) {
+                $id_wilayah = !empty($wilayah_list) ? (int)$wilayah_list[0]['id'] : 1;
+                $errors[]   = "Baris {$line}: wilayah '{$wilayah_abm}' tidak dikenali → diassign ke id_wilayah={$id_wilayah}";
+            }
+ 
+            $insert_batch[] = [
+                'no_urut'           => $no_urut        ?: null,
+                'kode'              => $kode           ?: null,
+                'bulan'             => (int)date('m', strtotime($tanggal)),
+                'tahun'             => (int)date('Y', strtotime($tanggal)),
+                'tanggal'           => $tanggal,
+                'nomor'             => $nomor          ?: null,
+                'inputer'           => $inputer        ?: $this->session->userdata('nama'),
+                'no_retur'          => $no_retur       ?: null,
+                'tgl_retur'         => $tgl_retur,
+                'sales_so'          => $sales_so       ?: null,
+                'sc'                => $sc             ?: null,
+                'se'                => $se             ?: null,
+                'wilayah_se'        => $wilayah_se     ?: null,
+                'id_wilayah'        => $id_wilayah,
+                'nama_toko'         => $nama_toko,
+                'kontak_person'     => $kontak_person  ?: null,  // ✅ index [16]
+                'alamat'            => $alamat         ?: null,  // ✅ index [17]
+                'kota'              => $kota           ?: null,
+                'merk'              => $merk           ?: null,
+                'jenis'             => $jenis          ?: null,
+                'golongan'          => $golongan       ?: null,  // ✅ index [21]
+                'point'             => $point,                   // ✅ index [23]
+                'fokus'             => $fokus          ?: null,  // ✅ index [24]
+                'kode_produk'       => $kode_produk    ?: null,  // ✅ index [25]
+                'produk'            => $produk,
+                'quantity'          => $quantity,
+                'unit'              => $unit           ?: null,
+                'box'               => $box,
+                'ltr_kg'            => $ltr_kg,
+                'harga_inc_ppn'     => $harga,
+                'penj_dpp_neto'     => $penj_dpp,
+                'penj_inc_ppn_neto' => $penj_neto,
+                'keterangan'        => $keterangan     ?: null,
+                'tgl_kirim'         => $tgl_kirim,
+                'created_by'        => $this->session->userdata('id_user'),
+                'created_at'        => date('Y-m-d H:i:s'),
+            ];
+        }
+ 
+        return [
+            'data'    => $insert_batch,
+            'errors'  => $errors,
+            'skipped' => $skipped,
+            'format'  => 'File Excel Perusahaan',
+        ];
+    }
+ 
+    // ================================================================
+    // HELPERS
+    // ================================================================
+ 
+    /** Parse nilai sel Excel jadi string tanggal Y-m-d */
+    private function _parse_excel_val($val): ?string
+    {
+        if ($val === null || $val === '') return null;
+ 
+        // DateTime object (dari PhpSpreadsheet)
+        if ($val instanceof \DateTime) return $val->format('Y-m-d');
+ 
+        // Serial number Excel (float)
+        if (is_float($val) || (is_int($val) && $val > 10000 && $val < 100000)) {
+            try {
+                $dt = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$val);
+                return $dt->format('Y-m-d');
+            } catch (\Exception $e) {}
+        }
+ 
+        return $this->_parse_tgl((string)$val);
+    }
+ 
+    /** Parse string tanggal berbagai format → Y-m-d */
+    private function _parse_tgl(string $str): ?string
     {
         $str = trim($str);
         if (empty($str)) return null;
  
-        // Format YYYY-MM-DD
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $str)) {
-            return $str;
+        // YYYY-MM-DD
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $str)) return $str;
+ 
+        // DD/MM/YYYY atau DD-MM-YYYY
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $str, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
         }
-        // Format DD/MM/YYYY
-        if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $str, $m)) {
-            return "{$m[3]}-{$m[2]}-{$m[1]}";
-        }
-        // Format Excel serial number (angka bulat)
-        if (is_numeric($str)) {
-            try {
-                $date = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject((float)$str);
-                return $date->format('Y-m-d');
-            } catch (\Exception $e) {}
-        }
-        // Fallback strtotime
+ 
         $ts = strtotime($str);
         return $ts ? date('Y-m-d', $ts) : null;
+    }
+ 
+    /** Safe string dari nilai sel (null-safe) */
+    private function _s($val): string
+    {
+        if ($val === null) return '';
+        if ($val instanceof \DateTime) return $val->format('Y-m-d');
+        return trim((string)$val);
+    }
+ 
+    private function _build_row_template(array $data, string $tanggal, ?string $tgl_kirim, ?string $tgl_retur): array
+    {
+        return [
+            'no_urut'           => $data['no_urut']    ?: null,
+            'kode'              => $data['kode']       ?: null,
+            'bulan'             => (int)date('m', strtotime($tanggal)),
+            'tahun'             => (int)date('Y', strtotime($tanggal)),
+            'tanggal'           => $tanggal,
+            'nomor'             => $data['nomor']      ?: null,
+            'inputer'           => $this->session->userdata('nama'),
+            'no_retur'          => $data['no_retur']   ?: null,
+            'tgl_retur'         => $tgl_retur,
+            'sales_so'          => $data['sales_so']   ?: null,
+            'sc'                => $data['sc']         ?: null,
+            'se'                => $data['se']         ?: null,
+            'wilayah_se'        => $data['wilayah_se'] ?: null,
+            'id_wilayah'        => (int)($data['id_wilayah'] ?? 1),
+            'nama_toko'         => $data['nama_toko'],
+            'kota'              => $data['kota']       ?: null,
+            'merk'              => $data['merk']       ?: null,
+            'jenis'             => $data['jenis']      ?: null,
+            'produk'            => $data['produk'],
+            'kontak_person'     => $data['kontak_person'] ?: null, //
+            'alamat'            => $data['alamat']        ?: null,
+            'golongan'          => $data['golongan']      ?: null,  
+            'point'             => (float)($data['point'] ?? 0),
+            'fokus'             => $data['fokus']         ?: null,
+            'kode_produk'       => $data['kode_produk']   ?: null,
+            'quantity'          => (float)str_replace(',', '.', $data['quantity'] ?? 0),
+            'unit'              => $data['unit']       ?: null,
+            'box'               => (float)($data['box']    ?? 0),
+            'ltr_kg'            => (float)($data['ltr_kg'] ?? 0),
+            'harga_inc_ppn'     => (float)str_replace(['.', ','], ['', '.'], $data['harga_inc_ppn'] ?? 0),
+            'penj_dpp_neto'     => (float)str_replace(['.', ','], ['', '.'], $data['penj_dpp_neto'] ?? 0),
+            'penj_inc_ppn_neto' => (float)str_replace(['.', ','], ['', '.'], $data['penj_inc_ppn_neto'] ?? 0),
+            'keterangan'        => $data['keterangan'] ?: null,
+            'tgl_kirim'         => $tgl_kirim,
+            'created_by'        => $this->session->userdata('id_user'),
+            'created_at'        => date('Y-m-d H:i:s'),
+        ];
     }
 }
