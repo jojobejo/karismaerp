@@ -496,6 +496,15 @@ class M_Kmt extends CI_Model {
         return $this->db->get()->result_array();
     }
 
+    public function adjust_omset_nilai($id_omset, $nilai_retur, $kurangi = true) {
+        if (!$id_omset) return false;
+        $operator = $kurangi ? '-' : '+';
+        $this->db->set('penj_inc_ppn_neto', "penj_inc_ppn_neto {$operator} {$nilai_retur}", false);
+        // Optional: kurangi penj_dpp_neto juga proporsional (jika perlu)
+        $this->db->where('id', $id_omset);
+        return $this->db->update('tbkmt_omset');
+    }
+
     // ================================================================
     // OTHERS
     // ================================================================

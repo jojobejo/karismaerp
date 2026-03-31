@@ -161,12 +161,11 @@
     'import_url'   => base_url('kmt/gaji/import'),
     'template_url' => base_url('kmt/gaji/template_gaji'),
     'import_title' => 'Import Data Gaji dari Excel',
-    'import_note'  => 'Kolom wajib: id_wilayah, nama, tahun. Satu baris = satu karyawan per tahun.',
 ]); ?>
 
 <script>
 $(function(){
-    $('#tblGaji').DataTable({responsive:true,pageLength:25,scrollX:true,
+    $('#tblGaji').DataTable({responsive:false,pageLength:25,scrollX:true,
         language:{url:'<?= base_url('assets/plugins/datatables/id.json') ?>'}
     });
     $(document).on('click','.btn-hapus',function(e){

@@ -32,7 +32,12 @@
                     <a href="<?= base_url('kmt/promo/tambah') ?>" class="btn btn-warning btn-sm">
                         <i class="fas fa-plus mr-1"></i> Tambah Item
                     </a>
-                </div>
+
+                    <a href="<?= base_url('kmt/promo/export?tahun='.$tahun.'&bulan='.$bulan.'&id_wilayah='.$id_wilayah) ?>" 
+                    class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel mr-1"></i> Export Excel
+                    </a>
+                </div>              
 
                 <?php $this->load->view('partial/main/filter', [
                     'filter_url' => base_url('kmt/promo'),

@@ -221,7 +221,7 @@ class Gaji extends CI_Controller {
 
         // Baris 1: nama field (KEY — jangan diubah)
         $fields = [
-            'A' => 'id_wilayah', 'B' => 'nama',      'C' => 'posisi',
+            'A' => 'wilayah', 'B' => 'nama',      'C' => 'posisi',
             'D' => 'status',     'E' => 'tgl_mulai',  'F' => 'tgl_resign',
             'G' => 'tahun',
             'H' => 'gaji_jan',   'I' => 'gaji_feb',   'J' => 'gaji_mar',
@@ -232,7 +232,8 @@ class Gaji extends CI_Controller {
 
         // Baris 2: label ramah
         $labels = [
-            'A' => 'ID Wilayah*',               'B' => 'Nama Karyawan*',
+            'A' => 'Wilayah* (Jatim Timur / Jatim Barat / NTB)',
+            'B' => 'Nama Karyawan*',
             'C' => 'Posisi/Jabatan',             'D' => 'Status (Aktif/Resign)',
             'E' => 'Tgl Mulai (YYYY-MM-DD)',     'F' => 'Tgl Resign (YYYY-MM-DD)',
             'G' => 'Tahun*',
@@ -265,7 +266,7 @@ class Gaji extends CI_Controller {
 
         // Contoh data baris 3
         $example = [
-            'A' => '1',           'B' => 'Siti Rahayu',  'C' => 'Sales',
+            'A' => 'Jatim Timur',           'B' => 'Siti Rahayu',  'C' => 'Sales',
             'D' => 'Aktif',       'E' => '2023-01-01',   'F' => '',
             'G' => date('Y'),
             'H' => '3500000',     'I' => '3500000',      'J' => '3500000',
@@ -354,6 +355,14 @@ class Gaji extends CI_Controller {
             $field_names  = array_map('trim', $rows[0]); // baris 1 = nama field
             $bulan_cols   = $this->bulan_cols;
 
+            $wilayah_map = [];
+            $wilayah_list = $this->M_Kmt->get_wilayah();
+
+            foreach ($wilayah_list as $w) {
+                $wilayah_map[strtolower(trim($w['nama_wilayah']))] = $w['id'];
+            }
+
+
             $insert_batch = [];
             $errors       = [];
             $skipped      = 0;
@@ -377,7 +386,14 @@ class Gaji extends CI_Controller {
 
                 // ---- Validasi wajib ----
                 $err = [];
-                if (empty($data['id_wilayah']) || !is_numeric($data['id_wilayah'])) $err[] = 'id_wilayah wajib diisi (angka)';
+                $wilayah_nama = strtolower(trim($data['wilayah'] ?? ''));
+
+                if (empty($wilayah_nama)) {
+                    $err[] = 'wilayah wajib diisi';
+                } elseif (!isset($wilayah_map[$wilayah_nama])) {
+                    $err[] = 'wilayah tidak dikenal';
+                } 
+
                 if (empty($data['nama']))                                             $err[] = 'nama wajib diisi';
                 if (empty($data['tahun'])   || !is_numeric($data['tahun']))          $err[] = 'tahun wajib diisi (angka)';
 
@@ -391,7 +407,7 @@ class Gaji extends CI_Controller {
                 $tgl_resign = !empty($data['tgl_resign'])  ? $this->_parse_tanggal_gaji($data['tgl_resign']) : null;
 
                 $record = [
-                    'id_wilayah'  => (int)$data['id_wilayah'],
+                    'id_wilayah'  => $wilayah_map[$wilayah_nama] ?? null,
                     'nama'        => $data['nama'],
                     'posisi'      => $data['posisi']  ?: null,
                     'status'      => $data['status']  ?: null,

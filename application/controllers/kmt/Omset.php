@@ -252,7 +252,10 @@ class Omset extends CI_Controller {
         $omset    = $this->M_Kmt->get_omset_by_id($id_omset);
         if (!$omset) { show_404(); return; }
 
-        $tgl = $this->input->post('tanggal_retur');
+        $tgl           = $this->input->post('tanggal_retur');
+        $nilai_retur   = (float)str_replace('.', '', $this->input->post('nilai_retur') ?? 0);
+        $kurangi_target = (int)$this->input->post('kurangi_target');
+
         $insert = [
             'id_omset'       => $id_omset,
             'id_wilayah'     => $omset['id_wilayah'],
@@ -262,14 +265,24 @@ class Omset extends CI_Controller {
             'no_retur'       => $this->input->post('no_retur'),
             'nama_toko'      => $omset['nama_toko'],
             'produk'         => $omset['produk'],
+            'sc'             => $omset['sc'],           // ← field baru dari omset
+            'kota'           => $omset['kota'],         // ← field baru
+            'harga_dpp'      => $omset['harga_inc_ppn'], // ← ambil dari omset
             'quantity'       => (float)$this->input->post('quantity'),
-            'nilai_retur'    => (float)str_replace('.', '', $this->input->post('nilai_retur') ?? 0),
-            'kurangi_target' => (int)$this->input->post('kurangi_target'),
+            'unit'           => $this->input->post('unit'),
+            'nilai_retur'    => $nilai_retur,
+            'kurangi_target' => $kurangi_target,
+            'kategori'       => $this->input->post('kategori'),
             'keterangan'     => $this->input->post('keterangan'),
+            'keterangan_detail' => $this->input->post('keterangan_detail'),
             'created_by'     => $this->session->userdata('id_user'),
         ];
 
         if ($this->M_Kmt->insert_retur($insert)) {
+            // ← BARU: jika kurangi target, update nilai omset
+            if ($kurangi_target === 1) {
+                $this->M_Kmt->adjust_omset_nilai($id_omset, $nilai_retur, true);
+            }
             $this->session->set_flashdata('success', 'Retur berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan retur.');
@@ -283,6 +296,11 @@ class Omset extends CI_Controller {
     public function hapus_retur($id) {
         $retur    = $this->M_Kmt->get_retur_by_id($id);
         $id_omset = $retur['id_omset'] ?? null;
+
+        // ← BARU: kembalikan nilai omset jika retur ini tadinya kurangi target
+        if ($retur && $retur['kurangi_target'] == 1 && $id_omset) {
+            $this->M_Kmt->adjust_omset_nilai($id_omset, (float)$retur['nilai_retur'], false);
+        }
 
         if ($this->M_Kmt->delete_retur($id)) {
             $this->session->set_flashdata('success', 'Retur berhasil dihapus.');

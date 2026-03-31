@@ -200,7 +200,6 @@
     'import_url'   => base_url('kmt/omset/import'),
     'template_url' => base_url('kmt/omset/template_omset'),
     'import_title' => 'Import Data Omset dari Excel',
-    'import_note'  => 'Kolom wajib: tanggal, id_wilayah, nama_toko, produk, quantity, penj_inc_ppn_neto.',
 ]); ?>
 <?php endif; ?>
 

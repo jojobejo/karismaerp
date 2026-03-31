@@ -219,9 +219,38 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label>Keterangan</label>
-                                        <textarea name="keterangan" class="form-control form-control-sm"
-                                                  rows="2" placeholder="Alasan retur..."></textarea>
+                                        <label>Unit</label>
+                                        <input type="text" name="unit"
+                                            class="form-control form-control-sm"
+                                            placeholder="Pack / Sak / Kg">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Keterangan <span class="text-danger">*</span></label>
+                                        <select name="keterangan" class="form-control form-control-sm" required
+                                                id="selKeterangan">
+                                            <option value="">-- Pilih --</option>
+                                            <option value="Retur">Retur</option>
+                                            <option value="Replacement">Replacement</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Keterangan Detail</label>
+                                        <input type="text" name="keterangan_detail"
+                                            class="form-control form-control-sm"
+                                            placeholder="Contoh: Barang Expired, Barang Bermasalah...">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Kategori</label>
+                                        <select name="kategori" class="form-control form-control-sm">
+                                            <option value="">-- Pilih --</option>
+                                            <option value="Barang bermasalah">Barang bermasalah</option>
+                                            <option value="Replacement">Replacement</option>
+                                            <option value="Expired">Expired</option>
+                                            <option value="Lainnya">Lainnya</option>
+                                        </select>
                                     </div>
 
                                     <button type="submit" class="btn btn-danger btn-block btn-sm">
@@ -250,10 +279,16 @@
                                                 <th>#</th>
                                                 <th>Tgl Retur</th>
                                                 <th>No Retur</th>
+                                                <th>SC</th>          <!-- ← BARU -->
+                                                <th>Kota</th>         <!-- ← BARU -->
                                                 <th class="text-right">Qty</th>
+                                                <th class="text-right">Harga DPP</th>  <!-- ← BARU -->
                                                 <th class="text-right">Nilai Retur</th>
                                                 <th class="text-center">Target ABM</th>
+                                                <th>Kategori</th>     <!-- ← BARU -->
+                                                <th>Unit</th>
                                                 <th>Keterangan</th>
+                                                <th>Keterangan Detail</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
@@ -271,8 +306,13 @@
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td><?= date('d/m/Y', strtotime($r['tanggal_retur'])) ?></td>
                                                 <td><?= htmlspecialchars($r['no_retur'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($r['sc'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($r['kota'] ?? '-') ?></td>
                                                 <td class="text-right">
                                                     <?= number_format($r['quantity'], 2, ',', '.') ?>
+                                                </td>
+                                                <td class="text-right">
+                                                    <?= number_format($r['harga_dpp'] ?? 0, 0, ',', '.') ?>
                                                 </td>
                                                 <td class="text-right font-weight-bold text-danger">
                                                     <?= number_format($r['nilai_retur'], 0, ',', '.') ?>
@@ -290,9 +330,16 @@
                                                         </span>
                                                     <?php endif; ?>
                                                 </td>
+                                                <td><?= htmlspecialchars($r['kategori'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($r['unit'] ?? '-') ?></td>
                                                 <td class="small">
-                                                    <?= htmlspecialchars($r['keterangan'] ?? '-') ?>
+                                                    <?php
+                                                    $ket = $r['keterangan'] ?? '-';
+                                                    $badge = $ket === 'Replacement' ? 'badge-warning' : 'badge-danger';
+                                                    ?>
+                                                    <span class="badge <?= $badge ?>"><?= htmlspecialchars($ket) ?></span>
                                                 </td>
+                                                <td class="small"><?= htmlspecialchars($r['keterangan_detail'] ?? '-') ?></td>
                                                 <td class="text-center">
                                                     <a href="<?= base_url('kmt/omset/hapus_retur/' . $r['id']) ?>"
                                                        class="btn btn-xs btn-danger btn-hapus"
@@ -307,7 +354,7 @@
                                         <?php if (!empty($list_retur)): ?>
                                         <tfoot style="background:#f4f4f4;font-weight:bold;">
                                             <tr>
-                                                <td colspan="4" class="text-right">TOTAL:</td>
+                                                <td colspan="7" class="text-right">TOTAL:</td>
                                                 <td class="text-right text-danger">
                                                     Rp <?= number_format($summary['total_retur'] ?? 0, 0, ',', '.') ?>
                                                 </td>
@@ -350,6 +397,11 @@ $(function () {
     $('.angka').on('input', function () {
         var v = $(this).val().replace(/\D/g, '');
         $(this).val(v ? parseInt(v).toLocaleString('id-ID') : '');
+    });
+
+    $('#selKeterangan').on('change', function () {
+        // Kosongkan keterangan detail saat ganti pilihan
+        $('input[name="keterangan_detail"]').val('').focus();
     });
 
     // Konfirmasi hapus
