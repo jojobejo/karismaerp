@@ -215,6 +215,10 @@ class M_Kmt extends CI_Model {
         if (!empty($filter['tahun']))      $this->db->where('o.tahun', $filter['tahun']);
         if (!empty($filter['bulan']))      $this->db->where('o.bulan', $filter['bulan']);
         if (!empty($filter['id_wilayah'])) $this->db->where('o.id_wilayah', $filter['id_wilayah']);
+        if (!empty($filter['has_retur'])) {
+            $this->db->where('o.no_retur IS NOT NULL');
+            $this->db->where("o.no_retur !=", '');
+        }
         $this->db->order_by('o.tanggal', 'DESC');
         return $this->db->get()->result_array();
     }

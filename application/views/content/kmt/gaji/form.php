@@ -87,8 +87,8 @@
                                         <label>Status</label>
                                         <select name="status" class="form-control form-control-sm">
                                             <option value="Tetap" <?= ($is_edit&&$row['status']=='Tetap')?'selected':'' ?>>Tetap</option>
-                                            <option value="Kontrak" <?= ($is_edit&&$row['status']=='Kontrak')?'selected':'' ?>>Kontrak</option>
-                                            <option value="Freelance" <?= ($is_edit&&$row['status']=='Freelance')?'selected':'' ?>>Freelance</option>
+                                            <option value="MT" <?= ($is_edit&&$row['status']=='MT')?'selected':'' ?>>MT</option>
+                                            <option value="Resign" <?= ($is_edit&&$row['status']=='Freelance')?'selected':'' ?>>Resign</option>
                                         </select>
                                     </div>
                                 </div>

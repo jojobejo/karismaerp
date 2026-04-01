@@ -122,8 +122,21 @@
                                         <td class="font-weight-bold"><?= htmlspecialchars($row['nama']) ?></td>
                                         <td><?= htmlspecialchars($row['posisi']??'-') ?></td>
                                         <td>
-                                            <span class="badge <?= $row['tgl_resign'] ? 'badge-danger':'badge-success' ?>">
-                                                <?= $row['tgl_resign'] ? 'Resign':'Aktif' ?>
+                                            <?php
+                                            $status = strtolower(trim($row['status'] ?? ''));
+                                            if ($status === 'resign' || $row['tgl_resign']) {
+                                                $badge = 'badge-danger';
+                                                $label = 'Resign';
+                                            } elseif ($status === 'mt') {
+                                                $badge = 'badge-warning';
+                                                $label = 'MT';
+                                            } else {
+                                                $badge = 'badge-success';
+                                                $label = $row['status'] ?: 'Aktif';
+                                            }
+                                            ?>
+                                            <span class="badge <?= $badge ?>">
+                                                <?= htmlspecialchars($label) ?>
                                             </span>
                                         </td>
                                         <td><?= $row['tgl_mulai'] ? date('d/m/Y',strtotime($row['tgl_mulai'])):'-' ?></td>

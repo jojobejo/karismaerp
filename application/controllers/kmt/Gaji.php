@@ -431,6 +431,7 @@ class Gaji extends CI_Controller {
             }
 
             if (!empty($insert_batch)) {
+                $this->db->truncate('tbkmt_gaji');
                 $this->M_Kmt->import_batch_gaji($insert_batch);
             }
 

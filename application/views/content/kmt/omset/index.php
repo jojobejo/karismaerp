@@ -1,3 +1,4 @@
+<!-- content/kmt/omset/index.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -74,6 +75,24 @@
                     'show_bulan' => true,
                 ]); ?>
 
+                <!-- Filter tambahan: hanya tampilkan yang punya no_retur -->
+                <div class="mb-3">
+                    <a href="<?= base_url('kmt/omset')
+                                . '?tahun='      . $tahun
+                                . '&bulan='      . $bulan
+                                . '&id_wilayah=' . $id_wilayah
+                                . ($has_retur ? '' : '&has_retur=1') ?>"
+                    class="btn btn-sm <?= $has_retur ? 'btn-danger' : 'btn-outline-danger' ?>">
+                        <i class="fas fa-undo mr-1"></i>
+                        <?= $has_retur ? 'Menampilkan Retur Saja — Klik untuk Reset' : 'Tampilkan Retur Saja' ?>
+                    </a>
+                    <?php if ($has_retur): ?>
+                    <span class="badge badge-danger ml-1">
+                        <?= count($list) ?> transaksi memiliki nomor retur
+                    </span>
+                    <?php endif; ?>
+                </div>
+
                 <!-- Summary Card -->
                 <div class="row mb-3">
                     <div class="col-md-4">
@@ -113,17 +132,17 @@
                             <table id="tblOmset" class="table table-bordered table-striped table-hover table-sm mb-0">
                                 <thead style="background:#1f3864;color:#fff;">
                                     <tr>
-                                        <th width="40">#</th>
+                                        <th width="35">#</th>
                                         <th>Tanggal</th>
                                         <th>Wilayah</th>
+                                        <th>Nomor Fax</th>
                                         <th>Nama Toko</th>
                                         <th>Kota</th>
                                         <th>Produk</th>
                                         <th>Sales SO</th>
                                         <th class="text-right">Qty</th>
                                         <th class="text-right">Penj. Inc PPN Neto</th>
-                                        <th class="text-center">Retur</th>
-                                        <th width="80">Aksi</th>
+                                        <th width="70" class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -136,6 +155,9 @@
                                                 <?= htmlspecialchars($row['nama_wilayah'] ?? '-') ?>
                                             </span>
                                         </td>
+                                        <td>
+                                            <?= htmlspecialchars($row['nomor'] ?? '-') ?>
+                                        </td>
                                         <td><?= htmlspecialchars($row['nama_toko']) ?></td>
                                         <td><?= htmlspecialchars($row['kota'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['produk']) ?></td>
@@ -145,19 +167,13 @@
                                             <?= number_format($row['penj_inc_ppn_neto'], 0, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
-                                            <a href="<?= base_url('kmt/omset/retur/' . $row['id']) ?>"
-                                            class="btn btn-xs btn-info" title="Lihat Retur">
-                                                <i class="fas fa-undo"></i>
-                                            </a>
-                                        </td>
-                                        <td class="text-center">
                                             <?php if ($lv == 1): ?>
                                             <a href="<?= base_url('kmt/omset/edit/' . $row['id']) ?>"
-                                               class="btn btn-xs btn-warning" title="Edit">
+                                            class="btn btn-xs btn-warning" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <a href="<?= base_url('kmt/omset/hapus/' . $row['id']) ?>"
-                                               class="btn btn-xs btn-danger btn-hapus" title="Hapus">
+                                            class="btn btn-xs btn-danger btn-hapus" title="Hapus">
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                             <?php else: ?>
@@ -169,7 +185,7 @@
                                 </tbody>
                                 <tfoot style="background:#f4f4f4;font-weight:bold;">
                                     <tr>
-                                        <td colspan="8" class="text-right">TOTAL:</td>
+                                        <td colspan="9" class="text-right">TOTAL:</td>
                                         <td class="text-right">
                                             <?= number_format($total_omset, 0, ',', '.') ?>
                                         </td>
@@ -208,10 +224,10 @@ $(function () {
     $('#tblOmset').DataTable({
         responsive: true,
         pageLength: 25,
-        order: [[1, 'desc']],
+        order: [[0, 'asc']],
         columnDefs: [
-            { targets: [7, 8], className: 'dt-right' },
-            { targets: [9],    orderable: false }
+            { targets: [8, 9], className: 'dt-right' },
+            { targets: [10],   orderable: false },
         ],
         language: {
             url: '<?= base_url('assets/plugins/datatables/id.json') ?>'

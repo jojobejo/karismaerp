@@ -32,10 +32,12 @@ class Omset extends CI_Controller {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+        $has_retur  = $this->input->get('has_retur')  ?? '';
 
         $filter = ['tahun' => $tahun];
         if ($bulan)      $filter['bulan']      = $bulan;
         if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+        if ($has_retur)  $filter['has_retur']  = true; 
 
         $list = $this->M_Kmt->get_omset_list($filter);
 
@@ -53,6 +55,7 @@ class Omset extends CI_Controller {
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
             'lv'     => (int)$this->session->userdata('lv'),
+            'has_retur' => $has_retur,
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -662,6 +665,8 @@ class Omset extends CI_Controller {
             $result = $this->_baca_excel_omset($tmp_path, $ext);
  
             if (!empty($result['data'])) {
+                //truncate sebelum import kembali
+                $this->db->truncate('tbkmt_omset');
                 $this->M_Kmt->import_batch_omset($result['data']);
             }
  

@@ -252,7 +252,7 @@ $(function () {
     $('#tblRetur').DataTable({
         responsive: true,
         pageLength: 25,
-        order: [[2, 'desc']],
+        order: [[0, 'asc']],
         columnDefs: [
             { targets: [9],  className: 'dt-center' },
             { targets: [10], className: 'dt-right'  },

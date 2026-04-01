@@ -433,6 +433,7 @@ class Retur extends CI_Controller {
             $result = $this->_baca_excel_retur($tmp_path, $ext);
 
             if (!empty($result['data'])) {
+                $this->db->truncate('tbkmt_retur');
                 foreach (array_chunk($result['data'], 200) as $chunk) {
                     $this->db->insert_batch('tbkmt_retur', $chunk);
                 }
