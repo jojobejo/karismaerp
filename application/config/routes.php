@@ -343,6 +343,8 @@ $route['kmt/retur/simpan']         = 'kmt/Retur/simpan';
 $route['kmt/retur/edit/(:num)']    = 'kmt/Retur/edit/$1';
 $route['kmt/retur/update/(:num)']  = 'kmt/Retur/update/$1';
 $route['kmt/retur/hapus/(:num)']   = 'kmt/Retur/hapus/$1';
+$route['kmt/retur/import']         = 'kmt/Retur/import';
+$route['kmt/retur/template_retur']   = 'kmt/Retur/template_retur';
 
 // ---- KMT Others ----
 $route['kmt/others']               = 'kmt/Others/index';
