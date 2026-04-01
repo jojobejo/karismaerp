@@ -17,7 +17,9 @@
                     <input type="text" value="<?= date("H:i") ?>" name="jminput" id="" hidden>
                     <span id="jam" class="sjam"></span>
                     <?php  ?>
+
                     <span class="sdate"><?= format_indo(date("Y-m-d")) ?></span>
+
                     <div class="row divgbrindek" style="text-align: center;">
                         <a href="<?= base_url('nilai_ipkp/1') ?>" class="tmbl1"></a>
                         <a href="<?= base_url('nilai_ipkp/2') ?>" class="tmbl2"></a>
