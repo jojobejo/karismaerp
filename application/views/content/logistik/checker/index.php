@@ -13,7 +13,7 @@
 tr.separator-label td {
     font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
     padding:4px 12px !important;
-    border-top:2px dashed #aaa !important; border-bottom:2px dashed #aaa !important;
+    border-top:1px solid #aaa !important; border-bottom:1px solid #aaa !important;
 }
 tr.separator-label.sep-active  td { background:#fffde7; border-color:#f9a825 !important; color:#e65100; }
 tr.separator-label.sep-pending td { background:#f3f3f3; border-color:#bbb    !important; color:#555;    }

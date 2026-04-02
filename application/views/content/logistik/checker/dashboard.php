@@ -469,10 +469,10 @@
                                                     <small class="text-muted">
                                                         <?= htmlspecialchars($b['nm_checker'] ?? '-') ?>
                                                         <?= !empty($b['waktu_mulai']) ? ' | mulai ' . date('H:i', strtotime($b['waktu_mulai'])) : '' ?>
-                                                        <?= $dur_live ? ' <span class="badge badge-warning" style="font-size:9px">' . $dur_live . '</span>' : '' ?>
+                                                        <?= $dur_live ? ' <span class="badge badge-warning" style="font-size:12px">' . $dur_live . '</span>' : '' ?>
                                                     </small>
                                                 </div>
-                                                <span class="badge badge-warning ml-1" style="font-size:10px"><?= $progres ?>%</span>
+                                                <span class="badge badge-warning ml-1" style="font-size:12px"><?= $progres ?>%</span>
                                             </div>
                                             <div class="progress" style="height:5px">
                                                 <div class="progress-bar bg-warning" style="width:<?= $progres ?>%"></div>
@@ -653,13 +653,13 @@ function dashboardColumns($wait, $proses, $done, $type)
                                     }
                                 }
                                 ?>
-                                <small class="text-muted">
+                                <div style="font-size:14px; color:#212529; font-weight:500;">
                                     <?= htmlspecialchars($item['nm_checker'] ?? '-') ?>
                                     <?= !empty($item['waktu_mulai']) ? ' | mulai ' . date('H:i', strtotime($item['waktu_mulai'])) : '' ?>
-                                    <?= $durasi_live ? ' <span class="badge badge-warning" style="font-size:9px">' . $durasi_live . '</span>' : '' ?>
-                                </small>
+                                    <?= $durasi_live ? ' <span class="badge badge-warning" style="font-size:12px">' . $durasi_live . '</span>' : '' ?>
+                                </div>
                             </div>
-                            <span class="badge badge-warning ml-1" style="font-size:10px"><?= $progres ?>%</span>
+                            <span class="badge badge-warning ml-1" style="font-size:12px"><?= $progres ?>%</span>
                         </div>
                         <div class="progress" style="height:5px">
                             <div class="progress-bar bg-warning" style="width:<?= $progres ?>%"></div>
@@ -692,7 +692,24 @@ function dashboardColumns($wait, $proses, $done, $type)
                             <?= trukIconSVG($type, $color_done) ?>
                             <div style="min-width:0;margin-left:8px">
                                 <div class="font-weight-bold text-truncate" style="font-size:13px"><?= htmlspecialchars($item['keterangan']) ?></div>
-                                <small class="text-muted"><?= htmlspecialchars($item['nm_checker'] ?? '-') ?><?= $durasi ? ' · ' . $durasi : '' ?></small>
+                                <div style="margin-top:2px; line-height:1.4;">
+                                    <!-- Nama checker + durasi -->
+                                    <div style="font-size:14px; font-weight:400; color:#212529;">
+                                        <?= htmlspecialchars($item['nm_checker'] ?? '-') ?>
+                                        <?php if ($durasi): ?>
+                                            <span class="badge badge-success ml-1" style="font-size:12px;">
+                                                <?= $durasi ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Jam mulai & selesai -->
+                                    <div style="font-size:13px; color:#212529;">
+                                        <?= !empty($item['waktu_mulai']) ? 'Mulai: ' . date('H:i', strtotime($item['waktu_mulai'])) : '-' ?>
+                                        <?= !empty($item['waktu_selesai']) ? ' | Selesai: ' . date('H:i', strtotime($item['waktu_selesai'])) : '' ?>
+                                    </div>
+
+                                </div>
                             </div>
                         </div>
                     </div>
