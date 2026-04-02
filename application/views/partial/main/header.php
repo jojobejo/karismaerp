@@ -37,9 +37,6 @@
   <link rel="stylesheet" href="<?php echo base_url('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') ?>">
   <link rel="stylesheet" href="<?php echo base_url('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css') ?>">
 
-  <!-- CHARTS -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <!-- fullCalendar -->
   <link rel="stylesheet" href="<?= base_url('assets/plugins/fullcalendar/main.css') ?>">
   <!-- Select2 -->
@@ -48,16 +45,4 @@
   <script src="<?= base_url('assets/plugins/jquery/jquery.js') ?>"></script>
   <!-- CSS Custom Karisma -->
   <link rel="stylesheet" href="<?php echo base_url("assets/ipkp.css") ?>">
-  <!-- CSS HEADER KPI -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts@3.37.1/dist/apexcharts.css" integrity="sha256-4MX+61mt9NVvvuPjUWdUdyfZfxSB1/Rf9WtqRHgG5S0=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css" integrity="sha256-Qsx5lrStHZyR9REqhUF8iQt73X06c8LGIUPzpOhwRrI=" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/css/jsvectormap.min.css" integrity="sha256-+uGLJmmTKOqBr+2E6KDYs/NRsHxSkONXFHUL0fy2O/4=" crossorigin="anonymous">
-  <!-- END CSS HEADER KPI -->
-  <script>
-    $(function() {
-      $("#tgl1, #tgl2").datepicker({
-        dateFormat: "dd/mm/yy"
-      });
-    });
-  </script>
 </head>
