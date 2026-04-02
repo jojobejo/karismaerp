@@ -793,6 +793,7 @@ class C_Hrd extends CI_Controller
         $this->M_Hrd->update_karyawan($id, $dataupdate);
         redirect('hrd_all_karyawan');
     }
+
     public function export_laporan_issue()
     {
         include APPPATH . 'third_party/PHPExcel/PHPExcel.php';
@@ -1572,9 +1573,12 @@ class C_Hrd extends CI_Controller
                 case 'NITA':
                     $penerima_raw = 'HRD & GA';
                     break;
-                case 'MIA':
-                    $penerima_raw = 'MIA';
-                    break;
+                // case 'MIA':
+                //     $penerima_raw = 'MIA';
+                //     break;
+                    // case 'SHEILA':
+                    //     $penerima_raw = 'KARISMA ONLINE';
+                    //     break;
                 default:
                     $penerima_raw = $l->kd_penerima;
                     break;
@@ -1583,6 +1587,10 @@ class C_Hrd extends CI_Controller
             // ===== BADGE PENERIMA =====
             if ($penerima_raw === 'KEUANGAN') {
                 $penerima = '<span class="badge badge-primary">KEUANGAN</span>';
+            } elseif ($penerima_raw === 'SHEILA') {
+                $penerima = '<span class="badge badge-success">KARISMA ONLINE</span>';
+            } elseif ($penerima_raw === 'MIA') {
+                $penerima = '<span class="badge badge-warning">MIA</span>';
             } else {
                 $penerima = '<span class="badge badge-info">' . $penerima_raw . '</span>';
             }
@@ -1596,7 +1604,7 @@ class C_Hrd extends CI_Controller
             $row[] = $l->jam_terima_1;
             $row[] = $l->jam_terima_2;
             $row[] = $status_label;
-            $row[] = $l->inputer;
+
 
             if ($this->session->userdata('departemen') == 'KEUANGAN') {
                 $row[] = '
@@ -1608,16 +1616,20 @@ class C_Hrd extends CI_Controller
             </button>
             ';
             } else {
+                $row[] = $l->inputer;
                 $row[] = '
-            <button class="btn btn-warning btn-sm btn-edit"
-                data-id="' . $l->id . '">
-                <i class="fa fa-edit"></i>
-            </button>
-
-            <button class="btn btn-danger btn-sm btn-hapus"
-                data-id="' . $l->id . '">
-                <i class="fa fa-trash"></i>
-            </button>
+            <div class="row">
+                                <div class="col-6">
+                                    <button class="btn btn-warning btn-sm btn-edit" data-id="' . $l->id . '">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-danger btn-sm btn-hapus" data-id="' . $l->id . '">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
             ';
             }
             $data[] = $row;

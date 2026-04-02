@@ -9,7 +9,6 @@
 
             <form id="formInputPaket">
                 <div class="modal-body">
-
                     <div class="row">
                         <div class="col-md-6">
                             <label>Tanggal</label>
@@ -24,6 +23,7 @@
                                 <option value="IKA">IKA</option>
                                 <option value="NITA">NITA</option>
                                 <option value="MIA">MIA</option>
+                                <option value="SHEILA">SHEILA</option>
                             </select>
                         </div>
                     </div>

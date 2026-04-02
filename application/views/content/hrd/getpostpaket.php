@@ -47,7 +47,6 @@
                                             <th>Jam Diterima POS</th>
                                             <th>Jam Konfirmasi</th>
                                             <th>Status</th>
-                                            <th>Inputer</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
@@ -137,6 +136,7 @@
                                                 <th>Jam Diterima POS</th>
                                                 <th>Jam Konfirmasi</th>
                                                 <th>Status</th>
+                                                <th>Inputer</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
