@@ -821,11 +821,17 @@ class M_Hrd extends CI_Model
                 d.status,
                 d.keterangan,
                 d.evident,
+                f.foto_list AS foto_kategori,
                 k.nm_kategori,
                 kd.nm_detail
             FROM tb_checkup_mekanik_detail d
             LEFT JOIN tb_checkup_mekanik_kategori k ON k.id_kategori = d.id_kategori
             LEFT JOIN tb_checkup_mekanik_kategori_detail kd ON kd.id_detail_kat = d.id_detail_kat
+            LEFT JOIN (
+                SELECT id_ckup, id_kategori, GROUP_CONCAT(foto) AS foto_list
+                FROM tb_checkup_mekanik_kategori_foto
+                GROUP BY id_ckup, id_kategori
+            ) f ON f.id_ckup = d.id_ckup AND f.id_kategori = d.id_kategori
             WHERE d.id_ckup = " . (int) $id . "
             ORDER BY k.id_kategori ASC, kd.id_detail_kat ASC
         ")->result();
@@ -840,6 +846,11 @@ class M_Hrd extends CI_Model
     public function insert_truck_checkup_detail($data)
     {
         return $this->db->insert('tb_checkup_mekanik_detail', $data);
+    }
+
+    public function insert_truck_checkup_kategori_foto($data)
+    {
+        return $this->db->insert('tb_checkup_mekanik_kategori_foto', $data);
     }
 
     public function get_mekanik_kategori_all()

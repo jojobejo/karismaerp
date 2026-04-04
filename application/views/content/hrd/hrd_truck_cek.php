@@ -32,6 +32,7 @@
                                     <div class="col-md-3"><label>No.Polisi</label><input type="text" class="form-control" id="no_polisi" required></div>
                                     <div class="col-md-3"><label>Hari</label><input type="text" class="form-control" id="hari_check" required></div>
                                     <div class="col-md-3"><label>Tanggal</label><input type="date" class="form-control" id="tanggal_check" value="<?= date('Y-m-d') ?>" required></div>
+                                    <?php date_default_timezone_set('Asia/Jakarta'); ?>
                                     <div class="col-md-3"><label>Jam</label><input type="time" class="form-control" id="jam_check" value="<?= date('H:i') ?>" required></div>
                                 </div>
                                 <div class="row mt-3">
@@ -173,6 +174,7 @@
             kategoriData = [],
             detailKategoriData = [];
         const inputState = {};
+        const categoryFiles = {};
         $(function() {
             syncDayName();
             loadMasterChecklist();
@@ -220,9 +222,13 @@
             }
             let h = '';
             masterChecklist.forEach(function(k, ki) {
-                h += '<div class="card card-outline card-info mb-3"><div class="card-header py-2"><strong>' + (ki + 1) + '. ' + escapeHtml(k.nm_kategori || '-') + '</strong></div><div class="card-body table-responsive p-0"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th style="width:40px;">No</th><th>Point Checklist</th><th style="width:130px;">Status</th><th>Keterangan</th><th style="width:170px;">Bukti Foto</th></tr></thead><tbody>';
+                const catKey = String(k.id_kategori);
+                if (!(catKey in categoryFiles)) categoryFiles[catKey] = [];
+                const catCount = categoryFiles[catKey].length;
+                const catInfo = catCount ? '<span class="badge badge-info">' + catCount + ' foto</span>' : '<span class="text-muted">Belum ada</span>';
+                h += '<div class="card card-outline card-info mb-3"><div class="card-header py-2 d-flex justify-content-between align-items-center"><strong>' + (ki + 1) + '. ' + escapeHtml(k.nm_kategori || '-') + '</strong><div class="d-flex align-items-center"><span class="text-muted mr-2">Bukti Foto Kategori</span><input type="file" class="form-control form-control-sm" style="max-width:240px" accept="image/*" multiple onchange="setKategoriFoto(' + k.id_kategori + ',this)"><div class="ml-2" id="kategori_file_info_' + k.id_kategori + '">' + catInfo + '</div></div></div><div class="card-body table-responsive p-0"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th style="width:40px;">No</th><th>Point Checklist</th><th style="width:130px;">Status</th><th>Keterangan</th></tr></thead><tbody>';
                 if (!k.details || !k.details.length) {
-                    h += '<tr><td colspan="5" class="text-center text-muted">Belum ada detail checklist pada kategori ini</td></tr>';
+                    h += '<tr><td colspan="4" class="text-center text-muted">Belum ada detail checklist pada kategori ini</td></tr>';
                 } else {
                     k.details.forEach(function(d, i) {
                         const key = String(d.id_detail_kat);
@@ -230,13 +236,11 @@
                             id_kategori: k.id_kategori,
                             id_detail_kat: d.id_detail_kat,
                             status: 'BAIK',
-                            keterangan: '',
-                            file: null
+                            keterangan: ''
                         };
                         const s = inputState[key].status || 'BAIK';
                         const ket = escapeHtml(inputState[key].keterangan || '');
-                        const f = inputState[key].file ? '<span class="badge badge-info">Foto dipilih</span>' : '<span class="text-muted">Belum ada</span>';
-                        h += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(d.nm_detail || '-') + '</td><td><select class="form-control form-control-sm" onchange="setStatus(' + d.id_detail_kat + ',this.value)"><option value="BAIK" ' + (s === 'BAIK' ? 'selected' : '') + '>BAIK</option><option value="TIDAK BAIK" ' + (s === 'TIDAK BAIK' ? 'selected' : '') + '>TIDAK BAIK</option></select></td><td><input type="text" class="form-control form-control-sm" value="' + ket + '" oninput="setKeterangan(' + d.id_detail_kat + ',this.value)"></td><td><input type="file" class="form-control form-control-sm" accept="image/*" onchange="setFoto(' + d.id_detail_kat + ',this)"><div class="mt-1" id="file_info_' + d.id_detail_kat + '">' + f + '</div></td></tr>';
+                        h += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(d.nm_detail || '-') + '</td><td><select class="form-control form-control-sm" onchange="setStatus(' + d.id_detail_kat + ',this.value)"><option value="BAIK" ' + (s === 'BAIK' ? 'selected' : '') + '>BAIK</option><option value="TIDAK BAIK" ' + (s === 'TIDAK BAIK' ? 'selected' : '') + '>TIDAK BAIK</option></select></td><td><input type="text" class="form-control form-control-sm" value="' + ket + '" oninput="setKeterangan(' + d.id_detail_kat + ',this.value)"></td></tr>';
                     });
                 }
                 h += '</tbody></table></div></div>';
@@ -254,12 +258,12 @@
             if (inputState[k]) inputState[k].keterangan = v;
         }
 
-        function setFoto(id, input) {
+        function setKategoriFoto(id, input) {
             const k = String(id);
-            if (!inputState[k]) return;
-            const f = input.files && input.files[0] ? input.files[0] : null;
-            inputState[k].file = f;
-            $('#file_info_' + id).html(f ? '<span class="badge badge-info">Foto dipilih</span>' : '<span class="text-muted">Belum ada</span>');
+            const files = input.files ? Array.from(input.files) : [];
+            categoryFiles[k] = files;
+            const count = files.length;
+            $('#kategori_file_info_' + id).html(count ? '<span class="badge badge-info">' + count + ' foto</span>' : '<span class="text-muted">Belum ada</span>');
         }
 
         function submitCheckup() {
@@ -291,17 +295,25 @@
                     id_kategori: it.id_kategori,
                     id_detail_kat: it.id_detail_kat,
                     status: it.status || 'BAIK',
-                    keterangan: it.keterangan || '',
-                    file_key: ''
+                    keterangan: it.keterangan || ''
                 };
-                if (it.file) {
-                    const key = 'point_foto_' + i;
-                    fd.append(key, it.file);
-                    row.file_key = key;
-                }
                 payload.push(row);
             });
             fd.append('items_json', JSON.stringify(payload));
+            const kategoriPayload = [];
+            Object.keys(categoryFiles).forEach(function(k) {
+                const files = categoryFiles[k] || [];
+                if (!files.length) return;
+                const key = 'kategori_foto_' + k;
+                files.forEach(function(f) {
+                    fd.append(key + '[]', f);
+                });
+                kategoriPayload.push({
+                    id_kategori: Number(k),
+                    file_key: key
+                });
+            });
+            fd.append('kategori_json', JSON.stringify(kategoriPayload));
             $('#btnSimpanCheckup').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Menyimpan...');
             $.ajax({
                 url: "<?= base_url('ajax_truck_checkup_save') ?>",
@@ -337,7 +349,9 @@
             Object.keys(inputState).forEach(function(k) {
                 inputState[k].status = 'BAIK';
                 inputState[k].keterangan = '';
-                inputState[k].file = null;
+            });
+            Object.keys(categoryFiles).forEach(function(k) {
+                categoryFiles[k] = [];
             });
             renderMasterChecklist();
         }
@@ -389,10 +403,18 @@
                         $('#detailRiwayatBody').html(h);
                         return;
                     }
-                    h += '<div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>Kategori</th><th>Point</th><th>Status</th><th>Keterangan</th><th>Foto</th></tr></thead><tbody>';
+                    h += '<div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>Kategori</th><th>Point</th><th>Status</th><th>Keterangan</th><th>Foto Kategori</th></tr></thead><tbody>';
                     details.forEach(function(row) {
                         const b = String(row.status).toUpperCase() === 'TIDAK BAIK' ? '<span class="badge badge-danger">TIDAK BAIK</span>' : '<span class="badge badge-success">BAIK</span>';
-                        const p = row.evident ? '<a href="<?= base_url('uploads/checklist_kendaraan/') ?>' + row.evident + '" target="_blank">Lihat Foto</a>' : '-';
+                        let p = '-';
+                        if (row.foto_kategori) {
+                            const files = String(row.foto_kategori).split(',').filter(Boolean);
+                            if (files.length) {
+                                p = files.map(function(f) {
+                                    return '<a href="<?= base_url('uploads/checklist_kendaraan/') ?>' + f + '" target="_blank">Lihat Foto</a>';
+                                }).join('<br>');
+                            }
+                        }
                         h += '<tr><td>' + escapeHtml(row.nm_kategori || '-') + '</td><td>' + escapeHtml(row.nm_detail || '-') + '</td><td>' + b + '</td><td>' + escapeHtml(row.keterangan || '-') + '</td><td>' + p + '</td></tr>';
                     });
                     h += '</tbody></table></div>';

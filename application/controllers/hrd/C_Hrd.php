@@ -1911,7 +1911,12 @@ class C_Hrd extends CI_Controller
         $kilometer = (int) $this->input->post('kilometer');
         $inputBy   = trim($this->input->post('inmpuuter'));
         $rawItems  = $this->input->post('items_json');
+        $rawKategori = $this->input->post('kategori_json');
         $items     = json_decode($rawItems, true);
+        $kategoriItems = json_decode($rawKategori, true);
+        if (!is_array($kategoriItems)) {
+            $kategoriItems = [];
+        }
 
         $missing = [];
         if ($nopol === '') {
@@ -1977,12 +1982,74 @@ class C_Hrd extends CI_Controller
 
         $this->load->library('upload');
 
+        foreach ($kategoriItems as $idx => $item) {
+            $idKategori = isset($item['id_kategori']) ? (int) $item['id_kategori'] : 0;
+            $fileKey    = isset($item['file_key']) ? trim($item['file_key']) : '';
+            if ($idKategori <= 0 || $fileKey === '' || !isset($_FILES[$fileKey])) {
+                continue;
+            }
+
+            $fileField = $_FILES[$fileKey];
+            $isMulti = is_array($fileField['name']);
+            $fileCount = $isMulti ? count($fileField['name']) : 1;
+
+            for ($i = 0; $i < $fileCount; $i++) {
+                $fileError = $isMulti ? (int) $fileField['error'][$i] : (int) $fileField['error'];
+                $fileName  = $isMulti ? trim($fileField['name'][$i]) : trim($fileField['name']);
+                $tmpName   = $isMulti ? trim($fileField['tmp_name'][$i]) : trim($fileField['tmp_name']);
+
+                if ($fileError === UPLOAD_ERR_NO_FILE || $fileName === '' || $tmpName === '') {
+                    continue;
+                }
+                if ($fileError !== UPLOAD_ERR_OK) {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => false,
+                        'message' => 'File foto kategori gagal diupload'
+                    ]);
+                    return;
+                }
+
+                $_FILES['single_file'] = [
+                    'name'     => $fileName,
+                    'type'     => $isMulti ? $fileField['type'][$i] : $fileField['type'],
+                    'tmp_name' => $tmpName,
+                    'error'    => $fileError,
+                    'size'     => $isMulti ? $fileField['size'][$i] : $fileField['size']
+                ];
+
+                $config = [
+                    'upload_path'   => $uploadDir,
+                    'allowed_types' => 'jpg|jpeg|png|webp',
+                    'max_size'      => 4096,
+                    'file_name'     => 'TRUCK_CAT_' . $checklistId . '_' . $idKategori . '_' . time() . '_' . $i
+                ];
+
+                $this->upload->initialize($config);
+                if ($this->upload->do_upload('single_file')) {
+                    $uploadData = $this->upload->data();
+                    $this->M_Hrd->insert_truck_checkup_kategori_foto([
+                        'id_ckup'     => $checklistId,
+                        'id_kategori' => $idKategori,
+                        'foto'        => $uploadData['file_name'],
+                        'input_by'    => $inputBy
+                    ]);
+                } else {
+                    $this->db->trans_rollback();
+                    echo json_encode([
+                        'status'  => false,
+                        'message' => strip_tags($this->upload->display_errors())
+                    ]);
+                    return;
+                }
+            }
+        }
+
         foreach ($items as $idx => $item) {
             $idKategori = isset($item['id_kategori']) ? (int) $item['id_kategori'] : 0;
             $idDetail   = isset($item['id_detail_kat']) ? (int) $item['id_detail_kat'] : 0;
             $kondisiRaw = isset($item['status']) ? strtoupper(trim($item['status'])) : 'BAIK';
             $keterangan = isset($item['keterangan']) ? trim($item['keterangan']) : '';
-            $fileKey    = isset($item['file_key']) ? trim($item['file_key']) : '';
 
             if ($idKategori <= 0 || $idDetail <= 0) {
                 continue;
@@ -1990,46 +2057,6 @@ class C_Hrd extends CI_Controller
 
             $kondisi = $kondisiRaw === 'TIDAK BAIK' ? 'TIDAK BAIK' : 'BAIK';
             $fotoFile = '';
-
-            if ($fileKey !== '' && isset($_FILES[$fileKey])) {
-                $fileError = isset($_FILES[$fileKey]['error']) ? (int) $_FILES[$fileKey]['error'] : UPLOAD_ERR_NO_FILE;
-                $fileName  = isset($_FILES[$fileKey]['name']) ? trim($_FILES[$fileKey]['name']) : '';
-                $tmpName   = isset($_FILES[$fileKey]['tmp_name']) ? trim($_FILES[$fileKey]['tmp_name']) : '';
-
-                // Lewati proses upload jika memang tidak ada file yang dipilih.
-                if ($fileError !== UPLOAD_ERR_NO_FILE) {
-                    if ($fileError !== UPLOAD_ERR_OK || $fileName === '' || $tmpName === '') {
-                        $this->db->trans_rollback();
-                        echo json_encode([
-                            'status'  => false,
-                            'message' => 'File evident gagal diupload'
-                        ]);
-                        return;
-                    }
-
-                    $_FILES['single_file'] = $_FILES[$fileKey];
-
-                    $config = [
-                        'upload_path'   => $uploadDir,
-                        'allowed_types' => 'jpg|jpeg|png|webp',
-                        'max_size'      => 4096,
-                        'file_name'     => 'TRUCK_' . $checklistId . '_' . $idx . '_' . time()
-                    ];
-
-                    $this->upload->initialize($config);
-                    if ($this->upload->do_upload('single_file')) {
-                        $uploadData = $this->upload->data();
-                        $fotoFile = $uploadData['file_name'];
-                    } else {
-                        $this->db->trans_rollback();
-                        echo json_encode([
-                            'status'  => false,
-                            'message' => strip_tags($this->upload->display_errors())
-                        ]);
-                        return;
-                    }
-                }
-            }
 
             $detail = [
                 'id_ckup'      => $checklistId,
