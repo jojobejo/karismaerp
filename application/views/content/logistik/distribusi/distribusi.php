@@ -70,6 +70,9 @@
                         <div class="col-auto">
                             <a href="<?= base_url('logistik/distibusi/list_faktur_status') ?>" class="btn btn-success mb-2">List Faktur Terkirim / Belum</a>
                         </div>
+                        <div class="col-auto">
+                            <a href="<?= base_url('logistik/distibusi/list_total_kirim_do') ?>" class="btn btn-info mb-2">Total Kirim DO</a>
+                        </div>
                     </div>
                 </div>
             </div>

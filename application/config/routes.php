@@ -201,6 +201,8 @@ $route['logistik/distibusi/driver_rute_matrix']     = 'logistik/C_Distribusi/dri
 $route['logistik/distibusi/driver_ready']           = 'logistik/C_Distribusi/driver_ready';
 $route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/list_faktur_status';
 $route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
+$route['logistik/distibusi/list_total_kirim_do']    = 'logistik/C_Distribusi/list_total_kirim_do';
+$route['logistik/distibusi/ajax_total_kirim_do']    = 'logistik/C_Distribusi/ajax_total_kirim_do';
 $route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
 $route['logistik/distibusi/ajax_detail_tonase_by_rute'] = 'logistik/C_Distribusi/ajax_detail_tonase_by_rute';
 

@@ -14,7 +14,7 @@ class M_Distribusi extends CI_Model
             COALESCE(ROUND(SUM(b.berat * p.qty) / 1000000, 3),0) AS total_tonase,
             COUNT(DISTINCT CASE WHEN p.data_sts = '3' AND p.delivery_at <> '0000-00-00' THEN p.kd_faktur END) AS total_faktur_terkirim,
             COUNT(DISTINCT CASE WHEN p.data_sts != '3' THEN p.kd_faktur END) AS total_faktur_pending,
-            COUNT(DISTINCT p.kd_faktur) AS total_faktur 
+            COUNT(DISTINCT p.kd_faktur) AS total_faktur
         FROM tb_rutecs r
         LEFT JOIN tb_pre_do p
             ON p.kd_rute = r.kd_rute
@@ -23,6 +23,42 @@ class M_Distribusi extends CI_Model
         GROUP BY r.kd_rute
         ORDER BY tonase_terkirim DESC;
         ")->result();
+    }
+
+    public function total_kirim_do($tanggal = null)
+    {
+        $this->db->select("r.kd_rute AS rute,
+            COUNT(DISTINCT CASE 
+                WHEN p.data_sts = '3' 
+                THEN p.kd_faktur 
+            END) AS total_faktur_terkirim,
+            COUNT(DISTINCT CASE 
+                WHEN p.data_sts <> '3' 
+                THEN p.kd_faktur 
+            END) AS total_faktur_pending,
+            COUNT(DISTINCT p.kd_faktur) AS total_faktur
+        ", false);
+        $this->db->from('tb_rutecs r');
+        $this->db->join(
+            'tb_pre_do p',
+            "p.kd_rute = r.kd_rute 
+            AND p.delivery_at IS NOT NULL 
+            AND p.delivery_at <> '0000-00-00'",
+            'left'
+        );
+
+        if (!empty($tanggal)) {
+            $tgl = explode(' - ', $tanggal);
+            if (count($tgl) === 2) {
+                $this->db->where('p.delivery_at >=', $tgl[0] . ' 00:00:00');
+                $this->db->where('p.delivery_at <=', $tgl[1] . ' 23:59:59');
+            }
+        }
+
+        $this->db->group_by("r.kd_rute");
+        $this->db->order_by('r.kd_rute', 'ASC');
+
+        return $this->db->get()->result();
     }
 
     public function persentase_faktur()
@@ -178,9 +214,6 @@ class M_Distribusi extends CI_Model
 
         return $this->db->get()->result();
     }
-
-
-
 
     public function detail_faktur($kdrute)
     {

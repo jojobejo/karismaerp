@@ -74,6 +74,27 @@ class C_Distribusi extends CI_Controller
         $this->load->view('content/logistik/distribusi/ajax_list_faktur_status.php');
     }
 
+    public function list_total_kirim_do()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/distribusi/list_total_kirim_do.php', $data);
+        $this->load->view('partial/main/footer.php');
+        $this->load->view('content/logistik/distribusi/ajax_total_kirim_do.php');
+    }
+
+    public function ajax_total_kirim_do()
+    {
+        $tanggal = trim((string) $this->input->post('tanggal'));
+        $data = $this->M_Distribusi->total_kirim_do($tanggal);
+
+        echo json_encode([
+            'status' => true,
+            'data' => $data
+        ]);
+    }
+
     public function ajax_list_faktur_status()
     {
         $status = trim((string) $this->input->post('status'));
