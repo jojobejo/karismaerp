@@ -2619,47 +2619,56 @@ FROM (
             ->get('tb_customer')
             ->row();
     }
-
+    // model/M_logistik
     public function get_data_po($date1 = null, $date2 = null)
     {
-        $this->db->select('
-            pp.id_pre_po,
-            pp.no_po,
-            pp.kd_po,
-            pp.tgl_transaksi,
-            pp.kd_suplier,
-            pp.kd_barang,
-            pp.satuan,
-            pp.qty,
-            pp.status,
-            mb.nama_barang,
-            COALESCE(SUM(dl.qty_diterima), 0) AS qty_masuk
-        ');
-        $this->db->from('tb_pre_po pp');
+        $sql = "
+            SELECT
+                pp.no_po,
+                pp.kd_po,
+                pp.tgl_transaksi,
+                pp.kd_suplier,
+                s.nama_suplier,
 
-        $this->db->join(
-            'tb_master_barang_all mb',
-            'mb.kd_barang = pp.kd_barang',
-            'left'
-        );
+                /* Jumlah item (baris barang) dalam PO */
+                COUNT(DISTINCT pp.kd_barang)                          AS jumlah_barang,
 
-        $this->db->join(
-            'tb_po_received dl',
-            'dl.no_po = pp.no_po AND dl.kd_barang = pp.kd_barang',
-            'left'
-        );
+                /* Jumlah item yang qty_masuk-nya sudah >= qty_order (sudah terpenuhi) */
+                COUNT(DISTINCT CASE
+                    WHEN COALESCE(sub.qty_masuk, 0) >= pp.qty
+                    THEN pp.kd_barang
+                END)                                                  AS jumlah_barang_masuk,
 
-        // Filter tanggal dengan STR_TO_DATE karena format kolom adalah dd/MM/yyyy
+                /* Status: selesai jika semua item terpenuhi */
+                MIN(pp.status)                                        AS status
+
+            FROM tb_pre_po pp
+
+            LEFT JOIN tb_suplier s
+                ON s.kd_suplier = pp.kd_suplier
+
+            /* Sub-query: total qty diterima per no_po + kd_barang */
+            LEFT JOIN (
+                SELECT no_po, kd_barang, SUM(qty_diterima) AS qty_masuk
+                FROM tb_po_received
+                GROUP BY no_po, kd_barang
+            ) sub ON sub.no_po = pp.no_po AND sub.kd_barang = pp.kd_barang
+        ";
+
+        // Filter tanggal
+        $where = [];
         if (!empty($date1) && !empty($date2)) {
-            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') >=", $date1);
-            $this->db->where("STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') <=", $date2);
+            $where[] = "STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') >= " . $this->db->escape($date1);
+            $where[] = "STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') <= " . $this->db->escape($date2);
+        }
+        if (!empty($where)) {
+            $sql .= " WHERE " . implode(' AND ', $where);
         }
 
-        $this->db->group_by('pp.id_pre_po');
-        $this->db->order_by('pp.id_pre_po', 'DESC');
+        $sql .= " GROUP BY pp.no_po, pp.kd_po, pp.tgl_transaksi, pp.kd_suplier, s.nama_suplier";
+        $sql .= " ORDER BY pp.no_po DESC";
 
-        $query = $this->db->get();
-        return $query->result_array();
+        return $this->db->query($sql)->result_array();
     }
 
     public function save_detail_lpb($data)
@@ -2699,8 +2708,11 @@ FROM (
         $this->db->select('
             dl.id_detail_lpb,
             dl.no_po,
+            dl.kd_po,
             dl.kd_barang,
             mb.nama_barang,
+            pp.kd_suplier,
+            s.nama_suplier,
             dl.qty_diterima,
             dl.satuan,
             dl.no_lot,
@@ -2709,6 +2721,12 @@ FROM (
         ');
         $this->db->from('tb_po_received dl');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = dl.kd_barang', 'left');
+
+        // Join ke tb_pre_po untuk dapat kd_suplier
+        $this->db->join('tb_pre_po pp', 'pp.no_po = dl.no_po AND pp.kd_barang = dl.kd_barang', 'left');
+
+        // Join ke tb_suplier untuk nama_suplier
+        $this->db->join('tb_suplier s', 's.kd_suplier = pp.kd_suplier', 'left');
 
         if (!empty($date1) && !empty($date2)) {
             $this->db->where('DATE(dl.create_at) >=', $date1);

@@ -1078,38 +1078,90 @@ class C_Ics extends CI_Controller
 
     public function save_qty_diterima()
     {
-        $no_po     = $this->input->post('no_po',     TRUE);
-        $kd_barang = $this->input->post('kd_barang', TRUE);
-        $rows      = $this->input->post('rows');
+        $no_po = $this->input->post('no_po', TRUE);
+        $kd_po = $this->input->post('kd_po', TRUE);
+        $rows  = $this->input->post('rows');
 
-        if (empty($no_po) || empty($kd_barang) || empty($rows)) {
+        if (empty($no_po) || empty($rows)) {
             $this->session->set_flashdata('error', 'Data tidak lengkap.');
             redirect('data_lpb_zahir');
             return;
         }
 
         $insert_batch = [];
-        foreach ($rows as $row) {
-            if (empty($row['qty_diterima'])) continue;
-            $insert_batch[] = [
-                'no_po'        => $no_po,
-                'kd_barang'    => $kd_barang,
-                'qty_diterima' => (int) $row['qty_diterima'],
-                'satuan'       => $row['satuan']   ?? null,
-                'no_lot'       => $row['no_lot']   ?: null,
-                'exp_date'     => !empty($row['exp_date']) ? $row['exp_date'] : null,
-                'create_at'    => date('Y-m-d H:i:s'),
-            ];
+
+        foreach ($rows as $item) {
+            $kd_barang = $item['kd_barang'] ?? '';
+            $sub_rows  = $item['sub']       ?? [];
+
+            if (empty($kd_barang) || empty($sub_rows)) continue;
+
+            foreach ($sub_rows as $sub) {
+                if (empty($sub['qty_diterima'])) continue;
+
+                $insert_batch[] = [
+                    'no_po'        => $no_po,
+                    'kd_po'        => $kd_po ?: null,
+                    'kd_barang'    => $kd_barang,
+                    'qty_diterima' => (int) $sub['qty_diterima'],
+                    'satuan'       => $sub['satuan']   ?? null,
+                    'no_lot'       => $sub['no_lot']   ?: null,
+                    'exp_date'     => !empty($sub['exp_date']) ? $sub['exp_date'] : null,
+                    'create_at'    => date('Y-m-d H:i:s'),
+                ];
+            }
         }
 
         if (!empty($insert_batch)) {
             $this->db->insert_batch('tb_po_received', $insert_batch);
-            $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
+            $this->session->set_flashdata('success', count($insert_batch) . ' baris penerimaan berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
         }
 
         redirect('data_lpb_zahir');
+    }
+
+    public function get_barang_by_po()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $no_po      = $this->input->get('no_po',      TRUE);
+        $kd_suplier = $this->input->get('kd_suplier', TRUE); // TAMBAH INI
+
+        if (empty($no_po)) {
+            echo json_encode(['status' => 'error', 'message' => 'no_po kosong']);
+            exit;
+        }
+
+        $sql = "
+            SELECT
+                pp.kd_barang,
+                COALESCE(mb.nama_barang, '-')        AS nama_barang,
+                pp.qty                               AS qty_order,
+                pp.satuan,
+                COALESCE(sub.qty_masuk, 0)           AS qty_masuk,
+                (pp.qty - COALESCE(sub.qty_masuk,0)) AS sisa
+            FROM tb_pre_po pp
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
+            LEFT JOIN (
+                SELECT kd_barang, SUM(qty_diterima) AS qty_masuk
+                FROM tb_po_received
+                WHERE no_po = ?
+                GROUP BY kd_barang
+            ) sub ON sub.kd_barang = pp.kd_barang
+            WHERE pp.no_po = ?
+            AND pp.kd_suplier = ?
+            HAVING sisa > 0
+            ORDER BY pp.kd_barang
+        ";
+
+        $result = $this->db->query($sql, [$no_po, $no_po, $kd_suplier])->result_array();
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+        exit;
     }
 
     public function po_selesai()

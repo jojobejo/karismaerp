@@ -32,13 +32,11 @@
                         </a>
                     </div>
                     <div class="col-auto">
-                        <!-- Tombol ke halaman PO Selesai -->
                         <a href="<?= base_url('po_selesai') ?>" class="btn btn-md btn-success mb-3">
                             <i class="fas fa-check-double"></i> PO Selesai
                         </a>
                     </div>
                     <div class="col-auto">
-                        <!-- Tombol ke halaman Riwayat Barang Masuk -->
                         <a href="<?= base_url('riwayat_barang_masuk') ?>" class="btn btn-md btn-info mb-3">
                             <i class="fas fa-history"></i> Riwayat Barang Masuk
                         </a>
@@ -68,10 +66,12 @@
                             <form action="<?= base_url('data_lpb_zahir') ?>" method="post">
                                 <div class="row mb-3">
                                     <div class="col-2">
-                                        <input type="date" class="form-control" name="date1" id="name1">
+                                        <input type="date" class="form-control" name="date1" id="name1"
+                                               value="<?= htmlspecialchars($this->input->post('date1') ?? '') ?>">
                                     </div>
                                     <div class="col-2">
-                                        <input type="date" class="form-control" name="date2" id="name2">
+                                        <input type="date" class="form-control" name="date2" id="name2"
+                                               value="<?= htmlspecialchars($this->input->post('date2') ?? '') ?>">
                                     </div>
                                     <div class="col-2">
                                         <button class="btn btn-success btn-block">
@@ -86,44 +86,41 @@
                                     <tr>
                                         <th>No PO</th>
                                         <th>Tanggal</th>
-                                        <th>Kode Barang</th>
-                                        <th>Nama Barang</th>
-                                        <th class="text-right">Qty Order</th>
-                                        <th class="text-right">Qty Masuk</th>
-                                        <th class="text-right">Sisa</th>
+                                        <th>Kode Supplier</th>
+                                        <th>Nama Supplier</th>
+                                        <th class="text-center">Jumlah Barang</th>
+                                        <th class="text-center">Barang Masuk</th>
                                         <th class="text-center" style="width:80px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php 
                                     $ada_data = false;
-                                    if (!empty($lpb)) : 
+                                    if (!empty($lpb)) :
                                         foreach ($lpb as $row) :
-                                            $qty_order = (int)($row['qty']       ?? 0);
-                                            $qty_masuk = (int)($row['qty_masuk'] ?? 0);
-                                            $sisa      = $qty_order - $qty_masuk;
+                                            $jumlah_barang       = (int)($row['jumlah_barang']       ?? 0);
+                                            $jumlah_barang_masuk = (int)($row['jumlah_barang_masuk'] ?? 0);
+                                            $sisa                = $jumlah_barang - $jumlah_barang_masuk;
 
-                                            // SKIP baris yang sudah selesai (sisa <= 0)
+                                            // Tampilkan hanya PO yang belum semua item terpenuhi
                                             if ($sisa <= 0) continue;
                                             $ada_data = true;
                                     ?>
-                                        <tr class="<?= $qty_masuk > 0 ? 'table-warning' : '' ?>">
-                                            <td><?= htmlspecialchars($row['no_po']           ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['tgl_transaksi']   ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['kd_barang']       ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_barang']     ?? '-') ?></td>
-                                            <td class="text-right"><?= number_format($qty_order) ?></td>
-                                            <td class="text-right"><?= number_format($qty_masuk) ?></td>
-                                            <td class="text-right text-danger font-weight-bold"><?= number_format($sisa) ?></td>
+                                        <tr class="<?= $jumlah_barang_masuk > 0 ? 'table-warning' : '' ?>">
+                                            <td><?= htmlspecialchars($row['no_po']         ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['kd_suplier']    ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['nama_suplier']  ?? '-') ?></td>
+                                            <td class="text-center font-weight-bold"><?= $jumlah_barang ?></td>
+                                            <td class="text-center text-success font-weight-bold"><?= $jumlah_barang_masuk ?></td>
                                             <td class="text-center">
                                                 <button
                                                     class="btn btn-sm btn-success btn-input-qty"
                                                     title="Input Penerimaan"
-                                                    data-no-po="<?= htmlspecialchars($row['no_po']       ?? '') ?>"
-                                                    data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>"
-                                                    data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '') ?>"
-                                                    data-qty-order="<?= $qty_order ?>"
-                                                    data-sisa="<?= $sisa ?>"
+                                                    data-no-po="<?= htmlspecialchars($row['no_po']        ?? '') ?>"
+                                                    data-kd-po="<?= htmlspecialchars($row['kd_po']        ?? '') ?>"
+                                                    data-kd-suplier="<?= htmlspecialchars($row['kd_suplier']   ?? '') ?>"  {{-- TAMBAH INI --}}
+                                                    data-nama-suplier="<?= htmlspecialchars($row['nama_suplier'] ?? '') ?>"
                                                     data-toggle="modal"
                                                     data-target="#modalInputQty">
                                                     <i class="fas fa-plus"></i>
@@ -136,7 +133,7 @@
                                     if (!$ada_data) :
                                     ?>
                                         <tr>
-                                            <td colspan="8" class="text-center text-success">
+                                            <td colspan="7" class="text-center text-success">
                                                 <i class="fas fa-check-circle mr-1"></i> Semua barang PO sudah terpenuhi
                                             </td>
                                         </tr>
@@ -161,7 +158,7 @@
 </div>
 
 <!-- ================================================================
-     MODAL INPUT PENERIMAAN BARANG (MULTI ROW)
+     MODAL INPUT PENERIMAAN BARANG (PER NO_PO, LIST BARANG DINAMIS)
 ================================================================ -->
 <div class="modal fade" id="modalInputQty" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
@@ -173,63 +170,36 @@
                 <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
+
+                <!-- Info PO -->
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="font-weight-bold">No PO</label>
                         <input type="text" class="form-control-plaintext font-weight-bold text-primary" id="modal_no_po" readonly>
                     </div>
-                    <div class="col-md-4">
-                        <label class="font-weight-bold">Kode Barang</label>
-                        <input type="text" class="form-control-plaintext" id="modal_kd_barang" readonly>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="font-weight-bold">Nama Barang</label>
-                        <input type="text" class="form-control-plaintext text-muted" id="modal_nama_barang" readonly>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">Supplier</label>
+                        <input type="text" class="form-control-plaintext text-muted" id="modal_nama_suplier" readonly>
                     </div>
                 </div>
                 <hr class="my-2">
 
+                <!-- Loading indicator -->
+                <div id="loadingBarang" class="text-center py-3" style="display:none;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-success"></i>
+                    <p class="mt-2 text-muted">Memuat data barang...</p>
+                </div>
+
+                <!-- Form input per barang -->
                 <form id="formInputQty" action="<?= base_url('save_qty_diterima') ?>" method="post">
-                    <input type="hidden" name="no_po"     id="form_no_po">
-                    <input type="hidden" name="kd_barang" id="form_kd_barang">
-                    <input type="hidden" id="form_sisa" value="0">
+                    <input type="hidden" name="no_po" id="form_no_po">
+                    <input type="hidden" name="kd_po" id="form_kd_po">
 
-                    <table class="table table-bordered table-sm" id="tabelInputBaris">
-                        <thead class="thead-light">
-                            <tr>
-                                <th style="width:150px;">Qty Diterima <span class="text-danger">*</span></th>
-                                <th style="width:130px;">Satuan <span class="text-danger">*</span></th>
-                                <th style="width:160px;">No Lot</th>
-                                <th style="width:160px;">Exp Date</th>
-                                <th style="width:50px;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="bodyInputBaris">
-                            <tr>
-                                <td><input type="number" class="form-control form-control-sm" name="rows[0][qty_diterima]" min="1" required></td>
-                                <td>
-                                    <select class="form-control form-control-sm" name="rows[0][satuan]" required>
-                                        <option value="">-- Pilih --</option>
-                                        <?php foreach ($list_satuan as $s) : ?>
-                                            <option value="<?= $s['nm_satuan'] ?>"><?= $s['nm_satuan'] ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                                <td><input type="text" class="form-control form-control-sm" name="rows[0][no_lot]" placeholder="No Lot"></td>
-                                <td><input type="date" class="form-control form-control-sm" name="rows[0][exp_date]"></td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-danger btn-hapus-baris" disabled>
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <button type="button" class="btn btn-sm btn-info" id="btnTambahBaris">
-                        <i class="fas fa-plus"></i> Tambah Baris
-                    </button>
+                    <div id="wrapperBarang">
+                        <!-- Diisi dinamis via AJAX -->
+                    </div>
                 </form>
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">
@@ -246,104 +216,205 @@
 <script>
 $(document).ready(function () {
 
-    // DataTables
+    // ── DataTables ────────────────────────────────────────────────
     $('#tabelPO').DataTable({
-        responsive: true,
-        autoWidth: false,
-        pageLength: 25,
-        order: [[0, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: -1 } // kolom Aksi tidak bisa diurutkan
-        ],
+        responsive  : true,
+        autoWidth   : false,
+        pageLength  : 25,
+        order       : [[0, 'desc']],
+        columnDefs  : [{ orderable: false, targets: -1 }],
         language: {
-            search:      "Cari:",
-            lengthMenu:  "Tampilkan _MENU_ data",
-            info:        "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-            zeroRecords: "Tidak ada data ditemukan",
-            emptyTable:  "Tidak ada data tersedia",
-            paginate: {
-                first:    "Pertama",
-                last:     "Terakhir",
-                next:     "Berikutnya",
-                previous: "Sebelumnya"
-            }
+            search      : "Cari:",
+            lengthMenu  : "Tampilkan _MENU_ data",
+            info        : "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+            zeroRecords : "Tidak ada data ditemukan",
+            emptyTable  : "Tidak ada data tersedia",
+            paginate    : { first: "Pertama", last: "Terakhir", next: "Berikutnya", previous: "Sebelumnya" }
         }
     });
 
+    // ── Buka modal: load daftar barang via AJAX ───────────────────
     $('.btn-input-qty').on('click', function () {
-        $('#modal_no_po').val($(this).data('no-po'));
-        $('#modal_kd_barang').val($(this).data('kd-barang'));
-        $('#modal_nama_barang').val($(this).data('nama-barang'));
-        $('#form_no_po').val($(this).data('no-po'));
-        $('#form_kd_barang').val($(this).data('kd-barang'));
-        $('#form_sisa').val($(this).data('sisa'));
-        resetTabel();
-    });
+        var noPo        = $(this).data('no-po');
+        var kdPo        = $(this).data('kd-po');
+        var kdSuplier   = $(this).data('kd-suplier');   // TAMBAH INI
+        var namaSuplier = $(this).data('nama-suplier');
 
-    $('#formInputQty').on('submit', function (e) {
-        var sisa       = parseInt($('#form_sisa').val()) || 0;
-        var totalInput = 0;
+        $('#modal_no_po').val(noPo);
+        $('#modal_nama_suplier').val(namaSuplier);
+        $('#form_no_po').val(noPo);
+        $('#form_kd_po').val(kdPo);
 
-        $('#bodyInputBaris tr').each(function () {
-            var qty = parseInt($(this).find('input[name*="qty_diterima"]').val()) || 0;
-            totalInput += qty;
+        $('#wrapperBarang').html('');
+        $('#loadingBarang').show();
+
+        // Kirim no_po + kd_suplier ke endpoint
+        $.getJSON('<?= base_url('get_barang_by_po') ?>', { no_po: noPo, kd_suplier: kdSuplier }, function (data) {
+            $('#loadingBarang').hide();
+
+            if (!data || data.length === 0) {
+                $('#wrapperBarang').html(
+                    '<div class="alert alert-success"><i class="fas fa-check-circle mr-1"></i> Semua barang dalam PO ini sudah terpenuhi.</div>'
+                );
+                return;
+            }
+
+            var html = buildFormBarang(data);
+            $('#wrapperBarang').html(html);
+
+            // Re-init tambah/hapus baris per card barang
+            initCardEvents();
+        }).fail(function () {
+            $('#loadingBarang').hide();
+            $('#wrapperBarang').html(
+                '<div class="alert alert-danger"><i class="fas fa-exclamation-circle mr-1"></i> Gagal memuat data barang. Silakan coba lagi.</div>'
+            );
         });
-
-        if (totalInput > sisa) {
-            e.preventDefault();
-            alert('Total qty diterima (' + totalInput + ') melebihi sisa qty yang belum terpenuhi (' + sisa + '). Silakan periksa kembali.');
-            return false;
-        }
     });
 
-    $('#btnTambahBaris').on('click', function () { tambahBaris(); });
+    // ── Build HTML form per barang ────────────────────────────────
+    function buildFormBarang(items) {
+        var satuanOptions = '';
+        <?php foreach ($list_satuan as $s) : ?>
+            satuanOptions += '<option value="<?= $s['nm_satuan'] ?>"><?= $s['nm_satuan'] ?></option>';
+        <?php endforeach; ?>
 
-    $('#bodyInputBaris').on('click', '.btn-hapus-baris', function () {
-        $(this).closest('tr').remove();
-        reindexBaris();
-        updateTombolHapus();
-    });
-
-    function tambahBaris() {
-        var idx  = $('#bodyInputBaris tr').length;
-        var opts = $('#bodyInputBaris tr:first select').html();
-        var baris = `
-            <tr>
-                <td><input type="number" class="form-control form-control-sm" name="rows[${idx}][qty_diterima]" min="1" required></td>
-                <td><select class="form-control form-control-sm" name="rows[${idx}][satuan]" required><option value="">-- Pilih --</option>${opts}</select></td>
-                <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][no_lot]" placeholder="No Lot"></td>
-                <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][exp_date]"></td>
-                <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-danger btn-hapus-baris">
-                        <i class="fas fa-trash"></i>
+        var html = '';
+        $.each(items, function (idx, item) {
+            html += `
+            <div class="card card-outline card-success mb-3" data-barang-idx="${idx}">
+                <div class="card-header py-2">
+                    <strong class="text-success">${item.kd_barang}</strong>
+                    &mdash; ${item.nama_barang}
+                    <span class="badge badge-warning ml-2">Sisa: ${item.sisa} ${item.satuan}</span>
+                    <input type="hidden" name="rows[${idx}][kd_barang]" value="${item.kd_barang}">
+                </div>
+                <div class="card-body py-2">
+                    <table class="table table-bordered table-sm mb-1 tabel-sub-baris" data-idx="${idx}">
+                        <thead class="thead-light">
+                            <tr>
+                                <th style="width:150px;">Qty Diterima <span class="text-danger">*</span></th>
+                                <th style="width:130px;">Satuan <span class="text-danger">*</span></th>
+                                <th style="width:160px;">No Lot</th>
+                                <th style="width:160px;">Exp Date</th>
+                                <th style="width:50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="body-sub-baris">
+                            <tr>
+                                <td><input type="number" class="form-control form-control-sm input-qty"
+                                           name="rows[${idx}][sub][0][qty_diterima]" min="1"
+                                           max="${item.sisa}" required></td>
+                                <td>
+                                    <select class="form-control form-control-sm" name="rows[${idx}][sub][0][satuan]" required>
+                                        <option value="">-- Pilih --</option>${satuanOptions}
+                                    </select>
+                                </td>
+                                <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][sub][0][no_lot]" placeholder="No Lot"></td>
+                                <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][sub][0][exp_date]"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-danger btn-hapus-sub" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-xs btn-info btn-tambah-sub"
+                            data-idx="${idx}" data-sisa="${item.sisa}" data-satuan-opts="${escHtml(satuanOptions)}">
+                        <i class="fas fa-plus"></i> Tambah Baris
                     </button>
-                </td>
-            </tr>`;
-        $('#bodyInputBaris').append(baris);
-        updateTombolHapus();
+                </div>
+            </div>`;
+        });
+        return html;
     }
 
-    function reindexBaris() {
-        $('#bodyInputBaris tr').each(function (i) {
+    function escHtml(str) { return $('<div>').text(str).html(); }
+
+    // ── Events dalam card barang (delegasi ke #wrapperBarang) ─────
+    function initCardEvents() {
+        // sudah pakai delegasi di bawah, tidak perlu bind ulang
+    }
+
+    $('#wrapperBarang')
+        .on('click', '.btn-tambah-sub', function () {
+            var idx      = $(this).data('idx');
+            var sisa     = $(this).data('sisa');
+            var tbody    = $(this).closest('.card-body').find('.body-sub-baris');
+            var subIdx   = tbody.find('tr').length;
+            var satuanOpts = $(this).data('satuan-opts');
+
+            var tr = `
+                <tr>
+                    <td><input type="number" class="form-control form-control-sm input-qty"
+                               name="rows[${idx}][sub][${subIdx}][qty_diterima]" min="1" max="${sisa}" required></td>
+                    <td>
+                        <select class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][satuan]" required>
+                            <option value="">-- Pilih --</option>${satuanOpts}
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][no_lot]" placeholder="No Lot"></td>
+                    <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][exp_date]"></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-danger btn-hapus-sub">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            tbody.append(tr);
+            updateHapusSub(tbody);
+        })
+
+        .on('click', '.btn-hapus-sub', function () {
+            var tbody = $(this).closest('tbody');
+            $(this).closest('tr').remove();
+            updateHapusSub(tbody);
+            reindexSubBaris(tbody);
+        });
+
+    function updateHapusSub(tbody) {
+        var btns = tbody.find('.btn-hapus-sub');
+        btns.prop('disabled', btns.length === 1);
+    }
+
+    function reindexSubBaris(tbody) {
+        tbody.find('tr').each(function (si) {
             $(this).find('input, select').each(function () {
                 var name = $(this).attr('name');
-                if (name) $(this).attr('name', name.replace(/\[\d+\]/, '[' + i + ']'));
+                if (name) {
+                    // ganti sub index: rows[X][sub][Y] → rows[X][sub][si]
+                    $(this).attr('name', name.replace(/\[sub\]\[\d+\]/, '[sub][' + si + ']'));
+                }
             });
         });
     }
 
-    function updateTombolHapus() {
-        var rows = $('#bodyInputBaris tr');
-        rows.find('.btn-hapus-baris').prop('disabled', rows.length === 1);
-    }
+    // ── Validasi submit: total per barang tidak boleh > sisa ──────
+    $('#formInputQty').on('submit', function (e) {
+        var valid = true;
 
-    function resetTabel() {
-        $('#bodyInputBaris tr:not(:first)').remove();
-        $('#bodyInputBaris tr:first input').val('');
-        $('#bodyInputBaris tr:first select').val('');
-        updateTombolHapus();
-    }
+        $('.card[data-barang-idx]').each(function () {
+            var card   = $(this);
+            var sisa   = parseInt(card.find('.badge-warning').text().replace(/[^0-9]/g, '')) || 0;
+            var total  = 0;
 
+            card.find('.input-qty').each(function () {
+                total += parseInt($(this).val()) || 0;
+            });
+
+            if (total > sisa) {
+                valid = false;
+                var namaBarang = card.find('.card-header strong').text();
+                alert('Total qty untuk barang "' + namaBarang + '" (' + total + ') melebihi sisa (' + sisa + '). Silakan periksa kembali.');
+                return false; // break each
+            }
+        });
+
+        if (!valid) { e.preventDefault(); return false; }
+    });
+
+    // ── Auto-hide alert ───────────────────────────────────────────
     setTimeout(function () { $('.alert').fadeOut('slow'); }, 4000);
 });
 </script>
