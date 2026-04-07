@@ -346,6 +346,6 @@ $route['export-stock']                              = 'logistik/C_ExportStock/ex
 $route['kiu_katalog']                               = 'sales/C_ExportStock/export';
 
 //IndeksNilaiKepuasanPelanggan
-$route['kepuasan_pelanggan'] = 'Pelanggan/C_Pelanggan';
-$route['nilai_ipkp/(:any)'] = 'Pelanggan/C_Pelanggan/input_nilai/$1';
-$route['ratingreview'] = 'Pelanggan/C_Pelanggan/rating_review';
+$route['kepuasan_pelanggan']                        = 'pelanggan/C_Pelanggan';
+$route['nilai_ipkp/(:any)']                         = 'pelanggan/C_Pelanggan/input_nilai/$1';
+$route['ratingreview']                              = 'pelanggan/C_Pelanggan/rating_review';
