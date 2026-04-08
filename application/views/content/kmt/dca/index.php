@@ -75,7 +75,7 @@
                             <table id="tblDca" class="table table-bordered table-striped table-hover table-sm mb-0">
                                 <thead style="background:#1f3864;color:#fff;">
                                     <tr>
-                                        <th>#</th><th>Tanggal</th><th>Wilayah</th><th>ABM</th>
+                                        <th>#</th><th>Tanggal</th><th>Wilayah</th><th>MDO</th><th>ABM</th>
                                         <th>Uraian</th>
                                         <th class="text-right">UM</th>
                                         <th class="text-right">Refund</th>
@@ -90,6 +90,7 @@
                                         <td><?= $i+1 ?></td>
                                         <td><?= date('d/m/Y', strtotime($row['tanggal_dca'])) ?></td>
                                         <td><span class="badge badge-secondary"><?= $row['nama_wilayah'] ?? '-' ?></span></td>
+                                        <td><?= htmlspecialchars($row['nama_mdo'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['abm'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($row['uraian']) ?></td>
                                         <td class="text-right"><?= number_format($row['um'],0,',','.') ?></td>

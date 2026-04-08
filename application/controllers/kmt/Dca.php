@@ -72,34 +72,36 @@ class Dca extends CI_Controller {
 
         $tgl = $this->input->post('tanggal_dca');
 
-        // Ambil array detail dari form
-        $id_kegiatan   = $this->input->post('id_kegiatan')   ?? [];
-        $nama_kegiatan = $this->input->post('nama_kegiatan') ?? [];
-        $um_arr        = $this->input->post('um_detail')     ?? [];
-        $refund_arr    = $this->input->post('refund_detail') ?? [];
-        $real_arr      = $this->input->post('real_detail')   ?? [];
-        $ket_arr       = $this->input->post('ket_detail')    ?? [];
+        $mdo_arr         = $this->input->post('nama_mdo')       ?? '';   // header
+        $um_header       = (float)str_replace('.', '', $this->input->post('um_header') ?? 0); // UM dipindah ke header
 
-        // Hitung total dari semua detail
-        $total_semua = 0;
+        // Array detail tambahan
+        $tgl_kegiatan_arr = $this->input->post('tgl_kegiatan') ?? [];
+        $tgl_kasbon_arr   = $this->input->post('tgl_kasbon')   ?? [];
+        $jml_peserta_arr  = $this->input->post('jml_peserta')  ?? [];
+        $qty_bisi_arr     = $this->input->post('qty_bisi')     ?? [];
+        $qty_q235_arr     = $this->input->post('qty_q235')     ?? [];
+
+        // Hitung total real biaya (tanpa um_arr per baris)
+        $total_real = 0;
         foreach ($real_arr as $i => $real) {
-            $r = (float)str_replace('.', '', $real ?? 0);
-            $f = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
-            $total_semua += ($r - $f);
+            $total_real += (float)str_replace('.', '', $real ?? 0);
         }
+        $refund_total = max(0, $um_header - $total_real); // refund otomatis
 
-        // Simpan header DCA
+        // Header DCA — ganti $insert_dca / $update
         $insert_dca = [
             'tanggal_dca' => $tgl,
             'bulan'       => (int)date('m', strtotime($tgl)),
             'tahun'       => (int)date('Y', strtotime($tgl)),
             'id_wilayah'  => (int)$this->input->post('id_wilayah'),
+            'nama_mdo'    => $this->input->post('nama_mdo'),
             'abm'         => $this->input->post('abm'),
             'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
-            'um'          => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $um_arr)),
-            'refund'      => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $refund_arr)),
-            'real_biaya'  => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $real_arr)),
-            'total_biaya' => $total_semua,
+            'um'          => $um_header,                     // UM dari header
+            'refund'      => $refund_total,                  // otomatis
+            'real_biaya'  => $total_real,
+            'total_biaya' => $total_real,                    // total = real (refund sudah dikurangi di header)
             'created_by'  => $this->session->userdata('id_user'),
         ];
 
@@ -107,20 +109,21 @@ class Dca extends CI_Controller {
             $id_dca = $this->db->insert_id();
 
             // Simpan detail per kegiatan
-            $detail_rows = [];
             foreach ($id_kegiatan as $i => $id_k) {
-                $real   = (float)str_replace('.', '', $real_arr[$i]   ?? 0);
-                $refund = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
-                if ($real <= 0) continue; // skip baris kosong
+                $real = (float)str_replace('.', '', $real_arr[$i] ?? 0);
+                if ($real <= 0) continue;
 
                 $detail_rows[] = [
                     'id_dca'        => $id_dca,
                     'id_kegiatan'   => $id_k ?: null,
                     'nama_kegiatan' => $nama_kegiatan[$i] ?? '-',
-                    'um'            => (float)str_replace('.', '', $um_arr[$i] ?? 0),
-                    'refund'        => $refund,
+                    'tgl_kegiatan'  => $tgl_kegiatan_arr[$i] ?? null,
+                    'tgl_kasbon'    => $tgl_kasbon_arr[$i]   ?? null,
+                    'jml_peserta'   => (int)($jml_peserta_arr[$i] ?? 0),
+                    'qty_bisi'      => (float)str_replace('.', '', $qty_bisi_arr[$i]  ?? 0),
+                    'qty_q235'      => (float)str_replace('.', '', $qty_q235_arr[$i]  ?? 0),
                     'real_biaya'    => $real,
-                    'total_biaya'   => $real - $refund,
+                    'total_biaya'   => $real,
                     'keterangan'    => $ket_arr[$i] ?? '',
                 ];
             }

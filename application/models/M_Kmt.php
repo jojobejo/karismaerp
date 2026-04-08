@@ -565,19 +565,22 @@ class M_Kmt extends CI_Model {
     // DCA DETAIL
     // ================================================================
     public function get_dca_detail($id_dca) {
-        $this->db->select('d.*, k.nama_kegiatan as nm_kegiatan_master');
-        $this->db->from('tbkmt_dca_detail d');
-        $this->db->join('tbkmt_dca_kegiatan k', 'k.id = d.id_kegiatan', 'left');
-        $this->db->where('d.id_dca', $id_dca);
-        return $this->db->get()->result_array();
+    // Tambah kolom baru di select
+    return $this->db->select('*, tgl_kegiatan, tgl_kasbon, jml_peserta, qty_bisi, qty_q235')
+                    ->get_where('tbkmt_dca_detail', ['id_dca' => $id_dca])
+                    ->result_array();
     }
 
-    public function insert_dca_detail($data_arr) {
-        // $data_arr = array of rows
-        return $this->db->insert_batch('tbkmt_dca_detail', $data_arr);
-    }
+    // public function insert_dca_detail($data_arr) {
+    //     // $data_arr = array of rows
+    //     return $this->db->insert_batch('tbkmt_dca_detail', $data_arr);
+    // }
 
     public function delete_dca_detail($id_dca) {
         return $this->db->delete('tbkmt_dca_detail', ['id_dca' => $id_dca]);
-    }  
+    }
+    
+    public function insert_dca_detail($rows) {
+    return $this->db->insert_batch('tbkmt_dca_detail', $rows);
+    }
 }
