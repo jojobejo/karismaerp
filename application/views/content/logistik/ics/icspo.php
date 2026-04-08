@@ -1,5 +1,4 @@
 <!-- icspo.php -->
-
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -17,23 +16,33 @@
                     <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
                         <div class="row">
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-arrow-left"></i></a>
+                                <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3">
+                                    <i class="fas fa-arrow-left"></i>
+                                </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-minus-circle"></i> Data DO</a>
+                                <a href="<?= base_url('ics/icsdo') ?>" class="btn btn-md btn-primary w-100 mb-3">
+                                    <i class="fas fa-minus-circle"></i> Data DO
+                                </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data LPB</a>
+                                <a href="<?= base_url('ics/icspo') ?>" class="btn btn-md btn-secondary w-100 mb-3">
+                                    <i class="fas fa-plus-circle"></i> Data LPB
+                                </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('ics/retur') ?>" class="btn btn-md btn-primary w-100 mb-3"><i class="fas fa-plus-circle"></i> Data Retur</a>
+                                <a href="<?= base_url('ics/retur') ?>" class="btn btn-md btn-primary w-100 mb-3">
+                                    <i class="fas fa-plus-circle"></i> Data Retur
+                                </a>
                             </div>
                         </div>
                     <?php endif; ?>
 
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <h3 class="card-title"><i class="fas fa-plus-circle mr-2"></i> Data LPB (Laporan Penerimaan Barang)</h3>
+                            <h3 class="card-title">
+                                <i class="fas fa-plus-circle mr-2"></i> Data LPB (Laporan Penerimaan Barang)
+                            </h3>
                         </div>
                         <div class="card-body">
                             <div class="container-fluid">
@@ -90,7 +99,9 @@
                                                 <div class="modal-content">
                                                     <div class="modal-header bg-success">
                                                         <h5 class="modal-title">Import Data PO dari CSV</h5>
-                                                        <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                                                        <button type="button" class="close" data-dismiss="modal">
+                                                            <span>&times;</span>
+                                                        </button>
                                                     </div>
                                                     <div class="modal-body">
                                                         <div class="form-group">
@@ -114,45 +125,53 @@
                                         <tr>
                                             <th>No PO</th>
                                             <th>Tgl Transaksi</th>
-                                            <th>Kode Barang</th>
-                                            <th>Nama Barang</th>
-                                            <th class="text-right">Qty Order</th>
-                                            <th class="text-right">Qty Masuk</th>
-                                            <th class="text-right">Sisa</th>
+                                            <th>Kode Supplier</th>
+                                            <th>Nama Supplier</th>
+                                            <th class="text-center">Jumlah Barang</th>
+                                            <th class="text-center">Barang Masuk</th>
                                             <th class="text-center">Status</th>
-                                            <th class="text-center">#</th>
+                                            <th class="text-center" style="width:90px;">#</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (!empty($lpb)) : ?>
                                             <?php foreach ($lpb as $row) :
-                                                $qty_order = (int)($row['qty']       ?? 0);
-                                                $qty_masuk = (int)($row['qty_masuk'] ?? 0);
-                                                $sisa      = $qty_order - $qty_masuk;
+                                                $jumlah_barang       = (int)($row['jumlah_barang']       ?? 0);
+                                                $jumlah_barang_masuk = (int)($row['jumlah_barang_masuk'] ?? 0);
+                                                $sisa                = $jumlah_barang - $jumlah_barang_masuk;
 
-                                                // Tentukan warna baris & badge status
+                                                // Warna baris & badge status
                                                 if ($sisa <= 0) {
-                                                    $row_class  = 'table-success';
-                                                    $badge      = '<span class="badge badge-success"><i class="fas fa-check"></i> Selesai</span>';
-                                                } elseif ($qty_masuk > 0) {
-                                                    $row_class  = 'table-warning';
-                                                    $badge      = '<span class="badge badge-warning"><i class="fas fa-clock"></i> Sebagian</span>';
+                                                    $row_class = 'table-success';
+                                                    $badge     = '<span class="badge badge-success px-2 py-1">
+                                                                    <i class="fas fa-check mr-1"></i> Selesai
+                                                                  </span>';
+                                                } elseif ($jumlah_barang_masuk > 0) {
+                                                    $row_class = 'table-warning';
+                                                    $badge     = '<span class="badge badge-warning px-2 py-1">
+                                                                    <i class="fas fa-clock mr-1"></i> Sebagian
+                                                                  </span>';
                                                 } else {
-                                                    $row_class  = '';
-                                                    $badge      = '<span class="badge badge-danger"><i class="fas fa-times"></i> Belum Datang</span>';
+                                                    $row_class = '';
+                                                    $badge     = '<span class="badge badge-danger px-2 py-1">
+                                                                    <i class="fas fa-times mr-1"></i> Belum Datang
+                                                                  </span>';
                                                 }
                                             ?>
                                                 <tr class="<?= $row_class ?>">
                                                     <td><?= htmlspecialchars($row['no_po']         ?? '') ?></td>
                                                     <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                                    <td><?= htmlspecialchars($row['kd_barang']     ?? '') ?></td>
-                                                    <td><?= htmlspecialchars($row['nama_barang']   ?? '-') ?></td>
-                                                    <td class="text-right"><?= number_format($qty_order) ?></td>
-                                                    <td class="text-right"><?= number_format($qty_masuk) ?></td>
-                                                    <td class="text-right"><?= number_format($sisa) ?></td>
+                                                    <td><?= htmlspecialchars($row['kd_suplier']    ?? '') ?></td>
+                                                    <td><?= htmlspecialchars($row['nama_suplier']  ?? '-') ?></td>
+                                                    <td class="text-center font-weight-bold">
+                                                        <?= $jumlah_barang ?>
+                                                    </td>
+                                                    <td class="text-center font-weight-bold <?= $jumlah_barang_masuk > 0 ? 'text-success' : 'text-danger' ?>">
+                                                        <?= $jumlah_barang_masuk ?>
+                                                    </td>
                                                     <td class="text-center"><?= $badge ?></td>
                                                     <td class="text-center">
-                                                        <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($row['no_po'])) ?>" 
+                                                        <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($row['no_po']) . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '')) ?>"
                                                             class="btn btn-info btn-sm">
                                                             <i class="fas fa-eye"></i> Detail
                                                         </a>
@@ -161,7 +180,7 @@
                                             <?php endforeach; ?>
                                         <?php else : ?>
                                             <tr>
-                                                <td colspan="9" class="text-center text-muted">
+                                                <td colspan="8" class="text-center text-muted">
                                                     <i class="fas fa-inbox mr-1"></i> Tidak ada data
                                                 </td>
                                             </tr>
@@ -188,25 +207,18 @@
     <script>
         $(document).ready(function () {
             $('#tb_ics_po').DataTable({
-                responsive: true,
-                autoWidth: false,
-                pageLength: 25,
-                order: [[0, 'desc']],
-                columnDefs: [
-                    { orderable: false, targets: -1 }
-                ],
+                responsive  : true,
+                autoWidth   : false,
+                pageLength  : 25,
+                order       : [[0, 'desc']],
+                columnDefs  : [{ orderable: false, targets: -1 }],
                 language: {
-                    search:      "Cari:",
-                    lengthMenu:  "Tampilkan _MENU_ data",
-                    info:        "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-                    zeroRecords: "Tidak ada data ditemukan",
-                    emptyTable:  "Belum ada data LPB",
-                    paginate: {
-                        first:    "Pertama",
-                        last:     "Terakhir",
-                        next:     "Berikutnya",
-                        previous: "Sebelumnya"
-                    }
+                    search      : "Cari:",
+                    lengthMenu  : "Tampilkan _MENU_ data",
+                    info        : "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                    zeroRecords : "Tidak ada data ditemukan",
+                    emptyTable  : "Belum ada data LPB",
+                    paginate    : { first: "Pertama", last: "Terakhir", next: "Berikutnya", previous: "Sebelumnya" }
                 }
             });
         });
