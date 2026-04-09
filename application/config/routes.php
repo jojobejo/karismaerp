@@ -203,8 +203,13 @@ $route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/lis
 $route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
 $route['logistik/distibusi/list_total_kirim_do']    = 'logistik/C_Distribusi/list_total_kirim_do';
 $route['logistik/distibusi/ajax_total_kirim_do']    = 'logistik/C_Distribusi/ajax_total_kirim_do';
+$route['logistik/distibusi/export_total_kirim_do']    = 'logistik/C_Distribusi/export_total_kirim_do';
+$route['logistik/distibusi/driver_productif']       = 'logistik/C_Distribusi/driver_productif';
+$route['logistik/distibusi/ajax_driver_productif']  = 'logistik/C_Distribusi/ajax_driver_productif';
+$route['logistik/distibusi/export_driver_productif']  = 'logistik/C_Distribusi/export_driver_productif';
 $route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
 $route['logistik/distibusi/ajax_detail_tonase_by_rute'] = 'logistik/C_Distribusi/ajax_detail_tonase_by_rute';
+$route['logistik/distibusi/ajax_dashboard_distribusi'] = 'logistik/C_Distribusi/ajax_dashboard_distribusi';
 
 $route['distibusi/detail_rute/(:any)']              = 'logistik/C_Distribusi/detail_rute/$1';
 $route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/detail_tonase_by_rute/$1';
