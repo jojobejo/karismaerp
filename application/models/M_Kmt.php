@@ -260,7 +260,14 @@ class M_Kmt extends CI_Model {
     // OPERASIONAL
     // ================================================================
     public function get_operasional_list($filter = []) {
-        $this->db->select('op.*, w.nama_wilayah');
+        $this->db->select('op.*, w.nama_wilayah,
+            (IFNULL(op.hotel,0) + IFNULL(op.per_diem,0) + IFNULL(op.entertainment,0) +
+            IFNULL(op.communication,0) + IFNULL(op.atk,0) + IFNULL(op.gasoline,0) +
+            IFNULL(op.sparepart_service,0) + IFNULL(op.retribusi_toll_parkir,0) +
+            IFNULL(op.transportasi,0) + IFNULL(op.pos_paket,0) + IFNULL(op.tambah_angin,0) +
+            IFNULL(op.tambal_ban,0) + IFNULL(op.indekost,0) + IFNULL(op.sewa_kendaraan,0) +
+            IFNULL(op.lain_lain,0)) AS total_biaya
+        ');
         $this->db->from('tbkmt_operasional op');
         $this->db->join('tbkmt_wilayah w', 'w.id = op.id_wilayah', 'left');
         if (!empty($filter['tahun']))      $this->db->where('op.tahun', $filter['tahun']);

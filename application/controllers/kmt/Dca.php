@@ -72,24 +72,28 @@ class Dca extends CI_Controller {
 
         $tgl = $this->input->post('tanggal_dca');
 
-        $mdo_arr         = $this->input->post('nama_mdo')       ?? '';   // header
-        $um_header       = (float)str_replace('.', '', $this->input->post('um_header') ?? 0); // UM dipindah ke header
+        // ── Ambil semua input POST ────────────────────────────────
+        $um_header = (float)str_replace('.', '', $this->input->post('um_header') ?? 0);
 
-        // Array detail tambahan
-        $tgl_kegiatan_arr = $this->input->post('tgl_kegiatan') ?? [];
-        $tgl_kasbon_arr   = $this->input->post('tgl_kasbon')   ?? [];
-        $jml_peserta_arr  = $this->input->post('jml_peserta')  ?? [];
-        $qty_bisi_arr     = $this->input->post('qty_bisi')     ?? [];
-        $qty_q235_arr     = $this->input->post('qty_q235')     ?? [];
+        // Array detail
+        $id_kegiatan      = $this->input->post('id_kegiatan')   ?? [];
+        $nama_kegiatan    = $this->input->post('nama_kegiatan') ?? [];
+        $real_arr         = $this->input->post('real_detail')   ?? [];
+        $ket_arr          = $this->input->post('ket_detail')    ?? [];
+        $tgl_kegiatan_arr = $this->input->post('tgl_kegiatan')  ?? [];
+        $tgl_kasbon_arr   = $this->input->post('tgl_kasbon')    ?? [];
+        $jml_peserta_arr  = $this->input->post('jml_peserta')   ?? [];
+        $qty_bisi_arr     = $this->input->post('qty_bisi')      ?? [];
+        $qty_q235_arr     = $this->input->post('qty_q235')      ?? [];
 
-        // Hitung total real biaya (tanpa um_arr per baris)
+        // ── Hitung total real biaya ───────────────────────────────
         $total_real = 0;
-        foreach ($real_arr as $i => $real) {
+        foreach ($real_arr as $real) {
             $total_real += (float)str_replace('.', '', $real ?? 0);
         }
-        $refund_total = max(0, $um_header - $total_real); // refund otomatis
+        $refund_total = max(0, $um_header - $total_real);
 
-        // Header DCA — ganti $insert_dca / $update
+        // ── Simpan header DCA ─────────────────────────────────────
         $insert_dca = [
             'tanggal_dca' => $tgl,
             'bulan'       => (int)date('m', strtotime($tgl)),
@@ -98,17 +102,18 @@ class Dca extends CI_Controller {
             'nama_mdo'    => $this->input->post('nama_mdo'),
             'abm'         => $this->input->post('abm'),
             'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
-            'um'          => $um_header,                     // UM dari header
-            'refund'      => $refund_total,                  // otomatis
+            'um'          => $um_header,
+            'refund'      => $refund_total,
             'real_biaya'  => $total_real,
-            'total_biaya' => $total_real,                    // total = real (refund sudah dikurangi di header)
+            'total_biaya' => $total_real,
             'created_by'  => $this->session->userdata('id_user'),
         ];
 
         if ($this->M_Kmt->insert_dca($insert_dca)) {
             $id_dca = $this->db->insert_id();
 
-            // Simpan detail per kegiatan
+            // ── Simpan detail ─────────────────────────────────────
+            $detail_rows = [];
             foreach ($id_kegiatan as $i => $id_k) {
                 $real = (float)str_replace('.', '', $real_arr[$i] ?? 0);
                 if ($real <= 0) continue;
@@ -117,8 +122,8 @@ class Dca extends CI_Controller {
                     'id_dca'        => $id_dca,
                     'id_kegiatan'   => $id_k ?: null,
                     'nama_kegiatan' => $nama_kegiatan[$i] ?? '-',
-                    'tgl_kegiatan'  => $tgl_kegiatan_arr[$i] ?? null,
-                    'tgl_kasbon'    => $tgl_kasbon_arr[$i]   ?? null,
+                    'tgl_kegiatan'  => !empty($tgl_kegiatan_arr[$i]) ? $tgl_kegiatan_arr[$i] : null,
+                    'tgl_kasbon'    => !empty($tgl_kasbon_arr[$i])   ? $tgl_kasbon_arr[$i]   : null,
                     'jml_peserta'   => (int)($jml_peserta_arr[$i] ?? 0),
                     'qty_bisi'      => (float)str_replace('.', '', $qty_bisi_arr[$i]  ?? 0),
                     'qty_q235'      => (float)str_replace('.', '', $qty_q235_arr[$i]  ?? 0),
@@ -163,51 +168,61 @@ class Dca extends CI_Controller {
     public function update($id) {
         $tgl = $this->input->post('tanggal_dca');
 
-        $id_kegiatan   = $this->input->post('id_kegiatan')   ?? [];
-        $nama_kegiatan = $this->input->post('nama_kegiatan') ?? [];
-        $um_arr        = $this->input->post('um_detail')     ?? [];
-        $refund_arr    = $this->input->post('refund_detail') ?? [];
-        $real_arr      = $this->input->post('real_detail')   ?? [];
-        $ket_arr       = $this->input->post('ket_detail')    ?? [];
+        // ── Ambil semua input POST ────────────────────────────────
+        $um_header = (float)str_replace('.', '', $this->input->post('um_header') ?? 0);
 
-        $total_semua = 0;
-        foreach ($real_arr as $i => $real) {
-            $r = (float)str_replace('.', '', $real ?? 0);
-            $f = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
-            $total_semua += ($r - $f);
+        $id_kegiatan      = $this->input->post('id_kegiatan')   ?? [];
+        $nama_kegiatan    = $this->input->post('nama_kegiatan') ?? [];
+        $real_arr         = $this->input->post('real_detail')   ?? [];
+        $ket_arr          = $this->input->post('ket_detail')    ?? [];
+        $tgl_kegiatan_arr = $this->input->post('tgl_kegiatan')  ?? [];
+        $tgl_kasbon_arr   = $this->input->post('tgl_kasbon')    ?? [];
+        $jml_peserta_arr  = $this->input->post('jml_peserta')   ?? [];
+        $qty_bisi_arr     = $this->input->post('qty_bisi')      ?? [];
+        $qty_q235_arr     = $this->input->post('qty_q235')      ?? [];
+
+        // ── Hitung total real biaya ───────────────────────────────
+        $total_real = 0;
+        foreach ($real_arr as $real) {
+            $total_real += (float)str_replace('.', '', $real ?? 0);
         }
+        $refund_total = max(0, $um_header - $total_real);
 
+        // ── Update header DCA ─────────────────────────────────────
         $update = [
             'tanggal_dca' => $tgl,
             'bulan'       => (int)date('m', strtotime($tgl)),
             'tahun'       => (int)date('Y', strtotime($tgl)),
             'id_wilayah'  => (int)$this->input->post('id_wilayah'),
+            'nama_mdo'    => $this->input->post('nama_mdo'),
             'abm'         => $this->input->post('abm'),
             'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
-            'um'          => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $um_arr)),
-            'refund'      => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $refund_arr)),
-            'real_biaya'  => array_sum(array_map(fn($v) => (float)str_replace('.', '', $v ?? 0), $real_arr)),
-            'total_biaya' => $total_semua,
+            'um'          => $um_header,
+            'refund'      => $refund_total,
+            'real_biaya'  => $total_real,
+            'total_biaya' => $total_real,
         ];
 
         if ($this->M_Kmt->update_dca($id, $update)) {
-            // Hapus detail lama, insert baru
+            // ── Hapus detail lama, insert baru ────────────────────
             $this->M_Kmt->delete_dca_detail($id);
 
             $detail_rows = [];
             foreach ($id_kegiatan as $i => $id_k) {
-                $real   = (float)str_replace('.', '', $real_arr[$i]   ?? 0);
-                $refund = (float)str_replace('.', '', $refund_arr[$i] ?? 0);
+                $real = (float)str_replace('.', '', $real_arr[$i] ?? 0);
                 if ($real <= 0) continue;
 
                 $detail_rows[] = [
                     'id_dca'        => $id,
                     'id_kegiatan'   => $id_k ?: null,
                     'nama_kegiatan' => $nama_kegiatan[$i] ?? '-',
-                    'um'            => (float)str_replace('.', '', $um_arr[$i] ?? 0),
-                    'refund'        => $refund,
+                    'tgl_kegiatan'  => !empty($tgl_kegiatan_arr[$i]) ? $tgl_kegiatan_arr[$i] : null,
+                    'tgl_kasbon'    => !empty($tgl_kasbon_arr[$i])   ? $tgl_kasbon_arr[$i]   : null,
+                    'jml_peserta'   => (int)($jml_peserta_arr[$i] ?? 0),
+                    'qty_bisi'      => (float)str_replace('.', '', $qty_bisi_arr[$i]  ?? 0),
+                    'qty_q235'      => (float)str_replace('.', '', $qty_q235_arr[$i]  ?? 0),
                     'real_biaya'    => $real,
-                    'total_biaya'   => $real - $refund,
+                    'total_biaya'   => $real,
                     'keterangan'    => $ket_arr[$i] ?? '',
                 ];
             }

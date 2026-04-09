@@ -66,19 +66,17 @@ class Operasional extends CI_Controller {
     }
 
     public function simpan() {
-
-        $this->form_validation->set_rules('tanggal',   'Tanggal', 'required');
-        $this->form_validation->set_rules('nama',      'Nama',    'required');
-        $this->form_validation->set_rules('id_wilayah','Wilayah', 'required|integer');
+        $this->form_validation->set_rules('tanggal',    'Tanggal', 'required');
+        $this->form_validation->set_rules('nama',       'Nama',    'required');
+        $this->form_validation->set_rules('id_wilayah', 'Wilayah', 'required|integer');
 
         if ($this->form_validation->run() === FALSE) {
-            $this->tambah();
-            return;
+            $this->tambah(); return;
         }
 
         $fields = ['hotel','per_diem','entertainment','communication','atk','gasoline',
-                   'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
-                   'tambah_angin','tambal_ban','indekost','lain_lain'];
+                'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
+                'tambah_angin','tambal_ban','indekost','sewa_kendaraan','lain_lain'];
 
         $tanggal = $this->input->post('tanggal');
         $insert  = [
@@ -87,13 +85,21 @@ class Operasional extends CI_Controller {
             'tahun'      => (int)date('Y', strtotime($tanggal)),
             'tanggal'    => $tanggal,
             'nama'       => $this->input->post('nama'),
+            'nama_mdo'   => $this->input->post('nama_mdo'),
             'created_by' => $this->session->userdata('id_user'),
         ];
 
+        $total_biaya = 0;
         foreach ($fields as $f) {
-            $val = $this->input->post($f);
-            $insert[$f] = $val ? (float)str_replace(['.','Rp ','Rp'],['' ,'',''], $val) : 0;
+            $val        = $this->input->post($f);
+            $angka      = $val ? (float)str_replace(['.','Rp ','Rp'], ['','',''], $val) : 0;
+            $insert[$f] = $angka;
+            $total_biaya += $angka;
         }
+
+        $um              = (float)str_replace('.', '', $this->input->post('um') ?? 0);
+        $insert['um']     = $um;
+        $insert['refund'] = max(0, $um - $total_biaya);
 
         if ($this->M_Kmt->insert_operasional($insert)) {
             $this->session->set_flashdata('success', 'Data operasional berhasil disimpan.');
@@ -131,10 +137,9 @@ class Operasional extends CI_Controller {
     }
 
     public function update($id) {
-
         $fields = ['hotel','per_diem','entertainment','communication','atk','gasoline',
-                   'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
-                   'tambah_angin','tambal_ban','indekost','lain_lain'];
+                'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
+                'tambah_angin','tambal_ban','indekost','sewa_kendaraan','lain_lain'];
 
         $tanggal = $this->input->post('tanggal');
         $update  = [
@@ -143,12 +148,20 @@ class Operasional extends CI_Controller {
             'tahun'      => (int)date('Y', strtotime($tanggal)),
             'tanggal'    => $tanggal,
             'nama'       => $this->input->post('nama'),
+            'nama_mdo'   => $this->input->post('nama_mdo'),
         ];
 
+        $total_biaya = 0;
         foreach ($fields as $f) {
-            $val = $this->input->post($f);
-            $update[$f] = $val ? (float)str_replace(['.','Rp ','Rp'],['' ,'',''], $val) : 0;
+            $val        = $this->input->post($f);
+            $angka      = $val ? (float)str_replace(['.','Rp ','Rp'], ['','',''], $val) : 0;
+            $update[$f] = $angka;
+            $total_biaya += $angka;
         }
+
+        $um              = (float)str_replace('.', '', $this->input->post('um') ?? 0);
+        $update['um']     = $um;
+        $update['refund'] = max(0, $um - $total_biaya);
 
         if ($this->M_Kmt->update_operasional($id, $update)) {
             $this->session->set_flashdata('success', 'Data berhasil diperbarui.');

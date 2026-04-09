@@ -50,6 +50,7 @@
                     'tambah_angin'           => 'Tambah Angin',
                     'tambal_ban'             => 'Tambal Ban',
                     'indekost'               => 'Indekost',
+                    'sewa_kendaraan'         => 'Sewa Kendaraan',  
                     'lain_lain'              => 'Lain-lain',
                 ];
                 ?>
@@ -68,7 +69,7 @@
                                     <div class="form-group">
                                         <label>Tanggal <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal" class="form-control form-control-sm"
-                                               value="<?= $is_edit ? $row['tanggal'] : date('Y-m-d') ?>" required>
+                                            value="<?= $is_edit ? $row['tanggal'] : date('Y-m-d') ?>" required>
                                     </div>
                                 </div>
 
@@ -88,20 +89,62 @@
                                             </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <!-- Hidden untuk ABM agar nilai terkirim -->
                                         <?php if ($lv === 3): ?>
                                         <input type="hidden" name="id_wilayah"
-                                               value="<?= $is_edit ? $row['id_wilayah'] : $id_wilayah_user ?>">
+                                            value="<?= $is_edit ? $row['id_wilayah'] : $id_wilayah_user ?>">
                                         <?php endif; ?>
                                     </div>
                                 </div>
 
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>MDO <span class="text-danger">*</span></label>
+                                        <input type="text" name="nama_mdo" class="form-control form-control-sm"
+                                            value="<?= $is_edit ? htmlspecialchars($row['nama_mdo'] ?? '') : '' ?>"
+                                            placeholder="Nama MDO..." required>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Nama ABM <span class="text-danger">*</span></label>
                                         <input type="text" name="nama" class="form-control form-control-sm"
-                                               value="<?= $is_edit ? htmlspecialchars($row['nama'])
-                                                           : $this->session->userdata('nama') ?>" required>
+                                            value="<?= $is_edit ? htmlspecialchars($row['nama'])
+                                                        : $this->session->userdata('nama') ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Uang Muka (UM)</label>
+                                        <div class="input-group input-group-sm">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">Rp</span>
+                                            </div>
+                                            <input type="text" name="um" id="umOperasional"
+                                                class="form-control form-control-sm angka-um"
+                                                value="<?= $is_edit && ($row['um'] ?? 0) > 0
+                                                            ? number_format($row['um'], 0, ',', '.') : '' ?>"
+                                                placeholder="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Refund <small class="text-muted">(otomatis: UM &minus; Total Biaya)</small></label>
+                                        <div class="input-group input-group-sm">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">Rp</span>
+                                            </div>
+                                            <input type="text" id="refundOperasional"
+                                                class="form-control form-control-sm"
+                                                value="<?= $is_edit && ($row['refund'] ?? 0) > 0
+                                                            ? number_format($row['refund'], 0, ',', '.') : '0' ?>"
+                                                readonly style="background:#fff3cd;font-weight:600;">
+                                        </div>
+                                        <input type="hidden" name="refund" id="refundHidden"
+                                            value="<?= $is_edit ? ($row['refund'] ?? 0) : 0 ?>">
                                     </div>
                                 </div>
 
@@ -175,24 +218,30 @@
 </div>
 
 <script>
+// Ganti seluruh blok <script>
 $(function () {
-    // Format ribuan & hitung total otomatis
     function hitungTotal() {
         var total = 0;
         $('.angka-biaya').each(function () {
-            var val = $(this).val().replace(/\./g, '').replace(/,/g, '');
-            total += parseInt(val) || 0;
+            total += parseInt($(this).val().replace(/\./g, '') || 0);
         });
         $('#totalBiaya').text('Rp ' + total.toLocaleString('id-ID'));
         $('#badgeTotal').text('Total: Rp ' + total.toLocaleString('id-ID'));
     }
 
+    // Format input biaya
     $('.angka-biaya').on('input', function () {
         var val = $(this).val().replace(/\D/g, '');
         $(this).val(val ? parseInt(val).toLocaleString('id-ID') : '');
         hitungTotal();
     });
 
-    hitungTotal(); // Hitung awal saat edit
+    // Format input UM (tidak masuk ke hitungan total biaya)
+    $('.angka-um').on('input', function () {
+        var val = $(this).val().replace(/\D/g, '');
+        $(this).val(val ? parseInt(val).toLocaleString('id-ID') : '');
+    });
+
+    hitungTotal();
 });
 </script>

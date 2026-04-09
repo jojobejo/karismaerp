@@ -97,6 +97,7 @@
                                         <th>Tanggal</th>
                                         <th>Wilayah</th>
                                         <th>Nama</th>
+                                        <th>MDO</th>
                                         <th class="text-right">Hotel</th>
                                         <th class="text-right">Per Diem</th>
                                         <th class="text-right">Entertain</th>
@@ -114,6 +115,7 @@
                                         <td><?= date('d/m/Y', strtotime($row['tanggal'])) ?></td>
                                         <td><span class="badge badge-secondary"><?= $row['nama_wilayah'] ?? '-' ?></span></td>
                                         <td><?= htmlspecialchars($row['nama']) ?></td>
+                                        <td><?= htmlspecialchars($row['nama_mdo'] ?? '-') ?></td>
                                         <td class="text-right"><?= $row['hotel'] > 0 ? number_format($row['hotel'],0,',','.') : '-' ?></td>
                                         <td class="text-right"><?= $row['per_diem'] > 0 ? number_format($row['per_diem'],0,',','.') : '-' ?></td>
                                         <td class="text-right"><?= $row['entertainment'] > 0 ? number_format($row['entertainment'],0,',','.') : '-' ?></td>
@@ -145,7 +147,7 @@
                                 </tbody>
                                 <tfoot style="background:#f4f4f4;font-weight:bold;">
                                     <tr>
-                                        <td colspan="10" class="text-right">TOTAL:</td>
+                                        <td colspan="11" class="text-right">TOTAL:</td>
                                         <td class="text-right"><?= number_format($total_biaya, 0, ',', '.') ?></td>
                                         <td></td>
                                     </tr>
