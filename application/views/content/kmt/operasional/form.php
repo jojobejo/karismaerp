@@ -227,19 +227,24 @@ $(function () {
         });
         $('#totalBiaya').text('Rp ' + total.toLocaleString('id-ID'));
         $('#badgeTotal').text('Total: Rp ' + total.toLocaleString('id-ID'));
+
+        // Hitung refund otomatis
+        var um     = parseInt($('#umOperasional').val().replace(/\./g, '') || 0);
+        var refund = Math.max(0, um - total);
+        $('#refundOperasional').val(refund > 0 ? refund.toLocaleString('id-ID') : '0');
+        $('#refundHidden').val(refund);
     }
 
-    // Format input biaya
     $('.angka-biaya').on('input', function () {
         var val = $(this).val().replace(/\D/g, '');
         $(this).val(val ? parseInt(val).toLocaleString('id-ID') : '');
         hitungTotal();
     });
 
-    // Format input UM (tidak masuk ke hitungan total biaya)
     $('.angka-um').on('input', function () {
         var val = $(this).val().replace(/\D/g, '');
         $(this).val(val ? parseInt(val).toLocaleString('id-ID') : '');
+        hitungTotal(); // recalculate refund saat UM berubah
     });
 
     hitungTotal();
