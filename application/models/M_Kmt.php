@@ -338,6 +338,59 @@ class M_Kmt extends CI_Model {
         return $this->db->delete('tbkmt_dca', ['id' => $id]);
     }
 
+    public function get_dca_rekap($filter = []) {
+        // Header DCA
+        $this->db->select('
+            d.id, d.tanggal_dca, d.bulan, d.tahun,
+            d.abm, d.nama_mdo, d.um, d.refund, d.real_biaya, d.total_biaya,
+            w.nama_wilayah
+        ');
+        $this->db->from('tbkmt_dca d');
+        $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
+        if (!empty($filter['tahun']))      $this->db->where('d.tahun', $filter['tahun']);
+        if (!empty($filter['bulan']))      $this->db->where('d.bulan', $filter['bulan']);
+        if (!empty($filter['id_wilayah'])) $this->db->where('d.id_wilayah', $filter['id_wilayah']);
+        if (!empty($filter['abm']))        $this->db->where('d.abm', $filter['abm']);
+        $this->db->order_by('d.abm, d.nama_mdo, d.tanggal_dca');
+        $headers = $this->db->get()->result_array();
+    
+        if (empty($headers)) return [];
+    
+        // Ambil semua detail sekaligus
+        $ids = array_column($headers, 'id');
+        $this->db->select('
+            dd.id_dca, dd.nama_kegiatan, dd.tgl_kegiatan, dd.tgl_kasbon,
+            dd.jml_peserta, dd.qty_bisi, dd.qty_q235, dd.real_biaya
+        ');
+        $this->db->from('tbkmt_dca_detail dd');
+        $this->db->where_in('dd.id_dca', $ids);
+        $this->db->order_by('dd.id_dca, dd.nama_kegiatan');
+        $details = $this->db->get()->result_array();
+    
+        // Kelompokkan detail per id_dca
+        $detail_map = [];
+        foreach ($details as $d) {
+            $detail_map[$d['id_dca']][] = $d;
+        }
+    
+        // Gabungkan
+        foreach ($headers as &$h) {
+            $h['detail'] = $detail_map[$h['id']] ?? [];
+        }
+    
+        return $headers;
+    }
+    
+    public function get_dca_abm_list($filter = []) {
+        $this->db->distinct();                    // gunakan method distinct()
+        $this->db->select('abm');                 // bukan 'DISTINCT abm'
+        $this->db->from('tbkmt_dca');
+        if (!empty($filter['tahun']))      $this->db->where('tahun', $filter['tahun']);
+        if (!empty($filter['id_wilayah'])) $this->db->where('id_wilayah', $filter['id_wilayah']);
+        $this->db->order_by('abm');
+        return $this->db->get()->result_array();
+    }
+
     // ================================================================
     // PROMO / PERALATAN
     // ================================================================

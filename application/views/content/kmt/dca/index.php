@@ -36,6 +36,15 @@
                         <a href="<?= base_url('kmt/dca/tambah') ?>" class="btn btn-info btn-sm">
                             <i class="fas fa-plus mr-1"></i> Tambah DCA
                         </a>
+
+                        <!-- Tambah di dalam <div> tombol, setelah tombol "Tambah DCA" -->
+                        <a href="<?= base_url('kmt/dca/rekap')
+                                . '?tahun=' . $tahun
+                                . '&bulan=' . $bulan
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                        class="btn btn-primary btn-sm ml-2">
+                            <i class="fas fa-file-invoice mr-1"></i> Rekapitulasi
+                        </a>
                     </div>
 
                     <div>

@@ -321,4 +321,381 @@ class Dca extends CI_Controller {
         $writer->save('php://output');
         exit;
     }
+
+    public function rekap() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+        $abm        = $this->input->get('abm')        ?? '';
+    
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+        if ($abm)        $filter['abm']        = $abm;
+    
+        $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
+    
+        // Susun per ABM → per MDO → per kegiatan
+        $grouped = [];
+        foreach ($rekap_data as $dca) {
+            $abm_key = $dca['abm'];
+            $mdo_key = $dca['nama_mdo'];
+    
+            if (!isset($grouped[$abm_key])) {
+                $grouped[$abm_key] = ['um' => 0, 'mdo' => []];
+            }
+            $grouped[$abm_key]['um'] += $dca['um'];
+    
+            if (!isset($grouped[$abm_key]['mdo'][$mdo_key])) {
+                $grouped[$abm_key]['mdo'][$mdo_key] = ['kegiatan' => []];
+            }
+    
+            foreach ($dca['detail'] as $det) {
+                $kg_key = $det['nama_kegiatan'];
+                if (!isset($grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key])) {
+                    $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key] = [
+                        'rows'        => [],
+                        'total_bisi'  => 0,
+                        'total_q235'  => 0,
+                        'total_peserta' => 0,
+                        'total_biaya' => 0,
+                    ];
+                }
+    
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['rows'][] = [
+                    'nama_mdo'    => $mdo_key,
+                    'tgl_kegiatan'=> $det['tgl_kegiatan'],
+                    'tgl_kasbon'  => $det['tgl_kasbon'],
+                    'qty_bisi'    => $det['qty_bisi'],
+                    'qty_q235'    => $det['qty_q235'],
+                    'jml_peserta' => $det['jml_peserta'],
+                    'real_biaya'  => $det['real_biaya'],
+                ];
+    
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_bisi']    += $det['qty_bisi'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_q235']   += $det['qty_q235'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_peserta'] += $det['jml_peserta'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_biaya']   += $det['real_biaya'];
+            }
+        }
+    
+        $data = [
+            'page_title'   => 'Rekapitulasi DCA',
+            'grouped'      => $grouped,
+            'rekap_data'   => $rekap_data,
+            'abm_list'     => $this->M_Kmt->get_dca_abm_list(['tahun' => $tahun, 'id_wilayah' => $id_wilayah]),
+            'wilayah_list' => $this->M_Kmt->get_wilayah(),
+            'tahun'        => $tahun,
+            'bulan'        => $bulan,
+            'id_wilayah'   => $id_wilayah,
+            'abm'          => $abm,
+            'lv'           => (int)$this->session->userdata('lv'),
+            'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
+                               'Juli','Agustus','September','Oktober','November','Desember'],
+        ];
+    
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/kmt/dca/rekap', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+    
+    public function export_rekap() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+        $abm        = $this->input->get('abm')        ?? '';
+    
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+        if ($abm)        $filter['abm']        = $abm;
+    
+        $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
+    
+        // Sama seperti rekap(), susun grouped
+        $grouped = [];
+        foreach ($rekap_data as $dca) {
+            $abm_key = $dca['abm'];
+            $mdo_key = $dca['nama_mdo'];
+            if (!isset($grouped[$abm_key])) $grouped[$abm_key] = ['um' => 0, 'mdo' => [], 'wilayah' => $dca['nama_wilayah']];
+            $grouped[$abm_key]['um'] += $dca['um'];
+            if (!isset($grouped[$abm_key]['mdo'][$mdo_key])) $grouped[$abm_key]['mdo'][$mdo_key] = ['kegiatan' => []];
+            foreach ($dca['detail'] as $det) {
+                $kg_key = $det['nama_kegiatan'];
+                if (!isset($grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key])) {
+                    $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key] = [
+                        'rows' => [], 'total_bisi' => 0, 'total_q235' => 0,
+                        'total_peserta' => 0, 'total_biaya' => 0,
+                    ];
+                }
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['rows'][] = [
+                    'nama_mdo' => $mdo_key, 'qty_bisi' => $det['qty_bisi'],
+                    'qty_q235' => $det['qty_q235'], 'jml_peserta' => $det['jml_peserta'],
+                    'real_biaya' => $det['real_biaya'],
+                ];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_bisi']    += $det['qty_bisi'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_q235']   += $det['qty_q235'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_peserta'] += $det['jml_peserta'];
+                $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_biaya']   += $det['real_biaya'];
+            }
+        }
+    
+        $nama_bulan = ['','Januari','Februari','Maret','April','Mei','Juni',
+                       'Juli','Agustus','September','Oktober','November','Desember'];
+    
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheetIndex  = 0;
+    
+        foreach ($grouped as $abm_nama => $abm_data) {
+            if ($sheetIndex === 0) {
+                $sheet = $spreadsheet->getActiveSheet();
+            } else {
+                $sheet = $spreadsheet->createSheet();
+            }
+            $sheetIndex++;
+    
+            $safe_name = substr(preg_replace('/[^\w\s]/', '', $abm_nama), 0, 28);
+            $sheet->setTitle($safe_name ?: 'Sheet'.$sheetIndex);
+            $sheet->setShowGridLines(false);
+    
+            // ── Helper styles ───────────────────────────────────────
+            $DARK  = '1F3864'; $MID = '2E75B6'; $GOLD = 'FFC000';
+            $LIGHT = 'DAEEF3'; $WHITE = 'FFFFFF'; $GRAY = 'F2F2F2';
+    
+            $boldWhite = new \PhpOffice\PhpSpreadsheet\Style\Font();
+            $boldWhite->setBold(true)->setColor(
+                (new \PhpOffice\PhpSpreadsheet\Style\Color())->setRGB($WHITE)
+            )->setName('Arial')->setSize(10);
+    
+            $styleHeader = [
+                'font'      => ['bold' => true, 'color' => ['rgb' => $WHITE], 'name' => 'Arial', 'size' => 10],
+                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $DARK]],
+                'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
+                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
+            ];
+            $styleSubtotal = [
+                'font'      => ['bold' => true, 'color' => ['rgb' => $DARK], 'name' => 'Arial', 'size' => 10],
+                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $LIGHT]],
+                'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
+                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
+            ];
+            $styleDetail = [
+                'font'      => ['bold' => false, 'color' => ['rgb' => '000000'], 'name' => 'Arial', 'size' => 9],
+                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $WHITE]],
+                'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
+                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
+            ];
+    
+            // ── Column widths ───────────────────────────────────────
+            foreach ([['A',44],['B',15],['C',16],['D',16],['E',12],['F',12],['G',16]] as [$c,$w]) {
+                $sheet->getColumnDimension($c)->setWidth($w);
+            }
+    
+            // ── Row 1-2: Judul ──────────────────────────────────────
+            $sheet->mergeCells('A1:G1');
+            $sheet->setCellValue('A1', 'REKAPITULASI DCA KMT CORN');
+            $sheet->getStyle('A1')->applyFromArray([
+                'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'size'=>14,'name'=>'Arial'],
+                'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
+                'alignment' => ['horizontal'=>'center','vertical'=>'center'],
+            ]);
+            $sheet->getRowDimension(1)->setRowHeight(28);
+    
+            $sheet->mergeCells('A2:G2');
+            $sheet->setCellValue('A2', 'DCA JAGUNG BISI 959 & Q-235 CLING');
+            $sheet->getStyle('A2')->applyFromArray([
+                'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'size'=>11,'name'=>'Arial'],
+                'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$MID]],
+                'alignment' => ['horizontal'=>'center','vertical'=>'center'],
+            ]);
+            $sheet->getRowDimension(2)->setRowHeight(22);
+    
+            // ── Rows 3-6: Info ──────────────────────────────────────
+            $um_total   = $abm_data['um'];
+            $tot_biaya  = 0;
+            foreach ($abm_data['mdo'] as $mdo_nm => $mdo_data) {
+                foreach ($mdo_data['kegiatan'] as $kg) $tot_biaya += $kg['total_biaya'];
+            }
+            $sisa_dana  = $um_total - $tot_biaya;
+            $periode    = ($bulan ? $nama_bulan[(int)$bulan].' ' : '') . $tahun;
+    
+            $info = [
+                [3, 'ABM',     $abm_nama],
+                [4, 'MDO',     implode(', ', array_keys($abm_data['mdo']))],
+                [5, 'Wilayah', $abm_data['wilayah'] ?? '-'],
+                [6, 'Periode', $periode],
+            ];
+            foreach ($info as [$r, $lbl, $val]) {
+                $sheet->getRowDimension($r)->setRowHeight(18);
+                $sheet->setCellValue("A{$r}", $lbl);
+                $sheet->getStyle("A{$r}")->applyFromArray([
+                    'font' => ['bold'=>true,'color'=>['rgb'=>$DARK],'name'=>'Arial','size'=>10],
+                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$GRAY]],
+                    'borders'=>['allBorders'=>['borderStyle'=>'thin']],
+                ]);
+                $sheet->mergeCells("B{$r}:D{$r}");
+                $sheet->setCellValue("B{$r}", $val);
+                $sheet->getStyle("B{$r}")->applyFromArray([
+                    'borders'=>['allBorders'=>['borderStyle'=>'thin']],
+                ]);
+            }
+    
+            // Info kanan
+            $info_r = [
+                [3,'Total Biaya', $tot_biaya, $GOLD,   $DARK],
+                [4,'UM DCA',      $um_total,  '000000', $WHITE],
+                [5,'Sisa Dana',   $sisa_dana, $DARK,    'FFF2CC'],
+            ];
+            foreach ($info_r as [$r, $lbl, $val, $vfg, $vbg]) {
+                $sheet->mergeCells("E{$r}:F{$r}");
+                $sheet->setCellValue("E{$r}", $lbl);
+                $sheet->getStyle("E{$r}")->applyFromArray([
+                    'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'name'=>'Arial','size'=>10],
+                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
+                    'alignment' => ['horizontal'=>'right'],
+                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+                ]);
+                $sheet->setCellValue("G{$r}", $val);
+                $sheet->getStyle("G{$r}")->applyFromArray([
+                    'font'      => ['bold'=>true,'color'=>['rgb'=>$vfg],'name'=>'Arial','size'=>10],
+                    'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$vbg]],
+                    'alignment' => ['horizontal'=>'right'],
+                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+                    'numberFormat' => ['formatCode'=>'#,##0'],
+                ]);
+            }
+    
+            // ── Row 7: spacer, Row 8: thead ─────────────────────────
+            $sheet->getRowDimension(7)->setRowHeight(5);
+            $sheet->getRowDimension(8)->setRowHeight(30);
+            foreach ([['A','Nama Petugas & Jenis Kegiatan'],['B','DCA Kas Bon'],
+                      ['C','DS Bisi 959\n(20x1Kg)'],['D','DS Q-235 CLING\n(10x1Kg)'],
+                      ['E','Jml Peserta'],['F','Qty Terjual'],['G','Total Biaya']] as [$c,$h]) {
+                $sheet->setCellValue("{$c}8", $h);
+                $sheet->getStyle("{$c}8")->applyFromArray($styleHeader);
+            }
+    
+            // ── Data rows ───────────────────────────────────────────
+            $r = 9;
+            $num_fmt = '#,##0';
+    
+            foreach ($abm_data['mdo'] as $mdo_nm => $mdo_data) {
+                // UM row
+                $sheet->setCellValue("A{$r}", "UM {$mdo_nm} (BFM,FM,FFD,ODP)");
+                $sheet->setCellValue("B{$r}", $um_total);
+                $sheet->setCellValue("G{$r}", 0);
+                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
+                    'font' => ['bold'=>true,'color'=>['rgb'=>'DAEEF3'],'name'=>'Arial','size'=>10],
+                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'344D7E']],
+                    'alignment' => ['horizontal'=>'left','vertical'=>'center'],
+                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+                ]);
+                foreach (['B','G'] as $nc) {
+                    $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                    $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+                }
+                $sheet->getRowDimension($r)->setRowHeight(18);
+                $r++;
+    
+                foreach ($mdo_data['kegiatan'] as $kg_nm => $kg_data) {
+                    // Kegiatan header
+                    $sheet->setCellValue("A{$r}", $kg_nm);
+                    $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
+                        'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'name'=>'Arial','size'=>10],
+                        'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'4472C4']],
+                        'alignment' => ['horizontal'=>'left','vertical'=>'center'],
+                        'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+                    ]);
+                    $sheet->getRowDimension($r)->setRowHeight(18);
+                    $r++;
+    
+                    // Detail rows
+                    foreach ($kg_data['rows'] as $det) {
+                        $sheet->setCellValue("A{$r}", '  ' . $det['nama_mdo']);
+                        $sheet->setCellValue("C{$r}", $det['qty_bisi']);
+                        $sheet->setCellValue("D{$r}", $det['qty_q235']);
+                        $sheet->setCellValue("E{$r}", $det['jml_peserta']);
+                        $sheet->setCellValue("G{$r}", $det['real_biaya']);
+                        $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleDetail);
+                        foreach (['C','D','E','G'] as $nc) {
+                            $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                            $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+                        }
+                        $sheet->getRowDimension($r)->setRowHeight(15);
+                        $r++;
+                    }
+    
+                    // Subtotal kegiatan
+                    $sheet->setCellValue("A{$r}", "{$kg_nm} Total");
+                    $sheet->setCellValue("C{$r}", $kg_data['total_bisi']);
+                    $sheet->setCellValue("D{$r}", $kg_data['total_q235']);
+                    $sheet->setCellValue("E{$r}", $kg_data['total_peserta']);
+                    $sheet->setCellValue("G{$r}", $kg_data['total_biaya']);
+                    $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleSubtotal);
+                    foreach (['C','D','E','G'] as $nc) {
+                        $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                        $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+                    }
+                    $sheet->getRowDimension($r)->setRowHeight(18);
+                    $r++;
+                }
+    
+                // Subtotal MDO
+                $mdo_bisi = $mdo_peserta = $mdo_biaya = 0;
+                foreach ($mdo_data['kegiatan'] as $kg) {
+                    $mdo_bisi    += $kg['total_bisi'];
+                    $mdo_peserta += $kg['total_peserta'];
+                    $mdo_biaya   += $kg['total_biaya'];
+                }
+                $sheet->setCellValue("A{$r}", "MARKET DEVELOPMENT OFFICER (MDO) Total");
+                $sheet->setCellValue("C{$r}", $mdo_bisi);
+                $sheet->setCellValue("E{$r}", $mdo_peserta);
+                $sheet->setCellValue("G{$r}", $mdo_biaya);
+                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
+                    'font' => ['bold'=>true,'color'=>['rgb'=>$DARK],'name'=>'Arial','size'=>10],
+                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'9DC3E6']],
+                    'alignment' => ['horizontal'=>'left','vertical'=>'center'],
+                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+                ]);
+                foreach (['C','E','G'] as $nc) {
+                    $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                    $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+                }
+                $sheet->getRowDimension($r)->setRowHeight(18);
+                $r++;
+            }
+    
+            // Grand Total
+            $sheet->setCellValue("A{$r}", "{$abm_nama} Total / Grand Total");
+            $sheet->setCellValue("B{$r}", $um_total);
+            $sheet->setCellValue("G{$r}", $tot_biaya);
+            $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
+                'font'      => ['bold'=>true,'color'=>['rgb'=>$GOLD],'name'=>'Arial','size'=>11],
+                'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
+                'alignment' => ['horizontal'=>'left','vertical'=>'center'],
+                'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
+            ]);
+            foreach (['B','G'] as $nc) {
+                $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+            }
+            $sheet->getRowDimension($r)->setRowHeight(22);
+    
+            $sheet->freezePane('A9');
+            $sheet->getPageSetup()->setOrientation('landscape');
+            $sheet->getPageSetup()->setFitToPage(true);
+            $sheet->getPageSetup()->setFitToWidth(1);
+        }
+    
+        $periode_str = ($bulan ? 'Bln'.$bulan.'_' : '') . $tahun;
+        $filename = 'Rekap_DCA_KMT_' . $periode_str . '.xlsx';
+    
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+    
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }
