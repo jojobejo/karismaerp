@@ -458,67 +458,76 @@ class Dca extends CI_Controller {
             $sheet->setTitle($safe_name ?: 'Sheet'.$sheetIndex);
             $sheet->setShowGridLines(false);
     
-            // ── Helper styles ───────────────────────────────────────
-            $DARK  = '1F3864'; $MID = '2E75B6'; $GOLD = 'FFC000';
-            $LIGHT = 'DAEEF3'; $WHITE = 'FFFFFF'; $GRAY = 'F2F2F2';
+            $WHITE = 'FFFFFF';
+            $BLACK = '000000';
+            $num_fmt = '#,##0';
     
             $boldWhite = new \PhpOffice\PhpSpreadsheet\Style\Font();
             $boldWhite->setBold(true)->setColor(
                 (new \PhpOffice\PhpSpreadsheet\Style\Color())->setRGB($WHITE)
             )->setName('Arial')->setSize(10);
     
-            $styleHeader = [
-                'font'      => ['bold' => true, 'color' => ['rgb' => $WHITE], 'name' => 'Arial', 'size' => 10],
-                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $DARK]],
+            $borderThin = ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => $BLACK]]];
+            $borderMedium = ['allBorders' => ['borderStyle' => 'medium', 'color' => ['rgb' => $BLACK]]];
+
+            $styleBase = [
+                'font'    => ['name' => 'Arial', 'size' => 10, 'bold' => false, 'color' => ['rgb' => $BLACK]],
+                'fill'    => ['fillType' => 'solid', 'startColor' => ['rgb' => $WHITE]],
+                'borders' => $borderThin,
+            ];
+            $styleBold = array_merge($styleBase, [
+                'font' => ['name' => 'Arial', 'size' => 10, 'bold' => true, 'color' => ['rgb' => $BLACK]],
+            ]);
+            $styleHeader = array_merge($styleBold, [
                 'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
-                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
-            ];
-            $styleSubtotal = [
-                'font'      => ['bold' => true, 'color' => ['rgb' => $DARK], 'name' => 'Arial', 'size' => 10],
-                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $LIGHT]],
-                'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
-                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
-            ];
-            $styleDetail = [
-                'font'      => ['bold' => false, 'color' => ['rgb' => '000000'], 'name' => 'Arial', 'size' => 9],
-                'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $WHITE]],
-                'alignment' => ['horizontal' => 'left', 'vertical' => 'center'],
-                'borders'   => ['allBorders' => ['borderStyle' => 'thin']],
-            ];
+            ]);
+            $styleLeft    = array_merge($styleBase,  ['alignment' => ['horizontal' => 'left',  'vertical' => 'center']]);
+            $styleBoldLeft = array_merge($styleBold, ['alignment' => ['horizontal' => 'left',  'vertical' => 'center']]);
+            $styleRight   = array_merge($styleBase,  ['alignment' => ['horizontal' => 'right', 'vertical' => 'center']]);
+
+            // Semua level pakai style yang sama — hanya bold yang membedakan
+            $styleUM         = $styleBoldLeft;
+            $styleKegiatan   = $styleBoldLeft;
+            $styleSubtotal   = $styleBoldLeft;
+            $styleMDO        = $styleBoldLeft;
+            $styleDetail     = array_merge($styleLeft, ['font' => ['name'=>'Arial','size'=>9,'bold'=>false,'color'=>['rgb'=>$BLACK]]]);
+            $styleGrandTotal = array_merge($styleBoldLeft, ['borders' => $borderMedium]);
     
             // ── Column widths ───────────────────────────────────────
             foreach ([['A',44],['B',15],['C',16],['D',16],['E',12],['F',12],['G',16]] as [$c,$w]) {
                 $sheet->getColumnDimension($c)->setWidth($w);
             }
     
-            // ── Row 1-2: Judul ──────────────────────────────────────
+            // ── Row 1-2: Judul ──────────────────────────────────────────
             $sheet->mergeCells('A1:G1');
             $sheet->setCellValue('A1', 'REKAPITULASI DCA KMT CORN');
             $sheet->getStyle('A1')->applyFromArray([
-                'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'size'=>14,'name'=>'Arial'],
-                'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
+                'font'      => ['bold'=>true,'color'=>['rgb'=>$BLACK],'size'=>14,'name'=>'Arial'],
+                'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$WHITE]],
                 'alignment' => ['horizontal'=>'center','vertical'=>'center'],
+                'borders'   => $borderMedium,
             ]);
             $sheet->getRowDimension(1)->setRowHeight(28);
-    
+
             $sheet->mergeCells('A2:G2');
             $sheet->setCellValue('A2', 'DCA JAGUNG BISI 959 & Q-235 CLING');
             $sheet->getStyle('A2')->applyFromArray([
-                'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'size'=>11,'name'=>'Arial'],
-                'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$MID]],
+                'font'      => ['bold'=>true,'color'=>['rgb'=>$BLACK],'size'=>11,'name'=>'Arial'],
+                'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$WHITE]],
                 'alignment' => ['horizontal'=>'center','vertical'=>'center'],
+                'borders'   => $borderThin,
             ]);
             $sheet->getRowDimension(2)->setRowHeight(22);
-    
-            // ── Rows 3-6: Info ──────────────────────────────────────
-            $um_total   = $abm_data['um'];
-            $tot_biaya  = 0;
+
+            // ── Rows 3-6: Info ──────────────────────────────────────────
+            $um_total  = $abm_data['um'];
+            $tot_biaya = 0;
             foreach ($abm_data['mdo'] as $mdo_nm => $mdo_data) {
                 foreach ($mdo_data['kegiatan'] as $kg) $tot_biaya += $kg['total_biaya'];
             }
-            $sisa_dana  = $um_total - $tot_biaya;
-            $periode    = ($bulan ? $nama_bulan[(int)$bulan].' ' : '') . $tahun;
-    
+            $sisa_dana = $um_total - $tot_biaya;
+            $periode   = ($bulan ? $nama_bulan[(int)$bulan].' ' : '') . $tahun;
+
             $info = [
                 [3, 'ABM',     $abm_nama],
                 [4, 'MDO',     implode(', ', array_keys($abm_data['mdo']))],
@@ -528,154 +537,144 @@ class Dca extends CI_Controller {
             foreach ($info as [$r, $lbl, $val]) {
                 $sheet->getRowDimension($r)->setRowHeight(18);
                 $sheet->setCellValue("A{$r}", $lbl);
-                $sheet->getStyle("A{$r}")->applyFromArray([
-                    'font' => ['bold'=>true,'color'=>['rgb'=>$DARK],'name'=>'Arial','size'=>10],
-                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$GRAY]],
-                    'borders'=>['allBorders'=>['borderStyle'=>'thin']],
-                ]);
+                $sheet->getStyle("A{$r}")->applyFromArray($styleBoldLeft);
                 $sheet->mergeCells("B{$r}:D{$r}");
                 $sheet->setCellValue("B{$r}", $val);
-                $sheet->getStyle("B{$r}")->applyFromArray([
-                    'borders'=>['allBorders'=>['borderStyle'=>'thin']],
-                ]);
+                $sheet->getStyle("B{$r}")->applyFromArray($styleLeft);
             }
-    
+
             // Info kanan
             $info_r = [
-                [3,'Total Biaya', $tot_biaya, $GOLD,   $DARK],
-                [4,'UM DCA',      $um_total,  '000000', $WHITE],
-                [5,'Sisa Dana',   $sisa_dana, $DARK,    'FFF2CC'],
+                [3, 'Total Biaya', $tot_biaya],
+                [4, 'UM DCA',      $um_total],
+                [5, 'Sisa Dana',   $sisa_dana],
             ];
-            foreach ($info_r as [$r, $lbl, $val, $vfg, $vbg]) {
+            foreach ($info_r as [$r, $lbl, $val]) {
                 $sheet->mergeCells("E{$r}:F{$r}");
                 $sheet->setCellValue("E{$r}", $lbl);
-                $sheet->getStyle("E{$r}")->applyFromArray([
-                    'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'name'=>'Arial','size'=>10],
-                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
-                    'alignment' => ['horizontal'=>'right'],
-                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-                ]);
+                $sheet->getStyle("E{$r}")->applyFromArray($styleBoldLeft);
                 $sheet->setCellValue("G{$r}", $val);
-                $sheet->getStyle("G{$r}")->applyFromArray([
-                    'font'      => ['bold'=>true,'color'=>['rgb'=>$vfg],'name'=>'Arial','size'=>10],
-                    'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$vbg]],
-                    'alignment' => ['horizontal'=>'right'],
-                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-                    'numberFormat' => ['formatCode'=>'#,##0'],
-                ]);
+                $sheet->getStyle("G{$r}")->applyFromArray($styleRight);
+                $sheet->getStyle("G{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                $sheet->getStyle("G{$r}")->getFont()->setBold(true);
             }
-    
-            // ── Row 7: spacer, Row 8: thead ─────────────────────────
+
+            // ── Row 7: spacer, Row 8: thead ─────────────────────────────
             $sheet->getRowDimension(7)->setRowHeight(5);
             $sheet->getRowDimension(8)->setRowHeight(30);
-            foreach ([['A','Nama Petugas & Jenis Kegiatan'],['B','DCA Kas Bon'],
-                      ['C','DS Bisi 959\n(20x1Kg)'],['D','DS Q-235 CLING\n(10x1Kg)'],
-                      ['E','Jml Peserta'],['F','Qty Terjual'],['G','Total Biaya']] as [$c,$h]) {
+            foreach ([
+                ['A','Nama Petugas & Jenis Kegiatan'],
+                ['B','DCA Kas Bon'],
+                ['C','DS Bisi 959 (20x1Kg)'],
+                ['D','DS Q-235 CLING (10x1Kg)'],
+                ['E','Jml Peserta'],
+                ['F','Qty Terjual'],
+                ['G','Total Biaya'],
+            ] as [$c, $h]) {
                 $sheet->setCellValue("{$c}8", $h);
                 $sheet->getStyle("{$c}8")->applyFromArray($styleHeader);
+                $sheet->getStyle("{$c}8")->getFont()->setBold(true);
             }
-    
-            // ── Data rows ───────────────────────────────────────────
+
+            // ── Data rows ────────────────────────────────────────────────
             $r = 9;
-            $num_fmt = '#,##0';
-    
+
             foreach ($abm_data['mdo'] as $mdo_nm => $mdo_data) {
                 // UM row
                 $sheet->setCellValue("A{$r}", "UM {$mdo_nm} (BFM,FM,FFD,ODP)");
                 $sheet->setCellValue("B{$r}", $um_total);
                 $sheet->setCellValue("G{$r}", 0);
-                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
-                    'font' => ['bold'=>true,'color'=>['rgb'=>'DAEEF3'],'name'=>'Arial','size'=>10],
-                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'344D7E']],
-                    'alignment' => ['horizontal'=>'left','vertical'=>'center'],
-                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-                ]);
+                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleUM);
                 foreach (['B','G'] as $nc) {
                     $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
                     $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
                 }
                 $sheet->getRowDimension($r)->setRowHeight(18);
                 $r++;
-    
+
                 foreach ($mdo_data['kegiatan'] as $kg_nm => $kg_data) {
                     // Kegiatan header
                     $sheet->setCellValue("A{$r}", $kg_nm);
-                    $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
-                        'font' => ['bold'=>true,'color'=>['rgb'=>$WHITE],'name'=>'Arial','size'=>10],
-                        'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'4472C4']],
-                        'alignment' => ['horizontal'=>'left','vertical'=>'center'],
-                        'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-                    ]);
+                    $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleKegiatan);
                     $sheet->getRowDimension($r)->setRowHeight(18);
                     $r++;
-    
+
                     // Detail rows
                     foreach ($kg_data['rows'] as $det) {
-                        $sheet->setCellValue("A{$r}", '  ' . $det['nama_mdo']);
-                        $sheet->setCellValue("C{$r}", $det['qty_bisi']);
-                        $sheet->setCellValue("D{$r}", $det['qty_q235']);
-                        $sheet->setCellValue("E{$r}", $det['jml_peserta']);
-                        $sheet->setCellValue("G{$r}", $det['real_biaya']);
+                        $qty_terjual = ($det['qty_bisi'] ?? 0) + ($det['qty_q235'] ?? 0);
+                        $sheet->setCellValue("A{$r}", '  '.$det['nama_mdo']);
+                        $sheet->setCellValue("C{$r}", $det['qty_bisi']    ?? 0);
+                        $sheet->setCellValue("D{$r}", $det['qty_q235']    ?? 0);
+                        $sheet->setCellValue("E{$r}", $det['jml_peserta'] ?? 0);
+                        $sheet->setCellValue("F{$r}", $qty_terjual);
+                        $sheet->setCellValue("G{$r}", $det['real_biaya']  ?? 0);
                         $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleDetail);
-                        foreach (['C','D','E','G'] as $nc) {
+                        foreach (['C','D','E','F','G'] as $nc) {
                             $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
                             $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
                         }
                         $sheet->getRowDimension($r)->setRowHeight(15);
                         $r++;
                     }
-    
+
                     // Subtotal kegiatan
+                    $total_qty = ($kg_data['total_bisi'] ?? 0) + ($kg_data['total_q235'] ?? 0);
                     $sheet->setCellValue("A{$r}", "{$kg_nm} Total");
-                    $sheet->setCellValue("C{$r}", $kg_data['total_bisi']);
-                    $sheet->setCellValue("D{$r}", $kg_data['total_q235']);
-                    $sheet->setCellValue("E{$r}", $kg_data['total_peserta']);
-                    $sheet->setCellValue("G{$r}", $kg_data['total_biaya']);
+                    $sheet->setCellValue("C{$r}", $kg_data['total_bisi']    ?? 0);
+                    $sheet->setCellValue("D{$r}", $kg_data['total_q235']    ?? 0);
+                    $sheet->setCellValue("E{$r}", $kg_data['total_peserta'] ?? 0);
+                    $sheet->setCellValue("F{$r}", $total_qty);
+                    $sheet->setCellValue("G{$r}", $kg_data['total_biaya']   ?? 0);
                     $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleSubtotal);
-                    foreach (['C','D','E','G'] as $nc) {
+                    foreach (['C','D','E','F','G'] as $nc) {
                         $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
                         $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
                     }
                     $sheet->getRowDimension($r)->setRowHeight(18);
                     $r++;
                 }
-    
+
                 // Subtotal MDO
-                $mdo_bisi = $mdo_peserta = $mdo_biaya = 0;
+                $mdo_bisi = $mdo_q235 = $mdo_peserta = $mdo_biaya = 0;
                 foreach ($mdo_data['kegiatan'] as $kg) {
-                    $mdo_bisi    += $kg['total_bisi'];
-                    $mdo_peserta += $kg['total_peserta'];
-                    $mdo_biaya   += $kg['total_biaya'];
+                    $mdo_bisi    += $kg['total_bisi']    ?? 0;
+                    $mdo_q235    += $kg['total_q235']    ?? 0;
+                    $mdo_peserta += $kg['total_peserta'] ?? 0;
+                    $mdo_biaya   += $kg['total_biaya']   ?? 0;
                 }
                 $sheet->setCellValue("A{$r}", "MARKET DEVELOPMENT OFFICER (MDO) Total");
                 $sheet->setCellValue("C{$r}", $mdo_bisi);
+                $sheet->setCellValue("D{$r}", $mdo_q235);
                 $sheet->setCellValue("E{$r}", $mdo_peserta);
+                $sheet->setCellValue("F{$r}", $mdo_bisi + $mdo_q235);
                 $sheet->setCellValue("G{$r}", $mdo_biaya);
-                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
-                    'font' => ['bold'=>true,'color'=>['rgb'=>$DARK],'name'=>'Arial','size'=>10],
-                    'fill' => ['fillType'=>'solid','startColor'=>['rgb'=>'9DC3E6']],
-                    'alignment' => ['horizontal'=>'left','vertical'=>'center'],
-                    'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-                ]);
-                foreach (['C','E','G'] as $nc) {
+                $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleMDO);
+                foreach (['C','D','E','F','G'] as $nc) {
                     $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
                     $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
                 }
                 $sheet->getRowDimension($r)->setRowHeight(18);
                 $r++;
             }
-    
+
             // Grand Total
+            $grand_bisi = $grand_q235 = $grand_peserta = 0;
+            foreach ($abm_data['mdo'] as $mdo_data) {
+                foreach ($mdo_data['kegiatan'] as $kg) {
+                    $grand_bisi    += $kg['total_bisi']    ?? 0;
+                    $grand_q235    += $kg['total_q235']    ?? 0;
+                    $grand_peserta += $kg['total_peserta'] ?? 0;
+                }
+            }
             $sheet->setCellValue("A{$r}", "{$abm_nama} Total / Grand Total");
             $sheet->setCellValue("B{$r}", $um_total);
+            $sheet->setCellValue("C{$r}", $grand_bisi);
+            $sheet->setCellValue("D{$r}", $grand_q235);
+            $sheet->setCellValue("E{$r}", $grand_peserta);
+            $sheet->setCellValue("F{$r}", $grand_bisi + $grand_q235);
             $sheet->setCellValue("G{$r}", $tot_biaya);
-            $sheet->getStyle("A{$r}:G{$r}")->applyFromArray([
-                'font'      => ['bold'=>true,'color'=>['rgb'=>$GOLD],'name'=>'Arial','size'=>11],
-                'fill'      => ['fillType'=>'solid','startColor'=>['rgb'=>$DARK]],
-                'alignment' => ['horizontal'=>'left','vertical'=>'center'],
-                'borders'   => ['allBorders'=>['borderStyle'=>'thin']],
-            ]);
-            foreach (['B','G'] as $nc) {
+            $sheet->getStyle("A{$r}:G{$r}")->applyFromArray($styleGrandTotal);
+            foreach (['B','C','D','E','F','G'] as $nc) {
                 $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
                 $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
             }
