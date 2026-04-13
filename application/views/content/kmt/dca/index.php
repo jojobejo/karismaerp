@@ -115,7 +115,7 @@
                                 </tbody>
                                 <tfoot style="background:#f4f4f4;font-weight:bold;">
                                     <tr>
-                                        <td colspan="8" class="text-right">TOTAL:</td>
+                                        <td colspan="9" class="text-right">TOTAL:</td>
                                         <td class="text-right"><?= number_format($total_biaya,0,',','.') ?></td>
                                         <td></td>
                                     </tr>

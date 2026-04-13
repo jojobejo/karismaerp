@@ -181,13 +181,20 @@
                                 <?php endforeach; ?>
                             </div>
 
-                            <!-- Total Otomatis -->
+                            <!-- Total & Refund -->
                             <div class="row mt-2">
                                 <div class="col-md-4 offset-md-8">
-                                    <div class="alert alert-warning mb-0 py-2">
+
+                                    <div class="alert alert-warning mb-1 py-2">
                                         <strong>Total Biaya:</strong>
                                         <span id="totalBiaya" class="float-right font-weight-bold">Rp 0</span>
                                     </div>
+
+                                    <div class="alert alert-info mb-0 py-2">
+                                        <strong>Refund:</strong>
+                                        <span id="refundDisplay" class="float-right font-weight-bold">Rp 0</span>
+                                    </div>
+
                                 </div>
                             </div>
 
@@ -232,6 +239,7 @@ $(function () {
         var um     = parseInt($('#umOperasional').val().replace(/\./g, '') || 0);
         var refund = Math.max(0, um - total);
         $('#refundOperasional').val(refund > 0 ? refund.toLocaleString('id-ID') : '0');
+        $('#refundDisplay').text('Rp ' + refund.toLocaleString('id-ID'));
         $('#refundHidden').val(refund);
     }
 
@@ -250,3 +258,4 @@ $(function () {
     hitungTotal();
 });
 </script>
+
