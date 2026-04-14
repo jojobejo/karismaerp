@@ -201,12 +201,12 @@ class Operasional extends CI_Controller {
         $headers = ['No','Tanggal','Wilayah','Nama','Hotel','Per Diem','Entertainment',
                     'Communication','ATK','Gasoline','Sparepart','Toll/Parkir',
                     'Transportasi','Pos/Paket','Tambah Angin','Tambal Ban',
-                    'Indekost','Lain-lain','Total'];
+                    'Indekost','Sewa Kendaraan','Lain-lain','Total'];
         foreach ($headers as $i => $h) {
             $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
         }
 
-        $sheet->getStyle('A1:S1')->applyFromArray([
+        $sheet->getStyle('A1:T1')->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
             'alignment' => ['horizontal' => 'center'],
@@ -214,7 +214,7 @@ class Operasional extends CI_Controller {
 
         $fields = ['hotel','per_diem','entertainment','communication','atk','gasoline',
                 'sparepart_service','retribusi_toll_parkir','transportasi','pos_paket',
-                'tambah_angin','tambal_ban','indekost','lain_lain'];
+                'tambah_angin','tambal_ban','indekost','sewa_kendaraan','lain_lain'];
 
         foreach ($list as $i => $row) {
             $r = $i + 2;
@@ -229,7 +229,7 @@ class Operasional extends CI_Controller {
             $sheet->setCellValueByColumnAndRow($col, $r, $row['total_biaya']);
         }
 
-        foreach (range('A', 'S') as $col) {
+        foreach (range('A', 'T') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
