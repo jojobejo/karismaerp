@@ -17,8 +17,23 @@ NOTE - TRIAL :
 7. file upload , PIC dan kordinat  
 8. export file 
 
-
 REPORT : TRIAL DONE / TAMBAHAN BARU 
+
+API logging
+Rate limit
+
+1. API lambat = UI lemot
+        -caching
+        -queue
+        -atau minimal timeout CURL
+
+2. API down = aplikasi mati
+        -fallback response
+        -logging error
+
+3.Data gede = loading suwi
+        -pagination di API
+
 
 Giulio Leone
 ident {rng 2792840142 id E1_82022}

@@ -568,7 +568,7 @@ class C_Ics extends CI_Controller
 
     public function ics_po()
     {
-       $date1 = $this->input->post('date1');
+        $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
@@ -1393,7 +1393,26 @@ class C_Ics extends CI_Controller
         echo json_encode($data);
     }
 
-
+    public function api_stock_per_gudang()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            return $this->output
+                ->set_status_header(405)
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'status' => false,
+                    'message' => 'Method not allowed'
+                ]));
+        }
+        $gudang = $this->input->get('gudang', true);
+        $data = $this->M_Ics->get_stock_per_gudang_view($gudang);
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status' => true,
+                'data' => $data
+            ]));
+    }
 
     public function mutasi_barang()
     {
@@ -2411,5 +2430,23 @@ class C_Ics extends CI_Controller
             $this->db->trans_commit();
             redirect('stock/saldo');
         }
+    }
+
+    public function api_stock($params)
+    {
+        $params = [
+            'gudang'      => $this->input->get('gudang'),
+        ];
+
+        if (!empty($gudang) && $gudang != '1') {
+            $params['gudang'] = $gudang;
+        }
+
+        $data = $this->M_Ics->get_stock($params);
+
+        echo json_encode([
+            'status' => $data ? true : false,
+            'data'   => $data
+        ]);
     }
 }

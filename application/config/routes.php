@@ -146,6 +146,10 @@ $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
 $route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
 $route['ics/ajax_barang_pergudang']                 = 'logistik/C_Ics/ajax_barang_pergudang';
+$route['ics/api/stock_per_gudang']                  = 'logistik/C_Ics/api_stock_per_gudang';
+
+
+$route['api/v1/stock/(:any)']                       = 'logistik/C_Ics/api_stock/$1';
 
 $route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
 $route['ics/retur/penjualan']                       = 'logistik/C_Ics/retur_penjualan';
