@@ -233,11 +233,26 @@ $(document).ready(function () {
         }
     });
 
+    // ── Simpan options satuan sebagai array JS, bukan string HTML ──
+    // Ini solusi bug satuan hilang saat tambah baris
+    var listSatuan = [];
+    <?php foreach ($list_satuan as $s) : ?>
+        listSatuan.push('<?= addslashes($s['nm_satuan']) ?>');
+    <?php endforeach; ?>
+
+    function buildSatuanOptions() {
+        var opts = '<option value="">-- Pilih --</option>';
+        listSatuan.forEach(function(s) {
+            opts += '<option value="' + s + '">' + s + '</option>';
+        });
+        return opts;
+    }
+
     // ── Buka modal: load daftar barang via AJAX ───────────────────
     $('.btn-input-qty').on('click', function () {
         var noPo        = $(this).data('no-po');
         var kdPo        = $(this).data('kd-po');
-        var kdSuplier   = $(this).data('kd-suplier');   // TAMBAH INI
+        var kdSuplier   = $(this).data('kd-suplier');
         var namaSuplier = $(this).data('nama-suplier');
 
         $('#modal_no_po').val(noPo);
@@ -248,7 +263,6 @@ $(document).ready(function () {
         $('#wrapperBarang').html('');
         $('#loadingBarang').show();
 
-        // Kirim no_po + kd_suplier ke endpoint
         $.getJSON('<?= base_url('get_barang_by_po') ?>', { no_po: noPo, kd_suplier: kdSuplier }, function (data) {
             $('#loadingBarang').hide();
 
@@ -259,11 +273,7 @@ $(document).ready(function () {
                 return;
             }
 
-            var html = buildFormBarang(data);
-            $('#wrapperBarang').html(html);
-
-            // Re-init tambah/hapus baris per card barang
-            initCardEvents();
+            $('#wrapperBarang').html(buildFormBarang(data));
         }).fail(function () {
             $('#loadingBarang').hide();
             $('#wrapperBarang').html(
@@ -274,54 +284,34 @@ $(document).ready(function () {
 
     // ── Build HTML form per barang ────────────────────────────────
     function buildFormBarang(items) {
-        var satuanOptions = '';
-        <?php foreach ($list_satuan as $s) : ?>
-            satuanOptions += '<option value="<?= $s['nm_satuan'] ?>"><?= $s['nm_satuan'] ?></option>';
-        <?php endforeach; ?>
-
         var html = '';
         $.each(items, function (idx, item) {
+            // PERBAIKAN: required dihapus, input boleh kosong (barang boleh dilewati)
             html += `
-            <div class="card card-outline card-success mb-3" data-barang-idx="${idx}">
+            <div class="card card-outline card-success mb-3" data-barang-idx="${idx}" data-sisa="${item.sisa}">
                 <div class="card-header py-2">
-                    <strong class="text-success">${item.kd_barang}</strong>
-                    &mdash; ${item.nama_barang}
-                    <span class="badge badge-warning ml-2">Sisa: ${item.sisa} ${item.satuan}</span>
-                    <input type="hidden" name="rows[${idx}][kd_barang]" value="${item.kd_barang}">
+                    <strong class="text-success">${escStr(item.kd_barang)}</strong>
+                    &mdash; ${escStr(item.nama_barang)}
+                    <span class="badge badge-warning ml-2">Sisa: ${item.sisa} ${escStr(item.satuan)}</span>
+                    <input type="hidden" name="rows[${idx}][kd_barang]" value="${escStr(item.kd_barang)}">
                 </div>
                 <div class="card-body py-2">
-                    <table class="table table-bordered table-sm mb-1 tabel-sub-baris" data-idx="${idx}">
+                    <table class="table table-bordered table-sm mb-1">
                         <thead class="thead-light">
                             <tr>
-                                <th style="width:150px;">Qty Diterima <span class="text-danger">*</span></th>
-                                <th style="width:130px;">Satuan <span class="text-danger">*</span></th>
+                                <th style="width:150px;">Qty Diterima</th>
+                                <th style="width:130px;">Satuan</th>
                                 <th style="width:160px;">No Lot</th>
                                 <th style="width:160px;">Exp Date</th>
                                 <th style="width:50px;"></th>
                             </tr>
                         </thead>
                         <tbody class="body-sub-baris">
-                            <tr>
-                                <td><input type="number" class="form-control form-control-sm input-qty"
-                                           name="rows[${idx}][sub][0][qty_diterima]" min="1"
-                                           max="${item.sisa}" required></td>
-                                <td>
-                                    <select class="form-control form-control-sm" name="rows[${idx}][sub][0][satuan]" required>
-                                        <option value="">-- Pilih --</option>${satuanOptions}
-                                    </select>
-                                </td>
-                                <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][sub][0][no_lot]" placeholder="No Lot"></td>
-                                <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][sub][0][exp_date]"></td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-danger btn-hapus-sub" disabled>
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
+                            ${buildBarisSub(idx, 0, item.sisa)}
                         </tbody>
                     </table>
                     <button type="button" class="btn btn-xs btn-info btn-tambah-sub"
-                            data-idx="${idx}" data-sisa="${item.sisa}" data-satuan-opts="${escHtml(satuanOptions)}">
+                            data-idx="${idx}" data-sisa="${item.sisa}">
                         <i class="fas fa-plus"></i> Tambah Baris
                     </button>
                 </div>
@@ -330,47 +320,54 @@ $(document).ready(function () {
         return html;
     }
 
-    function escHtml(str) { return $('<div>').text(str).html(); }
-
-    // ── Events dalam card barang (delegasi ke #wrapperBarang) ─────
-    function initCardEvents() {
-        // sudah pakai delegasi di bawah, tidak perlu bind ulang
+    // ── Build satu baris sub (dipakai saat render awal & tambah baris) ──
+    function buildBarisSub(idx, subIdx, sisa) {
+        // PERBAIKAN: tidak pakai required, satuan dibangun dari listSatuan JS
+        return `
+        <tr>
+            <td><input type="number" class="form-control form-control-sm input-qty"
+                       name="rows[${idx}][sub][${subIdx}][qty_diterima]"
+                       min="1" max="${sisa}" placeholder="0"></td>
+            <td>
+                <select class="form-control form-control-sm select-satuan"
+                        name="rows[${idx}][sub][${subIdx}][satuan]">
+                    ${buildSatuanOptions()}
+                </select>
+            </td>
+            <td><input type="text" class="form-control form-control-sm"
+                       name="rows[${idx}][sub][${subIdx}][no_lot]" placeholder="No Lot"></td>
+            <td><input type="date" class="form-control form-control-sm"
+                       name="rows[${idx}][sub][${subIdx}][exp_date]"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger btn-hapus-sub" disabled>
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
     }
 
+    // Escape string untuk dipakai dalam HTML attribute
+    function escStr(str) {
+        return $('<div>').text(str || '').html();
+    }
+
+    // ── Tambah baris & hapus baris ────────────────────────────────
     $('#wrapperBarang')
         .on('click', '.btn-tambah-sub', function () {
-            var idx      = $(this).data('idx');
-            var sisa     = $(this).data('sisa');
-            var tbody    = $(this).closest('.card-body').find('.body-sub-baris');
-            var subIdx   = tbody.find('tr').length;
-            var satuanOpts = $(this).data('satuan-opts');
+            var idx    = $(this).data('idx');
+            var sisa   = $(this).data('sisa');
+            var tbody  = $(this).closest('.card-body').find('.body-sub-baris');
+            var subIdx = tbody.find('tr').length;
 
-            var tr = `
-                <tr>
-                    <td><input type="number" class="form-control form-control-sm input-qty"
-                               name="rows[${idx}][sub][${subIdx}][qty_diterima]" min="1" max="${sisa}" required></td>
-                    <td>
-                        <select class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][satuan]" required>
-                            <option value="">-- Pilih --</option>${satuanOpts}
-                        </select>
-                    </td>
-                    <td><input type="text" class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][no_lot]" placeholder="No Lot"></td>
-                    <td><input type="date" class="form-control form-control-sm" name="rows[${idx}][sub][${subIdx}][exp_date]"></td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-danger btn-hapus-sub">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>`;
-            tbody.append(tr);
+            tbody.append(buildBarisSub(idx, subIdx, sisa));
             updateHapusSub(tbody);
         })
 
         .on('click', '.btn-hapus-sub', function () {
             var tbody = $(this).closest('tbody');
             $(this).closest('tr').remove();
-            updateHapusSub(tbody);
             reindexSubBaris(tbody);
+            updateHapusSub(tbody);
         });
 
     function updateHapusSub(tbody) {
@@ -379,37 +376,62 @@ $(document).ready(function () {
     }
 
     function reindexSubBaris(tbody) {
+        // Ambil idx barang dari card parent
+        var idx = tbody.closest('.card').data('barang-idx');
         tbody.find('tr').each(function (si) {
             $(this).find('input, select').each(function () {
                 var name = $(this).attr('name');
                 if (name) {
-                    // ganti sub index: rows[X][sub][Y] → rows[X][sub][si]
                     $(this).attr('name', name.replace(/\[sub\]\[\d+\]/, '[sub][' + si + ']'));
                 }
             });
         });
     }
 
-    // ── Validasi submit: total per barang tidak boleh > sisa ──────
+    // ── Validasi submit ───────────────────────────────────────────
     $('#formInputQty').on('submit', function (e) {
-        var valid = true;
+        var valid       = true;
+        var adaYangDiisi = false;
 
         $('.card[data-barang-idx]').each(function () {
-            var card   = $(this);
-            var sisa   = parseInt(card.find('.badge-warning').text().replace(/[^0-9]/g, '')) || 0;
-            var total  = 0;
+            var card  = $(this);
+            var sisa  = parseInt(card.data('sisa')) || 0;
+            var total = 0;
+            var barisDiisi = 0;
 
             card.find('.input-qty').each(function () {
-                total += parseInt($(this).val()) || 0;
+                var qty = parseInt($(this).val()) || 0;
+                if (qty > 0) {
+                    barisDiisi++;
+                    total += qty;
+
+                    // Cek satuan wajib diisi jika qty diisi
+                    var satuan = $(this).closest('tr').find('.select-satuan').val();
+                    if (!satuan) {
+                        valid = false;
+                        var namaBarang = card.find('.card-header strong').text();
+                        alert('Satuan wajib dipilih untuk barang "' + namaBarang + '" yang qty-nya diisi.');
+                        return false;
+                    }
+                }
             });
 
+            if (barisDiisi > 0) adaYangDiisi = true;
+
+            // Total qty tidak boleh melebihi sisa
             if (total > sisa) {
                 valid = false;
                 var namaBarang = card.find('.card-header strong').text();
-                alert('Total qty untuk barang "' + namaBarang + '" (' + total + ') melebihi sisa (' + sisa + '). Silakan periksa kembali.');
-                return false; // break each
+                alert('Total qty untuk barang "' + namaBarang + '" (' + total + ') melebihi sisa (' + sisa + ').');
+                return false;
             }
         });
+
+        // Minimal 1 barang harus diisi
+        if (valid && !adaYangDiisi) {
+            valid = false;
+            alert('Minimal isi qty untuk 1 barang sebelum menyimpan.');
+        }
 
         if (!valid) { e.preventDefault(); return false; }
     });
