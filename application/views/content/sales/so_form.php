@@ -268,9 +268,8 @@
                     <table class="table table-bordered table-sm table-hover mb-0" id="tbl-stock">
                         <thead class="thead-dark sticky-top">
                             <tr>
-                                <th>Kode Barang</th>
                                 <th>Nama Barang</th>
-                                <th>Exp Date</th>
+                                <th>Expired Date</th>
                                 <th>No Lot</th>
                                 <th class="text-right">Stok Tersedia</th>
                                 <th>Satuan</th>
@@ -279,7 +278,7 @@
                         </thead>
                         <tbody id="stock-body">
                             <tr>
-                                <td colspan="7" class="text-center text-muted">
+                                <td colspan="6" class="text-center text-muted">
                                     <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data stok...
                                 </td>
                             </tr>
@@ -339,6 +338,11 @@ function buatBaris(idx, d) {
     const akun     = d.kode_akun        || '';
     const avail    = d.available_stock  || 0;
     const subtotal = (parseFloat(hrg) * parseFloat(qty) || 0) * (1 + parseFloat(pajak) / 100);
+    const expOptions = d.exp_options
+        ? d.exp_options.map(e =>
+            `<option value="${e.exp_date}" ${e.exp_date === exp ? 'selected' : ''}>${formatTgl(e.exp_date)} (Avail: ${fmtNum(e.available_stock)})</option>`
+          ).join('')
+        : (exp ? `<option value="${exp}" selected>${formatTgl(exp)}</option>` : '');
 
     return `
     <tr id="row-${idx}" data-idx="${idx}">
@@ -361,13 +365,17 @@ function buatBaris(idx, d) {
                     <i class="fas fa-search"></i>
                 </button>
             </div>
-            <small class="text-muted">Tersedia: <b id="avail_${idx}">${fmtNum(avail)}</b></small>
+            <!-- data-avail menyimpan nilai NUMERIK mentah untuk validasi submit -->
+            <small class="text-muted">Tersedia: <b id="avail_${idx}" data-avail="${avail}">${fmtNum(avail)}</b></small>
         </td>
         <td>
-            <input type="date" name="expired_date[]" id="exp_${idx}"
-                class="form-control form-control-sm mb-1" value="${exp}" required>
-            <input type="text" name="no_lot[]" id="lot_${idx}"
-                class="form-control form-control-sm" placeholder="No Lot" value="${lot}">
+            <select name="expired_date[]" id="exp_${idx}"
+                class="form-control form-control-sm mb-1" required>
+                <option value="">-- Pilih Expired --</option>
+                ${expOptions}
+            </select>
+            <input type="hidden" name="no_lot[]" id="lot_${idx}" value="${lot}">
+            <small class="text-muted" id="lot_lbl_${idx}">${lot ? 'Lot: ' + lot : ''}</small>
         </td>
         <td>
             <input type="number" step="0.001" name="qty[]" id="qty_${idx}"
@@ -378,7 +386,8 @@ function buatBaris(idx, d) {
                 class="form-control form-control-sm" value="${sat}" readonly>
         </td>
         <td class="text-center align-middle">
-            <span id="availnum_${idx}">${fmtNum(avail)}</span>
+            <!-- data-avail juga di sini untuk konsistensi -->
+            <span id="availnum_${idx}" data-avail="${avail}">${fmtNum(avail)}</span>
         </td>
         <td>
             <input type="number" step="0.01" name="hrg_satuan[]" id="hrg_${idx}"
@@ -544,18 +553,39 @@ function renderStock(data) {
 
     if (!filtered.length) {
         document.getElementById('stock-body').innerHTML =
-            '<tr><td colspan="7" class="text-center text-muted"><i class="fas fa-inbox mr-1"></i> Stok kosong / tidak ditemukan</td></tr>';
+            '<tr><td colspan="6" class="text-center text-muted">' +
+            '<i class="fas fa-inbox mr-1"></i> Stok kosong / tidak ditemukan</td></tr>';
         return;
     }
 
-    document.getElementById('stock-body').innerHTML = filtered.map(d => `
-        <tr>
-            <td><small>${d.kode_barang || ''}</small></td>
-            <td>${d.nama_barang || ''}</td>
-            <td>${d.exp_date || '-'}</td>
-            <td>${d.no_lot   || '-'}</td>
+    // Kelompokkan per kode barang agar mudah dibaca,
+    // tapi tetap tampilkan SETIAP baris exp_date+lot yang berbeda
+    // supaya user bisa memilih expired date yang diinginkan.
+    let html = '';
+    let lastKd = null;
+
+    filtered.forEach(d => {
+        const isNewItem = d.kode_barang !== lastKd;
+        lastKd = d.kode_barang;
+
+        // Baris dengan warna berbeda tiap ganti kode barang
+        const rowClass = isNewItem ? 'table-light font-weight-bold-first' : '';
+
+        html += `
+        <tr class="${rowClass}">
+            <td>
+                <small class="text-muted d-block">${d.kode_barang || ''}</small>
+                <span>${isNewItem ? (d.nama_barang || '') : '<span class="text-muted">↳</span> ' + (d.nama_barang || '')}</span>
+            </td>
+            <td>
+                <!-- Expired date ditampilkan jelas karena bisa berbeda per lot -->
+                ${d.exp_date
+                    ? `<span class="badge ${isExpiringSoon(d.exp_date) ? 'badge-warning' : 'badge-success'}">${formatTgl(d.exp_date)}</span>`
+                    : '<span class="text-muted">-</span>'}
+            </td>
+            <td>${d.no_lot || '-'}</td>
             <td class="text-right"><b>${fmtNum(d.available_stock)}</b></td>
-            <td>${d.satuan   || ''}</td>
+            <td>${d.satuan || ''}</td>
             <td class="text-center">
                 <button type="button" class="btn btn-xs btn-primary btn-pick-stock"
                     data-kd="${d.kode_barang}"
@@ -564,14 +594,31 @@ function renderStock(data) {
                     data-lot="${d.no_lot    || ''}"
                     data-sat="${d.satuan    || ''}"
                     data-av="${d.available_stock}"
-                    data-ton="${d.tonase_satuan    || 0}"
-                    data-kub="${d.kubikasi_satuan  || 0}"
-                    data-pk="${d.hrg_pokok || 0}"
+                    data-ton="${d.tonase_satuan   || 0}"
+                    data-kub="${d.kubikasi_satuan || 0}"
+                    data-pk="${d.hrg_pokok  || 0}"
                     data-akun="${d.kode_akun || ''}">
                     <i class="fas fa-check"></i> Pilih
                 </button>
             </td>
-        </tr>`).join('');
+        </tr>`;
+    });
+
+    document.getElementById('stock-body').innerHTML = html;
+}
+
+// Helper: format tanggal YYYY-MM-DD → DD/MM/YYYY untuk tampilan modal
+function formatTgl(ymd) {
+    if (!ymd) return '-';
+    const p = ymd.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ymd;
+}
+
+// Helper: cek apakah exp_date <= 30 hari dari hari ini
+function isExpiringSoon(ymd) {
+    if (!ymd) return false;
+    const diff = (new Date(ymd) - new Date()) / (1000 * 60 * 60 * 24);
+    return diff <= 30;
 }
 
 // =====================================================================
@@ -593,27 +640,70 @@ document.getElementById('item-body').addEventListener('click', e => {
 });
 
 // Pilih barang dari modal → isi baris
+// Saat tombol "Pilih" diklik di modal stok,
+// kumpulkan semua exp_date yang tersedia untuk kode barang itu
 document.getElementById('stock-body').addEventListener('click', e => {
     const btn = e.target.closest('.btn-pick-stock');
     if (!btn) return;
-    const i = currentRowIdx;
+    const i   = currentRowIdx;
+    const kd  = btn.dataset.kd;
 
-    // Isi hidden + display fields
-    document.getElementById('kd_'      + i).value       = btn.dataset.kd;
-    document.getElementById('nm_'      + i).value       = btn.dataset.nm;
-    document.getElementById('kdlbl_'   + i).textContent = btn.dataset.kd;
-    document.getElementById('nmlbl_'   + i).textContent = btn.dataset.nm;
-    document.getElementById('exp_'     + i).value       = btn.dataset.exp;
-    document.getElementById('lot_'     + i).value       = btn.dataset.lot;
-    document.getElementById('sat_'     + i).value       = btn.dataset.sat;
-    document.getElementById('satlbl_'  + i).value       = btn.dataset.sat;
-    document.getElementById('pk_'      + i).value       = btn.dataset.pk;
-    document.getElementById('toninp_'  + i).value       = btn.dataset.ton;
-    document.getElementById('kubinp_'  + i).value       = btn.dataset.kub;
-    document.getElementById('avail_'   + i).textContent = fmtNum(btn.dataset.av);
-    document.getElementById('availnum_'+ i).textContent = fmtNum(btn.dataset.av);
-    document.getElementById('ton_'     + i).value       = btn.dataset.ton;
-    document.getElementById('kub_'     + i).value       = btn.dataset.kub;
+    // Kumpulkan semua baris di stockCache dengan kode barang sama
+    const samaBarang = stockCache.filter(s => s.kode_barang === kd);
+
+    // Isi dropdown expired date
+    const expSel = document.getElementById('exp_' + i);
+    expSel.innerHTML = '<option value="">-- Pilih Expired --</option>';
+    samaBarang.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value       = s.exp_date;
+        opt.textContent = `${formatTgl(s.exp_date)} — Avail: ${fmtNum(s.available_stock)}`;
+        // Simpan available_stock per exp_date sebagai data attribute
+        opt.dataset.avail = s.available_stock;
+        opt.dataset.lot   = s.no_lot || '';
+        expSel.appendChild(opt);
+    });
+
+    // Pilih otomatis jika hanya 1 pilihan
+    if (samaBarang.length === 1) expSel.selectedIndex = 1;
+
+    // Trigger update avail saat expired dipilih
+    expSel.onchange = function() {
+        const selOpt = this.options[this.selectedIndex];
+        const avRaw  = parseFloat(selOpt.dataset.avail || 0);
+        const lotVal = selOpt.dataset.lot || '';
+
+        document.getElementById('lot_' + i).value          = lotVal;
+        document.getElementById('lot_lbl_' + i).textContent = lotVal ? 'Lot: ' + lotVal : '';
+
+        const elAvail = document.getElementById('avail_' + i);
+        if (elAvail) {
+            elAvail.textContent   = fmtNum(avRaw);
+            elAvail.dataset.avail = avRaw;
+        }
+        hitungBaris(i);
+    };
+
+    // Isi field lainnya
+    document.getElementById('kd_'     + i).value       = kd;
+    document.getElementById('nm_'     + i).value       = btn.dataset.nm;
+    document.getElementById('kdlbl_'  + i).textContent = kd;
+    document.getElementById('nmlbl_'  + i).textContent = btn.dataset.nm;
+    document.getElementById('sat_'    + i).value       = btn.dataset.sat;
+    document.getElementById('satlbl_' + i).value       = btn.dataset.sat;
+    document.getElementById('pk_'     + i).value       = btn.dataset.pk;
+    document.getElementById('toninp_' + i).value       = btn.dataset.ton;
+    document.getElementById('kubinp_' + i).value       = btn.dataset.kub;
+    document.getElementById('ton_'    + i).value       = btn.dataset.ton;
+    document.getElementById('kub_'    + i).value       = btn.dataset.kub;
+
+    // Set avail dari pilihan pertama yang otomatis terpilih
+    if (samaBarang.length === 1) {
+        const avRaw = parseFloat(samaBarang[0].available_stock || 0);
+        document.getElementById('avail_' + i).textContent   = fmtNum(avRaw);
+        document.getElementById('avail_' + i).dataset.avail = avRaw;
+        document.getElementById('lot_'   + i).value         = samaBarang[0].no_lot || '';
+    }
 
     hitungBaris(i);
     $('#modal-stock').modal('hide');
@@ -642,22 +732,31 @@ document.getElementById('form-so').addEventListener('submit', e => {
     const rows = document.querySelectorAll('#item-body tr');
     if (!rows.length) {
         e.preventDefault();
-        toastr.error('Minimal 1 item barang harus ditambahkan!');
+        toastr ? toastr.error('Minimal 1 item barang harus ditambahkan!') : alert('Minimal 1 item barang harus ditambahkan!');
         return;
     }
 
     let stokErr = [];
     rows.forEach(tr => {
-        const i     = tr.dataset.idx;
-        const qty   = parseFloat(document.getElementById('qty_'   + i)?.value || 0);
-        const avail = parseFloat(document.getElementById('avail_' + i)?.textContent?.replace(/\./g,'').replace(',','.') || 0);
-        const nm    = document.getElementById('nm_' + i)?.value || '';
-        if (qty > avail) stokErr.push(`${nm}: diminta ${qty}, tersedia ${avail}`);
+        const i   = tr.dataset.idx;
+        const qty = parseFloat(document.getElementById('qty_' + i)?.value || 0);
+        const nm  = document.getElementById('nm_' + i)?.value || '(barang)';
+
+        // Ambil dari data-avail (nilai numerik mentah, bukan textContent terformat)
+        const availEl = document.getElementById('avail_' + i);
+        const avail   = parseFloat(availEl?.dataset.avail ?? availEl?.getAttribute('data-avail') ?? 0);
+
+        if (qty <= 0) {
+            stokErr.push(`${nm}: qty harus lebih dari 0`);
+        } else if (avail > 0 && qty > avail) {
+            stokErr.push(`${nm}: diminta ${qty}, tersedia ${avail}`);
+        }
     });
 
     if (stokErr.length) {
         e.preventDefault();
-        toastr.error('Stok tidak mencukupi:\n' + stokErr.join('\n'));
+        const msg = 'Stok tidak mencukupi:\n• ' + stokErr.join('\n• ');
+        toastr ? toastr.error(msg) : alert(msg);
     }
 });
 

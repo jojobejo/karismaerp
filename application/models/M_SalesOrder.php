@@ -49,12 +49,20 @@ class M_SalesOrder extends CI_Model
 
     public function cek_stock($kd_barang, $exp_date, $gudang_id)
     {
-        return $this->db->get_where('v_available_stock', [
-            'kode_barang' => $kd_barang,
-            'exp_date'    => $exp_date,
-            'gudang'      => $gudang_id,
-            
-        ])->row_array();
+        // Gunakan query manual agar tipe data tidak ambigu
+        $sql = "SELECT * FROM v_available_stock 
+                WHERE kode_barang = ? 
+                AND DATE(exp_date) = DATE(?) 
+                AND gudang = ?
+                LIMIT 1";
+        
+        $query = $this->db->query($sql, [
+            $kd_barang,
+            $exp_date,
+            $gudang_id
+        ]);
+        
+        return $query->row_array();
     }
 
     // ----------------------------------------------------------------
@@ -189,21 +197,24 @@ class M_SalesOrder extends CI_Model
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
 
-            // Jika edit SO → tambahkan kembali reservasi milik SO ini
             if ($exclude_so) {
                 $this->db->select('SUM(qty_reserved) as qty');
                 $this->db->where('id_so', $exclude_so);
                 $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('exp_date', $d['expired_date']);
+                $this->db->where('DATE(exp_date)', date('Y-m-d', strtotime($d['expired_date'])));
                 $this->db->where('status', 'active');
-                $res = $this->db->get('tbso_stock_reservation')->row_array();
+                $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
             }
 
-            if ((float)$d['qty'] > $available) {
+            // Gunakan ROUND agar tidak ada floating point mismatch
+            $available = round($available, 3);
+            $diminta   = round((float)$d['qty'], 3);
+
+            if ($diminta > $available) {
                 $errors[] = "Stok tidak cukup: <b>{$d['nama_barang']}</b> "
-                          . "(Exp: {$d['expired_date']}) — "
-                          . "Diminta: {$d['qty']}, Tersedia: {$available}";
+                        . "(Exp: {$d['expired_date']}) — "
+                        . "Diminta: {$diminta}, Tersedia: {$available}";
             }
         }
         return $errors;
