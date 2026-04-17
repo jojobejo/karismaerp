@@ -6,18 +6,16 @@
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
 
-
-        <div class="content-wrapper bgipkp">
-
             <!-- Main content -->
             <div class="content">
                 <?php date_default_timezone_set('Asia/Jakarta');  ?>
                 <div class="container">
                     <input type="text" value="<?= date("Y-m-d") ?>" name="tglinput" id="tglinput" hidden>
                     <input type="text" value="<?= date("H:i") ?>" name="jminput" id="" hidden>
-                    <span id="jam" class="sjam"></span>
+                    <!--<span id="jam" class="sjam"></span>-->
                     <?php  ?>
-                    <span class="sdate"><?= format_indo(date("Y-m-d")) ?></span>
+                    <!--<span class="sdate"><?= format_indo(date("Y-m-d")) ?></span>-->
+
                     <div class="row divgbrindek" style="text-align: center;">
                         <a href="<?= base_url('nilai_ipkp/1') ?>" class="tmbl1"></a>
                         <a href="<?= base_url('nilai_ipkp/2') ?>" class="tmbl2"></a>
