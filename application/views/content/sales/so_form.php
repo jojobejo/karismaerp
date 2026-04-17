@@ -1,10 +1,14 @@
 <!-- views/content/sales/so_form.php -->
 <?php
     $is_edit   = !empty($so);
-    $id_so_val = $is_edit ? $so['id_so']    : $no_so;
+    $id_so_val = $is_edit ? $so['id_so'] : $no_so;
     $action    = $is_edit
         ? base_url('sales_order/update/' . $so['id_so'])
         : base_url('sales_order/store');
+
+    // Batas default dari controller (dikirim dari konstanta model)
+    $batas_ton = $batas_tonase   ?? 6;
+    $batas_kub = $batas_kubikasi ?? 9;
 ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
@@ -41,7 +45,6 @@
         <section class="content">
             <div class="container-fluid">
 
-                <!-- TOMBOL KEMBALI -->
                 <div class="mb-3">
                     <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali
@@ -58,14 +61,13 @@
                 <form action="<?= $action ?>" method="post" id="form-so">
 
                     <div class="row">
-                        <!-- KOLOM KIRI: Informasi SO -->
+                        <!-- Informasi SO -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header bg-primary text-white py-2">
                                     <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informasi SO</h3>
                                 </div>
                                 <div class="card-body">
-
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label">No SO</label>
                                         <div class="col-sm-8">
@@ -73,7 +75,6 @@
                                                 value="<?= htmlspecialchars($id_so_val) ?>" readonly>
                                         </div>
                                     </div>
-
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label">Tanggal <span class="text-danger">*</span></label>
                                         <div class="col-sm-8">
@@ -81,7 +82,6 @@
                                                 value="<?= $is_edit ? $so['tanggal_transaksi'] : date('Y-m-d') ?>">
                                         </div>
                                     </div>
-
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label">Customer <span class="text-danger">*</span></label>
                                         <div class="col-sm-8">
@@ -99,7 +99,6 @@
                                                 value="<?= $is_edit ? htmlspecialchars($so['customer_name']) : '' ?>">
                                         </div>
                                     </div>
-
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label">Gudang</label>
                                         <div class="col-sm-8">
@@ -107,72 +106,90 @@
                                                 value="<?= htmlspecialchars($gudang_id) ?>">
                                         </div>
                                     </div>
-
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label">Catatan</label>
                                         <div class="col-sm-8">
                                             <textarea name="catatan" class="form-control" rows="2"><?= $is_edit ? htmlspecialchars($so['catatan'] ?? '') : '' ?></textarea>
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
 
-                        <!-- KOLOM KANAN: Tonase & Kubikasi -->
+                        <!-- Tonase & Kubikasi (otomatis, batas fixed) -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header bg-info text-white py-2">
-                                    <h3 class="card-title"><i class="fas fa-weight mr-1"></i> Batas Tonase & Kubikasi</h3>
+                                    <h3 class="card-title">
+                                        <i class="fas fa-weight mr-1"></i> Tonase & Kubikasi
+                                    </h3>
                                 </div>
                                 <div class="card-body">
-
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-5 col-form-label">Batas Tonase (kg)</label>
-                                        <div class="col-sm-7">
-                                            <input type="number" step="0.001" name="batas_tonase" id="batas_tonase"
-                                                class="form-control"
-                                                value="<?= $is_edit ? $so['batas_tonase'] : '' ?>"
-                                                placeholder="Opsional">
+                                    <!-- Info batas (read-only) -->
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <div class="info-box mb-0">
+                                                <span class="info-box-icon bg-success" style="min-height:50px">
+                                                    <i class="fas fa-truck"></i>
+                                                </span>
+                                                <div class="info-box-content">
+                                                    <span class="info-box-text">Batas Tonase</span>
+                                                    <span class="info-box-number"><?= $batas_ton ?> ton</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="info-box mb-0">
+                                                <span class="info-box-icon bg-info" style="min-height:50px">
+                                                    <i class="fas fa-cube"></i>
+                                                </span>
+                                                <div class="info-box-content">
+                                                    <span class="info-box-text">Batas Kubikasi</span>
+                                                    <span class="info-box-number"><?= $batas_kub ?> m³</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-5 col-form-label">Batas Kubikasi (m³)</label>
-                                        <div class="col-sm-7">
-                                            <input type="number" step="0.00001" name="batas_kubikasi" id="batas_kubikasi"
-                                                class="form-control"
-                                                value="<?= $is_edit ? $so['batas_kubikasi'] : '' ?>"
-                                                placeholder="Opsional">
-                                        </div>
-                                    </div>
-
-                                    <hr class="my-3">
-
-                                    <!-- Progress Bars -->
+                                    <!-- Progress Tonase -->
                                     <div class="mb-3">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <small><b>Tonase:</b> <span id="lbl-tonase">0</span> kg</small>
-                                            <small class="text-muted" id="lbl-tonase-limit"></small>
+                                            <small>
+                                                <b>Tonase:</b>
+                                                <span id="lbl-tonase">0,000</span> ton
+                                            </small>
+                                            <small class="text-muted">Maks <?= $batas_ton ?> ton</small>
                                         </div>
-                                        <div class="progress" style="height:10px">
+                                        <div class="progress" style="height:12px">
                                             <div class="progress-bar bg-success" id="tonase-bar"
-                                                 role="progressbar" style="width:0%"></div>
+                                                 role="progressbar" style="width:0%">
+                                            </div>
                                         </div>
+                                        <small id="lbl-tonase-warn" class="text-danger d-none font-weight-bold">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Melebihi batas tonase!
+                                        </small>
                                     </div>
 
+                                    <!-- Progress Kubikasi -->
                                     <div class="mb-2">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <small><b>Kubikasi:</b> <span id="lbl-kubikasi">0</span> m³</small>
-                                            <small class="text-muted" id="lbl-kubikasi-limit"></small>
+                                            <small>
+                                                <b>Kubikasi:</b>
+                                                <span id="lbl-kubikasi">0,00000</span> m³
+                                            </small>
+                                            <small class="text-muted">Maks <?= $batas_kub ?> m³</small>
                                         </div>
-                                        <div class="progress" style="height:10px">
+                                        <div class="progress" style="height:12px">
                                             <div class="progress-bar bg-info" id="kubikasi-bar"
-                                                 role="progressbar" style="width:0%"></div>
+                                                 role="progressbar" style="width:0%">
+                                            </div>
                                         </div>
+                                        <small id="lbl-kubikasi-warn" class="text-danger d-none font-weight-bold">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Melebihi batas kubikasi!
+                                        </small>
                                     </div>
-
-                                    <div id="tk-warning" class="mt-2"></div>
 
                                 </div>
                             </div>
@@ -195,26 +212,24 @@
                                     <thead class="thead-dark">
                                         <tr>
                                             <th style="min-width:230px">Barang</th>
-                                            <th style="min-width:140px">Expired / No Lot</th>
+                                            <th style="min-width:160px">Expired / No Lot</th>
                                             <th style="width:90px">Qty</th>
                                             <th style="width:70px">Satuan</th>
-                                            <th style="width:90px">Stok Avail</th>
+                                            <th style="width:100px">Stok Avail</th>
                                             <th style="width:130px">Harga Satuan</th>
                                             <th style="width:70px">Pajak %</th>
                                             <th style="width:130px">Subtotal</th>
-                                            <th style="width:90px">Tonase/sat</th>
-                                            <th style="width:90px">Kubik/sat</th>
-                                            <th style="width:40px"></th>
+                                            <th style="width:100px">Tonase</th>
+                                            <th style="width:100px">Kubikasi</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="item-body">
-                                        <!-- diisi JS -->
-                                    </tbody>
+                                    <tbody id="item-body"></tbody>
                                     <tfoot>
                                         <tr class="bg-light">
                                             <td colspan="7" class="text-right font-weight-bold">GRAND TOTAL</td>
                                             <td class="text-right font-weight-bold" id="total-grand">0</td>
-                                            <td colspan="3"></td>
+                                            <td class="text-right font-weight-bold small" id="total-tonase-tbl">0 ton</td>
+                                            <td class="text-right font-weight-bold small" id="total-kubikasi-tbl">0 m³</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -222,21 +237,16 @@
                         </div>
                     </div>
 
-                    <!-- TOMBOL SIMPAN -->
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div id="harga-warning" class="text-danger small"></div>
-                        <div>
-                            <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary mr-2">
-                                <i class="fas fa-times"></i> Batal
-                            </a>
-                            <button type="submit" class="btn btn-primary" id="btn-submit">
-                                <i class="fas fa-save"></i> Simpan SO
-                            </button>
-                        </div>
+                    <div class="d-flex justify-content-end mb-4">
+                        <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary mr-2">
+                            <i class="fas fa-times"></i> Batal
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btn-submit">
+                            <i class="fas fa-save"></i> Simpan SO
+                        </button>
                     </div>
 
                 </form>
-
             </div>
         </section>
     </div>
@@ -249,39 +259,35 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
-<!-- MODAL: Pilih Barang dari Stok -->
+<!-- MODAL: Pilih Barang -->
 <div class="modal fade" id="modal-stock" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white py-2">
                 <h5 class="modal-title"><i class="fas fa-search mr-1"></i> Pilih Barang</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <div class="mb-2">
-                    <input type="text" id="stock-search" class="form-control"
-                        placeholder="Cari kode atau nama barang...">
-                </div>
-                <div style="max-height:420px; overflow-y:auto">
-                    <table class="table table-bordered table-sm table-hover mb-0" id="tbl-stock">
+                <input type="text" id="stock-search" class="form-control mb-2"
+                    placeholder="Cari kode atau nama barang...">
+                <div style="max-height:420px;overflow-y:auto">
+                    <table class="table table-bordered table-sm table-hover mb-0">
                         <thead class="thead-dark sticky-top">
                             <tr>
                                 <th>Nama Barang</th>
-                                <th>Expired Date</th>
+                                <th>Exp Date</th>
                                 <th>No Lot</th>
-                                <th class="text-right">Stok Tersedia</th>
+                                <th class="text-right">Stok Avail</th>
                                 <th>Satuan</th>
+                                <th class="text-right">Berat/sat</th>
+                                <th class="text-right">Kubik/sat</th>
                                 <th class="text-center">Pilih</th>
                             </tr>
                         </thead>
                         <tbody id="stock-body">
-                            <tr>
-                                <td colspan="6" class="text-center text-muted">
-                                    <i class="fas fa-spinner fa-spin mr-1"></i> Memuat data stok...
-                                </td>
-                            </tr>
+                            <tr><td colspan="8" class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin mr-1"></i> Memuat...
+                            </td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -291,14 +297,18 @@
 </div>
 
 <script>
-/* =====================================================================
-   SO FORM SCRIPT — sesuai struktur proyek Karisma ERP
-   ===================================================================== */
+/* ===================================================================
+   SO FORM — Karisma ERP
+   Tonase otomatis : qty × berat_gram / 1.000.000   (gram → ton)
+   Kubikasi otomatis: qty × kubikasi_m3              (sudah m³)
+   Batas default   : <?= $batas_ton ?> ton, <?= $batas_kub ?> m³
+   =================================================================== */
 
-const BASE_URL  = '<?= base_url() ?>';
-const GUDANG_ID = '<?= htmlspecialchars($gudang_id) ?>';
+const BASE_URL      = '<?= base_url() ?>';
+const GUDANG_ID     = '<?= htmlspecialchars($gudang_id) ?>';
+const BATAS_TONASE  = <?= (float)$batas_ton ?>;    // ton
+const BATAS_KUBIKASI= <?= (float)$batas_kub ?>;    // m³
 
-// Data dari server saat edit
 <?php if ($is_edit && !empty($details)): ?>
 const EDIT_DETAILS = <?= json_encode(array_values($details)) ?>;
 <?php else: ?>
@@ -309,73 +319,90 @@ let currentRowIdx = null;
 let stockCache    = [];
 let rowIdx        = 0;
 
-// =====================================================================
-// UTILITIES
-// =====================================================================
+// -------------------------------------------------------------------
+// UTILS
+// -------------------------------------------------------------------
 function fmtNum(n, dec = 2) {
     return parseFloat(n || 0).toLocaleString('id-ID', {
-        minimumFractionDigits: dec,
-        maximumFractionDigits: dec
+        minimumFractionDigits: dec, maximumFractionDigits: dec
     });
 }
+function formatTgl(ymd) {
+    if (!ymd) return '-';
+    const p = ymd.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ymd;
+}
+function isExpiringSoon(ymd) {
+    if (!ymd) return false;
+    return (new Date(ymd) - new Date()) / 86400000 <= 30;
+}
 
-// =====================================================================
-// GENERATE BARIS ITEM
-// =====================================================================
+// -------------------------------------------------------------------
+// BUAT BARIS
+// -------------------------------------------------------------------
 function buatBaris(idx, d) {
     d = d || {};
-    const kd       = d.kd_barang        || '';
-    const nm       = d.nama_barang      || '';
-    const exp      = d.expired_date     || '';
-    const lot      = d.no_lot           || '';
-    const qty      = d.qty              || '';
-    const sat      = d.satuan           || '';
-    const hrg      = d.hrg_satuan       || '';
-    const pk       = d.hrg_pokok        || 0;
-    const pajak    = d.pajak            || 0;
-    const ton      = d.tonase_satuan    || 0;
-    const kub      = d.kubikasi_satuan  || 0;
-    const akun     = d.kode_akun        || '';
-    const avail    = d.available_stock  || 0;
-    const subtotal = (parseFloat(hrg) * parseFloat(qty) || 0) * (1 + parseFloat(pajak) / 100);
-    const expOptions = d.exp_options
-        ? d.exp_options.map(e =>
-            `<option value="${e.exp_date}" ${e.exp_date === exp ? 'selected' : ''}>${formatTgl(e.exp_date)} (Avail: ${fmtNum(e.available_stock)})</option>`
-          ).join('')
-        : (exp ? `<option value="${exp}" selected>${formatTgl(exp)}</option>` : '');
+    const kd       = d.kd_barang     || '';
+    const nm       = d.nama_barang   || '';
+    const exp      = d.expired_date  || '';
+    const lot      = d.no_lot        || '';
+    const qty      = d.qty           || '';
+    const sat      = d.satuan        || '';
+    const hrg      = d.hrg_satuan    || '';
+    const pk       = d.hrg_pokok     || 0;
+    const pajak    = d.pajak         || 0;
+    const akun     = d.kode_akun     || '';
+    const avail    = d.available_stock|| 0;
+    // berat_gram & kubikasi_m3 diambil dari data edit atau diisi saat pilih barang
+    const beratG   = d.berat_gram    || 0;
+    const kubikM   = d.kubikasi_m3   || 0;
+    const subtotal = (parseFloat(hrg) * parseFloat(qty) || 0) * (1 + parseFloat(pajak)/100);
+
+    // Hitung tonase & kubikasi baris ini
+    const ton = (parseFloat(qty)||0) * (parseFloat(beratG)||0) / 1000000;
+    const kub = (parseFloat(qty)||0) * (parseFloat(kubikM)||0);
+
+    // Opsi expired date untuk mode edit (akan diisi ulang saat pilih modal)
+    const expOption = exp
+        ? `<option value="${exp}" data-lot="${lot}" data-av="${avail}" data-ton="${beratG}" data-kub="${kubikM}" selected>
+               ${formatTgl(exp)}${lot ? ' | Lot: '+lot : ''}
+           </option>`
+        : '<option value="">-- Pilih barang dulu --</option>';
 
     return `
     <tr id="row-${idx}" data-idx="${idx}">
         <td>
-            <input type="hidden" name="produk_id[]"       value="${kd}">
-            <input type="hidden" name="kd_barang[]"        id="kd_${idx}"  value="${kd}">
-            <input type="hidden" name="nama_barang[]"      id="nm_${idx}"  value="${nm}">
-            <input type="hidden" name="satuan[]"           id="sat_${idx}" value="${sat}">
-            <input type="hidden" name="hrg_pokok[]"        id="pk_${idx}"  value="${pk}">
-            <input type="hidden" name="tonase_satuan[]"    id="ton_${idx}" value="${ton}">
-            <input type="hidden" name="kubikasi_satuan[]"  id="kub_${idx}" value="${kub}">
-            <input type="hidden" name="kode_akun[]"        value="${akun}">
+            <input type="hidden" name="produk_id[]"    value="${kd}">
+            <input type="hidden" name="kd_barang[]"    id="kd_${idx}"    value="${kd}">
+            <input type="hidden" name="nama_barang[]"  id="nm_${idx}"    value="${nm}">
+            <input type="hidden" name="satuan[]"       id="sat_${idx}"   value="${sat}">
+            <input type="hidden" name="hrg_pokok[]"    id="pk_${idx}"    value="${pk}">
+            <input type="hidden" name="kode_akun[]"    value="${akun}">
+            <!-- berat_gram & kubikasi_m3: dikirim ke server untuk hitung tonase/kubikasi -->
+            <input type="hidden" name="berat_gram[]"   id="bg_${idx}"    value="${beratG}">
+            <input type="hidden" name="kubikasi_m3[]"  id="km_${idx}"    value="${kubikM}">
             <div class="d-flex align-items-center">
                 <div class="flex-grow-1">
                     <small class="text-muted" id="kdlbl_${idx}">${kd || '—'}</small><br>
                     <span id="nmlbl_${idx}">${nm || '—'}</span>
                 </div>
                 <button type="button" class="btn btn-xs btn-outline-primary ml-1 btn-pick"
-                    data-idx="${idx}" title="Pilih Barang">
-                    <i class="fas fa-search"></i>
+                    data-idx="${idx}">
+                    <i class="fas fa-search"></i> Pilih
                 </button>
             </div>
-            <!-- data-avail menyimpan nilai NUMERIK mentah untuk validasi submit -->
-            <small class="text-muted">Tersedia: <b id="avail_${idx}" data-avail="${avail}">${fmtNum(avail)}</b></small>
+            <small class="text-muted">
+                Tersedia: <b id="avail_${idx}" data-avail="${avail}">${fmtNum(avail)}</b>
+            </small>
         </td>
         <td>
             <select name="expired_date[]" id="exp_${idx}"
-                class="form-control form-control-sm mb-1" required>
-                <option value="">-- Pilih Expired --</option>
-                ${expOptions}
+                    class="form-control form-control-sm mb-1" required>
+                <option value="">-- Pilih barang --</option>
+                ${expOption}
             </select>
             <input type="hidden" name="no_lot[]" id="lot_${idx}" value="${lot}">
-            <small class="text-muted" id="lot_lbl_${idx}">${lot ? 'Lot: ' + lot : ''}</small>
+            <small class="text-muted" id="lotlbl_${idx}">${lot ? 'Lot: '+lot : ''}</small>
         </td>
         <td>
             <input type="number" step="0.001" name="qty[]" id="qty_${idx}"
@@ -386,7 +413,6 @@ function buatBaris(idx, d) {
                 class="form-control form-control-sm" value="${sat}" readonly>
         </td>
         <td class="text-center align-middle">
-            <!-- data-avail juga di sini untuk konsistensi -->
             <span id="availnum_${idx}" data-avail="${avail}">${fmtNum(avail)}</span>
         </td>
         <td>
@@ -401,60 +427,93 @@ function buatBaris(idx, d) {
         <td class="text-right align-middle">
             <b id="sub_${idx}">${fmtNum(subtotal)}</b>
         </td>
-        <td>
-            <input type="number" step="0.0001" name="tonase_satuan[]" id="toninp_${idx}"
-                class="form-control form-control-sm" value="${ton}">
+        <td class="text-right align-middle small">
+            <!-- tonase baris ini (tampilan saja, dihitung otomatis) -->
+            <span id="ton_${idx}">${fmtNum(ton,4)}</span> ton
         </td>
-        <td>
-            <input type="number" step="0.000001" name="kubikasi_satuan[]" id="kubinp_${idx}"
-                class="form-control form-control-sm" value="${kub}">
-        </td>
-        <td class="text-center align-middle">
-            <button type="button" class="btn btn-xs btn-danger btn-remove" data-idx="${idx}">
-                <i class="fas fa-trash"></i>
-            </button>
+        <td class="text-right align-middle small">
+            <span id="kub_${idx}">${fmtNum(kub,5)}</span> m³
         </td>
     </tr>`;
 }
 
-// =====================================================================
-// TAMBAH BARIS
-// =====================================================================
+// -------------------------------------------------------------------
+// TAMBAH & BIND BARIS
+// -------------------------------------------------------------------
 function tambahBaris(d) {
-    document.getElementById('item-body').insertAdjacentHTML('beforeend', buatBaris(rowIdx, d || {}));
+    document.getElementById('item-body').insertAdjacentHTML('beforeend', buatBaris(rowIdx, d||{}));
     bindBaris(rowIdx);
     rowIdx++;
 }
 
 function bindBaris(idx) {
-    const fields = ['hrg_', 'qty_', 'pjk_', 'toninp_', 'kubinp_'];
-    fields.forEach(f => {
+    ['hrg_','qty_','pjk_'].forEach(f => {
         const el = document.getElementById(f + idx);
         if (el) el.addEventListener('input', () => hitungBaris(idx));
     });
+
+    // Saat pilih expired date dari dropdown → update lot, avail, berat, kubikasi
+    const sel = document.getElementById('exp_' + idx);
+    if (sel) {
+        sel.addEventListener('change', function () {
+            const opt  = this.options[this.selectedIndex];
+            if (!opt || !opt.value) return;
+            const av   = parseFloat(opt.dataset.av  || 0);
+            const lot  = opt.dataset.lot || '';
+            const bg   = parseFloat(opt.dataset.ton || 0);  // data-ton = berat_gram
+            const km   = parseFloat(opt.dataset.kub || 0);  // data-kub = kubikasi_m3
+
+            // Update lot
+            document.getElementById('lot_'    + idx).value       = lot;
+            document.getElementById('lotlbl_' + idx).textContent = lot ? 'Lot: '+lot : '';
+
+            // Update berat & kubikasi hidden (untuk dikirim ke server)
+            document.getElementById('bg_' + idx).value = bg;
+            document.getElementById('km_' + idx).value = km;
+
+            // Update avail
+            const elAv = document.getElementById('avail_' + idx);
+            if (elAv) { elAv.textContent = fmtNum(av); elAv.dataset.avail = av; }
+            const elAn = document.getElementById('availnum_' + idx);
+            if (elAn) { elAn.textContent = fmtNum(av); elAn.dataset.avail = av; }
+
+            hitungBaris(idx);
+        });
+    }
 }
 
-// =====================================================================
-// HITUNG SUBTOTAL
-// =====================================================================
+// -------------------------------------------------------------------
+// HITUNG SUBTOTAL + TONASE/KUBIKASI BARIS
+// -------------------------------------------------------------------
 function hitungBaris(idx) {
-    const hrg  = parseFloat(document.getElementById('hrg_'    + idx)?.value || 0);
-    const qty  = parseFloat(document.getElementById('qty_'    + idx)?.value || 0);
-    const pjk  = parseFloat(document.getElementById('pjk_'    + idx)?.value || 0);
-    const pk   = parseFloat(document.getElementById('pk_'     + idx)?.value || 0);
-    const sub  = hrg * qty;
-    const tot  = sub + (sub * pjk / 100);
+    const hrg = parseFloat(document.getElementById('hrg_' + idx)?.value || 0);
+    const qty = parseFloat(document.getElementById('qty_' + idx)?.value || 0);
+    const pjk = parseFloat(document.getElementById('pjk_' + idx)?.value || 0);
+    const pk  = parseFloat(document.getElementById('pk_'  + idx)?.value || 0);
+    const bg  = parseFloat(document.getElementById('bg_'  + idx)?.value || 0); // gram
+    const km  = parseFloat(document.getElementById('km_'  + idx)?.value || 0); // m³
 
+    // Subtotal
+    const sub = hrg * qty;
+    const tot = sub + (sub * pjk / 100);
     const elSub = document.getElementById('sub_' + idx);
     if (elSub) elSub.textContent = fmtNum(tot);
 
-    // Peringatan harga di bawah HPP
+    // Peringatan harga < HPP
     const warnEl = document.getElementById('hrgwarn_' + idx);
     if (warnEl) {
         warnEl.innerHTML = (hrg > 0 && hrg < pk)
             ? '<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Di bawah HPP</span>'
             : '';
     }
+
+    // Tonase & kubikasi per baris (tampilan)
+    const tonase   = qty * bg / 1000000;  // gram → ton
+    const kubikasi = qty * km;            // m³
+    const elTon = document.getElementById('ton_' + idx);
+    const elKub = document.getElementById('kub_' + idx);
+    if (elTon) elTon.textContent = fmtNum(tonase, 4);
+    if (elKub) elKub.textContent = fmtNum(kubikasi, 5);
 
     hitungGrand();
     hitungTK();
@@ -473,73 +532,60 @@ function hitungGrand() {
     document.getElementById('total-grand').textContent = fmtNum(grand);
 }
 
-// =====================================================================
-// HITUNG TONASE & KUBIKASI (progress bar)
-// =====================================================================
+// -------------------------------------------------------------------
+// HITUNG TOTAL TONASE & KUBIKASI + PROGRESS BAR
+// -------------------------------------------------------------------
 function hitungTK() {
     let totTon = 0, totKub = 0;
     document.querySelectorAll('#item-body tr').forEach(tr => {
-        const i = tr.dataset.idx;
-        const q = parseFloat(document.getElementById('qty_'    + i)?.value || 0);
-        const t = parseFloat(document.getElementById('toninp_' + i)?.value || 0);
-        const k = parseFloat(document.getElementById('kubinp_' + i)?.value || 0);
-        totTon += t * q;
-        totKub += k * q;
+        const i   = tr.dataset.idx;
+        const qty = parseFloat(document.getElementById('qty_' + i)?.value || 0);
+        const bg  = parseFloat(document.getElementById('bg_'  + i)?.value || 0);
+        const km  = parseFloat(document.getElementById('km_'  + i)?.value || 0);
+        totTon += qty * bg / 1000000;
+        totKub += qty * km;
     });
 
-    const bTon = parseFloat(document.getElementById('batas_tonase')?.value   || 0);
-    const bKub = parseFloat(document.getElementById('batas_kubikasi')?.value || 0);
+    // Label
+    document.getElementById('lbl-tonase').textContent   = fmtNum(totTon, 3);
+    document.getElementById('lbl-kubikasi').textContent = fmtNum(totKub, 5);
 
-    document.getElementById('lbl-tonase').textContent   = totTon.toFixed(3);
-    document.getElementById('lbl-kubikasi').textContent = totKub.toFixed(5);
+    // Footer tabel
+    document.getElementById('total-tonase-tbl').textContent   = fmtNum(totTon, 3)  + ' ton';
+    document.getElementById('total-kubikasi-tbl').textContent = fmtNum(totKub, 5)  + ' m³';
 
     // Progress bar tonase
-    if (bTon > 0) {
-        const pct   = Math.min((totTon / bTon) * 100, 100);
-        const bar   = document.getElementById('tonase-bar');
-        bar.style.width = pct + '%';
-        bar.className   = 'progress-bar ' + (totTon > bTon ? 'bg-danger' : 'bg-success');
-        document.getElementById('lbl-tonase-limit').textContent = 'Batas: ' + fmtNum(bTon, 3) + ' kg';
-    }
+    const pctTon = Math.min((totTon / BATAS_TONASE) * 100, 100);
+    const barTon = document.getElementById('tonase-bar');
+    barTon.style.width = pctTon + '%';
+    barTon.className   = 'progress-bar ' + (totTon > BATAS_TONASE ? 'bg-danger' : 'bg-success');
+    const wTon = document.getElementById('lbl-tonase-warn');
+    wTon.classList.toggle('d-none', totTon <= BATAS_TONASE);
 
     // Progress bar kubikasi
-    if (bKub > 0) {
-        const pct   = Math.min((totKub / bKub) * 100, 100);
-        const bar   = document.getElementById('kubikasi-bar');
-        bar.style.width = pct + '%';
-        bar.className   = 'progress-bar ' + (totKub > bKub ? 'bg-danger' : 'bg-info');
-        document.getElementById('lbl-kubikasi-limit').textContent = 'Batas: ' + totKub.toFixed(5) + ' m³';
-    }
-
-    // Pesan warning
-    let msgs = [];
-    if (bTon > 0 && bKub > 0) {
-        const oT = totTon > bTon, oK = totKub > bKub;
-        if  (oT && !oK) msgs.push('<i class="fas fa-exclamation-triangle text-warning"></i> Tonase melebihi batas, kubikasi masih aman.');
-        if  (oK && !oT) msgs.push('<i class="fas fa-exclamation-triangle text-warning"></i> Kubikasi melebihi batas, tonase masih aman.');
-        if  (oT && oK)  msgs.push('<i class="fas fa-times-circle text-danger"></i> Tonase DAN kubikasi melebihi batas!');
-    }
-    document.getElementById('tk-warning').innerHTML = msgs.map(m =>
-        `<div class="callout callout-warning py-1 mb-1"><small>${m}</small></div>`
-    ).join('');
+    const pctKub = Math.min((totKub / BATAS_KUBIKASI) * 100, 100);
+    const barKub = document.getElementById('kubikasi-bar');
+    barKub.style.width = pctKub + '%';
+    barKub.className   = 'progress-bar ' + (totKub > BATAS_KUBIKASI ? 'bg-danger' : 'bg-info');
+    const wKub = document.getElementById('lbl-kubikasi-warn');
+    wKub.classList.toggle('d-none', totKub <= BATAS_KUBIKASI);
 }
 
-// =====================================================================
-// LOAD DATA STOK (AJAX)
-// =====================================================================
+// -------------------------------------------------------------------
+// LOAD & RENDER STOK (AJAX)
+// data-ton di tombol = berat_gram, data-kub = kubikasi_m3
+// -------------------------------------------------------------------
 function loadStock() {
     document.getElementById('stock-body').innerHTML =
-        '<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat...</td></tr>';
+        '<tr><td colspan="8" class="text-center">' +
+        '<i class="fas fa-spinner fa-spin"></i> Memuat...</td></tr>';
 
     fetch(`${BASE_URL}sales_order/get_stock?gudang_id=${GUDANG_ID}`)
         .then(r => r.json())
-        .then(res => {
-            stockCache = res.data || [];
-            renderStock(stockCache);
-        })
+        .then(res => { stockCache = res.data || []; renderStock(stockCache); })
         .catch(() => {
             document.getElementById('stock-body').innerHTML =
-                '<tr><td colspan="7" class="text-center text-danger">Gagal memuat data stok.</td></tr>';
+                '<tr><td colspan="8" class="text-center text-danger">Gagal memuat stok.</td></tr>';
         });
 }
 
@@ -547,91 +593,71 @@ function renderStock(data) {
     const q = (document.getElementById('stock-search').value || '').toLowerCase();
     const filtered = q
         ? data.filter(d =>
-            (d.kode_barang || '').toLowerCase().includes(q) ||
-            (d.nama_barang || '').toLowerCase().includes(q))
+            (d.kode_barang||'').toLowerCase().includes(q) ||
+            (d.nama_barang||'').toLowerCase().includes(q))
         : data;
 
     if (!filtered.length) {
         document.getElementById('stock-body').innerHTML =
-            '<tr><td colspan="6" class="text-center text-muted">' +
-            '<i class="fas fa-inbox mr-1"></i> Stok kosong / tidak ditemukan</td></tr>';
+            '<tr><td colspan="8" class="text-center text-muted">' +
+            '<i class="fas fa-inbox mr-1"></i> Tidak ada stok</td></tr>';
         return;
     }
 
-    // Kelompokkan per kode barang agar mudah dibaca,
-    // tapi tetap tampilkan SETIAP baris exp_date+lot yang berbeda
-    // supaya user bisa memilih expired date yang diinginkan.
     let html = '';
     let lastKd = null;
-
     filtered.forEach(d => {
-        const isNewItem = d.kode_barang !== lastKd;
+        const isNew = d.kode_barang !== lastKd;
         lastKd = d.kode_barang;
-
-        // Baris dengan warna berbeda tiap ganti kode barang
-        const rowClass = isNewItem ? 'table-light font-weight-bold-first' : '';
+        // berat per satuan: gram → kg untuk tampilan lebih mudah dibaca
+        const beratKg  = (parseFloat(d.berat_gram||0) / 1000).toFixed(3);
+        const kubikStr = parseFloat(d.kubikasi_m3||0).toFixed(6);
 
         html += `
-        <tr class="${rowClass}">
+        <tr class="${isNew ? 'table-light' : ''}">
             <td>
-                <small class="text-muted d-block">${d.kode_barang || ''}</small>
-                <span>${isNewItem ? (d.nama_barang || '') : '<span class="text-muted">↳</span> ' + (d.nama_barang || '')}</span>
+                <small class="text-muted d-block">${d.kode_barang}</small>
+                ${isNew ? `<b>${d.nama_barang}</b>` : `<span class="text-muted">↳</span> ${d.nama_barang}`}
             </td>
             <td>
-                <!-- Expired date ditampilkan jelas karena bisa berbeda per lot -->
                 ${d.exp_date
-                    ? `<span class="badge ${isExpiringSoon(d.exp_date) ? 'badge-warning' : 'badge-success'}">${formatTgl(d.exp_date)}</span>`
-                    : '<span class="text-muted">-</span>'}
+                    ? `<span class="badge ${isExpiringSoon(d.exp_date)?'badge-warning':'badge-success'}">
+                           ${formatTgl(d.exp_date)}</span>`
+                    : '-'}
             </td>
-            <td>${d.no_lot || '-'}</td>
+            <td>${d.no_lot||'-'}</td>
             <td class="text-right"><b>${fmtNum(d.available_stock)}</b></td>
-            <td>${d.satuan || ''}</td>
+            <td>${d.satuan||''}</td>
+            <td class="text-right"><small>${beratKg} kg</small></td>
+            <td class="text-right"><small>${kubikStr} m³</small></td>
             <td class="text-center">
                 <button type="button" class="btn btn-xs btn-primary btn-pick-stock"
                     data-kd="${d.kode_barang}"
                     data-nm="${d.nama_barang}"
-                    data-exp="${d.exp_date  || ''}"
-                    data-lot="${d.no_lot    || ''}"
-                    data-sat="${d.satuan    || ''}"
+                    data-exp="${d.exp_date||''}"
+                    data-lot="${d.no_lot||''}"
+                    data-sat="${d.satuan||''}"
                     data-av="${d.available_stock}"
-                    data-ton="${d.tonase_satuan   || 0}"
-                    data-kub="${d.kubikasi_satuan || 0}"
-                    data-pk="${d.hrg_pokok  || 0}"
-                    data-akun="${d.kode_akun || ''}">
+                    data-ton="${d.berat_gram||0}"
+                    data-kub="${d.kubikasi_m3||0}"
+                    data-pk="${d.hpp||0}"
+                    data-akun="">
                     <i class="fas fa-check"></i> Pilih
                 </button>
             </td>
         </tr>`;
     });
-
     document.getElementById('stock-body').innerHTML = html;
 }
 
-// Helper: format tanggal YYYY-MM-DD → DD/MM/YYYY untuk tampilan modal
-function formatTgl(ymd) {
-    if (!ymd) return '-';
-    const p = ymd.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ymd;
-}
-
-// Helper: cek apakah exp_date <= 30 hari dari hari ini
-function isExpiringSoon(ymd) {
-    if (!ymd) return false;
-    const diff = (new Date(ymd) - new Date()) / (1000 * 60 * 60 * 24);
-    return diff <= 30;
-}
-
-// =====================================================================
-// EVENT DELEGATION
-// =====================================================================
+// -------------------------------------------------------------------
+// EVENT: Buka modal pilih barang
+// -------------------------------------------------------------------
 document.getElementById('item-body').addEventListener('click', e => {
-    // Tombol hapus baris
     if (e.target.closest('.btn-remove')) {
         e.target.closest('tr').remove();
-        hitungGrand();
-        hitungTK();
+        hitungGrand(); hitungTK();
     }
-    // Tombol buka modal pilih barang
     if (e.target.closest('.btn-pick')) {
         currentRowIdx = parseInt(e.target.closest('.btn-pick').dataset.idx);
         loadStock();
@@ -639,52 +665,17 @@ document.getElementById('item-body').addEventListener('click', e => {
     }
 });
 
-// Pilih barang dari modal → isi baris
-// Saat tombol "Pilih" diklik di modal stok,
-// kumpulkan semua exp_date yang tersedia untuk kode barang itu
+// -------------------------------------------------------------------
+// EVENT: Pilih baris di modal
+// Mengisi dropdown expired date dengan SEMUA baris expired barang ini
+// -------------------------------------------------------------------
 document.getElementById('stock-body').addEventListener('click', e => {
     const btn = e.target.closest('.btn-pick-stock');
     if (!btn) return;
-    const i   = currentRowIdx;
-    const kd  = btn.dataset.kd;
+    const i  = currentRowIdx;
+    const kd = btn.dataset.kd;
 
-    // Kumpulkan semua baris di stockCache dengan kode barang sama
-    const samaBarang = stockCache.filter(s => s.kode_barang === kd);
-
-    // Isi dropdown expired date
-    const expSel = document.getElementById('exp_' + i);
-    expSel.innerHTML = '<option value="">-- Pilih Expired --</option>';
-    samaBarang.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value       = s.exp_date;
-        opt.textContent = `${formatTgl(s.exp_date)} — Avail: ${fmtNum(s.available_stock)}`;
-        // Simpan available_stock per exp_date sebagai data attribute
-        opt.dataset.avail = s.available_stock;
-        opt.dataset.lot   = s.no_lot || '';
-        expSel.appendChild(opt);
-    });
-
-    // Pilih otomatis jika hanya 1 pilihan
-    if (samaBarang.length === 1) expSel.selectedIndex = 1;
-
-    // Trigger update avail saat expired dipilih
-    expSel.onchange = function() {
-        const selOpt = this.options[this.selectedIndex];
-        const avRaw  = parseFloat(selOpt.dataset.avail || 0);
-        const lotVal = selOpt.dataset.lot || '';
-
-        document.getElementById('lot_' + i).value          = lotVal;
-        document.getElementById('lot_lbl_' + i).textContent = lotVal ? 'Lot: ' + lotVal : '';
-
-        const elAvail = document.getElementById('avail_' + i);
-        if (elAvail) {
-            elAvail.textContent   = fmtNum(avRaw);
-            elAvail.dataset.avail = avRaw;
-        }
-        hitungBaris(i);
-    };
-
-    // Isi field lainnya
+    // Isi field utama
     document.getElementById('kd_'     + i).value       = kd;
     document.getElementById('nm_'     + i).value       = btn.dataset.nm;
     document.getElementById('kdlbl_'  + i).textContent = kd;
@@ -692,84 +683,81 @@ document.getElementById('stock-body').addEventListener('click', e => {
     document.getElementById('sat_'    + i).value       = btn.dataset.sat;
     document.getElementById('satlbl_' + i).value       = btn.dataset.sat;
     document.getElementById('pk_'     + i).value       = btn.dataset.pk;
-    document.getElementById('toninp_' + i).value       = btn.dataset.ton;
-    document.getElementById('kubinp_' + i).value       = btn.dataset.kub;
-    document.getElementById('ton_'    + i).value       = btn.dataset.ton;
-    document.getElementById('kub_'    + i).value       = btn.dataset.kub;
 
-    // Set avail dari pilihan pertama yang otomatis terpilih
-    if (samaBarang.length === 1) {
-        const avRaw = parseFloat(samaBarang[0].available_stock || 0);
-        document.getElementById('avail_' + i).textContent   = fmtNum(avRaw);
-        document.getElementById('avail_' + i).dataset.avail = avRaw;
-        document.getElementById('lot_'   + i).value         = samaBarang[0].no_lot || '';
-    }
+    // Kumpulkan semua expired date untuk kode barang ini dari stockCache
+    const rows = stockCache.filter(s => s.kode_barang === kd);
+    const sel  = document.getElementById('exp_' + i);
+    sel.innerHTML = '<option value="">-- Pilih Expired Date --</option>';
+
+    rows.forEach(s => {
+        const opt    = document.createElement('option');
+        opt.value    = s.exp_date || '';
+        const tgl    = formatTgl(s.exp_date);
+        const lotStr = s.no_lot ? ' | Lot: ' + s.no_lot : '';
+        const avStr  = ' (stok: ' + fmtNum(s.available_stock) + ')';
+        opt.textContent  = tgl + lotStr + avStr;
+        // data-ton = berat_gram, data-kub = kubikasi_m3 (sesuai kolom yg dikembalikan API)
+        opt.dataset.ton  = s.berat_gram    || 0;
+        opt.dataset.kub  = s.kubikasi_m3   || 0;
+        opt.dataset.av   = s.available_stock || 0;
+        opt.dataset.lot  = s.no_lot || '';
+        if (s.exp_date === btn.dataset.exp) opt.selected = true;
+        sel.appendChild(opt);
+    });
+
+    // Jika hanya 1 pilihan → pilih otomatis
+    if (rows.length === 1) sel.selectedIndex = 1;
+
+    // Trigger change agar berat, kubikasi, avail, lot langsung terisi
+    sel.dispatchEvent(new Event('change'));
 
     hitungBaris(i);
     $('#modal-stock').modal('hide');
 });
 
-// Customer change → simpan nama ke hidden input
+// Customer name
 document.getElementById('customer_id').addEventListener('change', function () {
-    const opt = this.options[this.selectedIndex];
-    document.getElementById('customer_name').value = opt.dataset.nama || '';
+    document.getElementById('customer_name').value =
+        this.options[this.selectedIndex].dataset.nama || '';
 });
 
-// Batas tonase/kubikasi berubah → update progress bar
-['batas_tonase','batas_kubikasi'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', hitungTK);
-});
+// Search modal
+document.getElementById('stock-search').addEventListener('input', () => renderStock(stockCache));
 
-// Search di modal
-document.getElementById('stock-search').addEventListener('input', function () {
-    renderStock(stockCache);
-});
-
-// =====================================================================
-// VALIDASI SEBELUM SUBMIT
-// =====================================================================
+// -------------------------------------------------------------------
+// VALIDASI SUBMIT
+// -------------------------------------------------------------------
 document.getElementById('form-so').addEventListener('submit', e => {
     const rows = document.querySelectorAll('#item-body tr');
     if (!rows.length) {
         e.preventDefault();
-        toastr ? toastr.error('Minimal 1 item barang harus ditambahkan!') : alert('Minimal 1 item barang harus ditambahkan!');
+        alert('Minimal 1 item barang harus ditambahkan!');
         return;
     }
-
-    let stokErr = [];
+    let errs = [];
     rows.forEach(tr => {
-        const i   = tr.dataset.idx;
-        const qty = parseFloat(document.getElementById('qty_' + i)?.value || 0);
-        const nm  = document.getElementById('nm_' + i)?.value || '(barang)';
-
-        // Ambil dari data-avail (nilai numerik mentah, bukan textContent terformat)
-        const availEl = document.getElementById('avail_' + i);
-        const avail   = parseFloat(availEl?.dataset.avail ?? availEl?.getAttribute('data-avail') ?? 0);
-
-        if (qty <= 0) {
-            stokErr.push(`${nm}: qty harus lebih dari 0`);
-        } else if (avail > 0 && qty > avail) {
-            stokErr.push(`${nm}: diminta ${qty}, tersedia ${avail}`);
-        }
+        const i     = tr.dataset.idx;
+        const qty   = parseFloat(document.getElementById('qty_'   + i)?.value || 0);
+        const nm    = document.getElementById('nm_' + i)?.value || '(barang)';
+        const avail = parseFloat(document.getElementById('avail_' + i)?.dataset.avail || 0);
+        if (qty <= 0)         errs.push(`${nm}: qty harus > 0`);
+        else if (qty > avail) errs.push(`${nm}: diminta ${qty}, tersedia ${avail}`);
     });
-
-    if (stokErr.length) {
+    if (errs.length) {
         e.preventDefault();
-        const msg = 'Stok tidak mencukupi:\n• ' + stokErr.join('\n• ');
-        toastr ? toastr.error(msg) : alert(msg);
+        alert('Peringatan:\n• ' + errs.join('\n• '));
     }
 });
 
-// Tombol tambah baris
 document.getElementById('btn-add-row').addEventListener('click', () => tambahBaris({}));
 
-// =====================================================================
+// -------------------------------------------------------------------
 // INIT
-// =====================================================================
+// -------------------------------------------------------------------
 if (EDIT_DETAILS.length) {
     EDIT_DETAILS.forEach(d => tambahBaris(d));
 } else {
-    tambahBaris({});   // default 1 baris kosong
+    tambahBaris({});
 }
 hitungGrand();
 hitungTK();

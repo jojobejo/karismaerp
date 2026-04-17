@@ -1,8 +1,21 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
+/**
+ * M_SalesOrder.php
+ * Konversi berat:
+ *   berat di tb_master_barang_all = GRAM per satuan
+ *   Tonase (ton) = qty × berat / 1.000.000
+ * Kubikasi:
+ *   kubikasi di tb_master_barang_all = m³ per satuan (sudah desimal)
+ *   Kubikasi (m³) = qty × kubikasi
+ * Batas default: 6 ton, 9 m³
+ */
 class M_SalesOrder extends CI_Model
 {
+    const BATAS_TONASE   = 6;   // ton
+    const BATAS_KUBIKASI = 9;   // m³
+
     // ----------------------------------------------------------------
     // GENERATE NOMOR SO
     // ----------------------------------------------------------------
@@ -13,7 +26,6 @@ class M_SalesOrder extends CI_Model
         $this->db->order_by('id_so', 'DESC');
         $this->db->limit(1);
         $row = $this->db->get('tbso_sales_order')->row();
-
         if ($row) {
             $last = (int) substr($row->id_so, -4);
             return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
@@ -36,9 +48,6 @@ class M_SalesOrder extends CI_Model
         return $this->db->get_where('tb_customer', ['id' => $id])->row_array();
     }
 
-    // ----------------------------------------------------------------
-    // STOK — Available Stock = Stock On Hand - Stock Reserved
-    // ----------------------------------------------------------------
     public function get_available_stock($gudang_id = null, $kd_barang = null)
     {
         $this->db->where('available_stock >', 0);
@@ -66,17 +75,17 @@ class M_SalesOrder extends CI_Model
     }
 
     // ----------------------------------------------------------------
-    // MASTER BARANG
+    // MASTER BARANG — tb_master_barang_all
     // ----------------------------------------------------------------
     public function get_harga_pokok($kd_barang)
     {
-        $row = $this->db->get_where('tb_master_barang', ['kd_barang' => $kd_barang])->row_array();
-        return $row ? (float)$row['hrg_pokok'] : 0;
+        $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
+        return $row ? (float)$row['hpp'] : 0;
     }
 
     public function get_detail_barang($kd_barang)
     {
-        return $this->db->get_where('tb_master_barang', ['kd_barang' => $kd_barang])->row_array();
+        return $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
     }
 
     // ----------------------------------------------------------------
@@ -87,12 +96,10 @@ class M_SalesOrder extends CI_Model
         $this->db->select('so.*, c.nama_customer');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.id = so.customer_id', 'left');
-
         if (!empty($filter['status']))       $this->db->where('so.status', $filter['status']);
         if (!empty($filter['date1']))        $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))        $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('so.customer_id', $filter['customer_id']);
-
         $this->db->order_by('so.create_at', 'DESC');
         return $this->db->get()->result_array();
     }
@@ -112,21 +119,16 @@ class M_SalesOrder extends CI_Model
     }
 
     // ----------------------------------------------------------------
-    // SIMPAN SO (HEADER + DETAIL + RESERVASI STOK) — Transaction
+    // SIMPAN SO
     // ----------------------------------------------------------------
     public function simpan_so($header, $details)
     {
         $this->db->trans_start();
-
-        // 1. Insert header
         $this->db->insert('tbso_sales_order', $header);
-
-        // 2. Insert detail & reservasi stok per item
         foreach ($details as $d) {
             $d['id_so'] = $header['id_so'];
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
-
             $this->db->insert('tbso_stock_reservation', [
                 'id_so'        => $header['id_so'],
                 'id_so_detail' => $id_detail,
@@ -138,11 +140,8 @@ class M_SalesOrder extends CI_Model
                 'status'       => 'active',
             ]);
         }
-
-        // 3. Update jumlah_item
         $this->db->where('id_so', $header['id_so']);
         $this->db->update('tbso_sales_order', ['jumlah_item' => count($details)]);
-
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
@@ -153,21 +152,15 @@ class M_SalesOrder extends CI_Model
     public function update_so($id_so, $header, $details)
     {
         $this->db->trans_start();
-
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $header);
-
-        // Hapus detail & reservasi lama
         $this->db->delete('tbso_sales_order_detail', ['id_so' => $id_so]);
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_stock_reservation', ['status' => 'released']);
-
-        // Insert ulang
         foreach ($details as $d) {
             $d['id_so'] = $id_so;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
-
             $this->db->insert('tbso_stock_reservation', [
                 'id_so'        => $id_so,
                 'id_so_detail' => $id_detail,
@@ -179,16 +172,14 @@ class M_SalesOrder extends CI_Model
                 'status'       => 'active',
             ]);
         }
-
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['jumlah_item' => count($details)]);
-
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
 
     // ----------------------------------------------------------------
-    // VALIDASI STOK (server-side)
+    // VALIDASI STOK
     // ----------------------------------------------------------------
     public function validasi_stok($details, $gudang_id, $exclude_so = null)
     {
@@ -196,7 +187,6 @@ class M_SalesOrder extends CI_Model
         foreach ($details as $d) {
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
-
             if ($exclude_so) {
                 $this->db->select('SUM(qty_reserved) as qty');
                 $this->db->where('id_so', $exclude_so);
@@ -206,50 +196,65 @@ class M_SalesOrder extends CI_Model
                 $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
             }
-
-            // Gunakan ROUND agar tidak ada floating point mismatch
             $available = round($available, 3);
             $diminta   = round((float)$d['qty'], 3);
-
             if ($diminta > $available) {
                 $errors[] = "Stok tidak cukup: <b>{$d['nama_barang']}</b> "
-                        . "(Exp: {$d['expired_date']}) — "
-                        . "Diminta: {$diminta}, Tersedia: {$available}";
+                          . "(Exp: {$d['expired_date']}) — "
+                          . "Diminta: {$diminta}, Tersedia: {$available}";
             }
         }
         return $errors;
     }
 
     // ----------------------------------------------------------------
-    // VALIDASI TONASE & KUBIKASI
+    // VALIDASI & HITUNG TONASE + KUBIKASI
+    //   total_tonase   = SUM(qty × berat_gram / 1.000.000)
+    //   total_kubikasi = SUM(qty × kubikasi_m3)
+    //   batas default  = 6 ton & 9 m³
     // ----------------------------------------------------------------
-    public function validasi_tonase_kubikasi($details, $batas_tonase, $batas_kubikasi)
+    public function validasi_tonase_kubikasi($details,
+        $batas_tonase   = self::BATAS_TONASE,
+        $batas_kubikasi = self::BATAS_KUBIKASI)
     {
+        $batas_tonase   = ($batas_tonase   > 0) ? (float)$batas_tonase   : self::BATAS_TONASE;
+        $batas_kubikasi = ($batas_kubikasi > 0) ? (float)$batas_kubikasi : self::BATAS_KUBIKASI;
+
         $total_tonase   = 0;
         $total_kubikasi = 0;
-        $warnings       = [];
 
         foreach ($details as $d) {
-            $total_tonase   += (float)$d['tonase_satuan']   * (float)$d['qty'];
-            $total_kubikasi += (float)$d['kubikasi_satuan'] * (float)$d['qty'];
+            $berat_gram  = (float)($d['berat_gram']  ?? 0);   // gram dari master barang
+            $kubikasi_m3 = (float)($d['kubikasi_m3'] ?? 0);   // m³ dari master barang
+            $qty         = (float)($d['qty']          ?? 0);
+            // gram → ton: bagi 1.000.000
+            $total_tonase   += $qty * ($berat_gram / 1000000);
+            $total_kubikasi += $qty * $kubikasi_m3;
         }
 
-        if ($batas_tonase > 0 && $batas_kubikasi > 0) {
-            $over_ton = $total_tonase   > $batas_tonase;
-            $over_kub = $total_kubikasi > $batas_kubikasi;
+        $total_tonase   = round($total_tonase,   6);
+        $total_kubikasi = round($total_kubikasi, 6);
+        $warnings       = [];
 
-            if ($over_ton && !$over_kub) {
-                $warnings[] = "Tonase melebihi batas ({$total_tonase} kg &gt; {$batas_tonase} kg), kubikasi masih aman.";
-            } elseif ($over_kub && !$over_ton) {
-                $warnings[] = "Kubikasi melebihi batas ({$total_kubikasi} m³ &gt; {$batas_kubikasi} m³), tonase masih aman.";
-            } elseif ($over_ton && $over_kub) {
-                $warnings[] = "Tonase ({$total_tonase} kg) DAN kubikasi ({$total_kubikasi} m³) melebihi batas!";
-            }
+        $over_ton = $total_tonase   > $batas_tonase;
+        $over_kub = $total_kubikasi > $batas_kubikasi;
+
+        if ($over_ton && !$over_kub) {
+            $warnings[] = "Tonase melebihi batas (" . round($total_tonase, 3)
+                        . " ton &gt; {$batas_tonase} ton), kubikasi masih aman.";
+        } elseif ($over_kub && !$over_ton) {
+            $warnings[] = "Kubikasi melebihi batas (" . round($total_kubikasi, 4)
+                        . " m³ &gt; {$batas_kubikasi} m³), tonase masih aman.";
+        } elseif ($over_ton && $over_kub) {
+            $warnings[] = "Tonase (" . round($total_tonase, 3) . " ton) DAN "
+                        . "kubikasi (" . round($total_kubikasi, 4) . " m³) melebihi batas!";
         }
 
         return [
             'total_tonase'   => $total_tonase,
             'total_kubikasi' => $total_kubikasi,
+            'batas_tonase'   => $batas_tonase,
+            'batas_kubikasi' => $batas_kubikasi,
             'warnings'       => $warnings,
         ];
     }
@@ -259,12 +264,10 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     public function simpan_request_approval_nego($id_so, $req_by)
     {
-        // Cek apakah sudah ada request pending
         $ada = $this->db->get_where('tbso_approval_nego', [
             'id_so'  => $id_so,
             'status' => 'pending',
         ])->row_array();
-
         if (!$ada) {
             $this->db->insert('tbso_approval_nego', [
                 'id_so'  => $id_so,
@@ -272,7 +275,6 @@ class M_SalesOrder extends CI_Model
                 'req_by' => $req_by,
             ]);
         }
-
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['status' => 'waiting_approval']);
     }
@@ -296,7 +298,6 @@ class M_SalesOrder extends CI_Model
             'act_by' => $act_by,
             'act_at' => date('Y-m-d H:i:s'),
         ]);
-
         $row = $this->db->get_where('tbso_approval_nego', ['id' => $id])->row_array();
         if ($row) {
             $new_status = ($status === 'approved') ? 'approved' : 'draft';
@@ -311,12 +312,7 @@ class M_SalesOrder extends CI_Model
     public function update_status($id_so, $status, $update_by)
     {
         $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order', [
-            'status'    => $status,
-            'update_by' => $update_by,
-        ]);
-
-        // Jika cancelled → release semua reservasi
+        $this->db->update('tbso_sales_order', ['status' => $status, 'update_by' => $update_by]);
         if ($status === 'cancelled') {
             $this->db->where('id_so', $id_so);
             $this->db->update('tbso_stock_reservation', ['status' => 'released']);
@@ -324,13 +320,12 @@ class M_SalesOrder extends CI_Model
     }
 
     // ----------------------------------------------------------------
-    // PARTIAL DELIVERY: update qty_delivered per item
+    // PARTIAL DELIVERY
     // ----------------------------------------------------------------
     public function update_qty_delivered($id_so_detail, $qty_delivered)
     {
         $this->db->where('id', $id_so_detail);
         $this->db->update('tbso_sales_order_detail', ['qty_delivered' => $qty_delivered]);
-
         $detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
         if ($detail) {
             $all      = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $detail['id_so']])->result_array();

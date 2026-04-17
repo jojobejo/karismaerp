@@ -12,20 +12,15 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // LIST SALES ORDER
+    // LIST
     // ================================================================
     public function index()
     {
-        $date1       = $this->input->post('date1');
-        $date2       = $this->input->post('date2');
-        $status      = $this->input->post('status');
-        $customer_id = $this->input->post('customer_id');
-
         $filter = [
-            'date1'       => $date1,
-            'date2'       => $date2,
-            'status'      => $status,
-            'customer_id' => $customer_id,
+            'date1'       => $this->input->post('date1'),
+            'date2'       => $this->input->post('date2'),
+            'status'      => $this->input->post('status'),
+            'customer_id' => $this->input->post('customer_id'),
         ];
 
         $data['page_title'] = 'KARISMA - Sales Order';
@@ -39,16 +34,19 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // FORM BUAT SO BARU
+    // FORM CREATE
     // ================================================================
     public function create()
     {
-        $data['page_title'] = 'KARISMA - Buat Sales Order';
-        $data['no_so']      = $this->M_SalesOrder->generate_no_so();
-        $data['customers']  = $this->M_SalesOrder->get_customers();
-        $data['gudang_id']  = $this->session->userdata('gudang_id') ?? '';
-        $data['so']         = null;   // null = mode tambah
-        $data['details']    = [];
+        $data['page_title']     = 'KARISMA - Buat Sales Order';
+        $data['no_so']          = $this->M_SalesOrder->generate_no_so();
+        $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['gudang_id']      = $this->session->userdata('gudang_id') ?? '';
+        $data['so']             = null;
+        $data['details']        = [];
+        // Kirim batas ke view agar ditampilkan di progress bar
+        $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
+        $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_form.php', $data);
@@ -56,7 +54,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // SIMPAN SO BARU (POST)
+    // STORE (POST)
     // ================================================================
     public function store()
     {
@@ -65,14 +63,13 @@ class C_SalesOrder extends CI_Controller
         $post    = $this->input->post(null, true);
         $details = $this->_parse_detail_post($post);
 
-        // Validasi: minimal 1 item
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
             redirect('sales_order/create');
             return;
         }
 
-        // Validasi stok (server-side)
+        // Validasi stok server-side
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $post['gudang_id']);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
@@ -80,29 +77,23 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Hitung & validasi tonase/kubikasi
-        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi(
-            $details,
-            (float)($post['batas_tonase']   ?? 0),
-            (float)($post['batas_kubikasi'] ?? 0)
-        );
+        // Hitung tonase & kubikasi (batas default dari konstanta model)
+        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
 
-        // Deteksi harga nego
         $is_nego = 0;
         foreach ($details as $d) {
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
         }
 
-        $id_so = $post['id_so'];
-
+        $id_so  = $post['id_so'];
         $header = [
             'id_so'             => $id_so,
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
             'gudang_id'         => $post['gudang_id'],
-            'batas_tonase'      => $post['batas_tonase']   ?: null,
-            'batas_kubikasi'    => $post['batas_kubikasi'] ?: null,
+            'batas_tonase'      => $tk['batas_tonase'],
+            'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'is_nego'           => $is_nego,
@@ -115,15 +106,10 @@ class C_SalesOrder extends CI_Controller
 
         if ($result) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego(
-                    $id_so,
-                    $this->session->userdata('username')
-                );
-                $this->session->set_flashdata('warning',
-                    'SO berhasil disimpan. Menunggu approval harga nego.');
+                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->session->userdata('username'));
+                $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
             } elseif (!empty($tk['warnings'])) {
-                $this->session->set_flashdata('warning',
-                    '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
+                $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
                 $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibuat.');
             }
@@ -135,7 +121,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // DETAIL SO
+    // DETAIL
     // ================================================================
     public function detail($id_so)
     {
@@ -152,7 +138,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // FORM EDIT SO
+    // FORM EDIT
     // ================================================================
     public function edit($id_so)
     {
@@ -163,12 +149,14 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $data['page_title'] = 'KARISMA - Edit SO ' . $id_so;
-        $data['no_so']      = $id_so;
-        $data['so']         = $so;
-        $data['details']    = $this->M_SalesOrder->get_so_detail($id_so);
-        $data['customers']  = $this->M_SalesOrder->get_customers();
-        $data['gudang_id']  = $so['gudang_id'];
+        $data['page_title']     = 'KARISMA - Edit SO ' . $id_so;
+        $data['no_so']          = $id_so;
+        $data['so']             = $so;
+        $data['details']        = $this->M_SalesOrder->get_so_detail($id_so);
+        $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['gudang_id']      = $so['gudang_id'];
+        $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
+        $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_form.php', $data);
@@ -176,7 +164,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // UPDATE SO (POST)
+    // UPDATE (POST)
     // ================================================================
     public function update($id_so)
     {
@@ -198,11 +186,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi(
-            $details,
-            (float)($post['batas_tonase']   ?? 0),
-            (float)($post['batas_kubikasi'] ?? 0)
-        );
+        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
 
         $is_nego = 0;
         foreach ($details as $d) {
@@ -214,8 +198,8 @@ class C_SalesOrder extends CI_Controller
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
             'gudang_id'         => $post['gudang_id'],
-            'batas_tonase'      => $post['batas_tonase']   ?: null,
-            'batas_kubikasi'    => $post['batas_kubikasi'] ?: null,
+            'batas_tonase'      => $tk['batas_tonase'],
+            'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'is_nego'           => $is_nego,
@@ -228,10 +212,7 @@ class C_SalesOrder extends CI_Controller
 
         if ($result) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego(
-                    $id_so,
-                    $this->session->userdata('username')
-                );
+                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->session->userdata('username'));
             }
             if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', implode('<br>', $tk['warnings']));
@@ -246,75 +227,64 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // CANCEL SO (POST)
+    // CANCEL
     // ================================================================
     public function cancel($id_so)
     {
         if ($this->input->method() !== 'post') show_404();
-
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || in_array($so['status'], ['completed', 'cancelled'])) {
             $this->session->set_flashdata('error', 'SO tidak dapat dibatalkan.');
             redirect('sales_order/detail/' . $id_so);
             return;
         }
-
         $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->session->userdata('username'));
         $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibatalkan.');
         redirect('sales_order');
     }
 
     // ================================================================
-    // HALAMAN APPROVAL NEGO (Manager/Admin)
+    // APPROVAL NEGO
     // ================================================================
     public function approval()
     {
         $data['page_title'] = 'KARISMA - Approval Harga Nego';
         $data['list']       = $this->M_SalesOrder->get_pending_approval();
-
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_approval.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    // ================================================================
-    // PROSES APPROVAL (POST)
-    // ================================================================
     public function approve()
     {
         if ($this->input->method() !== 'post') show_404();
-
-        $id     = $this->input->post('id',     true);
-        $status = $this->input->post('status', true); // approved / rejected
-        $note   = $this->input->post('note',   true);
-
         $this->M_SalesOrder->proses_approval_nego(
-            $id,
-            $status,
-            $note,
+            $this->input->post('id',     true),
+            $this->input->post('status', true),
+            $this->input->post('note',   true),
             $this->session->userdata('username')
         );
-
-        $msg = ($status === 'approved') ? 'disetujui' : 'ditolak';
+        $msg = ($this->input->post('status') === 'approved') ? 'disetujui' : 'ditolak';
         $this->session->set_flashdata('success', "Harga nego berhasil <b>{$msg}</b>.");
         redirect('sales_order/approval');
     }
 
     // ================================================================
-    // AJAX — Ambil Data Stok (dipanggil dari modal picker)
+    // AJAX — Stok tersedia (dipanggil modal picker)
+    // Mengembalikan: kode_barang, nama_barang, exp_date, no_lot, gudang,
+    //                available_stock, satuan, berat_gram, kubikasi_m3, hpp
     // ================================================================
     public function get_stock()
     {
         $gudang_id = $this->input->get('gudang_id', true);
         $kd_barang = $this->input->get('kd_barang', true) ?: null;
-
-        $stock = $this->M_SalesOrder->get_available_stock($gudang_id, $kd_barang);
+        $stock     = $this->M_SalesOrder->get_available_stock($gudang_id, $kd_barang);
         header('Content-Type: application/json');
         echo json_encode(['status' => 'ok', 'data' => $stock]);
     }
 
     // ================================================================
-    // AJAX — Ambil Detail Barang (harga pokok, tonase, kubikasi)
+    // AJAX — Detail barang (berat, kubikasi, hpp)
     // ================================================================
     public function get_barang()
     {
@@ -325,7 +295,11 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // PRIVATE — Parse array item dari POST
+    // PRIVATE — Parse POST detail item
+    //   berat_gram  : dari hidden input (diisi JS dari data master)
+    //   kubikasi_m3 : dari hidden input (diisi JS dari data master)
+    //   Kedua field ini dikirim agar server bisa hitung tonase & kubikasi
+    //   tanpa query ulang ke master barang.
     // ================================================================
     private function _parse_detail_post($post)
     {
@@ -345,22 +319,24 @@ class C_SalesOrder extends CI_Controller
             $is_nego   = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
             $details[] = [
-                'produk_id'       => $post['produk_id'][$i]       ?? '',
-                'kd_barang'       => $kd,
-                'nama_barang'     => $post['nama_barang'][$i]      ?? '',
-                'qty'             => $qty,
-                'satuan'          => $post['satuan'][$i]           ?? '',
-                'expired_date'    => $post['expired_date'][$i]     ?? '',
-                'no_lot'          => $post['no_lot'][$i]           ?? null,
-                'pajak'           => $pajak,
-                'hrg_satuan'      => $hrg,
-                'hrg_pokok'       => $hrg_pk,
-                'total_harga'     => $total_tax,
-                'tonase_satuan'   => (float)($post['tonase_satuan'][$i]   ?? 0),
-                'kubikasi_satuan' => (float)($post['kubikasi_satuan'][$i] ?? 0),
-                'kode_akun'       => $post['kode_akun'][$i]        ?? null,
-                'is_nego'         => $is_nego,
-                'create_by'       => $this->session->userdata('username'),
+                'produk_id'    => $post['produk_id'][$i]    ?? '',
+                'kd_barang'    => $kd,
+                'nama_barang'  => $post['nama_barang'][$i]  ?? '',
+                'qty'          => $qty,
+                'satuan'       => $post['satuan'][$i]       ?? '',
+                'expired_date' => $post['expired_date'][$i] ?? '',
+                'no_lot'       => $post['no_lot'][$i]       ?? null,
+                'pajak'        => $pajak,
+                'hrg_satuan'   => $hrg,
+                'hrg_pokok'    => $hrg_pk,
+                'total_harga'  => $total_tax,
+                // berat & kubikasi dikirim dari hidden input di form
+                // (diisi JS saat user memilih barang dari modal)
+                'berat_gram'   => (float)($post['berat_gram'][$i]   ?? 0),
+                'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i]  ?? 0),
+                'kode_akun'    => $post['kode_akun'][$i]    ?? null,
+                'is_nego'      => $is_nego,
+                'create_by'    => $this->session->userdata('username'),
             ];
         }
         return $details;
