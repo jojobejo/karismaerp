@@ -141,7 +141,7 @@
                                         <th>Produk</th>
                                         <th>Sales SO</th>
                                         <th class="text-right">Qty</th>
-                                        <th class="text-right">Penj. Inc PPN Neto</th>
+                                        <th class="text-right">Penj. DPP Neto</th>
                                         <th width="70" class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
@@ -164,7 +164,7 @@
                                         <td><?= htmlspecialchars($row['sales_so'] ?? '-') ?></td>
                                         <td class="text-right"><?= number_format($row['quantity'], 2, ',', '.') ?></td>
                                         <td class="text-right font-weight-bold">
-                                            <?= number_format($row['penj_inc_ppn_neto'], 0, ',', '.') ?>
+                                            <?= number_format($row['penj_dpp_neto'], 0, ',', '.') ?>
                                         </td>
                                         <td class="text-center">
                                             <?php if ($lv == 1): ?>
