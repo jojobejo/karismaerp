@@ -2620,55 +2620,103 @@ FROM (
             ->row();
     }
     // model/M_logistik
-    public function get_data_po($date1 = null, $date2 = null)
+   public function get_data_po($date1 = null, $date2 = null)
     {
         $sql = "
             SELECT
                 pp.no_po,
                 pp.kd_po,
-                pp.tgl_transaksi,
+                MAX(pp.tgl_transaksi) AS tgl_transaksi,
                 pp.kd_suplier,
-                s.nama_suplier,
-
-                /* Jumlah item (baris barang) dalam PO */
-                COUNT(DISTINCT pp.kd_barang)                          AS jumlah_barang,
-
-                /* Jumlah item yang qty_masuk-nya sudah >= qty_order (sudah terpenuhi) */
-                COUNT(DISTINCT CASE
-                    WHEN COALESCE(sub.qty_masuk, 0) >= pp.qty
-                    THEN pp.kd_barang
-                END)                                                  AS jumlah_barang_masuk,
-
-                /* Status: selesai jika semua item terpenuhi */
-                MIN(pp.status)                                        AS status
-
+                MAX(s.nama_suplier) AS nama_suplier,
+                COUNT(DISTINCT pp.kd_barang) AS jumlah_barang,
+                SUM(CASE 
+                    WHEN COALESCE(sub.qty_masuk, 0) >= pp.qty THEN 1
+                    WHEN COALESCE(sub.qty_masuk, 0) > 0 AND COALESCE(sub.qty_masuk, 0) < pp.qty THEN 1
+                    ELSE 0
+                END) AS jumlah_barang_masuk,
+                MAX(sub.last_input) AS last_input,
+                SUM(pp.qty) AS total_qty_order,
+                SUM(COALESCE(sub.qty_masuk, 0)) AS total_qty_masuk
             FROM tb_pre_po pp
-
-            LEFT JOIN tb_suplier s
-                ON s.kd_suplier = pp.kd_suplier
-
-            /* Sub-query: total qty diterima per no_po + kd_barang */
+            LEFT JOIN tb_suplier s ON s.kd_suplier = pp.kd_suplier
             LEFT JOIN (
-                SELECT no_po, kd_barang, SUM(qty_diterima) AS qty_masuk
+                SELECT 
+                    no_po, 
+                    kd_po,
+                    kd_barang,
+                    SUM(qty_diterima) AS qty_masuk,
+                    MAX(create_at) AS last_input
                 FROM tb_po_received
-                GROUP BY no_po, kd_barang
-            ) sub ON sub.no_po = pp.no_po AND sub.kd_barang = pp.kd_barang
+                GROUP BY no_po, kd_po, kd_barang
+            ) sub ON sub.no_po = pp.no_po 
+                AND sub.kd_po = pp.kd_po 
+                AND sub.kd_barang = pp.kd_barang
+            WHERE 1=1
         ";
 
-        // Filter tanggal
-        $where = [];
+        $params = [];
+        
         if (!empty($date1) && !empty($date2)) {
-            $where[] = "STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') >= " . $this->db->escape($date1);
-            $where[] = "STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') <= " . $this->db->escape($date2);
-        }
-        if (!empty($where)) {
-            $sql .= " WHERE " . implode(' AND ', $where);
+            // Konversi date ke format yang sesuai dengan tgl_transaksi di database
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
         }
 
-        $sql .= " GROUP BY pp.no_po, pp.kd_po, pp.tgl_transaksi, pp.kd_suplier, s.nama_suplier";
-        $sql .= " ORDER BY pp.no_po DESC";
+        $sql .= " GROUP BY pp.no_po, pp.kd_po, pp.kd_suplier";
+        $sql .= " HAVING total_qty_order > total_qty_masuk"; // Hanya yang belum lunas
+        $sql .= " ORDER BY MAX(pp.tgl_transaksi) DESC, pp.no_po DESC";
 
-        return $this->db->query($sql)->result_array();
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function get_barang_by_po()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $no_po      = $this->input->get('no_po', TRUE);
+        $kd_suplier = $this->input->get('kd_suplier', TRUE);
+        $kd_po      = $this->input->get('kd_po', TRUE);
+
+        if (empty($no_po) || empty($kd_po)) {
+            echo json_encode(['status' => 'error', 'message' => 'Parameter tidak lengkap']);
+            exit;
+        }
+
+        // Query untuk mendapatkan detail barang berdasarkan kd_po yang spesifik
+        $sql = "
+            SELECT
+                pp.kd_po,
+                pp.kd_barang,
+                COALESCE(mb.nama_barang, '-') AS nama_barang,
+                pp.qty AS qty_order,
+                pp.satuan,
+                COALESCE(sub.qty_masuk, 0) AS qty_masuk,
+                (pp.qty - COALESCE(sub.qty_masuk, 0)) AS sisa
+            FROM tb_pre_po pp
+            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = pp.kd_barang
+            LEFT JOIN (
+                SELECT kd_po, kd_barang, SUM(qty_diterima) AS qty_masuk
+                FROM tb_po_received
+                WHERE no_po = ? AND kd_po = ?
+                GROUP BY kd_po, kd_barang
+            ) sub ON sub.kd_po = pp.kd_po AND sub.kd_barang = pp.kd_barang
+            WHERE pp.no_po = ? 
+                AND pp.kd_po = ?
+                AND pp.kd_suplier = ?
+            HAVING sisa > 0
+            ORDER BY pp.kd_barang
+        ";
+
+        $params = [$no_po, $kd_po, $no_po, $kd_po, $kd_suplier];
+        $result = $this->db->query($sql, $params)->result_array();
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+        exit;
     }
 
     public function save_detail_lpb($data)

@@ -67,11 +67,11 @@
                                 <div class="row mb-3">
                                     <div class="col-2">
                                         <input type="date" class="form-control" name="date1" id="name1"
-                                               value="<?= htmlspecialchars($this->input->post('date1') ?? '') ?>">
+                                            value="<?= htmlspecialchars($this->input->post('date1') ?? '') ?>">
                                     </div>
                                     <div class="col-2">
                                         <input type="date" class="form-control" name="date2" id="name2"
-                                               value="<?= htmlspecialchars($this->input->post('date2') ?? '') ?>">
+                                            value="<?= htmlspecialchars($this->input->post('date2') ?? '') ?>">
                                     </div>
                                     <div class="col-2">
                                         <button class="btn btn-success btn-block">
@@ -81,45 +81,171 @@
                                 </div>
                             </form>
 
+                            <?php
+                            // ── Hitung last update global & statistik ──────────────
+                            $last_update_global = null;
+                            $total_po           = 0;
+                            $total_sebagian     = 0;
+                            $total_belum        = 0;
+
+                            if (!empty($lpb)) :
+                                foreach ($lpb as $row) :
+                                    $sisa = (int)($row['jumlah_barang'] ?? 0) - (int)($row['jumlah_barang_masuk'] ?? 0);
+                                    if ($sisa <= 0) continue; // skip yang sudah selesai
+
+                                    $total_po++;
+                                    if ((int)($row['jumlah_barang_masuk'] ?? 0) > 0) $total_sebagian++;
+                                    else $total_belum++;
+
+                                    if (!empty($row['last_input'])) {
+                                        if ($last_update_global === null || $row['last_input'] > $last_update_global) {
+                                            $last_update_global = $row['last_input'];
+                                        }
+                                    }
+                                endforeach;
+                            endif;
+                            ?>
+
+                            <!-- ── Info Bar: Last Update + Statistik ── -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="info-box shadow-sm mb-0">
+                                        <span class="info-box-icon bg-info"><i class="fas fa-clock"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Last Update Input</span>
+                                            <span class="info-box-number" style="font-size:14px;">
+                                                <?= $last_update_global
+                                                    ? date('d/m/Y H:i', strtotime($last_update_global))
+                                                    : '<span class="text-muted">Belum ada input</span>' ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="info-box shadow-sm mb-0">
+                                        <span class="info-box-icon bg-danger"><i class="fas fa-box"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Belum Datang</span>
+                                            <span class="info-box-number"><?= $total_belum ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="info-box shadow-sm mb-0">
+                                        <span class="info-box-icon bg-warning"><i class="fas fa-clock"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Sebagian Masuk</span>
+                                            <span class="info-box-number"><?= $total_sebagian ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="info-box shadow-sm mb-0">
+                                        <span class="info-box-icon bg-secondary"><i class="fas fa-list"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Total PO Pending</span>
+                                            <span class="info-box-number"><?= $total_po ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Legenda Warna ── -->
+                            <div class="mb-2">
+                                <span class="badge badge-light border px-2 py-1 mr-1"><i class="fas fa-box mr-1"></i> Belum ada masuk</span>
+                                <span class="badge badge-warning px-2 py-1 mr-1"><i class="fas fa-clock mr-1"></i> Sebagian sudah masuk</span>
+                            </div>
+
                             <table class="table table-bordered" id="tabelPO">
                                 <thead class="thead-dark">
                                     <tr>
                                         <th>No PO</th>
-                                        <th>Tanggal</th>
+                                        <th>Tgl PO</th>
                                         <th>Kode Supplier</th>
                                         <th>Nama Supplier</th>
-                                        <th class="text-center">Jumlah Barang</th>
+                                        <th class="text-center">Jml Barang</th>
                                         <th class="text-center">Barang Masuk</th>
-                                        <th class="text-center" style="width:80px;">Aksi</th>
+                                        <th class="text-center">Status</th>
+                                        <th>Tgl Input Terakhir</th>
+                                        <th class="text-center" style="width:70px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php 
                                     $ada_data = false;
+                                    $processed_kd_po = []; // Array untuk tracking kd_po yang sudah ditampilkan
+                                    
                                     if (!empty($lpb)) :
-                                        foreach ($lpb as $row) :
-                                            $jumlah_barang       = (int)($row['jumlah_barang']       ?? 0);
+                                        // Urutkan berdasarkan last_input terbaru
+                                        $sorted_lpb = $lpb;
+                                        usort($sorted_lpb, function($a, $b) {
+                                            $date_a = strtotime($a['last_input'] ?? '1970-01-01');
+                                            $date_b = strtotime($b['last_input'] ?? '1970-01-01');
+                                            return $date_b - $date_a;
+                                        });
+                                        
+                                        foreach ($sorted_lpb as $row) :
+                                            $kd_po_current = $row['kd_po'] ?? '';
+                                            
+                                            // Skip jika kd_po sudah pernah ditampilkan (mencegah duplikasi)
+                                            if (in_array($kd_po_current, $processed_kd_po)) {
+                                                continue;
+                                            }
+                                            
+                                            $jumlah_barang       = (int)($row['jumlah_barang'] ?? 0);
                                             $jumlah_barang_masuk = (int)($row['jumlah_barang_masuk'] ?? 0);
                                             $sisa                = $jumlah_barang - $jumlah_barang_masuk;
 
-                                            // Tampilkan hanya PO yang belum semua item terpenuhi
                                             if ($sisa <= 0) continue;
+                                            
+                                            // Tandai kd_po sebagai sudah diproses
+                                            $processed_kd_po[] = $kd_po_current;
                                             $ada_data = true;
+
+                                            // Warna baris & badge status
+                                            if ($jumlah_barang_masuk > 0) {
+                                                $row_class = 'table-warning';
+                                                $badge     = '<span class="badge badge-warning px-2 py-1">
+                                                                <i class="fas fa-clock mr-1"></i> Sebagian
+                                                            </span>';
+                                            } else {
+                                                $row_class = '';
+                                                $badge     = '<span class="badge badge-light border px-2 py-1">
+                                                                <i class="fas fa-box mr-1"></i> Belum Datang
+                                                            </span>';
+                                            }
+
+                                            // Format tgl input terakhir
+                                            $tgl_input = !empty($row['last_input'])
+                                                ? date('d/m/Y H:i', strtotime($row['last_input']))
+                                                : '-';
                                     ?>
-                                        <tr class="<?= $jumlah_barang_masuk > 0 ? 'table-warning' : '' ?>">
-                                            <td><?= htmlspecialchars($row['no_po']         ?? '') ?></td>
+                                        <tr class="<?= $row_class ?>" data-kd-po="<?= htmlspecialchars($kd_po_current) ?>">
+                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['kd_suplier']    ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_suplier']  ?? '-') ?></td>
+                                            <td><?= htmlspecialchars($row['kd_suplier'] ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
                                             <td class="text-center font-weight-bold"><?= $jumlah_barang ?></td>
-                                            <td class="text-center text-success font-weight-bold"><?= $jumlah_barang_masuk ?></td>
+                                            <td class="text-center font-weight-bold <?= $jumlah_barang_masuk > 0 ? 'text-success' : 'text-secondary' ?>">
+                                                <?= $jumlah_barang_masuk ?>
+                                            </td>
+                                            <td class="text-center"><?= $badge ?></td>
+                                            <td class="text-center" data-order="<?= !empty($row['last_input']) ? strtotime($row['last_input']) : 0 ?>">
+                                                <?php if ($tgl_input !== '-') : ?>
+                                                    <span class="text-info font-weight-bold">
+                                                        <i class="fas fa-calendar-check mr-1"></i><?= $tgl_input ?>
+                                                    </span>
+                                                <?php else : ?>
+                                                    <span class="text-muted">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-center">
                                                 <button
                                                     class="btn btn-sm btn-success btn-input-qty"
                                                     title="Input Penerimaan"
-                                                    data-no-po="<?= htmlspecialchars($row['no_po']        ?? '') ?>"
-                                                    data-kd-po="<?= htmlspecialchars($row['kd_po']        ?? '') ?>"
-                                                    data-kd-suplier="<?= htmlspecialchars($row['kd_suplier']   ?? '') ?>"  {{-- TAMBAH INI --}}
+                                                    data-no-po="<?= htmlspecialchars($row['no_po'] ?? '') ?>"
+                                                    data-kd-po="<?= htmlspecialchars($kd_po_current) ?>"
+                                                    data-kd-suplier="<?= htmlspecialchars($row['kd_suplier'] ?? '') ?>"
                                                     data-nama-suplier="<?= htmlspecialchars($row['nama_suplier'] ?? '') ?>"
                                                     data-toggle="modal"
                                                     data-target="#modalInputQty">
@@ -133,7 +259,7 @@
                                     if (!$ada_data) :
                                     ?>
                                         <tr>
-                                            <td colspan="7" class="text-center text-success">
+                                            <td colspan="9" class="text-center text-success">
                                                 <i class="fas fa-check-circle mr-1"></i> Semua barang PO sudah terpenuhi
                                             </td>
                                         </tr>
@@ -157,9 +283,7 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
-<!-- ================================================================
-     MODAL INPUT PENERIMAAN BARANG (PER NO_PO, LIST BARANG DINAMIS)
-================================================================ -->
+<!-- Modal dan script sama seperti sebelumnya, hanya tambahkan reload setelah submit -->
 <div class="modal fade" id="modalInputQty" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
@@ -217,11 +341,11 @@
 $(document).ready(function () {
 
     // ── DataTables ────────────────────────────────────────────────
-    $('#tabelPO').DataTable({
+    var table = $('#tabelPO').DataTable({
         responsive  : true,
         autoWidth   : false,
         pageLength  : 25,
-        order       : [[0, 'desc']],
+        order       : [[7, 'desc']],
         columnDefs  : [{ orderable: false, targets: -1 }],
         language: {
             search      : "Cari:",
@@ -233,8 +357,7 @@ $(document).ready(function () {
         }
     });
 
-    // ── Simpan options satuan sebagai array JS, bukan string HTML ──
-    // Ini solusi bug satuan hilang saat tambah baris
+    // Simpan options satuan sebagai array JS
     var listSatuan = [];
     <?php foreach ($list_satuan as $s) : ?>
         listSatuan.push('<?= addslashes($s['nm_satuan']) ?>');
@@ -248,12 +371,18 @@ $(document).ready(function () {
         return opts;
     }
 
-    // ── Buka modal: load daftar barang via AJAX ───────────────────
-    $('.btn-input-qty').on('click', function () {
+    $(document).on('click', '.btn-input-qty', function () {
         var noPo        = $(this).data('no-po');
         var kdPo        = $(this).data('kd-po');
         var kdSuplier   = $(this).data('kd-suplier');
         var namaSuplier = $(this).data('nama-suplier');
+
+        // Debugging
+        console.log('=== DEBUG MODAL ===');
+        console.log('No PO:', noPo);
+        console.log('KD PO:', kdPo);
+        console.log('KD Suplier:', kdSuplier);
+        console.log('Nama Suplier:', namaSuplier);
 
         $('#modal_no_po').val(noPo);
         $('#modal_nama_suplier').val(namaSuplier);
@@ -263,7 +392,13 @@ $(document).ready(function () {
         $('#wrapperBarang').html('');
         $('#loadingBarang').show();
 
-        $.getJSON('<?= base_url('get_barang_by_po') ?>', { no_po: noPo, kd_suplier: kdSuplier }, function (data) {
+        // Kirimkan juga KD_PO ke server
+        $.getJSON('<?= base_url('get_barang_by_po') ?>', { 
+            no_po: noPo, 
+            kd_suplier: kdSuplier,
+            kd_po: kdPo 
+        }, function (data) {
+            console.log('Data barang yang diterima:', data);
             $('#loadingBarang').hide();
 
             if (!data || data.length === 0) {
@@ -274,7 +409,8 @@ $(document).ready(function () {
             }
 
             $('#wrapperBarang').html(buildFormBarang(data));
-        }).fail(function () {
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            console.error('Error AJAX:', textStatus, errorThrown);
             $('#loadingBarang').hide();
             $('#wrapperBarang').html(
                 '<div class="alert alert-danger"><i class="fas fa-exclamation-circle mr-1"></i> Gagal memuat data barang. Silakan coba lagi.</div>'
@@ -282,11 +418,10 @@ $(document).ready(function () {
         });
     });
 
-    // ── Build HTML form per barang ────────────────────────────────
+    // Build HTML form per barang
     function buildFormBarang(items) {
         var html = '';
         $.each(items, function (idx, item) {
-            // PERBAIKAN: required dihapus, input boleh kosong (barang boleh dilewati)
             html += `
             <div class="card card-outline card-success mb-3" data-barang-idx="${idx}" data-sisa="${item.sisa}">
                 <div class="card-header py-2">
@@ -294,6 +429,7 @@ $(document).ready(function () {
                     &mdash; ${escStr(item.nama_barang)}
                     <span class="badge badge-warning ml-2">Sisa: ${item.sisa} ${escStr(item.satuan)}</span>
                     <input type="hidden" name="rows[${idx}][kd_barang]" value="${escStr(item.kd_barang)}">
+                    <input type="hidden" name="rows[${idx}][kd_po]" value="${escStr(item.kd_po)}">
                 </div>
                 <div class="card-body py-2">
                     <table class="table table-bordered table-sm mb-1">
@@ -320,9 +456,7 @@ $(document).ready(function () {
         return html;
     }
 
-    // ── Build satu baris sub (dipakai saat render awal & tambah baris) ──
     function buildBarisSub(idx, subIdx, sisa) {
-        // PERBAIKAN: tidak pakai required, satuan dibangun dari listSatuan JS
         return `
         <tr>
             <td><input type="number" class="form-control form-control-sm input-qty"
@@ -346,29 +480,27 @@ $(document).ready(function () {
         </tr>`;
     }
 
-    // Escape string untuk dipakai dalam HTML attribute
     function escStr(str) {
         return $('<div>').text(str || '').html();
     }
 
-    // ── Tambah baris & hapus baris ────────────────────────────────
-    $('#wrapperBarang')
-        .on('click', '.btn-tambah-sub', function () {
-            var idx    = $(this).data('idx');
-            var sisa   = $(this).data('sisa');
-            var tbody  = $(this).closest('.card-body').find('.body-sub-baris');
-            var subIdx = tbody.find('tr').length;
+    // Event delegation untuk tombol tambah dan hapus sub baris
+    $(document).on('click', '.btn-tambah-sub', function () {
+        var idx    = $(this).data('idx');
+        var sisa   = $(this).data('sisa');
+        var tbody  = $(this).closest('.card-body').find('.body-sub-baris');
+        var subIdx = tbody.find('tr').length;
 
-            tbody.append(buildBarisSub(idx, subIdx, sisa));
-            updateHapusSub(tbody);
-        })
+        tbody.append(buildBarisSub(idx, subIdx, sisa));
+        updateHapusSub(tbody);
+    });
 
-        .on('click', '.btn-hapus-sub', function () {
-            var tbody = $(this).closest('tbody');
-            $(this).closest('tr').remove();
-            reindexSubBaris(tbody);
-            updateHapusSub(tbody);
-        });
+    $(document).on('click', '.btn-hapus-sub', function () {
+        var tbody = $(this).closest('tbody');
+        $(this).closest('tr').remove();
+        reindexSubBaris(tbody);
+        updateHapusSub(tbody);
+    });
 
     function updateHapusSub(tbody) {
         var btns = tbody.find('.btn-hapus-sub');
@@ -376,7 +508,6 @@ $(document).ready(function () {
     }
 
     function reindexSubBaris(tbody) {
-        // Ambil idx barang dari card parent
         var idx = tbody.closest('.card').data('barang-idx');
         tbody.find('tr').each(function (si) {
             $(this).find('input, select').each(function () {
@@ -388,8 +519,8 @@ $(document).ready(function () {
         });
     }
 
-    // ── Validasi submit ───────────────────────────────────────────
-    $('#formInputQty').on('submit', function (e) {
+    // Validasi submit
+    $(document).on('submit', '#formInputQty', function (e) {
         var valid       = true;
         var adaYangDiisi = false;
 
@@ -405,7 +536,6 @@ $(document).ready(function () {
                     barisDiisi++;
                     total += qty;
 
-                    // Cek satuan wajib diisi jika qty diisi
                     var satuan = $(this).closest('tr').find('.select-satuan').val();
                     if (!satuan) {
                         valid = false;
@@ -418,7 +548,6 @@ $(document).ready(function () {
 
             if (barisDiisi > 0) adaYangDiisi = true;
 
-            // Total qty tidak boleh melebihi sisa
             if (total > sisa) {
                 valid = false;
                 var namaBarang = card.find('.card-header strong').text();
@@ -427,16 +556,23 @@ $(document).ready(function () {
             }
         });
 
-        // Minimal 1 barang harus diisi
         if (valid && !adaYangDiisi) {
             valid = false;
             alert('Minimal isi qty untuk 1 barang sebelum menyimpan.');
         }
 
-        if (!valid) { e.preventDefault(); return false; }
+        if (!valid) { 
+            e.preventDefault(); 
+            return false; 
+        }
+        
+        // Reload halaman setelah submit
+        setTimeout(function() {
+            location.reload();
+        }, 500);
     });
 
-    // ── Auto-hide alert ───────────────────────────────────────────
+    // Auto-hide alert
     setTimeout(function () { $('.alert').fadeOut('slow'); }, 4000);
 });
 </script>
