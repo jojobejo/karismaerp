@@ -3,18 +3,19 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
  * M_SalesOrder.php
- * Konversi berat:
- *   berat di tb_master_barang_all = GRAM per satuan
- *   Tonase (ton) = qty × berat / 1.000.000
- * Kubikasi:
- *   kubikasi di tb_master_barang_all = m³ per satuan (sudah desimal)
- *   Kubikasi (m³) = qty × kubikasi
+ *
+ * Konversi:
+ *   Tonase (ton)   = qty_kecil × berat_gram / 1.000.000
+ *   Kubikasi (m³)  = qty_kecil × kubikasi_m3
+ *   isi_per_box    = (p×l×t cm³) / (kubikasi_m3 × 1.000.000)
+ *   qty_kecil      = qty_box × isi_per_box
+ *
  * Batas default: 6 ton, 9 m³
  */
 class M_SalesOrder extends CI_Model
 {
-    const BATAS_TONASE   = 6;   // ton
-    const BATAS_KUBIKASI = 9;   // m³
+    const BATAS_TONASE   = 6;
+    const BATAS_KUBIKASI = 9;
 
     // ----------------------------------------------------------------
     // GENERATE NOMOR SO
@@ -48,6 +49,9 @@ class M_SalesOrder extends CI_Model
         return $this->db->get_where('tb_customer', ['id' => $id])->row_array();
     }
 
+    // ----------------------------------------------------------------
+    // STOK (dari view — tidak diubah strukturnya)
+    // ----------------------------------------------------------------
     public function get_available_stock($gudang_id = null, $kd_barang = null)
     {
         $this->db->where('available_stock >', 0);
@@ -58,38 +62,155 @@ class M_SalesOrder extends CI_Model
 
     public function cek_stock($kd_barang, $exp_date, $gudang_id)
     {
-        // Gunakan query manual agar tipe data tidak ambigu
-        $sql = "SELECT * FROM v_available_stock 
-                WHERE kode_barang = ? 
-                AND DATE(exp_date) = DATE(?) 
+        $sql = "SELECT * FROM v_available_stock
+                WHERE kode_barang = ?
+                AND DATE(exp_date) = DATE(?)
                 AND gudang = ?
                 LIMIT 1";
-        
-        $query = $this->db->query($sql, [
-            $kd_barang,
-            $exp_date,
-            $gudang_id
-        ]);
-        
-        return $query->row_array();
+        return $this->db->query($sql, [$kd_barang, $exp_date, $gudang_id])->row_array();
     }
 
     // ----------------------------------------------------------------
-    // MASTER BARANG — tb_master_barang_all
+    // MASTER BARANG — normalisasi kolom fleksibel
+    // Mendukung berbagai nama kolom yang mungkin ada di tabel Anda.
     // ----------------------------------------------------------------
-    public function get_harga_pokok($kd_barang)
-    {
-        $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
-        return $row ? (float)$row['hpp'] : 0;
-    }
 
+    /**
+     * Kembalikan satu baris master barang yang sudah dinormalisasi.
+     */
     public function get_detail_barang($kd_barang)
     {
-        return $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
+        $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
+        if (!$row) return null;
+        return $this->_normalize_barang($row);
+    }
+
+    /**
+     * Bulk fetch master barang berdasarkan daftar kd_barang.
+     * Mengembalikan array berindeks kd_barang.
+     */
+    private function _get_master_bulk(array $kd_list)
+    {
+        if (empty($kd_list)) return [];
+        $rows = $this->db->where_in('kd_barang', array_unique($kd_list))
+                         ->get('tb_master_barang_all')
+                         ->result_array();
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['kd_barang']] = $this->_normalize_barang($r);
+        }
+        return $map;
+    }
+
+    /**
+     * Normalisasi satu baris master barang.
+     * Coba beberapa nama kolom alternatif agar tidak error
+     * meski nama kolom berbeda-beda di tiap instalasi.
+     */
+    private function _normalize_barang(array $row)
+    {
+        // ---- berat (gram per satuan kecil) ----
+        $berat = 0;
+        foreach (['berat', 'berat_gram', 'weight', 'berat_satuan', 'gr'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $berat = (float)$row[$c]; break;
+            }
+        }
+
+        // ---- kubikasi (m³ per satuan kecil) ----
+        $kubikasi = 0;
+        foreach (['kubikasi', 'kubikasi_m3', 'volume', 'kubik', 'cbm'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $kubikasi = (float)$row[$c]; break;
+            }
+        }
+
+        // ---- HPP ----
+        $hpp = 0;
+        foreach (['hpp', 'harga_pokok', 'cost', 'cogs', 'h_pokok'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $hpp = (float)$row[$c]; break;
+            }
+        }
+
+        // ---- dimensi box (cm) ----
+        $p = (float)($row['p'] ?? $row['panjang'] ?? $row['length'] ?? 0);
+        $l = (float)($row['l'] ?? $row['lebar']   ?? $row['width']  ?? 0);
+        $t = (float)($row['t'] ?? $row['tinggi']  ?? $row['height'] ?? 0);
+
+        // ---- isi per box ----
+        $isi = 0;
+        foreach (['isi_box', 'qty_isi', 'isi', 'isi_per_box', 'qty_per_box', 'jumlah_isi'] as $c) {
+            if (array_key_exists($c, $row) && (int)$row[$c] > 0) {
+                $isi = (int)$row[$c]; break;
+            }
+        }
+        // Hitung dari dimensi jika kolom isi tidak ada
+        if ($isi < 1 && $p > 0 && $l > 0 && $t > 0 && $kubikasi > 0) {
+            $vol_box   = $p * $l * $t;              // cm³
+            $vol_kecil = $kubikasi * 1000000;        // m³ → cm³
+            $isi = (int)round($vol_box / $vol_kecil);
+        }
+        if ($isi < 1) $isi = 1;
+
+        // Tulis kembali nilai yang sudah dinormalisasi
+        $row['berat_gram']  = $berat;
+        $row['kubikasi_m3'] = $kubikasi;
+        $row['hpp']         = $hpp;
+        $row['p']           = $p;
+        $row['l']           = $l;
+        $row['t']           = $t;
+        $row['isi_per_box'] = $isi;
+
+        return $row;
     }
 
     // ----------------------------------------------------------------
-    // LIST SALES ORDER
+    // STOK + DIMENSI — untuk endpoint AJAX /get_stock
+    //
+    // Dua query terpisah (aman, tidak perlu kolom di view):
+    //   1. Ambil semua stok dari v_available_stock
+    //   2. Ambil master barang (bulk IN query)
+    //   3. Gabungkan di PHP
+    // ----------------------------------------------------------------
+    public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
+    {
+        // -- Query 1: stok --
+        $this->db->where('available_stock >', 0);
+        if ($gudang_id) $this->db->where('gudang', $gudang_id);
+        if ($kd_barang) $this->db->where('kode_barang', $kd_barang);
+        $stocks = $this->db->get('v_available_stock')->result_array();
+
+        if (empty($stocks)) return [];
+
+        // -- Query 2: master barang (bulk) --
+        $kd_list = array_column($stocks, 'kode_barang');
+        $master  = $this->_get_master_bulk($kd_list);
+
+        // -- Gabungkan --
+        foreach ($stocks as &$row) {
+            $kd  = $row['kode_barang'];
+            $m   = isset($master[$kd]) ? $master[$kd] : [];
+
+            $row['berat_gram']  = isset($m['berat_gram'])  ? $m['berat_gram']  : 0;
+            $row['kubikasi_m3'] = isset($m['kubikasi_m3']) ? $m['kubikasi_m3'] : 0;
+            $row['hpp']         = isset($m['hpp'])         ? $m['hpp']         : 0;
+            $row['p']           = isset($m['p'])           ? $m['p']           : 0;
+            $row['l']           = isset($m['l'])           ? $m['l']           : 0;
+            $row['t']           = isset($m['t'])           ? $m['t']           : 0;
+            $row['isi_per_box'] = isset($m['isi_per_box']) ? $m['isi_per_box'] : 1;
+
+            $av  = (float)($row['available_stock'] ?? 0);
+            $isi = max(1, (int)$row['isi_per_box']);
+            $row['available_box'] = (int)floor($av / $isi);
+        }
+        unset($row);
+
+        return $stocks;
+    }
+
+    // ----------------------------------------------------------------
+    // LIST SO
     // ----------------------------------------------------------------
     public function get_all_so($filter = [])
     {
@@ -196,22 +317,23 @@ class M_SalesOrder extends CI_Model
                 $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
             }
-            $available = round($available, 3);
-            $diminta   = round((float)$d['qty'], 3);
+            $available  = round($available, 3);
+            $diminta    = round((float)$d['qty'], 3);
             if ($diminta > $available) {
+                $isi      = max(1, (int)($d['isi_per_box'] ?? 1));
+                $av_box   = (int)floor($available / $isi);
+                $req_box  = (int)ceil($diminta   / $isi);
                 $errors[] = "Stok tidak cukup: <b>{$d['nama_barang']}</b> "
                           . "(Exp: {$d['expired_date']}) — "
-                          . "Diminta: {$diminta}, Tersedia: {$available}";
+                          . "Diminta: {$req_box} box ({$diminta} pcs), "
+                          . "Tersedia: {$av_box} box ({$available} pcs)";
             }
         }
         return $errors;
     }
 
     // ----------------------------------------------------------------
-    // VALIDASI & HITUNG TONASE + KUBIKASI
-    //   total_tonase   = SUM(qty × berat_gram / 1.000.000)
-    //   total_kubikasi = SUM(qty × kubikasi_m3)
-    //   batas default  = 6 ton & 9 m³
+    // VALIDASI TONASE + KUBIKASI
     // ----------------------------------------------------------------
     public function validasi_tonase_kubikasi($details,
         $batas_tonase   = self::BATAS_TONASE,
@@ -224,10 +346,9 @@ class M_SalesOrder extends CI_Model
         $total_kubikasi = 0;
 
         foreach ($details as $d) {
-            $berat_gram  = (float)($d['berat_gram']  ?? 0);   // gram dari master barang
-            $kubikasi_m3 = (float)($d['kubikasi_m3'] ?? 0);   // m³ dari master barang
-            $qty         = (float)($d['qty']          ?? 0);
-            // gram → ton: bagi 1.000.000
+            $qty         = (float)($d['qty']         ?? 0); // satuan kecil
+            $berat_gram  = (float)($d['berat_gram']  ?? 0);
+            $kubikasi_m3 = (float)($d['kubikasi_m3'] ?? 0);
             $total_tonase   += $qty * ($berat_gram / 1000000);
             $total_kubikasi += $qty * $kubikasi_m3;
         }
@@ -235,9 +356,8 @@ class M_SalesOrder extends CI_Model
         $total_tonase   = round($total_tonase,   6);
         $total_kubikasi = round($total_kubikasi, 6);
         $warnings       = [];
-
-        $over_ton = $total_tonase   > $batas_tonase;
-        $over_kub = $total_kubikasi > $batas_kubikasi;
+        $over_ton       = $total_tonase   > $batas_tonase;
+        $over_kub       = $total_kubikasi > $batas_kubikasi;
 
         if ($over_ton && !$over_kub) {
             $warnings[] = "Tonase melebihi batas (" . round($total_tonase, 3)

@@ -44,7 +44,6 @@ class C_SalesOrder extends CI_Controller
         $data['gudang_id']      = $this->session->userdata('gudang_id') ?? '';
         $data['so']             = null;
         $data['details']        = [];
-        // Kirim batas ke view agar ditampilkan di progress bar
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
 
@@ -69,7 +68,6 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Validasi stok server-side
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $post['gudang_id']);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
@@ -77,9 +75,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        // Hitung tonase & kubikasi (batas default dari konstanta model)
-        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
-
+        $tk      = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
         $is_nego = 0;
         foreach ($details as $d) {
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
@@ -186,8 +182,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $tk = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
-
+        $tk      = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
         $is_nego = 0;
         foreach ($details as $d) {
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
@@ -270,36 +265,80 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // AJAX — Stok tersedia (dipanggil modal picker)
-    // Mengembalikan: kode_barang, nama_barang, exp_date, no_lot, gudang,
-    //                available_stock, satuan, berat_gram, kubikasi_m3, hpp
+    // AJAX — get_stock
+    // Mengembalikan stok + dimensi + isi_per_box dalam JSON bersih.
+    // PENTING: Semua output di-sanitasi agar tidak ada karakter
+    //          yang bisa membreak JSON (kutip, backslash, dsb).
     // ================================================================
     public function get_stock()
     {
-        $gudang_id = $this->input->get('gudang_id', true);
-        $kd_barang = $this->input->get('kd_barang', true) ?: null;
-        $stock     = $this->M_SalesOrder->get_available_stock($gudang_id, $kd_barang);
-        header('Content-Type: application/json');
-        echo json_encode(['status' => 'ok', 'data' => $stock]);
+        // Nonaktifkan semua output buffer sebelumnya agar tidak ada
+        // HTML error/warning yang ikut tercetak sebelum JSON
+        if (ob_get_level()) ob_end_clean();
+
+        try {
+            $gudang_id = $this->input->get('gudang_id', true);
+            $kd_barang = $this->input->get('kd_barang', true) ?: null;
+
+            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
+
+            // Sanitasi: pastikan semua nilai numerik benar-benar numerik
+            foreach ($stock as &$row) {
+                $row['available_stock'] = (float)($row['available_stock'] ?? 0);
+                $row['available_box']   = (int)($row['available_box']    ?? 0);
+                $row['berat_gram']      = (float)($row['berat_gram']     ?? 0);
+                $row['kubikasi_m3']     = (float)($row['kubikasi_m3']    ?? 0);
+                $row['hpp']             = (float)($row['hpp']            ?? 0);
+                $row['isi_per_box']     = (int)($row['isi_per_box']      ?? 1);
+                $row['p']               = (float)($row['p']              ?? 0);
+                $row['l']               = (float)($row['l']              ?? 0);
+                $row['t']               = (float)($row['t']              ?? 0);
+                // String: pastikan utf8 valid agar json_encode tidak gagal
+                foreach (['kode_barang','nama_barang','satuan','exp_date','no_lot','gudang'] as $f) {
+                    if (isset($row[$f])) {
+                        $row[$f] = mb_convert_encoding((string)$row[$f], 'UTF-8', 'UTF-8');
+                    }
+                }
+            }
+            unset($row);
+
+            $json = json_encode(['status' => 'ok', 'data' => $stock], JSON_UNESCAPED_UNICODE);
+
+            if ($json === false) {
+                // json_encode gagal (biasanya karena encoding string)
+                throw new Exception('json_encode failed: ' . json_last_error_msg());
+            }
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo $json;
+
+        } catch (Exception $e) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
     }
 
     // ================================================================
-    // AJAX — Detail barang (berat, kubikasi, hpp)
+    // AJAX — get_barang (detail + dimensi)
     // ================================================================
     public function get_barang()
     {
+        if (ob_get_level()) ob_end_clean();
+
         $kd_barang = $this->input->get('kd_barang', true);
         $barang    = $this->M_SalesOrder->get_detail_barang($kd_barang);
-        header('Content-Type: application/json');
-        echo json_encode(['status' => 'ok', 'data' => $barang]);
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'ok', 'data' => $barang], JSON_UNESCAPED_UNICODE);
     }
 
     // ================================================================
     // PRIVATE — Parse POST detail item
-    //   berat_gram  : dari hidden input (diisi JS dari data master)
-    //   kubikasi_m3 : dari hidden input (diisi JS dari data master)
-    //   Kedua field ini dikirim agar server bisa hitung tonase & kubikasi
-    //   tanpa query ulang ke master barang.
+    //
+    // qty_box    = jumlah box (input user)
+    // isi_per_box= satuan kecil per box (dari hidden field)
+    // qty        = qty_box × isi_per_box  →  satuan kecil, disimpan ke DB
     // ================================================================
     private function _parse_detail_post($post)
     {
@@ -309,12 +348,16 @@ class C_SalesOrder extends CI_Controller
         foreach ($post['kd_barang'] as $i => $kd) {
             if (empty($kd)) continue;
 
-            $hrg    = (float)($post['hrg_satuan'][$i] ?? 0);
-            $hrg_pk = (float)($post['hrg_pokok'][$i]  ?? 0);
-            $qty    = (float)($post['qty'][$i]         ?? 0);
-            $pajak  = (float)($post['pajak'][$i]       ?? 0);
+            $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
+            $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
+            $qty_box     = (float)($post['qty_box'][$i]      ?? 0);
+            $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+            $pajak       = (float)($post['pajak'][$i]        ?? 0);
 
-            $subtotal  = $hrg * $qty;
+            // Konversi ke satuan kecil
+            $qty_kecil = $qty_box * $isi_per_box;
+
+            $subtotal  = $hrg * $qty_box;
             $total_tax = $subtotal + ($subtotal * $pajak / 100);
             $is_nego   = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
@@ -322,19 +365,19 @@ class C_SalesOrder extends CI_Controller
                 'produk_id'    => $post['produk_id'][$i]    ?? '',
                 'kd_barang'    => $kd,
                 'nama_barang'  => $post['nama_barang'][$i]  ?? '',
-                'qty'          => $qty,
-                'satuan'       => $post['satuan'][$i]       ?? '',
-                'expired_date' => $post['expired_date'][$i] ?? '',
-                'no_lot'       => $post['no_lot'][$i]       ?? null,
+                'qty'          => $qty_kecil,       // satuan kecil — untuk stok & tonase
+                'qty_box'      => $qty_box,          // satuan box — referensi
+                'isi_per_box'  => $isi_per_box,
+                'satuan'       => $post['satuan'][$i]        ?? '',
+                'expired_date' => $post['expired_date'][$i]  ?? '',
+                'no_lot'       => $post['no_lot'][$i]        ?? null,
                 'pajak'        => $pajak,
                 'hrg_satuan'   => $hrg,
                 'hrg_pokok'    => $hrg_pk,
                 'total_harga'  => $total_tax,
-                // berat & kubikasi dikirim dari hidden input di form
-                // (diisi JS saat user memilih barang dari modal)
-                'berat_gram'   => (float)($post['berat_gram'][$i]   ?? 0),
-                'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i]  ?? 0),
-                'kode_akun'    => $post['kode_akun'][$i]    ?? null,
+                'berat_gram'   => (float)($post['berat_gram'][$i]  ?? 0),
+                'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
+                'kode_akun'    => $post['kode_akun'][$i]     ?? null,
                 'is_nego'      => $is_nego,
                 'create_by'    => $this->session->userdata('username'),
             ];
