@@ -12,6 +12,45 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
+    // HELPER — username dari session, fallback 'system'
+    // ================================================================
+    private function _getUsername()
+    {
+        $keys = ['username', 'user_name', 'nama', 'nama_user', 'user',
+                 'login_name', 'email', 'id_user', 'userid'];
+        foreach ($keys as $key) {
+            $val = $this->session->userdata($key);
+            if (!empty($val)) return $val;
+        }
+        return 'system';
+    }
+
+    // ================================================================
+    // HELPER — gudang_id dari POST → session → ''
+    // ================================================================
+    private function _getGudangId($post = [])
+    {
+        if (!empty($post['gudang_id'])) return $post['gudang_id'];
+        // Coba berbagai key session yang mungkin menyimpan gudang/wilayah
+        $keys = ['gudang_id', 'id_gudang', 'wilayah_id', 'id_wilayah', 'gudang'];
+        foreach ($keys as $key) {
+            $val = $this->session->userdata($key);
+            if (!empty($val)) return $val;
+        }
+        return '';
+    }
+
+    // ================================================================
+    // HELPER — redirect aman dengan id_so yang mengandung '/'
+    // ================================================================
+    private function _redirectDetail($id_so)
+    {
+        // Encode setiap segment agar '/' dalam nomor SO tidak memutus URL
+        $encoded = implode('/', array_map('rawurlencode', explode('/', $id_so)));
+        redirect('sales_order/detail/' . $encoded);
+    }
+
+    // ================================================================
     // LIST
     // ================================================================
     public function index()
@@ -41,7 +80,7 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']     = 'KARISMA - Buat Sales Order';
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
         $data['customers']      = $this->M_SalesOrder->get_customers();
-        $data['gudang_id']      = $this->session->userdata('gudang_id') ?? '';
+        $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
         $data['details']        = [];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
@@ -59,8 +98,9 @@ class C_SalesOrder extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $post    = $this->input->post(null, true);
-        $details = $this->_parse_detail_post($post);
+        $post      = $this->input->post(null, true);
+        $details   = $this->_parse_detail_post($post);
+        $gudang_id = $this->_getGudangId($post);
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
@@ -68,7 +108,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $stock_errors = $this->M_SalesOrder->validasi_stok($details, $post['gudang_id']);
+        $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
             redirect('sales_order/create');
@@ -87,7 +127,7 @@ class C_SalesOrder extends CI_Controller
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
-            'gudang_id'         => $post['gudang_id'],
+            'gudang_id'         => $gudang_id,
             'batas_tonase'      => $tk['batas_tonase'],
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
@@ -95,21 +135,21 @@ class C_SalesOrder extends CI_Controller
             'is_nego'           => $is_nego,
             'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
-            'create_by'         => $this->session->userdata('username'),
+            'create_by'         => $this->_getUsername(),
         ];
 
         $result = $this->M_SalesOrder->simpan_so($header, $details);
 
         if ($result) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->session->userdata('username'));
+                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->_getUsername());
                 $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
             } elseif (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
                 $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibuat.');
             }
-            redirect('sales_order/detail/' . $id_so);
+            $this->_redirectDetail($id_so);  // ← FIX: encode '/' dalam nomor SO
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan SO. Silakan coba lagi.');
             redirect('sales_order/create');
@@ -118,9 +158,15 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // DETAIL
+    // Terima id_so dari URL yang mungkin ter-encode
     // ================================================================
-    public function detail($id_so)
+    public function detail($seg1, $seg2 = null, $seg3 = null)
     {
+        // Rekonstruksi id_so dari segment URL
+        // URL: sales_order/detail/SO/202604/0001
+        $parts = array_filter([$seg1, $seg2, $seg3]);
+        $id_so = implode('/', array_map('rawurldecode', $parts));
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
 
@@ -136,8 +182,11 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     // FORM EDIT
     // ================================================================
-    public function edit($id_so)
+    public function edit($seg1, $seg2 = null, $seg3 = null)
     {
+        $parts = array_filter([$seg1, $seg2, $seg3]);
+        $id_so = implode('/', array_map('rawurldecode', $parts));
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || $so['status'] !== 'draft') {
             $this->session->set_flashdata('error', 'SO tidak dapat diedit.');
@@ -162,12 +211,15 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     // UPDATE (POST)
     // ================================================================
-    public function update($id_so)
+    public function update($seg1, $seg2 = null, $seg3 = null)
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $post    = $this->input->post(null, true);
-        $details = $this->_parse_detail_post($post);
+        $parts     = array_filter([$seg1, $seg2, $seg3]);
+        $id_so     = implode('/', array_map('rawurldecode', $parts));
+        $post      = $this->input->post(null, true);
+        $details   = $this->_parse_detail_post($post);
+        $gudang_id = $this->_getGudangId($post);
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
@@ -175,7 +227,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $stock_errors = $this->M_SalesOrder->validasi_stok($details, $post['gudang_id'], $id_so);
+        $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id, $id_so);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
             redirect('sales_order/edit/' . $id_so);
@@ -192,7 +244,7 @@ class C_SalesOrder extends CI_Controller
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
-            'gudang_id'         => $post['gudang_id'],
+            'gudang_id'         => $gudang_id,
             'batas_tonase'      => $tk['batas_tonase'],
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
@@ -200,21 +252,21 @@ class C_SalesOrder extends CI_Controller
             'is_nego'           => $is_nego,
             'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
-            'update_by'         => $this->session->userdata('username'),
+            'update_by'         => $this->_getUsername(),
         ];
 
         $result = $this->M_SalesOrder->update_so($id_so, $header, $details);
 
         if ($result) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->session->userdata('username'));
+                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->_getUsername());
             }
             if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', implode('<br>', $tk['warnings']));
             } else {
                 $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil diupdate.');
             }
-            redirect('sales_order/detail/' . $id_so);
+            $this->_redirectDetail($id_so);
         } else {
             $this->session->set_flashdata('error', 'Gagal update SO.');
             redirect('sales_order/edit/' . $id_so);
@@ -224,16 +276,19 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     // CANCEL
     // ================================================================
-    public function cancel($id_so)
+    public function cancel($seg1, $seg2 = null, $seg3 = null)
     {
         if ($this->input->method() !== 'post') show_404();
+        $parts = array_filter([$seg1, $seg2, $seg3]);
+        $id_so = implode('/', array_map('rawurldecode', $parts));
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || in_array($so['status'], ['completed', 'cancelled'])) {
             $this->session->set_flashdata('error', 'SO tidak dapat dibatalkan.');
-            redirect('sales_order/detail/' . $id_so);
+            $this->_redirectDetail($id_so);
             return;
         }
-        $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->session->userdata('username'));
+        $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->_getUsername());
         $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibatalkan.');
         redirect('sales_order');
     }
@@ -257,7 +312,7 @@ class C_SalesOrder extends CI_Controller
             $this->input->post('id',     true),
             $this->input->post('status', true),
             $this->input->post('note',   true),
-            $this->session->userdata('username')
+            $this->_getUsername()
         );
         $msg = ($this->input->post('status') === 'approved') ? 'disetujui' : 'ditolak';
         $this->session->set_flashdata('success', "Harga nego berhasil <b>{$msg}</b>.");
@@ -266,26 +321,25 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // AJAX — get_stock
-    // Mengembalikan stok + dimensi + isi_per_box dalam JSON bersih.
-    // PENTING: Semua output di-sanitasi agar tidak ada karakter
-    //          yang bisa membreak JSON (kutip, backslash, dsb).
+    // gudang dari GET param → session → '' (model handle empty)
     // ================================================================
     public function get_stock()
     {
-        // Nonaktifkan semua output buffer sebelumnya agar tidak ada
-        // HTML error/warning yang ikut tercetak sebelum JSON
         if (ob_get_level()) ob_end_clean();
 
         try {
             $gudang_id = $this->input->get('gudang_id', true);
+            if (empty($gudang_id)) {
+                $gudang_id = $this->_getGudangId();
+            }
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
 
             $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
 
-            // Sanitasi: pastikan semua nilai numerik benar-benar numerik
             foreach ($stock as &$row) {
                 $row['available_stock'] = (float)($row['available_stock'] ?? 0);
                 $row['available_box']   = (int)($row['available_box']    ?? 0);
+                $row['available_ecer']  = (int)($row['available_ecer']   ?? 0);
                 $row['berat_gram']      = (float)($row['berat_gram']     ?? 0);
                 $row['kubikasi_m3']     = (float)($row['kubikasi_m3']    ?? 0);
                 $row['hpp']             = (float)($row['hpp']            ?? 0);
@@ -293,7 +347,6 @@ class C_SalesOrder extends CI_Controller
                 $row['p']               = (float)($row['p']              ?? 0);
                 $row['l']               = (float)($row['l']              ?? 0);
                 $row['t']               = (float)($row['t']              ?? 0);
-                // String: pastikan utf8 valid agar json_encode tidak gagal
                 foreach (['kode_barang','nama_barang','satuan','exp_date','no_lot','gudang'] as $f) {
                     if (isset($row[$f])) {
                         $row[$f] = mb_convert_encoding((string)$row[$f], 'UTF-8', 'UTF-8');
@@ -303,11 +356,7 @@ class C_SalesOrder extends CI_Controller
             unset($row);
 
             $json = json_encode(['status' => 'ok', 'data' => $stock], JSON_UNESCAPED_UNICODE);
-
-            if ($json === false) {
-                // json_encode gagal (biasanya karena encoding string)
-                throw new Exception('json_encode failed: ' . json_last_error_msg());
-            }
+            if ($json === false) throw new Exception('json_encode failed: ' . json_last_error_msg());
 
             header('Content-Type: application/json; charset=utf-8');
             echo $json;
@@ -320,15 +369,13 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // AJAX — get_barang (detail + dimensi)
+    // AJAX — get_barang
     // ================================================================
     public function get_barang()
     {
         if (ob_get_level()) ob_end_clean();
-
         $kd_barang = $this->input->get('kd_barang', true);
         $barang    = $this->M_SalesOrder->get_detail_barang($kd_barang);
-
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['status' => 'ok', 'data' => $barang], JSON_UNESCAPED_UNICODE);
     }
@@ -336,9 +383,9 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     // PRIVATE — Parse POST detail item
     //
-    // qty_box    = jumlah box (input user)
-    // isi_per_box= satuan kecil per box (dari hidden field)
-    // qty        = qty_box × isi_per_box  →  satuan kecil, disimpan ke DB
+    // HARGA: hrg_satuan = harga per BOX (input user)
+    //        total_harga = hrg_satuan × qty_box  (+ eceran × hrg/pcs)
+    //        Subtotal BUKAN per pcs — sesuai harga yang diinput per box.
     // ================================================================
     private function _parse_detail_post($post)
     {
@@ -351,22 +398,28 @@ class C_SalesOrder extends CI_Controller
             $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
             $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
             $qty_box     = (float)($post['qty_box'][$i]      ?? 0);
+            $qty_satuan  = (float)($post['qty_satuan'][$i]   ?? 0);
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
             $pajak       = (float)($post['pajak'][$i]        ?? 0);
 
-            // Konversi ke satuan kecil
-            $qty_kecil = $qty_box * $isi_per_box;
+            // Total qty dalam satuan kecil (untuk stok & tonase)
+            $qty_kecil = ($qty_box * $isi_per_box) + $qty_satuan;
 
-            $subtotal  = $hrg * $qty_box;
-            $total_tax = $subtotal + ($subtotal * $pajak / 100);
-            $is_nego   = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
+            // Harga per pcs = hrg_satuan / isi_per_box
+            $hrg_per_pcs = $isi_per_box > 0 ? $hrg / $isi_per_box : 0;
+
+            // Subtotal: box × hrg/box + eceran × hrg/pcs
+            $subtotal_before = ($hrg * $qty_box) + ($hrg_per_pcs * $qty_satuan);
+            $total_tax       = $subtotal_before * (1 + $pajak / 100);
+            $is_nego         = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
             $details[] = [
                 'produk_id'    => $post['produk_id'][$i]    ?? '',
                 'kd_barang'    => $kd,
                 'nama_barang'  => $post['nama_barang'][$i]  ?? '',
-                'qty'          => $qty_kecil,       // satuan kecil — untuk stok & tonase
-                'qty_box'      => $qty_box,          // satuan box — referensi
+                'qty'          => $qty_kecil,
+                'qty_box'      => $qty_box,
+                'qty_satuan'   => $qty_satuan,
                 'isi_per_box'  => $isi_per_box,
                 'satuan'       => $post['satuan'][$i]        ?? '',
                 'expired_date' => $post['expired_date'][$i]  ?? '',
@@ -379,7 +432,7 @@ class C_SalesOrder extends CI_Controller
                 'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
                 'kode_akun'    => $post['kode_akun'][$i]     ?? null,
                 'is_nego'      => $is_nego,
-                'create_by'    => $this->session->userdata('username'),
+                'create_by'    => $this->_getUsername(),
             ];
         }
         return $details;

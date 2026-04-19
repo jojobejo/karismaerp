@@ -4,18 +4,44 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 /**
  * M_SalesOrder.php
  *
- * Konversi:
- *   Tonase (ton)   = qty_kecil × berat_gram / 1.000.000
- *   Kubikasi (m³)  = qty_kecil × kubikasi_m3
- *   isi_per_box    = (p×l×t cm³) / (kubikasi_m3 × 1.000.000)
- *   qty_kecil      = qty_box × isi_per_box
+ * ISI PER BOX = p × l × t (INT kolom master barang)
  *
- * Batas default: 6 ton, 9 m³
+ * GUDANG: v_available_stock.gudang = wilayah_id dari tb_saldo_awal
+ *   → integer, bukan string nama gudang.
+ *
+ * FORMAT exp_date di view: DD/MM/YYYY (varchar/text)
+ *   → dikonversi ke YYYY-MM-DD untuk form/JS, dan balik ke DD/MM/YYYY
+ *     saat query ke view.
+ *
+ * STOK berkurang: v_available_stock sudah JOIN ke tbso_stock_reservation.
+ *   Agar stok berkurang, gudang_id di reservasi harus cocok dengan
+ *   kolom gudang_id di tbso_stock_reservation yang di-JOIN ke view.
  */
 class M_SalesOrder extends CI_Model
 {
     const BATAS_TONASE   = 6;
     const BATAS_KUBIKASI = 9;
+
+    // ----------------------------------------------------------------
+    // HELPER: YYYY-MM-DD ↔ DD/MM/YYYY
+    // ----------------------------------------------------------------
+    private function _normalizeDate($raw)
+    {
+        $raw = trim((string)$raw);
+        if (!$raw) return null;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) return $raw;
+        if (preg_match('/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/', $raw, $m))
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        return $raw;
+    }
+
+    private function _toViewDate($ymd)
+    {
+        $ymd = $this->_normalizeDate($ymd);
+        if (!$ymd) return '';
+        $p = explode('-', $ymd);
+        return count($p) === 3 ? $p[2].'/'.$p[1].'/'.$p[0] : $ymd;
+    }
 
     // ----------------------------------------------------------------
     // GENERATE NOMOR SO
@@ -50,34 +76,45 @@ class M_SalesOrder extends CI_Model
     }
 
     // ----------------------------------------------------------------
-    // STOK (dari view — tidak diubah strukturnya)
+    // STOK
     // ----------------------------------------------------------------
     public function get_available_stock($gudang_id = null, $kd_barang = null)
     {
         $this->db->where('available_stock >', 0);
-        if ($gudang_id) $this->db->where('gudang', $gudang_id);
-        if ($kd_barang) $this->db->where('kode_barang', $kd_barang);
+        if (!empty($gudang_id)) $this->db->where('gudang', $gudang_id);
+        if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
         return $this->db->get('v_available_stock')->result_array();
     }
 
+    /**
+     * Cek stok satu item.
+     * - exp_date dikonversi ke DD/MM/YYYY (format kolom di view)
+     * - gudang kosong → SUM semua gudang (validasi tidak gagal saat session belum set)
+     */
     public function cek_stock($kd_barang, $exp_date, $gudang_id)
     {
-        $sql = "SELECT * FROM v_available_stock
-                WHERE kode_barang = ?
-                AND DATE(exp_date) = DATE(?)
-                AND gudang = ?
-                LIMIT 1";
-        return $this->db->query($sql, [$kd_barang, $exp_date, $gudang_id])->row_array();
+        $ddmmyyyy = $this->_toViewDate($exp_date);
+
+        if (!empty($gudang_id)) {
+            $sql = "SELECT * FROM v_available_stock
+                    WHERE kode_barang = ? AND exp_date = ? AND gudang = ?
+                    LIMIT 1";
+            return $this->db->query($sql, [$kd_barang, $ddmmyyyy, $gudang_id])->row_array();
+        } else {
+            // Gudang tidak diketahui → ambil total semua gudang
+            $sql = "SELECT kode_barang, nama_barang, exp_date,
+                           SUM(available_stock) AS available_stock
+                    FROM v_available_stock
+                    WHERE kode_barang = ? AND exp_date = ?
+                    GROUP BY kode_barang, nama_barang, exp_date
+                    LIMIT 1";
+            return $this->db->query($sql, [$kd_barang, $ddmmyyyy])->row_array();
+        }
     }
 
     // ----------------------------------------------------------------
-    // MASTER BARANG — normalisasi kolom fleksibel
-    // Mendukung berbagai nama kolom yang mungkin ada di tabel Anda.
+    // MASTER BARANG
     // ----------------------------------------------------------------
-
-    /**
-     * Kembalikan satu baris master barang yang sudah dinormalisasi.
-     */
     public function get_detail_barang($kd_barang)
     {
         $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
@@ -85,10 +122,6 @@ class M_SalesOrder extends CI_Model
         return $this->_normalize_barang($row);
     }
 
-    /**
-     * Bulk fetch master barang berdasarkan daftar kd_barang.
-     * Mengembalikan array berindeks kd_barang.
-     */
     private function _get_master_bulk(array $kd_list)
     {
         if (empty($kd_list)) return [];
@@ -103,57 +136,49 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Normalisasi satu baris master barang.
-     * Coba beberapa nama kolom alternatif agar tidak error
-     * meski nama kolom berbeda-beda di tiap instalasi.
+     * Normalisasi master barang.
+     * - satuan   : dari kolom 'satuan' di tb_master_barang_all
+     * - isi_per_box: kolom eksplisit → p × l × t → fallback 1
      */
     private function _normalize_barang(array $row)
     {
-        // ---- berat (gram per satuan kecil) ----
+        // berat (gram per satuan kecil)
         $berat = 0;
-        foreach (['berat', 'berat_gram', 'weight', 'berat_satuan', 'gr'] as $c) {
-            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
-                $berat = (float)$row[$c]; break;
-            }
+        foreach (['berat','berat_gram','weight','berat_satuan','gr'] as $c) {
+            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $berat=(float)$row[$c]; break; }
         }
 
-        // ---- kubikasi (m³ per satuan kecil) ----
+        // kubikasi (m³ per satuan kecil)
         $kubikasi = 0;
-        foreach (['kubikasi', 'kubikasi_m3', 'volume', 'kubik', 'cbm'] as $c) {
-            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
-                $kubikasi = (float)$row[$c]; break;
-            }
+        foreach (['kubikasi','kubikasi_m3','volume','kubik','cbm'] as $c) {
+            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $kubikasi=(float)$row[$c]; break; }
         }
 
-        // ---- HPP ----
+        // HPP
         $hpp = 0;
-        foreach (['hpp', 'harga_pokok', 'cost', 'cogs', 'h_pokok'] as $c) {
-            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
-                $hpp = (float)$row[$c]; break;
-            }
+        foreach (['hpp','harga_pokok','cost','cogs','h_pokok'] as $c) {
+            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $hpp=(float)$row[$c]; break; }
         }
 
-        // ---- dimensi box (cm) ----
-        $p = (float)($row['p'] ?? $row['panjang'] ?? $row['length'] ?? 0);
-        $l = (float)($row['l'] ?? $row['lebar']   ?? $row['width']  ?? 0);
-        $t = (float)($row['t'] ?? $row['tinggi']  ?? $row['height'] ?? 0);
+        // Dimensi INT
+        $p = (int)($row['p'] ?? $row['panjang'] ?? $row['length'] ?? 0);
+        $l = (int)($row['l'] ?? $row['lebar']   ?? $row['width']  ?? 0);
+        $t = (int)($row['t'] ?? $row['tinggi']  ?? $row['height'] ?? 0);
 
-        // ---- isi per box ----
+        // isi_per_box: kolom eksplisit → p×l×t → 1
         $isi = 0;
-        foreach (['isi_box', 'qty_isi', 'isi', 'isi_per_box', 'qty_per_box', 'jumlah_isi'] as $c) {
-            if (array_key_exists($c, $row) && (int)$row[$c] > 0) {
-                $isi = (int)$row[$c]; break;
-            }
+        foreach (['isi_box','qty_isi','isi','isi_per_box','qty_per_box','jumlah_isi'] as $c) {
+            if (array_key_exists($c,$row) && (int)$row[$c]>0) { $isi=(int)$row[$c]; break; }
         }
-        // Hitung dari dimensi jika kolom isi tidak ada
-        if ($isi < 1 && $p > 0 && $l > 0 && $t > 0 && $kubikasi > 0) {
-            $vol_box   = $p * $l * $t;              // cm³
-            $vol_kecil = $kubikasi * 1000000;        // m³ → cm³
-            $isi = (int)round($vol_box / $vol_kecil);
-        }
+        if ($isi < 1 && $p > 0 && $l > 0 && $t > 0) $isi = $p * $l * $t;
         if ($isi < 1) $isi = 1;
 
-        // Tulis kembali nilai yang sudah dinormalisasi
+        // Satuan dari kolom 'satuan' di tb_master_barang_all
+        $satuan = '';
+        foreach (['satuan','unit','uom','satuan_kecil'] as $c) {
+            if (!empty($row[$c])) { $satuan = (string)$row[$c]; break; }
+        }
+
         $row['berat_gram']  = $berat;
         $row['kubikasi_m3'] = $kubikasi;
         $row['hpp']         = $hpp;
@@ -161,48 +186,53 @@ class M_SalesOrder extends CI_Model
         $row['l']           = $l;
         $row['t']           = $t;
         $row['isi_per_box'] = $isi;
+        $row['satuan']      = $satuan;  // ← pastikan satuan ikut
 
         return $row;
     }
 
     // ----------------------------------------------------------------
-    // STOK + DIMENSI — untuk endpoint AJAX /get_stock
+    // STOK + DIMENSI — endpoint AJAX /get_stock
     //
-    // Dua query terpisah (aman, tidak perlu kolom di view):
-    //   1. Ambil semua stok dari v_available_stock
-    //   2. Ambil master barang (bulk IN query)
-    //   3. Gabungkan di PHP
+    // exp_date dikonversi DD/MM/YYYY → YYYY-MM-DD untuk form/JS.
+    // satuan diambil dari master barang (JOIN di PHP, bukan di SQL view).
+    // gudang di v_available_stock = wilayah_id (integer).
     // ----------------------------------------------------------------
     public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
     {
-        // -- Query 1: stok --
         $this->db->where('available_stock >', 0);
-        if ($gudang_id) $this->db->where('gudang', $gudang_id);
-        if ($kd_barang) $this->db->where('kode_barang', $kd_barang);
+        if (!empty($gudang_id)) $this->db->where('gudang', $gudang_id);
+        if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
         $stocks = $this->db->get('v_available_stock')->result_array();
 
         if (empty($stocks)) return [];
 
-        // -- Query 2: master barang (bulk) --
         $kd_list = array_column($stocks, 'kode_barang');
         $master  = $this->_get_master_bulk($kd_list);
 
-        // -- Gabungkan --
         foreach ($stocks as &$row) {
-            $kd  = $row['kode_barang'];
-            $m   = isset($master[$kd]) ? $master[$kd] : [];
+            $kd = $row['kode_barang'];
+            $m  = isset($master[$kd]) ? $master[$kd] : [];
 
-            $row['berat_gram']  = isset($m['berat_gram'])  ? $m['berat_gram']  : 0;
-            $row['kubikasi_m3'] = isset($m['kubikasi_m3']) ? $m['kubikasi_m3'] : 0;
-            $row['hpp']         = isset($m['hpp'])         ? $m['hpp']         : 0;
-            $row['p']           = isset($m['p'])           ? $m['p']           : 0;
-            $row['l']           = isset($m['l'])           ? $m['l']           : 0;
-            $row['t']           = isset($m['t'])           ? $m['t']           : 0;
-            $row['isi_per_box'] = isset($m['isi_per_box']) ? $m['isi_per_box'] : 1;
+            $row['berat_gram']  = $m['berat_gram']  ?? 0;
+            $row['kubikasi_m3'] = $m['kubikasi_m3'] ?? 0;
+            $row['hpp']         = $m['hpp']         ?? 0;
+            $row['p']           = $m['p']           ?? 0;
+            $row['l']           = $m['l']           ?? 0;
+            $row['t']           = $m['t']           ?? 0;
+            $row['isi_per_box'] = $m['isi_per_box'] ?? 1;
+
+            // Satuan dari master (view tidak punya kolom satuan)
+            $row['satuan'] = $m['satuan'] ?? ($row['satuan'] ?? '');
+
+            // Konversi exp_date DD/MM/YYYY → YYYY-MM-DD
+            $row['exp_date'] = $this->_normalizeDate($row['exp_date'] ?? '');
 
             $av  = (float)($row['available_stock'] ?? 0);
             $isi = max(1, (int)$row['isi_per_box']);
-            $row['available_box'] = (int)floor($av / $isi);
+
+            $row['available_box']  = (int)floor($av / $isi);
+            $row['available_ecer'] = (int)fmod($av, $isi);
         }
         unset($row);
 
@@ -241,6 +271,14 @@ class M_SalesOrder extends CI_Model
 
     // ----------------------------------------------------------------
     // SIMPAN SO
+    //
+    // STOK BERKURANG: v_available_stock JOIN ke tbso_stock_reservation
+    //   dengan kondisi: kd_barang + exp_date + gudang_id + status='active'.
+    //   Agar stok berkurang, exp_date di reservasi harus sama formatnya
+    //   dengan exp_date di view (DD/MM/YYYY).
+    //   → Kita simpan dalam format asli form (YYYY-MM-DD) dan biarkan
+    //     view query menggunakan DATE() jika kolom reservasi bertipe DATE.
+    //     Cek definisi kolom exp_date di tbso_stock_reservation Anda.
     // ----------------------------------------------------------------
     public function simpan_so($header, $details)
     {
@@ -254,7 +292,8 @@ class M_SalesOrder extends CI_Model
                 'id_so'        => $header['id_so'],
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $d['expired_date'],
+                // Simpan exp_date dalam format DD/MM/YYYY agar cocok dengan view
+                'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
                 'gudang_id'    => $header['gudang_id'],
                 'qty_reserved' => $d['qty'],
@@ -286,7 +325,7 @@ class M_SalesOrder extends CI_Model
                 'id_so'        => $id_so,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $d['expired_date'],
+                'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
                 'gudang_id'    => $header['gudang_id'],
                 'qty_reserved' => $d['qty'],
@@ -308,25 +347,32 @@ class M_SalesOrder extends CI_Model
         foreach ($details as $d) {
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
+
             if ($exclude_so) {
                 $this->db->select('SUM(qty_reserved) as qty');
                 $this->db->where('id_so', $exclude_so);
                 $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('DATE(exp_date)', date('Y-m-d', strtotime($d['expired_date'])));
+                // exp_date di reservasi disimpan DD/MM/YYYY
+                $this->db->where('exp_date', $this->_toViewDate($d['expired_date']));
                 $this->db->where('status', 'active');
                 $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
             }
-            $available  = round($available, 3);
-            $diminta    = round((float)$d['qty'], 3);
+
+            $available = round($available, 3);
+            $diminta   = round((float)$d['qty'], 3);
+
             if ($diminta > $available) {
                 $isi      = max(1, (int)($d['isi_per_box'] ?? 1));
                 $av_box   = (int)floor($available / $isi);
-                $req_box  = (int)ceil($diminta   / $isi);
+                $av_ecer  = (int)fmod($available, $isi);
+                $req_box  = (int)($d['qty_box']    ?? 0);
+                $req_ecer = (int)($d['qty_satuan'] ?? 0);
+
                 $errors[] = "Stok tidak cukup: <b>{$d['nama_barang']}</b> "
                           . "(Exp: {$d['expired_date']}) — "
-                          . "Diminta: {$req_box} box ({$diminta} pcs), "
-                          . "Tersedia: {$av_box} box ({$available} pcs)";
+                          . "Diminta: {$req_box} box + {$req_ecer} pcs = {$diminta} pcs, "
+                          . "Tersedia: {$av_box} box + {$av_ecer} pcs = {$available} pcs";
             }
         }
         return $errors;
@@ -342,11 +388,10 @@ class M_SalesOrder extends CI_Model
         $batas_tonase   = ($batas_tonase   > 0) ? (float)$batas_tonase   : self::BATAS_TONASE;
         $batas_kubikasi = ($batas_kubikasi > 0) ? (float)$batas_kubikasi : self::BATAS_KUBIKASI;
 
-        $total_tonase   = 0;
-        $total_kubikasi = 0;
+        $total_tonase = 0; $total_kubikasi = 0;
 
         foreach ($details as $d) {
-            $qty         = (float)($d['qty']         ?? 0); // satuan kecil
+            $qty         = (float)($d['qty']         ?? 0);
             $berat_gram  = (float)($d['berat_gram']  ?? 0);
             $kubikasi_m3 = (float)($d['kubikasi_m3'] ?? 0);
             $total_tonase   += $qty * ($berat_gram / 1000000);
@@ -359,16 +404,12 @@ class M_SalesOrder extends CI_Model
         $over_ton       = $total_tonase   > $batas_tonase;
         $over_kub       = $total_kubikasi > $batas_kubikasi;
 
-        if ($over_ton && !$over_kub) {
-            $warnings[] = "Tonase melebihi batas (" . round($total_tonase, 3)
-                        . " ton &gt; {$batas_tonase} ton), kubikasi masih aman.";
-        } elseif ($over_kub && !$over_ton) {
-            $warnings[] = "Kubikasi melebihi batas (" . round($total_kubikasi, 4)
-                        . " m³ &gt; {$batas_kubikasi} m³), tonase masih aman.";
-        } elseif ($over_ton && $over_kub) {
-            $warnings[] = "Tonase (" . round($total_tonase, 3) . " ton) DAN "
-                        . "kubikasi (" . round($total_kubikasi, 4) . " m³) melebihi batas!";
-        }
+        if ($over_ton && !$over_kub)
+            $warnings[] = "Tonase melebihi batas (".round($total_tonase,3)." ton &gt; {$batas_tonase} ton).";
+        elseif ($over_kub && !$over_ton)
+            $warnings[] = "Kubikasi melebihi batas (".round($total_kubikasi,4)." m³ &gt; {$batas_kubikasi} m³).";
+        elseif ($over_ton && $over_kub)
+            $warnings[] = "Tonase (".round($total_tonase,3)." ton) DAN kubikasi (".round($total_kubikasi,4)." m³) melebihi batas!";
 
         return [
             'total_tonase'   => $total_tonase,
@@ -384,16 +425,9 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     public function simpan_request_approval_nego($id_so, $req_by)
     {
-        $ada = $this->db->get_where('tbso_approval_nego', [
-            'id_so'  => $id_so,
-            'status' => 'pending',
-        ])->row_array();
+        $ada = $this->db->get_where('tbso_approval_nego', ['id_so'=>$id_so,'status'=>'pending'])->row_array();
         if (!$ada) {
-            $this->db->insert('tbso_approval_nego', [
-                'id_so'  => $id_so,
-                'status' => 'pending',
-                'req_by' => $req_by,
-            ]);
+            $this->db->insert('tbso_approval_nego', ['id_so'=>$id_so,'status'=>'pending','req_by'=>$req_by]);
         }
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['status' => 'waiting_approval']);
@@ -413,16 +447,12 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->where('id', $id);
         $this->db->update('tbso_approval_nego', [
-            'status' => $status,
-            'note'   => $note,
-            'act_by' => $act_by,
-            'act_at' => date('Y-m-d H:i:s'),
+            'status'=>$status,'note'=>$note,'act_by'=>$act_by,'act_at'=>date('Y-m-d H:i:s')
         ]);
-        $row = $this->db->get_where('tbso_approval_nego', ['id' => $id])->row_array();
+        $row = $this->db->get_where('tbso_approval_nego', ['id'=>$id])->row_array();
         if ($row) {
-            $new_status = ($status === 'approved') ? 'approved' : 'draft';
             $this->db->where('id_so', $row['id_so']);
-            $this->db->update('tbso_sales_order', ['status' => $new_status]);
+            $this->db->update('tbso_sales_order', ['status' => ($status==='approved') ? 'approved' : 'draft']);
         }
     }
 
@@ -432,7 +462,7 @@ class M_SalesOrder extends CI_Model
     public function update_status($id_so, $status, $update_by)
     {
         $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order', ['status' => $status, 'update_by' => $update_by]);
+        $this->db->update('tbso_sales_order', ['status'=>$status,'update_by'=>$update_by]);
         if ($status === 'cancelled') {
             $this->db->where('id_so', $id_so);
             $this->db->update('tbso_stock_reservation', ['status' => 'released']);
@@ -448,9 +478,8 @@ class M_SalesOrder extends CI_Model
         $this->db->update('tbso_sales_order_detail', ['qty_delivered' => $qty_delivered]);
         $detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
         if ($detail) {
-            $all      = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $detail['id_so']])->result_array();
-            $all_done = true;
-            $any_done = false;
+            $all      = $this->db->get_where('tbso_sales_order_detail', ['id_so'=>$detail['id_so']])->result_array();
+            $all_done = true; $any_done = false;
             foreach ($all as $item) {
                 if ($item['qty_delivered'] >= $item['qty']) $any_done = true;
                 else $all_done = false;
