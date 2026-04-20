@@ -12,42 +12,100 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // HELPER — username dari session, fallback 'system'
+    // HELPER — Ambil data user yang sedang login dari session / DB.
     // ================================================================
-    private function _getUsername()
+    private function _getCurrentUser()
     {
-        $keys = ['username', 'user_name', 'nama', 'nama_user', 'user',
-                 'login_name', 'email', 'id_user', 'userid'];
-        foreach ($keys as $key) {
-            $val = $this->session->userdata($key);
-            if (!empty($val)) return $val;
+        $id   = $this->session->userdata('id_karyawan')
+             ?? $this->session->userdata('id')
+             ?? $this->session->userdata('user_id')
+             ?? $this->session->userdata('karyawan_id')
+             ?? null;
+
+        $usn  = $this->session->userdata('username')
+             ?? $this->session->userdata('user_name')
+             ?? $this->session->userdata('login')
+             ?? null;
+
+        $nama = $this->session->userdata('nm_karyawan')
+             ?? $this->session->userdata('nama')
+             ?? $this->session->userdata('name')
+             ?? $this->session->userdata('nama_user')
+             ?? null;
+
+        $wil  = $this->session->userdata('wilayah')
+             ?? $this->session->userdata('wilayah_id')
+             ?? $this->session->userdata('gudang_id')
+             ?? $this->session->userdata('id_wilayah')
+             ?? null;
+
+        if (!empty($nama) && !empty($wil)) {
+            return [
+                'nm_karyawan' => $nama,
+                'wilayah'     => $wil,
+                'username'    => $usn ?? $nama,
+            ];
         }
-        return 'system';
+
+        $row = null;
+        if (!empty($id)) {
+            $row = $this->db->get_where('tb_karyawan', ['id' => $id])->row_array();
+        }
+        if (!$row && !empty($usn)) {
+            $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
+        }
+
+        if ($row) {
+            return [
+                'nm_karyawan' => $row['nm_karyawan'] ?? 'system',
+                'wilayah'     => $row['wilayah']     ?? '',
+                'username'    => $row['username']    ?? 'system',
+            ];
+        }
+
+        return ['nm_karyawan' => 'system', 'wilayah' => '', 'username' => 'system'];
     }
 
-    // ================================================================
-    // HELPER — gudang_id dari POST → session → ''
-    // ================================================================
+    private function _getUsername()
+    {
+        return $this->_getCurrentUser()['nm_karyawan'];
+    }
+
     private function _getGudangId($post = [])
     {
         if (!empty($post['gudang_id'])) return $post['gudang_id'];
-        // Coba berbagai key session yang mungkin menyimpan gudang/wilayah
-        $keys = ['gudang_id', 'id_gudang', 'wilayah_id', 'id_wilayah', 'gudang'];
-        foreach ($keys as $key) {
-            $val = $this->session->userdata($key);
-            if (!empty($val)) return $val;
-        }
+        $wil = $this->_getCurrentUser()['wilayah'];
+        if (!empty($wil)) return $wil;
         return '';
     }
 
     // ================================================================
-    // HELPER — redirect aman dengan id_so yang mengandung '/'
+    // HELPER — Decode id_so dari URI segment (:any)
+    //
+    // Dengan route $route['sales_order/detail/(:any)'] = '.../$1',
+    // CodeIgniter meneruskan seluruh sisa URI sebagai satu string
+    // dengan '/' di antaranya. Kita tinggal rawurldecode saja.
+    //
+    // Contoh URI : sales_order/detail/SO%2F202604%2F0003
+    //   → $encoded : SO%2F202604%2F0003  → decode → SO/202604/0003  ✓
+    //
+    // Contoh URI : sales_order/detail/SO/202604/0003
+    //   → $encoded : SO/202604/0003      → decode → SO/202604/0003  ✓
+    // ================================================================
+    private function _decodeId($encoded)
+    {
+        return rawurldecode((string)$encoded);
+    }
+
+    // ================================================================
+    // HELPER — redirect ke detail, encode '/' → %2F agar 1 segment
     // ================================================================
     private function _redirectDetail($id_so)
     {
-        // Encode setiap segment agar '/' dalam nomor SO tidak memutus URL
-        $encoded = implode('/', array_map('rawurlencode', explode('/', $id_so)));
-        redirect('sales_order/detail/' . $encoded);
+        // rawurlencode mengubah '/' → '%2F'
+        // Hasilnya: sales_order/detail/SO%2F202604%2F0003
+        // Route (:any) menangkap seluruh string itu sebagai $1
+        redirect('sales_order/detail/' . rawurlencode($id_so));
     }
 
     // ================================================================
@@ -121,9 +179,11 @@ class C_SalesOrder extends CI_Controller
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
         }
 
-        $id_so  = $post['id_so'];
+        $no_so  = $post['id_so']; // no_so dari form (SO200420260001)
+
         $header = [
-            'id_so'             => $id_so,
+            // id_so tidak diisi → auto increment dari DB
+            'no_so'             => $no_so,
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
@@ -138,41 +198,37 @@ class C_SalesOrder extends CI_Controller
             'create_by'         => $this->_getUsername(),
         ];
 
-        $result = $this->M_SalesOrder->simpan_so($header, $details);
+        $id_so = $this->M_SalesOrder->simpan_so($header, $details); // return int
 
-        if ($result) {
+        if ($id_so) {
             if ($is_nego) {
                 $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->_getUsername());
                 $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
             } elseif (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
-                $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibuat.');
+                $this->session->set_flashdata('success', 'Sales Order <b>' . $no_so . '</b> berhasil dibuat.');
             }
-            $this->_redirectDetail($id_so);  // ← FIX: encode '/' dalam nomor SO
+            redirect('sales_order/detail/' . $id_so); // id_so = integer, aman di URL
         } else {
-            $this->session->set_flashdata('error', 'Gagal menyimpan SO. Silakan coba lagi.');
+            $this->session->set_flashdata('error', 'Gagal menyimpan SO.');
             redirect('sales_order/create');
         }
     }
 
     // ================================================================
     // DETAIL
-    // Terima id_so dari URL yang mungkin ter-encode
+    // Route: $route['sales_order/detail/(:any)'] = 'C_SalesOrder/detail/$1';
+    // $encoded = seluruh sisa path setelah "detail/", mis: SO%2F202604%2F0003
     // ================================================================
-    public function detail($seg1, $seg2 = null, $seg3 = null)
+    public function detail($id_so)
     {
-        // Rekonstruksi id_so dari segment URL
-        // URL: sales_order/detail/SO/202604/0001
-        $parts = array_filter([$seg1, $seg2, $seg3]);
-        $id_so = implode('/', array_map('rawurldecode', $parts));
-
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
 
         $data['page_title'] = 'KARISMA - Detail SO ' . $id_so;
         $data['so']         = $so;
-        $data['details']    = $this->M_SalesOrder->get_so_detail($id_so);
+        $data['details'] = $this->M_SalesOrder->get_so_detail($so['no_so']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -181,12 +237,10 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // FORM EDIT
+    // Route: $route['sales_order/edit/(:any)'] = 'C_SalesOrder/edit/$1';
     // ================================================================
-    public function edit($seg1, $seg2 = null, $seg3 = null)
+    public function edit($id_so)
     {
-        $parts = array_filter([$seg1, $seg2, $seg3]);
-        $id_so = implode('/', array_map('rawurldecode', $parts));
-
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || $so['status'] !== 'draft') {
             $this->session->set_flashdata('error', 'SO tidak dapat diedit.');
@@ -197,7 +251,7 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']     = 'KARISMA - Edit SO ' . $id_so;
         $data['no_so']          = $id_so;
         $data['so']             = $so;
-        $data['details']        = $this->M_SalesOrder->get_so_detail($id_so);
+        $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_so']);
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
@@ -210,27 +264,27 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // UPDATE (POST)
+    // Route: $route['sales_order/update/(:any)'] = 'C_SalesOrder/update/$1';
     // ================================================================
-    public function update($seg1, $seg2 = null, $seg3 = null)
+    public function update($id_so)
     {
-        if ($this->input->method() !== 'post') show_404();
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so) show_404();
 
-        $parts     = array_filter([$seg1, $seg2, $seg3]);
-        $id_so     = implode('/', array_map('rawurldecode', $parts));
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
-            redirect('sales_order/edit/' . $id_so);
+            redirect('sales_order/edit/' . rawurlencode($id_so));
             return;
         }
 
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id, $id_so);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
-            redirect('sales_order/edit/' . $id_so);
+            redirect('sales_order/edit/' . rawurlencode($id_so));
             return;
         }
 
@@ -269,20 +323,19 @@ class C_SalesOrder extends CI_Controller
             $this->_redirectDetail($id_so);
         } else {
             $this->session->set_flashdata('error', 'Gagal update SO.');
-            redirect('sales_order/edit/' . $id_so);
+            redirect('sales_order/edit/' . rawurlencode($id_so));
         }
     }
 
     // ================================================================
     // CANCEL
+    // Route: $route['sales_order/cancel/(:any)'] = 'C_SalesOrder/cancel/$1';
     // ================================================================
-    public function cancel($seg1, $seg2 = null, $seg3 = null)
+    public function cancel($id_so)
     {
-        if ($this->input->method() !== 'post') show_404();
-        $parts = array_filter([$seg1, $seg2, $seg3]);
-        $id_so = implode('/', array_map('rawurldecode', $parts));
-
         $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so) show_404();
+
         if (!$so || in_array($so['status'], ['completed', 'cancelled'])) {
             $this->session->set_flashdata('error', 'SO tidak dapat dibatalkan.');
             $this->_redirectDetail($id_so);
@@ -321,20 +374,14 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // AJAX — get_stock
-    // gudang dari GET param → session → '' (model handle empty)
     // ================================================================
     public function get_stock()
     {
         if (ob_get_level()) ob_end_clean();
 
         try {
-            $gudang_id = $this->input->get('gudang_id', true);
-            if (empty($gudang_id)) {
-                $gudang_id = $this->_getGudangId();
-            }
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
-
-            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
+            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi(null, $kd_barang);
 
             foreach ($stock as &$row) {
                 $row['available_stock'] = (float)($row['available_stock'] ?? 0);
@@ -382,10 +429,6 @@ class C_SalesOrder extends CI_Controller
 
     // ================================================================
     // PRIVATE — Parse POST detail item
-    //
-    // HARGA: hrg_satuan = harga per BOX (input user)
-    //        total_harga = hrg_satuan × qty_box  (+ eceran × hrg/pcs)
-    //        Subtotal BUKAN per pcs — sesuai harga yang diinput per box.
     // ================================================================
     private function _parse_detail_post($post)
     {
@@ -402,16 +445,9 @@ class C_SalesOrder extends CI_Controller
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
             $pajak       = (float)($post['pajak'][$i]        ?? 0);
 
-            // Total qty dalam satuan kecil (untuk stok & tonase)
-            $qty_kecil = ($qty_box * $isi_per_box) + $qty_satuan;
-
-            // Harga per pcs = hrg_satuan / isi_per_box
-            $hrg_per_pcs = $isi_per_box > 0 ? $hrg / $isi_per_box : 0;
-
-            // Subtotal: box × hrg/box + eceran × hrg/pcs
-            $subtotal_before = ($hrg * $qty_box) + ($hrg_per_pcs * $qty_satuan);
-            $total_tax       = $subtotal_before * (1 + $pajak / 100);
-            $is_nego         = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
+            $qty_kecil   = ($qty_box * $isi_per_box) + $qty_satuan;
+            $total_tax   = $hrg * $qty_kecil * (1 + $pajak / 100);
+            $is_nego     = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
             $details[] = [
                 'produk_id'    => $post['produk_id'][$i]    ?? '',

@@ -24,7 +24,7 @@
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                            <li class="breadcrumb-item active"><?= htmlspecialchars($so['id_so']) ?></li>
+                            <li class="breadcrumb-item active"><?= htmlspecialchars($so['no_so']) ?></li>
                         </ol>
                     </div>
                 </div>
@@ -95,7 +95,7 @@
                                 <table class="table table-sm table-borderless mb-0">
                                     <tr>
                                         <th class="pl-3" style="width:40%">No SO</th>
-                                        <td><?= htmlspecialchars($so['id_so']) ?></td>
+                                        <td><?= htmlspecialchars($so['no_so']) ?></td>
                                     </tr>
                                     <tr>
                                         <th class="pl-3">Tanggal</th>

@@ -186,7 +186,7 @@
                                     <tr>
                                         <td>
                                             <a href="<?= base_url('sales_order/detail/' . $row['id_so']) ?>">
-                                                <?= htmlspecialchars($row['id_so']) ?>
+                                                <?= htmlspecialchars($row['no_so']) ?>
                                             </a>
                                         </td>
                                         <td><?= date('d/m/Y', strtotime($row['tanggal_transaksi'])) ?></td>
