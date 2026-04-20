@@ -321,6 +321,15 @@ $route['update_norut']                              = 'logistik/C_Logistik/updat
 $route['save_do']                                   = 'logistik/C_Logistik/save_do';
 $route['custupdate']                                = 'logistik/C_Logistik/custupdate';
 
+// General
+$route['cctv']                                      = 'general/C_cctv/index';
+$route['cctv/tambah']                               = 'general/C_cctv/tambah';
+$route['cctv/simpan']                               = 'general/C_cctv/simpan';
+$route['cctv/edit/(:num)']                          = 'general/C_cctv/edit/$1';
+$route['cctv/update/(:num)']                        = 'general/C_cctv/update/$1';
+$route['cctv/hapus/(:num)']                         = 'general/C_cctv/hapus/$1';
+$route['cctv/refresh_status']                       = 'general/C_cctv/refresh_status';
+
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
 
