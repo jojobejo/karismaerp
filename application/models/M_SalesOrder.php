@@ -47,17 +47,17 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     // GENERATE NOMOR SO
     // ----------------------------------------------------------------
-    public function generate_no_so()
+    public function generate_no_faktur()
     {
-        $prefix = 'SO' . date('dmY');
+        $prefix = 'INV' . date('dmY');
 
-        $this->db->like('no_so', $prefix, 'after');
-        $this->db->order_by('no_so', 'DESC');
+        $this->db->like('no_faktur', $prefix, 'after');
+        $this->db->order_by('no_faktur', 'DESC');
         $this->db->limit(1);
         $row = $this->db->get('tbso_sales_order')->row();
 
         if ($row) {
-            $last = (int) substr($row->no_so, -4);
+            $last = (int) substr($row->no_faktur, -4);
             return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
         }
         return $prefix . '0001';
@@ -284,7 +284,8 @@ class M_SalesOrder extends CI_Model
         $no_so = $header['no_so'];
 
         foreach ($details as $d) {
-            $d['no_so'] = $no_so;
+            $d['no_so']    = $no_so;
+            $d['no_faktur'] = $header['no_faktur'];
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
@@ -292,6 +293,7 @@ class M_SalesOrder extends CI_Model
 
             $this->db->insert('tbso_stock_reservation', [
                 'no_so'        => $no_so,
+                'no_faktur'    => $header['no_faktur'],
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_normalizeDate($d['expired_date']),
@@ -316,6 +318,7 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->trans_start();
         $no_so = $header['no_so'];
+        $no_faktur = $header['no_faktur'];
 
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $header);
@@ -326,13 +329,15 @@ class M_SalesOrder extends CI_Model
         $this->db->update('tbso_stock_reservation', ['status' => 'released']);
 
         foreach ($details as $d) {
-            $d['no_so'] = $no_so;
+            $d['no_so']    = $no_so;
+            $d['no_faktur'] = $no_faktur;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
             $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
 
             $this->db->insert('tbso_stock_reservation', [
                 'no_so'        => $no_so,
+                'no_faktur'    => $no_faktur,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_normalizeDate($d['expired_date']),
@@ -428,11 +433,16 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     // APPROVAL NEGO
     // ----------------------------------------------------------------
-    public function simpan_request_approval_nego($id_so, $req_by)
+    public function simpan_request_approval_nego($no_so, $req_by, $no_faktur = '')
     {
-        $ada = $this->db->get_where('tbso_approval_nego', ['id_so'=>$id_so,'status'=>'pending'])->row_array();
-        if (!$ada) $this->db->insert('tbso_approval_nego', ['id_so'=>$id_so,'status'=>'pending','req_by'=>$req_by]);
-        $this->db->where('id_so', $id_so);
+        $ada = $this->db->get_where('tbso_approval_nego', ['no_so'=>$no_so,'status'=>'pending'])->row_array();
+        if (!$ada) $this->db->insert('tbso_approval_nego', [
+            'no_so'     => $no_so,
+            'no_faktur' => $no_faktur,
+            'status'    => 'pending',
+            'req_by'    => $req_by,
+        ]);
+        $this->db->where('no_so', $no_so);
         $this->db->update('tbso_sales_order', ['status' => 'waiting_approval']);
     }
 
@@ -440,7 +450,7 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->select('an.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi');
         $this->db->from('tbso_approval_nego an');
-        $this->db->join('tbso_sales_order so', 'so.id_so = an.id_so', 'left');
+        $this->db->join('tbso_sales_order so', 'so.no_so = an.no_so', 'left');
         $this->db->where('an.status', 'pending');
         $this->db->order_by('an.req_at', 'DESC');
         return $this->db->get()->result_array();
@@ -452,7 +462,7 @@ class M_SalesOrder extends CI_Model
         $this->db->update('tbso_approval_nego', ['status'=>$status,'note'=>$note,'act_by'=>$act_by,'act_at'=>date('Y-m-d H:i:s')]);
         $row = $this->db->get_where('tbso_approval_nego', ['id'=>$id])->row_array();
         if ($row) {
-            $this->db->where('id_so', $row['id_so']);
+            $this->db->where('no_so', $row['no_so']);
             $this->db->update('tbso_sales_order', ['status' => ($status==='approved')?'approved':'draft']);
         }
     }

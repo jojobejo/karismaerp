@@ -1,7 +1,7 @@
 <!-- views/content/sales/so_form.php -->
 <?php
     $is_edit   = !empty($so);
-    $id_so_val = $is_edit ? ($so['no_so'] ?? $so['id_so']) : $no_so;
+    $id_so_val = $is_edit ? ($so['no_so'] ?? '') : ($no_so ?? '');
     $action    = $is_edit
         ? base_url('sales_order/update/' . implode('/', array_map('rawurlencode', explode('/', $so['id_so']))))
         : base_url('sales_order/store');
@@ -72,10 +72,18 @@
                                 </div>
                                 <div class="card-body">
                                     <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">No SO</label>
+                                        <label class="col-sm-4 col-form-label">No SO <span class="text-danger">*</span></label>
                                         <div class="col-sm-8">
-                                            <input type="text" class="form-control" name="id_so"
-                                                value="<?= htmlspecialchars($id_so_val) ?>" readonly>
+                                            <input type="text" class="form-control" name="no_so"
+                                                value="<?= $is_edit ? escAttr($so['no_so'] ?? '') : '' ?>"
+                                                placeholder="Nomor SO" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group row mb-2">
+                                        <label class="col-sm-4 col-form-label">No Faktur</label>
+                                        <div class="col-sm-8">
+                                            <input type="text" class="form-control" name="no_faktur"
+                                                value="<?= $is_edit ? escAttr($so['no_faktur'] ?? '') : escAttr($no_faktur) ?>" readonly>
                                         </div>
                                     </div>
                                     <div class="form-group row mb-2">
@@ -763,6 +771,15 @@ document.getElementById('stock-body').addEventListener('click', function(e) {
     document.getElementById('pk_'+i).value       = btn.dataset.pk;
     document.getElementById('sat_'+i).value      = btn.dataset.sat;
     document.getElementById('satlbl_'+i).value   = btn.dataset.sat;
+
+    var hppBarang = parseFloat(btn.dataset.pk || 0);
+    if (hppBarang > 0) {
+        var elHrg = document.getElementById('hrg_'+i);
+        if (elHrg) {
+            elHrg.value = hppBarang;
+            hitungBaris(i);  // langsung hitung subtotal
+        }
+    }
 
     var gudangBarang = btn.dataset.gudang || '';
     document.getElementById('gudang_id_input').value = gudangBarang;

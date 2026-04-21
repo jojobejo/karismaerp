@@ -136,7 +136,8 @@ class C_SalesOrder extends CI_Controller
     public function create()
     {
         $data['page_title']     = 'KARISMA - Buat Sales Order';
-        $data['no_so']          = $this->M_SalesOrder->generate_no_so();
+        $data['no_so']          = '';   // kosong, diisi manual user
+        $data['no_faktur']      = $this->M_SalesOrder->generate_no_faktur();
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
@@ -179,11 +180,12 @@ class C_SalesOrder extends CI_Controller
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
         }
 
-        $no_so  = $post['id_so']; // no_so dari form (SO200420260001)
+        $no_so    = $post['no_so'];
+        $no_faktur = $post['no_faktur'];
 
         $header = [
-            // id_so tidak diisi → auto increment dari DB
             'no_so'             => $no_so,
+            'no_faktur'         => $no_faktur,
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
@@ -202,7 +204,7 @@ class C_SalesOrder extends CI_Controller
 
         if ($id_so) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->_getUsername());
+                $this->M_SalesOrder->simpan_request_approval_nego($no_so, $this->_getUsername(), $no_faktur);
                 $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
             } elseif (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
@@ -249,7 +251,8 @@ class C_SalesOrder extends CI_Controller
         }
 
         $data['page_title']     = 'KARISMA - Edit SO ' . $id_so;
-        $data['no_so']          = $id_so;
+        $data['no_so']          = $so['no_so'] ?? '';
+        $data['no_faktur']      = $so['no_faktur'] ?? '';
         $data['so']             = $so;
         $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_so']);
         $data['customers']      = $this->M_SalesOrder->get_customers();
@@ -313,7 +316,11 @@ class C_SalesOrder extends CI_Controller
 
         if ($result) {
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego($id_so, $this->_getUsername());
+                $this->M_SalesOrder->simpan_request_approval_nego(
+                    $post['no_so'] ?? '',
+                    $this->_getUsername(),
+                    $post['no_faktur'] ?? ''
+                );
             }
             if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', implode('<br>', $tk['warnings']));
