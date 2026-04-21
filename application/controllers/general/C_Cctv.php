@@ -8,8 +8,6 @@ class C_Cctv extends CI_Controller {
         $this->load->model('M_General');
         $this->load->library(['session', 'form_validation']);
         $this->load->helper(['url', 'form']);
-        // Tambahkan cek login sesuai sistem autentikasi Karisma ERP
-        // if (!$this->session->userdata('logged_in')) redirect('auth/login');
     }
 
     // -------------------------------------------------------
@@ -24,7 +22,7 @@ class C_Cctv extends CI_Controller {
             'status_rekaman' => $this->input->get('status_rekaman'),
         ];
 
-        $data['title']        = 'Tracking CCTV';
+        $data['page_title']   = 'Tracking CCTV';
         $data['summary']      = $this->M_General->get_summary();
         $data['cctv_list']    = $this->M_General->get_all($filter);
         $data['lokasi_list']  = $this->M_General->get_lokasi_list();
@@ -39,7 +37,7 @@ class C_Cctv extends CI_Controller {
     // Form tambah kamera
     // -------------------------------------------------------
     public function tambah() {
-        $data['title'] = 'Tambah Kamera';
+        $data['page_title'] = 'Tambah Kamera';
         
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/general/cctv/form.php', $data);
@@ -84,8 +82,8 @@ class C_Cctv extends CI_Controller {
     // Form edit
     // -------------------------------------------------------
     public function edit($id) {
-        $data['title']  = 'Edit Kamera';
-        $data['kamera'] = $this->M_General->get_by_id($id);
+        $data['page_title'] = 'Edit Kamera';
+        $data['kamera']     = $this->M_General->get_by_id($id);
 
         if (!$data['kamera']) {
             show_404();
