@@ -296,7 +296,7 @@ class M_SalesOrder extends CI_Model
                 'no_faktur'    => $header['no_faktur'],
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $this->_normalizeDate($d['expired_date']),
+                'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
                 'gudang_id'    => $header['gudang_id'],
                 'qty_reserved' => $d['qty'],
@@ -340,7 +340,7 @@ class M_SalesOrder extends CI_Model
                 'no_faktur'    => $no_faktur,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $this->_normalizeDate($d['expired_date']),
+                'exp_date' => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
                 'gudang_id'    => $header['gudang_id'],
                 'qty_reserved' => $d['qty'],
@@ -506,5 +506,24 @@ class M_SalesOrder extends CI_Model
                 $this->update_status($detail['id_so'], 'partial_delivered', 'system');
             }
         }
+    }
+    
+    // ----------------------------------------------------------------
+    // GET KD PO DARI MASTER BARANG
+    // ----------------------------------------------------------------
+    public function get_kd_po($kd_barang, $exp_date, $no_lot = '')
+    {
+        $ymd = $this->_normalizeDate($exp_date);
+
+        $this->db->select('kd_po');
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->where('exp_date',  $ymd);
+        if (!empty($no_lot)) {
+            $this->db->where('no_lot', $no_lot);
+        }
+        $this->db->order_by('create_at', 'DESC');
+        $this->db->limit(1);
+        $row = $this->db->get('tb_po_received')->row_array();
+        return $row ? $row['kd_po'] : null;
     }
 }

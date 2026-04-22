@@ -551,6 +551,12 @@ class C_SalesOrder extends CI_Controller
             $total_tax   = $hrg * $qty_kecil * (1 + $pajak / 100);
             $is_nego     = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
+            $kd_po = $this->M_SalesOrder->get_kd_po(
+                $kd,
+                $post['expired_date'][$i] ?? '',
+                $post['no_lot'][$i]       ?? ''
+            );
+
             $details[] = [
                 'produk_id'    => $post['produk_id'][$i]    ?? '',
                 'kd_barang'    => $kd,
@@ -562,6 +568,7 @@ class C_SalesOrder extends CI_Controller
                 'satuan'       => $post['satuan'][$i]        ?? '',
                 'expired_date' => $post['expired_date'][$i]  ?? '',
                 'no_lot'       => $post['no_lot'][$i]        ?? null,
+                'kd_po'        => $kd_po,
                 'pajak'        => $pajak,
                 'hrg_satuan'   => $hrg,
                 'hrg_pokok'    => $hrg_pk,
