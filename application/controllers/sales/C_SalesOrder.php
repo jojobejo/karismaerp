@@ -7,7 +7,8 @@ class C_SalesOrder extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_SalesOrder');
-        $this->load->library(['form_validation', 'session']);
+        $this->load->model('M_ActivityLog');
+        $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
     }
 
@@ -203,6 +204,18 @@ class C_SalesOrder extends CI_Controller
         $id_so = $this->M_SalesOrder->simpan_so($header, $details); // return int
 
         if ($id_so) {
+            $aksi = $is_nego ? 'CREATE_NEGO' : 'CREATE';
+            $detail_str = [];
+            foreach ($details as $d) {
+                $detail_str[] = $d['nama_barang']
+                    .' | Box: '.$d['qty_box']
+                    .' | Ecer: '.$d['qty_satuan'].' pcs'
+                    .' | Total: '.$d['qty'].' pcs';
+            }
+            $ket           = 'SO baru dibuat. Customer: '.$post['customer_name'].'. Total item: '.count($details);
+            $detail_produk = implode("\n", $detail_str);
+            $this->M_ActivityLog->log($no_so, $no_faktur, $aksi, $ket, $this->_getUsername(), $detail_produk);
+
             if ($is_nego) {
                 $this->M_SalesOrder->simpan_request_approval_nego($no_so, $this->_getUsername(), $no_faktur);
                 $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
@@ -298,6 +311,8 @@ class C_SalesOrder extends CI_Controller
         }
 
         $header = [
+            'no_so'             => $post['no_so']     ?? ($so['no_so']     ?? ''),
+            'no_faktur'         => $post['no_faktur'] ?? ($so['no_faktur'] ?? ''),
             'tanggal_transaksi' => $post['tanggal'],
             'customer_id'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
@@ -315,6 +330,21 @@ class C_SalesOrder extends CI_Controller
         $result = $this->M_SalesOrder->update_so($id_so, $header, $details);
 
         if ($result) {
+            // Activity log
+            $so_data   = $this->M_SalesOrder->get_so($id_so);
+            $no_so_log = $so_data['no_so']    ?? '';
+            $no_fak    = $so_data['no_faktur'] ?? '';
+            $detail_str = [];
+            foreach ($details as $d) {
+                $detail_str[] = $d['nama_barang']
+                    .' | Box: '.$d['qty_box']
+                    .' | Ecer: '.$d['qty_satuan'].' pcs'
+                    .' | Total: '.$d['qty'].' pcs';
+            }
+            $ket           = 'SO diupdate. Customer: '.($post['customer_name']??'').'. Total item: '.count($details);
+            $detail_produk = implode("\n", $detail_str);
+            $this->M_ActivityLog->log($no_so_log, $no_fak, 'UPDATE', $ket, $this->_getUsername(), $detail_produk);
+
             if ($is_nego) {
                 $this->M_SalesOrder->simpan_request_approval_nego(
                     $post['no_so'] ?? '',
@@ -349,6 +379,17 @@ class C_SalesOrder extends CI_Controller
             return;
         }
         $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->_getUsername());
+
+        // Activity log
+        $so_data = $this->M_SalesOrder->get_so($id_so);
+        $this->M_ActivityLog->log(
+            $so_data['no_so']    ?? '',
+            $so_data['no_faktur'] ?? '',
+            'CANCEL',
+            'SO dibatalkan.',
+            $this->_getUsername()
+        );
+
         $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibatalkan.');
         redirect('sales_order');
     }
@@ -367,16 +408,70 @@ class C_SalesOrder extends CI_Controller
 
     public function approve()
     {
-        if ($this->input->method() !== 'post') show_404();
+        $status_approval = $this->input->post('status', true);
         $this->M_SalesOrder->proses_approval_nego(
-            $this->input->post('id',     true),
-            $this->input->post('status', true),
-            $this->input->post('note',   true),
+            $this->input->post('id',   true),
+            $status_approval,
+            $this->input->post('note', true),
             $this->_getUsername()
         );
-        $msg = ($this->input->post('status') === 'approved') ? 'disetujui' : 'ditolak';
+
+        // Activity log
+        $id_approval = $this->input->post('id', true);
+        $approval    = $this->db->get_where('tbso_approval_nego', ['id' => $id_approval])->row_array();
+        $aksi_appr   = ($status_approval === 'approved') ? 'APPROVE' : 'REJECT';
+        $ket_appr    = 'Harga nego '.($status_approval==='approved'?'disetujui':'ditolak').'. Note: '.$this->input->post('note', true);
+        $this->M_ActivityLog->log(
+            $approval['no_so']    ?? '',
+            $approval['no_faktur'] ?? '',
+            $aksi_appr,
+            $ket_appr,
+            $this->_getUsername()
+        );
+
+        $msg = ($status_approval === 'approved') ? 'disetujui' : 'ditolak';
         $this->session->set_flashdata('success', "Harga nego berhasil <b>{$msg}</b>.");
         redirect('sales_order/approval');
+    }
+
+    // ================================================================
+    // ACTIVITY LOG
+    // ================================================================
+    public function activity_log()
+    {
+        $per_page = 20;
+        $page     = (int)($this->input->get('page') ?? 1);
+        $offset   = ($page - 1) * $per_page;
+
+        $filter = [
+            'no_so'    => $this->input->get('no_so',    true) ?? '',
+            'aksi'     => $this->input->get('aksi',     true) ?? '',
+            'tanggal'  => $this->input->get('tanggal',  true) ?? '',
+            'keyword'  => $this->input->get('keyword',  true) ?? '',
+        ];
+
+        $data['page_title'] = 'KARISMA - Activity Log SO';
+        $data['logs']       = $this->M_ActivityLog->get_filtered($filter, $per_page, $offset);
+        $data['total']      = $this->M_ActivityLog->count_filtered($filter);
+        $data['filter']     = $filter;
+        $data['per_page']   = $per_page;
+        $data['page']       = $page;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/so_activity_log.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // AJAX — activity log per SO (untuk tab di halaman detail)
+    public function activity_log_so($id_so)
+    {
+        $so      = $this->M_SalesOrder->get_so($id_so);
+        $no_so   = $so['no_so'] ?? '';
+        $logs    = $this->M_ActivityLog->get_by_no_so($no_so);
+
+        if (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'ok', 'data' => $logs], JSON_UNESCAPED_UNICODE);
     }
 
     // ================================================================

@@ -67,6 +67,11 @@
                             <i class="fas fa-check-circle"></i> Approval Nego
                         </a>
                     </div>
+                    <div class="col-auto">
+                        <a href="<?= base_url('sales_order/activity_log') ?>" class="btn btn-info">
+                            <i class="fas fa-history"></i> Activity Log
+                        </a>
+                    </div>
                 </div>
 
                 <!-- FILTER -->

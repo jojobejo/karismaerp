@@ -322,6 +322,7 @@ $route['sales_order/approval']                      = 'sales/C_SalesOrder/approv
 $route['sales_order/approve']                       = 'sales/C_SalesOrder/approve';
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
+$route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
