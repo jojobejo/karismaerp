@@ -245,25 +245,23 @@ class M_SalesOrder extends CI_Model
         return $this->db->get()->row_array();
     }
 
-    public function get_so_detail($no_so)
+    public function get_so_detail($no_faktur)
     {
-        $rows = $this->db->get_where('tbso_sales_order_detail', ['no_so' => $no_so])->result_array();
+        $rows = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
 
-        // Mapping nama kolom DB → nama yang dipakai JS di so_form
         foreach ($rows as &$row) {
-            $row['berat_gram']  = $row['tonase_satuan']   ?? 0;
-            $row['kubikasi_m3'] = $row['kubikasi_satuan'] ?? 0;
-            $row['hrg_pokok']   = $row['hrg_pokok']       ?? 0;
-            $row['gudang']      = $row['gudang_id']        ?? '';
+            $row['berat_gram']  = (float)($row['tonase_satuan']   ?? 0);
+            $row['kubikasi_m3'] = (float)($row['kubikasi_satuan'] ?? 0);
+            $row['hrg_pokok']   = (float)($row['hrg_pokok']       ?? 0);
+            $row['gudang']      = $row['gudang_id'] ?? '';
 
-            if (!isset($row['qty_box'])) {
+            if (!isset($row['qty_box']) || $row['qty_box'] === null) {
                 $isi = max(1, (int)($row['isi_per_box'] ?? 1));
                 $row['qty_box']    = floor((float)$row['qty'] / $isi);
                 $row['qty_satuan'] = fmod((float)$row['qty'], $isi);
             }
         }
         unset($row);
-
         return $rows;
     }
 
@@ -280,20 +278,18 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->trans_start();
         $this->db->insert('tbso_sales_order', $header);
-        $id_so = $this->db->insert_id();
-        $no_so = $header['no_so'];
+        $id_so     = $this->db->insert_id();
+        $no_faktur = $header['no_faktur']; // ← pakai no_faktur sebagai referensi
 
         foreach ($details as $d) {
-            $d['no_so']    = $no_so;
-            $d['no_faktur'] = $header['no_faktur'];
+            $d['no_faktur'] = $no_faktur;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
             $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
 
             $this->db->insert('tbso_stock_reservation', [
-                'no_so'        => $no_so,
-                'no_faktur'    => $header['no_faktur'],
+                'no_faktur'    => $no_faktur,   // ← no_faktur
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_toViewDate($d['expired_date']),
@@ -317,30 +313,27 @@ class M_SalesOrder extends CI_Model
     public function update_so($id_so, $header, $details)
     {
         $this->db->trans_start();
-        $no_so = $header['no_so'];
         $no_faktur = $header['no_faktur'];
 
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $header);
 
-        $this->db->delete('tbso_sales_order_detail', ['no_so' => $no_so]);
-
-        $this->db->where('no_so', $no_so);
+        // Hapus detail & release reservasi berdasarkan no_faktur
+        $this->db->delete('tbso_sales_order_detail', ['no_faktur' => $no_faktur]);
+        $this->db->where('no_faktur', $no_faktur);
         $this->db->update('tbso_stock_reservation', ['status' => 'released']);
 
         foreach ($details as $d) {
-            $d['no_so']    = $no_so;
             $d['no_faktur'] = $no_faktur;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
             $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
 
             $this->db->insert('tbso_stock_reservation', [
-                'no_so'        => $no_so,
                 'no_faktur'    => $no_faktur,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
-                'exp_date' => $this->_toViewDate($d['expired_date']),
+                'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
                 'gudang_id'    => $header['gudang_id'],
                 'qty_reserved' => $d['qty'],
@@ -357,19 +350,26 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     // VALIDASI STOK
     // ----------------------------------------------------------------
-    public function validasi_stok($details, $gudang_id, $exclude_no_so = null)
+    public function validasi_stok($details, $gudang_id, $exclude_id_so = null)
     {
         $errors = [];
+        
+        // Ambil no_faktur dari id_so yang di-exclude
+        $exclude_no_faktur = null;
+        if ($exclude_id_so) {
+            $so = $this->db->get_where('tbso_sales_order', ['id_so' => $exclude_id_so])->row_array();
+            $exclude_no_faktur = $so['no_faktur'] ?? null;
+        }
+
         foreach ($details as $d) {
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
 
-            if ($exclude_no_so) {
-                $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
+            if ($exclude_no_faktur) {
                 $this->db->select('SUM(qty_reserved) as qty');
-                $this->db->where('no_so', $exclude_no_so); // ← no_so
+                $this->db->where('no_faktur', $exclude_no_faktur); // ← no_faktur
                 $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('exp_date', $this->_normalizeDate($d['expired_date']));
+                $this->db->where('exp_date',  $this->_toViewDate($d['expired_date']));
                 $this->db->where('status', 'active');
                 $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
@@ -478,7 +478,7 @@ class M_SalesOrder extends CI_Model
         $this->db->update('tbso_sales_order', ['status' => $status, 'update_by' => $update_by]);
 
         if ($status === 'cancelled' && $so) {
-            $this->db->where('no_so', $so['no_so']);
+            $this->db->where('no_faktur', $so['no_faktur']); // ← no_faktur
             $this->db->update('tbso_stock_reservation', ['status' => 'released']);
         }
     }
@@ -525,5 +525,15 @@ class M_SalesOrder extends CI_Model
         $this->db->limit(1);
         $row = $this->db->get('tb_po_received')->row_array();
         return $row ? $row['kd_po'] : null;
+    }
+
+    // ----------------------------------------------------------------
+    // DAFTAR PAJAK dari tb_set_tax
+    // ----------------------------------------------------------------
+    public function get_tax_list()
+    {
+        return $this->db->order_by('nm_tax', 'ASC')
+                        ->get('tb_set_tax')
+                        ->result_array();
     }
 }

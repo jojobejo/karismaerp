@@ -140,6 +140,7 @@ class C_SalesOrder extends CI_Controller
         $data['no_so']          = '';   // kosong, diisi manual user
         $data['no_faktur']      = $this->M_SalesOrder->generate_no_faktur();
         $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
         $data['details']        = [];
@@ -243,7 +244,7 @@ class C_SalesOrder extends CI_Controller
 
         $data['page_title'] = 'KARISMA - Detail SO ' . $id_so;
         $data['so']         = $so;
-        $data['details'] = $this->M_SalesOrder->get_so_detail($so['no_so']);
+        $data['details'] = $this->M_SalesOrder->get_so_detail($so['no_faktur']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -267,8 +268,9 @@ class C_SalesOrder extends CI_Controller
         $data['no_so']          = $so['no_so'] ?? '';
         $data['no_faktur']      = $so['no_faktur'] ?? '';
         $data['so']             = $so;
-        $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_so']);
+        $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_faktur']);
         $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
@@ -547,9 +549,13 @@ class C_SalesOrder extends CI_Controller
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
             $pajak       = (float)($post['pajak'][$i]        ?? 0);
 
+            $disc        = (float)($post['disc'][$i] ?? 0);
             $qty_kecil   = ($qty_box * $isi_per_box) + $qty_satuan;
-            $total_tax   = $hrg * $qty_kecil * (1 + $pajak / 100);
-            $is_nego     = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
+
+            $subtotal_before_disc = $hrg * $qty_kecil;
+            $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
+            $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
+            $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
             $kd_po = $this->M_SalesOrder->get_kd_po(
                 $kd,
@@ -570,6 +576,9 @@ class C_SalesOrder extends CI_Controller
                 'no_lot'       => $post['no_lot'][$i]        ?? null,
                 'kd_po'        => $kd_po,
                 'pajak'        => $pajak,
+                'disc'         => $disc,
+                'subtotal_before_disc' => $subtotal_before_disc,
+                'subtotal_after_disc'  => $subtotal_after_disc,
                 'hrg_satuan'   => $hrg,
                 'hrg_pokok'    => $hrg_pk,
                 'total_harga'  => $total_tax,
