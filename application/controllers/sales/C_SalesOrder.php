@@ -141,6 +141,7 @@ class C_SalesOrder extends CI_Controller
         $data['no_faktur']      = $this->M_SalesOrder->generate_no_faktur();
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
+        $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
         $data['details']        = [];
@@ -218,8 +219,20 @@ class C_SalesOrder extends CI_Controller
             $this->M_ActivityLog->log($no_so, $no_faktur, $aksi, $ket, $this->_getUsername(), $detail_produk);
 
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego($no_so, $this->_getUsername(), $no_faktur);
-                $this->session->set_flashdata('warning', 'SO berhasil disimpan. Menunggu approval harga nego.');
+                // Ambil approver dari baris pertama yang nego
+                $approve_by = '';
+                foreach ($details as $d) {
+                    if (!empty($d['is_nego']) && !empty($d['approve_by'])) {
+                        $approve_by = $d['approve_by'];
+                        break;
+                    }
+                }
+                $ket_approval = 'Harga item berbeda dari HPP. Dibuat oleh: '.$this->_getUsername();
+                $this->M_SalesOrder->simpan_request_approval(
+                    $no_faktur, $no_so, $ket_approval, $this->_getUsername(), $approve_by
+                );
+                $this->session->set_flashdata('warning',
+                    'SO berhasil disimpan. Menunggu approval dari <b>'.$approve_by.'</b>.');
             } elseif (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
@@ -271,6 +284,7 @@ class C_SalesOrder extends CI_Controller
         $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_faktur']);
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
+        $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
@@ -348,10 +362,14 @@ class C_SalesOrder extends CI_Controller
             $this->M_ActivityLog->log($no_so_log, $no_fak, 'UPDATE', $ket, $this->_getUsername(), $detail_produk);
 
             if ($is_nego) {
-                $this->M_SalesOrder->simpan_request_approval_nego(
-                    $post['no_so'] ?? '',
+                $approve_by   = $post['approve_by'] ?? '';
+                $ket_approval = 'Harga item berbeda dari HPP. Diupdate oleh: '.$this->_getUsername();
+                $this->M_SalesOrder->simpan_request_approval(
+                    $post['no_faktur'] ?? '',
+                    $post['no_so']     ?? '',
+                    $ket_approval,
                     $this->_getUsername(),
-                    $post['no_faktur'] ?? ''
+                    $approve_by
                 );
             }
             if (!empty($tk['warnings'])) {
@@ -397,12 +415,17 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // APPROVAL NEGO
+    // APPROVAL
     // ================================================================
     public function approval()
     {
-        $data['page_title'] = 'KARISMA - Approval Harga Nego';
-        $data['list']       = $this->M_SalesOrder->get_pending_approval();
+        $user        = $this->_getCurrentUser();
+        $approve_by  = $user['nm_karyawan'];
+
+        $data['page_title']    = 'KARISMA - Approval SO';
+        $data['list']          = $this->M_SalesOrder->get_pending_approval($approve_by);
+        $data['approver_name'] = $approve_by;
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_approval.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -410,19 +433,18 @@ class C_SalesOrder extends CI_Controller
 
     public function approve()
     {
+        if ($this->input->method() !== 'post') show_404();
+
         $status_approval = $this->input->post('status', true);
-        $this->M_SalesOrder->proses_approval_nego(
-            $this->input->post('id',   true),
-            $status_approval,
-            $this->input->post('note', true),
-            $this->_getUsername()
-        );
+        $id_approval     = $this->input->post('id',     true);
+        $note            = $this->input->post('note',   true);
+
+        $this->M_SalesOrder->proses_approval($id_approval, $status_approval, $note, $this->_getUsername());
 
         // Activity log
-        $id_approval = $this->input->post('id', true);
-        $approval    = $this->db->get_where('tbso_approval_nego', ['id' => $id_approval])->row_array();
-        $aksi_appr   = ($status_approval === 'approved') ? 'APPROVE' : 'REJECT';
-        $ket_appr    = 'Harga nego '.($status_approval==='approved'?'disetujui':'ditolak').'. Note: '.$this->input->post('note', true);
+        $approval  = $this->db->get_where('tbso_so_approval', ['id' => $id_approval])->row_array();
+        $aksi_appr = ($status_approval === 'approved') ? 'APPROVE' : 'REJECT';
+        $ket_appr  = 'SO '.($status_approval === 'approved' ? 'disetujui' : 'ditolak').'. Note: '.$note;
         $this->M_ActivityLog->log(
             $approval['no_so']    ?? '',
             $approval['no_faktur'] ?? '',
@@ -432,7 +454,7 @@ class C_SalesOrder extends CI_Controller
         );
 
         $msg = ($status_approval === 'approved') ? 'disetujui' : 'ditolak';
-        $this->session->set_flashdata('success', "Harga nego berhasil <b>{$msg}</b>.");
+        $this->session->set_flashdata('success', "SO berhasil <b>{$msg}</b>.");
         redirect('sales_order/approval');
     }
 
@@ -556,6 +578,7 @@ class C_SalesOrder extends CI_Controller
             $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
             $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
             $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
+            $approve_by_item      = trim($post['approve_by'][$i] ?? '');
 
             $kd_po = $this->M_SalesOrder->get_kd_po(
                 $kd,
@@ -586,6 +609,7 @@ class C_SalesOrder extends CI_Controller
                 'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
                 'kode_akun'    => $post['kode_akun'][$i]     ?? null,
                 'is_nego'      => $is_nego,
+                'approve_by'   => $approve_by_item,
                 'create_by'    => $this->_getUsername(),
             ];
         }

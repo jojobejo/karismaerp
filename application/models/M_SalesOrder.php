@@ -431,39 +431,81 @@ class M_SalesOrder extends CI_Model
     }
 
     // ----------------------------------------------------------------
-    // APPROVAL NEGO
+    // GET DAFTAR KARYAWAN — untuk dropdown pilih approver di form SO
     // ----------------------------------------------------------------
-    public function simpan_request_approval_nego($no_so, $req_by, $no_faktur = '')
+    public function get_approver_list()
     {
-        $ada = $this->db->get_where('tbso_approval_nego', ['no_so'=>$no_so,'status'=>'pending'])->row_array();
-        if (!$ada) $this->db->insert('tbso_approval_nego', [
-            'no_so'     => $no_so,
+        return $this->db
+            ->select('id, nm_karyawan, jobdesk, departemen')
+            ->where('nm_karyawan !=', '')
+            ->order_by('nm_karyawan', 'ASC')
+            ->get('tb_karyawan')
+            ->result_array();
+    }
+
+    public function simpan_request_approval($no_faktur, $no_so, $keterangan, $req_by, $approve_by)
+    {
+        // Cek apakah sudah ada pending untuk no_faktur ini
+        $ada = $this->db->get_where('tbso_so_approval', [
             'no_faktur' => $no_faktur,
             'status'    => 'pending',
-            'req_by'    => $req_by,
-        ]);
-        $this->db->where('no_so', $no_so);
-        $this->db->update('tbso_sales_order', ['status' => 'waiting_approval']);
-    }
+        ])->row_array();
+ 
+        if (!$ada) {
+            $this->db->insert('tbso_so_approval', [
+                'no_faktur'  => $no_faktur,
+                'no_so'      => $no_so,
+                'tipe'       => 'harga',
+                'keterangan' => $keterangan,
+                'req_by'     => $req_by,
+                'approve_by' => $approve_by,
+                'status'     => 'pending',
+                'req_at'     => date('Y-m-d H:i:s'),
+            ]);
+        }
 
-    public function get_pending_approval()
+        $this->db->where('no_faktur', $no_faktur);
+        $this->db->update('tbso_sales_order', [
+            'status'     => 'waiting_approval',
+            'approve_by' => $approve_by,
+        ]);
+    }
+ 
+    // ----------------------------------------------------------------
+    // GET PENDING APPROVAL — untuk halaman daftar approval
+    // Filter by approve_by agar hanya tampil yang relevan
+    // ----------------------------------------------------------------
+    public function get_pending_approval($approve_by = null)
     {
-        $this->db->select('an.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi');
-        $this->db->from('tbso_approval_nego an');
-        $this->db->join('tbso_sales_order so', 'so.no_so = an.no_so', 'left');
-        $this->db->where('an.status', 'pending');
-        $this->db->order_by('an.req_at', 'DESC');
+        $this->db->select('ap.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi, so.no_so');
+        $this->db->from('tbso_so_approval ap');
+        $this->db->join('tbso_sales_order so', 'so.no_faktur = ap.no_faktur', 'left');
+        $this->db->where('ap.status', 'pending');
+        if (!empty($approve_by)) {
+            $this->db->where('ap.approve_by', $approve_by);
+        }
+        $this->db->order_by('ap.req_at', 'DESC');
         return $this->db->get()->result_array();
     }
-
-    public function proses_approval_nego($id, $status, $note, $act_by)
+ 
+    // ----------------------------------------------------------------
+    // PROSES APPROVAL
+    // ----------------------------------------------------------------
+    public function proses_approval($id, $status, $note, $act_by)
     {
         $this->db->where('id', $id);
-        $this->db->update('tbso_approval_nego', ['status'=>$status,'note'=>$note,'act_by'=>$act_by,'act_at'=>date('Y-m-d H:i:s')]);
-        $row = $this->db->get_where('tbso_approval_nego', ['id'=>$id])->row_array();
+        $this->db->update('tbso_so_approval', [
+            'status' => $status,
+            'note'   => $note,
+            'act_by' => $act_by,
+            'act_at' => date('Y-m-d H:i:s'),
+        ]);
+ 
+        $row = $this->db->get_where('tbso_so_approval', ['id' => $id])->row_array();
         if ($row) {
-            $this->db->where('no_so', $row['no_so']);
-            $this->db->update('tbso_sales_order', ['status' => ($status==='approved')?'approved':'draft']);
+            $new_status = ($status === 'approved') ? 'approved' : 'draft';
+            $this->db->where('no_faktur', $row['no_faktur']);
+            $this->db->update('tbso_sales_order', ['status' => $new_status]);
         }
     }
 

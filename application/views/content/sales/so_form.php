@@ -234,10 +234,10 @@
                     </div>
 
                     <!-- ============================================================
-                         TABEL ITEM BARANG
-                         Kolom: Barang | Expired/Lot | Qty Box | +Eceran | =Total Pcs
-                                Satuan | Harga/Pcs | Disc% | Stl Disc | Pajak | Subtotal | Aksi
-                         Total kolom = 12 → colspan footer = 10
+                        TABEL ITEM BARANG
+                        Kolom: Barang | Expired/Lot | Qty Box | +Eceran | =Total Pcs
+                                Satuan | Harga/Pcs + Approver | Disc% | Stl Disc | Pajak | Subtotal | Aksi
+                        Total kolom = 12 → colspan footer = 10
                     ============================================================ -->
                     <div class="card">
                         <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
@@ -259,7 +259,7 @@
                                             <th style="width:85px"  class="text-center">+Eceran</th>
                                             <th style="width:80px"  class="text-center">=Total Pcs</th>
                                             <th style="width:60px">Satuan</th>
-                                            <th style="width:115px">Harga/Pcs</th>
+                                            <th style="width:160px">Harga/Pcs</th>
                                             <th style="width:65px"  class="text-center">Disc%</th>
                                             <th style="width:110px" class="text-right">Stl&nbsp;Disc</th>
                                             <th style="width:85px">Pajak</th>
@@ -272,7 +272,6 @@
                                     </tbody>
                                     <tfoot>
                                         <tr class="bg-light font-weight-bold">
-                                            <!-- colspan = 12 kolom − 2 (Subtotal + Aksi) = 10 -->
                                             <td colspan="10" class="text-right">GRAND TOTAL</td>
                                             <td class="text-right" id="total-grand">0</td>
                                             <td></td>
@@ -461,6 +460,16 @@ var currentRowIdx = null;
 var stockCache    = [];
 var rowIdx        = 0;
 
+<?php
+$approver_safe = [];
+foreach (($approver_list ?? []) as $a) {
+    $approver_safe[] = [
+        'nm'       => mb_convert_encoding($a['nm_karyawan'] ?? '', 'UTF-8', 'UTF-8'),
+        'jobdesk'  => mb_convert_encoding($a['jobdesk']     ?? '', 'UTF-8', 'UTF-8'),
+    ];
+}
+?>
+var APPROVER_LIST = <?= json_encode($approver_safe, JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
 /* ================================================================
    UTILS
 ================================================================ */
@@ -620,7 +629,7 @@ function buatBaris(idx, d) {
     h += '<input type="number" step="1" min="0" name="qty_satuan[]" id="qtyecer_'+idx+'"'
        + ' class="form-control form-control-sm text-center" value="'+qtySat+'">';
     h += '<small class="text-muted d-block text-center">maks'
-       + ' <span id="maxecer_'+idx+'">'+fmtNum(avEcer,0)+'</span> pcs</small>';
+       + ' <span id="maxecer_'+idx+'">'+fmtNum(avEcer,0)+'</span></small>';
     h += '</td>';
 
     /* 4. =Total Pcs */
@@ -635,11 +644,25 @@ function buatBaris(idx, d) {
        + ' value="'+esc(sat)+'" readonly>';
     h += '</td>';
 
-    /* 6. Harga/Pcs */
+    /* 6. Harga/Pcs + Approver (muncul jika harga != HPP) */
+    var hargaClass = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) ? 'text-danger' : '';
     h += '<td>';
     h += '<input type="number" step="0.01" min="0" name="hrg_satuan[]" id="hrg_'+idx+'"'
-       + ' class="form-control form-control-sm" value="'+(hrg||'')+'" required>';
+       + ' class="form-control form-control-sm ' + hargaClass + '" value="'+(hrg||'')+'" required>';
     h += '<div id="hrgwarn_'+idx+'" class="mt-1"></div>';
+    /* Dropdown approver — tersembunyi, muncul jika harga != HPP */
+    h += '<div id="approver-wrap_'+idx+'" style="display:none" class="mt-1">';
+    
+    h += '<select name="approve_by[]" id="approve_by_'+idx+'"'
+       + ' class="form-control form-control-sm">';
+    h += '<option value="">-- Pilih Approver --</option>';
+    /* Isi dari APPROVER_LIST yang dikirim PHP */
+    APPROVER_LIST.forEach(function(a) {
+        var label = a.nm + (a.jobdesk ? ' — '+a.jobdesk : '');
+        h += '<option value="'+esc(a.nm)+'">'+esc(label)+'</option>';
+    });
+    h += '</select>';
+    h += '</div>';
     h += '</td>';
 
     /* 7. Disc% */
@@ -812,6 +835,16 @@ function hitungBaris(idx) {
     var km     = val('km_'+idx);
     var isi    = getIsi(idx);
 
+    var elHrg = document.getElementById('hrg_'+idx);
+    if (elHrg) {
+        var isNego = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001);
+        if (isNego) {
+            elHrg.classList.add('text-danger');
+        } else {
+            elHrg.classList.remove('text-danger');
+        }
+    }
+
     var qKecil    = (qBox * isi) + qSat;
     var subBefore = hrg * qKecil;
     var subDisc   = subBefore * (1 - disc / 100);
@@ -829,16 +862,27 @@ function hitungBaris(idx) {
     var elS = document.getElementById('sub_'+idx);
     if (elS) elS.textContent = fmtNum(tot);
 
-    /* peringatan harga < HPP */
-    var wEl = document.getElementById('hrgwarn_'+idx);
+    /* peringatan harga != HPP + tampilkan/sembunyikan approver */
+    var wEl        = document.getElementById('hrgwarn_'+idx);
+    var approverWrap = document.getElementById('approver-wrap_'+idx);
+    var approverSel  = document.getElementById('approve_by_'+idx);
+    var isNego = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001);
+
     if (wEl) {
-        wEl.innerHTML = (hrg > 0 && hrg < pk)
-            ? '<span class="badge badge-danger"><i class="fas fa-exclamation-triangle"></i> Di bawah HPP</span>'
+        wEl.innerHTML = isNego
+            ? '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i>'
+              + ' Perlu Persetujuan</span>'
             : '';
+    }
+    if (approverWrap) {
+        approverWrap.style.display = isNego ? '' : 'none';
+        if (approverSel) approverSel.required = isNego;
+        if (!isNego && approverSel) approverSel.value = '';
     }
 
     hitungGrand();
     hitungTK();
+    cekNegoGlobal();
 }
 
 /* ================================================================
@@ -906,6 +950,39 @@ function hitungTK() {
     }
     var wK = document.getElementById('lbl-kubikasi-warn');
     if (wK) wK.classList.toggle('d-none', totKub <= BATAS_KUBIKASI);
+}
+
+/* ================================================================
+   CEK NEGO GLOBAL — tampilkan notif ringkasan
+================================================================ */
+function cekNegoGlobal() {
+    var negoItems = [];
+    document.querySelectorAll('#item-body tr').forEach(function(tr) {
+        var i   = tr.dataset.idx;
+        var hrg = parseFloat((document.getElementById('hrg_'+i)||{value:0}).value)||0;
+        var pk  = parseFloat((document.getElementById('pk_' +i)||{value:0}).value)||0;
+        var nm  = (document.getElementById('nm_'+i)||{value:''}).value || '';
+        if (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) {
+            negoItems.push(nm
+                + ' (HPP: '+fmtNum(pk)
+                + ', Input: '+fmtNum(hrg)+')');
+        }
+    });
+
+    var notifNego = document.getElementById('notif-nego');
+    var listNego  = document.getElementById('nego-detail-list');
+
+    if (negoItems.length > 0) {
+        if (notifNego) notifNego.classList.remove('d-none');
+        if (listNego) {
+            listNego.innerHTML = negoItems.map(function(s){
+                return '<li><i class="fas fa-arrow-right mr-1"></i>'+esc(s)+'</li>';
+            }).join('');
+        }
+    } else {
+        if (notifNego) notifNego.classList.add('d-none');
+        if (listNego)  listNego.innerHTML = '';
+    }
 }
 
 /* ================================================================
@@ -1292,6 +1369,7 @@ if (EDIT_DETAILS.length) {
     tambahBaris({});
     hitungGrand();
     hitungTK();
+    cekNegoGlobal(); 
 }
 </script>
 </body>

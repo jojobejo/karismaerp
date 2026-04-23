@@ -55,6 +55,12 @@
                     </a>
                 </div>
 
+                <!-- Setelah tombol Kembali -->
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-user-check mr-1"></i>
+                    Menampilkan SO yang perlu diapprove oleh: <b><?= htmlspecialchars($approver_name ?? '-') ?></b>
+                </div>
+
                 <div class="card">
                     <div class="card-header bg-warning py-2">
                         <h3 class="card-title">
@@ -88,7 +94,7 @@
                                     <?php foreach ($list as $row): ?>
                                     <tr>
                                         <td>
-                                            <a href="<?= base_url('sales_order/detail/' . $row['id_so']) ?>">
+                                            <a href="<?= base_url('sales_order/detail/' . $row['id_so_detail'] ?? $row['id']) ?>">
                                                 <?= htmlspecialchars($row['id_so']) ?>
                                             </a>
                                         </td>
