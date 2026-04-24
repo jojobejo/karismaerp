@@ -1,81 +1,96 @@
 <?php
 // ================================================================
-// controllers/content/kmt/Dca.php
+// controllers/content/kmt/Dca.php  — VERSI LENGKAP + VERIFIKASI
 // ================================================================
 defined('BASEPATH') OR exit('No direct script access allowed');
-
+ 
 class Dca extends CI_Controller {
-
+ 
     public function __construct() {
         parent::__construct();
         if (!$this->session->userdata('logged_in')) redirect('login');
         $this->load->model('M_Kmt');
         $this->load->library('form_validation');
     }
-
+ 
+    // ── Level helper ──────────────────────────────────────────────
+    private function get_lv()              { return (int)$this->session->userdata('lv'); }
+    private function get_id_user()         { return (int)$this->session->userdata('id_user'); }
+    private function is_admkeu()           { return $this->get_lv() === 2; }   // adm keu
+    private function is_abm()             { return $this->get_lv() === 3; }   // ABM / field
+    private function is_super()           { return $this->get_lv() === 1; }   // super admin
+ 
     private function get_id_wilayah_filter() {
-        return ((int)$this->session->userdata('lv') === 3)
+        return $this->is_abm()
             ? (int)$this->session->userdata('wilayah') : null;
     }
-
+ 
+    // ── Index ─────────────────────────────────────────────────────
     public function index() {
-        $tahun      = $this->input->get('tahun')      ?? date('Y');
-        $bulan      = $this->input->get('bulan')      ?? '';
-        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
-
+        $tahun             = $this->input->get('tahun')             ?? date('Y');
+        $bulan             = $this->input->get('bulan')             ?? '';
+        $id_wilayah        = $this->input->get('id_wilayah')        ?? $this->get_id_wilayah_filter();
+        $status_verifikasi = $this->input->get('status_verifikasi') ?? '';
+ 
         $filter = ['tahun' => $tahun];
-        if ($bulan)      $filter['bulan']      = $bulan;
-        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
-
+        if ($bulan)                        $filter['bulan']             = $bulan;
+        if ($id_wilayah)                   $filter['id_wilayah']        = $id_wilayah;
+        if ($status_verifikasi !== '')     $filter['status_verifikasi'] = (int)$status_verifikasi;
+ 
         $list        = $this->M_Kmt->get_dca_list($filter);
         $total_biaya = array_sum(array_column($list, 'total_biaya'));
-
+ 
+        // Hitung badge ringkasan
+        $jml_belum = count(array_filter($list, fn($r) => (int)$r['status_verifikasi'] === 0));
+        $jml_sudah = count(array_filter($list, fn($r) => (int)$r['status_verifikasi'] === 1));
+ 
         $data = [
-            'page_title'   => 'Data DCA KMT CORN',
-            'list'         => $list,
-            'total_biaya'  => $total_biaya,
-            'wilayah_list' => $this->M_Kmt->get_wilayah(),
-            'tahun'        => $tahun,
-            'bulan'        => $bulan,
-            'id_wilayah'   => $id_wilayah,
-            'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
-                               'Juli','Agustus','September','Oktober','November','Desember'],
-            'lv'     => (int)$this->session->userdata('lv'),
+            'page_title'        => 'Data DCA KMT CORN',
+            'list'              => $list,
+            'total_biaya'       => $total_biaya,
+            'wilayah_list'      => $this->M_Kmt->get_wilayah(),
+            'tahun'             => $tahun,
+            'bulan'             => $bulan,
+            'id_wilayah'        => $id_wilayah,
+            'status_verifikasi' => $status_verifikasi,
+            'jml_belum'         => $jml_belum,
+            'jml_sudah'         => $jml_sudah,
+            'nama_bulan'        => ['','Januari','Februari','Maret','April','Mei','Juni',
+                                    'Juli','Agustus','September','Oktober','November','Desember'],
+            'lv'                => $this->get_lv(),
         ];
-
+ 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/index', $data);
         $this->load->view('partial/main/footer.php');
     }
-
-    // Ganti method tambah() — kirim kegiatan_list
+ 
+    // ── Tambah ────────────────────────────────────────────────────
     public function tambah() {
         $data = [
             'page_title'      => 'Tambah Data DCA',
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'kegiatan_list'   => $this->M_Kmt->get_dca_kegiatan(),
-            'lv'              => (int)$this->session->userdata('lv'),
+            'lv'              => $this->get_lv(),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/form', $data);
         $this->load->view('partial/main/footer.php');
     }
-
+ 
+    // ── Simpan ────────────────────────────────────────────────────
     public function simpan() {
         $this->form_validation->set_rules('tanggal_dca', 'Tanggal', 'required');
         $this->form_validation->set_rules('id_wilayah',  'Wilayah', 'required|integer');
-
+ 
         if ($this->form_validation->run() === FALSE) {
             $this->tambah(); return;
         }
-
-        $tgl = $this->input->post('tanggal_dca');
-
-        // ── Ambil semua input POST ────────────────────────────────
+ 
+        $tgl       = $this->input->post('tanggal_dca');
         $um_header = (float)str_replace('.', '', $this->input->post('um_header') ?? 0);
-
-        // Array detail
+ 
         $id_kegiatan      = $this->input->post('id_kegiatan')   ?? [];
         $nama_kegiatan    = $this->input->post('nama_kegiatan') ?? [];
         $real_arr         = $this->input->post('real_detail')   ?? [];
@@ -85,39 +100,36 @@ class Dca extends CI_Controller {
         $jml_peserta_arr  = $this->input->post('jml_peserta')   ?? [];
         $qty_bisi_arr     = $this->input->post('qty_bisi')      ?? [];
         $qty_q235_arr     = $this->input->post('qty_q235')      ?? [];
-
-        // ── Hitung total real biaya ───────────────────────────────
+ 
         $total_real = 0;
         foreach ($real_arr as $real) {
             $total_real += (float)str_replace('.', '', $real ?? 0);
         }
         $refund_total = max(0, $um_header - $total_real);
-
-        // ── Simpan header DCA ─────────────────────────────────────
+ 
         $insert_dca = [
-            'tanggal_dca' => $tgl,
-            'bulan'       => (int)date('m', strtotime($tgl)),
-            'tahun'       => (int)date('Y', strtotime($tgl)),
-            'id_wilayah'  => (int)$this->input->post('id_wilayah'),
-            'nama_mdo'    => $this->input->post('nama_mdo'),
-            'abm'         => $this->input->post('abm'),
-            'uraian'      => $this->input->post('uraian') ?: 'Multi Kegiatan',
-            'um'          => $um_header,
-            'refund'      => $refund_total,
-            'real_biaya'  => $total_real,
-            'total_biaya' => $total_real,
-            'created_by'  => $this->session->userdata('id_user'),
+            'tanggal_dca'      => $tgl,
+            'bulan'            => (int)date('m', strtotime($tgl)),
+            'tahun'            => (int)date('Y', strtotime($tgl)),
+            'id_wilayah'       => (int)$this->input->post('id_wilayah'),
+            'nama_mdo'         => $this->input->post('nama_mdo'),
+            'abm'              => $this->input->post('abm'),
+            'uraian'           => $this->input->post('uraian') ?: 'Multi Kegiatan',
+            'um'               => $um_header,
+            'refund'           => $refund_total,
+            'real_biaya'       => $total_real,
+            'total_biaya'      => $total_real,
+            'status_verifikasi'=> 0,          // default belum diverifikasi
+            'created_by'       => $this->get_id_user(),
         ];
-
+ 
         if ($this->M_Kmt->insert_dca($insert_dca)) {
             $id_dca = $this->db->insert_id();
-
-            // ── Simpan detail ─────────────────────────────────────
+ 
             $detail_rows = [];
             foreach ($id_kegiatan as $i => $id_k) {
                 $real = (float)str_replace('.', '', $real_arr[$i] ?? 0);
                 if ($real <= 0) continue;
-
                 $detail_rows[] = [
                     'id_dca'        => $id_dca,
                     'id_kegiatan'   => $id_k ?: null,
@@ -132,45 +144,64 @@ class Dca extends CI_Controller {
                     'keterangan'    => $ket_arr[$i] ?? '',
                 ];
             }
-
             if (!empty($detail_rows)) {
                 $this->M_Kmt->insert_dca_detail($detail_rows);
             }
-
+ 
             $this->session->set_flashdata('success', 'Data DCA berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan data.');
         }
         redirect('kmt/dca');
     }
-
-    // Ganti method edit()
+ 
+    // ── Edit ─────────────────────────────────────────────────────
     public function edit($id) {
         $row = $this->M_Kmt->get_dca_by_id($id);
         if (!$row) { show_404(); return; }
-
+ 
+        // ABM (level 3) tidak boleh edit jika sudah diverifikasi
+        if ($this->is_abm() && (int)$row['status_verifikasi'] === 1) {
+            $this->session->set_flashdata('error',
+                'Data ini sudah diverifikasi oleh Adm Keuangan dan tidak dapat diedit.');
+            redirect('kmt/dca');
+            return;
+        }
+ 
         $data = [
             'page_title'      => 'Edit Data DCA',
             'row'             => $row,
             'detail'          => $this->M_Kmt->get_dca_detail($id),
             'kegiatan_list'   => $this->M_Kmt->get_dca_kegiatan(),
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
-            'lv'              => (int)$this->session->userdata('lv'),
+            'log_verifikasi'  => $this->M_Kmt->get_log_verifikasi($id),
+            'lv'              => $this->get_lv(),
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
-
+ 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/form', $data);
         $this->load->view('partial/main/footer.php');
     }
-
-    // Ganti method update()
+ 
+    // ── Update ────────────────────────────────────────────────────
     public function update($id) {
-        $tgl = $this->input->post('tanggal_dca');
-
-        // ── Ambil semua input POST ────────────────────────────────
+        // Guard: ABM tidak boleh update data yang sudah diverifikasi
+        if ($this->is_abm() && $this->M_Kmt->is_dca_verified($id)) {
+            $this->session->set_flashdata('error',
+                'Data sudah diverifikasi. Anda tidak memiliki izin untuk mengubahnya.');
+            redirect('kmt/dca');
+            return;
+        }
+ 
+        // Jika super admin / adm keu mengedit data yg sudah diverifikasi,
+        // reset status verifikasi agar perlu diverifikasi ulang
+        $was_verified = $this->M_Kmt->is_dca_verified($id);
+        $reset_verif  = ($was_verified && !$this->is_abm());
+ 
+        $tgl       = $this->input->post('tanggal_dca');
         $um_header = (float)str_replace('.', '', $this->input->post('um_header') ?? 0);
-
+ 
         $id_kegiatan      = $this->input->post('id_kegiatan')   ?? [];
         $nama_kegiatan    = $this->input->post('nama_kegiatan') ?? [];
         $real_arr         = $this->input->post('real_detail')   ?? [];
@@ -180,15 +211,13 @@ class Dca extends CI_Controller {
         $jml_peserta_arr  = $this->input->post('jml_peserta')   ?? [];
         $qty_bisi_arr     = $this->input->post('qty_bisi')      ?? [];
         $qty_q235_arr     = $this->input->post('qty_q235')      ?? [];
-
-        // ── Hitung total real biaya ───────────────────────────────
+ 
         $total_real = 0;
         foreach ($real_arr as $real) {
             $total_real += (float)str_replace('.', '', $real ?? 0);
         }
         $refund_total = max(0, $um_header - $total_real);
-
-        // ── Update header DCA ─────────────────────────────────────
+ 
         $update = [
             'tanggal_dca' => $tgl,
             'bulan'       => (int)date('m', strtotime($tgl)),
@@ -202,16 +231,24 @@ class Dca extends CI_Controller {
             'real_biaya'  => $total_real,
             'total_biaya' => $total_real,
         ];
-
+ 
+        // Reset verifikasi jika data yg sudah diverifikasi diedit oleh level ≥ 2
+        if ($reset_verif) {
+            $update['status_verifikasi'] = 0;
+            $update['verified_by']       = null;
+            $update['verified_at']       = null;
+            $update['verified_notes']    = null;
+            $this->M_Kmt->_log_verifikasi_public($id, 'reset_oleh_edit', $this->get_id_user(),
+                'Data diedit oleh ' . $this->session->userdata('nama'));
+        }
+ 
         if ($this->M_Kmt->update_dca($id, $update)) {
-            // ── Hapus detail lama, insert baru ────────────────────
             $this->M_Kmt->delete_dca_detail($id);
-
+ 
             $detail_rows = [];
             foreach ($id_kegiatan as $i => $id_k) {
                 $real = (float)str_replace('.', '', $real_arr[$i] ?? 0);
                 if ($real <= 0) continue;
-
                 $detail_rows[] = [
                     'id_dca'        => $id,
                     'id_kegiatan'   => $id_k ?: null,
@@ -226,40 +263,135 @@ class Dca extends CI_Controller {
                     'keterangan'    => $ket_arr[$i] ?? '',
                 ];
             }
-
             if (!empty($detail_rows)) {
                 $this->M_Kmt->insert_dca_detail($detail_rows);
             }
-
-            $this->session->set_flashdata('success', 'Data DCA berhasil diperbarui.');
+ 
+            $msg = $reset_verif
+                ? 'Data DCA diperbarui. Status verifikasi direset — perlu diverifikasi ulang.'
+                : 'Data DCA berhasil diperbarui.';
+            $this->session->set_flashdata('success', $msg);
         } else {
             $this->session->set_flashdata('error', 'Gagal memperbarui data.');
         }
         redirect('kmt/dca');
     }
-
-    // Tambah method tambah_kegiatan() — AJAX add kegiatan custom
-    public function tambah_kegiatan() {
-        $nama = trim($this->input->post('nama_kegiatan'));
-        if (empty($nama)) {
-            echo json_encode(['status' => 'error', 'msg' => 'Nama kegiatan tidak boleh kosong']);
+ 
+    // ================================================================
+    // VERIFIKASI — hanya level 2 (adm keu) dan level 1 (super)
+    // ================================================================
+ 
+    /**
+     * POST /kmt/dca/verifikasi/{id}
+     * Adm Keu menekan tombol "Verifikasi"
+     */
+    public function verifikasi($id) {
+        if (!$this->is_admkeu() && !$this->is_super()) {
+            $this->session->set_flashdata('error', 'Anda tidak memiliki akses untuk memverifikasi data.');
+            redirect('kmt/dca');
             return;
         }
-
-        // Cek duplikat
-        $cek = $this->db->get_where('tbkmt_dca_kegiatan', ['nama_kegiatan' => $nama])->row();
-        if ($cek) {
-            echo json_encode(['status' => 'exists', 'id' => $cek->id, 'nama' => $cek->nama_kegiatan]);
+ 
+        $row = $this->M_Kmt->get_dca_by_id($id);
+        if (!$row) { show_404(); return; }
+ 
+        if ((int)$row['status_verifikasi'] === 1) {
+            $this->session->set_flashdata('warning', 'Data ini sudah diverifikasi sebelumnya.');
+            redirect('kmt/dca');
             return;
         }
-
-        $this->M_Kmt->insert_dca_kegiatan($nama, $this->session->userdata('id_user'));
-        $new_id = $this->db->insert_id();
-
-        echo json_encode(['status' => 'ok', 'id' => $new_id, 'nama' => $nama]);
+ 
+        $catatan = trim($this->input->post('catatan_verifikasi') ?? '');
+ 
+        if ($this->M_Kmt->verifikasi_dca($id, $this->get_id_user(), $catatan)) {
+            $this->session->set_flashdata('success',
+                'Data DCA <strong>' . htmlspecialchars($row['uraian']) . '</strong> berhasil diverifikasi.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal melakukan verifikasi. Silakan coba lagi.');
+        }
+ 
+        // Kembali ke halaman index dengan filter yang sama
+        $back = $this->input->post('redirect_back') ?: 'kmt/dca';
+        redirect($back);
     }
-
+ 
+    /**
+     * POST /kmt/dca/batal_verifikasi/{id}
+     * Adm Keu atau Super membatalkan verifikasi
+     */
+    public function batal_verifikasi($id) {
+        if (!$this->is_admkeu() && !$this->is_super()) {
+            $this->session->set_flashdata('error', 'Anda tidak memiliki akses untuk membatalkan verifikasi.');
+            redirect('kmt/dca');
+            return;
+        }
+ 
+        $row = $this->M_Kmt->get_dca_by_id($id);
+        if (!$row) { show_404(); return; }
+ 
+        $catatan = trim($this->input->post('catatan_batal') ?? '');
+ 
+        if ($this->M_Kmt->batal_verifikasi_dca($id, $this->get_id_user(), $catatan)) {
+            $this->session->set_flashdata('success', 'Verifikasi DCA berhasil dibatalkan. Data dapat diedit kembali.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal membatalkan verifikasi.');
+        }
+ 
+        $back = $this->input->post('redirect_back') ?: 'kmt/dca';
+        redirect($back);
+    }
+ 
+    /**
+     * AJAX: verifikasi cepat dari tabel index (tanpa catatan)
+     * POST /kmt/dca/ajax_verifikasi
+     */
+    public function ajax_verifikasi() {
+        if (!$this->is_admkeu() && !$this->is_super()) {
+            echo json_encode(['status' => 'error', 'msg' => 'Akses ditolak']);
+            return;
+        }
+ 
+        $id     = (int)$this->input->post('id');
+        $aksi   = $this->input->post('aksi');   // 'verifikasi' | 'batal'
+        $catatan= trim($this->input->post('catatan') ?? '');
+ 
+        if (!$id) {
+            echo json_encode(['status' => 'error', 'msg' => 'ID tidak valid']);
+            return;
+        }
+ 
+        if ($aksi === 'verifikasi') {
+            $ok = $this->M_Kmt->verifikasi_dca($id, $this->get_id_user(), $catatan);
+        } else {
+            $ok = $this->M_Kmt->batal_verifikasi_dca($id, $this->get_id_user(), $catatan);
+        }
+ 
+        if ($ok) {
+            $row = $this->M_Kmt->get_dca_by_id($id);
+            echo json_encode([
+                'status'            => 'ok',
+                'status_verifikasi' => (int)$row['status_verifikasi'],
+                'verified_at'       => $row['verified_at'],
+                'nama_verifikator'  => $row['nama_verifikator'] ?? '-',
+                'msg'               => $aksi === 'verifikasi'
+                                        ? 'Data berhasil diverifikasi.'
+                                        : 'Verifikasi berhasil dibatalkan.',
+            ]);
+        } else {
+            echo json_encode(['status' => 'error', 'msg' => 'Operasi gagal. Coba lagi.']);
+        }
+    }
+ 
+    // ── Hapus ─────────────────────────────────────────────────────
     public function hapus($id) {
+        // Tidak boleh hapus data yang sudah diverifikasi (kecuali super)
+        if (!$this->is_super() && $this->M_Kmt->is_dca_verified($id)) {
+            $this->session->set_flashdata('error',
+                'Data sudah diverifikasi dan tidak dapat dihapus. Hubungi Admin.');
+            redirect('kmt/dca');
+            return;
+        }
+ 
         if ($this->M_Kmt->delete_dca($id)) {
             $this->session->set_flashdata('success', 'Data berhasil dihapus.');
         } else {
@@ -267,101 +399,109 @@ class Dca extends CI_Controller {
         }
         redirect('kmt/dca');
     }
-
+ 
+    // ── Tambah kegiatan (AJAX) ────────────────────────────────────
+    public function tambah_kegiatan() {
+        $nama = trim($this->input->post('nama_kegiatan'));
+        if (empty($nama)) {
+            echo json_encode(['status' => 'error', 'msg' => 'Nama kegiatan tidak boleh kosong']);
+            return;
+        }
+        $cek = $this->db->get_where('tbkmt_dca_kegiatan', ['nama_kegiatan' => $nama])->row();
+        if ($cek) {
+            echo json_encode(['status' => 'exists', 'id' => $cek->id, 'nama' => $cek->nama_kegiatan]);
+            return;
+        }
+        $this->M_Kmt->insert_dca_kegiatan($nama, $this->get_id_user());
+        $new_id = $this->db->insert_id();
+        echo json_encode(['status' => 'ok', 'id' => $new_id, 'nama' => $nama]);
+    }
+ 
+    // ── Export & Rekap (tidak berubah, copy dari versi sebelumnya) ─
     public function export() {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
-
+ 
         $filter = ['tahun' => $tahun];
         if ($bulan)      $filter['bulan']      = $bulan;
         if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
-
+ 
         $list = $this->M_Kmt->get_dca_list($filter);
-
+ 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('DCA');
-
-        $headers = ['No','Tanggal','Wilayah','ABM','Uraian','UM','Refund','Real Biaya','Total'];
+ 
+        $headers = ['No','Tanggal','Wilayah','ABM','Uraian','UM','Refund','Real Biaya','Total','Status Verifikasi'];
         foreach ($headers as $i => $h) {
             $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
         }
-
-        $sheet->getStyle('A1:I1')->applyFromArray([
+        $sheet->getStyle('A1:J1')->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
             'alignment' => ['horizontal' => 'center'],
         ]);
-
+ 
         foreach ($list as $i => $row) {
             $r = $i + 2;
-            $sheet->setCellValueByColumnAndRow(1, $r, $i + 1);
-            $sheet->setCellValueByColumnAndRow(2, $r, date('d/m/Y', strtotime($row['tanggal_dca'])));
-            $sheet->setCellValueByColumnAndRow(3, $r, $row['nama_wilayah'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(4, $r, $row['abm'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(5, $r, $row['uraian']);
-            $sheet->setCellValueByColumnAndRow(6, $r, $row['um']);
-            $sheet->setCellValueByColumnAndRow(7, $r, $row['refund']);
-            $sheet->setCellValueByColumnAndRow(8, $r, $row['real_biaya']);
-            $sheet->setCellValueByColumnAndRow(9, $r, $row['total_biaya']);
+            $sheet->setCellValueByColumnAndRow(1,  $r, $i + 1);
+            $sheet->setCellValueByColumnAndRow(2,  $r, date('d/m/Y', strtotime($row['tanggal_dca'])));
+            $sheet->setCellValueByColumnAndRow(3,  $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(4,  $r, $row['abm'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(5,  $r, $row['uraian']);
+            $sheet->setCellValueByColumnAndRow(6,  $r, $row['um']);
+            $sheet->setCellValueByColumnAndRow(7,  $r, $row['refund']);
+            $sheet->setCellValueByColumnAndRow(8,  $r, $row['real_biaya']);
+            $sheet->setCellValueByColumnAndRow(9,  $r, $row['total_biaya']);
+            $sheet->setCellValueByColumnAndRow(10, $r,
+                (int)$row['status_verifikasi'] === 1
+                    ? '✓ Terverifikasi (' . ($row['nama_verifikator'] ?? '-') . ')'
+                    : 'Belum Diverifikasi'
+            );
         }
-
-        foreach (range('A', 'I') as $col) {
+ 
+        foreach (range('A', 'J') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
-
+ 
         $filename = 'DCA_KMT_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
-
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
-
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
     }
-
+ 
     public function rekap() {
         $tahun      = $this->input->get('tahun')      ?? date('Y');
         $bulan      = $this->input->get('bulan')      ?? '';
         $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
         $abm        = $this->input->get('abm')        ?? '';
-    
+ 
         $filter = ['tahun' => $tahun];
         if ($bulan)      $filter['bulan']      = $bulan;
         if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
         if ($abm)        $filter['abm']        = $abm;
-    
+ 
         $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
-    
-        // Susun per ABM → per MDO → per kegiatan
+ 
         $grouped = [];
         foreach ($rekap_data as $dca) {
             $abm_key = $dca['abm'];
             $mdo_key = $dca['nama_mdo'];
-    
-            if (!isset($grouped[$abm_key])) {
-                $grouped[$abm_key] = ['um' => 0, 'mdo' => []];
-            }
+            if (!isset($grouped[$abm_key])) $grouped[$abm_key] = ['um' => 0, 'mdo' => []];
             $grouped[$abm_key]['um'] += $dca['um'];
-    
-            if (!isset($grouped[$abm_key]['mdo'][$mdo_key])) {
-                $grouped[$abm_key]['mdo'][$mdo_key] = ['kegiatan' => []];
-            }
-    
+            if (!isset($grouped[$abm_key]['mdo'][$mdo_key])) $grouped[$abm_key]['mdo'][$mdo_key] = ['kegiatan' => []];
             foreach ($dca['detail'] as $det) {
                 $kg_key = $det['nama_kegiatan'];
                 if (!isset($grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key])) {
                     $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key] = [
-                        'rows'        => [],
-                        'total_bisi'  => 0,
-                        'total_q235'  => 0,
-                        'total_peserta' => 0,
-                        'total_biaya' => 0,
+                        'rows' => [], 'total_bisi' => 0, 'total_q235' => 0,
+                        'total_peserta' => 0, 'total_biaya' => 0,
                     ];
                 }
-    
                 $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['rows'][] = [
                     'nama_mdo'    => $mdo_key,
                     'tgl_kegiatan'=> $det['tgl_kegiatan'],
@@ -371,14 +511,13 @@ class Dca extends CI_Controller {
                     'jml_peserta' => $det['jml_peserta'],
                     'real_biaya'  => $det['real_biaya'],
                 ];
-    
                 $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_bisi']    += $det['qty_bisi'];
                 $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_q235']   += $det['qty_q235'];
                 $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_peserta'] += $det['jml_peserta'];
                 $grouped[$abm_key]['mdo'][$mdo_key]['kegiatan'][$kg_key]['total_biaya']   += $det['real_biaya'];
             }
         }
-    
+ 
         $data = [
             'page_title'   => 'Rekapitulasi DCA',
             'grouped'      => $grouped,
@@ -389,11 +528,11 @@ class Dca extends CI_Controller {
             'bulan'        => $bulan,
             'id_wilayah'   => $id_wilayah,
             'abm'          => $abm,
-            'lv'           => (int)$this->session->userdata('lv'),
+            'lv'           => $this->get_lv(),
             'nama_bulan'   => ['','Januari','Februari','Maret','April','Mei','Juni',
                                'Juli','Agustus','September','Oktober','November','Desember'],
         ];
-    
+ 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/rekap', $data);
         $this->load->view('partial/main/footer.php');

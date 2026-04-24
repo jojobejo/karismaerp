@@ -260,7 +260,7 @@ class M_Kmt extends CI_Model {
     // OPERASIONAL
     // ================================================================
     public function get_operasional_list($filter = []) {
-        $this->db->select('op.*, w.nama_wilayah,
+        $this->db->select('op.*, w.nama_wilayah, k.nm_karyawan AS nama_verifikator,
             (IFNULL(op.hotel,0) + IFNULL(op.per_diem,0) + IFNULL(op.entertainment,0) +
             IFNULL(op.communication,0) + IFNULL(op.atk,0) + IFNULL(op.gasoline,0) +
             IFNULL(op.sparepart_service,0) + IFNULL(op.retribusi_toll_parkir,0) +
@@ -270,17 +270,22 @@ class M_Kmt extends CI_Model {
         ');
         $this->db->from('tbkmt_operasional op');
         $this->db->join('tbkmt_wilayah w', 'w.id = op.id_wilayah', 'left');
-        if (!empty($filter['tahun']))      $this->db->where('op.tahun', $filter['tahun']);
-        if (!empty($filter['bulan']))      $this->db->where('op.bulan', $filter['bulan']);
-        if (!empty($filter['id_wilayah'])) $this->db->where('op.id_wilayah', $filter['id_wilayah']);
+        $this->db->join('tb_karyawan k',   'k.id = op.verified_by', 'left');
+    
+        if (!empty($filter['tahun']))            $this->db->where('op.tahun', $filter['tahun']);
+        if (!empty($filter['bulan']))            $this->db->where('op.bulan', $filter['bulan']);
+        if (!empty($filter['id_wilayah']))       $this->db->where('op.id_wilayah', $filter['id_wilayah']);
+        if (isset($filter['status_verifikasi'])) $this->db->where('op.status_verifikasi', $filter['status_verifikasi']);
+    
         $this->db->order_by('op.tanggal', 'DESC');
         return $this->db->get()->result_array();
     }
 
     public function get_operasional_by_id($id) {
-        $this->db->select('op.*, w.nama_wilayah');
+        $this->db->select('op.*, w.nama_wilayah, k.nm_karyawan AS nama_verifikator');
         $this->db->from('tbkmt_operasional op');
         $this->db->join('tbkmt_wilayah w', 'w.id = op.id_wilayah', 'left');
+        $this->db->join('tb_karyawan k',   'k.id = op.verified_by', 'left');
         $this->db->where('op.id', $id);
         return $this->db->get()->row_array();
     }
@@ -299,27 +304,89 @@ class M_Kmt extends CI_Model {
         return $this->db->delete('tbkmt_operasional', ['id' => $id]);
     }
 
+    public function verifikasi_operasional($id, $id_user, $catatan = '') {
+        $this->db->where('id', $id);
+        $ok = $this->db->update('tbkmt_operasional', [
+            'status_verifikasi' => 1,
+            'verified_by'       => $id_user,
+            'verified_at'       => date('Y-m-d H:i:s'),
+            'verified_notes'    => $catatan,
+        ]);
+        if ($ok) $this->_log_verif_op($id, 'verifikasi', $id_user, $catatan);
+        return $ok;
+    }
+    
+    // ── Batalkan verifikasi ───────────────────────────────────────────
+    public function batal_verifikasi_operasional($id, $id_user, $catatan = '') {
+        $this->db->where('id', $id);
+        $ok = $this->db->update('tbkmt_operasional', [
+            'status_verifikasi' => 0,
+            'verified_by'       => null,
+            'verified_at'       => null,
+            'verified_notes'    => null,
+        ]);
+        if ($ok) $this->_log_verif_op($id, 'batal_verifikasi', $id_user, $catatan);
+        return $ok;
+    }
+    
+    // ── Cek apakah sudah terverifikasi ───────────────────────────────
+    public function is_operasional_verified($id) {
+        $row = $this->db->select('status_verifikasi')
+                        ->get_where('tbkmt_operasional', ['id' => $id])
+                        ->row_array();
+        return !empty($row) && (int)$row['status_verifikasi'] === 1;
+    }
+    
+    // ── Log audit ─────────────────────────────────────────────────────
+    private function _log_verif_op($id_op, $aksi, $id_user, $catatan = '') {
+        $kar = $this->db->get_where('tb_karyawan', ['id' => $id_user])->row_array();
+        $this->db->insert('tbkmt_operasional_verifikasi_log', [
+            'id_operasional' => $id_op,
+            'aksi'           => $aksi,
+            'id_user'        => $id_user,
+            'nama_user'      => $kar['nm_karyawan'] ?? '',
+            'catatan'        => $catatan,
+            'created_at'     => date('Y-m-d H:i:s'),
+        ]);
+    }
+    
+    // ── Ambil log verifikasi ──────────────────────────────────────────
+    public function get_log_verif_op($id_op) {
+        return $this->db
+            ->order_by('created_at', 'DESC')
+            ->get_where('tbkmt_operasional_verifikasi_log', ['id_operasional' => $id_op])
+            ->result_array();
+    }
+
     // ================================================================
     // DCA
     // ================================================================
     public function get_dca_list($filter = []) {
         $this->db->select('d.*, w.nama_wilayah,
             (SELECT SUM(dd.total_biaya) FROM tbkmt_dca_detail dd WHERE dd.id_dca = d.id) as total_biaya_detail,
-            (SELECT COUNT(dd.id) FROM tbkmt_dca_detail dd WHERE dd.id_dca = d.id) as jumlah_kegiatan
+            (SELECT COUNT(dd.id)        FROM tbkmt_dca_detail dd WHERE dd.id_dca = d.id) as jumlah_kegiatan,
+            u.nm_karyawan AS nama_verifikator
         ');
         $this->db->from('tbkmt_dca d');
         $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
-        if (!empty($filter['tahun']))      $this->db->where('d.tahun', $filter['tahun']);
-        if (!empty($filter['bulan']))      $this->db->where('d.bulan', $filter['bulan']);
-        if (!empty($filter['id_wilayah'])) $this->db->where('d.id_wilayah', $filter['id_wilayah']);
+        $this->db->join('tb_karyawan u', 'u.id = d.verified_by', 'left');
+    
+        if (!empty($filter['tahun']))             $this->db->where('d.tahun', $filter['tahun']);
+        if (!empty($filter['bulan']))             $this->db->where('d.bulan', $filter['bulan']);
+        if (!empty($filter['id_wilayah']))        $this->db->where('d.id_wilayah', $filter['id_wilayah']);
+        if (isset($filter['status_verifikasi']))  $this->db->where('d.status_verifikasi', $filter['status_verifikasi']);
+    
         $this->db->order_by('d.tanggal_dca', 'DESC');
         return $this->db->get()->result_array();
     }
 
     public function get_dca_by_id($id) {
-        $this->db->select('d.*, w.nama_wilayah');
+        $this->db->select('d.*, w.nama_wilayah,
+            u.nm_karyawan AS nama_verifikator
+        ');
         $this->db->from('tbkmt_dca d');
         $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
+        $this->db->join('tb_karyawan u', 'u.id = d.verified_by', 'left');
         $this->db->where('d.id', $id);
         return $this->db->get()->row_array();
     }
@@ -336,6 +403,82 @@ class M_Kmt extends CI_Model {
 
     public function delete_dca($id) {
         return $this->db->delete('tbkmt_dca', ['id' => $id]);
+    }
+
+    public function _log_verifikasi_public($id_dca, $aksi, $id_user, $catatan = '') {
+        return $this->_log_verifikasi($id_dca, $aksi, $id_user, $catatan);
+    }
+
+    public function verifikasi_dca($id_dca, $id_user, $catatan = '') {
+        $this->db->where('id', $id_dca);
+        $ok = $this->db->update('tbkmt_dca', [
+            'status_verifikasi' => 1,
+            'verified_by'       => $id_user,
+            'verified_at'       => date('Y-m-d H:i:s'),
+            'verified_notes'    => $catatan,
+        ]);
+    
+        if ($ok) {
+            $this->_log_verifikasi($id_dca, 'verifikasi', $id_user, $catatan);
+        }
+        return $ok;
+    }
+    
+    /**
+     * Batalkan verifikasi (kembalikan ke status 0)
+     * Hanya boleh dipanggil oleh level 1 atau level 2
+     */
+    public function batal_verifikasi_dca($id_dca, $id_user, $catatan = '') {
+        $this->db->where('id', $id_dca);
+        $ok = $this->db->update('tbkmt_dca', [
+            'status_verifikasi' => 0,
+            'verified_by'       => null,
+            'verified_at'       => null,
+            'verified_notes'    => null,
+        ]);
+    
+        if ($ok) {
+            $this->_log_verifikasi($id_dca, 'batal_verifikasi', $id_user, $catatan);
+        }
+        return $ok;
+    }
+    
+    /**
+     * Apakah DCA sudah terverifikasi?
+     */
+    public function is_dca_verified($id_dca) {
+        $row = $this->db->select('status_verifikasi')
+                        ->get_where('tbkmt_dca', ['id' => $id_dca])
+                        ->row_array();
+        return !empty($row) && (int)$row['status_verifikasi'] === 1;
+    }
+    
+    /**
+     * Simpan log verifikasi (audit trail)
+     */
+    private function _log_verifikasi($id_dca, $aksi, $id_user, $catatan = '') {
+        // Ambil nama user
+        $user = $this->db->get_where('tb_karyawan', ['id' => $id_user])->row_array();
+        $nama = $user['nm_karyawan'] ?? '';
+    
+        $this->db->insert('tbkmt_dca_verifikasi_log', [
+            'id_dca'     => $id_dca,
+            'aksi'       => $aksi,
+            'id_user'    => $id_user,
+            'nama_user'  => $nama,
+            'catatan'    => $catatan,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+    
+    /**
+     * Ambil log verifikasi untuk 1 DCA
+     */
+    public function get_log_verifikasi($id_dca) {
+        return $this->db
+            ->order_by('created_at', 'DESC')
+            ->get_where('tbkmt_dca_verifikasi_log', ['id_dca' => $id_dca])
+            ->result_array();
     }
 
     public function get_dca_rekap($filter = []) {
@@ -390,7 +533,7 @@ class M_Kmt extends CI_Model {
         $this->db->order_by('abm');
         return $this->db->get()->result_array();
     }
-
+    
     // ================================================================
     // PROMO / PERALATAN
     // ================================================================
