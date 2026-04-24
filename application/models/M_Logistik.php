@@ -2620,55 +2620,131 @@ FROM (
             ->row();
     }
     // model/M_logistik
-   public function get_data_po($date1 = null, $date2 = null)
+
+    public function get_data_po($date1 = null, $date2 = null)
     {
-        $sql = "
-            SELECT
-                pp.no_po,
-                pp.kd_po,
-                MAX(pp.tgl_transaksi) AS tgl_transaksi,
-                pp.kd_suplier,
-                MAX(s.nama_suplier) AS nama_suplier,
-                COUNT(DISTINCT pp.kd_barang) AS jumlah_barang,
-                SUM(CASE 
-                    WHEN COALESCE(sub.qty_masuk, 0) >= pp.qty THEN 1
-                    WHEN COALESCE(sub.qty_masuk, 0) > 0 AND COALESCE(sub.qty_masuk, 0) < pp.qty THEN 1
-                    ELSE 0
-                END) AS jumlah_barang_masuk,
-                MAX(sub.last_input) AS last_input,
-                SUM(pp.qty) AS total_qty_order,
-                SUM(COALESCE(sub.qty_masuk, 0)) AS total_qty_masuk
-            FROM tb_pre_po pp
-            LEFT JOIN tb_suplier s ON s.kd_suplier = pp.kd_suplier
-            LEFT JOIN (
-                SELECT 
-                    no_po, 
-                    kd_po,
-                    kd_barang,
-                    SUM(qty_diterima) AS qty_masuk,
-                    MAX(create_at) AS last_input
-                FROM tb_po_received
-                GROUP BY no_po, kd_po, kd_barang
-            ) sub ON sub.no_po = pp.no_po 
-                AND sub.kd_po = pp.kd_po 
-                AND sub.kd_barang = pp.kd_barang
-            WHERE 1=1
-        ";
+        $sql = "SELECT
+            pp.no_po,
+            pp.kd_po,
+            MAX(pp.tgl_transaksi) AS tgl_transaksi,
+            pp.kd_suplier,
+            MAX(s.nama_suplier) AS nama_suplier,
+            COUNT(pp.kd_barang) AS jumlah_barang,
+            SUM(CASE WHEN COALESCE(sub.qty_masuk,0) > 0 THEN 1 ELSE 0 END) AS jumlah_barang_masuk,
+            MAX(sub.last_input) AS last_input,
+            SUM(pp.qty) AS total_qty_order,
+            SUM(COALESCE(sub.qty_masuk,0)) AS total_qty_masuk,
+            CASE 
+                WHEN SUM(COALESCE(sub.qty_masuk,0)) = 0 THEN 'OPEN'
+                WHEN SUM(COALESCE(sub.qty_masuk,0)) < SUM(pp.qty) THEN 'PARTIAL'
+                ELSE 'CLOSED'
+            END AS status_po
+        FROM tb_pre_po pp
+        LEFT JOIN tb_suplier s 
+            ON s.kd_suplier = pp.kd_suplier
+        LEFT JOIN (
+            SELECT 
+                no_po, 
+                kd_po,
+                kd_barang,
+                SUM(qty_diterima) AS qty_masuk,
+                MAX(create_at) AS last_input
+            FROM tb_po_received
+            GROUP BY no_po, kd_po, kd_barang
+        ) sub 
+            ON sub.no_po = pp.no_po 
+            AND sub.kd_po = pp.kd_po 
+            AND sub.kd_barang = pp.kd_barang
+        WHERE 1=1";
 
         $params = [];
-        
+
         if (!empty($date1) && !empty($date2)) {
-            // Konversi date ke format yang sesuai dengan tgl_transaksi di database
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
+
             $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
 
         $sql .= " GROUP BY pp.no_po, pp.kd_po, pp.kd_suplier";
-        $sql .= " HAVING total_qty_order > total_qty_masuk"; // Hanya yang belum lunas
+        $sql .= " HAVING total_qty_order > total_qty_masuk";
         $sql .= " ORDER BY MAX(pp.tgl_transaksi) DESC, pp.no_po DESC";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function get_lpb($date1 = null, $date2 = null)
+    {
+        $sql = "SELECT
+            po.kd_po,
+            po.tgl_transaksi,
+            po.no_po,
+            po.kdsupp,
+            CASE
+                WHEN po.nm_suplier IS NULL OR po.nm_suplier = '' THEN po.kdsupp
+                ELSE po.nm_suplier
+            END AS nm_suplier,
+            po.total_barang_order,
+            COALESCE(rcv.total_barang_diterima, 0) AS total_barang_diterima,
+            po.total_qty_order,
+            COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
+            CASE
+                WHEN rcv.input_terakhir IS NULL OR rcv.input_terakhir = '' THEN '-'
+                ELSE rcv.input_terakhir
+            END AS input_terakhir,
+            CASE
+                WHEN po.total_qty_order <= 0 THEN 0
+                WHEN COALESCE(rcv.total_qty_diterima, 0) >= po.total_qty_order THEN 100
+                ELSE ROUND((COALESCE(rcv.total_qty_diterima, 0) / po.total_qty_order) * 100, 2)
+            END AS progress_persen,
+            CASE
+                WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 'belum'
+                WHEN COALESCE(rcv.total_qty_diterima, 0) < po.total_qty_order THEN 'partial'
+                ELSE 'done'
+            END AS status
+        FROM (
+            SELECT
+                pp.kd_po,
+                MAX(pp.tgl_transaksi) AS tgl_transaksi,
+                MAX(pp.no_po) AS no_po,
+                MAX(pp.kd_suplier) AS kdsupp,
+                MAX(supp.nama_suplier) AS nm_suplier,
+                COUNT(DISTINCT pp.kd_barang) AS total_barang_order,
+                SUM(pp.qty) AS total_qty_order
+            FROM tb_pre_po pp
+            LEFT JOIN tb_suplier supp
+                ON supp.kd_suplier = pp.kd_suplier
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+
+            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= "
+            GROUP BY pp.kd_po
+        ) po
+        LEFT JOIN (
+            SELECT
+                h.kd_po,
+                COUNT(DISTINCT d.kd_barang) AS total_barang_diterima,
+                SUM(d.qty_diterima) AS total_qty_diterima,
+                MAX(COALESCE(d.input_at, h.input_at)) AS input_terakhir
+            FROM tb_lpb h
+            INNER JOIN tb_lpb_detail d
+                ON d.id_lpb = h.id_lpb
+            GROUP BY h.kd_po
+        ) rcv
+            ON rcv.kd_po = po.kd_po
+        ORDER BY STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC, po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
     }
@@ -2736,7 +2812,7 @@ FROM (
     public function get_detail_by_po($no_po)
     {
         $this->db->select('
-            dl.*,
+            dl.*, 
             mb.nama_barang
         ');
         $this->db->from('tb_po_received dl');
@@ -2749,6 +2825,344 @@ FROM (
         $this->db->order_by('dl.id_detail_lpb', 'ASC');
 
         return $this->db->get()->result_array();
+    }
+
+    public function detail_po_received($nopo, $kdsup)
+    {
+        $sql = "SELECT 
+                a.id_pre_po AS id,
+                a.no_po,
+                a.kd_po,
+                a.kd_barang,
+                b.nama_barang,
+                (b.p * b.l * b.t) AS dimensi_br,
+                a.qty * (b.p * b.l * b.t) AS qty_kecil,
+                a.qty AS qty_besar,
+                a.satuan,
+                a.hrg_satuan,
+                a.harga_total,
+                COALESCE(r.qty_diterima, 0) AS qty_diterima,
+                COALESCE(r.qty_diterima, 0) * (b.p * b.l * b.t) AS qty_kecil_diterima,
+                GREATEST(a.qty - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST(a.qty - COALESCE(r.qty_diterima, 0), 0) * (b.p * b.l * b.t) AS qty_kecil_sisa,
+                COALESCE(r.total_lpb_record, 0) AS total_lpb_record,
+                CASE 
+                    WHEN COALESCE(r.qty_diterima, 0) = 0 THEN 'BELUM'
+                    WHEN COALESCE(r.qty_diterima, 0) < a.qty THEN 'PARTIAL'
+                    ELSE 'FULL'
+                END AS status_barang
+            FROM tb_pre_po a
+            LEFT JOIN tb_master_barang_all b 
+                ON b.kd_barang = a.kd_barang
+            LEFT JOIN (
+                SELECT 
+                    h.no_po,
+                    h.kd_po,
+                    d.kd_barang,
+                    SUM(d.qty_diterima) AS qty_diterima,
+                    COUNT(DISTINCT h.id_lpb) AS total_lpb_record
+                FROM tb_lpb_detail d
+                INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
+                GROUP BY h.no_po, h.kd_po, d.kd_barang
+            ) r 
+                ON r.no_po = a.no_po
+                AND r.kd_po = a.kd_po
+                AND r.kd_barang = a.kd_barang
+            WHERE a.no_po = ?
+                AND a.kd_suplier = ?";
+
+        return $this->db->query($sql, [$nopo, $kdsup])->result_array();
+    }
+
+    public function get_lpb_records_by_kd_po($kd_po)
+    {
+        $sql = "SELECT
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.no_invoice,
+                h.gudang_id,
+                COALESCE(g.nama_gudang, '-') AS nama_gudang,
+                h.keterangan,
+                h.input_at,
+                COUNT(d.id_detail_lpb) AS total_baris,
+                COUNT(DISTINCT d.kd_barang) AS total_item,
+                COALESCE(SUM(d.qty_diterima), 0) AS total_qty
+            FROM tb_lpb h
+            LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+            LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
+            WHERE h.kd_po = ?
+            GROUP BY
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.no_invoice,
+                h.gudang_id,
+                g.nama_gudang,
+                h.keterangan,
+                h.input_at
+            ORDER BY h.input_at DESC, h.id_lpb DESC";
+
+        return $this->db->query($sql, [$kd_po])->result_array();
+    }
+
+    public function get_lpb_record_header($id_lpb)
+    {
+        $sql = "SELECT
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.no_invoice,
+                h.gudang_id,
+                COALESCE(g.nama_gudang, '-') AS nama_gudang,
+                h.keterangan,
+                h.input_at,
+                COUNT(d.id_detail_lpb) AS total_baris,
+                COUNT(DISTINCT d.kd_barang) AS total_item,
+                COALESCE(SUM(d.qty_diterima), 0) AS total_qty
+            FROM tb_lpb h
+            LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+            LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
+            WHERE h.id_lpb = ?
+            GROUP BY
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.no_invoice,
+                h.gudang_id,
+                g.nama_gudang,
+                h.keterangan,
+                h.input_at
+            LIMIT 1";
+
+        return $this->db->query($sql, [$id_lpb])->row_array();
+    }
+
+    public function get_lpb_record_detail_rows($id_lpb)
+    {
+        $sql = "SELECT
+                d.id_detail_lpb,
+                d.id_lpb,
+                d.kd_barang,
+                COALESCE(mb.nama_barang, '-') AS nama_barang,
+                d.qty_diterima,
+                d.no_lot,
+                d.expired_date,
+                d.input_at
+            FROM tb_lpb_detail d
+            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = d.kd_barang
+            WHERE d.id_lpb = ?
+            ORDER BY d.id_detail_lpb ASC";
+
+        return $this->db->query($sql, [$id_lpb])->result_array();
+    }
+
+    public function get_tmp_po_received_item($kd_po, $kd_barang)
+    {
+        return $this->db
+            ->from('tb_tmp_po_received')
+            ->where('kd_po', $kd_po)
+            ->where('kd_barang', $kd_barang)
+            ->order_by('id_tmp_recieved', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function replace_tmp_po_received_item($kd_po, $kd_barang, $rows)
+    {
+        $this->db->where('kd_po', $kd_po);
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->delete('tb_tmp_po_received');
+
+        if (empty($rows)) {
+            return TRUE;
+        }
+
+        return $this->db->insert_batch('tb_tmp_po_received', $rows);
+    }
+
+    public function get_tmp_po_received_summary($no_po, $kd_suplier)
+    {
+        $this->db->select('
+            t.id_tmp_recieved,
+            t.kd_po,
+            t.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            t.qty_diterima,
+            t.satuan,
+            t.no_lot,
+            t.expired_date
+        ');
+        $this->db->from('tb_tmp_po_received t');
+        $this->db->join(
+            'tb_pre_po pp',
+            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+            'inner'
+        );
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = t.kd_barang', 'left');
+        $this->db->where('pp.no_po', $no_po);
+        $this->db->where('t.kd_suplier', $kd_suplier);
+        $this->db->order_by('t.kd_barang', 'ASC');
+        $this->db->order_by('t.id_tmp_recieved', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_tmp_po_received_summary_by_item($kd_po, $kd_barang)
+    {
+        $this->db->select('
+            t.id_tmp_recieved,
+            t.kd_po,
+            t.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            t.qty_diterima,
+            t.satuan,
+            t.no_lot,
+            t.expired_date
+        ');
+        $this->db->from('tb_tmp_po_received t');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = t.kd_barang', 'left');
+        $this->db->where('t.kd_po', $kd_po);
+        $this->db->where('t.kd_barang', $kd_barang);
+        $this->db->order_by('t.id_tmp_recieved', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_po_remaining_qty($no_po, $kd_suplier)
+    {
+        $sql = "
+            SELECT
+                pp.kd_po,
+                pp.kd_barang,
+                pp.qty AS qty_order,
+                COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
+                GREATEST(pp.qty - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa
+            FROM tb_pre_po pp
+            LEFT JOIN (
+                SELECT
+                    h.no_po,
+                    d.kd_barang,
+                    SUM(d.qty_diterima) AS qty_diterima
+                FROM tb_lpb_detail d
+                INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
+                GROUP BY h.no_po, d.kd_barang
+            ) rcv
+                ON rcv.no_po = pp.no_po
+                AND rcv.kd_barang = pp.kd_barang
+            WHERE pp.no_po = ?
+                AND pp.kd_suplier = ?
+        ";
+
+        return $this->db->query($sql, [$no_po, $kd_suplier])->result_array();
+    }
+
+    public function get_po_remaining_qty_by_item($kd_po, $kd_barang)
+    {
+        $sql = "
+            SELECT
+                pp.no_po,
+                pp.kd_suplier,
+                pp.kd_po,
+                pp.kd_barang,
+                pp.qty AS qty_order,
+                COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
+                GREATEST(pp.qty - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa
+            FROM tb_pre_po pp
+            LEFT JOIN (
+                SELECT
+                    h.no_po,
+                    d.kd_barang,
+                    SUM(d.qty_diterima) AS qty_diterima
+                FROM tb_lpb_detail d
+                INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
+                GROUP BY h.no_po, d.kd_barang
+            ) rcv
+                ON rcv.no_po = pp.no_po
+                AND rcv.kd_barang = pp.kd_barang
+            WHERE pp.kd_po = ?
+                AND pp.kd_barang = ?
+            LIMIT 1
+        ";
+
+        return $this->db->query($sql, [$kd_po, $kd_barang])->row_array();
+    }
+
+    public function get_tmp_po_received_posting_rows($no_po, $kd_suplier)
+    {
+        $this->db->select('
+            t.id_tmp_recieved,
+            t.kd_po,
+            t.kd_suplier,
+            t.kd_barang,
+            t.qty_diterima,
+            t.satuan,
+            t.no_lot,
+            t.expired_date
+        ');
+        $this->db->from('tb_tmp_po_received t');
+        $this->db->join(
+            'tb_pre_po pp',
+            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+            'inner'
+        );
+        $this->db->where('pp.no_po', $no_po);
+        $this->db->where('t.kd_suplier', $kd_suplier);
+        $this->db->order_by('t.id_tmp_recieved', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function create_lpb_from_tmp($header, $detailRows)
+    {
+        $headerInsert = [
+            'kd_po'       => $header['kd_po'],
+            'no_po'       => $header['no_po'],
+            'no_invoice'  => $header['no_invoice'],
+            'gudang_id'   => $header['gudang_id'],
+            'keterangan'  => $header['keterangan'],
+            'input_at'    => date('Y-m-d H:i:s')
+        ];
+
+        $this->db->insert('tb_lpb', $headerInsert);
+        $idLpb = $this->db->insert_id();
+
+        if (!$idLpb) {
+            return FALSE;
+        }
+
+        foreach ($detailRows as $row) {
+            $detailInsert = [
+                'id_lpb'        => $idLpb,
+                'kd_barang'     => $row['kd_barang'],
+                'qty_diterima'  => $row['qty_diterima'],
+                'no_lot'        => $row['no_lot'],
+                'expired_date'  => $row['expired_date'],
+                'input_at'      => date('Y-m-d H:i:s')
+            ];
+
+            $this->db->insert('tb_lpb_detail', $detailInsert);
+            $idDetailLpb = $this->db->insert_id();
+
+            if (!$idDetailLpb) {
+                return FALSE;
+            }
+
+            $batchInsert = [
+                'id_detail_lpb' => $idDetailLpb,
+                'no_lot'        => $row['no_lot'],
+                'expired_date'  => $row['expired_date'],
+                'qty'           => $row['qty_diterima']
+            ];
+
+            $this->db->insert('tb_lpb_batch', $batchInsert);
+        }
+
+        $this->db->where('kd_suplier', $header['kd_suplier']);
+        $this->db->where_in('id_tmp_recieved', array_column($detailRows, 'id_tmp_recieved'));
+        $this->db->delete('tb_tmp_po_received');
+
+        return $idLpb;
     }
 
     public function get_riwayat_barang_masuk($date1 = null, $date2 = null)
