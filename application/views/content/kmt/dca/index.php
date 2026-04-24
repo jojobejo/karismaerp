@@ -1,5 +1,5 @@
 <!-- ================================================================
-     views/content/kmt/dca/index.php  — VERSI + VERIFIKASI
+     views/content/kmt/dca/index.php  — PERBAIKAN AKSI + EXPORT DETAIL
 ================================================================ -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
@@ -21,7 +21,9 @@
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
-                            <li class="breadcrumb-item"><a href="<?= base_url('kmt/dashboard') ?>">KMT</a></li>
+                            <li class="breadcrumb-item">
+                                <a href="<?= base_url('kmt/dashboard') ?>">KMT</a>
+                            </li>
                             <li class="breadcrumb-item active">DCA</li>
                         </ol>
                     </div>
@@ -33,10 +35,11 @@
             <div class="container-fluid">
                 <?php $this->load->view('partial/main/alert') ?>
 
-                <!-- ── Tombol aksi ── -->
+                <!-- ── Tombol aksi utama ── -->
                 <div class="mb-3 d-flex justify-content-between flex-wrap gap-2">
                     <div>
-                        <a href="<?= base_url('kmt/dca/tambah') ?>" class="btn btn-info btn-sm">
+                        <a href="<?= base_url('kmt/dca/tambah') ?>"
+                           class="btn btn-info btn-sm">
                             <i class="fas fa-plus mr-1"></i> Tambah DCA
                         </a>
                         <a href="<?= base_url('kmt/dca/rekap')
@@ -47,13 +50,22 @@
                             <i class="fas fa-file-invoice mr-1"></i> Rekapitulasi
                         </a>
                     </div>
-                    <div>
+                    <div class="d-flex gap-1">
+                        <!-- Export ringkasan (seperti semula) -->
                         <a href="<?= base_url('kmt/dca/export')
                                 . '?tahun='      . $tahun
                                 . '&bulan='      . $bulan
                                 . '&id_wilayah=' . $id_wilayah ?>"
                            class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel mr-1"></i> Export Excel
+                            <i class="fas fa-file-excel mr-1"></i> Export Ringkasan
+                        </a>
+                        <!-- Export detail per kegiatan (BARU) -->
+                        <a href="<?= base_url('kmt/dca/export_detail')
+                                . '?tahun='      . $tahun
+                                . '&bulan='      . $bulan
+                                . '&id_wilayah=' . $id_wilayah ?>"
+                           class="btn btn-success btn-sm ml-1">
+                            <i class="fas fa-file-excel mr-1"></i> Export Detail Kegiatan
                         </a>
                     </div>
                 </div>
@@ -64,7 +76,7 @@
                     'show_bulan' => true,
                 ]); ?>
 
-                <!-- ── Filter status verifikasi (khusus level 1 & 2) ── -->
+                <!-- ── Filter status verifikasi (lv 1 & 2) ── -->
                 <?php if ($lv <= 2): ?>
                 <div class="mb-3">
                     <div class="btn-group btn-group-sm" role="group">
@@ -91,7 +103,9 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="info-box bg-info shadow-sm">
-                            <span class="info-box-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                            <span class="info-box-icon">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </span>
                             <div class="info-box-content">
                                 <span class="info-box-text">Total Biaya DCA</span>
                                 <span class="info-box-number">
@@ -103,7 +117,9 @@
                     <?php if ($lv <= 2): ?>
                     <div class="col-md-4">
                         <div class="info-box bg-warning shadow-sm">
-                            <span class="info-box-icon"><i class="fas fa-hourglass-half"></i></span>
+                            <span class="info-box-icon">
+                                <i class="fas fa-hourglass-half"></i>
+                            </span>
                             <div class="info-box-content">
                                 <span class="info-box-text">Menunggu Verifikasi</span>
                                 <span class="info-box-number"><?= $jml_belum ?> data</span>
@@ -112,7 +128,9 @@
                     </div>
                     <div class="col-md-4">
                         <div class="info-box bg-success shadow-sm">
-                            <span class="info-box-icon"><i class="fas fa-check-double"></i></span>
+                            <span class="info-box-icon">
+                                <i class="fas fa-check-double"></i>
+                            </span>
                             <div class="info-box-content">
                                 <span class="info-box-text">Sudah Diverifikasi</span>
                                 <span class="info-box-number"><?= $jml_sudah ?> data</span>
@@ -126,7 +144,8 @@
                 <div class="card card-outline card-info">
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-table mr-1"></i> Daftar DCA — <?= $tahun ?>
+                            <i class="fas fa-table mr-1"></i>
+                            Daftar DCA — <?= $tahun ?>
                         </h3>
                     </div>
                     <div class="card-body p-0">
@@ -156,7 +175,7 @@
                                     $can_edit  = !($lv === 3 && $verified);
                                     $can_hapus = !($verified && $lv > 1);
                                 ?>
-                                <tr class="<?= $verified ? '' : 'table-warning-light' ?>">
+                                <tr>
                                     <td class="align-middle"><?= $i + 1 ?></td>
                                     <td class="align-middle text-nowrap">
                                         <?= date('d/m/Y', strtotime($row['tanggal_dca'])) ?>
@@ -166,14 +185,22 @@
                                             <?= htmlspecialchars($row['nama_wilayah'] ?? '-') ?>
                                         </span>
                                     </td>
-                                    <td class="align-middle"><?= htmlspecialchars($row['nama_mdo'] ?? '-') ?></td>
-                                    <td class="align-middle"><?= htmlspecialchars($row['abm'] ?? '-') ?></td>
-                                    <td class="align-middle"><?= htmlspecialchars($row['uraian']) ?></td>
+                                    <td class="align-middle">
+                                        <?= htmlspecialchars($row['nama_mdo'] ?? '-') ?>
+                                    </td>
+                                    <td class="align-middle">
+                                        <?= htmlspecialchars($row['abm'] ?? '-') ?>
+                                    </td>
+                                    <td class="align-middle">
+                                        <?= htmlspecialchars($row['uraian']) ?>
+                                    </td>
                                     <td class="text-right align-middle">
                                         <?= number_format($row['um'], 0, ',', '.') ?>
                                     </td>
                                     <td class="text-right align-middle text-danger">
-                                        <?= $row['refund'] > 0 ? number_format($row['refund'], 0, ',', '.') : '-' ?>
+                                        <?= $row['refund'] > 0
+                                            ? number_format($row['refund'], 0, ',', '.')
+                                            : '-' ?>
                                     </td>
                                     <td class="text-right align-middle">
                                         <?= number_format($row['real_biaya'], 0, ',', '.') ?>
@@ -182,47 +209,57 @@
                                         <?= number_format($row['total_biaya'], 0, ',', '.') ?>
                                     </td>
 
-                                    <!-- Kolom Status Verifikasi -->
+                                    <!-- Status Verifikasi -->
                                     <td class="text-center align-middle">
                                         <?php if ($verified): ?>
-                                            <span class="badge badge-success"
-                                                  data-toggle="tooltip"
-                                                  title="Oleh: <?= htmlspecialchars($row['nama_verifikator'] ?? '-') ?>&#10;<?= $row['verified_at'] ? date('d/m/Y H:i', strtotime($row['verified_at'])) : '' ?>&#10;<?= htmlspecialchars($row['verified_notes'] ?? '') ?>">
-                                                <i class="fas fa-check-circle mr-1"></i> Terverifikasi
-                                            </span>
+                                        <span class="badge badge-success"
+                                              data-toggle="tooltip"
+                                              title="Oleh: <?= htmlspecialchars($row['nama_verifikator'] ?? '-') ?>&#10;<?= $row['verified_at'] ? date('d/m/Y H:i', strtotime($row['verified_at'])) : '' ?>&#10;<?= htmlspecialchars($row['verified_notes'] ?? '') ?>">
+                                            <i class="fas fa-check-circle mr-1"></i> Terverifikasi
+                                        </span>
                                         <?php else: ?>
-                                            <span class="badge badge-warning text-dark">
-                                                <i class="fas fa-clock mr-1"></i> Menunggu
-                                            </span>
+                                        <span class="badge badge-warning text-dark">
+                                            <i class="fas fa-clock mr-1"></i> Menunggu
+                                        </span>
                                         <?php endif; ?>
                                     </td>
 
-                                    <!-- Kolom Aksi -->
+                                    <!-- ══ KOLOM AKSI — LOGIKA DIPERBAIKI ══ -->
                                     <td class="text-center align-middle text-nowrap">
 
-                                        <!-- Edit: ABM tidak boleh edit data terverifikasi -->
-                                        <?php if ($can_edit): ?>
-                                        <a href="<?= base_url('kmt/dca/edit/' . $row['id']) ?>"
-                                           class="btn btn-xs btn-warning"
-                                           title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <?php else: ?>
-                                        <button class="btn btn-xs btn-secondary"
-                                                title="Tidak dapat diedit — sudah diverifikasi"
-                                                disabled>
-                                            <i class="fas fa-lock"></i>
-                                        </button>
-                                        <?php endif; ?>
+                                        <?php if ($lv === 3): ?>
+                                            <?php if ($can_edit): ?>
+                                            <!-- ABM: belum terverifikasi → edit + hapus -->
+                                            <a href="<?= base_url('kmt/dca/edit/' . $row['id']) ?>"
+                                               class="btn btn-xs btn-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="<?= base_url('kmt/dca/hapus/' . $row['id']) ?>"
+                                               class="btn btn-xs btn-danger btn-hapus" title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                            <?php else: ?>
+                                            <!-- ABM: sudah terverifikasi → HANYA LIHAT (sama seperti operasional) -->
+                                            <a href="<?= base_url('kmt/dca/edit/' . $row['id']) ?>"
+                                               class="btn btn-xs btn-info" title="Lihat Detail">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <?php endif; ?>
 
-                                        <!-- Tombol Verifikasi (khusus level 1 & 2) -->
-                                        <?php if ($lv <= 2): ?>
+                                        <?php else: ?>
+                                            <!-- lv 1 & 2: selalu bisa edit -->
+                                            <a href="<?= base_url('kmt/dca/edit/' . $row['id']) ?>"
+                                               class="btn btn-xs btn-warning" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <!-- Tombol Verifikasi / Batal -->
                                             <?php if (!$verified): ?>
                                             <button type="button"
                                                     class="btn btn-xs btn-success btn-verifikasi"
                                                     data-id="<?= $row['id'] ?>"
                                                     data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
-                                                    title="Verifikasi data ini">
+                                                    title="Verifikasi">
                                                 <i class="fas fa-check"></i> Verifikasi
                                             </button>
                                             <?php else: ?>
@@ -230,19 +267,18 @@
                                                     class="btn btn-xs btn-outline-danger btn-batal-verifikasi"
                                                     data-id="<?= $row['id'] ?>"
                                                     data-uraian="<?= htmlspecialchars($row['uraian']) ?>"
-                                                    title="Batalkan verifikasi">
+                                                    title="Batalkan Verifikasi">
                                                 <i class="fas fa-undo"></i> Batal
                                             </button>
                                             <?php endif; ?>
-                                        <?php endif; ?>
 
-                                        <!-- Hapus: tidak boleh hapus data terverifikasi (kecuali super) -->
-                                        <?php if ($can_hapus): ?>
-                                        <a href="<?= base_url('kmt/dca/hapus/' . $row['id']) ?>"
-                                           class="btn btn-xs btn-danger btn-hapus"
-                                           title="Hapus">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
+                                            <!-- Hapus: hanya jika belum terverifikasi -->
+                                            <?php if ($can_hapus): ?>
+                                            <a href="<?= base_url('kmt/dca/hapus/' . $row['id']) ?>"
+                                               class="btn btn-xs btn-danger btn-hapus" title="Hapus">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                            <?php endif; ?>
                                         <?php endif; ?>
 
                                     </td>
@@ -263,9 +299,9 @@
                     </div>
                 </div>
 
-            </div><!-- /.container-fluid -->
+            </div>
         </section>
-    </div><!-- /.content-wrapper -->
+    </div>
 
     <footer class="main-footer">
         <strong>Copyright &copy; 2022
@@ -275,12 +311,9 @@
         <div class="float-right d-none d-sm-inline-block"><b>Version</b> 1.0</div>
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
-</div><!-- /.wrapper -->
+</div>
 
-
-<!-- ================================================================
-     Modal Verifikasi
-================================================================ -->
+<!-- Modal Verifikasi -->
 <div class="modal fade" id="modalVerifikasi" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -288,20 +321,18 @@
                 <h5 class="modal-title">
                     <i class="fas fa-check-circle mr-2"></i> Konfirmasi Verifikasi
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="mb-2">
-                    Anda akan memverifikasi data DCA:
+                    Verifikasi data DCA:
                     <strong id="verif-uraian" class="text-info"></strong>
                 </p>
                 <p class="text-muted small mb-3">
-                    Setelah diverifikasi, ABM tidak dapat mengedit data ini lagi.
+                    Setelah diverifikasi, ABM hanya dapat melihat data ini.
                 </p>
                 <div class="form-group mb-0">
-                    <label class="small">Catatan (opsional)</label>
+                    <label class="small">Catatan <span class="text-muted">(opsional)</span></label>
                     <textarea id="verif-catatan" class="form-control form-control-sm"
                               rows="2" placeholder="Misal: Bukti lengkap, nominal sesuai..."></textarea>
                 </div>
@@ -326,9 +357,7 @@
                 <h5 class="modal-title">
                     <i class="fas fa-undo mr-2"></i> Batalkan Verifikasi
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="mb-2">
@@ -336,10 +365,13 @@
                     <strong id="batal-uraian" class="text-danger"></strong>
                 </p>
                 <p class="text-muted small mb-3">
-                    Data akan kembali ke status <em>Belum Diverifikasi</em> dan ABM dapat mengedit lagi.
+                    Data akan kembali ke status <em>Belum Diverifikasi</em>
+                    dan ABM dapat mengedit kembali.
                 </p>
                 <div class="form-group mb-0">
-                    <label class="small">Alasan pembatalan <span class="text-danger">*</span></label>
+                    <label class="small">
+                        Alasan pembatalan <span class="text-danger">*</span>
+                    </label>
                     <textarea id="batal-catatan" class="form-control form-control-sm"
                               rows="2" placeholder="Tulis alasan pembatalan..."></textarea>
                 </div>
@@ -356,49 +388,40 @@
     </div>
 </div>
 
-
-<!-- ================================================================
-     JavaScript
-================================================================ -->
 <script>
 $(function () {
 
-    // Inisialisasi DataTable
-    var table = $('#tblDca').DataTable({
-        responsive : true,
-        pageLength : 25,
-        order      : [[1, 'desc']],
-        columnDefs : [
+    $('#tblDca').DataTable({
+        responsive  : true,
+        pageLength  : 25,
+        order       : [[1, 'desc']],
+        columnDefs  : [
             { targets: [6,7,8,9], className: 'dt-right' },
             { targets: [10,11],   orderable: false }
         ],
         language: { url: '<?= base_url('assets/plugins/datatables/id.json') ?>' }
     });
 
-    // Tooltip Bootstrap
     $('[data-toggle="tooltip"]').tooltip({ html: true });
 
-    // ── Konfirmasi hapus ──────────────────────────────────────────
+    // ── Hapus ────────────────────────────────────────────────────
     $(document).on('click', '.btn-hapus', function (e) {
         e.preventDefault();
         var url = $(this).attr('href');
         Swal.fire({
-            title: 'Hapus data ini?',
-            icon : 'warning',
-            showCancelButton    : true,
-            confirmButtonColor  : '#d33',
-            confirmButtonText   : 'Ya, Hapus!',
-            cancelButtonText    : 'Batal'
+            title: 'Hapus data ini?', icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal'
         }).then(r => { if (r.isConfirmed) window.location.href = url; });
     });
 
-    // ── Verifikasi ────────────────────────────────────────────────
-    var pendingId   = null;
-    var pendingAksi = null;
+    // ── Verifikasi ───────────────────────────────────────────────
+    var pendingId = null;
 
     $(document).on('click', '.btn-verifikasi', function () {
-        pendingId   = $(this).data('id');
-        pendingAksi = 'verifikasi';
+        pendingId = $(this).data('id');
         $('#verif-uraian').text($(this).data('uraian'));
         $('#verif-catatan').val('');
         $('#modalVerifikasi').modal('show');
@@ -410,7 +433,7 @@ $(function () {
         $('#modalVerifikasi').modal('hide');
     });
 
-    // ── Batal Verifikasi ──────────────────────────────────────────
+    // ── Batal Verifikasi ─────────────────────────────────────────
     $(document).on('click', '.btn-batal-verifikasi', function () {
         pendingId = $(this).data('id');
         $('#batal-uraian').text($(this).data('uraian'));
@@ -429,12 +452,11 @@ $(function () {
         $('#modalBatalVerif').modal('hide');
     });
 
-    // ── AJAX verifikasi / batal ───────────────────────────────────
     function kirimVerifikasi(id, aksi, catatan) {
         $.ajax({
-            url    : '<?= base_url('kmt/dca/ajax_verifikasi') ?>',
-            method : 'POST',
-            data   : {
+            url   : '<?= base_url('kmt/dca/ajax_verifikasi') ?>',
+            method: 'POST',
+            data  : {
                 id     : id,
                 aksi   : aksi,
                 catatan: catatan,
@@ -446,11 +468,8 @@ $(function () {
                     var r = JSON.parse(res);
                     if (r.status === 'ok') {
                         Swal.fire({
-                            icon : 'success',
-                            title: 'Berhasil',
-                            text : r.msg,
-                            timer: 1800,
-                            showConfirmButton: false
+                            icon: 'success', title: 'Berhasil', text: r.msg,
+                            timer: 1800, showConfirmButton: false
                         }).then(() => location.reload());
                     } else {
                         Swal.fire('Gagal', r.msg, 'error');
@@ -460,10 +479,9 @@ $(function () {
                 }
             },
             error: function () {
-                Swal.fire('Error', 'Koneksi gagal. Periksa jaringan Anda.', 'error');
+                Swal.fire('Error', 'Koneksi gagal.', 'error');
             }
         });
     }
-
 });
 </script>

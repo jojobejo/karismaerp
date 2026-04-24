@@ -304,6 +304,10 @@ class M_Kmt extends CI_Model {
         return $this->db->delete('tbkmt_operasional', ['id' => $id]);
     }
 
+    public function _log_verif_op_public($id_op, $aksi, $id_user, $catatan = '') {
+        return $this->_log_verif_op($id_op, $aksi, $id_user, $catatan);
+    }
+
     public function verifikasi_operasional($id, $id_user, $catatan = '') {
         $this->db->where('id', $id);
         $ok = $this->db->update('tbkmt_operasional', [
@@ -482,41 +486,47 @@ class M_Kmt extends CI_Model {
     }
 
     public function get_dca_rekap($filter = []) {
-        // Header DCA
         $this->db->select('
             d.id, d.tanggal_dca, d.bulan, d.tahun,
-            d.abm, d.nama_mdo, d.um, d.refund, d.real_biaya, d.total_biaya,
-            w.nama_wilayah
+            d.abm, d.nama_mdo, d.uraian,
+            d.um, d.refund, d.real_biaya, d.total_biaya,
+            d.status_verifikasi, d.verified_at, d.verified_notes,
+            w.nama_wilayah,
+            k.nm_karyawan AS nama_verifikator
         ');
         $this->db->from('tbkmt_dca d');
         $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
+        $this->db->join('tb_karyawan k',   'k.id = d.verified_by', 'left');
+    
         if (!empty($filter['tahun']))      $this->db->where('d.tahun', $filter['tahun']);
         if (!empty($filter['bulan']))      $this->db->where('d.bulan', $filter['bulan']);
         if (!empty($filter['id_wilayah'])) $this->db->where('d.id_wilayah', $filter['id_wilayah']);
         if (!empty($filter['abm']))        $this->db->where('d.abm', $filter['abm']);
+    
         $this->db->order_by('d.abm, d.nama_mdo, d.tanggal_dca');
         $headers = $this->db->get()->result_array();
     
         if (empty($headers)) return [];
     
-        // Ambil semua detail sekaligus
+        // ── Ambil semua detail sekaligus ────────────────────────────
         $ids = array_column($headers, 'id');
         $this->db->select('
             dd.id_dca, dd.nama_kegiatan, dd.tgl_kegiatan, dd.tgl_kasbon,
-            dd.jml_peserta, dd.qty_bisi, dd.qty_q235, dd.real_biaya
+            dd.jml_peserta, dd.qty_bisi, dd.qty_q235,
+            dd.real_biaya, dd.total_biaya, dd.keterangan
         ');
         $this->db->from('tbkmt_dca_detail dd');
         $this->db->where_in('dd.id_dca', $ids);
         $this->db->order_by('dd.id_dca, dd.nama_kegiatan');
         $details = $this->db->get()->result_array();
     
-        // Kelompokkan detail per id_dca
+        // ── Kelompokkan detail per id_dca ────────────────────────────
         $detail_map = [];
         foreach ($details as $d) {
             $detail_map[$d['id_dca']][] = $d;
         }
     
-        // Gabungkan
+        // ── Gabungkan header + detail ────────────────────────────────
         foreach ($headers as &$h) {
             $h['detail'] = $detail_map[$h['id']] ?? [];
         }

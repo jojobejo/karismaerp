@@ -159,26 +159,30 @@ class Dca extends CI_Controller {
     public function edit($id) {
         $row = $this->M_Kmt->get_dca_by_id($id);
         if (!$row) { show_404(); return; }
- 
-        // ABM (level 3) tidak boleh edit jika sudah diverifikasi
-        if ($this->is_abm() && (int)$row['status_verifikasi'] === 1) {
-            $this->session->set_flashdata('error',
-                'Data ini sudah diverifikasi oleh Adm Keuangan dan tidak dapat diedit.');
+    
+        $lv          = $this->get_lv();
+        $is_verified = (int)($row['status_verifikasi'] ?? 0) === 1;
+    
+        // ABM hanya bisa akses data wilayahnya sendiri
+        if ($lv === 3 && $row['id_wilayah'] != $this->session->userdata('wilayah')) {
+            $this->session->set_flashdata('error', 'Anda tidak bisa mengakses data wilayah lain.');
             redirect('kmt/dca');
             return;
         }
- 
+    
         $data = [
-            'page_title'      => 'Edit Data DCA',
+            'page_title'      => ($lv === 3 && $is_verified)
+                                    ? 'Lihat Data DCA'
+                                    : 'Edit Data DCA',
             'row'             => $row,
             'detail'          => $this->M_Kmt->get_dca_detail($id),
             'kegiatan_list'   => $this->M_Kmt->get_dca_kegiatan(),
             'wilayah_list'    => $this->M_Kmt->get_wilayah(),
             'log_verifikasi'  => $this->M_Kmt->get_log_verifikasi($id),
-            'lv'              => $this->get_lv(),
+            'lv'              => $lv,
             'id_wilayah_user' => $this->session->userdata('wilayah'),
         ];
- 
+    
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kmt/dca/form', $data);
         $this->load->view('partial/main/footer.php');
@@ -827,6 +831,318 @@ class Dca extends CI_Controller {
     
         $periode_str = ($bulan ? 'Bln'.$bulan.'_' : '') . $tahun;
         $filename = 'Rekap_DCA_KMT_' . $periode_str . '.xlsx';
+    
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+    
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function export_detail() {
+        $tahun      = $this->input->get('tahun')      ?? date('Y');
+        $bulan      = $this->input->get('bulan')      ?? '';
+        $id_wilayah = $this->input->get('id_wilayah') ?? $this->get_id_wilayah_filter();
+        $abm        = $this->input->get('abm')        ?? '';
+    
+        $filter = ['tahun' => $tahun];
+        if ($bulan)      $filter['bulan']      = $bulan;
+        if ($id_wilayah) $filter['id_wilayah'] = $id_wilayah;
+        if ($abm)        $filter['abm']        = $abm;
+    
+        // Ambil data rekap (header + detail sudah digabung)
+        $rekap_data = $this->M_Kmt->get_dca_rekap($filter);
+    
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet       = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Detail Kegiatan DCA');
+    
+        // ── Gaya umum ────────────────────────────────────────────────
+        $BLACK    = '000000';
+        $WHITE    = 'FFFFFF';
+        $BLUE     = '1F3864';
+        $LBLUE    = 'BDD7EE';  // biru muda untuk header group
+        $YELLOW   = 'FFF2CC';  // kuning muda untuk baris header DCA
+        $GREEN    = 'E2EFDA';  // hijau muda untuk subtotal
+        $num_fmt  = '#,##0';
+        $date_fmt = 'DD/MM/YYYY';
+    
+        $styleHeaderMain = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => $WHITE], 'name' => 'Arial', 'size' => 10],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $BLUE]],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
+            'borders'   => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => $BLACK]]],
+        ];
+        $styleHeaderDca = [
+            'font'      => ['bold' => true, 'name' => 'Arial', 'size' => 9],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $YELLOW]],
+            'alignment' => ['vertical' => 'center'],
+            'borders'   => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => $BLACK]]],
+        ];
+        $styleDetail = [
+            'font'      => ['name' => 'Arial', 'size' => 9],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $WHITE]],
+            'alignment' => ['vertical' => 'center'],
+            'borders'   => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => $BLACK]]],
+        ];
+        $styleSubtotal = [
+            'font'      => ['bold' => true, 'name' => 'Arial', 'size' => 9],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $GREEN]],
+            'alignment' => ['vertical' => 'center'],
+            'borders'   => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => $BLACK]]],
+        ];
+        $styleVerifBadge = [
+            'font'  => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 9],
+            'fill'  => ['fillType' => 'solid', 'startColor' => ['rgb' => '28A745']],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ];
+        $styleBelumVerif = [
+            'font'  => ['bold' => true, 'color' => ['rgb' => $BLACK], 'size' => 9],
+            'fill'  => ['fillType' => 'solid', 'startColor' => ['rgb' => 'FFC107']],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ];
+    
+        // ── Judul ────────────────────────────────────────────────────
+        $sheet->mergeCells('A1:N1');
+        $sheet->setCellValue('A1', 'DETAIL KEGIATAN DCA KMT CORN');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font'      => ['bold' => true, 'size' => 14, 'name' => 'Arial'],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+    
+        $nama_bulan_map = ['','Januari','Februari','Maret','April','Mei','Juni',
+                        'Juli','Agustus','September','Oktober','November','Desember'];
+        $periode_str = ($bulan ? $nama_bulan_map[(int)$bulan] . ' ' : '') . $tahun;
+    
+        $sheet->mergeCells('A2:N2');
+        $sheet->setCellValue('A2', 'Periode: ' . $periode_str
+            . ($id_wilayah ? '' : ' | Semua Wilayah')
+            . ($abm        ? ' | ABM: ' . $abm : ''));
+        $sheet->getStyle('A2')->applyFromArray([
+            'font'      => ['size' => 10, 'name' => 'Arial'],
+            'alignment' => ['horizontal' => 'center'],
+        ]);
+        $sheet->getRowDimension(2)->setRowHeight(16);
+    
+        // ── Header kolom (row 4) ─────────────────────────────────────
+        $headers = [
+            'A' => 'No',
+            'B' => 'Tanggal DCA',
+            'C' => 'Wilayah',
+            'D' => 'ABM',
+            'E' => 'MDO',
+            'F' => 'Nama Kegiatan',
+            'G' => 'Tgl Kegiatan',
+            'H' => 'Tgl Kasbon',
+            'I' => 'Jml Peserta',
+            'J' => 'Qty Bisi 959\n(20x1Kg)',
+            'K' => 'Qty Q-235\n(10x1Kg)',
+            'L' => 'Qty Total\nTerjual',
+            'M' => 'Real Biaya (Rp)',
+            'N' => 'Status',
+        ];
+    
+        foreach ($headers as $col => $h) {
+            $sheet->setCellValue($col . '4', $h);
+            $sheet->getStyle($col . '4')->applyFromArray($styleHeaderMain);
+        }
+        $sheet->getRowDimension(4)->setRowHeight(36);
+    
+        // ── Lebar kolom ──────────────────────────────────────────────
+        $col_widths = [
+            'A' =>  5, 'B' => 13, 'C' => 16, 'D' => 18, 'E' => 18,
+            'F' => 30, 'G' => 13, 'H' => 13, 'I' =>  9,
+            'J' => 15, 'K' => 15, 'L' => 15, 'M' => 16, 'N' => 18,
+        ];
+        foreach ($col_widths as $col => $w) {
+            $sheet->getColumnDimension($col)->setWidth($w);
+        }
+    
+        // ── Isi data ─────────────────────────────────────────────────
+        $r      = 5;
+        $no_urut = 1;
+    
+        foreach ($rekap_data as $dca) {
+            $verified     = (int)($dca['status_verifikasi'] ?? 0) === 1;
+            $tgl_dca      = date('d/m/Y', strtotime($dca['tanggal_dca']));
+            $detail_list  = $dca['detail'] ?? [];
+    
+            if (empty($detail_list)) {
+                // DCA tanpa detail — tetap tampilkan 1 baris kosong
+                $sheet->setCellValue('A' . $r, $no_urut++);
+                $sheet->setCellValue('B' . $r, $tgl_dca);
+                $sheet->setCellValue('C' . $r, $dca['nama_wilayah'] ?? '-');
+                $sheet->setCellValue('D' . $r, $dca['abm'] ?? '-');
+                $sheet->setCellValue('E' . $r, $dca['nama_mdo'] ?? '-');
+                $sheet->setCellValue('F' . $r, '(tidak ada detail)');
+                $sheet->setCellValue('N' . $r, $verified ? 'Terverifikasi' : 'Belum Verifikasi');
+                $sheet->getStyle("A{$r}:N{$r}")->applyFromArray($styleDetail);
+                $sheet->getStyle("N{$r}")->applyFromArray($verified ? $styleVerifBadge : $styleBelumVerif);
+                $sheet->getRowDimension($r)->setRowHeight(16);
+                $r++;
+                continue;
+            }
+    
+            // Baris header DCA (warna kuning muda) — tampilkan info header
+            $sheet->mergeCells("A{$r}:E{$r}");
+            $sheet->setCellValue("A{$r}",
+                'DCA ' . $tgl_dca
+                . ' | ' . ($dca['nama_wilayah'] ?? '-')
+                . ' | ABM: ' . ($dca['abm'] ?? '-')
+                . ' | MDO: ' . ($dca['nama_mdo'] ?? '-')
+                . ' | UM: Rp ' . number_format($dca['um'] ?? 0, 0, '.', '.')
+            );
+            $sheet->mergeCells("F{$r}:L{$r}");
+            $sheet->setCellValue("F{$r}", 'Uraian: ' . ($dca['uraian'] ?? '-'));
+            $sheet->setCellValue("M{$r}", $dca['total_biaya'] ?? 0);
+            $sheet->setCellValue("N{$r}", $verified ? 'Terverifikasi' : 'Belum Verifikasi');
+    
+            $sheet->getStyle("A{$r}:N{$r}")->applyFromArray($styleHeaderDca);
+            $sheet->getStyle("M{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+            $sheet->getStyle("M{$r}")->getAlignment()->setHorizontal('right');
+            $sheet->getStyle("N{$r}")->applyFromArray($verified ? $styleVerifBadge : $styleBelumVerif);
+            $sheet->getRowDimension($r)->setRowHeight(18);
+            $r++;
+    
+            // Baris detail per kegiatan
+            $sub_bisi = $sub_q235 = $sub_peserta = $sub_biaya = 0;
+    
+            foreach ($detail_list as $det) {
+                $qty_total = ($det['qty_bisi'] ?? 0) + ($det['qty_q235'] ?? 0);
+    
+                $sheet->setCellValue("A{$r}", $no_urut++);
+                $sheet->setCellValue("B{$r}", $tgl_dca);
+                $sheet->setCellValue("C{$r}", $dca['nama_wilayah'] ?? '-');
+                $sheet->setCellValue("D{$r}", $dca['abm'] ?? '-');
+                $sheet->setCellValue("E{$r}", $dca['nama_mdo'] ?? '-');
+                $sheet->setCellValue("F{$r}", $det['nama_kegiatan'] ?? '-');
+    
+                // Tanggal kegiatan
+                if (!empty($det['tgl_kegiatan'])) {
+                    $sheet->setCellValue("G{$r}", \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
+                        strtotime($det['tgl_kegiatan'])
+                    ));
+                    $sheet->getStyle("G{$r}")->getNumberFormat()->setFormatCode($date_fmt);
+                } else {
+                    $sheet->setCellValue("G{$r}", '-');
+                }
+    
+                // Tanggal kasbon
+                if (!empty($det['tgl_kasbon'])) {
+                    $sheet->setCellValue("H{$r}", \PhpOffice\PhpSpreadsheet\Shared\Date::PHPToExcel(
+                        strtotime($det['tgl_kasbon'])
+                    ));
+                    $sheet->getStyle("H{$r}")->getNumberFormat()->setFormatCode($date_fmt);
+                } else {
+                    $sheet->setCellValue("H{$r}", '-');
+                }
+    
+                $sheet->setCellValue("I{$r}", (int)($det['jml_peserta'] ?? 0));
+                $sheet->setCellValue("J{$r}", (float)($det['qty_bisi']  ?? 0));
+                $sheet->setCellValue("K{$r}", (float)($det['qty_q235']  ?? 0));
+                $sheet->setCellValue("L{$r}", $qty_total);
+                $sheet->setCellValue("M{$r}", (float)($det['real_biaya'] ?? 0));
+                $sheet->setCellValue("N{$r}", $verified ? 'Terverifikasi' : 'Belum Verifikasi');
+    
+                $sheet->getStyle("A{$r}:N{$r}")->applyFromArray($styleDetail);
+    
+                // Format angka kolom numerik
+                foreach (['I','J','K','L'] as $nc) {
+                    $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                    $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+                }
+                $sheet->getStyle("M{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                $sheet->getStyle("M{$r}")->getAlignment()->setHorizontal('right');
+                $sheet->getStyle("N{$r}")->applyFromArray($verified ? $styleVerifBadge : $styleBelumVerif);
+    
+                // Keterangan di kolom F jika ada
+                if (!empty($det['keterangan'])) {
+                    $sheet->getComment("F{$r}")->getText()->createTextRun($det['keterangan']);
+                }
+    
+                $sheet->getRowDimension($r)->setRowHeight(15);
+    
+                $sub_bisi    += (float)($det['qty_bisi']  ?? 0);
+                $sub_q235    += (float)($det['qty_q235']  ?? 0);
+                $sub_peserta += (int)($det['jml_peserta'] ?? 0);
+                $sub_biaya   += (float)($det['real_biaya'] ?? 0);
+                $r++;
+            }
+    
+            // Baris subtotal per DCA (hijau muda)
+            $sheet->mergeCells("A{$r}:E{$r}");
+            $sheet->setCellValue("A{$r}", 'SUBTOTAL DCA ' . $tgl_dca
+                . ' — ' . ($dca['nama_mdo'] ?? '-'));
+            $sheet->setCellValue("I{$r}", $sub_peserta);
+            $sheet->setCellValue("J{$r}", $sub_bisi);
+            $sheet->setCellValue("K{$r}", $sub_q235);
+            $sheet->setCellValue("L{$r}", $sub_bisi + $sub_q235);
+            $sheet->setCellValue("M{$r}", $sub_biaya);
+            $sheet->setCellValue("N{$r}", '');
+    
+            $sheet->getStyle("A{$r}:N{$r}")->applyFromArray($styleSubtotal);
+            foreach (['I','J','K','L','M'] as $nc) {
+                $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+                $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+            }
+            $sheet->getRowDimension($r)->setRowHeight(18);
+            $r++;
+        }
+    
+        // ── Grand Total ───────────────────────────────────────────────
+        // Hitung ulang dari $rekap_data
+        $gt_bisi = $gt_q235 = $gt_peserta = $gt_biaya = 0;
+        foreach ($rekap_data as $dca) {
+            foreach ($dca['detail'] ?? [] as $det) {
+                $gt_bisi    += (float)($det['qty_bisi']   ?? 0);
+                $gt_q235    += (float)($det['qty_q235']   ?? 0);
+                $gt_peserta += (int)($det['jml_peserta']  ?? 0);
+                $gt_biaya   += (float)($det['real_biaya'] ?? 0);
+            }
+        }
+    
+        $sheet->mergeCells("A{$r}:H{$r}");
+        $sheet->setCellValue("A{$r}", 'GRAND TOTAL');
+        $sheet->setCellValue("I{$r}", $gt_peserta);
+        $sheet->setCellValue("J{$r}", $gt_bisi);
+        $sheet->setCellValue("K{$r}", $gt_q235);
+        $sheet->setCellValue("L{$r}", $gt_bisi + $gt_q235);
+        $sheet->setCellValue("M{$r}", $gt_biaya);
+    
+        $styleGrandTotal = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => $WHITE], 'name' => 'Arial', 'size' => 10],
+            'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => $BLUE]],
+            'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
+            'borders'   => ['allBorders' => ['borderStyle' => 'medium', 'color' => ['rgb' => $BLACK]]],
+        ];
+        $sheet->getStyle("A{$r}:N{$r}")->applyFromArray($styleGrandTotal);
+        foreach (['I','J','K','L','M'] as $nc) {
+            $sheet->getStyle("{$nc}{$r}")->getNumberFormat()->setFormatCode($num_fmt);
+            $sheet->getStyle("{$nc}{$r}")->getAlignment()->setHorizontal('right');
+        }
+        $sheet->getRowDimension($r)->setRowHeight(22);
+    
+        // ── Freeze & Page setup ───────────────────────────────────────
+        $sheet->freezePane('A5');
+        $sheet->getPageSetup()->setOrientation('landscape');
+        $sheet->getPageSetup()->setFitToPage(true);
+        $sheet->getPageSetup()->setFitToWidth(1);
+        $sheet->getPageSetup()->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A3);
+    
+        // Header print
+        $sheet->getHeaderFooter()->setOddHeader(
+            '&C&B&14DETAIL KEGIATAN DCA KMT CORN — ' . $periode_str
+        );
+        $sheet->getHeaderFooter()->setOddFooter(
+            '&LDicetak: ' . date('d/m/Y H:i') . '&RHalaman &P dari &N'
+        );
+    
+        // ── Output file ───────────────────────────────────────────────
+        $periode_file = ($bulan ? 'Bln' . $bulan . '_' : '') . $tahun;
+        $filename     = 'Detail_Kegiatan_DCA_KMT_' . $periode_file . '.xlsx';
     
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
