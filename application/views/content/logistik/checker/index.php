@@ -386,8 +386,8 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = in_array($role, ['ADMLOG','CHECKER','MANAGERCK']);
-                        // +1 kolom Pintu → 11 kolom biasa, 12 dengan aksi
-                        $colspan_lk  = $has_aksi_lk ? 12 : 11;
+                        // +2 kolom Pintu & DO Selesai → 12 kolom biasa, 13 dengan aksi
+                        $colspan_lk  = $has_aksi_lk ? 13 : 12;
                         $lk_aktif   = array_filter($list_lk, fn($r) => $r['status'] === 'PROSES_LOADING');
                         $lk_pending = array_filter($list_lk, fn($r) => in_array($r['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI']));
                         $lk_done    = array_filter($list_lk, fn($r) => $r['status'] === 'DONE');
@@ -414,6 +414,15 @@ tr.row-pending { background:#fafafa !important; }
                             <td class="text-center">
                                 <?php if (!empty($lk['pintu'])): ?>
                                     <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$lk['pintu']-1] ?? 'P'.$lk['pintu'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if (!empty($lk['waktu_do_selesai'])): ?>
+                                    <small class="text-warning font-weight-bold">
+                                        <i class="fas fa-file-alt mr-1"></i><?= date('d/m H:i', strtotime($lk['waktu_do_selesai'])) ?>
+                                    </small>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
@@ -474,7 +483,7 @@ tr.row-pending { background:#fafafa !important; }
                             <thead class="thead-dark text-center">
                                 <tr>
                                     <th>#</th><th>Kode</th><th>Keterangan</th><th>Tgl</th><th>Checker</th>
-                                    <th>Pintu</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
+                                    <th>Pintu</th><th>Wkt DO Selesai</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
                                     <?php if ($has_aksi_lk): ?><th class="text-center">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -505,8 +514,8 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = in_array($role, ['ADMLOG','CHECKER','MANAGERCK']);
-                        // +1 kolom Pintu → 11 kolom biasa, 12 dengan aksi
-                        $colspan_kk  = $has_aksi_kk ? 12 : 11;
+                        // +2 kolom Pintu & DO Selesai → 12 kolom biasa, 13 dengan aksi
+                        $colspan_kk  = $has_aksi_kk ? 13 : 12;
                         $kk_aktif   = array_filter($list_kk, fn($r) => $r['status'] === 'PROSES_LOADING');
                         $kk_pending = array_filter($list_kk, fn($r) => in_array($r['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI']));
                         $kk_done    = array_filter($list_kk, fn($r) => $r['status'] === 'DONE');
@@ -533,6 +542,15 @@ tr.row-pending { background:#fafafa !important; }
                             <td class="text-center">
                                 <?php if (!empty($kk['pintu'])): ?>
                                     <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$kk['pintu']-1] ?? 'P'.$kk['pintu'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-center">
+                                <?php if (!empty($kk['waktu_do_selesai'])): ?>
+                                    <small class="text-warning font-weight-bold">
+                                        <i class="fas fa-file-alt mr-1"></i><?= date('d/m H:i', strtotime($kk['waktu_do_selesai'])) ?>
+                                    </small>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
@@ -593,7 +611,7 @@ tr.row-pending { background:#fafafa !important; }
                             <thead class="thead-dark text-center">
                                 <tr>
                                     <th>#</th><th>Kode</th><th>Keterangan</th><th>Tgl</th><th>Checker</th>
-                                    <th>Pintu</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
+                                    <th>Pintu</th><th>Wkt DO Selesai</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
                                     <?php if ($has_aksi_kk): ?><th class="text-center">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>

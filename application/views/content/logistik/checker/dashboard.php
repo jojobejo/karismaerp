@@ -377,6 +377,11 @@ function dashboardColumns($wait, $proses, $done, $type)
                                 $badge_cls = $badge_map[$item['status']] ?? 'badge-secondary';
                                 ?>
                                 <span class="badge <?= $badge_cls ?> mt-1"><?= statusLabel($item['status']) ?></span>
+                                <?php if ($item['status'] === 'DO_SELESAI' && !empty($item['waktu_do_selesai'])): ?>
+                                    <div class="mt-1" style="font-size:11px; font-weight:600; color:#856404;">
+                                        <i class="fas fa-file-alt mr-1"></i>DO: <?= date('d/m H:i', strtotime($item['waktu_do_selesai'])) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -440,6 +445,12 @@ function dashboardColumns($wait, $proses, $done, $type)
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
+                                <!-- Waktu DO selesai (hanya LK & KK yang sudah proses loading) -->
+                                <?php if ($type !== 'bongkar' && !empty($item['waktu_do_selesai'])): ?>
+                                    <div class="item-time" style="color:#856404; font-weight:600;">
+                                        <i class="fas fa-file-alt mr-1"></i>DO Selesai: <?= date('H:i', strtotime($item['waktu_do_selesai'])) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <!-- Persentase -->
                             <span class="badge badge-warning badge-persen ml-2 align-self-start"><?= $progres ?>%</span>
@@ -498,7 +509,13 @@ function dashboardColumns($wait, $proses, $done, $type)
                                         <span class="badge badge-success ml-1" style="font-size:12px; font-weight:700; padding:2px 8px"><?= $durasi ?></span>
                                     <?php endif; ?>
                                 </div>
-                                <!-- Jam mulai & selesai -->
+                                <!-- Waktu DO Selesai (hanya LK & KK) -->
+                                <?php if ($type !== 'bongkar' && !empty($item['waktu_do_selesai'])): ?>
+                                    <div class="item-time" style="color:#856404; font-weight:600;">
+                                        <i class="fas fa-file-alt mr-1"></i>DO Selesai: <?= date('H:i', strtotime($item['waktu_do_selesai'])) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <!-- Jam mulai loading & selesai loading -->
                                 <div class="item-time">
                                     <i class="fas fa-clock mr-1"></i>
                                     <?= !empty($item['waktu_mulai'])   ? date('H:i', strtotime($item['waktu_mulai']))   : '-' ?>
