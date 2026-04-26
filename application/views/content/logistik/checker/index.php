@@ -1,19 +1,17 @@
-<!-- view/content/logistik/bongkaran/index.php -->
+<!-- view/content/logistik/checker/index.php -->
 
 <!-- STYLE TAMBAHAN -->
 <style>
-/* Warna thead tabel LK (biru) sesuai card-header bg-primary */
 #tabelLK thead.thead-dark th {
     background: #1565c0 !important; color: #fff !important; border-color: #0d47a1 !important;
 }
-/* Warna thead tabel KK (hijau) sesuai card-header bg-success */
 #tabelKK thead.thead-dark th {
     background: #1b5e20 !important; color: #fff !important; border-color: #145214 !important;
 }
 tr.separator-label td {
     font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
     padding:4px 12px !important;
-    border-top:2px dashed #aaa !important; border-bottom:2px dashed #aaa !important;
+    border-top:1px solid #aaa !important; border-bottom:1px solid #aaa !important;
 }
 tr.separator-label.sep-active  td { background:#fffde7; border-color:#f9a825 !important; color:#e65100; }
 tr.separator-label.sep-pending td { background:#f3f3f3; border-color:#bbb    !important; color:#555;    }
@@ -25,6 +23,10 @@ tr.row-pending { background:#fafafa !important; }
 }
 .aksi-checker .form-control, .aksi-managerck .form-control { width:70px !important; flex-shrink:0; }
 .aksi-checker .btn, .aksi-managerck .btn { min-width:82px; white-space:nowrap; }
+.badge-pintu {
+    background:#343a40; color:#fff; font-size:11px;
+    padding:2px 7px; border-radius:4px; white-space:nowrap;
+}
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -57,7 +59,7 @@ tr.row-pending { background:#fafafa !important; }
                         </button>
                     </div>
                     <?php endif; ?>
-                    <?php if (in_array($role, ['SALES','DIREKTUR'])) : ?>
+                    <?php if (in_array($role, ['SALES','DIREKTURCK'])) : ?>
                     <div class="col-auto">
                         <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
                             <i class="fas fa-archive mr-1"></i> Lihat Arsip
@@ -75,11 +77,6 @@ tr.row-pending { background:#fafafa !important; }
                             <i class="fas fa-plus"></i> Tambah Loading LK
                         </button>
                     </div>
-                    <!-- <div class="col-auto">
-                        <button class="btn btn-danger" id="btnArchiveAll">
-                            <i class="fas fa-box-archive mr-1"></i> Archive Aktivitas Hari Ini
-                        </button>
-                    </div> -->
                     <div class="col-auto">
                         <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
                             <i class="fas fa-archive"></i> Lihat Arsip
@@ -110,7 +107,7 @@ tr.row-pending { background:#fafafa !important; }
                         ?>
                         <div class="row">
 
-                            <!-- ── Kolom Bongkaran ── -->
+                            <!-- Kolom Bongkaran -->
                             <div class="col-md-4 mb-2">
                                 <div class="p-2 rounded h-100" style="background:#fff8e1; border-left:4px solid #f9a825;">
                                     <p class="mb-2" style="color:#e65100; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em;">
@@ -120,15 +117,10 @@ tr.row-pending { background:#fafafa !important; }
                                         <p class="mb-0" style="color:#aaa; font-size:12px; font-style:italic;">Tidak ada data</p>
                                     <?php endif; ?>
                                     <?php $no = 1; foreach ($bongkaran as $b) :
-                                        if ($b['status'] === 'DONE') {
-                                            $dot = '#22c55e'; $label = 'done ✅';
-                                        } elseif ($b['status'] === 'PROSES') {
-                                            $dot = '#f59e0b'; $label = 'proses ▶️';
-                                        } elseif ($b['status'] === 'MENUNGGU') {
-                                            $dot = '#94a3b8'; $label = 'menunggu ⏳';
-                                        } else {
-                                            $dot = '#60a5fa'; $label = str_replace('_',' ',$b['status']);
-                                        }
+                                        if ($b['status'] === 'DONE')         { $dot = '#22c55e'; $label = 'done ✅'; }
+                                        elseif ($b['status'] === 'PROSES')   { $dot = '#f59e0b'; $label = 'proses ▶️'; }
+                                        elseif ($b['status'] === 'MENUNGGU') { $dot = '#94a3b8'; $label = 'menunggu ⏳'; }
+                                        else                                 { $dot = '#60a5fa'; $label = str_replace('_',' ',$b['status']); }
                                         $is_last_b = ($no === count($bongkaran));
                                     ?>
                                     <div class="d-flex align-items-center py-1"
@@ -138,6 +130,11 @@ tr.row-pending { background:#fafafa !important; }
                                         <span style="color:#444; flex:1; min-width:0;" class="text-truncate">
                                             <?= htmlspecialchars($b['keterangan'] ?? $b['kode_bongkar']) ?>
                                         </span>
+                                        <?php if (!empty($b['pintu'])) : ?>
+                                            <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($b['pintu']??1)-1] ?? 'A'.$b['pintu'] ?>
+                                            </span>
+                                        <?php endif; ?>
                                         <?php if (!empty($b['nm_checker'])) : ?>
                                             <span style="font-size:11px; color:#888; flex-shrink:0; margin:0 4px;">
                                                 <i class="fas fa-user" style="font-size:10px;"></i> <?= htmlspecialchars($b['nm_checker']) ?>
@@ -149,7 +146,7 @@ tr.row-pending { background:#fafafa !important; }
                                 </div>
                             </div>
 
-                            <!-- ── Kolom Loading LK ── -->
+                            <!-- Kolom Loading LK -->
                             <div class="col-md-4 mb-2">
                                 <div class="p-2 rounded h-100" style="background:#e3f2fd; border-left:4px solid #1565c0;">
                                     <p class="mb-2" style="color:#1565c0; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em;">
@@ -175,6 +172,11 @@ tr.row-pending { background:#fafafa !important; }
                                         <span style="color:#444; flex:1; min-width:0;" class="text-truncate">
                                             <?= htmlspecialchars($lk['keterangan']) ?>
                                         </span>
+                                        <?php if (!empty($lk['pintu'])) : ?>
+                                            <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($lk['pintu']??1)-1] ?? 'A'.$lk['pintu'] ?>
+                                            </span>
+                                        <?php endif; ?>
                                         <?php if (!empty($lk['nm_checker'])) : ?>
                                             <span style="font-size:11px; color:#888; flex-shrink:0; margin:0 4px;">
                                                 <i class="fas fa-user" style="font-size:10px;"></i> <?= htmlspecialchars($lk['nm_checker']) ?>
@@ -186,7 +188,7 @@ tr.row-pending { background:#fafafa !important; }
                                 </div>
                             </div>
 
-                            <!-- ── Kolom Loading KK ── -->
+                            <!-- Kolom Loading KK -->
                             <div class="col-md-4 mb-2">
                                 <div class="p-2 rounded h-100" style="background:#e8f5e9; border-left:4px solid #1b5e20;">
                                     <p class="mb-2" style="color:#1b5e20; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.04em;">
@@ -212,6 +214,11 @@ tr.row-pending { background:#fafafa !important; }
                                         <span style="color:#444; flex:1; min-width:0;" class="text-truncate">
                                             <?= htmlspecialchars($kk['keterangan']) ?>
                                         </span>
+                                        <?php if (!empty($kk['pintu'])) : ?>
+                                            <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($kk['pintu']??1)-1] ?? 'A'.$kk['pintu'] ?>
+                                            </span>
+                                        <?php endif; ?>
                                         <?php if (!empty($kk['nm_checker'])) : ?>
                                             <span style="font-size:11px; color:#888; flex-shrink:0; margin:0 4px;">
                                                 <i class="fas fa-user" style="font-size:10px;"></i> <?= htmlspecialchars($kk['nm_checker']) ?>
@@ -241,7 +248,9 @@ tr.row-pending { background:#fafafa !important; }
                 </div>
 
 
-                <!-- TABEL BONGKARAN -->
+                <!-- ============================================================
+                    TABEL BONGKARAN
+                ============================================================ -->
                 <div class="card">
                     <div class="card-header bg-dark text-white">
                         <h3 class="card-title"><i class="fas fa-dolly mr-2"></i> Data Bongkaran</h3>
@@ -249,7 +258,8 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_b = in_array($role, ['CHECKER','MANAGERCK','MANAGERWH','ADMLOG']);
-                        $colspan_b  = $has_aksi_b ? 11 : 10;
+                        // +1 kolom Pintu → 11 kolom biasa, 12 dengan aksi
+                        $colspan_b  = $has_aksi_b ? 12 : 11;
                         $b_aktif   = array_filter($bongkaran, fn($r) => in_array($r['status'], ['PROSES','PENYIAPAN_BARANG','CETAK_DO']));
                         $b_pending = array_filter($bongkaran, fn($r) => $r['status'] === 'MENUNGGU');
                         $b_done    = array_filter($bongkaran, fn($r) => $r['status'] === 'DONE');
@@ -273,6 +283,13 @@ tr.row-pending { background:#fafafa !important; }
                             <td><small><?= htmlspecialchars($b['kode_bongkar']) ?></small></td>
                             <td><?= htmlspecialchars($b['keterangan'] ?? '-') ?></td>
                             <td><?= $is_taken ? htmlspecialchars($b['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
+                            <td class="text-center">
+                                <?php if (!empty($b['pintu'])): ?>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$b['pintu']-1] ?? 'P'.$b['pintu'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td><small><?= $is_taken ? ($b['waktu_mulai'] ?? '-') : '-' ?></small></td>
                             <td><small><?= $is_done_checker ? ($b['waktu_selesai'] ?? '-') : '-' ?></small></td>
                             <td style="min-width:110px;">
@@ -283,7 +300,8 @@ tr.row-pending { background:#fafafa !important; }
                             <td class="text-center" style="min-width:100px;">
                                 <?php
                                 if ($is_taken && !empty($b['waktu_mulai'])) {
-                                    $mulai=$b['waktu_mulai']; $selisih=((!empty($b['waktu_selesai'])&&$is_done_checker)?strtotime($b['waktu_selesai']):time())-strtotime($mulai);
+                                    $mulai=$b['waktu_mulai'];
+                                    $selisih=((!empty($b['waktu_selesai'])&&$is_done_checker)?strtotime($b['waktu_selesai']):time())-strtotime($mulai);
                                     if($selisih>0){$j=floor($selisih/3600);$m=floor(($selisih%3600)/60);echo '<small>'.($j>0?$j.' jam ':'').$m.' menit</small>';if(!$is_done_checker)echo ' <span class="badge badge-warning" style="font-size:9px;">live</span>';}
                                     else echo '<small class="text-muted">-</small>';
                                 } else echo '<small class="text-muted">-</small>';
@@ -332,7 +350,7 @@ tr.row-pending { background:#fafafa !important; }
                             <thead class="thead-dark text-center">
                                 <tr>
                                     <th>#</th><th>Tgl Dibuat</th><th>Kode</th><th>Keterangan</th><th>Checker</th>
-                                    <th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
+                                    <th>Pintu</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
                                     <?php if ($has_aksi_b) : ?><th class="text-center">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
@@ -358,7 +376,9 @@ tr.row-pending { background:#fafafa !important; }
                     </div>
                 </div>
 
-                <!-- TABEL LOADING LK (header biru) -->
+                <!-- ============================================================
+                    TABEL LOADING LK (header biru)
+                ============================================================ -->
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title"><i class="fas fa-truck mr-2"></i> Loading LK</h3>
@@ -366,59 +386,80 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = in_array($role, ['ADMLOG','CHECKER','MANAGERCK']);
-                        $colspan_lk  = $has_aksi_lk ? 11 : 10;
+                        // +1 kolom Pintu → 11 kolom biasa, 12 dengan aksi
+                        $colspan_lk  = $has_aksi_lk ? 12 : 11;
                         $lk_aktif   = array_filter($list_lk, fn($r) => $r['status'] === 'PROSES_LOADING');
                         $lk_pending = array_filter($list_lk, fn($r) => in_array($r['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI']));
                         $lk_done    = array_filter($list_lk, fn($r) => $r['status'] === 'DONE');
 
                         $renderLK = function($lk) use (&$no, $role, $nik, $has_aksi_lk) {
-                            $lk_done=$lk['status']==='DONE'; $lk_progres=(int)($lk['progres']??0);
-                            $lk_started=$lk['status']==='PROSES_LOADING';
-                            $badge_lk=['CETAK_DO'=>'badge-info','DO_SELESAI'=>'badge-warning','PROSES_LOADING'=>'badge-primary','DONE'=>'badge-success'][$lk['status']]??'badge-secondary';
-                            $lk_durasi='-';
-                            if(!empty($lk['waktu_mulai'])){$akhir=(!empty($lk['waktu_selesai'])&&$lk_done)?strtotime($lk['waktu_selesai']):time();$sel=$akhir-strtotime($lk['waktu_mulai']);if($sel>0){$j=floor($sel/3600);$m=floor(($sel%3600)/60);$lk_durasi=$j>0?"{$j} jam {$m} menit":"{$m} menit";}}
-                            $rc=$lk_done?'table-success':($lk_started?'row-proses':'row-pending');
+                            $lk_done    = $lk['status'] === 'DONE';
+                            $lk_progres = (int)($lk['progres'] ?? 0);
+                            $lk_started = $lk['status'] === 'PROSES_LOADING';
+                            $badge_lk   = ['CETAK_DO'=>'badge-info','DO_SELESAI'=>'badge-warning','PROSES_LOADING'=>'badge-primary','DONE'=>'badge-success'][$lk['status']] ?? 'badge-secondary';
+                            $lk_durasi  = '-';
+                            if (!empty($lk['waktu_mulai'])) {
+                                $akhir = (!empty($lk['waktu_selesai']) && $lk_done) ? strtotime($lk['waktu_selesai']) : time();
+                                $sel   = $akhir - strtotime($lk['waktu_mulai']);
+                                if ($sel > 0) { $j=floor($sel/3600); $m=floor(($sel%3600)/60); $lk_durasi=$j>0?"{$j} jam {$m} menit":"{$m} menit"; }
+                            }
+                            $rc = $lk_done ? 'table-success' : ($lk_started ? 'row-proses' : 'row-pending');
                         ?>
                         <tr class="<?= $rc ?>">
                             <td><?= $no++ ?></td>
-                            <td><small><?= htmlspecialchars($lk['kode']??'-') ?></small></td>
+                            <td><small><?= htmlspecialchars($lk['kode'] ?? '-') ?></small></td>
                             <td><?= htmlspecialchars($lk['keterangan']) ?></td>
                             <td><small><?= $lk['tgl'] ?></small></td>
-                            <td><?= !empty($lk['nm_checker'])?htmlspecialchars($lk['nm_checker']):'<span class="text-muted">-</span>' ?></td>
-                            <td><small><?= !empty($lk['waktu_mulai'])?date('d/m H:i',strtotime($lk['waktu_mulai'])):'-' ?></small></td>
-                            <td><small><?= !empty($lk['waktu_selesai'])?date('d/m H:i',strtotime($lk['waktu_selesai'])):'-' ?></small></td>
-                            <td style="min-width:100px;"><div class="progress" style="height:14px;"><div class="progress-bar <?= $lk_progres==100?'bg-success':'bg-primary' ?>" style="width:<?= $lk_progres ?>%"><?= $lk_progres ?>%</div></div></td>
-                            <td><small><?= $lk_durasi ?><?php if($lk_started):?> <span class="badge badge-warning" style="font-size:9px;">live</span><?php endif;?></small></td>
+                            <td><?= !empty($lk['nm_checker']) ? htmlspecialchars($lk['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
                             <td class="text-center">
-                                <?php if($role==='ADMLOG'&&in_array($lk['status'],['CETAK_DO','DO_SELESAI'])): ?>
-                                    <select class="form-control form-control-sm select-status-lk" data-id="<?= $lk['id'] ?>" style="min-width:120px;">
-                                        <?php foreach(['CETAK_DO','DO_SELESAI'] as $s):?><option value="<?= $s ?>" <?= $lk['status']===$s?'selected':''?>><?= str_replace('_',' ',$s) ?></option><?php endforeach;?>
-                                    </select>
-                                <?php else:?><span class="badge <?= $badge_lk ?>"><?= str_replace('_',' ',$lk['status']) ?></span><?php endif;?>
+                                <?php if (!empty($lk['pintu'])): ?>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$lk['pintu']-1] ?? 'P'.$lk['pintu'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
                             </td>
-                            <?php if($has_aksi_lk): ?>
+                            <td><small><?= !empty($lk['waktu_mulai']) ? date('d/m H:i', strtotime($lk['waktu_mulai'])) : '-' ?></small></td>
+                            <td><small><?= !empty($lk['waktu_selesai']) ? date('d/m H:i', strtotime($lk['waktu_selesai'])) : '-' ?></small></td>
+                            <td style="min-width:100px;">
+                                <div class="progress" style="height:14px;">
+                                    <div class="progress-bar <?= $lk_progres==100?'bg-success':'bg-primary' ?>" style="width:<?= $lk_progres ?>%"><?= $lk_progres ?>%</div>
+                                </div>
+                            </td>
+                            <td><small><?= $lk_durasi ?><?php if ($lk_started): ?> <span class="badge badge-warning" style="font-size:9px;">live</span><?php endif; ?></small></td>
+                            <td class="text-center">
+                                <?php if ($role === 'ADMLOG' && in_array($lk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
+                                    <select class="form-control form-control-sm select-status-lk" data-id="<?= $lk['id'] ?>" style="min-width:120px;">
+                                        <?php foreach (['CETAK_DO','DO_SELESAI'] as $s): ?><option value="<?= $s ?>" <?= $lk['status']===$s?'selected':'' ?>><?= str_replace('_',' ',$s) ?></option><?php endforeach; ?>
+                                    </select>
+                                <?php else: ?><span class="badge <?= $badge_lk ?>"><?= str_replace('_',' ',$lk['status']) ?></span><?php endif; ?>
+                            </td>
+                            <?php if ($has_aksi_lk): ?>
                             <td class="text-center" style="min-width:230px;">
-                                <?php if($role==='ADMLOG'): ?>
-                                    <?php if(in_array($lk['status'],['CETAK_DO','DO_SELESAI'])): ?>
+                                <?php if ($role === 'ADMLOG'): ?>
+                                    <?php if (in_array($lk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
                                         <button class="btn btn-sm btn-info btn-simpan-lk mr-1" data-id="<?= $lk['id'] ?>"><i class="fas fa-save"></i> Simpan</button>
                                     <?php else: ?><span class="text-muted small">—</span><?php endif; ?>
-                                <?php elseif($role==='CHECKER'): ?>
-                                    <?php if($lk['status']==='DO_SELESAI'): ?>
+                                <?php elseif ($role === 'CHECKER'): ?>
+                                    <?php if ($lk['status'] === 'DO_SELESAI'): ?>
                                         <button class="btn btn-sm btn-success btn-start-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-play"></i> Start</button>
-                                    <?php elseif($lk_started&&$lk['nik_checker']===$nik): ?>
+                                    <?php elseif ($lk_started && $lk['nik_checker'] === $nik): ?>
                                         <div class="aksi-checker">
-                                            <select class="form-control form-control-sm select-progres-lk"><?php foreach([0,10,20,30,40,50,60,70,80,90] as $p):?><option value="<?= $p ?>" <?= $lk_progres==$p?'selected':''?>><?= $p ?>%</option><?php endforeach;?></select>
+                                            <select class="form-control form-control-sm select-progres-lk">
+                                                <?php foreach ([0,10,20,30,40,50,60,70,80,90] as $p): ?><option value="<?= $p ?>" <?= $lk_progres==$p?'selected':'' ?>><?= $p ?>%</option><?php endforeach; ?>
+                                            </select>
                                             <button class="btn btn-sm btn-warning btn-update-progres-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-sync"></i> Update</button>
                                             <button class="btn btn-sm btn-primary btn-done-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-check"></i> Done</button>
                                         </div>
-                                    <?php elseif($lk_started): ?><span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($lk['nm_checker']??'') ?></span>
+                                    <?php elseif ($lk_started): ?><span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($lk['nm_checker'] ?? '') ?></span>
                                     <?php else: ?><span class="text-muted small">—</span><?php endif; ?>
-                                <?php elseif($role==='MANAGERCK'): ?>
-                                    <?php if($lk['status']==='DO_SELESAI'): ?>
+                                <?php elseif ($role === 'MANAGERCK'): ?>
+                                    <?php if ($lk['status'] === 'DO_SELESAI'): ?>
                                         <button class="btn btn-sm btn-success btn-start-mck" data-id="<?= $lk['id'] ?>" data-type="lk"><i class="fas fa-play"></i> Start</button>
-                                    <?php elseif($lk_started): ?>
+                                    <?php elseif ($lk_started): ?>
                                         <div class="aksi-managerck">
-                                            <select class="form-control form-control-sm select-progres-lk"><?php foreach([0,10,20,30,40,50,60,70,80,90] as $p):?><option value="<?= $p ?>" <?= $lk_progres==$p?'selected':''?>><?= $p ?>%</option><?php endforeach;?></select>
+                                            <select class="form-control form-control-sm select-progres-lk">
+                                                <?php foreach ([0,10,20,30,40,50,60,70,80,90] as $p): ?><option value="<?= $p ?>" <?= $lk_progres==$p?'selected':'' ?>><?= $p ?>%</option><?php endforeach; ?>
+                                            </select>
                                             <button class="btn btn-sm btn-warning btn-update-progres-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-sync"></i> Update</button>
                                             <button class="btn btn-sm btn-primary btn-done-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-check"></i> Done</button>
                                         </div>
@@ -433,28 +474,30 @@ tr.row-pending { background:#fafafa !important; }
                             <thead class="thead-dark text-center">
                                 <tr>
                                     <th>#</th><th>Kode</th><th>Keterangan</th><th>Tgl</th><th>Checker</th>
-                                    <th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
-                                    <?php if($has_aksi_lk):?><th class="text-center">Aksi</th><?php endif;?>
+                                    <th>Pintu</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
+                                    <?php if ($has_aksi_lk): ?><th class="text-center">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
                             <?php $no=1; ?>
-                            <?php if(!empty($lk_aktif)):?>
+                            <?php if (!empty($lk_aktif)): ?>
                             <tr class="separator-label sep-active"><td colspan="<?= $colspan_lk ?>"><i class="fas fa-circle-notch fa-spin mr-1"></i> Sedang Proses</td></tr>
-                            <?php foreach($lk_aktif as $lk):$renderLK($lk);endforeach;endif;?>
-                            <?php if(!empty($lk_pending)):?>
+                            <?php foreach ($lk_aktif as $lk): $renderLK($lk); endforeach; endif; ?>
+                            <?php if (!empty($lk_pending)): ?>
                             <tr class="separator-label sep-pending"><td colspan="<?= $colspan_lk ?>"><i class="fas fa-hourglass-half mr-1"></i> Menunggu / Belum Dikerjakan</td></tr>
-                            <?php foreach($lk_pending as $lk):$renderLK($lk);endforeach;endif;?>
-                            <?php if(!empty($lk_done)):?>
+                            <?php foreach ($lk_pending as $lk): $renderLK($lk); endforeach; endif; ?>
+                            <?php if (!empty($lk_done)): ?>
                             <tr class="separator-label sep-done"><td colspan="<?= $colspan_lk ?>"><i class="fas fa-check-circle mr-1"></i> Sudah Selesai / Done</td></tr>
-                            <?php foreach($lk_done as $lk):$renderLK($lk);endforeach;endif;?>
-                            <?php if(empty($list_lk)):?><tr><td colspan="<?= $colspan_lk ?>" class="text-center text-muted">Tidak ada data Loading LK</td></tr><?php endif;?>
+                            <?php foreach ($lk_done as $lk): $renderLK($lk); endforeach; endif; ?>
+                            <?php if (empty($list_lk)): ?><tr><td colspan="<?= $colspan_lk ?>" class="text-center text-muted">Tidak ada data Loading LK</td></tr><?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- TABEL LOADING KK (header hijau) -->
+                <!-- ============================================================
+                    TABEL LOADING KK (header hijau)
+                ============================================================ -->
                 <div class="card">
                     <div class="card-header bg-success text-white">
                         <h3 class="card-title"><i class="fas fa-truck-loading mr-2"></i> Loading KK</h3>
@@ -462,59 +505,80 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = in_array($role, ['ADMLOG','CHECKER','MANAGERCK']);
-                        $colspan_kk  = $has_aksi_kk ? 11 : 10;
+                        // +1 kolom Pintu → 11 kolom biasa, 12 dengan aksi
+                        $colspan_kk  = $has_aksi_kk ? 12 : 11;
                         $kk_aktif   = array_filter($list_kk, fn($r) => $r['status'] === 'PROSES_LOADING');
                         $kk_pending = array_filter($list_kk, fn($r) => in_array($r['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI']));
                         $kk_done    = array_filter($list_kk, fn($r) => $r['status'] === 'DONE');
 
                         $renderKK = function($kk) use (&$no, $role, $nik, $has_aksi_kk) {
-                            $kk_done=$kk['status']==='DONE'; $kk_progres=(int)($kk['progres']??0);
-                            $kk_started=$kk['status']==='PROSES_LOADING';
-                            $badge_kk=['CETAK_DO'=>'badge-info','DO_SELESAI'=>'badge-warning','PROSES_LOADING'=>'badge-primary','DONE'=>'badge-success'][$kk['status']]??'badge-secondary';
-                            $kk_durasi='-';
-                            if(!empty($kk['waktu_mulai'])){$akhir=(!empty($kk['waktu_selesai'])&&$kk_done)?strtotime($kk['waktu_selesai']):time();$sel=$akhir-strtotime($kk['waktu_mulai']);if($sel>0){$j=floor($sel/3600);$m=floor(($sel%3600)/60);$kk_durasi=$j>0?"{$j} jam {$m} menit":"{$m} menit";}}
-                            $rc=$kk_done?'table-success':($kk_started?'row-proses':'row-pending');
+                            $kk_done    = $kk['status'] === 'DONE';
+                            $kk_progres = (int)($kk['progres'] ?? 0);
+                            $kk_started = $kk['status'] === 'PROSES_LOADING';
+                            $badge_kk   = ['CETAK_DO'=>'badge-info','DO_SELESAI'=>'badge-warning','PROSES_LOADING'=>'badge-primary','DONE'=>'badge-success'][$kk['status']] ?? 'badge-secondary';
+                            $kk_durasi  = '-';
+                            if (!empty($kk['waktu_mulai'])) {
+                                $akhir = (!empty($kk['waktu_selesai']) && $kk_done) ? strtotime($kk['waktu_selesai']) : time();
+                                $sel   = $akhir - strtotime($kk['waktu_mulai']);
+                                if ($sel > 0) { $j=floor($sel/3600); $m=floor(($sel%3600)/60); $kk_durasi=$j>0?"{$j} jam {$m} menit":"{$m} menit"; }
+                            }
+                            $rc = $kk_done ? 'table-success' : ($kk_started ? 'row-proses' : 'row-pending');
                         ?>
                         <tr class="<?= $rc ?>">
                             <td><?= $no++ ?></td>
-                            <td><small><?= htmlspecialchars($kk['kode']??'-') ?></small></td>
+                            <td><small><?= htmlspecialchars($kk['kode'] ?? '-') ?></small></td>
                             <td><?= htmlspecialchars($kk['keterangan']) ?></td>
                             <td><small><?= $kk['tgl'] ?></small></td>
-                            <td><?= !empty($kk['nm_checker'])?htmlspecialchars($kk['nm_checker']):'<span class="text-muted">-</span>' ?></td>
-                            <td><small><?= !empty($kk['waktu_mulai'])?date('d/m H:i',strtotime($kk['waktu_mulai'])):'-' ?></small></td>
-                            <td><small><?= !empty($kk['waktu_selesai'])?date('d/m H:i',strtotime($kk['waktu_selesai'])):'-' ?></small></td>
-                            <td style="min-width:100px;"><div class="progress" style="height:14px;"><div class="progress-bar bg-success" style="width:<?= $kk_progres ?>%"><?= $kk_progres ?>%</div></div></td>
-                            <td><small><?= $kk_durasi ?><?php if($kk_started):?> <span class="badge badge-warning" style="font-size:9px;">live</span><?php endif;?></small></td>
+                            <td><?= !empty($kk['nm_checker']) ? htmlspecialchars($kk['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
                             <td class="text-center">
-                                <?php if($role==='ADMLOG'&&in_array($kk['status'],['CETAK_DO','DO_SELESAI'])): ?>
-                                    <select class="form-control form-control-sm select-status-kk" data-id="<?= $kk['id'] ?>" style="min-width:120px;">
-                                        <?php foreach(['CETAK_DO','DO_SELESAI'] as $s):?><option value="<?= $s ?>" <?= $kk['status']===$s?'selected':''?>><?= str_replace('_',' ',$s) ?></option><?php endforeach;?>
-                                    </select>
-                                <?php else:?><span class="badge <?= $badge_kk ?>"><?= str_replace('_',' ',$kk['status']) ?></span><?php endif;?>
+                                <?php if (!empty($kk['pintu'])): ?>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$kk['pintu']-1] ?? 'P'.$kk['pintu'] ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
                             </td>
-                            <?php if($has_aksi_kk): ?>
+                            <td><small><?= !empty($kk['waktu_mulai']) ? date('d/m H:i', strtotime($kk['waktu_mulai'])) : '-' ?></small></td>
+                            <td><small><?= !empty($kk['waktu_selesai']) ? date('d/m H:i', strtotime($kk['waktu_selesai'])) : '-' ?></small></td>
+                            <td style="min-width:100px;">
+                                <div class="progress" style="height:14px;">
+                                    <div class="progress-bar bg-success" style="width:<?= $kk_progres ?>%"><?= $kk_progres ?>%</div>
+                                </div>
+                            </td>
+                            <td><small><?= $kk_durasi ?><?php if ($kk_started): ?> <span class="badge badge-warning" style="font-size:9px;">live</span><?php endif; ?></small></td>
+                            <td class="text-center">
+                                <?php if ($role === 'ADMLOG' && in_array($kk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
+                                    <select class="form-control form-control-sm select-status-kk" data-id="<?= $kk['id'] ?>" style="min-width:120px;">
+                                        <?php foreach (['CETAK_DO','DO_SELESAI'] as $s): ?><option value="<?= $s ?>" <?= $kk['status']===$s?'selected':'' ?>><?= str_replace('_',' ',$s) ?></option><?php endforeach; ?>
+                                    </select>
+                                <?php else: ?><span class="badge <?= $badge_kk ?>"><?= str_replace('_',' ',$kk['status']) ?></span><?php endif; ?>
+                            </td>
+                            <?php if ($has_aksi_kk): ?>
                             <td class="text-center" style="min-width:230px;">
-                                <?php if($role==='ADMLOG'): ?>
-                                    <?php if(in_array($kk['status'],['CETAK_DO','DO_SELESAI'])): ?>
+                                <?php if ($role === 'ADMLOG'): ?>
+                                    <?php if (in_array($kk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
                                         <button class="btn btn-sm btn-info btn-simpan-kk mr-1" data-id="<?= $kk['id'] ?>"><i class="fas fa-save"></i> Simpan</button>
                                     <?php else: ?><span class="text-muted small">—</span><?php endif; ?>
-                                <?php elseif($role==='CHECKER'): ?>
-                                    <?php if($kk['status']==='DO_SELESAI'): ?>
+                                <?php elseif ($role === 'CHECKER'): ?>
+                                    <?php if ($kk['status'] === 'DO_SELESAI'): ?>
                                         <button class="btn btn-sm btn-success btn-start-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-play"></i> Start</button>
-                                    <?php elseif($kk_started&&$kk['nik_checker']===$nik): ?>
+                                    <?php elseif ($kk_started && $kk['nik_checker'] === $nik): ?>
                                         <div class="aksi-checker">
-                                            <select class="form-control form-control-sm select-progres-kk"><?php foreach([0,10,20,30,40,50,60,70,80,90] as $p):?><option value="<?= $p ?>" <?= $kk_progres==$p?'selected':''?>><?= $p ?>%</option><?php endforeach;?></select>
+                                            <select class="form-control form-control-sm select-progres-kk">
+                                                <?php foreach ([0,10,20,30,40,50,60,70,80,90] as $p): ?><option value="<?= $p ?>" <?= $kk_progres==$p?'selected':'' ?>><?= $p ?>%</option><?php endforeach; ?>
+                                            </select>
                                             <button class="btn btn-sm btn-warning btn-update-progres-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-sync"></i> Update</button>
                                             <button class="btn btn-sm btn-primary btn-done-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-check"></i> Done</button>
                                         </div>
-                                    <?php elseif($kk_started): ?><span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($kk['nm_checker']??'') ?></span>
+                                    <?php elseif ($kk_started): ?><span class="text-muted small"><i class="fas fa-lock mr-1"></i><?= htmlspecialchars($kk['nm_checker'] ?? '') ?></span>
                                     <?php else: ?><span class="text-muted small">—</span><?php endif; ?>
-                                <?php elseif($role==='MANAGERCK'): ?>
-                                    <?php if($kk['status']==='DO_SELESAI'): ?>
+                                <?php elseif ($role === 'MANAGERCK'): ?>
+                                    <?php if ($kk['status'] === 'DO_SELESAI'): ?>
                                         <button class="btn btn-sm btn-success btn-start-mck" data-id="<?= $kk['id'] ?>" data-type="kk"><i class="fas fa-play"></i> Start</button>
-                                    <?php elseif($kk_started): ?>
+                                    <?php elseif ($kk_started): ?>
                                         <div class="aksi-managerck">
-                                            <select class="form-control form-control-sm select-progres-kk"><?php foreach([0,10,20,30,40,50,60,70,80,90] as $p):?><option value="<?= $p ?>" <?= $kk_progres==$p?'selected':''?>><?= $p ?>%</option><?php endforeach;?></select>
+                                            <select class="form-control form-control-sm select-progres-kk">
+                                                <?php foreach ([0,10,20,30,40,50,60,70,80,90] as $p): ?><option value="<?= $p ?>" <?= $kk_progres==$p?'selected':'' ?>><?= $p ?>%</option><?php endforeach; ?>
+                                            </select>
                                             <button class="btn btn-sm btn-warning btn-update-progres-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-sync"></i> Update</button>
                                             <button class="btn btn-sm btn-primary btn-done-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-check"></i> Done</button>
                                         </div>
@@ -529,22 +593,22 @@ tr.row-pending { background:#fafafa !important; }
                             <thead class="thead-dark text-center">
                                 <tr>
                                     <th>#</th><th>Kode</th><th>Keterangan</th><th>Tgl</th><th>Checker</th>
-                                    <th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
-                                    <?php if($has_aksi_kk):?><th class="text-center">Aksi</th><?php endif;?>
+                                    <th>Pintu</th><th>Mulai</th><th>Selesai</th><th>Progres</th><th>Durasi</th><th>Status</th>
+                                    <?php if ($has_aksi_kk): ?><th class="text-center">Aksi</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
                             <?php $no=1; ?>
-                            <?php if(!empty($kk_aktif)):?>
+                            <?php if (!empty($kk_aktif)): ?>
                             <tr class="separator-label sep-active"><td colspan="<?= $colspan_kk ?>"><i class="fas fa-circle-notch fa-spin mr-1"></i> Sedang Proses</td></tr>
-                            <?php foreach($kk_aktif as $kk):$renderKK($kk);endforeach;endif;?>
-                            <?php if(!empty($kk_pending)):?>
+                            <?php foreach ($kk_aktif as $kk): $renderKK($kk); endforeach; endif; ?>
+                            <?php if (!empty($kk_pending)): ?>
                             <tr class="separator-label sep-pending"><td colspan="<?= $colspan_kk ?>"><i class="fas fa-hourglass-half mr-1"></i> Menunggu / Belum Dikerjakan</td></tr>
-                            <?php foreach($kk_pending as $kk):$renderKK($kk);endforeach;endif;?>
-                            <?php if(!empty($kk_done)):?>
+                            <?php foreach ($kk_pending as $kk): $renderKK($kk); endforeach; endif; ?>
+                            <?php if (!empty($kk_done)): ?>
                             <tr class="separator-label sep-done"><td colspan="<?= $colspan_kk ?>"><i class="fas fa-check-circle mr-1"></i> Sudah Selesai / Done</td></tr>
-                            <?php foreach($kk_done as $kk):$renderKK($kk);endforeach;endif;?>
-                            <?php if(empty($list_kk)):?><tr><td colspan="<?= $colspan_kk ?>" class="text-center text-muted">Tidak ada data Loading KK</td></tr><?php endif;?>
+                            <?php foreach ($kk_done as $kk): $renderKK($kk); endforeach; endif; ?>
+                            <?php if (empty($list_kk)): ?><tr><td colspan="<?= $colspan_kk ?>" class="text-center text-muted">Tidak ada data Loading KK</td></tr><?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -562,7 +626,9 @@ tr.row-pending { background:#fafafa !important; }
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
-<!-- MODALS -->
+<!-- ============================================================
+     MODALS
+============================================================ -->
 
 <?php if ($role === 'MANAGERWH') : ?>
 <div class="modal fade" id="modalBuatBongkaran" tabindex="-1" aria-hidden="true">
@@ -590,7 +656,9 @@ tr.row-pending { background:#fafafa !important; }
             <h5 class="modal-title"><i class="fas fa-plus mr-2"></i> Tambah Loading KK</h5>
             <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
         </div>
-        <div class="modal-body"><div class="form-group"><label class="font-weight-bold">Keterangan <span class="text-danger">*</span></label><input type="text" id="inputKeteranganKK" class="form-control" placeholder="Contoh: JBR"></div></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="font-weight-bold">Keterangan <span class="text-danger">*</span></label><input type="text" id="inputKeteranganKK" class="form-control" placeholder="Contoh: JBR"></div>
+        </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
             <button type="button" class="btn btn-success" id="btnSimpanKK"><i class="fas fa-save mr-1"></i> Simpan</button>
@@ -603,7 +671,9 @@ tr.row-pending { background:#fafafa !important; }
             <h5 class="modal-title"><i class="fas fa-plus mr-2"></i> Tambah Loading LK</h5>
             <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
         </div>
-        <div class="modal-body"><div class="form-group"><label class="font-weight-bold">Keterangan <span class="text-danger">*</span></label><input type="text" id="inputKeteranganLK" class="form-control" placeholder="Contoh: P-2"></div></div>
+        <div class="modal-body">
+            <div class="form-group"><label class="font-weight-bold">Keterangan <span class="text-danger">*</span></label><input type="text" id="inputKeteranganLK" class="form-control" placeholder="Contoh: P-2"></div>
+        </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
             <button type="button" class="btn btn-warning" id="btnSimpanLK"><i class="fas fa-save mr-1"></i> Simpan</button>
@@ -613,14 +683,16 @@ tr.row-pending { background:#fafafa !important; }
 <?php endif; ?>
 
 <?php if ($role === 'MANAGERCK') : ?>
+<!-- Modal MANAGERCK: pilih checker + pintu sekaligus -->
 <div class="modal fade" id="modalStartMCK" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-success text-white">
-            <h5 class="modal-title"><i class="fas fa-play mr-2"></i> Start — Pilih Checker</h5>
+            <h5 class="modal-title"><i class="fas fa-play mr-2"></i> Start — Pilih Checker & Pintu</h5>
             <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
         </div>
         <div class="modal-body">
-            <input type="hidden" id="mck_id"><input type="hidden" id="mck_type">
+            <input type="hidden" id="mck_id">
+            <input type="hidden" id="mck_type">
             <div class="form-group">
                 <label class="font-weight-bold">Pilih Checker <span class="text-danger">*</span></label>
                 <select id="mck_checker" class="form-control">
@@ -628,6 +700,17 @@ tr.row-pending { background:#fafafa !important; }
                     <?php foreach ($list_checker as $ck) : ?>
                         <option value="<?= $ck['nik'] ?>" data-nama="<?= htmlspecialchars($ck['nm_karyawan']) ?>"><?= htmlspecialchars($ck['nm_karyawan']) ?></option>
                     <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group mb-0">
+                <label class="font-weight-bold">Pilih Pintu <span class="text-danger">*</span></label>
+                <select id="mck_pintu" class="form-control">
+                    <option value="">-- Pilih Pintu --</option>
+                    <option value="1">Pintu A1</option>
+                    <option value="2">Pintu A2</option>
+                    <option value="3">Pintu A3</option>
+                    <option value="4">Pintu A4</option>
+                    <option value="5">Pintu A5</option>
                 </select>
             </div>
         </div>
@@ -639,91 +722,200 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
+<!-- Modal pilih pintu — CHECKER biasa (bongkaran, KK, LK) -->
+<?php if (in_array($role, ['CHECKER'])) : ?>
+<div class="modal fade" id="modalPilihPintu" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm"><div class="modal-content">
+        <div class="modal-header bg-success text-white">
+            <h5 class="modal-title"><i class="fas fa-door-open mr-2"></i> Pilih Pintu</h5>
+            <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="pp_id">
+            <input type="hidden" id="pp_type">
+            <div class="form-group mb-0">
+                <label class="font-weight-bold">Pintu mana? <span class="text-danger">*</span></label>
+                <select id="pp_pintu" class="form-control">
+                    <option value="">-- Pilih Pintu --</option>
+                    <option value="1">Pintu A1</option>
+                    <option value="2">Pintu A2</option>
+                    <option value="3">Pintu A3</option>
+                    <option value="4">Pintu A4</option>
+                    <option value="5">Pintu A5</option>
+                </select>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+            <button type="button" class="btn btn-success" id="btnKonfirmasiPintu">
+                <i class="fas fa-play mr-1"></i> Start
+            </button>
+        </div>
+    </div></div>
+</div>
+<?php endif; ?>
+
 <script>
 var BASE = '<?= base_url() ?>';
 function ajaxPost(url, data, cb) {
     $.post(BASE + url, data, cb, 'json').fail(function(xhr){ alert('Error: ' + xhr.responseText.substring(0,200)); });
 }
+
 $(document).ready(function () {
+    // Auto-reload setiap 30 detik
     setTimeout(function(){ location.reload(); }, 30000);
 
+    // --- Buat bongkaran (MANAGERWH) ---
     $('#btnSimpanBongkaran').on('click', function () {
-        var ket=$('#inputKeterangan').val().trim();
-        if(!ket){alert('Keterangan wajib diisi');return;}
-        ajaxPost('checker/store',{keterangan:ket},function(res){alert(res.msg);if(res.status)location.reload();});
+        var ket = $('#inputKeterangan').val().trim();
+        if (!ket) { alert('Keterangan wajib diisi'); return; }
+        ajaxPost('checker/store', {keterangan: ket}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-start-mck',function(){
-        $('#mck_id').val($(this).data('id'));$('#mck_type').val($(this).data('type'));$('#mck_checker').val('');$('#modalStartMCK').modal('show');
+
+    // --- Tambah KK / LK (ADMLOG) ---
+    $('#btnSimpanKK').on('click', function(){
+        var ket = $('#inputKeteranganKK').val().trim();
+        if (!ket) { alert('Keterangan wajib diisi'); return; }
+        ajaxPost('checker/store_kk', {keterangan: ket}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $('#btnKonfirmasiStartMCK').on('click',function(){
-        var id=$('#mck_id').val(),type=$('#mck_type').val(),nik=$('#mck_checker').val(),nama=$('#mck_checker option:selected').data('nama');
-        if(!nik){alert('Pilih checker terlebih dahulu');return;}
-        var urlMap={bongkaran:'checker/start',kk:'checker/start_kk',lk:'checker/start_lk'};
-        ajaxPost(urlMap[type],{id:id,nik_checker:nik,nm_checker:nama},function(res){$('#modalStartMCK').modal('hide');alert(res.msg);if(res.status)location.reload();});
+    $('#btnSimpanLK').on('click', function(){
+        var ket = $('#inputKeteranganLK').val().trim();
+        if (!ket) { alert('Keterangan wajib diisi'); return; }
+        ajaxPost('checker/store_lk', {keterangan: ket}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-start',function(){
-        if(!confirm('Ambil pekerjaan ini?'))return;
-        ajaxPost('checker/start',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // --- Simpan status LK / KK (ADMLOG) ---
+    $(document).on('click', '.btn-simpan-lk', function(){
+        var id = $(this).data('id'), status = $(this).closest('tr').find('.select-status-lk').val();
+        ajaxPost('checker/update_lk', {id: id, status: status}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-update-progres',function(){
-        var id=$(this).data('id'),progres=$(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres').val();
-        ajaxPost('checker/update_progres',{id:id,progres:progres},function(res){alert(res.msg);if(res.status)location.reload();});
+    $(document).on('click', '.btn-simpan-kk', function(){
+        var id = $(this).data('id'), status = $(this).closest('tr').find('.select-status-kk').val();
+        ajaxPost('checker/update_kk', {id: id, status: status}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-done',function(){
-        if(!confirm('Tandai sebagai SELESAI?'))return;
-        ajaxPost('checker/done',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // ============================================================
+    // CHECKER BIASA — Start via modal pilih pintu
+    // ============================================================
+    $(document).on('click', '.btn-start', function () {
+        $('#pp_id').val($(this).data('id'));
+        $('#pp_type').val('bongkaran');
+        $('#pp_pintu').val('');
+        $('#modalPilihPintu').modal('show');
     });
-    $(document).on('click','.btn-simpan-lk',function(){
-        var id=$(this).data('id'),status=$(this).closest('tr').find('.select-status-lk').val();
-        ajaxPost('checker/update_lk',{id:id,status:status},function(res){alert(res.msg);if(res.status)location.reload();});
+    $(document).on('click', '.btn-start-lk', function () {
+        $('#pp_id').val($(this).data('id'));
+        $('#pp_type').val('lk');
+        $('#pp_pintu').val('');
+        $('#modalPilihPintu').modal('show');
     });
-    $(document).on('click','.btn-simpan-kk',function(){
-        var id=$(this).data('id'),status=$(this).closest('tr').find('.select-status-kk').val();
-        ajaxPost('checker/update_kk',{id:id,status:status},function(res){alert(res.msg);if(res.status)location.reload();});
+    $(document).on('click', '.btn-start-kk', function () {
+        $('#pp_id').val($(this).data('id'));
+        $('#pp_type').val('kk');
+        $('#pp_pintu').val('');
+        $('#modalPilihPintu').modal('show');
     });
-    $('#btnSimpanKK').on('click',function(){
-        var ket=$('#inputKeteranganKK').val().trim();if(!ket){alert('Keterangan wajib diisi');return;}
-        ajaxPost('checker/store_kk',{keterangan:ket},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // Konfirmasi pintu CHECKER biasa
+    $('#btnKonfirmasiPintu').on('click', function () {
+        var id    = $('#pp_id').val();
+        var type  = $('#pp_type').val();
+        var pintu = $('#pp_pintu').val();
+        if (!pintu) { alert('Pilih pintu terlebih dahulu'); return; }
+        var urlMap = {bongkaran: 'checker/start', kk: 'checker/start_kk', lk: 'checker/start_lk'};
+        ajaxPost(urlMap[type], {id: id, pintu: pintu}, function(res){
+            $('#modalPilihPintu').modal('hide');
+            alert(res.msg);
+            if (res.status) location.reload();
+        });
     });
-    $('#btnSimpanLK').on('click',function(){
-        var ket=$('#inputKeteranganLK').val().trim();if(!ket){alert('Keterangan wajib diisi');return;}
-        ajaxPost('checker/store_lk',{keterangan:ket},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // ============================================================
+    // MANAGERCK — Start via modal checker + pintu
+    // ============================================================
+    $(document).on('click', '.btn-start-mck', function(){
+        $('#mck_id').val($(this).data('id'));
+        $('#mck_type').val($(this).data('type'));
+        $('#mck_checker').val('');
+        $('#mck_pintu').val('');
+        $('#modalStartMCK').modal('show');
     });
-    $(document).on('click','.btn-start-lk',function(){
-        if(!confirm('Mulai Loading LK ini?'))return;
-        ajaxPost('checker/start_lk',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // Konfirmasi MANAGERCK — SATU handler saja
+    $('#btnKonfirmasiStartMCK').on('click', function(){
+        var id    = $('#mck_id').val();
+        var type  = $('#mck_type').val();
+        var nik   = $('#mck_checker').val();
+        var nama  = $('#mck_checker option:selected').data('nama');
+        var pintu = $('#mck_pintu').val();
+        if (!nik)   { alert('Pilih checker terlebih dahulu'); return; }
+        if (!pintu) { alert('Pilih pintu terlebih dahulu'); return; }
+        var urlMap = {bongkaran: 'checker/start', kk: 'checker/start_kk', lk: 'checker/start_lk'};
+        ajaxPost(urlMap[type], {id: id, nik_checker: nik, nm_checker: nama, pintu: pintu}, function(res){
+            $('#modalStartMCK').modal('hide');
+            alert(res.msg);
+            if (res.status) location.reload();
+        });
     });
-    $(document).on('click','.btn-update-progres-lk',function(){
-        var id=$(this).data('id'),progres=$(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres-lk').val();
-        ajaxPost('checker/update_progres_lk',{id:id,progres:progres},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // ============================================================
+    // Update progres & Done — Bongkaran
+    // ============================================================
+    $(document).on('click', '.btn-update-progres', function(){
+        var id      = $(this).data('id');
+        var progres = $(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres').val();
+        ajaxPost('checker/update_progres', {id: id, progres: progres}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-done-lk',function(){
-        if(!confirm('Tandai Loading LK sebagai SELESAI?'))return;
-        ajaxPost('checker/done_lk',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+    $(document).on('click', '.btn-done', function(){
+        if (!confirm('Tandai sebagai SELESAI?')) return;
+        ajaxPost('checker/done', {id: $(this).data('id')}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-start-kk',function(){
-        if(!confirm('Mulai Loading KK ini?'))return;
-        ajaxPost('checker/start_kk',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // ============================================================
+    // Update progres & Done — LK
+    // ============================================================
+    $(document).on('click', '.btn-update-progres-lk', function(){
+        var id      = $(this).data('id');
+        var progres = $(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres-lk').val();
+        ajaxPost('checker/update_progres_lk', {id: id, progres: progres}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-update-progres-kk',function(){
-        var id=$(this).data('id'),progres=$(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres-kk').val();
-        ajaxPost('checker/update_progres_kk',{id:id,progres:progres},function(res){alert(res.msg);if(res.status)location.reload();});
+    $(document).on('click', '.btn-done-lk', function(){
+        if (!confirm('Tandai Loading LK sebagai SELESAI?')) return;
+        ajaxPost('checker/done_lk', {id: $(this).data('id')}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $(document).on('click','.btn-done-kk',function(){
-        if(!confirm('Tandai Loading KK sebagai SELESAI?'))return;
-        ajaxPost('checker/done_kk',{id:$(this).data('id')},function(res){alert(res.msg);if(res.status)location.reload();});
+
+    // ============================================================
+    // Update progres & Done — KK
+    // ============================================================
+    $(document).on('click', '.btn-update-progres-kk', function(){
+        var id      = $(this).data('id');
+        var progres = $(this).closest('.aksi-checker,.aksi-managerck').find('.select-progres-kk').val();
+        ajaxPost('checker/update_progres_kk', {id: id, progres: progres}, function(res){ alert(res.msg); if(res.status) location.reload(); });
     });
-    $('#btnArchiveAll').on('click',function(){
+    $(document).on('click', '.btn-done-kk', function(){
+        if (!confirm('Tandai Loading KK sebagai SELESAI?')) return;
+        ajaxPost('checker/done_kk', {id: $(this).data('id')}, function(res){ alert(res.msg); if(res.status) location.reload(); });
+    });
+
+    // ============================================================
+    // Archive semua (MANAGERWH)
+    // ============================================================
+    $('#btnArchiveAll').on('click', function(){
         Swal.fire({
-            title:'Archive Aktivitas Hari Ini?',
-            html:'Semua aktivitas yang sudah <b>DONE</b> akan diarsipkan,<br>tidak terbatas hari ini saja.<br><small class="text-muted">Data yang belum DONE tidak akan terpengaruh.</small>',
-            icon:'warning',showCancelButton:true,confirmButtonColor:'#dc3545',cancelButtonColor:'#6c757d',
-            confirmButtonText:'<i class="fas fa-box-archive mr-1"></i> Ya, Archive Sekarang',cancelButtonText:'Batal'
+            title: 'Archive Aktivitas Hari Ini?',
+            html: 'Semua aktivitas yang sudah <b>DONE</b> akan diarsipkan,<br>tidak terbatas hari ini saja.<br><small class="text-muted">Data yang belum DONE tidak akan terpengaruh.</small>',
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-box-archive mr-1"></i> Ya, Archive Sekarang', cancelButtonText: 'Batal'
         }).then(function(result){
-            if(!result.isConfirmed)return;
-            ajaxPost('checker/archive_all_today',{},function(res){
-                Swal.fire({icon:res.status?'success':'error',title:res.status?'Berhasil!':'Gagal',text:res.msg,timer:res.status?2500:0,showConfirmButton:!res.status})
-                .then(function(){if(res.status)location.reload();});
+            if (!result.isConfirmed) return;
+            ajaxPost('checker/archive_all_today', {}, function(res){
+                Swal.fire({
+                    icon: res.status ? 'success' : 'error',
+                    title: res.status ? 'Berhasil!' : 'Gagal',
+                    text: res.msg,
+                    timer: res.status ? 2500 : 0,
+                    showConfirmButton: !res.status
+                }).then(function(){ if(res.status) location.reload(); });
             });
         });
     });

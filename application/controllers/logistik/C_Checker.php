@@ -144,31 +144,29 @@ class C_Checker extends CI_Controller
         if (!$this->isDoer()) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
-        $id  = (int)$this->input->post('id');
+        $id    = (int)$this->input->post('id');
+        $pintu = (int)$this->input->post('pintu') ?: null;   // ← TAMBAH
 
-        // Bongkaran sudah diambil orang lain?
         if ($this->M_Checker->is_taken($id)) {
             echo json_encode(['status' => false, 'msg' => 'Bongkaran sudah diambil checker lain']); return;
         }
 
         if ($this->isMCK()) {
-            // MANAGERCK: bisa start banyak, nama checker dari input
             $nik_ck  = $this->input->post('nik_checker', true) ?: $this->session->userdata('nik');
             $nama_ck = $this->input->post('nm_checker',  true) ?: $this->nama();
         } else {
-        $nik_ck = $this->session->userdata('nik');
-        $active = $this->M_Checker->get_active_id_by_checker($nik_ck);
-        if ($active !== null) {
-            echo json_encode(['status' => false, 'msg' => 'Anda masih memiliki bongkaran aktif']); return;
+            $nik_ck = $this->session->userdata('nik');
+            $active = $this->M_Checker->get_active_id_by_checker($nik_ck);
+            if ($active !== null) {
+                echo json_encode(['status' => false, 'msg' => 'Anda masih memiliki bongkaran aktif']); return;
+            }
+            if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
+                echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading aktif yang belum selesai']); return;
+            }
+            $nama_ck = $this->nama();
         }
-        // Tambahkan ini:
-        if ($this->M_Checker->get_active_loading_by_checker($nik_ck) !== null) {
-            echo json_encode(['status' => false, 'msg' => 'Anda masih punya loading aktif yang belum selesai']); return;
-        }
-        $nama_ck = $this->nama();
-    }
 
-        $ok = $this->M_Checker->start($id, $nik_ck, $nama_ck);
+        $ok = $this->M_Checker->start($id, $nik_ck, $nama_ck, $pintu);  // ← $pintu
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Start berhasil' : 'Gagal start']);
     }
 
@@ -327,6 +325,8 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
+        $pintu = (int)$this->input->post('pintu') ?: null;
+
         $row = $this->M_Checker->get_kk_by_id($id);
         if (!$row || $row['status'] !== 'DO_SELESAI') {
             echo json_encode(['status' => false, 'msg' => 'Status harus DO SELESAI sebelum bisa start loading']); return;
@@ -345,7 +345,7 @@ class C_Checker extends CI_Controller
             }
             $nama_ck = $this->nama();
         }
-        $ok = $this->M_Checker->start_kk($id, $nik_ck, $nama_ck);
+        $ok = $this->M_Checker->start_kk($id, $nik_ck, $nama_ck, $pintu);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK dimulai' : 'Gagal']);
     }
 
@@ -391,6 +391,8 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
+        $pintu = (int)$this->input->post('pintu') ?: null;
+
         $row = $this->M_Checker->get_lk_by_id($id);
         if (!$row || $row['status'] !== 'DO_SELESAI') {
             echo json_encode(['status' => false, 'msg' => 'Status harus DO SELESAI sebelum bisa start loading']); return;
@@ -402,7 +404,7 @@ class C_Checker extends CI_Controller
             $nik_ck  = $this->session->userdata('nik');
             $nama_ck = $this->nama();
         }
-        $ok = $this->M_Checker->start_lk($id, $nik_ck, $nama_ck);
+        $ok = $this->M_Checker->start_lk($id, $nik_ck, $nama_ck, $pintu);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK dimulai' : 'Gagal']);
     }
 

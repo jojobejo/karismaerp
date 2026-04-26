@@ -85,9 +85,12 @@ class M_Checker extends CI_Model
 
     public function create($data)           { return $this->db->insert('tb_bongkaran', $data); }
 
-    public function start($id, $nik, $nama)
+    public function start($id, $nik, $nama, $pintu = null)
     {
-        $this->db->where('id', $id)->update('tb_bongkaran', ['status' => 'PROSES']);
+        $this->db->where('id', $id)->update('tb_bongkaran', [
+            'status' => 'PROSES',
+            'pintu'  => $pintu,
+        ]);
         return $this->db->insert('tb_bongkaran_checker', [
             'id_bongkaran'   => $id,
             'nik_checker'    => $nik,
@@ -164,14 +167,15 @@ class M_Checker extends CI_Model
     public function create_kk($data)      { return $this->db->insert('tb_loading_kk', $data); }
     public function update_kk($id, $data) { return $this->db->where('id', $id)->update('tb_loading_kk', $data); }
 
-    public function start_kk($id, $nik, $nama)
+    public function start_kk($id, $nik, $nama, $pintu = null)
     {
         return $this->db->where('id', $id)->update('tb_loading_kk', [
-            'status'       => 'PROSES_LOADING',
-            'nik_checker'  => $nik,
-            'nm_checker'   => $nama,
-            'waktu_mulai'  => date('Y-m-d H:i:s'),
-            'progres'      => 0,
+            'status'      => 'PROSES_LOADING',
+            'nik_checker' => $nik,
+            'nm_checker'  => $nama,
+            'waktu_mulai' => date('Y-m-d H:i:s'),
+            'progres'     => 0,
+            'pintu'       => $pintu,
         ]);
     }
 
@@ -217,14 +221,15 @@ class M_Checker extends CI_Model
     public function create_lk($data)      { return $this->db->insert('tb_loading_lk', $data); }
     public function update_lk($id, $data) { return $this->db->where('id', $id)->update('tb_loading_lk', $data); }
 
-    public function start_lk($id, $nik, $nama)
+    public function start_lk($id, $nik, $nama, $pintu = null)
     {
         return $this->db->where('id', $id)->update('tb_loading_lk', [
-            'status'       => 'PROSES_LOADING',
-            'nik_checker'  => $nik,
-            'nm_checker'   => $nama,
-            'waktu_mulai'  => date('Y-m-d H:i:s'),
-            'progres'      => 0,
+            'status'      => 'PROSES_LOADING',
+            'nik_checker' => $nik,
+            'nm_checker'  => $nama,
+            'waktu_mulai' => date('Y-m-d H:i:s'),
+            'progres'     => 0,
+            'pintu'       => $pintu,
         ]);
     }
 
