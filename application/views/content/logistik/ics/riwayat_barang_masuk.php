@@ -27,7 +27,6 @@
                     <div class="card-body">
                         <div class="container-fluid">
 
-                            <!-- Filter -->
                             <form action="<?= base_url('riwayat_barang_masuk') ?>" method="post">
                                 <div class="row mb-3">
                                     <div class="col-2">
@@ -54,12 +53,13 @@
                                 </div>
                             </form>
 
-                            <!-- Tabel Riwayat -->
                             <table class="table table-striped table-bordered table-hover table-sm" id="tabelRiwayat">
                                 <thead class="thead-dark">
                                     <tr>
                                         <th>Tgl Input</th>
                                         <th>No PO</th>
+                                        <th>Kode Supplier</th>
+                                        <th>Nama Supplier</th>
                                         <th>Kode Barang</th>
                                         <th>Nama Barang</th>
                                         <th class="text-right">Qty Diterima</th>
@@ -75,6 +75,8 @@
                                             <tr>
                                                 <td><?= htmlspecialchars($row['create_at']    ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['no_po']        ?? '') ?></td>
+                                                <td><?= htmlspecialchars($row['kd_suplier']   ?? '') ?></td>
+                                                <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
                                                 <td><?= htmlspecialchars($row['kd_barang']    ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang']  ?? '-') ?></td>
                                                 <td class="text-right"><?= number_format($row['qty_diterima'] ?? 0) ?></td>
@@ -83,9 +85,8 @@
                                                 <td><?= htmlspecialchars($row['exp_date']     ?? '-') ?></td>
                                                 <td class="text-center">
                                                     <button
-                                                        class="btn btn-sm btn-warning btn-cetak"
+                                                        class="btn btn-sm btn-warning"
                                                         title="Cetak Bukti Penerimaan"
-                                                        data-id="<?= $row['id_detail_lpb'] ?>"
                                                         onclick="cetakSatu(<?= $row['id_detail_lpb'] ?>)">
                                                         <i class="fas fa-print"></i>
                                                     </button>
@@ -94,7 +95,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">
+                                            <td colspan="11" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Tidak ada data
                                             </td>
                                         </tr>
@@ -118,9 +119,7 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
-<!-- ================================================================
-     AREA CETAK (HIDDEN, hanya muncul saat print)
-================================================================ -->
+<!-- Area Cetak -->
 <div id="areaCetak" style="display:none;"></div>
 
 <style>
@@ -151,89 +150,75 @@
 <script>
 $(document).ready(function () {
     $('#tabelRiwayat').DataTable({
-        responsive: true,
-        autoWidth: false,
-        pageLength: 25,
-        order: [[0, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: -1 }
-        ],
+        responsive  : true,
+        autoWidth   : false,
+        pageLength  : 25,
+        order       : [[0, 'desc']],
+        columnDefs  : [{ orderable: false, targets: -1 }],
         language: {
-            search:      "Cari:",
-            lengthMenu:  "Tampilkan _MENU_ data",
-            info:        "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-            zeroRecords: "Tidak ada data ditemukan",
-            emptyTable:  "Tidak ada data tersedia",
-            paginate: {
-                first:    "Pertama",
-                last:     "Terakhir",
-                next:     "Berikutnya",
-                previous: "Sebelumnya"
-            }
+            search      : "Cari:",
+            lengthMenu  : "Tampilkan _MENU_ data",
+            info        : "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+            zeroRecords : "Tidak ada data ditemukan",
+            emptyTable  : "Tidak ada data tersedia",
+            paginate    : { first: "Pertama", last: "Terakhir", next: "Berikutnya", previous: "Sebelumnya" }
         }
     });
 });
-// Data riwayat untuk keperluan cetak
+
 var dataRiwayat = <?= json_encode($riwayat ?? []) ?>;
 
-function buatHtmlBukti(rows) {
-    var html = '';
-    rows.forEach(function(row) {
-        html += `
-        <div class="bukti-penerimaan">
-            <div class="bukti-header">
-                <h4>PT. KARISMA INDOARGO UNIVERSAL</h4>
-                <p>BUKTI PENERIMAAN BARANG</p>
-                <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'})}</p>
-            </div>
-            <table class="bukti-table">
-                <tr><th width="35%">No PO</th><td>${row.no_po || '-'}</td></tr>
-                <tr><th>Kode Barang</th><td>${row.kd_barang || '-'}</td></tr>
-                <tr><th>Nama Barang</th><td>${row.nama_barang || '-'}</td></tr>
-                <tr><th>Qty Diterima</th><td>${Number(row.qty_diterima).toLocaleString('id-ID')} ${row.satuan || ''}</td></tr>
-                <tr><th>No Lot</th><td>${row.no_lot || '-'}</td></tr>
-                <tr><th>Exp Date</th><td>${row.exp_date || '-'}</td></tr>
-                <tr><th>Tanggal Input</th><td>${row.create_at || '-'}</td></tr>
-            </table>
-            <div class="ttd-area">
-                <div class="ttd-box">
-                    <div class="ttd-line">Diterima Oleh</div>
-                </div>
-                <div class="ttd-box">
-                    <div class="ttd-line">Diketahui Oleh</div>
-                </div>
-                <div class="ttd-box">
-                    <div class="ttd-line">Kepala Gudang</div>
-                </div>
-            </div>
-        </div>`;
-    });
-    return html;
+function buatHtmlBuktiSatu(row) {
+    return `
+    <div class="bukti-penerimaan">
+        <div class="bukti-header">
+            <h4>PT. KARISMA INDOARGO UNIVERSAL</h4>
+            <p>BUKTI PENERIMAAN BARANG</p>
+            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
+        </div>
+        <table class="bukti-table">
+            <tr><th width="35%">No PO</th><td>${row.no_po || '-'}</td></tr>
+            <tr><th>Kode Supplier</th><td>${row.kd_suplier || '-'}</td></tr>
+            <tr><th>Nama Supplier</th><td>${row.nama_suplier || '-'}</td></tr>
+            <tr><th>Kode Barang</th><td>${row.kd_barang || '-'}</td></tr>
+            <tr><th>Nama Barang</th><td>${row.nama_barang || '-'}</td></tr>
+            <tr><th>Qty Diterima</th><td>${Number(row.qty_diterima).toLocaleString('id-ID')} ${row.satuan || ''}</td></tr>
+            <tr><th>No Lot</th><td>${row.no_lot || '-'}</td></tr>
+            <tr><th>Exp Date</th><td>${row.exp_date || '-'}</td></tr>
+            <tr><th>Tanggal Input</th><td>${row.create_at || '-'}</td></tr>
+        </table>
+        <div class="ttd-area">
+            <div class="ttd-box"><div class="ttd-line">Diterima Oleh</div></div>
+            <div class="ttd-box"><div class="ttd-line">Diketahui Oleh</div></div>
+            <div class="ttd-box"><div class="ttd-line">Kepala Gudang</div></div>
+        </div>
+    </div>`;
 }
 
 function cetakSatu(id) {
     var row = dataRiwayat.find(function(r) { return r.id_detail_lpb == id; });
     if (!row) { alert('Data tidak ditemukan'); return; }
-    document.getElementById('areaCetak').innerHTML = buatHtmlBukti([row]);
+    document.getElementById('areaCetak').innerHTML = buatHtmlBuktiSatu(row);
     window.print();
 }
 
 function cetakSemua() {
     if (!dataRiwayat || dataRiwayat.length === 0) { alert('Tidak ada data'); return; }
-    
-    // Semua baris dalam SATU halaman cetak tanpa page-break
+
     var html = `
     <div class="bukti-penerimaan">
         <div class="bukti-header">
             <h4>PT. KARISMA INDOARGO UNIVERSAL</h4>
             <p>DAFTAR PENERIMAAN BARANG</p>
-            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'})}</p>
+            <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', {day:'2-digit', month:'long', year:'numeric'})}</p>
         </div>
         <table class="bukti-table" style="width:100%;border-collapse:collapse;margin-top:10px;">
             <thead>
                 <tr>
                     <th>No</th>
                     <th>No PO</th>
+                    <th>Kode Supplier</th>
+                    <th>Nama Supplier</th>
                     <th>Kode Barang</th>
                     <th>Nama Barang</th>
                     <th>Qty</th>
@@ -249,6 +234,8 @@ function cetakSemua() {
         html += `<tr>
             <td>${i + 1}</td>
             <td>${row.no_po || '-'}</td>
+            <td>${row.kd_suplier || '-'}</td>
+            <td>${row.nama_suplier || '-'}</td>
             <td>${row.kd_barang || '-'}</td>
             <td>${row.nama_barang || '-'}</td>
             <td style="text-align:right;">${Number(row.qty_diterima).toLocaleString('id-ID')}</td>

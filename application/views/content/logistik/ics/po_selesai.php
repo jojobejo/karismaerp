@@ -27,7 +27,7 @@
 
                 <div class="card">
                     <div class="card-header bg-success text-white">
-                        <h3 class="card-title"><i class="fas fa-check-double mr-2"></i> PO Selesai - Barang Sudah Terpenuhi</h3>
+                        <h3 class="card-title"><i class="fas fa-check-double mr-2"></i> PO Selesai - Semua Barang Sudah Terpenuhi</h3>
                     </div>
                     <div class="card-body">
                         <div class="container-fluid">
@@ -53,10 +53,10 @@
                                     <tr>
                                         <th>No PO</th>
                                         <th>Tanggal</th>
-                                        <th>Kode Barang</th>
-                                        <th>Nama Barang</th>
-                                        <th class="text-right">Qty Order</th>
-                                        <th class="text-right">Qty Masuk</th>
+                                        <th>Kode Supplier</th>
+                                        <th>Nama Supplier</th>
+                                        <th class="text-center">Jumlah Barang</th>
+                                        <th class="text-center">Barang Masuk</th>
                                         <th class="text-center">Status</th>
                                     </tr>
                                 </thead>
@@ -65,23 +65,24 @@
                                     $ada = false;
                                     if (!empty($lpb)) :
                                         foreach ($lpb as $row) :
-                                            $qty_order = (int)($row['qty']       ?? 0);
-                                            $qty_masuk = (int)($row['qty_masuk'] ?? 0);
-                                            $sisa      = $qty_order - $qty_masuk;
-                                            // Hanya tampilkan yang sudah selesai
+                                            $jumlah_barang       = (int)($row['jumlah_barang']       ?? 0);
+                                            $jumlah_barang_masuk = (int)($row['jumlah_barang_masuk'] ?? 0);
+                                            $sisa                = $jumlah_barang - $jumlah_barang_masuk;
+
+                                            // Hanya tampilkan yang sudah selesai semua
                                             if ($sisa > 0) continue;
                                             $ada = true;
                                     ?>
                                         <tr class="table-success">
                                             <td><?= htmlspecialchars($row['no_po']         ?? '') ?></td>
                                             <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['kd_barang']     ?? '') ?></td>
-                                            <td><?= htmlspecialchars($row['nama_barang']   ?? '-') ?></td>
-                                            <td class="text-right"><?= number_format($qty_order) ?></td>
-                                            <td class="text-right"><?= number_format($qty_masuk) ?></td>
+                                            <td><?= htmlspecialchars($row['kd_suplier']    ?? '') ?></td>
+                                            <td><?= htmlspecialchars($row['nama_suplier']  ?? '-') ?></td>
+                                            <td class="text-center font-weight-bold"><?= $jumlah_barang ?></td>
+                                            <td class="text-center text-success font-weight-bold"><?= $jumlah_barang_masuk ?></td>
                                             <td class="text-center">
-                                                <span class="badge badge-success">
-                                                    <i class="fas fa-check"></i> Selesai
+                                                <span class="badge badge-success px-3 py-2">
+                                                    <i class="fas fa-check mr-1"></i> Selesai
                                                 </span>
                                             </td>
                                         </tr>
@@ -118,25 +119,18 @@
 <script>
 $(document).ready(function () {
     $('#tabelPoSelesai').DataTable({
-        responsive: true,
-        autoWidth: false,
-        pageLength: 25,
-        order: [[0, 'desc']],
-        columnDefs: [
-            { orderable: false, targets: -1 }
-        ],
+        responsive  : true,
+        autoWidth   : false,
+        pageLength  : 25,
+        order       : [[0, 'desc']],
+        columnDefs  : [{ orderable: false, targets: -1 }],
         language: {
-            search:      "Cari:",
-            lengthMenu:  "Tampilkan _MENU_ data",
-            info:        "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-            zeroRecords: "Tidak ada data ditemukan",
-            emptyTable:  "Belum ada PO yang selesai",
-            paginate: {
-                first:    "Pertama",
-                last:     "Terakhir",
-                next:     "Berikutnya",
-                previous: "Sebelumnya"
-            }
+            search      : "Cari:",
+            lengthMenu  : "Tampilkan _MENU_ data",
+            info        : "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+            zeroRecords : "Tidak ada data ditemukan",
+            emptyTable  : "Belum ada PO yang selesai",
+            paginate    : { first: "Pertama", last: "Terakhir", next: "Berikutnya", previous: "Sebelumnya" }
         }
     });
 });
