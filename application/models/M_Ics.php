@@ -4,6 +4,384 @@ use JetBrains\PhpStorm\Internal\ReturnTypeContract;
 
 class M_Ics extends CI_Model
 {
+    private function pick_value(array $row, array $keys)
+    {
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+                return $row[$key];
+            }
+        }
+        return null;
+    }
+
+    private function normalize_date_dmy($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{4}$/', $value)) {
+            $dt = DateTime::createFromFormat('d/m/Y', $value);
+            return $dt ? $dt->format('d/m/Y') : null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+            $ts = strtotime($value);
+            return $ts ? date('d/m/Y', $ts) : null;
+        }
+
+        if (preg_match('/^\d{1,2}-\d{1,2}-\d{4}$/', $value)) {
+            $dt = DateTime::createFromFormat('d-m-Y', $value);
+            return $dt ? $dt->format('d/m/Y') : null;
+        }
+
+        if (is_numeric($value)) {
+            $ts = (int) $value;
+            if ($ts > 0) {
+                return date('d/m/Y', $ts);
+            }
+        }
+
+        return null;
+    }
+
+    private function build_pre_do_payload(array $row, array $columns)
+    {
+        $has = array_flip($columns);
+        $data = [];
+
+        $tgl_inputer = $this->normalize_date_dmy($this->pick_value($row, [
+            'tgl_inputer',
+            'tgl_transaksi',
+            'tanggal',
+            'tgl',
+            'tgl_po'
+        ])) ?: date('d/m/Y');
+
+        $tgl_exp = $this->normalize_date_dmy($this->pick_value($row, [
+            'tgl_exp',
+            'exp_date',
+            'expired',
+            'tgl_expired',
+            'expired_date'
+        ]));
+
+        $kd_faktur = $this->pick_value($row, [
+            'kd_po',
+            'kd_faktur',
+            'kode_faktur',
+            'no_faktur',
+            'no_po',
+            'kode_po'
+        ]);
+
+        $kd_barang = $this->pick_value($row, [
+            'kd_barang',
+            'kode_barang',
+            'kode_barang_system',
+            'kd_barang_system'
+        ]);
+
+        $kd_customer = $this->pick_value($row, [
+            'kd_customer',
+            'kode_customer',
+            'customer_code'
+        ]);
+
+        $kd_rute = $this->pick_value($row, [
+            'kd_rute',
+            'kode_rute',
+            'rute'
+        ]);
+
+        $kdupdate = $this->pick_value($row, [
+            'kdupdate',
+            'kd_update',
+            'kode_update'
+        ]);
+
+        $nama_barang = $this->pick_value($row, [
+            'nama_barang',
+            'nm_barang',
+            'barang'
+        ]);
+
+        $qty = $this->pick_value($row, [
+            'qty',
+            'qty_order',
+            'jumlah',
+            'qty_po'
+        ]);
+
+        $satuan = $this->pick_value($row, [
+            'satuan',
+            'unit'
+        ]);
+
+        $no_lot = $this->pick_value($row, [
+            'no_lot',
+            'lot_no',
+            'nolot'
+        ]);
+
+        $nominal_p = $this->pick_value($row, [
+            'nominal_p',
+            'nominal',
+            'harga',
+            'hrg_total',
+            'hrg_satuan'
+        ]);
+
+        $jtempo = $this->pick_value($row, [
+            'jtempo',
+            'jatuh_tempo',
+            'due_date'
+        ]);
+
+        if (isset($has['tgl_inputer'])) $data['tgl_inputer'] = $tgl_inputer;
+        if (isset($has['kd_faktur'])) $data['kd_faktur'] = $kd_faktur;
+        if (isset($has['kode_faktur'])) $data['kode_faktur'] = $kd_faktur;
+        if (isset($has['kd_rute'])) $data['kd_rute'] = $kd_rute;
+        if (isset($has['kdupdate'])) $data['kdupdate'] = $kdupdate;
+        if (isset($has['kd_customer'])) $data['kd_customer'] = $kd_customer;
+        if (isset($has['kd_barang'])) $data['kd_barang'] = $kd_barang;
+        if (isset($has['kode_barang'])) $data['kode_barang'] = $kd_barang;
+        if (isset($has['nama_barang'])) $data['nama_barang'] = $nama_barang;
+        if (isset($has['qty'])) $data['qty'] = (int) $qty;
+        if (isset($has['satuan'])) $data['satuan'] = $satuan;
+        if (isset($has['no_lot'])) $data['no_lot'] = $no_lot ?: '-';
+        if (isset($has['tgl_exp'])) $data['tgl_exp'] = $tgl_exp;
+        if (isset($has['nominal_p'])) $data['nominal_p'] = $nominal_p;
+        if (isset($has['jtempo'])) $data['jtempo'] = $jtempo;
+
+        if (isset($has['upload_sts'])) $data['upload_sts'] = 1;
+        if (isset($has['data_sts'])) $data['data_sts'] = 1;
+        if (isset($has['barang_sts'])) $data['barang_sts'] = 1;
+        if (isset($has['create_at'])) $data['create_at'] = date('Y-m-d H:i:s');
+
+        return $data;
+    }
+
+    public function get_pre_do_by_faktur_barang($kd_faktur, $kd_barang, $qty, $no_lot, $tgl_exp)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->where('kd_barang', $kd_barang)
+            ->where('qty', $qty)
+            ->where('no_lot', $no_lot)
+            ->where('tgl_exp', $tgl_exp)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('tb_pre_do')
+            ->row();
+    }
+
+    public function update_pre_do_by_faktur($kd_faktur, $kd_barang, $data)
+    {
+        return $this->db
+            ->where('kd_faktur', $kd_faktur)
+            ->where('kd_barang', $kd_barang)
+            ->update('tb_pre_do', $data);
+    }
+
+    public function sync_pre_do_from_api(array $items)
+    {
+        $columns = $this->db->list_fields('tb_pre_do');
+        $insert_batch = [];
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+        $error = null;
+
+        foreach ($items as $row) {
+            if (!is_array($row)) {
+                $skipped++;
+                continue;
+            }
+
+            $data = $this->build_pre_do_payload($row, $columns);
+
+            $kd_faktur = $data['kd_faktur'] ?? null;
+            $kd_barang = $data['kd_barang'] ?? null;
+
+            if (!$kd_faktur || !$kd_barang) {
+                $skipped++;
+                continue;
+            }
+
+            $qty = $data['qty'] ?? null;
+            $no_lot = $data['no_lot'] ?? null;
+            $tgl_exp = $data['tgl_exp'] ?? null;
+
+            $existing = $this->get_pre_do_by_faktur_barang($kd_faktur, $kd_barang, $qty, $no_lot, $tgl_exp);
+            if ($existing) {
+                $existing_arr = (array) $existing;
+                $compare = array_intersect_key($existing_arr, $data);
+                $diff = array_diff_assoc($data, $compare);
+                if (!empty($diff)) {
+                    if (in_array('upload_sts', $columns, true)) {
+                        $data['upload_sts'] = 2;
+                    }
+                    if (in_array('barang_sts', $columns, true)) {
+                        $data['barang_sts'] = 1;
+                    }
+                    $this->update_pre_do_by_faktur($kd_faktur, $kd_barang, $data);
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
+                continue;
+            }
+
+            $insert_batch[] = $data;
+        }
+
+        if (!empty($insert_batch)) {
+            $ok = $this->db->insert_batch('tb_pre_do', $insert_batch);
+            if ($ok === false) {
+                $error = $this->db->error();
+            } else {
+                $inserted = count($insert_batch);
+            }
+        }
+
+        return [
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'error' => $error
+        ];
+    }
+
+    private function normalize_date_ymd($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '0000-00-00') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return $value;
+        }
+
+        $ts = strtotime($value);
+        return $ts ? date('Y-m-d', $ts) : null;
+    }
+
+    private function build_pre_po_payload(array $row, array $columns)
+    {
+        $has = array_flip($columns);
+        $data = [];
+
+        $no_po = $this->pick_value($row, ['no_po', 'no_faktur', 'kode_faktur']);
+        $kd_po = $this->pick_value($row, ['kd_po', 'kode_po', 'kd_faktur']);
+        $tgl_transaksi = $this->normalize_date_ymd($this->pick_value($row, ['tgl_transaksi', 'tanggal', 'tgl']));
+        $kd_suplier = $this->pick_value($row, ['kd_suplier', 'kd_supplier', 'suplier']);
+        $kd_barang = $this->pick_value($row, ['kd_barang', 'kode_barang', 'kd_barang_system']);
+        $satuan = $this->pick_value($row, ['satuan', 'unit']);
+        $qty = $this->pick_value($row, ['qty', 'qty_order', 'jumlah']);
+        $hrg_satuan = $this->pick_value($row, ['hrg_satuan', 'harga_satuan', 'harga']);
+        $harga_total = $this->pick_value($row, ['harga_total', 'hrg_total', 'total']);
+        $status = $this->pick_value($row, ['status']);
+
+        if (isset($has['no_po'])) $data['no_po'] = $no_po;
+        if (isset($has['kd_po'])) $data['kd_po'] = $kd_po;
+        if (isset($has['tgl_transaksi'])) $data['tgl_transaksi'] = $tgl_transaksi;
+        if (isset($has['kd_suplier'])) $data['kd_suplier'] = $kd_suplier;
+        if (isset($has['kd_barang'])) $data['kd_barang'] = $kd_barang;
+        if (isset($has['satuan'])) $data['satuan'] = $satuan;
+        if (isset($has['qty'])) $data['qty'] = (int) $qty;
+        if (isset($has['hrg_satuan'])) $data['hrg_satuan'] = $hrg_satuan;
+        if (isset($has['harga_total'])) $data['harga_total'] = $harga_total;
+        if (isset($has['status'])) $data['status'] = $status !== null ? $status : 1;
+        if (isset($has['create_at'])) $data['create_at'] = date('Y-m-d H:i:s');
+
+        return $data;
+    }
+
+    public function get_pre_po_by_kd_po_barang($kd_po, $kd_barang)
+    {
+        return $this->db
+            ->where('kd_po', $kd_po)
+            ->where('kd_barang', $kd_barang)
+            ->order_by('id_pre_po', 'DESC')
+            ->limit(1)
+            ->get('tb_pre_po')
+            ->row();
+    }
+
+    public function update_pre_po_by_kd_po($kd_po, $kd_barang, $data)
+    {
+        return $this->db
+            ->where('kd_po', $kd_po)
+            ->where('kd_barang', $kd_barang)
+            ->update('tb_pre_po', $data);
+    }
+
+    public function sync_pre_po_from_api(array $items)
+    {
+        $columns = $this->db->list_fields('tb_pre_po');
+        $insert_batch = [];
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+        $error = null;
+
+        foreach ($items as $row) {
+            if (!is_array($row)) {
+                $skipped++;
+                continue;
+            }
+
+            $data = $this->build_pre_po_payload($row, $columns);
+
+            $kd_po = $data['kd_po'] ?? null;
+            $kd_barang = $data['kd_barang'] ?? null;
+
+            if (!$kd_po || !$kd_barang) {
+                $skipped++;
+                continue;
+            }
+
+            $existing = $this->get_pre_po_by_kd_po_barang($kd_po, $kd_barang);
+            if ($existing) {
+                $existing_arr = (array) $existing;
+                $compare = array_intersect_key($existing_arr, $data);
+                $diff = array_diff_assoc($data, $compare);
+                if (!empty($diff)) {
+                    $this->update_pre_po_by_kd_po($kd_po, $kd_barang, $data);
+                    $updated++;
+                } else {
+                    $skipped++;
+                }
+                continue;
+            }
+
+            $insert_batch[] = $data;
+        }
+
+        if (!empty($insert_batch)) {
+            $ok = $this->db->insert_batch('tb_pre_po', $insert_batch);
+            if ($ok === false) {
+                $error = $this->db->error();
+            } else {
+                $inserted = count($insert_batch);
+            }
+        }
+
+        return [
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'error' => $error
+        ];
+    }
 
     public function getAllICS()
     {
@@ -1722,6 +2100,34 @@ LEFT JOIN tb_customer c
     ", [$id_gudang])->result();
     }
 
+    public function get_stock_per_gudang_view($gudang = null)
+    {
+        $sql = "
+            SELECT
+                a.kode_barang,
+                a.nama_barang,
+                a.exp_date,
+                a.gudang,
+                a.qty,
+                (b.p*b.l*b.t) AS dimensi,
+                FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
+                MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
+            FROM v_stock_per_gudang a
+            JOIN tb_master_barang_all b
+                ON b.kd_barang = a.kode_barang
+        ";
+
+        $params = [];
+        if ($gudang !== null && $gudang !== '') {
+            $sql .= " WHERE a.gudang = ? ";
+            $params[] = $gudang;
+        }
+
+        $sql .= " ORDER BY a.nama_barang ASC, a.exp_date ASC ";
+
+        return $this->db->query($sql, $params)->result();
+    }
+
 
 
     public function get_gudang_induk()
@@ -2313,5 +2719,17 @@ LEFT JOIN tb_customer c
             AND mu.exp_date = sa.exp_date
             AND mu.gdg_asal = g.id_gudang
         ")->result();
+    }
+
+    public function get_stock($params = [])
+    {
+        $this->db->select('kode_barang,nama_barang,exp_date,nm_gudang,gudang,qty');
+        $this->db->from('v_stock_per_gudang');
+
+        if (!empty($params['gudang'])) {
+            $this->db->where('gudang', $params['gudang']);
+        }
+
+        return $this->db->get()->result();
     }
 }

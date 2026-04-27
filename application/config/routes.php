@@ -135,6 +135,7 @@ $route['ics/update_gudang']                         = 'logistik/C_Ics/update_gud
 $route['ics/update_wilayah']                        = 'logistik/C_Ics/update_wilayah';
 $route['ics/detail_wilayah/(:any)']                 = 'logistik/C_Ics/detail_wilayah/$1';
 $route['data_lpb_zahir']                            = 'logistik/C_Ics/data_lpb_zahir';
+$route['ics/sync_po_pre_do']                        = 'logistik/C_Ics/sync_po_pre_do';
 $route['save_qty_diterima']                         = 'logistik/C_Ics/save_qty_diterima';
 $route['get_barang_by_po']                          = 'logistik/C_ics/get_barang_by_po';
 $route['po_selesai']                                = 'logistik/C_Ics/po_selesai';
@@ -153,6 +154,10 @@ $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang
 $route['ics/update_pic_lokasi']                     = 'logistik/C_Ics/update_pic_lokasi';
 $route['ics/barangpergudang']                       = 'logistik/C_Ics/barangpergudang';
 $route['ics/ajax_barang_pergudang']                 = 'logistik/C_Ics/ajax_barang_pergudang';
+$route['ics/api/stock_per_gudang']                  = 'logistik/C_Ics/api_stock_per_gudang';
+
+
+$route['api/v1/stock/(:any)']                       = 'logistik/C_Ics/api_stock/$1';
 
 $route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
 $route['ics/retur/penjualan']                       = 'logistik/C_Ics/retur_penjualan';
@@ -208,8 +213,15 @@ $route['logistik/distibusi/driver_rute_matrix']     = 'logistik/C_Distribusi/dri
 $route['logistik/distibusi/driver_ready']           = 'logistik/C_Distribusi/driver_ready';
 $route['logistik/distibusi/list_faktur_status']     = 'logistik/C_Distribusi/list_faktur_status';
 $route['logistik/distibusi/ajax_list_faktur_status'] = 'logistik/C_Distribusi/ajax_list_faktur_status';
+$route['logistik/distibusi/list_total_kirim_do']    = 'logistik/C_Distribusi/list_total_kirim_do';
+$route['logistik/distibusi/ajax_total_kirim_do']    = 'logistik/C_Distribusi/ajax_total_kirim_do';
+$route['logistik/distibusi/export_total_kirim_do']    = 'logistik/C_Distribusi/export_total_kirim_do';
+$route['logistik/distibusi/driver_productif']       = 'logistik/C_Distribusi/driver_productif';
+$route['logistik/distibusi/ajax_driver_productif']  = 'logistik/C_Distribusi/ajax_driver_productif';
+$route['logistik/distibusi/export_driver_productif']  = 'logistik/C_Distribusi/export_driver_productif';
 $route['logistik/distibusi/list_do_status_2']       = 'logistik/C_Distribusi/list_do_status_2';
 $route['logistik/distibusi/ajax_detail_tonase_by_rute'] = 'logistik/C_Distribusi/ajax_detail_tonase_by_rute';
+$route['logistik/distibusi/ajax_dashboard_distribusi'] = 'logistik/C_Distribusi/ajax_dashboard_distribusi';
 
 $route['distibusi/detail_rute/(:any)']              = 'logistik/C_Distribusi/detail_rute/$1';
 $route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/detail_tonase_by_rute/$1';
@@ -268,6 +280,27 @@ $route['get_customer_bintang']                      = 'logistik/C_Logistik/get_c
 $route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
+
+//LOGISTIK - Checker
+$route['checker']                          = 'logistik/C_Checker/index';
+$route['checker/dashboard']                = 'logistik/C_Checker/dashboard';
+$route['checker/arsip']                    = 'logistik/C_Checker/arsip';
+$route['checker/store']                    = 'logistik/C_Checker/store';
+$route['checker/start']                    = 'logistik/C_Checker/start';
+$route['checker/update_progres']           = 'logistik/C_Checker/update_progres';
+$route['checker/done']                     = 'logistik/C_Checker/done';
+$route['checker/update_status_bongkaran']  = 'logistik/C_Checker/update_status_bongkaran';
+$route['checker/archive_all_today']        = 'logistik/C_Checker/archive_all_today';
+$route['checker/store_kk']                 = 'logistik/C_Checker/store_kk';
+$route['checker/update_kk']                = 'logistik/C_Checker/update_kk';
+$route['checker/store_lk']                 = 'logistik/C_Checker/store_lk';
+$route['checker/update_lk']                = 'logistik/C_Checker/update_lk';
+$route['checker/start_lk']                 = 'logistik/C_Checker/start_lk';
+$route['checker/update_progres_lk']        = 'logistik/C_Checker/update_progres_lk';
+$route['checker/done_lk']                  = 'logistik/C_Checker/done_lk';
+$route['checker/start_kk']                 = 'logistik/C_Checker/start_kk';
+$route['checker/update_progres_kk']        = 'logistik/C_Checker/update_progres_kk';
+$route['checker/done_kk']                  = 'logistik/C_Checker/done_kk';
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
@@ -328,3 +361,8 @@ $route['export-stock']                              = 'logistik/C_ExportStock/ex
 
 // SALES KIU KATALOG
 $route['kiu_katalog']                               = 'sales/C_ExportStock/export';
+
+//IndeksNilaiKepuasanPelanggan
+$route['kepuasan_pelanggan']                        = 'pelanggan/C_Pelanggan';
+$route['nilai_ipkp/(:any)']                         = 'pelanggan/C_Pelanggan/input_nilai/$1';
+$route['ratingreview']                              = 'pelanggan/C_Pelanggan/rating_review';
