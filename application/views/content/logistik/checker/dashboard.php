@@ -139,7 +139,7 @@
                 $pintu_aktif = count($pintu_dipakai);
 
                 // Daftar nama pintu A1–A5
-                $nama_pintu = ['A1','A2','A3','A4','A5'];
+                $nama_pintu = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
                 ?>
 
                 <!-- Header -->
@@ -315,7 +315,7 @@
 // Nama pintu A1–A5 (index 1=A1, 2=A2, dst.)
 // ================================================================
 function namaPintu($pintu) {
-    $map = [1=>'A1', 2=>'A2', 3=>'A3', 4=>'A4', 5=>'A5'];
+    $map = [1=>'A1', 2=>'A2', 3=>'A3', 4=>'A4', 5=>'A5', 6=>'A6', 7=>'B1', 8=>'B2', 9=>'B3', 10=>'C'];
     return isset($map[(int)$pintu]) ? $map[(int)$pintu] : 'P'.$pintu;
 }
 

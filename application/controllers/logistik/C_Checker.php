@@ -234,6 +234,39 @@ class C_Checker extends CI_Controller
         ]);
     }
 
+    public function edit_bongkaran()
+    {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $ket = $this->input->post('keterangan', true);
+        if (empty(trim($ket))) {
+            echo json_encode(['status' => false, 'msg' => 'Keterangan tidak boleh kosong']); return;
+        }
+        // Pastikan masih status MENUNGGU
+        $row = $this->M_Checker->get_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya bongkaran berstatus MENUNGGU yang bisa diedit']); return;
+        }
+        $ok = $this->M_Checker->edit_bongkaran($id, $ket);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran berhasil diupdate' : 'Gagal update']);
+    }
+
+    public function hapus_bongkaran()
+    {
+        if ($this->role() !== self::ROLE_MANAGER_WH) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $row = $this->M_Checker->get_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya bongkaran berstatus MENUNGGU yang bisa dihapus']); return;
+        }
+        $ok = $this->M_Checker->hapus_bongkaran($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran berhasil dihapus' : 'Gagal hapus']);
+    }
+
     // ================================================================
     // AJAX: LOADING KK  (ADMLOG yang input & update)
     // ================================================================
@@ -315,6 +348,38 @@ class C_Checker extends CI_Controller
         $ok = $this->M_Checker->archive_lk((int)$this->input->post('id'), $this->nama());
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'LK diarsipkan' : 'Gagal']);
     }
+
+    public function edit_lk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $ket = $this->input->post('keterangan', true);
+        if (empty(trim($ket))) {
+            echo json_encode(['status' => false, 'msg' => 'Keterangan tidak boleh kosong']); return;
+        }
+        $row = $this->M_Checker->get_lk_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya LK berstatus MENUNGGU yang bisa diedit']); return;
+        }
+        $ok = $this->M_Checker->edit_lk($id, $ket);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK berhasil diupdate' : 'Gagal update']);
+    }
+
+    public function hapus_lk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $row = $this->M_Checker->get_lk_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya LK berstatus MENUNGGU yang bisa dihapus']); return;
+        }
+        $ok = $this->M_Checker->hapus_lk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK berhasil dihapus' : 'Gagal hapus']);
+    }
     // ================================================================
     // AJAX: LOADING KK — Start / Progres / Done (ADMLOG yang jalankan)
     // ================================================================
@@ -381,6 +446,37 @@ class C_Checker extends CI_Controller
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK selesai!' : 'Gagal']);
     }
 
+    public function edit_kk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $ket = $this->input->post('keterangan', true);
+        if (empty(trim($ket))) {
+            echo json_encode(['status' => false, 'msg' => 'Keterangan tidak boleh kosong']); return;
+        }
+        $row = $this->M_Checker->get_kk_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya KK berstatus MENUNGGU yang bisa diedit']); return;
+        }
+        $ok = $this->M_Checker->edit_kk($id, $ket);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK berhasil diupdate' : 'Gagal update']);
+    }
+
+    public function hapus_kk()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id  = (int)$this->input->post('id');
+        $row = $this->M_Checker->get_kk_by_id($id);
+        if (!$row || $row['status'] !== 'MENUNGGU') {
+            echo json_encode(['status' => false, 'msg' => 'Hanya KK berstatus MENUNGGU yang bisa dihapus']); return;
+        }
+        $ok = $this->M_Checker->hapus_kk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK berhasil dihapus' : 'Gagal hapus']);
+    }
     // ================================================================
     // AJAX: LOADING LK — Start / Progres / Done (ADMLOG yang jalankan)
     // ================================================================

@@ -132,7 +132,7 @@ tr.row-pending { background:#fafafa !important; }
                                         </span>
                                         <?php if (!empty($b['pintu'])) : ?>
                                             <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
-                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($b['pintu']??1)-1] ?? 'A'.$b['pintu'] ?>
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][($b['pintu']??1)-1] ?? 'A'.$b['pintu'] ?>
                                             </span>
                                         <?php endif; ?>
                                         <?php if (!empty($b['nm_checker'])) : ?>
@@ -174,7 +174,7 @@ tr.row-pending { background:#fafafa !important; }
                                         </span>
                                         <?php if (!empty($lk['pintu'])) : ?>
                                             <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
-                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($lk['pintu']??1)-1] ?? 'A'.$lk['pintu'] ?>
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][($lk['pintu']??1)-1] ?? 'A'.$lk['pintu'] ?>
                                             </span>
                                         <?php endif; ?>
                                         <?php if (!empty($lk['nm_checker'])) : ?>
@@ -216,7 +216,7 @@ tr.row-pending { background:#fafafa !important; }
                                         </span>
                                         <?php if (!empty($kk['pintu'])) : ?>
                                             <span style="font-size:10px; color:#555; flex-shrink:0; margin:0 3px;">
-                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5'][($kk['pintu']??1)-1] ?? 'A'.$kk['pintu'] ?>
+                                                <i class="fas fa-door-open" style="font-size:9px;"></i> <?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][($kk['pintu']??1)-1] ?? 'A'.$kk['pintu'] ?>
                                             </span>
                                         <?php endif; ?>
                                         <?php if (!empty($kk['nm_checker'])) : ?>
@@ -233,15 +233,32 @@ tr.row-pending { background:#fafafa !important; }
                         </div>
 
                         <!-- Footer ringkasan -->
+                        <?php
+                        $aktif_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'PROSES');
+                        $aktif_lk      = array_filter($list_lk,   fn($r) => $r['status'] === 'PROSES_LOADING');
+                        $aktif_kk      = array_filter($list_kk,   fn($r) => $r['status'] === 'PROSES_LOADING');
+                        $total_aktif   = count($aktif_bongkar) + count($aktif_lk) + count($aktif_kk);
+
+                        $selesai_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'DONE');
+                        $selesai_lk      = array_filter($list_lk,   fn($r) => $r['status'] === 'DONE');
+                        $selesai_kk      = array_filter($list_kk,   fn($r) => $r['status'] === 'DONE');
+                        $total_selesai   = count($selesai_bongkar) + count($selesai_lk) + count($selesai_kk);
+                        ?>
                         <hr style="border-color:#e0e0e0; margin:10px 0 8px;">
                         <div class="d-flex justify-content-center align-items-center" style="gap:16px; flex-wrap:wrap;">
                             <span style="font-size:13px; font-weight:700; color:#1565c0;">
                                 <i class="fas fa-warehouse mr-1"></i>
-                                Aktif: <span style="font-size:16px; color:#e65100;"><?= count($aktif) ?></span> pintu berjalan
+                                Aktif: <span style="font-size:16px; color:#e65100;"><?= $total_aktif ?></span> pintu berjalan
+                                <!-- <small class="text-muted font-weight-normal ml-1">
+                                    (bongkar <?= count($aktif_bongkar) ?> · LK <?= count($aktif_lk) ?> · KK <?= count($aktif_kk) ?>)
+                                </small> -->
                             </span>
                             <span style="font-size:13px; font-weight:700; color:#1b5e20;">
                                 <i class="fas fa-check-circle mr-1"></i>
-                                Selesai: <span style="font-size:16px; color:#22c55e;"><?= count($selesai) ?></span> bongkaran
+                                Selesai: <span style="font-size:16px; color:#22c55e;"><?= $total_selesai ?></span> aktivitas
+                                <!-- <small class="text-muted font-weight-normal ml-1">
+                                    (bongkar <?= count($selesai_bongkar) ?> · LK <?= count($selesai_lk) ?> · KK <?= count($selesai_kk) ?>)
+                                </small> -->
                             </span>
                         </div>
                     </div>
@@ -285,7 +302,7 @@ tr.row-pending { background:#fafafa !important; }
                             <td><?= $is_taken ? htmlspecialchars($b['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
                             <td class="text-center">
                                 <?php if (!empty($b['pintu'])): ?>
-                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$b['pintu']-1] ?? 'P'.$b['pintu'] ?></span>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][$b['pintu']-1] ?? 'P'.$b['pintu'] ?></span>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
@@ -413,7 +430,7 @@ tr.row-pending { background:#fafafa !important; }
                             <td><?= !empty($lk['nm_checker']) ? htmlspecialchars($lk['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
                             <td class="text-center">
                                 <?php if (!empty($lk['pintu'])): ?>
-                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$lk['pintu']-1] ?? 'P'.$lk['pintu'] ?></span>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][$lk['pintu']-1] ?? 'P'.$lk['pintu'] ?></span>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
@@ -541,7 +558,7 @@ tr.row-pending { background:#fafafa !important; }
                             <td><?= !empty($kk['nm_checker']) ? htmlspecialchars($kk['nm_checker']) : '<span class="text-muted">-</span>' ?></td>
                             <td class="text-center">
                                 <?php if (!empty($kk['pintu'])): ?>
-                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5'][$kk['pintu']-1] ?? 'P'.$kk['pintu'] ?></span>
+                                    <span class="badge-pintu"><i class="fas fa-door-open mr-1"></i><?= ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'][$kk['pintu']-1] ?? 'P'.$kk['pintu'] ?></span>
                                 <?php else: ?>
                                     <span class="text-muted">-</span>
                                 <?php endif; ?>
@@ -729,6 +746,11 @@ tr.row-pending { background:#fafafa !important; }
                     <option value="3">Pintu A3</option>
                     <option value="4">Pintu A4</option>
                     <option value="5">Pintu A5</option>
+                    <option value="6">Pintu A6</option>
+                    <option value="7">Pintu B1</option>
+                    <option value="8">Pintu B2</option>
+                    <option value="9">Pintu B3</option>
+                    <option value="10">Pintu C</option>
                 </select>
             </div>
         </div>
@@ -760,6 +782,11 @@ tr.row-pending { background:#fafafa !important; }
                     <option value="3">Pintu A3</option>
                     <option value="4">Pintu A4</option>
                     <option value="5">Pintu A5</option>
+                    <option value="6">Pintu A6</option>
+                    <option value="7">Pintu B1</option>
+                    <option value="8">Pintu B2</option>
+                    <option value="9">Pintu B3</option>
+                    <option value="10">Pintu C</option>
                 </select>
             </div>
         </div>
