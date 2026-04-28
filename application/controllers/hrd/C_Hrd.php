@@ -1573,9 +1573,9 @@ class C_Hrd extends CI_Controller
                 case 'NITA':
                     $penerima_raw = 'HRD & GA';
                     break;
-                // case 'MIA':
-                //     $penerima_raw = 'MIA';
-                //     break;
+                    // case 'MIA':
+                    //     $penerima_raw = 'MIA';
+                    //     break;
                     // case 'SHEILA':
                     //     $penerima_raw = 'KARISMA ONLINE';
                     //     break;
@@ -1777,7 +1777,7 @@ class C_Hrd extends CI_Controller
             $config = [
                 'upload_path'   => './uploads/checklist_kendaraan/',
                 'allowed_types' => 'jpg|jpeg|png',
-                'max_size'      => 2048
+                'max_size'      => 5120
             ];
 
             $this->load->library('upload');
@@ -1794,13 +1794,38 @@ class C_Hrd extends CI_Controller
                 $this->upload->initialize($config);
 
                 if ($this->upload->do_upload('file')) {
-                    $file = $this->upload->data();
+
+                    $upload_data = $this->upload->data();
+                    $file_path   = $upload_data['full_path'];
+                    $file_size   = filesize($file_path);
+
+                    if ($file_size > 2 * 1024 * 1024) {
+
+                        $this->load->library('image_lib');
+
+                        $config_resize['image_library']  = 'gd2';
+                        $config_resize['source_image']   = $file_path;
+                        $config_resize['maintain_ratio'] = TRUE;
+                        $config_resize['quality']        = '60%';
+                        $config_resize['width']  = 1280;
+                        $config_resize['height'] = 1280;
+
+                        $this->image_lib->initialize($config_resize);
+
+                        if (!$this->image_lib->resize()) {
+                            log_message('error', $this->image_lib->display_errors());
+                        }
+
+                        $this->image_lib->clear();
+                    }
 
                     $this->M_Hrd->insert_foto_checklist([
                         'id_cheklist'  => $checklist_id,
-                        'name_file'    => $file['file_name'],
-                        'path'         => 'uploads/checklist_kendaraan/' . $file['file_name']
+                        'name_file'    => $upload_data['file_name'],
+                        'path'         => 'uploads/checklist_kendaraan/' . $upload_data['file_name']
                     ]);
+                } else {
+                    log_message('error', $this->upload->display_errors());
                 }
             }
         }
