@@ -326,4 +326,43 @@ class M_Checker extends CI_Model
         return null;
     }
 
+    // ── BONGKARAN ──────────────────────────────────────────────
+    public function edit_bongkaran($id, $keterangan)
+    {
+        return $this->db->where('id', $id)
+                        ->update('tb_bongkaran', ['keterangan' => $keterangan]);
+    }
+ 
+    public function hapus_bongkaran($id)
+    {
+        return $this->db->where('id', $id)
+                        ->delete('tb_bongkaran');
+    }
+ 
+    // ── LOADING KK ─────────────────────────────────────────────
+    public function edit_kk($id, $keterangan)
+    {
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_kk', ['keterangan' => $keterangan]);
+    }
+ 
+    public function hapus_kk($id)
+    {
+        return $this->db->where('id', $id)
+                        ->delete('tb_loading_kk');
+    }
+ 
+    // ── LOADING LK ─────────────────────────────────────────────
+    public function edit_lk($id, $keterangan)
+    {
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_lk', ['keterangan' => $keterangan]);
+    }
+ 
+    public function hapus_lk($id)
+    {
+        return $this->db->where('id', $id)
+                        ->delete('tb_loading_lk');
+    }
+
 }
