@@ -276,7 +276,7 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_sisa'] ?? 0)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
+                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
                                                 </td>
@@ -364,6 +364,7 @@
                                             <th class="text-center">Satuan</th>
                                             <th>No Lot</th>
                                             <th class="text-center">Expired Date</th>
+                                            <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
@@ -397,6 +398,7 @@
                     </div>
 
                     <form id="formTmpPoReceived">
+
                         <div class="modal-body">
                             <input type="hidden" name="kd_po" id="tmp_kd_po">
                             <input type="hidden" name="kd_suplier" id="tmp_kd_suplier">
@@ -412,7 +414,7 @@
                                     <input type="text" class="form-control" id="tmp_display_kd_barang" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="font-weight-bold">Qty Sisa</label>
+                                    <label class="font-weight-bold">Qty Kecil Sisa</label>
                                     <input type="text" class="form-control" id="tmp_qty_sisa" readonly>
                                 </div>
                             </div>
@@ -481,7 +483,7 @@
                 nama_barang: '',
                 no_po: '',
                 satuan_default: '',
-                qty_sisa: 0
+                qty_kecil_sisa: 0
             };
             var isSubmittingFinal = false;
             var defaultFinalForm = {
@@ -590,7 +592,7 @@
                 $('#tmp_no_po').val(item.no_po);
                 $('#tmp_display_kd_barang').val(item.kd_barang);
                 $('#tmp_nama_barang').text(item.nama_barang || '-');
-                $('#tmp_qty_sisa').val(item.qty_sisa + ' ' + (item.satuan_default || ''));
+                $('#tmp_qty_sisa').val(formatNumber(item.qty_kecil_sisa) + ' pcs');
             }
 
             function renderModalRows(rows) {
@@ -627,6 +629,11 @@
                         '<td class="text-center">' + escHtml(row.satuan) + '</td>' +
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
+                        '<td class="text-center">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger js-delete-summary-row" data-id="' + escHtml(row.id_tmp_recieved) + '" title="Hapus baris draft">' +
+                        '<i class="fas fa-trash"></i>' +
+                        '</button>' +
+                        '</td>' +
                         '</tr>'
                     );
                 });
@@ -717,7 +724,7 @@
                     nama_barang: $(this).data('nama-barang') || '',
                     no_po: $(this).data('no-po') || '',
                     satuan_default: $(this).data('satuan') || '',
-                    qty_sisa: parseFloat($(this).data('sisa')) || 0
+                    qty_kecil_sisa: parseFloat($(this).data('sisa')) || 0
                 };
 
                 fillModalHeader(currentItem);
@@ -770,6 +777,52 @@
                 Swal.fire('Reset Form', 'Field header draft berhasil dikosongkan.', 'success');
             });
 
+            $(document).on('click', '.js-delete-summary-row', function() {
+                var idTmpReceived = parseInt($(this).data('id'), 10) || 0;
+
+                if (!idTmpReceived) {
+                    Swal.fire('Gagal', 'ID draft tidak valid.', 'error');
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Hapus Baris Draft?',
+                    text: 'Baris draft temporary ini akan dihapus.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Hapus',
+                    cancelButtonText: 'Batal'
+                }).then(function(result) {
+                    if (!result.isConfirmed) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: '<?= base_url('ics/ajax_delete_tmp_po_received_row') ?>',
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            id_tmp_recieved: idTmpReceived,
+                            no_po: $('#final_no_po').val(),
+                            kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>'
+                        },
+                        success: function(res) {
+                            if (res.status !== 'success') {
+                                Swal.fire('Gagal', res.message || 'Baris draft gagal dihapus.', 'error');
+                                return;
+                            }
+
+                            reloadSummaryTable();
+
+                            Swal.fire('Berhasil', res.message || 'Baris draft berhasil dihapus.', 'success');
+                        },
+                        error: function(xhr) {
+                            handleAjaxError(xhr, 'Terjadi kesalahan saat menghapus baris draft.');
+                        }
+                    });
+                });
+            });
+
             $('#formTmpPoReceived').on('submit', function(e) {
                 e.preventDefault();
 
@@ -797,10 +850,10 @@
                     return;
                 }
 
-                if (totalQty > currentItem.qty_sisa) {
+                if (totalQty > currentItem.qty_kecil_sisa) {
                     Swal.fire(
                         'Qty Melebihi Sisa',
-                        'Total qty draft (' + totalQty + ') melebihi qty sisa barang (' + currentItem.qty_sisa + ').',
+                        'Total qty draft (' + totalQty + ' pcs) melebihi qty kecil sisa barang (' + currentItem.qty_kecil_sisa + ' pcs).',
                         'warning'
                     );
                     return;
@@ -831,7 +884,9 @@
                             'Berhasil',
                             hasAnyQty ? 'Draft penerimaan berhasil disimpan.' : 'Draft untuk barang ini berhasil dikosongkan.',
                             'success'
-                        );
+                        ).then(function() {
+                            $('#modalTmpPoReceived').modal('hide');
+                        });
                     },
                     error: function(xhr) {
                         handleAjaxError(xhr, 'Terjadi kesalahan saat menyimpan draft.');

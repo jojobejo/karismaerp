@@ -796,13 +796,13 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        if ($totalQty > (float) $qtyInfo['qty_sisa']) {
+        if ($totalQty > (float) $qtyInfo['qty_kecil_sisa']) {
             echo json_encode([
                 'status'  => 'error',
                 'step'    => 'validate_qty',
-                'message' => 'Total qty draft melebihi qty sisa PO.',
+                'message' => 'Total qty draft melebihi qty kecil sisa PO.',
                 'debug'   => [
-                    'qty_sisa'    => (float) $qtyInfo['qty_sisa'],
+                    'qty_kecil_sisa' => (float) $qtyInfo['qty_kecil_sisa'],
                     'total_draft' => $totalQty,
                     'kd_po'       => $payload['kd_po'],
                     'kd_barang'   => $payload['kd_barang']
@@ -836,6 +836,45 @@ class C_Ics extends CI_Controller
             'message'      => empty($insertRows) ? 'Draft dikosongkan.' : 'Draft penerimaan berhasil disimpan.',
             'rows'         => $this->M_Logistik->get_tmp_po_received_item($payload['kd_po'], $payload['kd_barang']),
             'summary_rows' => $this->M_Logistik->get_tmp_po_received_summary_by_item($payload['kd_po'], $payload['kd_barang'])
+        ]);
+    }
+
+    public function ajax_delete_tmp_po_received_row()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        $idTmpReceived = (int) $this->input->post('id_tmp_recieved', TRUE);
+        $noPo = trim((string) $this->input->post('no_po', TRUE));
+        $kdSuplier = trim((string) $this->input->post('kd_suplier', TRUE));
+
+        if ($idTmpReceived <= 0 || $noPo === '' || $kdSuplier === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter hapus draft belum lengkap.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $deleted = $this->M_Logistik->delete_tmp_po_received_row($idTmpReceived, $kdSuplier, $noPo);
+
+        if (!$deleted || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Baris draft gagal dihapus atau data tidak ditemukan.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Baris draft berhasil dihapus.'
         ]);
     }
 
@@ -894,7 +933,7 @@ class C_Ics extends CI_Controller
         $remainingRows = $this->M_Logistik->get_po_remaining_qty($payload['no_po'], $payload['kd_suplier']);
         $remainingMap = [];
         foreach ($remainingRows as $item) {
-            $remainingMap[$item['kd_po'] . '||' . $item['kd_barang']] = (float) $item['qty_sisa'];
+            $remainingMap[$item['kd_po'] . '||' . $item['kd_barang']] = (float) $item['qty_kecil_sisa'];
         }
 
         $draftMap = [];
@@ -910,11 +949,11 @@ class C_Ics extends CI_Controller
                 echo json_encode([
                     'status'  => 'error',
                     'step'    => 'validate_qty',
-                    'message' => 'Ada qty draft yang melebihi qty sisa PO.',
+                    'message' => 'Ada qty draft yang melebihi qty kecil sisa PO.',
                     'debug'   => [
                         'kd_po'       => $kdPo,
                         'kd_barang'   => $kdBarang,
-                        'qty_sisa'    => $qtySisa,
+                        'qty_kecil_sisa' => $qtySisa,
                         'total_draft' => $draftQty
                     ]
                 ]);

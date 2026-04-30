@@ -2836,21 +2836,23 @@ FROM (
                 a.kd_barang,
                 b.nama_barang,
                 (b.p * b.l * b.t) AS dimensi_br,
-                a.qty * (b.p * b.l * b.t) AS qty_kecil,
+                a.qty * (b.p * b.l * b.t) AS qty_kecil, 
                 a.qty AS qty_besar,
                 a.satuan,
                 a.hrg_satuan,
                 a.harga_total,
                 COALESCE(r.qty_diterima, 0) AS qty_diterima,
-                COALESCE(r.qty_diterima, 0) * (b.p * b.l * b.t) AS qty_kecil_diterima,
-                GREATEST(a.qty - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST(a.qty - COALESCE(r.qty_diterima, 0), 0) * (b.p * b.l * b.t) AS qty_kecil_sisa,
+                COALESCE(r.qty_diterima, 0) AS qty_kecil_diterima,
+                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_kecil_sisa,
                 COALESCE(r.total_lpb_record, 0) AS total_lpb_record,
+                
                 CASE 
                     WHEN COALESCE(r.qty_diterima, 0) = 0 THEN 'BELUM'
-                    WHEN COALESCE(r.qty_diterima, 0) < a.qty THEN 'PARTIAL'
+                    WHEN  a.qty * (b.p * b.l * b.t) - COALESCE(r.qty_diterima, 0) != a.qty THEN 'PARTIAL'
                     ELSE 'FULL'
                 END AS status_barang
+                          
             FROM tb_pre_po a
             LEFT JOIN tb_master_barang_all b 
                 ON b.kd_barang = a.kd_barang
@@ -3029,16 +3031,53 @@ FROM (
         return $this->db->get()->result_array();
     }
 
+    public function delete_tmp_po_received_row($idTmpReceived, $kdSuplier = '', $noPo = '')
+    {
+        $idTmpReceived = (int) $idTmpReceived;
+
+        if ($idTmpReceived <= 0) {
+            return FALSE;
+        }
+
+        $this->db->from('tb_tmp_po_received t');
+        $this->db->join(
+            'tb_pre_po pp',
+            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+            'inner'
+        );
+        $this->db->where('t.id_tmp_recieved', $idTmpReceived);
+
+        if ($kdSuplier !== '') {
+            $this->db->where('t.kd_suplier', $kdSuplier);
+        }
+
+        if ($noPo !== '') {
+            $this->db->where('pp.no_po', $noPo);
+        }
+
+        $row = $this->db->get()->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $this->db->where('id_tmp_recieved', $idTmpReceived);
+
+        return $this->db->delete('tb_tmp_po_received');
+    }
+
     public function get_po_remaining_qty($no_po, $kd_suplier)
     {
-        $sql = "
-            SELECT
+        $sql = "SELECT
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty AS qty_order,
+                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa
+                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
             FROM tb_pre_po pp
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -3059,16 +3098,18 @@ FROM (
 
     public function get_po_remaining_qty_by_item($kd_po, $kd_barang)
     {
-        $sql = "
-            SELECT
+        $sql = "SELECT
                 pp.no_po,
                 pp.kd_suplier,
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty AS qty_order,
+                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa
+                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
             FROM tb_pre_po pp
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
             LEFT JOIN (
                 SELECT
                     h.no_po,

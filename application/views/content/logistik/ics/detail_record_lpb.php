@@ -215,7 +215,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="lpb-stat-card">
-                                <div class="lpb-stat-label">Total Qty Diterima</div>
+                                <div class="lpb-stat-label">Total Qty Diterima (PCS)</div>
                                 <div class="lpb-stat-value" id="statTotalQty">0</div>
                             </div>
                         </div>
@@ -283,7 +283,7 @@
                                                         <th class="text-center">No</th>
                                                         <th>Kode Barang</th>
                                                         <th>Nama Barang</th>
-                                                        <th class="text-center">Qty Diterima</th>
+                                                        <th class="text-center">Qty Diterima (PCS)</th>
                                                         <th>No Lot</th>
                                                         <th class="text-center">Expired Date</th>
                                                         <th class="text-center">Input At</th>
@@ -428,7 +428,7 @@
                         value: formatNumber(header.total_baris || 0)
                     },
                     {
-                        label: 'Total Qty',
+                        label: 'Total Qty (PCS)',
                         value: formatNumber(header.total_qty || 0)
                     },
                     {
