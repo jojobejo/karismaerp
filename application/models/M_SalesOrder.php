@@ -280,9 +280,11 @@ class M_SalesOrder extends CI_Model
         $this->db->insert('tbso_sales_order', $header);
         $id_so     = $this->db->insert_id();
         $no_faktur = $header['no_faktur']; // ← pakai no_faktur sebagai referensi
+        $no_so = $header['no_so'];
 
         foreach ($details as $d) {
             $d['no_faktur'] = $no_faktur;
+            $d['no_so']     = $no_so;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
@@ -290,6 +292,7 @@ class M_SalesOrder extends CI_Model
 
             $this->db->insert('tbso_stock_reservation', [
                 'no_faktur'    => $no_faktur,   // ← no_faktur
+                'no_so'        => $no_so,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_toViewDate($d['expired_date']),
@@ -314,6 +317,7 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->trans_start();
         $no_faktur = $header['no_faktur'];
+        $no_so = $header['no_so'];
 
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $header);
@@ -325,12 +329,14 @@ class M_SalesOrder extends CI_Model
 
         foreach ($details as $d) {
             $d['no_faktur'] = $no_faktur;
+            $d['no_so']     = $no_so;   
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
             $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
 
             $this->db->insert('tbso_stock_reservation', [
                 'no_faktur'    => $no_faktur,
+                'no_so'        => $no_so,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_toViewDate($d['expired_date']),
