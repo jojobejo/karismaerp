@@ -280,6 +280,7 @@ $route['get_customer_bintang']                      = 'logistik/C_Logistik/get_c
 $route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
+$route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
 
 //LOGISTIK - Checker
 $route['checker']                          = 'logistik/C_Checker/index';

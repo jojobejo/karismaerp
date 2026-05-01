@@ -1,3 +1,4 @@
+<!-- controller/C_Logistik.php -->
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -1016,6 +1017,38 @@ class C_Logistik extends CI_Controller
             'message' => 'Kode barang berhasil diupdate',
             'affected_rows' => $affected
         ]);
+    }
+
+    public function get_list_faktur_ajax() ///ppp///
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        try {
+            $data = $this->M_Logistik->get_data_penjualan_zahir();
+
+            $result = [];
+            foreach ($data as $row) {
+                $result[] = [
+                    'kd_faktur'     => $row->kd_faktur     ?? '-',
+                    'tgl_inputer'   => $row->tgl_inputer_fmt ?? ($row->tgl_inputer ?? '-'),
+                    'nama_customer' => $row->nama_customer  ?? '-',
+                    'nama_kios'     => $row->nama_kios      ?? '-',
+                    'alamat_kios'   => $row->alamat_kios    ?? '-',
+                    'kd_rute'       => $row->kd_rute        ?? '-',
+                    'regional'      => $row->regional       ?? '-',
+                    'total_barang'  => $row->total_barang   ?? 0,
+                    'data_sts'      => $row->data_sts       ?? '-',
+                ];
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['status' => true, 'data' => $result]);
+
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['status' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
     }
 
     public function cancel_fk($kd_faktur, $kd_do)
