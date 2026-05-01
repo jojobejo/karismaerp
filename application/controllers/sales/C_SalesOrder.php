@@ -187,10 +187,10 @@ class C_SalesOrder extends CI_Controller
         $no_faktur = $post['no_faktur'];
 
         $header = [
-            'no_so'             => $no_so,
+            'no_so'             => $post['no_so'],
             'no_faktur'         => $no_faktur,
             'tanggal_transaksi' => $post['tanggal'],
-            'customer_id'       => $post['customer_id'],
+            'kd_customer'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
             'gudang_id'         => $gudang_id,
             'batas_tonase'      => $tk['batas_tonase'],
@@ -329,7 +329,7 @@ class C_SalesOrder extends CI_Controller
             'no_so'             => $post['no_so']     ?? ($so['no_so']     ?? ''),
             'no_faktur'         => $post['no_faktur'] ?? ($so['no_faktur'] ?? ''),
             'tanggal_transaksi' => $post['tanggal'],
-            'customer_id'       => $post['customer_id'],
+            'kd_customer'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
             'gudang_id'         => $gudang_id,
             'batas_tonase'      => $tk['batas_tonase'],

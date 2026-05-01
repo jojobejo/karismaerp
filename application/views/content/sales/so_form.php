@@ -125,7 +125,7 @@
                                                 </div>
                                             </div>
                                             <input type="hidden" name="customer_id" id="customer_id"
-                                                value="<?= $is_edit ? escAttr($so['customer_id']) : '' ?>">
+                                                value="<?= $is_edit ? escAttr($so['kd_customer'] ?? '') : '' ?>">
                                             <input type="hidden" name="customer_name" id="customer_name"
                                                 value="<?= $is_edit ? escAttr($so['customer_name']) : '' ?>">
                                             <div id="customer_validation" class="text-danger small mt-1"
@@ -373,7 +373,7 @@
                         <thead class="thead-dark sticky-top">
                             <tr>
                                 <th>Nama Customer</th>
-                                <th>Telepon</th>
+                                <th>Nama Kios</th>
                                 <th>Alamat</th>
                                 <th style="width:60px" class="text-center">Pilih</th>
                             </tr>
@@ -645,6 +645,7 @@ function buatBaris(idx, d) {
     h += '</td>';
 
     /* 6. Harga/Pcs + Approver (muncul jika harga != HPP) */
+    var approveBy = d.approve_by || d.approve_by_item || '';
     var hargaClass = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) ? 'text-danger' : '';
     h += '<td>';
     h += '<input type="number" step="0.01" min="0" name="hrg_satuan[]" id="hrg_'+idx+'"'
@@ -659,7 +660,8 @@ function buatBaris(idx, d) {
     /* Isi dari APPROVER_LIST yang dikirim PHP */
     APPROVER_LIST.forEach(function(a) {
         var label = a.nm + (a.jobdesk ? ' — '+a.jobdesk : '');
-        h += '<option value="'+esc(a.nm)+'">'+esc(label)+'</option>';
+        var selected = (a.nm === approveBy) ? ' selected' : '';
+        h += '<option value="'+esc(a.nm)+'"'+selected+'>'+esc(label)+'</option>';
     });
     h += '</select>';
     h += '</div>';
@@ -1097,11 +1099,11 @@ function renderCustomers(q) {
     filtered.forEach(function(c) {
         html += '<tr>';
         html += '<td><b>'+esc(c.nama_customer||'')+'</b></td>';
-        html += '<td><small>'+esc(c.telepon||c.no_telp||'-')+'</small></td>';
-        html += '<td><small>'+esc(c.alamat||'-')+'</small></td>';
+        html += '<td><small>'+esc(c.nama_kios||'-')+'</small></td>';
+        html += '<td><small>'+esc(c.alamat_kios||'-')+'</small></td>';
         html += '<td class="text-center">';
         html += '<button type="button" class="btn btn-xs btn-primary btn-pick-customer"';
-        html += ' data-id="'+esc(c.id)+'" data-nama="'+esc(c.nama_customer)+'">';
+        html += ' data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'">';
         html += '<i class="fas fa-check"></i></button>';
         html += '</td></tr>';
     });
@@ -1227,7 +1229,7 @@ document.getElementById('customer-search').addEventListener('input', function() 
 document.getElementById('customer-body').addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-pick-customer');
     if (!btn) return;
-    document.getElementById('customer_id').value      = btn.dataset.id;
+    document.getElementById('customer_id').value      = btn.dataset.kd;
     document.getElementById('customer_name').value    = btn.dataset.nama;
     document.getElementById('customer_display').value = btn.dataset.nama;
     document.getElementById('customer_validation').style.display = 'none';

@@ -227,11 +227,11 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->select('so.*, c.nama_customer');
         $this->db->from('tbso_sales_order so');
-        $this->db->join('tb_customer c', 'c.id = so.customer_id', 'left');
-        if (!empty($filter['status']))       $this->db->where('so.status', $filter['status']);
-        if (!empty($filter['date1']))        $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
-        if (!empty($filter['date2']))        $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
-        if (!empty($filter['customer_id'])) $this->db->where('so.customer_id', $filter['customer_id']);
+        $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
+        if (!empty($filter['status']))          $this->db->where('so.status', $filter['status']);
+        if (!empty($filter['date1']))           $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
+        if (!empty($filter['date2']))           $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
+        if (!empty($filter['customer_id']))     $this->db->where('so.kd_customer', $filter['customer_id']);
         $this->db->order_by('so.create_at', 'DESC');
         return $this->db->get()->result_array();
     }
@@ -240,7 +240,7 @@ class M_SalesOrder extends CI_Model
     {
         $this->db->select('so.*, c.nama_customer');
         $this->db->from('tbso_sales_order so');
-        $this->db->join('tb_customer c', 'c.id = so.customer_id', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->where('so.id_so', $id_so);
         return $this->db->get()->row_array();
     }
