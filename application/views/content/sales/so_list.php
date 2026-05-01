@@ -63,11 +63,6 @@
                         </a>
                     </div>
                     <div class="col-auto">
-                        <a href="<?= base_url('sales_order/approval') ?>" class="btn btn-warning">
-                            <i class="fas fa-check-circle"></i> Approval Nego
-                        </a>
-                    </div>
-                    <div class="col-auto">
                         <a href="<?= base_url('sales_order/activity_log') ?>" class="btn btn-info">
                             <i class="fas fa-history"></i> Activity Log
                         </a>
@@ -154,7 +149,6 @@
                                     <th class="text-right">Item</th>
                                     <th class="text-right">Tonase (kg)</th>
                                     <th class="text-right">Kubikasi (m³)</th>
-                                    <th class="text-center">Nego</th>
                                     <th class="text-center">Status</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -199,13 +193,6 @@
                                         <td class="text-right"><?= number_format($row['jumlah_item']) ?></td>
                                         <td class="text-right"><?= number_format($row['total_tonase'], 3) ?></td>
                                         <td class="text-right"><?= number_format($row['total_kubikasi'], 5) ?></td>
-                                        <td class="text-center">
-                                            <?php if ($row['is_nego']): ?>
-                                                <span class="badge badge-warning">Nego</span>
-                                            <?php else: ?>
-                                                -
-                                            <?php endif; ?>
-                                        </td>
                                         <td class="text-center">
                                             <span class="badge badge-<?= $badge ?>">
                                                 <?= $label ?>

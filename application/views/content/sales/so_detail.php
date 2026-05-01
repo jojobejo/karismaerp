@@ -133,9 +133,6 @@
                                             $l = $label[$so['status']] ?? $so['status'];
                                             ?>
                                             <span class="badge badge-<?= $b ?>"><?= $l ?></span>
-                                            <?php if ($so['is_nego']): ?>
-                                                <span class="badge badge-warning ml-1">NEGO</span>
-                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php if (!empty($so['catatan'])): ?>
@@ -270,11 +267,6 @@
                                         </td>
                                         <td class="text-right"><?= $d['pajak'] ?>%</td>
                                         <td class="text-right">Rp <?= number_format($d['total_harga'], 2) ?></td>
-                                        <td class="text-center">
-                                            <?= $d['is_nego']
-                                                ? '<span class="badge badge-warning">Nego</span>'
-                                                : '' ?>
-                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 </tbody>

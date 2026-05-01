@@ -197,7 +197,6 @@ class C_SalesOrder extends CI_Controller
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
-            'is_nego'           => $is_nego,
             'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
             'create_by'         => $this->_getUsername(),
@@ -337,7 +336,6 @@ class C_SalesOrder extends CI_Controller
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
-            'is_nego'           => $is_nego,
             'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
             'update_by'         => $this->_getUsername(),
@@ -608,7 +606,6 @@ class C_SalesOrder extends CI_Controller
                 'berat_gram'   => (float)($post['berat_gram'][$i]  ?? 0),
                 'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
                 'kode_akun'    => $post['kode_akun'][$i]     ?? null,
-                'is_nego'      => $is_nego,
                 'approve_by'   => $approve_by_item,
                 'create_by'    => $this->_getUsername(),
             ];
