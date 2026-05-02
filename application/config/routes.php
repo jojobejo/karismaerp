@@ -281,6 +281,7 @@ $route['update_customer_faktur']                    = 'logistik/C_Logistik/updat
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
 $route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
+$route['debug_so'] = 'logistik/C_Logistik/debug_so';
 
 //LOGISTIK - Checker
 $route['checker']                          = 'logistik/C_Checker/index';

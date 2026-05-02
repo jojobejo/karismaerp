@@ -1051,6 +1051,50 @@ class C_Logistik extends CI_Controller
         exit;
     }
 
+    public function debug_so()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json');
+        ini_set('display_errors', '0');
+
+        $checks = [];
+
+        // 1. Cek total SO
+        $total_so = $this->db->query("SELECT COUNT(*) as total FROM tbso_sales_order")->row();
+        $checks['total_so'] = $total_so->total ?? 0;
+
+        // 2. Cek status SO yang ada
+        $statuses = $this->db->query("SELECT status, COUNT(*) as jml FROM tbso_sales_order GROUP BY status")->result();
+        $checks['status_list'] = $statuses;
+
+        // 3. Cek apakah SO punya detail
+        $has_detail = $this->db->query("
+            SELECT so.no_so, so.status, 
+                COUNT(sod.id) as total_detail
+            FROM tbso_sales_order so
+            LEFT JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
+            GROUP BY so.no_so, so.status
+            LIMIT 5
+        ")->result();
+        $checks['so_with_detail'] = $has_detail;
+
+        // 4. Cek join ke tb_customer
+        $join_cust = $this->db->query("
+            SELECT so.no_so, so.kd_customer, c.nama_customer
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LIMIT 5
+        ")->result();
+        $checks['join_customer'] = $join_cust;
+
+        // 5. Cek nama tabel tmp yang benar
+        $tmp_table = $this->db->query("SHOW TABLES LIKE 'tb_tmp%'")->result();
+        $checks['tmp_tables'] = $tmp_table;
+
+        echo json_encode(['status' => true, 'debug' => $checks], JSON_PRETTY_PRINT);
+        exit;
+    }
+
     public function cancel_fk($kd_faktur, $kd_do)
     {
         $this->M_Logistik->delete_faktur_customer($kd_faktur);

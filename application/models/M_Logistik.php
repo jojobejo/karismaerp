@@ -405,43 +405,50 @@ class M_Logistik extends CI_Model
     {
         $sql = "
             SELECT
-                so.no_so                        AS kd_faktur,
-                so.tanggal_transaksi            AS tgl_inputer,
-                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y') AS tgl_inputer_fmt,
+                so.no_so                                        AS kd_faktur,
+                so.tanggal_transaksi                            AS tgl_inputer,
+                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y')   AS tgl_inputer_fmt,
                 so.kd_customer,
+                so.status                                       AS data_sts,
                 c.nama_customer,
                 c.nama_kios,
                 c.alamat_kios,
                 c.regional,
-                COALESCE(r.kd_rute, c.regional) AS kd_rute,
-                COALESCE(r.keterangan, c.regional) AS keterangan_rute,
-                COUNT(DISTINCT sod.kd_barang)   AS total_barang,
-                so.status                       AS data_sts
+                COALESCE(r.kd_rute,  c.regional)               AS kd_rute,
+                COALESCE(r.keterangan, c.regional)              AS keterangan_rute,
+                COUNT(DISTINCT sod.kd_barang)                   AS total_barang
             FROM tbso_sales_order so
-            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
-            JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
-            WHERE so.status = 'approved'
+            INNER JOIN tbso_sales_order_detail sod
+                ON sod.no_so = so.no_so
+            INNER JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = c.regional
+            WHERE so.status IN ('draft', 'waiting_approval', 'approved')
             AND NOT EXISTS (
-                SELECT 1 FROM tb_detail_do d WHERE d.kd_faktur = so.no_so
+                SELECT 1 FROM tb_detail_do d
+                WHERE d.kd_faktur = so.no_so
             )
             AND NOT EXISTS (
-                SELECT 1 FROM tb_tmp_detaildo t WHERE t.kd_faktur = so.no_so
+                SELECT 1 FROM tb_tmp_detaildo t
+                WHERE t.kd_faktur = so.no_so
             )
-            -- Hanya tampilkan SO yang semua barangnya ada di master barang
-            AND NOT EXISTS (
-                SELECT 1
-                FROM tbso_sales_order_detail x
-                LEFT JOIN tb_master_barang_all m ON m.kd_barang = x.kd_barang
-                WHERE x.no_so = so.no_so
-                    AND m.kd_barang IS NULL
-            )
-            GROUP BY so.no_so
+            GROUP BY
+                so.no_so,
+                so.tanggal_transaksi,
+                so.kd_customer,
+                so.status,
+                c.nama_customer,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                r.kd_rute,
+                r.keterangan
             ORDER BY so.tanggal_transaksi DESC
         ";
+
         return $this->db->query($sql)->result();
     }
-
     public function get_master_barang_not_listed()
     {
         return $this->db->query("SELECT 

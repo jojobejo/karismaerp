@@ -306,74 +306,108 @@
         }
 
         function loadFakturPenjualan() {
-            var tbody = $('#dailyod tbody');
-            tbody.html('<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
-
-            $.ajax({
-                url: '<?= base_url("get_list_faktur_ajax") ?>',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    tbody.empty();
-
-                    if (!response || !response.status) {
-                        tbody.html('<tr><td colspan="10" class="text-center text-danger">Gagal memuat data.</td></tr>');
-                        return;
-                    }
-
-                    if (response.data.length === 0) {
-                        tbody.html('<tr><td colspan="10" class="text-center">Tidak ada data faktur.</td></tr>');
-                        return;
-                    }
-
-                    $.each(response.data, function(i, l) {
-                        var statusBadge = '';
-                        var actionBtn   = '';
-
-                        // data_sts dari tbso_sales_order adalah string
-                        if (l.data_sts === 'approved') {
-                            statusBadge = '<span class="badge badge-secondary">NOT IN DRAFT</span>';
-                            actionBtn   = `
-                                <div class="row">
-                                    <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                    <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
-                                </div>`;
-                        } else if (l.data_sts === 'in_delivery') {
-                            statusBadge = '<span class="badge badge-success">ON DRAFT</span>';
-                            actionBtn   = `
-                                <div class="row">
-                                    <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                </div>`;
-                        } else {
-                            statusBadge = `<span class="badge badge-light">${l.data_sts}</span>`;
-                            actionBtn   = `
-                                <div class="row">
-                                    <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                </div>`;
-                        }
-
-                        tbody.append(`
-                            <tr>
-                                <td>${l.tgl_inputer}</td>
-                                <td>${l.kd_faktur}</td>
-                                <td>${l.nama_customer}</td>
-                                <td>${l.nama_kios}</td>
-                                <td>${l.alamat_kios}</td>
-                                <td>${l.kd_rute}</td>
-                                <td>${l.regional}</td>
-                                <td>${l.total_barang}</td>
-                                <td>${statusBadge}</td>
-                                <td>${actionBtn}</td>
-                            </tr>
-                        `);
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("AJAX Error:", xhr.responseText);
-                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Error: ' + error + '</td></tr>');
-                }
-            });
+        // Destroy DataTable dulu jika sudah diinit
+        if ($.fn.DataTable.isDataTable('#dailyod')) {
+            $('#dailyod').DataTable().destroy();
         }
+
+        var tbody = $('#dailyod tbody');
+        tbody.html('<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+
+        $.ajax({
+            url: '<?= base_url("get_list_faktur_ajax") ?>',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                tbody.empty();
+
+                if (!response || !response.status) {
+                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Gagal memuat data: ' + (response.message || '') + '</td></tr>');
+                    // Reinit DataTable walau kosong
+                    $('#dailyod').DataTable({
+                        "paging": false, "searching": false, "info": false, "ordering": false
+                    });
+                    return;
+                }
+
+                if (response.data.length === 0) {
+                    tbody.html('<tr><td colspan="10" class="text-center">Tidak ada data SO yang approved.</td></tr>');
+                    $('#dailyod').DataTable({
+                        "paging": false, "searching": false, "info": false, "ordering": false
+                    });
+                    return;
+                }
+
+                $.each(response.data, function(i, l) {
+                    var statusBadge = '';
+                    var actionBtn   = '';
+
+                    if (l.data_sts === 'approved') {
+                        statusBadge = '<span class="badge badge-secondary">NOT IN DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                            </div>`;
+                    } else if (l.data_sts === 'in_delivery') {
+                        statusBadge = '<span class="badge badge-success">ON DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                            </div>`;
+                    } else if (l.data_sts === 'draft') {
+                        statusBadge = '<span class="badge badge-secondary">DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" 
+                                class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" 
+                                class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                            </div>`;
+                    } else {
+                        statusBadge = `<span class="badge badge-light">${l.data_sts}</span>`;
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                            </div>`;
+                    }
+
+                    tbody.append(`
+                        <tr>
+                            <td>${l.tgl_inputer}</td>
+                            <td>${l.kd_faktur}</td>
+                            <td>${l.nama_customer}</td>
+                            <td>${l.nama_kios}</td>
+                            <td>${l.alamat_kios}</td>
+                            <td>${l.kd_rute}</td>
+                            <td>${l.regional}</td>
+                            <td>${l.total_barang}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `);
+                });
+
+                // Reinit DataTable setelah data terisi
+                $('#dailyod').DataTable({
+                    "paging":       true,
+                    "lengthChange": false,
+                    "searching":    true,
+                    "ordering":     false,
+                    "info":         true,
+                    "autoWidth":    false,
+                    "responsive":   true,
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", xhr.responseText);
+                tbody.html('<tr><td colspan="10" class="text-center text-danger">Error: ' + error + '</td></tr>');
+                $('#dailyod').DataTable({
+                    "paging": false, "searching": false, "info": false, "ordering": false
+                });
+            }
+        });
+    }
 
         $(document).ready(function() {
 
