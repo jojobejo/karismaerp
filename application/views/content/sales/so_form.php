@@ -240,13 +240,10 @@
                         Total kolom = 12 → colspan footer = 10
                     ============================================================ -->
                     <div class="card">
-                        <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-success text-white py-2">
                             <h3 class="card-title mb-0">
                                 <i class="fas fa-boxes mr-1"></i> Item Barang
                             </h3>
-                            <button type="button" class="btn btn-light btn-sm" id="btn-add-row">
-                                <i class="fas fa-plus"></i> Tambah Barang
-                            </button>
                         </div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
@@ -283,9 +280,14 @@
                     </div>
 
                     <div class="d-flex justify-content-end mb-4">
+                        <button type="button" class="btn btn-success mr-2" id="btn-add-row">
+                            <i class="fas fa-plus"></i> Tambah Barang
+                        </button>
+
                         <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary mr-2">
                             <i class="fas fa-times"></i> Batal
                         </a>
+
                         <button type="submit" class="btn btn-primary" id="btn-submit">
                             <i class="fas fa-save"></i> Simpan SO
                         </button>
@@ -1254,9 +1256,12 @@ document.getElementById('stock-search').addEventListener('input', function() {
     renderStock(stockCache);
 });
 
-/* Tambah baris kosong */
+/* Tambah baris kosong & buka modal pilih barang */
 document.getElementById('btn-add-row').addEventListener('click', function() {
     tambahBaris({});
+    // Langsung buka modal setelah baris ditambahkan
+    loadStock();
+    $('#modal-stock').modal('show');
 });
 
 /* Validasi submit */
