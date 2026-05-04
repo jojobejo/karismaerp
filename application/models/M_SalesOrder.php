@@ -90,27 +90,33 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Cek stok satu item.
-     * exp_date input (YYYY-MM-DD) dikonversi ke DD/MM/YYYY untuk cocokkan kolom view.
+     * Cek stok satu item dari tberp_stock_batch.
+     * exp_date input (YYYY-MM-DD) akan dicocokkan dengan kolom expired_date.
+     * Available = qty_on_hand - qty_reserved
      * gudang_id kosong → SUM semua gudang (fallback saat session belum set).
      */
     public function cek_stock($kd_barang, $exp_date, $gudang_id)
     {
-        $ddmmyyyy = $this->_toViewDate($exp_date);
+        $ymd = $this->_normalizeDate($exp_date);
 
         if (!empty($gudang_id)) {
-            $sql = "SELECT * FROM v_available_stock
-                    WHERE kode_barang = ? AND exp_date = ? AND gudang = ?
+            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
+                           qty_on_hand, qty_reserved,
+                           (qty_on_hand - COALESCE(qty_reserved, 0)) AS available_stock
+                    FROM tberp_stock_batch
+                    WHERE kd_barang = ? AND expired_date = ? AND gudang_id = ?
                     LIMIT 1";
-            return $this->db->query($sql, [$kd_barang, $ddmmyyyy, $gudang_id])->row_array();
+            return $this->db->query($sql, [$kd_barang, $ymd, $gudang_id])->row_array();
         } else {
-            $sql = "SELECT kode_barang, nama_barang, exp_date,
-                           SUM(available_stock) AS available_stock
-                    FROM v_available_stock
-                    WHERE kode_barang = ? AND exp_date = ?
-                    GROUP BY kode_barang, nama_barang, exp_date
+            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
+                           SUM(qty_on_hand) AS qty_on_hand,
+                           SUM(COALESCE(qty_reserved, 0)) AS qty_reserved,
+                           (SUM(qty_on_hand) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
+                    FROM tberp_stock_batch
+                    WHERE kd_barang = ? AND expired_date = ?
+                    GROUP BY kd_barang, expired_date
                     LIMIT 1";
-            return $this->db->query($sql, [$kd_barang, $ddmmyyyy])->row_array();
+            return $this->db->query($sql, [$kd_barang, $ymd])->row_array();
         }
     }
 
@@ -180,21 +186,49 @@ class M_SalesOrder extends CI_Model
 
     // ----------------------------------------------------------------
     // STOK + DIMENSI — AJAX /get_stock
+    // PERUBAHAN: Menggunakan tberp_stock_ledger dan tberp_stock_batch
+    //            Available = qty_on_hand - qty_reserved
+    //            JOIN with master barang to get nama_barang
     // ----------------------------------------------------------------
     public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
     {
-        $this->db->where('available_stock >', 0);
-        if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
-        $stocks = $this->db->get('v_available_stock')->result_array();
+        // First, try to get data from tberp_stock_batch
+        $this->db->select('sb.*, mb.nama_barang,
+                           (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock');
+        $this->db->from('tberp_stock_batch sb');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
+        $this->db->where('(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) >', 0);
+        
+        if (!empty($kd_barang)) {
+            $this->db->where('sb.kd_barang', $kd_barang);
+        }
+        if (!empty($gudang_id)) {
+            $this->db->where('sb.gudang_id', $gudang_id);
+        }
+        
+        $stocks = $this->db->get()->result_array();
+
+        // If tberp_stock_batch is empty, fallback to v_available_stock
+        if (empty($stocks)) {
+            $this->db->where('available_stock >', 0);
+            if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
+            if (!empty($gudang_id)) $this->db->where('gudang', $gudang_id);
+            $stocks = $this->db->get('v_available_stock')->result_array();
+        }
 
         if (empty($stocks)) return [];
 
-        $kd_list = array_column($stocks, 'kode_barang');
+        $kd_list = array_column($stocks, 'kd_barang');
         $master  = $this->_get_master_bulk($kd_list);
 
         foreach ($stocks as &$row) {
-            $kd = $row['kode_barang'];
+            $kd = $row['kd_barang'];
             $m  = isset($master[$kd]) ? $master[$kd] : [];
+
+            // Use master data if nama_barang is empty
+            if (empty($row['nama_barang']) && !empty($m['nama_barang'])) {
+                $row['nama_barang'] = $m['nama_barang'];
+            }
 
             $row['berat_gram']  = $m['berat_gram']  ?? 0;
             $row['kubikasi_m3'] = $m['kubikasi_m3'] ?? 0;
@@ -205,10 +239,22 @@ class M_SalesOrder extends CI_Model
             $row['isi_per_box'] = $m['isi_per_box'] ?? 1;
             $row['satuan']      = $m['satuan'] ?? ($row['satuan'] ?? '');
 
-            // Konversi exp_date DD/MM/YYYY → YYYY-MM-DD untuk form/JS
-            $row['exp_date'] = $this->_normalizeDate($row['exp_date'] ?? '');
-            $row['gudang'] = $row['gudang'] ?? '';
+            // Normalize expired_date to YYYY-MM-DD for form/JS
+            // Handle both tberp_stock_batch (expired_date) and v_available_stock (exp_date)
+            if (isset($row['expired_date'])) {
+                $row['exp_date'] = $this->_normalizeDate($row['expired_date']);
+                $row['gudang']   = $row['gudang_id'] ?? '';
+                $row['qty_on_hand']  = (float)($row['qty_on_hand'] ?? $row['available_stock'] ?? 0);
+                $row['qty_reserved'] = (float)($row['qty_reserved'] ?? 0);
+            } else {
+                // From v_available_stock
+                $row['exp_date'] = $this->_normalizeDate($row['exp_date'] ?? '');
+                $row['gudang']   = $row['gudang'] ?? '';
+                $row['qty_on_hand']  = (float)($row['available_stock'] ?? 0);
+                $row['qty_reserved'] = 0;
+            }
 
+            // Available = qty_on_hand - qty_reserved
             $av  = (float)($row['available_stock'] ?? 0);
             $isi = max(1, (int)$row['isi_per_box']);
 
@@ -268,19 +314,17 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     // SIMPAN SO
     //
-    // KUNCI STOK BERKURANG:
-    //   tbso_stock_reservation.exp_date  → DD/MM/YYYY (sama dengan view)
-    //   tbso_stock_reservation.gudang_id → integer wilayah (sama dengan view.gudang)
-    //   Kedua field ini harus identik dengan yang ada di v_available_stock
-    //   agar JOIN di view bisa mengurangi available_stock.
+    // PERUBAHAN: Menggunakan tberp_stock_ledger dengan tipe 'RESERVE'
+    //            dan update tberp_stock_batch.qty_reserved
     // ----------------------------------------------------------------
     public function simpan_so($header, $details)
     {
         $this->db->trans_start();
         $this->db->insert('tbso_sales_order', $header);
         $id_so     = $this->db->insert_id();
-        $no_faktur = $header['no_faktur']; // ← pakai no_faktur sebagai referensi
+        $no_faktur = $header['no_faktur'];
         $no_so = $header['no_so'];
+        $gudang_id = $header['gudang_id'];
 
         foreach ($details as $d) {
             $d['no_faktur'] = $no_faktur;
@@ -288,19 +332,53 @@ class M_SalesOrder extends CI_Model
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
-            $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
-
+            // Simpan ke tbso_stock_reservation (untuk kompatibilitas)
             $this->db->insert('tbso_stock_reservation', [
-                'no_faktur'    => $no_faktur,   // ← no_faktur
+                'no_faktur'    => $no_faktur,
                 'no_so'        => $no_so,
                 'id_so_detail' => $id_detail,
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
-                'gudang_id'    => $header['gudang_id'],
+                'gudang_id'    => $gudang_id,
                 'qty_reserved' => $d['qty'],
                 'status'       => 'active',
             ]);
+
+            // Simpan ke tberp_stock_ledger dengan tipe RESERVE (jika tabel ada)
+            try {
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $d['kd_barang'],
+                    'gudang_id'    => $gudang_id,
+                    'no_lot'       => $d['no_lot'],
+                    'expired_date' => $this->_normalizeDate($d['expired_date']),
+                    'qty'          => $d['qty'],
+                    'tipe'         => 'RESERVE',
+                    'ref_no'       => $no_faktur,
+                    'ref_type'     => 'SALES_ORDER',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+            } catch (Exception $e) {
+                // Ignore if table doesn't exist
+            }
+
+            // Update tberp_stock_batch.qty_reserved (jika tabel ada)
+            try {
+                $exp_date_normalized = $this->_normalizeDate($d['expired_date']);
+                $this->db->where('kd_barang', $d['kd_barang']);
+                $this->db->where('gudang_id', $gudang_id);
+                if (!empty($d['no_lot'])) {
+                    $this->db->where('no_lot', $d['no_lot']);
+                }
+                if (!empty($exp_date_normalized)) {
+                    $this->db->where('expired_date', $exp_date_normalized);
+                }
+                $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$d['qty'], FALSE);
+                $this->db->set('update_at', date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+            } catch (Exception $e) {
+                // Ignore if table doesn't exist
+            }
         }
 
         $this->db->where('id_so', $id_so);
@@ -312,28 +390,61 @@ class M_SalesOrder extends CI_Model
 
     // ----------------------------------------------------------------
     // UPDATE SO
+    // PERUBAHAN: Handle stock ledger RELEASE untuk old data dan RESERVE untuk new data
+    //            Also update tberp_stock_batch.qty_reserved
     // ----------------------------------------------------------------
     public function update_so($id_so, $header, $details)
     {
         $this->db->trans_start();
         $no_faktur = $header['no_faktur'];
         $no_so = $header['no_so'];
+        $gudang_id = $header['gudang_id'];
 
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', $header);
 
-        // Hapus detail & release reservasi berdasarkan no_faktur
-        $this->db->delete('tbso_sales_order_detail', ['no_faktur' => $no_faktur]);
+        // Get old details for releasing stock
+        $old_details = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
+
+        // Release old stock_reservation
         $this->db->where('no_faktur', $no_faktur);
         $this->db->update('tbso_stock_reservation', ['status' => 'released']);
 
+        // Release old stock_ledger (add RELEASE entry to reverse RESERVE)
+        foreach ($old_details as $old) {
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $old['kd_barang'],
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $old['no_lot'],
+                'expired_date' => $old['expired_date'],
+                'qty'          => $old['qty'],
+                'tipe'         => 'RELEASE',
+                'ref_no'       => $no_faktur,
+                'ref_type'     => 'SALES_ORDER',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // Decrease qty_reserved in tberp_stock_batch for old items
+            $this->db->where('kd_barang', $old['kd_barang']);
+            $this->db->where('gudang_id', $gudang_id);
+            $this->db->where('no_lot', $old['no_lot']);
+            $this->db->where('expired_date', $old['expired_date']);
+            $this->db->set('qty_reserved', 'qty_reserved - ' . (float)$old['qty'], FALSE);
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+            $this->db->update('tberp_stock_batch');
+        }
+
+        // Delete old details
+        $this->db->delete('tbso_sales_order_detail', ['no_faktur' => $no_faktur]);
+
+        // Insert new details and create new reservations
         foreach ($details as $d) {
             $d['no_faktur'] = $no_faktur;
-            $d['no_so']     = $no_so;   
+            $d['no_so']     = $no_so;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
-            $exp_ddmmyyyy = $this->_toViewDate($d['expired_date']);
 
+            // Simpan ke tbso_stock_reservation (untuk kompatibilitas)
             $this->db->insert('tbso_stock_reservation', [
                 'no_faktur'    => $no_faktur,
                 'no_so'        => $no_so,
@@ -341,10 +452,32 @@ class M_SalesOrder extends CI_Model
                 'kd_barang'    => $d['kd_barang'],
                 'exp_date'     => $this->_toViewDate($d['expired_date']),
                 'no_lot'       => $d['no_lot'],
-                'gudang_id'    => $header['gudang_id'],
+                'gudang_id'    => $gudang_id,
                 'qty_reserved' => $d['qty'],
                 'status'       => 'active',
             ]);
+
+            // Simpan ke tberp_stock_ledger dengan tipe RESERVE
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $d['kd_barang'],
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $d['no_lot'],
+                'expired_date' => $this->_normalizeDate($d['expired_date']),
+                'qty'          => $d['qty'],
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $no_faktur,
+                'ref_type'     => 'SALES_ORDER',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // Update tberp_stock_batch.qty_reserved
+            $this->db->where('kd_barang', $d['kd_barang']);
+            $this->db->where('gudang_id', $gudang_id);
+            $this->db->where('no_lot', $d['no_lot']);
+            $this->db->where('expired_date', $this->_normalizeDate($d['expired_date']));
+            $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$d['qty'], FALSE);
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+            $this->db->update('tberp_stock_batch');
         }
 
         $this->db->where('id_so', $id_so);
@@ -517,6 +650,7 @@ class M_SalesOrder extends CI_Model
 
     // ----------------------------------------------------------------
     // UPDATE STATUS SO
+    // PERUBAHAN: Handle stock ledger RELEASE when cancelling SO
     // ----------------------------------------------------------------
     public function update_status($id_so, $status, $update_by)
     {
@@ -526,8 +660,39 @@ class M_SalesOrder extends CI_Model
         $this->db->update('tbso_sales_order', ['status' => $status, 'update_by' => $update_by]);
 
         if ($status === 'cancelled' && $so) {
-            $this->db->where('no_faktur', $so['no_faktur']); // ← no_faktur
+            $no_faktur = $so['no_faktur'];
+            $gudang_id = $so['gudang_id'];
+
+            // Release stock_reservation
+            $this->db->where('no_faktur', $no_faktur);
             $this->db->update('tbso_stock_reservation', ['status' => 'released']);
+
+            // Get details for releasing stock_ledger and batch
+            $details = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
+
+            foreach ($details as $d) {
+                // Add RELEASE entry to stock_ledger to reverse the RESERVE
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $d['kd_barang'],
+                    'gudang_id'    => $gudang_id,
+                    'no_lot'       => $d['no_lot'],
+                    'expired_date' => $d['expired_date'],
+                    'qty'          => $d['qty'],
+                    'tipe'         => 'RELEASE',
+                    'ref_no'       => $no_faktur,
+                    'ref_type'     => 'SALES_ORDER_CANCEL',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+
+                // Decrease qty_reserved in tberp_stock_batch
+                $this->db->where('kd_barang', $d['kd_barang']);
+                $this->db->where('gudang_id', $gudang_id);
+                $this->db->where('no_lot', $d['no_lot']);
+                $this->db->where('expired_date', $d['expired_date']);
+                $this->db->set('qty_reserved', 'qty_reserved - ' . (float)$d['qty'], FALSE);
+                $this->db->set('update_at', date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+            }
         }
     }
 
@@ -559,20 +724,24 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     // GET KD PO DARI MASTER BARANG
     // ----------------------------------------------------------------
-    public function get_kd_po($kd_barang, $exp_date, $no_lot = '')
+    public function get_ref_no($kd_barang, $exp_date, $no_lot = '')
     {
         $ymd = $this->_normalizeDate($exp_date);
 
-        $this->db->select('kd_po');
+        $this->db->select('ref_no');
+        $this->db->from('tberp_stock_ledger');
         $this->db->where('kd_barang', $kd_barang);
-        $this->db->where('exp_date',  $ymd);
+        $this->db->where('expired_date', $ymd);
+
         if (!empty($no_lot)) {
             $this->db->where('no_lot', $no_lot);
         }
-        $this->db->order_by('create_at', 'DESC');
+
+        $this->db->where_in('tipe', ['IN', 'SALDO_AWAL']);
+        $this->db->order_by('created_at', 'DESC');
         $this->db->limit(1);
-        $row = $this->db->get('tb_po_received')->row_array();
-        return $row ? $row['kd_po'] : null;
+        $row = $this->db->get()->row_array();
+        return $row ? $row['ref_no'] : null;
     }
 
     // ----------------------------------------------------------------

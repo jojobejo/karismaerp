@@ -1017,7 +1017,9 @@ function renderStock(data) {
     var q = (document.getElementById('stock-search').value || '').toLowerCase();
     var filtered = q
         ? data.filter(function(d) {
-            return String(d.kode_barang||'').toLowerCase().indexOf(q) >= 0
+            // Handle both 'kd_barang' and 'kode_barang' field names
+            var kd = d.kd_barang || d.kode_barang || '';
+            return String(kd).toLowerCase().indexOf(q) >= 0
                 || String(d.nama_barang||'').toLowerCase().indexOf(q) >= 0;
           })
         : data;
@@ -1031,8 +1033,10 @@ function renderStock(data) {
 
     var html = '', lastKd = null;
     filtered.forEach(function(d) {
-        var isNew   = (d.kode_barang !== lastKd);
-        lastKd      = d.kode_barang;
+        // Handle both 'kd_barang' and 'kode_barang' field names
+        var kd = d.kd_barang || d.kode_barang || '';
+        var isNew   = (kd !== lastKd);
+        lastKd      = kd;
         var isi     = parseInt(d.isi_per_box || 1);
         var avTotal = parseFloat(d.available_stock || 0);
         var avBox   = parseInt(d.available_box  || 0);
@@ -1042,14 +1046,16 @@ function renderStock(data) {
 
         html += '<tr class="'+(isNew ? 'table-light' : '')+'">';
         html += '<td>';
-        html += '<small class="text-muted d-block">'+esc(d.kode_barang)+'</small>';
+        html += '<small class="text-muted d-block">'+esc(kd)+'</small>';
         html += isNew
             ? '<b>'+esc(d.nama_barang)+'</b>'
             : '<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang);
         html += '</td>';
-        html += '<td>'+(d.exp_date
-            ? '<span class="badge '+(isExpiringSoon(d.exp_date)?'badge-warning':'badge-success')+'">'
-              + formatTgl(d.exp_date)+'</span>'
+        // Handle both 'exp_date' and 'expired_date' field names
+        var expDate = d.exp_date || d.expired_date || '';
+        html += '<td>'+(expDate
+            ? '<span class="badge '+(isExpiringSoon(expDate)?'badge-warning':'badge-success')+'">'
+              + formatTgl(expDate)+'</span>'
             : '-')+'</td>';
         html += '<td>'+(d.no_lot || '-')+'</td>';
         html += '<td class="text-right"><b class="text-success">'+fmtNum(avBox, 0)+' box</b></td>';
@@ -1059,20 +1065,22 @@ function renderStock(data) {
         html += '<td>'+esc(d.satuan || '')+'</td>';
         html += '<td class="text-right"><small>'+beratKg+' kg</small></td>';
         html += '<td class="text-right"><small>'+kubStr+' m³</small></td>';
-        html += '<td><small class="text-muted">'+esc(String(d.gudang||'-'))+'</small></td>';
+        // Handle both 'gudang' and 'gudang_id' field names
+        var gudang = d.gudang || d.gudang_id || '-';
+        html += '<td><small class="text-muted">'+esc(String(gudang))+'</small></td>';
         html += '<td class="text-center">';
         html += '<button type="button" class="btn btn-xs btn-primary btn-pick-stock"';
-        html += ' data-kd="'+esc(d.kode_barang||'')+'"';
+        html += ' data-kd="'+esc(kd)+'"';
         html += ' data-nm="'+esc(d.nama_barang||'')+'"';
-        html += ' data-exp="'+esc(d.exp_date||'')+'"';
+        html += ' data-exp="'+esc(expDate)+'"';
         html += ' data-lot="'+esc(d.no_lot||'')+'"';
         html += ' data-sat="'+esc(d.satuan||'')+'"';
         html += ' data-av="'+avTotal+'"';
         html += ' data-ton="'+(parseFloat(d.berat_gram)||0)+'"';
         html += ' data-kub="'+(parseFloat(d.kubikasi_m3)||0)+'"';
         html += ' data-isi="'+isi+'"';                         /* ← PENTING */
-        html += ' data-gudang="'+esc(String(d.gudang||''))+'"';
-        html += ' data-pk="'+(parseFloat(d.hpp)||0)+'">';
+        html += ' data-gudang="'+esc(String(gudang))+'"';
+        html += ' data-pk="'+(parseFloat(d.hpp||d.hpp)||0)+'">';
         html += '<i class="fas fa-check"></i> Pilih</button>';
         html += '</td></tr>';
     });
@@ -1166,16 +1174,21 @@ document.getElementById('stock-body').addEventListener('click', function(e) {
     document.getElementById('gudang_id_input').value = gudang || '';
 
     /* Isi dropdown expired date dari semua baris stok barang ini */
-    var rows = stockCache.filter(function(s) { return s.kode_barang === kd; });
+    /* Handle both 'kd_barang' (from tberp_stock_batch) and 'kode_barang' (from v_available_stock) */
+    var rows = stockCache.filter(function(s) {
+        return (s.kd_barang || s.kode_barang) === kd;
+    });
     var sel  = document.getElementById('exp_'+i);
     sel.innerHTML = '<option value="">-- Pilih Expired Date --</option>';
     rows.forEach(function(s) {
         var opt    = document.createElement('option');
-        opt.value  = s.exp_date || '';
+        /* Handle both 'exp_date' and 'expired_date' field names */
+        var expDate = s.exp_date || s.expired_date || '';
+        opt.value  = expDate;
         var isiS   = parseInt(s.isi_per_box || 1);
         var avBox  = Math.floor(parseFloat(s.available_stock||0) / isiS);
         var avEcer = Math.floor(parseFloat(s.available_stock||0) % isiS);
-        opt.textContent = formatTgl(s.exp_date)
+        opt.textContent = formatTgl(expDate)
             + (s.no_lot ? ' | Lot: '+s.no_lot : '')
             + ' ['+fmtNum(avBox,0)+' box + '+fmtNum(avEcer,0)+' pcs]';
         opt.dataset.ton    = parseFloat(s.berat_gram    || 0);
@@ -1183,8 +1196,8 @@ document.getElementById('stock-body').addEventListener('click', function(e) {
         opt.dataset.av     = parseFloat(s.available_stock || 0);
         opt.dataset.lot    = s.no_lot || '';
         opt.dataset.isi    = parseInt(s.isi_per_box || 1);
-        opt.dataset.gudang = s.gudang || '';
-        if (s.exp_date === btn.dataset.exp) opt.selected = true;
+        opt.dataset.gudang = s.gudang || s.gudang_id || '';
+        if (expDate === btn.dataset.exp) opt.selected = true;
         sel.appendChild(opt);
     });
 
@@ -1305,18 +1318,22 @@ if (EDIT_DETAILS.length) {
                 var expVal = (document.getElementById('exp_'+i)||{}).value || '';
                 if (!kd) return;
 
-                /* Rebuild dropdown expired */
-                var rows = stockCache.filter(function(s){ return s.kode_barang === kd; });
+                /* Rebuild dropdown expired - handle both field name formats */
+                var rows = stockCache.filter(function(s){
+                    return (s.kd_barang || s.kode_barang) === kd;
+                });
                 var sel  = document.getElementById('exp_'+i);
                 if (sel && rows.length) {
                     sel.innerHTML = '<option value="">-- Pilih Expired Date --</option>';
                     rows.forEach(function(s) {
                         var opt    = document.createElement('option');
-                        opt.value  = s.exp_date || '';
+                        /* Handle both exp_date and expired_date */
+                        var expDate = s.exp_date || s.expired_date || '';
+                        opt.value  = expDate;
                         var isiS   = parseInt(s.isi_per_box || 1);
                         var avBox  = Math.floor(parseFloat(s.available_stock||0) / isiS);
                         var avEcer = Math.floor(parseFloat(s.available_stock||0) % isiS);
-                        opt.textContent = formatTgl(s.exp_date)
+                        opt.textContent = formatTgl(expDate)
                             + (s.no_lot ? ' | Lot: '+s.no_lot : '')
                             + ' ['+fmtNum(avBox,0)+' box + '+fmtNum(avEcer,0)+' pcs]';
                         opt.dataset.ton    = parseFloat(s.berat_gram    || 0);
@@ -1324,15 +1341,17 @@ if (EDIT_DETAILS.length) {
                         opt.dataset.av     = parseFloat(s.available_stock || 0);
                         opt.dataset.lot    = s.no_lot || '';
                         opt.dataset.isi    = parseInt(s.isi_per_box || 1);
-                        opt.dataset.gudang = s.gudang || '';
-                        if (s.exp_date === expVal) opt.selected = true;
+                        opt.dataset.gudang = s.gudang || s.gudang_id || '';
+                        if (expDate === expVal) opt.selected = true;
                         sel.appendChild(opt);
                     });
                 }
 
-                /* Update avail dari match */
+                /* Update avail dari match - handle both field name formats */
                 var match = stockCache.filter(function(s){
-                    return s.kode_barang === kd && s.exp_date === expVal;
+                    var sKd = s.kd_barang || s.kode_barang || '';
+                    var sExp = s.exp_date || s.expired_date || '';
+                    return sKd === kd && sExp === expVal;
                 });
                 var stok = match.length ? match[0] : null;
                 if (stok) {
@@ -1356,8 +1375,9 @@ if (EDIT_DETAILS.length) {
                     document.getElementById('km_' +i).value = stok.kubikasi_m3 || 0;
 
                     /* Update gudang di Informasi SO */
-                    document.getElementById('gudang_display').value  = stok.gudang || '-';
-                    document.getElementById('gudang_id_input').value = stok.gudang || '';
+                    var gudang = stok.gudang || stok.gudang_id || '-';
+                    document.getElementById('gudang_display').value  = gudang;
+                    document.getElementById('gudang_id_input').value = gudang;
                 }
 
                 hitungBaris(i);

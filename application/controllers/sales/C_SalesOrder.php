@@ -578,7 +578,7 @@ class C_SalesOrder extends CI_Controller
             $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
             $approve_by_item      = trim($post['approve_by'][$i] ?? '');
 
-            $kd_po = $this->M_SalesOrder->get_kd_po(
+            $ref_no = $this->M_SalesOrder->get_ref_no(
                 $kd,
                 $post['expired_date'][$i] ?? '',
                 $post['no_lot'][$i]       ?? ''
@@ -595,7 +595,7 @@ class C_SalesOrder extends CI_Controller
                 'satuan'       => $post['satuan'][$i]        ?? '',
                 'expired_date' => $post['expired_date'][$i]  ?? '',
                 'no_lot'       => $post['no_lot'][$i]        ?? null,
-                'kd_po'        => $kd_po,
+                'ref_no'       => $ref_no,
                 'pajak'        => $pajak,
                 'disc'         => $disc,
                 'subtotal_before_disc' => $subtotal_before_disc,
