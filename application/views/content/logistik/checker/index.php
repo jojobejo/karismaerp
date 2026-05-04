@@ -239,15 +239,32 @@ tr.row-pending { background:#fafafa !important; }
                         </div>
 
                         <!-- Footer ringkasan -->
+                        <?php
+                        $aktif_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'PROSES');
+                        $aktif_lk      = array_filter($list_lk,   fn($r) => $r['status'] === 'PROSES_LOADING');
+                        $aktif_kk      = array_filter($list_kk,   fn($r) => $r['status'] === 'PROSES_LOADING');
+                        $total_aktif   = count($aktif_bongkar) + count($aktif_lk) + count($aktif_kk);
+
+                        $selesai_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'DONE');
+                        $selesai_lk      = array_filter($list_lk,   fn($r) => $r['status'] === 'DONE');
+                        $selesai_kk      = array_filter($list_kk,   fn($r) => $r['status'] === 'DONE');
+                        $total_selesai   = count($selesai_bongkar) + count($selesai_lk) + count($selesai_kk);
+                        ?>
                         <hr style="border-color:#e0e0e0; margin:10px 0 8px;">
                         <div class="d-flex justify-content-center align-items-center" style="gap:16px; flex-wrap:wrap;">
                             <span style="font-size:13px; font-weight:700; color:#1565c0;">
                                 <i class="fas fa-warehouse mr-1"></i>
-                                Aktif: <span style="font-size:16px; color:#e65100;"><?= count($aktif) ?></span> pintu berjalan
+                                Aktif: <span style="font-size:16px; color:#e65100;"><?= $total_aktif ?></span> pintu berjalan
+                                <!-- <small class="text-muted font-weight-normal ml-1">
+                                    (bongkar <?= count($aktif_bongkar) ?> · LK <?= count($aktif_lk) ?> · KK <?= count($aktif_kk) ?>)
+                                </small> -->
                             </span>
                             <span style="font-size:13px; font-weight:700; color:#1b5e20;">
                                 <i class="fas fa-check-circle mr-1"></i>
-                                Selesai: <span style="font-size:16px; color:#22c55e;"><?= count($selesai) ?></span> bongkaran
+                                Selesai: <span style="font-size:16px; color:#22c55e;"><?= $total_selesai ?></span> aktivitas
+                                <!-- <small class="text-muted font-weight-normal ml-1">
+                                    (bongkar <?= count($selesai_bongkar) ?> · LK <?= count($selesai_lk) ?> · KK <?= count($selesai_kk) ?>)
+                                </small> -->
                             </span>
                         </div>
                     </div>

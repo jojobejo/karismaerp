@@ -7,7 +7,7 @@ class C_Checker extends CI_Controller
     const ROLE_MANAGERCK  = 'MANAGERCK';
     const ROLE_ADMLOG     = 'ADMLOG';
     const ROLE_MANAGER_WH = 'MANAGERWH';
-    const ROLE_SALES      = 'SALESCK';
+    const ROLE_SALES      = 'SALES';
     const ROLE_DIREKTUR   = 'DIREKTURCK';
 
     private function isDoer()
