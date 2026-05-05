@@ -80,6 +80,8 @@ class Auth extends CI_Controller
                         redirect('checker/dashboard'); 
                     } else if ($key->jobdesk == 'MANAGERCK') {
                         redirect('checker');
+                    } else if ($key->jobdesk == 'SC') {
+                        redirect('sales_order');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
