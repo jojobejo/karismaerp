@@ -286,6 +286,12 @@ $route['checker/edit_kk']                           = 'logistik/C_Checker/edit_k
 $route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
 $route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
 $route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
+$route['checker/pause']      = 'logistik/C_Checker/pause';
+$route['checker/resume']     = 'logistik/C_Checker/resume';
+$route['checker/pause_kk']   = 'logistik/C_Checker/pause_kk';
+$route['checker/resume_kk']  = 'logistik/C_Checker/resume_kk';
+$route['checker/pause_lk']   = 'logistik/C_Checker/pause_lk';
+$route['checker/resume_lk']  = 'logistik/C_Checker/resume_lk';
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';

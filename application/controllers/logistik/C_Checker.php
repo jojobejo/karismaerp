@@ -497,4 +497,112 @@ class C_Checker extends CI_Controller
         $ok = $this->M_Checker->archive_lk((int)$this->input->post('id'), $this->nama());
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'LK diarsipkan' : 'Gagal']);
     }
+
+    // ================================================================
+    // PAUSE / RESUME — BONGKARAN
+    // ================================================================
+ 
+    public function pause()
+    {
+        if (!$this->isDoer()) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $checker = $this->M_Checker->get_checker($id);
+            if (!$checker || $checker['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->pause_bongkaran($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran di-pause' : 'Gagal pause (mungkin sudah di-pause)']);
+    }
+ 
+    public function resume()
+    {
+        if (!$this->isDoer()) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $checker = $this->M_Checker->get_checker($id);
+            if (!$checker || $checker['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->resume_bongkaran($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Bongkaran dilanjutkan' : 'Gagal resume']);
+    }
+ 
+    // ================================================================
+    // PAUSE / RESUME — LOADING KK
+    // ================================================================
+ 
+    public function pause_kk()
+    {
+        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $row = $this->M_Checker->get_kk_by_id($id);
+            if (!$row || $row['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->pause_kk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK di-pause' : 'Gagal pause']);
+    }
+ 
+    public function resume_kk()
+    {
+        if (!in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK])) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $row = $this->M_Checker->get_kk_by_id($id);
+            if (!$row || $row['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->resume_kk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK dilanjutkan' : 'Gagal resume']);
+    }
+ 
+    // ================================================================
+    // PAUSE / RESUME — LOADING LK
+    // ================================================================
+ 
+    public function pause_lk()
+    {
+        if (!$this->isDoer()) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $row = $this->M_Checker->get_lk_by_id($id);
+            if (!$row || $row['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->pause_lk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK di-pause' : 'Gagal pause']);
+    }
+ 
+    public function resume_lk()
+    {
+        if (!$this->isDoer()) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        if (!$this->isMCK()) {
+            $row = $this->M_Checker->get_lk_by_id($id);
+            if (!$row || $row['nik_checker'] !== $this->session->userdata('nik')) {
+                echo json_encode(['status' => false, 'msg' => 'Bukan job Anda']); return;
+            }
+        }
+        $ok = $this->M_Checker->resume_lk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK dilanjutkan' : 'Gagal resume']);
+    }
 }

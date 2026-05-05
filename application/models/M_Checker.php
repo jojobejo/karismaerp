@@ -15,7 +15,19 @@ class M_Checker extends CI_Model
     // ================================================================
     public function get_list()
     {
-        $this->db->select('b.*, bc.nik_checker, bc.nm_checker, bc.waktu_mulai, bc.waktu_selesai, bc.progres, bc.status_checker');
+        $this->db->select('
+            b.*,
+            bc.nik_checker,
+            bc.nm_checker,
+            bc.waktu_mulai,
+            bc.waktu_selesai,
+            bc.progres,
+            bc.status_checker,
+            bc.is_paused,
+            bc.paused_at,
+            bc.total_pause_secs,
+            bc.pernah_pause
+        ');
         $this->db->from('tb_bongkaran b');
         $this->db->join('tb_bongkaran_checker bc', 'bc.id_bongkaran = b.id', 'left');
         $this->db->where('b.is_archived', 0);
@@ -25,7 +37,15 @@ class M_Checker extends CI_Model
 
     public function get_arsip_bongkaran()
     {
-        $this->db->select('b.*, bc.nm_checker, bc.waktu_mulai, bc.waktu_selesai, bc.progres');
+        $this->db->select('
+            b.*,
+            bc.nm_checker,
+            bc.waktu_mulai,
+            bc.waktu_selesai,
+            bc.progres,
+            bc.pernah_pause,
+            bc.total_pause_secs
+        ');
         $this->db->from('tb_bongkaran b');
         $this->db->join('tb_bongkaran_checker bc', 'bc.id_bongkaran = b.id', 'left');
         $this->db->where('b.is_archived', 1);
@@ -363,6 +383,109 @@ class M_Checker extends CI_Model
     {
         return $this->db->where('id', $id)
                         ->delete('tb_loading_lk');
+    }
+
+    // ================================================================
+    // PAUSE / RESUME — BONGKARAN
+    // ================================================================
+
+    public function pause_bongkaran($id)
+    {
+        // Pastikan baris checker ada dan belum pause
+        $row = $this->db->get_where('tb_bongkaran_checker', [
+            'id_bongkaran'   => $id,
+            'status_checker' => 'PROSES',
+            'is_paused'      => 0,
+        ])->row_array();
+ 
+        if (!$row) return false; // sudah pause atau tidak ditemukan
+ 
+        return $this->db->where('id_bongkaran', $id)
+                        ->update('tb_bongkaran_checker', [
+                            'is_paused'    => 1,
+                            'paused_at'    => date('Y-m-d H:i:s'),
+                            'pernah_pause' => 1,
+                        ]);
+    }
+ 
+    public function resume_bongkaran($id)
+    {
+        $row = $this->db->get_where('tb_bongkaran_checker', ['id_bongkaran' => $id])->row_array();
+        if (!$row || !$row['is_paused'] || empty($row['paused_at'])) return false;
+ 
+        $tambah = time() - strtotime($row['paused_at']);
+        $total  = (int)$row['total_pause_secs'] + max(0, $tambah);
+ 
+        return $this->db->where('id_bongkaran', $id)
+                        ->update('tb_bongkaran_checker', [
+                            'is_paused'        => 0,
+                            'paused_at'        => null,
+                            'total_pause_secs' => $total,
+                        ]);
+    }
+ 
+    // ================================================================
+    // PAUSE / RESUME — LOADING KK
+    // ================================================================
+ 
+    public function pause_kk($id)
+    {
+        return $this->db->where('id', $id)
+                        ->where('status', 'PROSES_LOADING')
+                        ->where('is_paused', 0)
+                        ->update('tb_loading_kk', [
+                            'is_paused'    => 1,
+                            'paused_at'    => date('Y-m-d H:i:s'),
+                            'pernah_pause' => 1,
+                        ]);
+    }
+ 
+    public function resume_kk($id)
+    {
+        $row = $this->db->get_where('tb_loading_kk', ['id' => $id])->row_array();
+        if (!$row || !$row['is_paused'] || empty($row['paused_at'])) return false;
+ 
+        $tambah = time() - strtotime($row['paused_at']);
+        $total  = (int)$row['total_pause_secs'] + max(0, $tambah);
+ 
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_kk', [
+                            'is_paused'        => 0,
+                            'paused_at'        => null,
+                            'total_pause_secs' => $total,
+                        ]);
+    }
+ 
+    // ================================================================
+    // PAUSE / RESUME — LOADING LK
+    // ================================================================
+ 
+    public function pause_lk($id)
+    {
+        return $this->db->where('id', $id)
+                        ->where('status', 'PROSES_LOADING')
+                        ->where('is_paused', 0)
+                        ->update('tb_loading_lk', [
+                            'is_paused'    => 1,
+                            'paused_at'    => date('Y-m-d H:i:s'),
+                            'pernah_pause' => 1,
+                        ]);
+    }
+ 
+    public function resume_lk($id)
+    {
+        $row = $this->db->get_where('tb_loading_lk', ['id' => $id])->row_array();
+        if (!$row || !$row['is_paused'] || empty($row['paused_at'])) return false;
+ 
+        $tambah = time() - strtotime($row['paused_at']);
+        $total  = (int)$row['total_pause_secs'] + max(0, $tambah);
+ 
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_lk', [
+                            'is_paused'        => 0,
+                            'paused_at'        => null,
+                            'total_pause_secs' => $total,
+                        ]);
     }
 
 }
