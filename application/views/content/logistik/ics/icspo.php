@@ -89,11 +89,13 @@
                     <?php endif; ?>
 
                     <div class="card">
+
                         <div class="card-header bg-primary text-white">
                             <h3 class="card-title">
                                 <i class="fas fa-plus-circle mr-2"></i> Data LPB (Laporan Penerimaan Barang)
                             </h3>
                         </div>
+
                         <div class="card-body">
                             <div class="container-fluid">
 

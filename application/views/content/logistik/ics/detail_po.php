@@ -306,6 +306,7 @@
                                     <div class="col-lg-3 col-md-6 mb-3">
                                         <label class="font-weight-bold">Nomor PO</label>
                                         <input type="text" class="form-control" id="final_no_po" value="<?= htmlspecialchars($no_po) ?>" readonly>
+                                        <input type="hidden" id="final_kd_po" value="<?= htmlspecialchars($kd_po ?? '') ?>">
                                     </div>
                                     <div class="col-lg-3 col-md-6 mb-3">
                                         <label class="font-weight-bold">Invoice <span class="text-danger">*</span></label>
@@ -327,24 +328,28 @@
                                 </div>
 
                                 <div class="row">
+
                                     <div class="col-md-4 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Total Qty Draft</div>
                                             <div class="value" id="summaryTotalQty">0</div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-4 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Jumlah Lot</div>
                                             <div class="value" id="summaryTotalLot">0</div>
                                         </div>
                                     </div>
+
                                     <div class="col-md-4 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Baris Draft</div>
                                             <div class="value" id="summaryTotalRows">0</div>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
 
@@ -929,6 +934,7 @@
                     dataType: 'json',
                     data: {
                         no_po: $('#final_no_po').val(),
+                        kd_po: $('#final_kd_po').val(),
                         kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>',
                         no_invoice: invoice,
                         gudang_id: gudangId,
