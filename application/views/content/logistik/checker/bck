@@ -528,7 +528,7 @@ tr.row-pending { background:#fafafa !important; }
                             ][$lk['status']] ?? 'badge-secondary';
                             $rc = $lk_done_s ? 'table-success'
                                 : (($is_paused || $is_paused_siapkan) ? 'row-paused'
-                                : (($lk_started || $lk_siapkan) ? 'row-proses'
+                                : (($lk_started || $lk_siapkan || $lk_siap_loading) ? 'row-proses'
                                 : 'row-pending'));
 
                             // Durasi efektif loading
@@ -797,7 +797,7 @@ tr.row-pending { background:#fafafa !important; }
                             ][$kk['status']] ?? 'badge-secondary';
                             $rc = $kk_done_s ? 'table-success'
                                 : (($is_paused || $is_paused_siapkan) ? 'row-paused'
-                                : (($kk_started || $kk_siapkan) ? 'row-proses'
+                                : (($kk_started || $kk_siapkan || $kk_siap_loading) ? 'row-proses'
                                 : 'row-pending'));
 
                             // Durasi efektif loading
