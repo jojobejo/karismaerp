@@ -2100,6 +2100,34 @@ LEFT JOIN tb_customer c
     ", [$id_gudang])->result();
     }
 
+    public function get_stock_per_gudang_view($gudang = null)
+    {
+        $sql = "
+            SELECT
+                a.kode_barang,
+                a.nama_barang,
+                a.exp_date,
+                a.gudang,
+                a.qty,
+                (b.p*b.l*b.t) AS dimensi,
+                FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
+                MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
+            FROM v_stock_per_gudang a
+            JOIN tb_master_barang_all b
+                ON b.kd_barang = a.kode_barang
+        ";
+
+        $params = [];
+        if ($gudang !== null && $gudang !== '') {
+            $sql .= " WHERE a.gudang = ? ";
+            $params[] = $gudang;
+        }
+
+        $sql .= " ORDER BY a.nama_barang ASC, a.exp_date ASC ";
+
+        return $this->db->query($sql, $params)->result();
+    }
+
 
 
     public function get_gudang_induk()
@@ -2691,5 +2719,17 @@ LEFT JOIN tb_customer c
             AND mu.exp_date = sa.exp_date
             AND mu.gdg_asal = g.id_gudang
         ")->result();
+    }
+
+    public function get_stock($params = [])
+    {
+        $this->db->select('kode_barang,nama_barang,exp_date,nm_gudang,gudang,qty');
+        $this->db->from('v_stock_per_gudang');
+
+        if (!empty($params['gudang'])) {
+            $this->db->where('gudang', $params['gudang']);
+        }
+
+        return $this->db->get()->result();
     }
 }
