@@ -628,19 +628,33 @@ tr.row-pending { background:#fafafa !important; }
                             <!-- Kolom Aksi — semua role lihat tombol Detail, role operasional lihat aksi tambahan -->
                             <td class="text-center" style="min-width:200px;">
                                 <div class="aksi-wrap">
-                                    <!-- Tombol Detail — tampil untuk SEMUA role -->
+                                    <?php
+                                    $show_detail_lk = false;
+                                    if ($role === 'ADMLOG') {
+                                        $show_detail_lk = in_array($lk['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','SIAP_LOADING','DONE']);
+                                    } elseif (in_array($role, ['MANAGERCK','CHECKER'])) {
+                                        $show_detail_lk = ($lk['status'] === 'DONE');
+                                    } else {
+                                        // role lain (MANAGERWH, SALESCK, DIREKTURCK, dll) tetap selalu tampil
+                                        $show_detail_lk = true;
+                                    }
+                                    ?>
+                                    <?php if ($show_detail_lk): ?>
                                     <a href="<?= base_url('checker/detail_lk/' . $lk['id']) ?>"
-                                       class="btn btn-sm btn-outline-secondary btn-detail">
+                                    class="btn btn-sm btn-outline-secondary btn-detail">
                                         <i class="fas fa-eye mr-1"></i> Detail
                                     </a>
+                                    <?php endif; ?>
 
                                     <?php if ($can_ops_lk): ?>
                                     <?php if ($role === 'ADMLOG'): ?>
                                         <?php if ($can_edit_row): ?>
-                                            <?php if (in_array($lk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
-                                                <button class="btn btn-sm btn-info btn-simpan-lk" data-id="<?= $lk['id'] ?>"><i class="fas fa-save"></i> Simpan</button>
-                                            <?php endif; ?>
-                                            <div style="display:flex;gap:4px;justify-content:center;">
+                                            <div style="display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                                                <?php if (in_array($lk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
+                                                    <button class="btn btn-sm btn-info btn-simpan-lk" data-id="<?= $lk['id'] ?>">
+                                                        <i class="fas fa-save"></i> Simpan
+                                                    </button>
+                                                <?php endif; ?>
                                                 <button class="btn btn-sm btn-warning btn-edit-lk"
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
@@ -889,19 +903,33 @@ tr.row-pending { background:#fafafa !important; }
                             <!-- Kolom Aksi — semua role lihat tombol Detail -->
                             <td class="text-center" style="min-width:200px;">
                                 <div class="aksi-wrap">
-                                    <!-- Tombol Detail — tampil untuk SEMUA role -->
+                                    <!-- Tombol Detail — tampil sesuai role & status -->
+                                    <?php
+                                    $show_detail_kk = false;
+                                    if ($role === 'ADMLOG') {
+                                        $show_detail_kk = in_array($kk['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','SIAP_LOADING','DONE']);
+                                    } elseif (in_array($role, ['MANAGERCK','CHECKER'])) {
+                                        $show_detail_kk = ($kk['status'] === 'DONE');
+                                    } else {
+                                        $show_detail_kk = true;
+                                    }
+                                    ?>
+                                    <?php if ($show_detail_kk): ?>
                                     <a href="<?= base_url('checker/detail_kk/' . $kk['id']) ?>"
-                                       class="btn btn-sm btn-outline-secondary btn-detail">
+                                    class="btn btn-sm btn-outline-secondary btn-detail">
                                         <i class="fas fa-eye mr-1"></i> Detail
                                     </a>
+                                    <?php endif; ?>
 
                                     <?php if ($can_ops_kk): ?>
                                     <?php if ($role === 'ADMLOG'): ?>
                                         <?php if ($can_edit_row): ?>
-                                            <?php if (in_array($kk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
-                                                <button class="btn btn-sm btn-info btn-simpan-kk" data-id="<?= $kk['id'] ?>"><i class="fas fa-save"></i> Simpan</button>
-                                            <?php endif; ?>
-                                            <div style="display:flex;gap:4px;justify-content:center;">
+                                            <div style="display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;">
+                                                <?php if (in_array($kk['status'], ['CETAK_DO','DO_SELESAI'])): ?>
+                                                    <button class="btn btn-sm btn-info btn-simpan-kk" data-id="<?= $kk['id'] ?>">
+                                                        <i class="fas fa-save"></i> Simpan
+                                                    </button>
+                                                <?php endif; ?>
                                                 <button class="btn btn-sm btn-warning btn-edit-kk"
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">

@@ -31,7 +31,6 @@
                     .semua-section-header.lk      { border-left-color:#17a2b8; }
                     .semua-section-header.kk       { border-left-color:#28a745; }
 
-                    /* Pintu badge di dalam card item */
                     .pintu-badge {
                         display:inline-flex; align-items:center; gap:3px;
                         background:#212529; color:#fff;
@@ -39,107 +38,109 @@
                         padding:2px 8px; border-radius:4px;
                         white-space:nowrap; vertical-align:middle;
                     }
-                    .pintu-badge.done-variant {
-                        background:#495057;
-                    }
+                    .pintu-badge.done-variant { background:#495057; }
 
-                    /* Card item di kolom proses/done */
                     .dash-item-card {
                         border-radius:6px;
                         padding:10px 12px;
                         margin-bottom:10px;
                     }
                     .dash-item-card .item-title {
-                        font-size:14px;
-                        font-weight:700;
-                        color:#1a1a1a;
-                        margin-bottom:4px;
+                        font-size:14px; font-weight:700; color:#1a1a1a; margin-bottom:4px;
                     }
                     .dash-item-card .item-meta {
-                        font-size:13px;
-                        font-weight:600;
-                        color:#212529;
-                        margin-bottom:2px;
+                        font-size:13px; font-weight:600; color:#212529; margin-bottom:2px;
                     }
                     .dash-item-card .item-time {
-                        font-size:12px;
-                        color:#444;
-                        font-weight:500;
+                        font-size:12px; color:#444; font-weight:500;
                     }
                     .dash-item-card .badge-durasi-live {
-                        font-size:12px;
-                        font-weight:700;
-                        padding:2px 8px;
+                        font-size:12px; font-weight:700; padding:2px 8px;
                     }
                     .dash-item-card .badge-persen {
-                        font-size:13px;
-                        font-weight:700;
-                        padding:3px 10px;
+                        font-size:13px; font-weight:700; padding:3px 10px;
                     }
+
+                    /* Badge penyiapan barang */
+                    .badge-siapkan {
+                        display:inline-flex; align-items:center; gap:4px;
+                        background:#7b1fa2; color:#fff;
+                        font-size:11px; font-weight:700;
+                        padding:3px 8px; border-radius:4px;
+                        white-space:nowrap;
+                    }
+
+                    /* Badge / strip pause */
+                    .pause-strip {
+                        display:flex; align-items:center; gap:6px;
+                        background:#fce4ec; border:1px solid #f48fb1;
+                        border-radius:5px; padding:4px 10px;
+                        margin-top:6px;
+                        font-size:12px; font-weight:700; color:#c62828;
+                    }
+                    @keyframes blink-dash { 0%,100%{opacity:1} 50%{opacity:.3} }
+                    .pause-strip i { animation: blink-dash 1.2s infinite; }
+
+                    /* Garis kiri item yang di-pause */
+                    .dash-item-card.is-paused { border-left: 4px solid #e91e63 !important; }
+                    /* Garis kiri item penyiapan */
+                    .dash-item-card.is-siapkan { border-left: 4px solid #7b1fa2 !important; }
                 </style>
 
                 <?php
                 // ---- Helper status ----
-                function isProses($s)  { return in_array($s, ['PROSES', 'PROSES_LOADING']); }
+                function isProses($s)  { return in_array($s, ['PROSES', 'PROSES_LOADING', 'PENYIAPAN_BARANG']); }
                 function isDone($s)    { return $s === 'DONE'; }
                 function isWait($s)    { return !isProses($s) && !isDone($s); }
 
                 function statusLabel($s) {
                     $map = [
-                        'MENUNGGU'        => 'Menunggu',
-                        'PROSES'          => 'Proses bongkar',
-                        'PENYIAPAN_BARANG'=> 'Penyiapan',
-                        'DONE'            => 'Done',
-                        'CETAK_DO'        => 'Cetak DO',
-                        'DO_SELESAI'      => 'DO Selesai',
-                        'PROSES_LOADING'  => 'Proses loading',
+                        'MENUNGGU'         => 'Menunggu',
+                        'PROSES'           => 'Proses bongkar',
+                        'PENYIAPAN_BARANG' => 'Siapkan Barang',
+                        'SIAP_LOADING'     => 'Siap Loading',
+                        'DONE'             => 'Done',
+                        'CETAK_DO'         => 'Cetak DO',
+                        'DO_SELESAI'       => 'DO Selesai',
+                        'PROSES_LOADING'   => 'Proses loading',
                     ];
                     return $map[$s] ?? str_replace('_', ' ', $s);
                 }
 
                 // ---- Hitung summary ----
-                // Total pintu = 5 (A1–A5)
                 $total_pintu  = 5;
-                $pintu_aktif  = 0;
+                $pintu_dipakai = [];
+
                 $total_proses = 0;
                 $total_done   = 0;
-
-                // Kumpulkan semua pintu yang sedang aktif (unik)
-                $pintu_dipakai = [];
 
                 foreach ($bongkaran as $b) {
                     if (isProses($b['status'])) {
                         $total_proses++;
-                        if (!empty($b['pintu']) && !in_array($b['pintu'], $pintu_dipakai)) {
+                        if (!empty($b['pintu']) && !in_array($b['pintu'], $pintu_dipakai))
                             $pintu_dipakai[] = $b['pintu'];
-                        }
                     }
                     if (isDone($b['status'])) $total_done++;
                 }
                 foreach ($list_lk as $lk) {
                     if (isProses($lk['status'])) {
                         $total_proses++;
-                        if (!empty($lk['pintu']) && !in_array($lk['pintu'], $pintu_dipakai)) {
+                        if (!empty($lk['pintu']) && !in_array($lk['pintu'], $pintu_dipakai))
                             $pintu_dipakai[] = $lk['pintu'];
-                        }
                     }
                     if (isDone($lk['status'])) $total_done++;
                 }
                 foreach ($list_kk as $kk) {
                     if (isProses($kk['status'])) {
                         $total_proses++;
-                        if (!empty($kk['pintu']) && !in_array($kk['pintu'], $pintu_dipakai)) {
+                        if (!empty($kk['pintu']) && !in_array($kk['pintu'], $pintu_dipakai))
                             $pintu_dipakai[] = $kk['pintu'];
-                        }
                     }
                     if (isDone($kk['status'])) $total_done++;
                 }
 
-                // Pintu aktif = jumlah pintu unik yang sedang dipakai
                 $pintu_aktif = count($pintu_dipakai);
-
-                // Daftar nama pintu A1–A5
-                $nama_pintu = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
+                $nama_pintu  = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
                 ?>
 
                 <!-- Header -->
@@ -230,40 +231,34 @@
                             <i class="fas fa-dolly mr-2"></i> Bongkaran
                             <span class="badge badge-warning ml-2"><?= count($bongkaran) ?></span>
                         </div>
-                        <?php
-                        echo dashboardColumns(
+                        <?php echo dashboardColumns(
                             array_filter($bongkaran, fn($r) => isWait($r['status'])),
                             array_filter($bongkaran, fn($r) => isProses($r['status'])),
                             array_filter($bongkaran, fn($r) => isDone($r['status'])),
                             'bongkar'
-                        );
-                        ?>
+                        ); ?>
 
                         <div class="semua-section-header lk">
                             <i class="fas fa-truck mr-2"></i> Loading LK
                             <span class="badge badge-info ml-2"><?= count($list_lk) ?></span>
                         </div>
-                        <?php
-                        echo dashboardColumns(
+                        <?php echo dashboardColumns(
                             array_filter($list_lk, fn($r) => isWait($r['status'])),
                             array_filter($list_lk, fn($r) => isProses($r['status'])),
                             array_filter($list_lk, fn($r) => isDone($r['status'])),
                             'lk'
-                        );
-                        ?>
+                        ); ?>
 
                         <div class="semua-section-header kk">
                             <i class="fas fa-truck-loading mr-2"></i> Loading KK
                             <span class="badge badge-success ml-2"><?= count($list_kk) ?></span>
                         </div>
-                        <?php
-                        echo dashboardColumns(
+                        <?php echo dashboardColumns(
                             array_filter($list_kk, fn($r) => isWait($r['status'])),
                             array_filter($list_kk, fn($r) => isProses($r['status'])),
                             array_filter($list_kk, fn($r) => isDone($r['status'])),
                             'kk'
-                        );
-                        ?>
+                        ); ?>
                     </div>
 
                     <!-- TAB BONGKARAN -->
@@ -312,36 +307,25 @@
 
 <?php
 // ================================================================
-// Nama pintu A1–A5 (index 1=A1, 2=A2, dst.)
+// Nama pintu
 // ================================================================
 function namaPintu($pintu) {
-    $map = [1=>'A1', 2=>'A2', 3=>'A3', 4=>'A4', 5=>'A5', 6=>'A6', 7=>'B1', 8=>'B2', 9=>'B3', 10=>'C'];
-    return isset($map[(int)$pintu]) ? $map[(int)$pintu] : 'P'.$pintu;
+    $map = [1=>'A1',2=>'A2',3=>'A3',4=>'A4',5=>'A5',6=>'A6',7=>'B1',8=>'B2',9=>'B3',10=>'C'];
+    return $map[(int)$pintu] ?? 'P'.$pintu;
 }
 
 // ================================================================
 // Helper: render 3 kolom (belum / proses / done)
-// FIX utama: badge pintu & semua teks ada DI DALAM foreach $item
 // ================================================================
 function dashboardColumns($wait, $proses, $done, $type)
 {
-    $color_wait  = ['bg'=>'#dee2e6','stroke'=>'#6c757d','dot'=>'#495057','dotIn'=>'#dee2e6'];
+    $color_wait   = ['bg'=>'#dee2e6','stroke'=>'#6c757d','dot'=>'#495057','dotIn'=>'#dee2e6'];
     $color_proses = ['bg'=>'#fff3cd','stroke'=>'#856404','dot'=>'#856404','dotIn'=>'#fff3cd'];
-    $color_done  = ['bg'=>'#d1e7dd','stroke'=>'#198754','dot'=>'#0a3622','dotIn'=>'#d1e7dd'];
+    $color_done   = ['bg'=>'#d1e7dd','stroke'=>'#198754','dot'=>'#0a3622','dotIn'=>'#d1e7dd'];
 
-    if ($type === 'bongkar') {
-        $lbl_wait = 'Belum Bongkar';
-        $lbl_p    = 'Proses Bongkar';
-        $lbl_done = 'Done Bongkar';
-    } elseif ($type === 'lk') {
-        $lbl_wait = 'Belum Loading LK';
-        $lbl_p    = 'Proses Loading LK';
-        $lbl_done = 'Done Loading LK';
-    } else {
-        $lbl_wait = 'Belum Loading KK';
-        $lbl_p    = 'Proses Loading KK';
-        $lbl_done = 'Done Loading KK';
-    }
+    if ($type === 'bongkar')      { $lbl_wait='Belum Bongkar';      $lbl_p='Proses Bongkar';     $lbl_done='Done Bongkar'; }
+    elseif ($type === 'lk')       { $lbl_wait='Belum Loading LK';   $lbl_p='Proses Loading LK';  $lbl_done='Done Loading LK'; }
+    else                          { $lbl_wait='Belum Loading KK';   $lbl_p='Proses Loading KK';  $lbl_done='Done Loading KK'; }
 
     ob_start();
     ?>
@@ -369,10 +353,11 @@ function dashboardColumns($wait, $proses, $done, $type)
                                 </div>
                                 <?php
                                 $badge_map = [
-                                    'MENUNGGU'        => 'badge-secondary',
-                                    'CETAK_DO'        => 'badge-info',
-                                    'DO_SELESAI'      => 'badge-warning',
-                                    'PENYIAPAN_BARANG'=> 'badge-primary',
+                                    'MENUNGGU'         => 'badge-secondary',
+                                    'CETAK_DO'         => 'badge-info',
+                                    'DO_SELESAI'       => 'badge-warning',
+                                    'SIAP_LOADING'     => 'badge-primary',
+                                    'PENYIAPAN_BARANG' => 'badge-secondary',
                                 ];
                                 $badge_cls = $badge_map[$item['status']] ?? 'badge-secondary';
                                 ?>
@@ -403,23 +388,56 @@ function dashboardColumns($wait, $proses, $done, $type)
                     <?php if (empty($proses)) : ?>
                         <p class="text-muted text-center mt-3 mb-0"><small>Tidak ada</small></p>
                     <?php else : foreach ($proses as $item) :
-                        $progres = (int)($item['progres'] ?? 0);
-                        // hitung durasi live
+
+                        // ── deteksi status ──
+                        $is_siapkan        = ($item['status'] === 'PENYIAPAN_BARANG');
+                        $is_paused_loading = !empty($item['is_paused']);
+                        $is_paused_siapkan = !empty($item['is_paused_siapkan']);
+                        $any_paused        = $is_paused_loading || $is_paused_siapkan;
+
+                        // progres: saat siapkan pakai progres_siapkan, saat loading pakai progres
+                        $progres = $is_siapkan
+                            ? (int)($item['progres_siapkan'] ?? 0)
+                            : (int)($item['progres'] ?? 0);
+
+                        // ── durasi live ──
+                        // Saat penyiapan: hitung dari waktu_mulai_siapkan
+                        // Saat loading   : hitung dari waktu_mulai
                         $durasi_live = '';
-                        if (!empty($item['waktu_mulai'])) {
-                            $sel = time() - strtotime($item['waktu_mulai']);
+                        if ($is_siapkan && !empty($item['waktu_mulai_siapkan'])) {
+                            $ref = $is_paused_siapkan && !empty($item['paused_at_siapkan'])
+                                 ? strtotime($item['paused_at_siapkan']) : time();
+                            $sel = max(0, $ref - strtotime($item['waktu_mulai_siapkan'])
+                                       - (int)($item['total_pause_secs_siapkan'] ?? 0));
                             if ($sel > 0) {
-                                $j = floor($sel / 3600);
-                                $m = floor(($sel % 3600) / 60);
+                                $j = floor($sel/3600); $m = floor(($sel%3600)/60);
+                                $durasi_live = $j > 0 ? "{$j}j {$m}m" : "{$m}m";
+                            }
+                        } elseif (!$is_siapkan && !empty($item['waktu_mulai'])) {
+                            $ref = $is_paused_loading && !empty($item['paused_at'])
+                                 ? strtotime($item['paused_at']) : time();
+                            $sel = max(0, $ref - strtotime($item['waktu_mulai'])
+                                       - (int)($item['total_pause_secs'] ?? 0));
+                            if ($sel > 0) {
+                                $j = floor($sel/3600); $m = floor(($sel%3600)/60);
                                 $durasi_live = $j > 0 ? "{$j}j {$m}m" : "{$m}m";
                             }
                         }
+
+                        // ── class card ──
+                        $card_class = 'dash-item-card mb-2 shadow-sm';
+                        if ($any_paused)   $card_class .= ' is-paused';
+                        elseif ($is_siapkan) $card_class .= ' is-siapkan';
+                        else               $card_class .= ' border-left-warning';
                     ?>
-                    <div class="card dash-item-card mb-2 border-left-warning shadow-sm">
-                        <!-- Baris atas: nama + pintu + % -->
+                    <div class="card <?= $card_class ?>">
+                        <!-- Baris atas: ikon + nama + pintu + % -->
                         <div class="d-flex align-items-start mb-2">
-                            <?= trukIconSVG($type, $color_proses) ?>
+                            <?= trukIconSVG($type, $any_paused ? ['bg'=>'#fce4ec','stroke'=>'#c62828','dot'=>'#c62828','dotIn'=>'#fce4ec']
+                                                               : ($is_siapkan ? ['bg'=>'#ede7f6','stroke'=>'#7b1fa2','dot'=>'#7b1fa2','dotIn'=>'#ede7f6']
+                                                                              : $color_proses)) ?>
                             <div style="min-width:0; flex:1; margin-left:10px">
+                                <!-- nama item + pintu -->
                                 <div class="d-flex align-items-center flex-wrap" style="gap:5px; margin-bottom:4px">
                                     <span class="item-title text-truncate">
                                         <?= htmlspecialchars($item['keterangan'] ?? ($item['kode_bongkar'] ?? '-')) ?>
@@ -430,34 +448,73 @@ function dashboardColumns($wait, $proses, $done, $type)
                                         </span>
                                     <?php endif; ?>
                                 </div>
+
+                                <!-- Badge fase: Siapkan Barang atau Proses Loading -->
+                                <div class="mb-1">
+                                    <?php if ($is_siapkan): ?>
+                                        <span class="badge-siapkan">
+                                            <i class="fas fa-boxes"></i> Siapkan Barang
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge badge-warning" style="font-size:11px;">
+                                            <i class="fas fa-truck mr-1"></i> Proses Loading
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+
                                 <!-- Nama checker -->
                                 <div class="item-meta">
                                     <i class="fas fa-user mr-1" style="color:#856404"></i>
                                     <?= htmlspecialchars($item['nm_checker'] ?? '-') ?>
                                 </div>
+
                                 <!-- Jam mulai + durasi -->
                                 <div class="item-time">
-                                    <?php if (!empty($item['waktu_mulai'])): ?>
+                                    <?php
+                                    $wkt_mulai_show = $is_siapkan
+                                        ? ($item['waktu_mulai_siapkan'] ?? null)
+                                        : ($item['waktu_mulai'] ?? null);
+                                    if (!empty($wkt_mulai_show)): ?>
                                         <i class="fas fa-clock mr-1"></i>
-                                        Mulai: <?= date('H:i', strtotime($item['waktu_mulai'])) ?>
+                                        Mulai: <?= date('H:i', strtotime($wkt_mulai_show)) ?>
                                         <?php if ($durasi_live): ?>
-                                            <span class="badge badge-warning badge-durasi-live ml-1"><?= $durasi_live ?></span>
+                                            <span class="badge badge-warning badge-durasi-live ml-1">
+                                                <?= $durasi_live ?>
+                                            </span>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
-                                <!-- Waktu DO selesai (hanya LK & KK yang sudah proses loading) -->
+
+                                <!-- Waktu DO selesai (hanya LK & KK) -->
                                 <?php if ($type !== 'bongkar' && !empty($item['waktu_do_selesai'])): ?>
                                     <div class="item-time" style="color:#856404; font-weight:600;">
                                         <i class="fas fa-file-alt mr-1"></i>DO Selesai: <?= date('H:i', strtotime($item['waktu_do_selesai'])) ?>
                                     </div>
                                 <?php endif; ?>
+
+                                <!-- Strip pause -->
+                                <?php if ($is_paused_siapkan): ?>
+                                    <div class="pause-strip">
+                                        <i class="fas fa-pause-circle"></i>
+                                        Penyiapan di-pause
+                                    </div>
+                                <?php elseif ($is_paused_loading): ?>
+                                    <div class="pause-strip">
+                                        <i class="fas fa-pause-circle"></i>
+                                        Loading di-pause
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <!-- Persentase -->
-                            <span class="badge badge-warning badge-persen ml-2 align-self-start"><?= $progres ?>%</span>
+                            <span class="badge <?= $any_paused ? 'badge-danger' : ($is_siapkan ? 'badge-secondary' : 'badge-warning') ?> badge-persen ml-2 align-self-start">
+                                <?= $progres ?>%
+                            </span>
                         </div>
+
                         <!-- Progress bar -->
                         <div class="progress" style="height:6px; border-radius:3px">
-                            <div class="progress-bar bg-warning" style="width:<?= $progres ?>%"></div>
+                            <div class="progress-bar <?= $any_paused ? 'bg-danger' : ($is_siapkan ? 'bg-purple' : 'bg-warning') ?>"
+                                 style="width:<?= $progres ?>%; <?= $is_siapkan && !$any_paused ? 'background:#7b1fa2!important' : '' ?>"></div>
                         </div>
                     </div>
                     <?php endforeach; endif; ?>
@@ -481,16 +538,26 @@ function dashboardColumns($wait, $proses, $done, $type)
                         $durasi = '';
                         if (!empty($item['waktu_mulai']) && !empty($item['waktu_selesai'])) {
                             $sel = strtotime($item['waktu_selesai']) - strtotime($item['waktu_mulai']);
-                            $j = floor($sel / 3600);
-                            $m = floor(($sel % 3600) / 60);
+                            $total_p = (int)($item['total_pause_secs'] ?? 0);
+                            $sel = max(0, $sel - $total_p);
+                            $j = floor($sel/3600); $m = floor(($sel%3600)/60);
                             $durasi = $j > 0 ? "{$j}j {$m}m" : "{$m}m";
+                        }
+                        // Durasi penyiapan (jika ada)
+                        $durasi_siapkan = '';
+                        if (!empty($item['waktu_mulai_siapkan']) && !empty($item['waktu_selesai_siapkan'])) {
+                            $sel_s = strtotime($item['waktu_selesai_siapkan']) - strtotime($item['waktu_mulai_siapkan']);
+                            $total_ps = (int)($item['total_pause_secs_siapkan'] ?? 0);
+                            $sel_s = max(0, $sel_s - $total_ps);
+                            $js = floor($sel_s/3600); $ms = floor(($sel_s%3600)/60);
+                            $durasi_siapkan = $js > 0 ? "{$js}j {$ms}m" : "{$ms}m";
                         }
                     ?>
                     <div class="card dash-item-card mb-2 border-left-success shadow-sm">
                         <div class="d-flex align-items-start">
                             <?= trukIconSVG($type, $color_done) ?>
                             <div style="min-width:0; flex:1; margin-left:10px">
-                                <!-- Nama item + pintu -->
+                                <!-- nama + pintu -->
                                 <div class="d-flex align-items-center flex-wrap" style="gap:5px; margin-bottom:4px">
                                     <span class="item-title text-truncate">
                                         <?= htmlspecialchars($item['keterangan'] ?? ($item['kode_bongkar'] ?? '-')) ?>
@@ -501,26 +568,43 @@ function dashboardColumns($wait, $proses, $done, $type)
                                         </span>
                                     <?php endif; ?>
                                 </div>
-                                <!-- Nama checker + durasi -->
+                                <!-- checker + durasi loading -->
                                 <div class="item-meta">
                                     <i class="fas fa-user mr-1" style="color:#198754"></i>
                                     <?= htmlspecialchars($item['nm_checker'] ?? '-') ?>
                                     <?php if ($durasi): ?>
-                                        <span class="badge badge-success ml-1" style="font-size:12px; font-weight:700; padding:2px 8px"><?= $durasi ?></span>
+                                        <span class="badge badge-success ml-1" style="font-size:12px;font-weight:700;padding:2px 8px">
+                                            <i class="fas fa-truck mr-1"></i><?= $durasi ?>
+                                        </span>
                                     <?php endif; ?>
                                 </div>
+                                <!-- durasi penyiapan (jika ada) -->
+                                <?php if ($durasi_siapkan): ?>
+                                    <div class="item-time" style="color:#5b21b6; font-weight:600;">
+                                        <i class="fas fa-boxes mr-1"></i>Siapkan: <?= $durasi_siapkan ?>
+                                    </div>
+                                <?php endif; ?>
                                 <!-- Waktu DO Selesai (hanya LK & KK) -->
                                 <?php if ($type !== 'bongkar' && !empty($item['waktu_do_selesai'])): ?>
                                     <div class="item-time" style="color:#856404; font-weight:600;">
-                                        <i class="fas fa-file-alt mr-1"></i>DO Selesai: <?= date('H:i', strtotime($item['waktu_do_selesai'])) ?>
+                                        <i class="fas fa-file-alt mr-1"></i>DO: <?= date('H:i', strtotime($item['waktu_do_selesai'])) ?>
                                     </div>
                                 <?php endif; ?>
-                                <!-- Jam mulai loading & selesai loading -->
+                                <!-- waktu mulai → selesai loading -->
                                 <div class="item-time">
                                     <i class="fas fa-clock mr-1"></i>
                                     <?= !empty($item['waktu_mulai'])   ? date('H:i', strtotime($item['waktu_mulai']))   : '-' ?>
                                     <?= !empty($item['waktu_selesai']) ? ' → ' . date('H:i', strtotime($item['waktu_selesai'])) : '' ?>
                                 </div>
+                                <!-- pernah pause indicator -->
+                                <?php if (!empty($item['pernah_pause']) || !empty($item['pernah_pause_siapkan'])): ?>
+                                    <div class="item-time" style="color:#c62828;">
+                                        <i class="fas fa-pause-circle mr-1"></i>
+                                        <?php if (!empty($item['pernah_pause_siapkan'])): ?>Pernah pause siapkan<?php endif; ?>
+                                        <?php if (!empty($item['pernah_pause']) && !empty($item['pernah_pause_siapkan'])): ?> & <?php endif; ?>
+                                        <?php if (!empty($item['pernah_pause'])): ?>Pernah pause loading<?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
