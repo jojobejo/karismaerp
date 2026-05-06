@@ -380,3 +380,28 @@ $route['kiu_katalog']                               = 'sales/C_ExportStock/expor
 $route['kepuasan_pelanggan']                        = 'pelanggan/C_Pelanggan';
 $route['nilai_ipkp/(:any)']                         = 'pelanggan/C_Pelanggan/input_nilai/$1';
 $route['ratingreview']                              = 'pelanggan/C_Pelanggan/rating_review';
+
+
+//LOGISTIK - Checker
+$route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';
+$route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
+$route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
+$route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
+$route['checker/pause']                             = 'logistik/C_Checker/pause';
+$route['checker/resume']                            = 'logistik/C_Checker/resume';
+$route['checker/pause_kk']                          = 'logistik/C_Checker/pause_kk';
+$route['checker/resume_kk']                         = 'logistik/C_Checker/resume_kk';
+$route['checker/pause_lk']                          = 'logistik/C_Checker/pause_lk';
+$route['checker/resume_lk']                         = 'logistik/C_Checker/resume_lk';
+$route['checker/start_siapkan_kk']                  = 'logistik/C_Checker/start_siapkan_kk';
+$route['checker/update_progres_siapkan_kk']         = 'logistik/C_Checker/update_progres_siapkan_kk';
+$route['checker/done_siapkan_kk']                   = 'logistik/C_Checker/done_siapkan_kk';
+$route['checker/pause_siapkan_kk']                  = 'logistik/C_Checker/pause_siapkan_kk';
+$route['checker/resume_siapkan_kk']                 = 'logistik/C_Checker/resume_siapkan_kk';
+$route['checker/start_siapkan_lk']                  = 'logistik/C_Checker/start_siapkan_lk';
+$route['checker/update_progres_siapkan_lk']         = 'logistik/C_Checker/update_progres_siapkan_lk';
+$route['checker/done_siapkan_lk']                   = 'logistik/C_Checker/done_siapkan_lk';
+$route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_siapkan_lk';
+$route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
+$route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
+$route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
