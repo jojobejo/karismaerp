@@ -568,11 +568,11 @@ class C_Ics extends CI_Controller
 
     public function ics_po()
     {
-       $date1 = $this->input->post('date1');
+        $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['lpb']        = $this->M_Logistik->get_data_po($date1, $date2);
+        $data['lpb']        = $this->M_Logistik->get_lpb($date1, $date2);
         $data['date1']      = $date1;
         $data['date2']      = $date2;
 
@@ -583,19 +583,426 @@ class C_Ics extends CI_Controller
 
     public function detail_po()
     {
-        // Ambil dari query string manual
         $no_po = $this->input->get('no_po');
-        $no_po = urldecode($no_po);
+        $kd_suplier = $this->input->get('kd_suplier');
+
+        $nopo      = urldecode($no_po);
+        $kdsuplier = urldecode($kd_suplier);
 
         if (empty($no_po)) redirect('ics/icspo');
 
         $data['page_title'] = 'KARISMA - Detail PO';
         $data['no_po']      = $no_po;
-        $data['detail']     = $this->M_Logistik->get_detail_by_po($no_po);
+        $data['kd_suplier'] = $kd_suplier;
+        $data['list_satuan'] = $this->db->order_by('nm_satuan', 'ASC')->get('tb_satuan')->result_array();
+        $data['list_gudang'] = $this->db
+            ->select('id_gudang, nama_gudang')
+            ->order_by('nama_gudang', 'ASC')
+            ->get('tb_gudang')
+            ->result_array();
+        $data['detail']     = $this->M_Logistik->detail_po_received($nopo, $kdsuplier);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_po.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function detail_record_lpb()
+    {
+        $kd_po = urldecode((string) $this->input->get('kd_po'));
+        $no_po = urldecode((string) $this->input->get('no_po'));
+        $kd_suplier = urldecode((string) $this->input->get('kd_suplier'));
+
+        if ($kd_po === '') {
+            redirect('ics/icspo');
+        }
+
+        $data['page_title'] = 'KARISMA - Record LPB PO';
+        $data['kd_po']      = $kd_po;
+        $data['no_po']      = $no_po;
+        $data['kd_suplier'] = $kd_suplier;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_get_lpb_records_by_kd_po()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($kd_po === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter kd_po wajib diisi.'
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'rows'   => $this->M_Logistik->get_lpb_records_by_kd_po($kd_po)
+        ]);
+    }
+
+    public function ajax_get_lpb_record_detail()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $id_lpb = (int) $this->input->get('id_lpb', TRUE);
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($id_lpb <= 0) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter id_lpb tidak valid.'
+            ]);
+            return;
+        }
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+
+        if (empty($header)) {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Data LPB tidak ditemukan.'
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'header' => $header,
+            'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+        ]);
+    }
+
+    public function ajax_get_tmp_po_received_item()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $kd_po      = trim((string) $this->input->get('kd_po', TRUE));
+        $kd_barang  = trim((string) $this->input->get('kd_barang', TRUE));
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($kd_po === '' || $kd_barang === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter kd_po dan kd_barang wajib diisi.'
+            ]);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_tmp_po_received_item($kd_po, $kd_barang);
+
+        echo json_encode([
+            'status' => 'success',
+            'rows'   => $rows
+        ]);
+    }
+
+    public function ajax_get_tmp_po_received_summary()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $no_po      = trim((string) $this->input->get('no_po', TRUE));
+        $kd_suplier = trim((string) $this->input->get('kd_suplier', TRUE));
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($no_po === '' || $kd_suplier === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter no_po dan kd_suplier wajib diisi.'
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'rows'   => $this->M_Logistik->get_tmp_po_received_summary($no_po, $kd_suplier)
+        ]);
+    }
+
+    public function ajax_save_tmp_po_received()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $payload = [
+            'kd_po'      => trim((string) $this->input->post('kd_po', TRUE)),
+            'kd_suplier' => trim((string) $this->input->post('kd_suplier', TRUE)),
+            'kd_barang'  => trim((string) $this->input->post('kd_barang', TRUE)),
+            'rows'       => $this->input->post('rows')
+        ];
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($payload['kd_po'] === '' || $payload['kd_suplier'] === '' || $payload['kd_barang'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Data barang yang dipilih belum lengkap.'
+            ]);
+            return;
+        }
+
+        $rows = is_array($payload['rows']) ? $payload['rows'] : [];
+        $insertRows = [];
+        $totalQty = 0;
+
+        foreach ($rows as $row) {
+            $qty = (float) ($row['qty_diterima'] ?? 0);
+            $satuan = trim((string) ($row['satuan'] ?? ''));
+            $noLot = trim((string) ($row['no_lot'] ?? ''));
+            $expiredDate = trim((string) ($row['expired_date'] ?? ''));
+
+            if ($qty <= 0) {
+                continue;
+            }
+
+            if ($satuan === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'message' => 'Satuan wajib dipilih untuk setiap baris yang diisi.'
+                ]);
+                return;
+            }
+
+            $totalQty += $qty;
+            $insertRows[] = [
+                'kd_po'         => $payload['kd_po'],
+                'kd_suplier'    => $payload['kd_suplier'],
+                'kd_barang'     => $payload['kd_barang'],
+                'qty_diterima'  => $qty,
+                'satuan'        => $satuan,
+                'no_lot'        => ($noLot !== '') ? $noLot : null,
+                'expired_date'  => ($expiredDate !== '') ? $expiredDate : null
+            ];
+        }
+
+        $qtyInfo = $this->M_Logistik->get_po_remaining_qty_by_item($payload['kd_po'], $payload['kd_barang']);
+
+        if (!$qtyInfo) {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_item',
+                'message' => 'Data barang PO tidak ditemukan untuk draft ini.'
+            ]);
+            return;
+        }
+
+        if ($totalQty > (float) $qtyInfo['qty_kecil_sisa']) {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_qty',
+                'message' => 'Total qty draft melebihi qty kecil sisa PO.',
+                'debug'   => [
+                    'qty_kecil_sisa' => (float) $qtyInfo['qty_kecil_sisa'],
+                    'total_draft' => $totalQty,
+                    'kd_po'       => $payload['kd_po'],
+                    'kd_barang'   => $payload['kd_barang']
+                ]
+            ]);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $result = $this->M_Logistik->replace_tmp_po_received_item(
+            $payload['kd_po'],
+            $payload['kd_barang'],
+            $insertRows
+        );
+
+        if (!$result || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'save_tmp',
+                'message' => 'Draft penerimaan gagal disimpan.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'status'       => 'success',
+            'step'         => 'save_tmp',
+            'message'      => empty($insertRows) ? 'Draft dikosongkan.' : 'Draft penerimaan berhasil disimpan.',
+            'rows'         => $this->M_Logistik->get_tmp_po_received_item($payload['kd_po'], $payload['kd_barang']),
+            'summary_rows' => $this->M_Logistik->get_tmp_po_received_summary_by_item($payload['kd_po'], $payload['kd_barang'])
+        ]);
+    }
+
+    public function ajax_delete_tmp_po_received_row()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        $idTmpReceived = (int) $this->input->post('id_tmp_recieved', TRUE);
+        $noPo = trim((string) $this->input->post('no_po', TRUE));
+        $kdSuplier = trim((string) $this->input->post('kd_suplier', TRUE));
+
+        if ($idTmpReceived <= 0 || $noPo === '' || $kdSuplier === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter hapus draft belum lengkap.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $deleted = $this->M_Logistik->delete_tmp_po_received_row($idTmpReceived, $kdSuplier, $noPo);
+
+        if (!$deleted || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Baris draft gagal dihapus atau data tidak ditemukan.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'status'  => 'success',
+            'message' => 'Baris draft berhasil dihapus.'
+        ]);
+    }
+
+    public function ajax_finalize_tmp_po_received()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        $payload = [
+            'no_po'       => trim((string) $this->input->post('no_po', TRUE)),
+            'kd_po'       => trim((string) $this->input->post('kd_po', TRUE)),
+            'kd_suplier'  => trim((string) $this->input->post('kd_suplier', TRUE)),
+            'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
+            'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
+            'keterangan'  => trim((string) $this->input->post('keterangan', TRUE))
+        ];
+
+        if ($payload['no_po'] === '' || $payload['kd_suplier'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_header',
+                'message' => 'Parameter utama draft penerimaan tidak lengkap.'
+            ]);
+            return;
+        }
+
+        if ($payload['no_invoice'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_header',
+                'message' => 'Nomor invoice wajib diisi.'
+            ]);
+            return;
+        }
+
+        if ($payload['gudang_id'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_header',
+                'message' => 'Gudang wajib dipilih.'
+            ]);
+            return;
+        }
+
+        $tmpRows = $this->M_Logistik->get_tmp_po_received_posting_rows($payload['no_po'], $payload['kd_suplier']);
+
+        if (empty($tmpRows)) {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_detail',
+                'message' => 'Minimal harus ada 1 draft detail sebelum simpan.'
+            ]);
+            return;
+        }
+
+        $remainingRows = $this->M_Logistik->get_po_remaining_qty($payload['no_po'], $payload['kd_suplier']);
+        $remainingMap = [];
+        foreach ($remainingRows as $item) {
+            $remainingMap[$item['kd_po'] . '||' . $item['kd_barang']] = (float) $item['qty_kecil_sisa'];
+        }
+
+        $draftMap = [];
+        foreach ($tmpRows as $row) {
+            $key = $row['kd_po'] . '||' . $row['kd_barang'];
+            $draftMap[$key] = ($draftMap[$key] ?? 0) + (float) $row['qty_diterima'];
+        }
+
+        foreach ($draftMap as $key => $draftQty) {
+            $qtySisa = $remainingMap[$key] ?? 0;
+            if ($draftQty > $qtySisa) {
+                list($kdPo, $kdBarang) = explode('||', $key);
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_qty',
+                    'message' => 'Ada qty draft yang melebihi qty kecil sisa PO.',
+                    'debug'   => [
+                        'kd_po'       => $kdPo,
+                        'kd_barang'   => $kdBarang,
+                        'qty_kecil_sisa' => $qtySisa,
+                        'total_draft' => $draftQty
+                    ]
+                ]);
+                return;
+            }
+        }
+
+        $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
+        $payload['detail_rows'] = $tmpRows;
+
+        if ($payload['kd_po'] === '') {
+            $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
+        }
+
+        if ($payload['kd_po'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_header',
+                'message' => 'kd_po dari draft temporary tidak ditemukan.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $idLpb = $this->M_Logistik->create_lpb_from_tmp($payload, $tmpRows);
+
+        if (!$idLpb || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'save_final',
+                'message' => 'Gagal menyimpan penerimaan final ke tabel LPB.'
+            ]);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        echo json_encode([
+            'status'  => 'success',
+            'step'    => 'save_final',
+            'message' => 'Penerimaan berhasil disimpan ke LPB dan draft temporary sudah dibersihkan.',
+            'debug'   => [
+                'id_lpb'       => $idLpb,
+                'no_po'        => $payload['no_po'],
+                'total_detail' => count($tmpRows)
+            ]
+        ]);
     }
 
     public function simpan_opname()
@@ -1135,38 +1542,90 @@ class C_Ics extends CI_Controller
 
     public function save_qty_diterima()
     {
-        $no_po     = $this->input->post('no_po',     TRUE);
-        $kd_barang = $this->input->post('kd_barang', TRUE);
-        $rows      = $this->input->post('rows');
+        $no_po = $this->input->post('no_po', TRUE);
+        $kd_po = $this->input->post('kd_po', TRUE);
+        $rows  = $this->input->post('rows');
 
-        if (empty($no_po) || empty($kd_barang) || empty($rows)) {
+        if (empty($no_po) || empty($rows)) {
             $this->session->set_flashdata('error', 'Data tidak lengkap.');
             redirect('data_lpb_zahir');
             return;
         }
 
         $insert_batch = [];
-        foreach ($rows as $row) {
-            if (empty($row['qty_diterima'])) continue;
-            $insert_batch[] = [
-                'no_po'        => $no_po,
-                'kd_barang'    => $kd_barang,
-                'qty_diterima' => (int) $row['qty_diterima'],
-                'satuan'       => $row['satuan']   ?? null,
-                'no_lot'       => $row['no_lot']   ?: null,
-                'exp_date'     => !empty($row['exp_date']) ? $row['exp_date'] : null,
-                'create_at'    => date('Y-m-d H:i:s'),
-            ];
+
+        foreach ($rows as $item) {
+            $kd_barang = $item['kd_barang'] ?? '';
+            $sub_rows  = $item['sub']       ?? [];
+
+            if (empty($kd_barang) || empty($sub_rows)) continue;
+
+            foreach ($sub_rows as $sub) {
+                if (empty($sub['qty_diterima'])) continue;
+
+                $insert_batch[] = [
+                    'no_po'        => $no_po,
+                    'kd_po'        => $kd_po ?: null,
+                    'kd_barang'    => $kd_barang,
+                    'qty_diterima' => (int) $sub['qty_diterima'],
+                    'satuan'       => $sub['satuan']   ?? null,
+                    'no_lot'       => $sub['no_lot']   ?: null,
+                    'exp_date'     => !empty($sub['exp_date']) ? $sub['exp_date'] : null,
+                    'create_at'    => date('Y-m-d H:i:s'),
+                ];
+            }
         }
 
         if (!empty($insert_batch)) {
             $this->db->insert_batch('tb_po_received', $insert_batch);
-            $this->session->set_flashdata('success', count($insert_batch) . ' data penerimaan berhasil disimpan.');
+            $this->session->set_flashdata('success', count($insert_batch) . ' baris penerimaan berhasil disimpan.');
         } else {
             $this->session->set_flashdata('error', 'Tidak ada data valid untuk disimpan.');
         }
 
         redirect('data_lpb_zahir');
+    }
+
+    public function get_barang_by_po()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $no_po      = $this->input->get('no_po',      TRUE);
+        $kd_suplier = $this->input->get('kd_suplier', TRUE); // TAMBAH INI
+
+        if (empty($no_po)) {
+            echo json_encode(['status' => 'error', 'message' => 'no_po kosong']);
+            exit;
+        }
+
+        $sql = "
+            SELECT
+                pp.kd_barang,
+                COALESCE(mb.nama_barang, '-')        AS nama_barang,
+                pp.qty                               AS qty_order,
+                pp.satuan,
+                COALESCE(sub.qty_masuk, 0)           AS qty_masuk,
+                (pp.qty - COALESCE(sub.qty_masuk,0)) AS sisa
+            FROM tb_pre_po pp
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
+            LEFT JOIN (
+                SELECT kd_barang, SUM(qty_diterima) AS qty_masuk
+                FROM tb_po_received
+                WHERE no_po = ?
+                GROUP BY kd_barang
+            ) sub ON sub.kd_barang = pp.kd_barang
+            WHERE pp.no_po = ?
+            AND pp.kd_suplier = ?
+            HAVING sisa > 0
+            ORDER BY pp.kd_barang
+        ";
+
+        $result = $this->db->query($sql, [$no_po, $no_po, $kd_suplier])->result_array();
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+        exit;
     }
 
     public function po_selesai()
@@ -1393,7 +1852,26 @@ class C_Ics extends CI_Controller
         echo json_encode($data);
     }
 
-
+    public function api_stock_per_gudang()
+    {
+        if ($this->input->method(TRUE) !== 'GET') {
+            return $this->output
+                ->set_status_header(405)
+                ->set_content_type('application/json')
+                ->set_output(json_encode([
+                    'status' => false,
+                    'message' => 'Method not allowed'
+                ]));
+        }
+        $gudang = $this->input->get('gudang', true);
+        $data = $this->M_Ics->get_stock_per_gudang_view($gudang);
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'status' => true,
+                'data' => $data
+            ]));
+    }
 
     public function mutasi_barang()
     {
@@ -2411,5 +2889,23 @@ class C_Ics extends CI_Controller
             $this->db->trans_commit();
             redirect('stock/saldo');
         }
+    }
+
+    public function api_stock($params)
+    {
+        $params = [
+            'gudang'      => $this->input->get('gudang'),
+        ];
+
+        if (!empty($gudang) && $gudang != '1') {
+            $params['gudang'] = $gudang;
+        }
+
+        $data = $this->M_Ics->get_stock($params);
+
+        echo json_encode([
+            'status' => $data ? true : false,
+            'data'   => $data
+        ]);
     }
 }
