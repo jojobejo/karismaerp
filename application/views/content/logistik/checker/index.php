@@ -1364,6 +1364,16 @@ $(document).ready(function () {
         $('#mck_checker').val(''); $('#mck_pintu').val('');
         $('#modalStartMCK').modal('show');
     });
+
+    // Tambahkan di dalam $(document).ready(function () { ... })
+    $(document).on('click', '.btn-start-mck', function () {
+        $('#mck_id').val($(this).data('id'));
+        $('#mck_type').val('bongkaran');
+        $('#mck_checker').val('');
+        $('#mck_pintu').val('');
+        $('#modalStartMCK').modal('show');
+    });
+    
     $('#btnKonfirmasiStartMCK').on('click', function(){
         var id=$('#mck_id').val(), type=$('#mck_type').val();
         var nik=$('#mck_checker').val(), nama=$('#mck_checker option:selected').data('nama');
