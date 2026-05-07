@@ -2754,10 +2754,12 @@ FROM (
                 MAX(pp.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
                 COUNT(DISTINCT pp.kd_barang) AS total_barang_order,
-                SUM(pp.qty) AS total_qty_order
+                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
             FROM tb_pre_po pp
             LEFT JOIN tb_suplier supp
                 ON supp.kd_suplier = pp.kd_suplier
+            LEFT JOIN tb_master_barang_all mb 
+                ON mb.kd_barang = pp.kd_barang
             WHERE 1=1";
 
         $params = [];
@@ -3196,6 +3198,21 @@ FROM (
         return $this->db->get()->result_array();
     }
 
+    private function _normalizeDate($raw)
+    {
+        $raw = trim((string)$raw);
+        if ($raw === '') {
+            return null;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+            return $raw;
+        }
+        if (preg_match('/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/', $raw, $m)) {
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+        return $raw;
+    }
+
     public function create_lpb_from_tmp($header, $detailRows)
     {
         $headerInsert = [
@@ -3239,6 +3256,53 @@ FROM (
             ];
 
             $this->db->insert('tb_lpb_batch', $batchInsert);
+
+            $stockQty = (float) $row['qty_diterima'];
+            $normalizedExpired = $this->_normalizeDate($row['expired_date'] ?? '');
+            $stockNoLot = trim((string) ($row['no_lot'] ?? ''));
+
+            if ($this->db->table_exists('tberp_stock_batch')) {
+                $this->db->where('kd_barang', $row['kd_barang']);
+                $this->db->where('gudang_id', $header['gudang_id']);
+                $this->db->where('no_lot', $stockNoLot);
+                if ($normalizedExpired !== null) {
+                    $this->db->where('expired_date', $normalizedExpired);
+                } else {
+                    $this->db->where('expired_date', null);
+                }
+
+                $existingStockBatch = $this->db->get('tberp_stock_batch')->row_array();
+
+                if ($existingStockBatch) {
+                    $this->db->where('id', $existingStockBatch['id']);
+                    $this->db->set('qty_on_hand', 'qty_on_hand + ' . $stockQty, FALSE);
+                    $this->db->set('update_at', date('Y-m-d H:i:s'));
+                    $this->db->update('tberp_stock_batch');
+                } else {
+                    $this->db->insert('tberp_stock_batch', [
+                        'kd_barang'    => $row['kd_barang'],
+                        'gudang_id'    => $header['gudang_id'],
+                        'no_lot'       => $stockNoLot,
+                        'expired_date' => $normalizedExpired,
+                        'qty_on_hand'  => $stockQty,
+                        'qty_reserved' => 0,
+                    ]);
+                }
+            }
+
+            if ($this->db->table_exists('tberp_stock_ledger')) {
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $row['kd_barang'],
+                    'gudang_id'    => $header['gudang_id'],
+                    'no_lot'       => $stockNoLot,
+                    'expired_date' => $normalizedExpired,
+                    'qty'          => $stockQty,
+                    'tipe'         => 'IN',
+                    'ref_no'       => $header['kd_po'],
+                    'ref_type'     => 'PO_RECEIVED',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+            }
         }
 
         $this->db->where('kd_suplier', $header['kd_suplier']);

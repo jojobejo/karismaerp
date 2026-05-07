@@ -886,6 +886,7 @@ class C_Ics extends CI_Controller
 
         $payload = [
             'no_po'       => trim((string) $this->input->post('no_po', TRUE)),
+            'kd_po'       => trim((string) $this->input->post('kd_po', TRUE)),
             'kd_suplier'  => trim((string) $this->input->post('kd_suplier', TRUE)),
             'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
             'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
@@ -963,6 +964,10 @@ class C_Ics extends CI_Controller
 
         $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
         $payload['detail_rows'] = $tmpRows;
+
+        if ($payload['kd_po'] === '') {
+            $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
+        }
 
         if ($payload['kd_po'] === '') {
             echo json_encode([
