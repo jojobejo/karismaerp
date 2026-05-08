@@ -1051,50 +1051,6 @@ class C_Logistik extends CI_Controller
         exit;
     }
 
-    public function debug_so()
-    {
-        while (ob_get_level()) ob_end_clean();
-        header('Content-Type: application/json');
-        ini_set('display_errors', '0');
-
-        $checks = [];
-
-        // 1. Cek total SO
-        $total_so = $this->db->query("SELECT COUNT(*) as total FROM tbso_sales_order")->row();
-        $checks['total_so'] = $total_so->total ?? 0;
-
-        // 2. Cek status SO yang ada
-        $statuses = $this->db->query("SELECT status, COUNT(*) as jml FROM tbso_sales_order GROUP BY status")->result();
-        $checks['status_list'] = $statuses;
-
-        // 3. Cek apakah SO punya detail
-        $has_detail = $this->db->query("
-            SELECT so.no_so, so.status, 
-                COUNT(sod.id) as total_detail
-            FROM tbso_sales_order so
-            LEFT JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
-            GROUP BY so.no_so, so.status
-            LIMIT 5
-        ")->result();
-        $checks['so_with_detail'] = $has_detail;
-
-        // 4. Cek join ke tb_customer
-        $join_cust = $this->db->query("
-            SELECT so.no_so, so.kd_customer, c.nama_customer
-            FROM tbso_sales_order so
-            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            LIMIT 5
-        ")->result();
-        $checks['join_customer'] = $join_cust;
-
-        // 5. Cek nama tabel tmp yang benar
-        $tmp_table = $this->db->query("SHOW TABLES LIKE 'tb_tmp%'")->result();
-        $checks['tmp_tables'] = $tmp_table;
-
-        echo json_encode(['status' => true, 'debug' => $checks], JSON_PRETTY_PRINT);
-        exit;
-    }
-
     public function cancel_fk($kd_faktur, $kd_do)
     {
         $this->M_Logistik->delete_faktur_customer($kd_faktur);
@@ -1260,53 +1216,62 @@ class C_Logistik extends CI_Controller
 
     public function rekam_order_check()
     {
+        // Wajib ada di baris pertama
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
         date_default_timezone_set("Asia/Jakarta");
-        $kd         = $this->input->post('kd_do');
-        $nolambung  = $this->input->post('platno');
-        $tgldeliv   = $this->input->post('tgl_krim');
-        $driver     = $this->input->post('driver');
+
+        $kd               = $this->input->post('kd_do');
+        $nolambung        = $this->input->post('platno');
+        $tgldeliv         = $this->input->post('tgl_krim');
+        $driver           = $this->input->post('driver');
         $jenis_pengiriman = $this->input->post('jenis_pengiriman');
-        $datenow    = date('d/m/Y');
-        $dateprenow = date("Y-m-d");
-        $kd_faktur_list = [];
+        $dateprenow       = date("Y-m-d");
+        $datenow          = date('d/m/Y');
 
-
-        $data['tanggal_now']        = date('d/m/Y');
-
-        $getdetail  = $this->M_Logistik->get_do_cust_byfaktur_ics($kd);
+        if (!$kd || !$nolambung || !$tgldeliv || !$driver) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
+            exit;
+        }
 
         if (!in_array($jenis_pengiriman, ['expedisi_kantor', 'expedisi_luar'])) {
             $jenis_pengiriman = 'expedisi_kantor';
         }
 
-        if (!$kd || !$nolambung || !$tgldeliv || !$driver) {
-            echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
-            return;
+        $getdetail = $this->M_Logistik->get_do_cust_byfaktur_ics($kd);
+
+        if (empty($getdetail)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Detail DO tidak ditemukan untuk kode: ' . $kd]);
+            exit;
         }
 
         $dataupdated_do = [
-            'nolambung' => $nolambung,
-            'driver' => $driver,
+            'nolambung'      => $nolambung,
+            'driver'         => $driver,
             'tgl_pengiriman' => $tgldeliv,
-            'status' => 2
+            'status'         => 2
         ];
 
         $dataupdateddetail_do = [
             'dt_status' => 1,
-            'status' => 4,
-            'input_at' => $datenow
+            'status'    => 4,
+            'input_at'  => $datenow
         ];
 
         $datalog = [
-            'kd_do'         => $kd,
-            'tgl_input'     => date('d/m/Y'),
-            'keterangan'    => "POST - FAKTUR",
-            'inputer'       => $this->session->userdata('nama')
+            'kd_do'      => $kd,
+            'tgl_input'  => date('d/m/Y'),
+            'keterangan' => "POST - FAKTUR",
+            'inputer'    => $this->session->userdata('nama')
         ];
 
-        $insert_batch = [];
+        $insert_batch   = [];
+        $ledger_rows    = [];
+        $kd_faktur_list = [];
+
         foreach ($getdetail as $det) {
-            $insert_batch[] = array(
+            $insert_batch[] = [
                 'kd_do'         => $kd,
                 'kd_faktur'     => $det->kd_faktur,
                 'tgl_transaksi' => $det->tgl_transaksi,
@@ -1315,11 +1280,20 @@ class C_Logistik extends CI_Controller
                 'qty'           => $det->qty,
                 'no_lot'        => $det->no_lot,
                 'exp_date'      => date('m/d/Y', strtotime($det->tgl_exp)),
-                'input_at'      => date('d/m/Y')
-            );
+                'input_at'      => $datenow
+            ];
+
             $kd_faktur_list[] = $det->kd_faktur;
-            $kd_faktur_list = array_unique($kd_faktur_list);
+
+            $ledger_rows[] = [
+                'kd_barang' => $det->kd_barang,
+                'no_lot'    => $det->no_lot,
+                'tgl_exp'   => $det->tgl_exp,
+                'qty'       => $det->qty,
+            ];
         }
+
+        $kd_faktur_list = array_unique($kd_faktur_list);
 
         $this->M_Logistik->update_pre_do_delivery_at($kd_faktur_list, $dateprenow);
         $this->M_Logistik->insert_batch_do_detail_ics($insert_batch);
@@ -1327,28 +1301,13 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
 
-        // $compareData = $this->M_Logistik->get_detail_do_not_exist_saldo_awal($kd);
-        // $insert_batch_saldo_awal = [];
-        // foreach ($compareData as $row) {
-        //     $insert_batch_saldo_awal[] = [
-        //         'kode_barang_system' => $row->kode_barang_system,
-        //         'kode_barang_zahir'  => $row->kode_barang_zahir,
-        //         'nama_barang'        => $row->nama_barang,
-        //         'wilayah_id'         => '2',
-        //         'koordinat_id'       => '0',
-        //         'barang_pic'         => '0',
-        //         'qty'                => $row->qty,
-        //         'nolot'              => $row->nolot,
-        //         'exp_date'           => $row->exp_date
-        //     ];
-        // }
-        // if (!empty($insert_batch_saldo_awal)) {
-        //     $this->db->insert_batch('tb_saldo_awal', $insert_batch_saldo_awal);
-        // }
+        if (!empty($ledger_rows)) {
+            $this->M_Logistik->finalize_ledger_do($ledger_rows, $kd, $kd_faktur_list);
+        }
 
         echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
+        exit;
     }
-
     public function repost_status()
     {
         $kd_do = $this->input->post('kd_do');
@@ -1767,7 +1726,6 @@ class C_Logistik extends CI_Controller
                 break;
 
             case 'formlist':
-
                 date_default_timezone_set("Asia/Jakarta");
                 $get_pre_do = $this->M_Logistik->get_do_cust($kd);
                 $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kd);
@@ -1804,19 +1762,20 @@ class C_Logistik extends CI_Controller
                         if (!empty($data_tmp_det_do)) {
                             $this->M_Logistik->insert_tmp_detdo_batch($data_tmp_det_do);
                         }
-                        $datainsert = array(
-                            'kd_do'      => $kddo,
-                            'kd_faktur'  => $kdfaktur,
-                            'input_at'   => $now
-                        );
 
-                        $this->M_Logistik->insert_tmp_do($datainsert);
-                        $update_pre_do = array(
-                            'data_sts' => '2'
+                        $datainsert = array(
+                            'kd_do'     => $kddo,
+                            'kd_faktur' => $kdfaktur,
+                            'input_at'  => $now
                         );
+                        $this->M_Logistik->insert_tmp_do($datainsert);
+
+                        $update_pre_do = array('data_sts' => '2');
                         $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
                     }
                 }
+                redirect('create_do');
+                break;
 
                 redirect('create_do');
                 break;
@@ -2009,25 +1968,34 @@ class C_Logistik extends CI_Controller
 
     public function rekam_do()
     {
+        // Bersihkan output buffer untuk pastikan response murni JSON
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json');
+
         date_default_timezone_set("Asia/Jakarta");
 
-        $kd_do = $this->input->post('kd_do');
+        $kd_do     = $this->input->post('kd_do');
         $nolambung = $this->input->post('platno');
-        $tgldeliv = $this->input->post('tgl_krim');
-        $kota = $this->input->post('kota');
-        $driver = $this->input->post('driver');
-        $now = date("Y-m-d H:i:s");
+        $tgldeliv  = $this->input->post('tgl_krim');
+        $kota      = $this->input->post('kota');
+        $driver    = $this->input->post('driver');
+        $now       = date("Y-m-d H:i:s");
+
+        if (!$kd_do || !$kota) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
+            exit;
+        }
 
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         $datado = array(
-            'kd_do'             => $kd_do,
-            'nolambung'         => $nolambung,
-            'regional'          => $kota,
-            'driver'            => $driver,
-            'tgl_pengiriman'    => $tgldeliv,
-            'tgl_create'        => $now,
-            'status'            => '1'
+            'kd_do'          => $kd_do,
+            'nolambung'      => $nolambung,
+            'regional'       => $kota,
+            'driver'         => $driver,
+            'tgl_pengiriman' => $tgldeliv,
+            'tgl_create'     => $now,
+            'status'         => '1'
         );
 
         $this->M_Logistik->insert_do($datado);
@@ -2036,11 +2004,12 @@ class C_Logistik extends CI_Controller
             $update_ids = [];
 
             foreach ($tmpdetail as $tmp) {
-                $kdfaktur = $tmp->kd_faktur;
+                $kdfaktur    = $tmp->kd_faktur;
                 $getkdfaktur = $this->M_Logistik->getkdfaktur($kdfaktur)->result();
+                $norut       = 0;
 
                 foreach ($getkdfaktur as $get_faktur_detail) {
-                    $norut  = $get_faktur_detail->norut_do;
+                    $norut = $get_faktur_detail->norut_do;
                 }
 
                 $detaildo = array(
@@ -2065,24 +2034,24 @@ class C_Logistik extends CI_Controller
                 );
 
                 $this->M_Logistik->insert_det_do($detaildo);
-
                 $update_ids[] = $tmp->id_pre_do;
             }
 
-            if (!empty($update_ids)) {
-                $this->db->where_in('id', $update_ids);
-                $this->db->update('tb_pre_do', ['data_sts' => 3]);
+            // Update status SO di tbso_sales_order
+            $kd_faktur_list = array_unique(array_column(
+                array_map(function($t){ return ['kd_faktur' => $t->kd_faktur]; }, $tmpdetail),
+                'kd_faktur'
+            ));
+            foreach ($kd_faktur_list as $fk) {
+                $this->M_Logistik->update_sts_pre_do($fk, ['data_sts' => '3']);
             }
 
             $this->M_Logistik->deletetmp_detdo($kd_do);
             $this->M_Logistik->deletetmp_do($kd_do);
 
-            $this->M_Logistik->deletetmp_do($kd_do);
-            $this->M_Logistik->deletetmp_do($kd_do);
-
             echo json_encode(['msg' => 'success']);
         } else {
-            echo json_encode(['msg' => 'error', 'message' => 'Data tidak ditemukan']);
+            echo json_encode(['msg' => 'error', 'message' => 'Data tmp tidak ditemukan']);
         }
         exit;
     }

@@ -280,8 +280,8 @@ $route['get_customer_bintang']                      = 'logistik/C_Logistik/get_c
 $route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
+// $route['do/confirm_sales']              = 'logistik/C_Logistik/confirm_sales';
 $route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
-$route['debug_so'] = 'logistik/C_Logistik/debug_so';
 
 //LOGISTIK - Checker
 $route['checker']                                   = 'logistik/C_Checker/index';
@@ -344,6 +344,9 @@ $route['sales_order/approve']                       = 'sales/C_SalesOrder/approv
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
 $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
+// $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
+// $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
+// $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
