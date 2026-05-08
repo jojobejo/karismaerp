@@ -919,33 +919,121 @@ class M_Logistik extends CI_Model
         return $this->db->update('tb_do', $data);
     }
 
+    /**
+     * Update status konfirmasi sales pada tb_do
+     */
+    public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
+    {
+        $now = date('Y-m-d H:i:s');
+
+        // Update tb_do
+        $this->db->where('kd_do', $kd_do);
+        $this->db->update('tb_do', [
+            'sales_confirm_status' => $action,       // 'siap' atau 'belum_siap'
+            'sales_confirm_by'     => $confirm_by,
+            'sales_confirm_at'     => $now,
+            'sales_confirm_note'   => $note,
+            // Jika siap → status 3 (On Delivery), jika belum siap tetap 2
+            'status'               => ($action === 'siap') ? 3 : 2
+        ]);
+
+        // Insert log
+        $this->db->insert('tb_log_confirm_sales', [
+            'kd_do'      => $kd_do,
+            'action'     => $action,
+            'note'       => $note,
+            'confirm_by' => $confirm_by,
+            'confirm_at' => $now
+        ]);
+
+        return $this->db->affected_rows();
+    }
+
+    /**
+     * Ambil list DO untuk halaman Sales — hanya status 2 (menunggu konfirmasi)
+     * dan status 3 (sudah on delivery)
+     */
+    public function get_do_for_sales()
+    {
+        return $this->db->query("
+            SELECT
+                a.kd_do                     AS kddo,
+                a.tgl_create                AS createat,
+                a.tgl_pengiriman            AS tglkirim,
+                a.nolambung                 AS nopol,
+                a.regional                  AS rute,
+                a.status,
+                a.sales_confirm_status,
+                a.sales_confirm_by,
+                a.sales_confirm_at,
+                a.sales_confirm_note,
+                (
+                    SELECT COUNT(DISTINCT kd_barang)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalbarang,
+                (
+                    SELECT COUNT(DISTINCT kd_faktur)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalfaktur
+            FROM tb_do a
+            WHERE a.status IN (2, 3)
+            AND (
+                SELECT COUNT(DISTINCT kd_faktur)
+                FROM tb_detail_do
+                WHERE kd_do = a.kd_do
+            ) > 0
+            ORDER BY a.tgl_create DESC
+        ")->result();
+    }
+
+    /**
+     * Ambil list DO di body.php — sekarang status 1=draft, 2=menunggu sales, 3=on delivery
+     */
     public function getdo()
     {
-        return $this->db->query("SELECT 
-        a.kd_do AS kddo,
-        a.tgl_create AS createat,
-        a.tgl_pengiriman AS tglkirim,
-        a.nolambung AS nopol,
-        a.regional AS rute,
-        (
-            SELECT COUNT(DISTINCT kd_barang) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) AS totalbarang,
-        (
-            SELECT COUNT(DISTINCT kd_faktur) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) AS totalfaktur,
-        a.status AS status
-        FROM tb_do a
-        WHERE (
-            SELECT COUNT(DISTINCT kd_faktur) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) > 0
-        ORDER BY a.tgl_create DESC
+        return $this->db->query("
+            SELECT
+                a.kd_do                     AS kddo,
+                a.tgl_create                AS createat,
+                a.tgl_pengiriman            AS tglkirim,
+                a.nolambung                 AS nopol,
+                a.regional                  AS rute,
+                a.status,
+                a.sales_confirm_status,
+                a.sales_confirm_by,
+                a.sales_confirm_at,
+                (
+                    SELECT COUNT(DISTINCT kd_barang)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalbarang,
+                (
+                    SELECT COUNT(DISTINCT kd_faktur)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalfaktur
+            FROM tb_do a
+            WHERE (
+                SELECT COUNT(DISTINCT kd_faktur)
+                FROM tb_detail_do
+                WHERE kd_do = a.kd_do
+            ) > 0
+            ORDER BY a.tgl_create DESC
         ")->result();
+    }
+
+    /**
+     * Ambil log konfirmasi sales untuk satu DO
+     */
+    public function get_log_confirm_sales($kd_do)
+    {
+        return $this->db->query("
+            SELECT * FROM tb_log_confirm_sales
+            WHERE kd_do = ?
+            ORDER BY confirm_at DESC
+        ", [$kd_do])->result();
     }
 
     public function get_tmp_dokd($kd)

@@ -44,7 +44,7 @@
                                         <td><?= $i->totalbarang ?></td>
                                         <td><?= $badge ?></td>
                                         <td>
-                                            <a href="<?= base_url('sales/detail_do/') . $i->kddo ?>"
+                                            <a href="<?= base_url('sales_order/detail_do/') . $i->kddo ?>"
                                                class="btn btn-sm btn-info btn-block">
                                                 <i class="fas fa-eye"></i>
                                                 <?php if ($confirm === 'pending') : ?>

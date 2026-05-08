@@ -1216,7 +1216,6 @@ class C_Logistik extends CI_Controller
 
     public function rekam_order_check()
     {
-        // Wajib ada di baris pertama
         while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
 
@@ -1246,11 +1245,15 @@ class C_Logistik extends CI_Controller
             exit;
         }
 
+        // STATUS 2 = Menunggu Konfirmasi Sales (bukan langsung on delivery)
         $dataupdated_do = [
-            'nolambung'      => $nolambung,
-            'driver'         => $driver,
-            'tgl_pengiriman' => $tgldeliv,
-            'status'         => 2
+            'nolambung'             => $nolambung,
+            'driver'                => $driver,
+            'tgl_pengiriman'        => $tgldeliv,
+            'status'                => 2,                // ← status 2, bukan 3
+            'sales_confirm_status'  => 'pending',        // ← tandai menunggu konfirmasi
+            'sales_confirm_by'      => null,
+            'sales_confirm_at'      => null,
         ];
 
         $dataupdateddetail_do = [
@@ -1262,7 +1265,7 @@ class C_Logistik extends CI_Controller
         $datalog = [
             'kd_do'      => $kd,
             'tgl_input'  => date('d/m/Y'),
-            'keterangan' => "POST - FAKTUR",
+            'keterangan' => "POST - FAKTUR - MENUNGGU KONFIRMASI SALES",
             'inputer'    => $this->session->userdata('nama')
         ];
 
@@ -1305,9 +1308,61 @@ class C_Logistik extends CI_Controller
             $this->M_Logistik->finalize_ledger_do($ledger_rows, $kd, $kd_faktur_list);
         }
 
-        echo json_encode(['msg' => 'success', 'message' => 'Data berhasil diperbarui']);
+        echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam, menunggu konfirmasi Sales.']);
         exit;
     }
+
+    /**
+     * Endpoint konfirmasi sales — dipanggil dari halaman Sales
+     * POST: kd_do, action (siap/belum_siap), note
+     */
+    public function confirm_sales()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_do      = $this->input->post('kd_do');
+        $action     = $this->input->post('action');     // 'siap' atau 'belum_siap'
+        $note       = $this->input->post('note') ?? '';
+        $confirm_by = $this->session->userdata('nama');
+
+        if (!$kd_do || !in_array($action, ['siap', 'belum_siap'])) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak valid']);
+            exit;
+        }
+
+        // Pastikan DO ada dan statusnya 2 (menunggu konfirmasi)
+        $do = $this->db->where('kd_do', $kd_do)->where('status', 2)->get('tb_do')->row();
+        if (!$do) {
+            echo json_encode(['msg' => 'error', 'message' => 'DO tidak ditemukan atau status tidak sesuai']);
+            exit;
+        }
+
+        $affected = $this->M_Logistik->update_sales_confirm($kd_do, $action, $confirm_by, $note);
+
+        if ($affected > 0 || $this->db->affected_rows() >= 0) {
+            $msg = ($action === 'siap')
+                ? 'DO dikonfirmasi Siap Loading. Status berubah ke On Delivery.'
+                : 'DO ditandai Belum Siap Loading. Menunggu konfirmasi ulang.';
+
+            // Jika siap → insert ledger finalize (opsional, sesuai kebutuhan)
+            if ($action === 'siap') {
+                $datalog = [
+                    'kd_do'      => $kd_do,
+                    'tgl_input'  => date('d/m/Y'),
+                    'keterangan' => "KONFIRMASI SALES - SIAP LOADING oleh " . $confirm_by,
+                    'inputer'    => $confirm_by
+                ];
+                $this->M_Logistik->insertlog_do($datalog);
+            }
+
+            echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
+        } else {
+            echo json_encode(['msg' => 'error', 'message' => 'Gagal menyimpan konfirmasi']);
+        }
+        exit;
+    }
+
     public function repost_status()
     {
         $kd_do = $this->input->post('kd_do');

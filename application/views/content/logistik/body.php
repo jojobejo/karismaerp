@@ -80,14 +80,25 @@
                                     <tbody>
                                         <?php foreach ($listdo as $i) :
                                             $status = $i->status;
+                                            $confirm = $i->sales_confirm_status ?? null;
+
                                             if ($status == '1') {
-                                                $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-warning btn-block">Draft</a></div>';
-                                            } else if ($status == '2') {
-                                                $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-info btn-block">On Delivery</a></div>';
-                                            } else if ($status == '3') {
-                                                $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Delivery</a></div>';
-                                            } else if ($status == '4') {
-                                                $datasts = '<div class="col"><a href="#" class="btn btn-sm btn-success btn-block">On Site</a></div>';
+                                                $datasts = '<span class="badge badge-warning">Draft</span>';
+                                            } elseif ($status == '2') {
+                                                // Status 2 = sudah direkam, menunggu konfirmasi sales
+                                                if ($confirm === 'pending' || $confirm === null) {
+                                                    $datasts = '<span class="badge badge-info">Menunggu Konfirmasi Sales</span>
+                                                                <br><small class="text-danger"><i class="fas fa-exclamation-circle"></i> Sales belum konfirmasi siap loading</small>';
+                                                } elseif ($confirm === 'belum_siap') {
+                                                    $datasts = '<span class="badge badge-danger">Belum Siap Loading</span>
+                                                                <br><small class="text-muted">Dikonfirmasi oleh: ' . htmlspecialchars($i->sales_confirm_by ?? '-') . '</small>';
+                                                } else {
+                                                    $datasts = '<span class="badge badge-info">Menunggu Konfirmasi</span>';
+                                                }
+                                            } elseif ($status == '3') {
+                                                $datasts = '<span class="badge badge-success">On Delivery</span>';
+                                            } elseif ($status == '4') {
+                                                $datasts = '<span class="badge badge-success">On Site</span>';
                                             }
                                         ?>
                                             <tr>
@@ -96,14 +107,20 @@
                                                 <td><?= $i->rute ?></td>
                                                 <td><?= $i->totalfaktur ?></td>
                                                 <td><?= $i->totalbarang ?></td>
-                                                <td>
-                                                    <?= $datasts ?>
-                                                </td>
+                                                <td><?= $datasts ?></td>
                                                 <?php if ($i->status == '1') : ?>
                                                     <td>
                                                         <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
                                                     </td>
                                                 <?php elseif ($i->status == '2') : ?>
+                                                    <td>
+                                                        <div class="row">
+                                                            <div class="col">
+                                                                <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                <?php elseif ($i->status == '3') : ?>
                                                     <td>
                                                         <div class="row">
                                                             <div class="col">
@@ -116,9 +133,7 @@
                                                     </td>
                                                 <?php elseif ($i->status == '4') : ?>
                                                     <td>
-                                                        <div class="col">
-                                                            <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
-                                                        </div>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block"><i class="fas fa-eye"></i></a>
                                                     </td>
                                                 <?php endif; ?>
                                             </tr>
