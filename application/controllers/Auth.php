@@ -40,7 +40,9 @@ class Auth extends CI_Controller
                     );
                     $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);
-                    if ($key->jobdesk == 'LOGISTIK') {
+                    if ($key->username === 'admin') {
+                        redirect('dashboard_penilaian');
+                    } else if ($key->jobdesk == 'LOGISTIK') {
                         redirect('logistik');
                     } else if ($key->jobdesk == 'ADMINICS') {
                         redirect('ics/ics_diffrent');
@@ -57,7 +59,7 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'STOCKOPNAME') {
                         redirect('stockopname');
                     } else if ($key->jobdesk == 'ADMIN') {
-                        redirect('extravaganza');
+                        redirect('penilaian_lingkungan');
                     } else if ($key->jobdesk == 'SALESONLINE') {
                         redirect('stock');
                     } else if ($key->jobdesk == 'SALESCOUNTER') {
@@ -77,11 +79,13 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'SALESCK') {
                         redirect('checker');
                     } else if ($key->jobdesk == 'DIREKTURCK') {
-                        redirect('checker/dashboard'); 
+                        redirect('checker/dashboard');
                     } else if ($key->jobdesk == 'MANAGERCK') {
                         redirect('checker');
                     } else if ($key->jobdesk == 'SC') {
                         redirect('sales_order');
+                    } else if ($key->jobdesk == 'SUPERADMIN') {
+                        redirect('penilaian_lingkungan');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

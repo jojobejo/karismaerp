@@ -60,6 +60,9 @@ $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard';
 
+// Penilaian Lingkungan Kantor alias route
+$route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingkungan';
+
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
 $route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';
@@ -414,3 +417,28 @@ $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail
 // LPB
 $route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
 $route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
+
+// dashboard_penilaian
+$route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
+
+// Mobile ERP modern UI
+$route['mobile-erp']                                = 'hrd/C_Hrd/mobile_erp_dashboard';
+$route['mobile-erp/list']                           = 'hrd/C_Hrd/mobile_erp_list';
+$route['mobile-erp/detail/(:num)']                  = 'hrd/C_Hrd/mobile_erp_detail/$1';
+$route['mobile-erp/profile']                        = 'hrd/C_Hrd/mobile_erp_profile';
+
+// Penilaian Lingkungan Kantor
+$route['penilaian_lingkungan']                     = 'hrd/C_Hrd/penilaian_lingkungan';
+$route['hrd/penilaian_lingkungan/admin']           = 'hrd/C_Hrd/penilaian_lingkungan_admin';
+$route['hrd/penilaian_lingkungan/monitoring']      = 'hrd/C_Hrd/penilaian_lingkungan_monitoring';
+$route['hrd/penilaian_lingkungan/submit']          = 'hrd/C_Hrd/submit_environment_issue';
+$route['hrd/penilaian_lingkungan/list']            = 'hrd/C_Hrd/get_environment_issue_list';
+$route['hrd/penilaian_lingkungan/detail/(:num)']   = 'hrd/C_Hrd/get_environment_issue_detail/$1';
+$route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environment_issue';
+$route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
+$route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
+$route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
+$route['hrd/penilaian_lingkungan/locations/delete']= 'hrd/C_Hrd/delete_hrd_location';
+$route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
+$route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
+$route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
