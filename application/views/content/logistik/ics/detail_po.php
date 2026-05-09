@@ -302,8 +302,16 @@
                         </div>
                         <div class="card-body">
                             <div class="draft-header-box">
-                                <div class="row">
+                                <div class="row" id="pre_po_data">
+                                    <div class="col-lg-3 col-md-6 mb-3" id="pre_po_date">
+                                        <label class="font-weight-bold">Nomor SJ</label>
+                                        <input type="text" class="form-control" id="final_nosj" placeholder="Input nomor SJ">
+                                    </div>
                                     <div class="col-lg-3 col-md-6 mb-3">
+                                        <label class="font-weight-bold">Tanggal SJ</label>
+                                        <input type="date" class="form-control" id="final_tgl_sj">
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
                                         <label class="font-weight-bold">Nomor PO</label>
                                         <input type="text" class="form-control" id="final_no_po" value="<?= htmlspecialchars($no_po) ?>" readonly>
                                         <input type="hidden" id="final_kd_po" value="<?= htmlspecialchars($kd_po ?? '') ?>">
@@ -493,6 +501,8 @@
             var isSubmittingFinal = false;
             var defaultFinalForm = {
                 no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
+                nosj: '',
+                tgl_sj: '',
                 no_invoice: '',
                 gudang_id: '',
                 keterangan: ''
@@ -682,6 +692,8 @@
 
             function resetFinalForm() {
                 $('#final_no_po').val(defaultFinalForm.no_po);
+                $('#final_nosj').val(defaultFinalForm.nosj);
+                $('#final_tgl_sj').val(defaultFinalForm.tgl_sj);
                 $('#final_invoice').val(defaultFinalForm.no_invoice);
                 $('#final_gudang_id').val(defaultFinalForm.gudang_id);
                 $('#final_keterangan').val(defaultFinalForm.keterangan);
@@ -908,6 +920,8 @@
                 }
 
                 var invoice = $.trim($('#final_invoice').val());
+                var nomorSj = $.trim($('#final_nosj').val());
+                var tanggalSj = $('#final_tgl_sj').val();
                 var gudangId = $('#final_gudang_id').val();
                 var keterangan = $.trim($('#final_keterangan').val());
 
@@ -936,6 +950,8 @@
                         no_po: $('#final_no_po').val(),
                         kd_po: $('#final_kd_po').val(),
                         kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>',
+                        nosj: nomorSj,
+                        tgl_sj: tanggalSj,
                         no_invoice: invoice,
                         gudang_id: gudangId,
                         keterangan: keterangan

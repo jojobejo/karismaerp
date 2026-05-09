@@ -283,6 +283,8 @@ $route['get_customer_bintang']                      = 'logistik/C_Logistik/get_c
 $route['update_customer_faktur']                    = 'logistik/C_Logistik/update_customer_faktur';
 
 $route['tonase_report']                             = 'logistik/C_Logistik/tonase_report';
+$route['do/confirm_sales']              = 'logistik/C_Logistik/confirm_sales';
+$route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
 
 //LOGISTIK - Checker
 $route['checker']                                   = 'logistik/C_Checker/index';
@@ -345,6 +347,9 @@ $route['sales_order/approve']                       = 'sales/C_SalesOrder/approv
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
 $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
+$route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
+$route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
+$route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
@@ -409,6 +414,10 @@ $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
 
+// LPB
+$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
+$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
+
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
 
@@ -417,7 +426,6 @@ $route['mobile-erp']                                = 'hrd/C_Hrd/mobile_erp_dash
 $route['mobile-erp/list']                           = 'hrd/C_Hrd/mobile_erp_list';
 $route['mobile-erp/detail/(:num)']                  = 'hrd/C_Hrd/mobile_erp_detail/$1';
 $route['mobile-erp/profile']                        = 'hrd/C_Hrd/mobile_erp_profile';
-
 
 // Penilaian Lingkungan Kantor
 $route['penilaian_lingkungan']                     = 'hrd/C_Hrd/penilaian_lingkungan';

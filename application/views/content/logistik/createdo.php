@@ -1,3 +1,4 @@
+<!-- views/content/logistik/createdo.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -292,71 +293,139 @@
     </div>
     <!-- ./wrapper -->
 
-    <script>
+    <script> ///ppp///
         function toggleDataPreDO() {
             var tableDiv = document.getElementById("pre_do");
 
             if (tableDiv.style.display === "none") {
                 tableDiv.style.display = "block";
+                loadFakturPenjualan(); // load data setiap kali dibuka
             } else {
                 tableDiv.style.display = "none";
             }
         }
 
+        function loadFakturPenjualan() {
+        // Destroy DataTable dulu jika sudah diinit
+        if ($.fn.DataTable.isDataTable('#dailyod')) {
+            $('#dailyod').DataTable().destroy();
+        }
+
+        var tbody = $('#dailyod tbody');
+        tbody.html('<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+
+        $.ajax({
+            url: '<?= base_url("get_list_faktur_ajax") ?>',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                tbody.empty();
+
+                if (!response || !response.status) {
+                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Gagal memuat data: ' + (response.message || '') + '</td></tr>');
+                    // Reinit DataTable walau kosong
+                    $('#dailyod').DataTable({
+                        "paging": false, "searching": false, "info": false, "ordering": false
+                    });
+                    return;
+                }
+
+                if (response.data.length === 0) {
+                    tbody.html('<tr><td colspan="10" class="text-center">Tidak ada data SO yang approved.</td></tr>');
+                    $('#dailyod').DataTable({
+                        "paging": false, "searching": false, "info": false, "ordering": false
+                    });
+                    return;
+                }
+
+                $.each(response.data, function(i, l) {
+                    var statusBadge = '';
+                    var actionBtn   = '';
+
+                    if (l.data_sts === 'approved') {
+                        statusBadge = '<span class="badge badge-secondary">NOT IN DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                            </div>`;
+                    } else if (l.data_sts === 'in_delivery') {
+                        statusBadge = '<span class="badge badge-success">ON DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                            </div>`;
+                    } else if (l.data_sts === 'draft') {
+                        statusBadge = '<span class="badge badge-secondary">DRAFT</span>';
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" 
+                                class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" 
+                                class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                            </div>`;
+                    } else {
+                        statusBadge = `<span class="badge badge-light">${l.data_sts}</span>`;
+                        actionBtn   = `
+                            <div class="row">
+                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                            </div>`;
+                    }
+
+                    tbody.append(`
+                        <tr>
+                            <td>${l.tgl_inputer}</td>
+                            <td>${l.kd_faktur}</td>
+                            <td>${l.nama_customer}</td>
+                            <td>${l.nama_kios}</td>
+                            <td>${l.alamat_kios}</td>
+                            <td>${l.kd_rute}</td>
+                            <td>${l.regional}</td>
+                            <td>${l.total_barang}</td>
+                            <td>${statusBadge}</td>
+                            <td>${actionBtn}</td>
+                        </tr>
+                    `);
+                });
+
+                // Reinit DataTable setelah data terisi
+                $('#dailyod').DataTable({
+                    "paging":       true,
+                    "lengthChange": false,
+                    "searching":    true,
+                    "ordering":     false,
+                    "info":         true,
+                    "autoWidth":    false,
+                    "responsive":   true,
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error("AJAX Error:", xhr.responseText);
+                tbody.html('<tr><td colspan="10" class="text-center text-danger">Error: ' + error + '</td></tr>');
+                $('#dailyod').DataTable({
+                    "paging": false, "searching": false, "info": false, "ordering": false
+                });
+            }
+        });
+    }
+
         $(document).ready(function() {
+
+            // Load tmp DO saat halaman dibuka
             function loadTmpDo() {
                 $.ajax({
-                    url: 'get_tmp_do',
+                    url: '<?= base_url("get_tmp_do") ?>',
                     type: 'GET',
                     dataType: 'json',
                     success: function(response) {
-                        let rows = '';
-                        if (response.length > 0) {
-                            $.each(response, function(index, data) {
-                                rows += `<tr>
-                            <td>${data.kd_faktur}</td>
-                            <td>${data.nama_customer}</td>
-                            <td>${data.alamat_kios}</td>
-                            <td>${data.regional}</td>
-                            <td>${data.telp1}</td>
-                            <td>${data.telp2}</td>
-                        </tr>`;
-                            });
-                        } else {
-                            rows = '<tr><td colspan="6" class="text-center">Data tidak tersedia</td></tr>';
-                        }
-                        $('#tmp_do_data').html(rows);
+                        // response sudah dihandle oleh PHP loop di view
+                        // jika perlu reload tabel tmp, tambahkan di sini
                     },
                     error: function() {
-                        alert('Gagal mengambil data');
+                        console.warn('Gagal mengambil data tmp DO');
                     }
                 });
             }
-
-            loadTmpDo();
-
-            $('#doForm').on('submit', function(e) {
-                e.preventDefault();
-
-                $.ajax({
-                    url: 'save_do',
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            alert(response.message);
-                            $('#doForm')[0].reset();
-                            loadTmpDo();
-                        } else {
-                            alert(response.message);
-                        }
-                    },
-                    error: function() {
-                        alert('Terjadi kesalahan saat menyimpan data');
-                    }
-                });
-            });
 
             $("#cancelEdit").on("click", function() {
                 $("#editRow").hide();
@@ -364,29 +433,24 @@
 
             $(".btn-nurut").on("click", function(e) {
                 e.preventDefault();
-
                 var row = $(this).closest("tr");
-                var id = row.data("id");
+                var id  = row.data("id");
 
                 $.ajax({
                     url: "<?= base_url('get_tmpdonorut') ?>",
                     type: "POST",
-                    data: {
-                        id: id,
-                    },
+                    data: { id: id },
                     dataType: "json",
                     success: function(data) {
                         $("#id").val(data.id);
                         $("#nourut").val(data.norut_do);
-
                         $("#editRow").insertAfter(row).show();
-                    },
+                    }
                 });
             });
 
             $("#editForm").on("submit", function(e) {
                 e.preventDefault();
-
                 $.ajax({
                     url: "<?= base_url('update_norut') ?>",
                     type: "POST",
@@ -407,35 +471,18 @@
             });
 
             $("#rekamdo").on('click', function() {
-                var kd_do = $("#do_isi").val().trim();
+                var kd_do   = $("#do_isi").val().trim();
                 var tgl_krim = $("#tgl_isi").val();
-                var platno = $("#plat_isi").val();
-                var kota = $("#regional_isi").val();
-                var driver = $("#driver_isi").val();
+                var platno  = $("#plat_isi").val();
+                var kota    = $("#regional_isi").val().trim();
+                var driver  = $("#driver_isi").val();
 
                 $("input").css("border", "");
-
-                if (!kd_do && !tgl_krim && !platno && !kota && !driver) {
-                    alert('Semua field masih kosong.');
-                    $("input").css("border", "2px solid red");
-                    return;
-                }
 
                 var isValid = true;
 
                 if (!kd_do) {
-                    alert('Kode DO harus diisi.');
                     $("#do_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-                if (!tgl_krim) {
-                    alert('Tanggal Kirim harus diisi.');
-                    $("#tgl_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-                if (!platno) {
-                    alert('Plat Nomor harus diisi.');
-                    $("#plat_isi").css("border", "2px solid red");
                     isValid = false;
                 }
                 if (!kota) {
@@ -443,41 +490,22 @@
                     $("#regional_isi").css("border", "2px solid red");
                     isValid = false;
                 }
-                if (!driver) {
-                    alert('Nama Driver harus diisi.');
-                    $("#driver_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
 
                 if (!isValid) return;
-
-                var isNorutValid = true;
-                $("#detbarang tbody tr").each(function() {
-                    var norut = $(this).find("td:first").text().trim();
-                    if (norut === "" || norut === "0") {
-                        isNorutValid = false;
-                    }
-                });
-
-                if (!isNorutValid) {
-                    alert("Nomor urut (No) belum terisi semua.");
-                    return;
-                }
 
                 $.ajax({
                     url: "<?= base_url('rekam_do') ?>",
                     type: "POST",
                     data: {
-                        kd_do: kd_do,
+                        kd_do:    kd_do,
                         tgl_krim: tgl_krim,
-                        platno: platno,
-                        kota: kota,
-                        driver: driver
+                        platno:   platno,
+                        kota:     kota,
+                        driver:   driver
                     },
-                    dataType: "JSON",
+                    dataType: "json",
                     cache: false,
                     success: function(data) {
-                        console.log(data);
                         if (data.msg == "success") {
                             alert('Data berhasil direkam');
                             window.location.href = "<?= base_url('create_do') ?>";
@@ -490,8 +518,6 @@
                     }
                 });
             });
-
-
         });
     </script>
 
@@ -524,3 +550,4 @@
             });
         });
     </script>
+///ppp///
