@@ -1,3 +1,4 @@
+<!-- views/content/logistik/body_detaildo.php -->
 <style>
     table {
         font-size: 14px;
@@ -80,6 +81,7 @@
                                 <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
                                 <?php endif; ?>
                                 <?php foreach ($kdo as $k) : ?>
+                                    <input type="hidden" id="do_isi" name="do_isi" value="<?= $k->kd_do ?>">
                                     <?php $this->load->view('content/logistik/modal/modal_detail_do'); ?>
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>

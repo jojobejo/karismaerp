@@ -7,6 +7,7 @@ class C_SalesOrder extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_SalesOrder');
+        $this->load->model('M_Logistik');
         $this->load->model('M_ActivityLog');
         $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
@@ -611,5 +612,128 @@ class C_SalesOrder extends CI_Controller
             ];
         }
         return $details;
+    }
+
+    public function list_do()
+    {
+        $data['page_title'] = 'KARISMA - SALES - LIST DO';
+        $data['listdo']     = $this->M_Logistik->get_do_for_sales();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/list_do.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Halaman Detail DO untuk Sales — view only + tombol konfirmasi
+     */
+    public function detail_do($kd_do)
+    {
+        // Ambil data sama seperti C_Logistik::detail_do tapi tanpa aksi edit
+        $query = $this->db->query("
+            SELECT
+                x.norut, d.nama_customer AS nama_kios, d.telp1, d.telp2,
+                x.kd_rute, d.regional, x.id, x.kd_faktur, x.tgl_transaksi,
+                x.note_faktur, c.kd_barang AS kd_system, c.nama_barang AS nm_barang,
+                x.no_lot, x.nominal_p, x.jtempo, x.tgl_exp, x.satuan,
+                x.status, x.kd_do, x.qty,
+                (c.p * c.l * c.t) AS dimensi,
+                FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
+                (x.qty % (c.p * c.l * c.t)) AS qty_pcs
+            FROM (
+                SELECT
+                    a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
+                    a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
+                    a.tgl_exp, a.nominal_p, a.jtempo, a.note_faktur,
+                    a.satuan, a.status,
+                    SUM(a.qty) AS qty
+                FROM tb_detail_do a
+                JOIN tb_do b ON b.kd_do = a.kd_do
+                WHERE b.kd_do = ?
+                GROUP BY
+                    a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
+                    a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
+                    a.tgl_exp, a.nominal_p, a.jtempo, a.satuan, a.status
+            ) x
+            JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
+            JOIN tb_customer d ON d.kd_customer = x.kd_customer
+            ORDER BY d.nama_customer ASC, x.kd_faktur ASC, c.nama_barang ASC
+        ", [$kd_do]);
+
+        $query1 = $this->db->query("
+            SELECT
+                b.id, b.kd_do, b.regional, b.nolambung, b.driver,
+                b.status, b.sales_confirm_status, b.sales_confirm_by,
+                b.sales_confirm_at, b.sales_confirm_note,
+                COUNT(DISTINCT a.kd_barang) AS total_barang,
+                ROUND(SUM(a.qty * m.berat)/1000000, 2) AS total_tonase_faktur,
+                ROUND(SUM(a.qty * m.kubikasi), 2) AS total_kubikasi,
+                COUNT(DISTINCT a.kd_customer) AS totalfaktur
+            FROM tb_detail_do a
+            JOIN tb_do b ON b.kd_do = a.kd_do
+            JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+            WHERE b.kd_do = ?
+            GROUP BY b.id, b.kd_do, b.regional, b.nolambung, b.driver,
+                     b.status, b.sales_confirm_status, b.sales_confirm_by,
+                     b.sales_confirm_at, b.sales_confirm_note
+        ", [$kd_do]);
+
+        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $log_confirm = $this->M_Logistik->get_log_confirm_sales($kd_do);
+
+        $data['page_title']  = 'KARISMA - SALES - DETAIL DO';
+        $data['kdo']         = $query1->result();
+        $data['dostatus']    = $query2->result();
+        $data['data_list']   = $query->result();
+        $data['log_confirm'] = $log_confirm;
+        $data['kd_do']       = $kd_do;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/detail_do_sales.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Endpoint konfirmasi loading dari Sales
+     * POST: kd_do, action (siap/belum_siap), note
+     */
+    public function confirm_loading()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_do      = $this->input->post('kd_do');
+        $action     = $this->input->post('action');
+        $note       = $this->input->post('note') ?? '';
+        $confirm_by = $this->session->userdata('nama');
+
+        if (!$kd_do || !in_array($action, ['siap', 'belum_siap'])) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak valid']);
+            exit;
+        }
+
+        $do = $this->db->where('kd_do', $kd_do)->where('status', 2)->get('tb_do')->row();
+        if (!$do) {
+            echo json_encode(['msg' => 'error', 'message' => 'DO tidak ditemukan atau sudah dikonfirmasi']);
+            exit;
+        }
+
+        $this->M_Logistik->update_sales_confirm($kd_do, $action, $confirm_by, $note);
+
+        $msg = ($action === 'siap')
+            ? 'Konfirmasi Siap Loading berhasil. DO sekarang On Delivery.'
+            : 'DO ditandai Belum Siap Loading.';
+
+        if ($action === 'siap') {
+            $this->M_Logistik->insertlog_do([
+                'kd_do'      => $kd_do,
+                'tgl_input'  => date('d/m/Y'),
+                'keterangan' => 'SALES CONFIRM - SIAP LOADING oleh ' . $confirm_by,
+                'inputer'    => $confirm_by
+            ]);
+        }
+
+        echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
+        exit;
     }
 }

@@ -1,3 +1,4 @@
+<!-- models/M_logistik.php -->
 <?php
 
 use JetBrains\PhpStorm\Internal\ReturnTypeContract;
@@ -402,44 +403,123 @@ class M_Logistik extends CI_Model
 
     public function get_data_penjualan_zahir()
     {
+        $sql = "
+            SELECT
+                so.no_faktur                                        AS kd_faktur,
+                so.tanggal_transaksi                                AS tgl_inputer,
+                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y')       AS tgl_inputer_fmt,
+                so.kd_customer,
+                so.status                                           AS data_sts,
+                c.nama_customer,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                COALESCE(r.kd_rute, c.regional)                    AS kd_rute,
+                COALESCE(r.keterangan, c.regional)                  AS keterangan_rute,
+                COUNT(DISTINCT sod.kd_barang)                       AS total_barang
+            FROM tbso_sales_order so
+            INNER JOIN tbso_sales_order_detail sod
+                ON sod.no_so = so.no_so
+            INNER JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = c.regional
+            WHERE so.status IN ('approved', 'draft')
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do d
+                WHERE d.kd_faktur = so.no_faktur
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_tmp_detaildo t
+                WHERE t.kd_faktur = so.no_faktur
+            )
+            GROUP BY
+                so.no_so,
+                so.no_faktur,
+                so.tanggal_transaksi,
+                so.kd_customer,
+                so.status,
+                c.nama_customer,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                r.kd_rute,
+                r.keterangan
+            ORDER BY so.tanggal_transaksi DESC
+        ";
 
-        $subDetail = $this->db
-            ->select('1', false)
-            ->from('tb_detail_do d')
-            ->where('d.kd_faktur = a.kd_faktur')
-            ->get_compiled_select();
-        $subBarang = $this->db
-            ->select('1', false)
-            ->from('tb_pre_do x')
-            ->where('x.kd_faktur = a.kd_faktur')
-            ->where('NOT EXISTS (
-            SELECT 1 
-            FROM tb_master_barang_all m 
-            WHERE m.kd_barang = x.kd_barang
-        )', null, false)
-            ->get_compiled_select();
-        $this->db->select([
-            'a.tgl_inputer',
-            "DATE_FORMAT(STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y'), '%d/%m/%Y') AS tgl_inputer_fmt",
-            'a.kd_faktur',
-            'b.nama_customer',
-            'b.nama_kios',
-            'b.alamat_kios',
-            'b.regional',
-            'a.kd_rute',
-            'c.keterangan AS keterangan_rute',
-            'COUNT(DISTINCT a.kd_barang) AS total_barang',
-            'a.data_sts'
-        ], false);
-        $this->db->from('tb_pre_do a');
-        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
-        $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-        $this->db->where('a.data_sts', '1');
-        $this->db->where("NOT EXISTS ($subDetail)", null, false);
-        $this->db->where("NOT EXISTS ($subBarang)", null, false);
-        $this->db->group_by('a.kd_faktur');
-        $this->db->order_by("STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y')", 'DESC', false);
-        return $this->db->get()->result();
+        return $this->db->query($sql)->result();
+    }
+
+    public function insert_ledger_do_draft(array $detailRows, $kd_do, $gudang_id = null)
+    {
+        if (empty($detailRows)) return false;
+
+        $gudang_id = $gudang_id ?? '6';
+        $rows      = [];
+
+        foreach ($detailRows as $row) {
+            $rows[] = [
+                'kd_barang'    => $row['kd_barang'],
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $row['no_lot']      ?? null,
+                'expired_date' => $row['tgl_exp']     ?? null,
+                'qty'          => $row['qty'],
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $kd_do,
+                'ref_type'     => 'DELIVERY_ORDER',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        return $this->db->insert_batch('tberp_stock_ledger', $rows);
+    }
+
+    public function finalize_ledger_do(array $detailRows, $kd_do, array $kd_faktur_list, $gudang_id = '6')
+    {
+        if (empty($detailRows)) return false;
+
+        $now = date('Y-m-d H:i:s');
+
+        // 1. Update tipe RESERVE → RELEASE untuk semua ledger SALES_ORDER lama
+        if (!empty($kd_faktur_list)) {
+            $this->db->where_in('ref_no', $kd_faktur_list);
+            $this->db->where('ref_type', 'SALES_ORDER');
+            $this->db->where('tipe', 'RESERVE');
+            $this->db->update('tberp_stock_ledger', ['tipe' => 'RELEASE']);
+        }
+
+        // 2. Insert RESERVE baru dengan ref_type DELIVERY_ORDER
+        $rows = [];
+        foreach ($detailRows as $row) {
+            $rows[] = [
+                'kd_barang'    => $row['kd_barang'],
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $row['no_lot']   ?? null,
+                'expired_date' => $row['tgl_exp']  ?? null,
+                'qty'          => $row['qty'],
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $kd_do,
+                'ref_type'     => 'DELIVERY_ORDER',
+                'created_at'   => $now,
+            ];
+        }
+
+        return $this->db->insert_batch('tberp_stock_ledger', $rows);
+    }
+
+    public function get_detail_do_for_ledger($kd_do)
+    {
+        return $this->db->query("
+            SELECT
+                d.kd_barang,
+                d.no_lot,
+                d.tgl_exp,
+                SUM(d.qty) AS qty
+            FROM tb_detail_do d
+            WHERE d.kd_do = ?
+            GROUP BY d.kd_barang, d.no_lot, d.tgl_exp
+        ", [$kd_do])->result_array();
     }
 
     public function get_master_barang_not_listed()
@@ -547,38 +627,44 @@ class M_Logistik extends CI_Model
 
     public function get_list_by_rute()
     {
-        $this->db->select('
-            a.tgl_inputer,
-            a.kd_faktur,
-            b.nama_customer,
-            b.nama_kios,
-            b.alamat_kios,
-            b.regional,
-            a.kd_rute,
-            c.keterangan AS keterangan_rute,
-            COUNT(DISTINCT a.kd_barang) AS total_barang,
-            a.data_sts 
-        ');
-        $this->db->from('tb_pre_do a');
-        $this->db->join('tb_customer b', 'b.kd_customer = a.kd_customer', 'inner');
-        $this->db->join('tb_rutecs c', 'c.kd_rute = a.kd_rute', 'inner');
-        $this->db->join('tb_detail_do d', 'd.kd_faktur = a.kd_faktur', 'left');
-        $this->db->where('a.data_sts', 1);
-        $this->db->where('d.kd_faktur IS NULL', null, false);
-        $this->db->group_by('a.kd_faktur');
-
-        $query = $this->db->get();
-        return $query->result();
+        return $this->db->query("
+            SELECT
+                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y') AS tgl_inputer,
+                so.no_faktur        AS kd_faktur,
+                c.nama_customer,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                COALESCE(r.kd_rute, c.regional)     AS kd_rute,
+                COALESCE(r.keterangan, c.regional)   AS keterangan_rute,
+                COUNT(DISTINCT sod.kd_barang)        AS total_barang,
+                so.status                            AS data_sts
+            FROM tbso_sales_order so
+            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
+            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
+            LEFT JOIN tb_detail_do d ON d.kd_faktur = so.no_faktur
+            WHERE so.status IN ('approved', 'draft')
+            AND d.kd_faktur IS NULL
+            GROUP BY so.no_so, so.no_faktur
+        ")->result();
     }
 
-    public function get_do_cust($kd)
+    public function get_do_cust($kd_faktur)
     {
-        return $this->db->query("SELECT
-            a.*
-            FROM tb_pre_do a
-            WHERE a.kd_faktur = '$kd'
-            GROUP BY a.kd_faktur
-        ")->result();
+        return $this->db->query("
+            SELECT DISTINCT
+                so.no_faktur            AS kd_faktur,
+                so.kd_customer,
+                c.regional              AS kd_rute,
+                so.tanggal_transaksi    AS tgl_inputer,
+                so.status
+            FROM tbso_sales_order so
+            INNER JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            WHERE so.no_faktur = ?
+            LIMIT 1
+        ", [$kd_faktur])->result();
     }
 
     public function insert_tmp_detdo_batch($data)
@@ -591,15 +677,35 @@ class M_Logistik extends CI_Model
         return $this->db->insert_batch('tb_detail_do', $data);
     }
 
-    public function get_do_cust_byfaktur($kd)
+    public function get_do_cust_byfaktur($kd_faktur)
     {
-        return $this->db->query("SELECT
-            a.*,b.nama_barang
-            FROM tb_pre_do a
-            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-            GROUP BY a.id
-        ")->result();
+        return $this->db->query("
+            SELECT
+                so.no_so                                            AS id,
+                so.no_faktur                                        AS kd_faktur,
+                so.kd_customer,
+                COALESCE(r.kd_rute, c.regional)                    AS kd_rute,
+                so.tanggal_transaksi                                AS tgl_inputer,
+                sod.kd_barang,
+                mb.nama_barang,
+                sod.qty                                             AS qty,
+                COALESCE(sod.satuan, 'PCS')                         AS satuan,
+                COALESCE(sod.no_lot, '')                            AS no_lot,
+                sod.expired_date                                    AS tgl_exp,
+                COALESCE(sod.hrg_satuan, 0)                         AS nominal_p,
+                0                                                   AS jtempo,
+                1                                                   AS barang_sts
+            FROM tbso_sales_order so
+            INNER JOIN tbso_sales_order_detail sod
+                ON sod.no_so = so.no_so
+            INNER JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = c.regional
+            INNER JOIN tb_master_barang_all mb
+                ON mb.kd_barang = sod.kd_barang
+            WHERE so.no_faktur = ?
+        ", [$kd_faktur])->result();
     }
 
     public function get_detail_do_not_exist_saldo_awal($kd_faktur)
@@ -628,19 +734,21 @@ class M_Logistik extends CI_Model
     }
 
 
-    public function get_do_cust_byfaktur_ics($kd)
+    public function get_do_cust_byfaktur_ics($kd_do)
     {
-        return $this->db->query("SELECT
-        a.kd_do,
-        a.kd_faktur,
-        a.tgl_transaksi,
-        a.kd_barang,
-        a.nama_barang,
-        a.qty,
-        a.tgl_exp,
-        a.no_lot
-        FROM tb_detail_do a
-        WHERE a.kd_do = '$kd'")->result();
+        return $this->db->query("
+            SELECT
+                a.kd_do,
+                a.kd_faktur,
+                a.tgl_transaksi,
+                a.kd_barang,
+                a.nama_barang,
+                a.qty,
+                a.tgl_exp,
+                a.no_lot
+            FROM tb_detail_do a
+            WHERE a.kd_do = ?
+        ", [$kd_do])->result();
     }
 
     public function update_pre_do_delivery_at($kd_faktur_list, $dateprenow)
@@ -654,15 +762,8 @@ class M_Logistik extends CI_Model
 
     public function det_do_cust($kd)
     {
-        return $this->db->query("SELECT
-            a.*,b.nama_barang
-        FROM
-            tb_pre_do a
-        JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
-        WHERE
-            a.kd_faktur = '$kd'
-            GROUP BY a.id
-        ")->result();
+        // Gunakan kembali logika yang sama dengan get_do_cust_byfaktur
+        return $this->get_do_cust_byfaktur($kd);
     }
 
     public function insert_tmp_do($data)
@@ -682,10 +783,26 @@ class M_Logistik extends CI_Model
         }
     }
 
-    public function update_sts_pre_do($kd, $data)
+    public function update_sts_pre_do($kd_faktur, $data)
     {
-        $this->db->where('kd_faktur', $kd);
-        return $this->db->update('tb_pre_do', $data);
+        $status_map = [
+            '1' => 'approved',
+            '2' => 'in_delivery',
+            '3' => 'shipped',
+            '4' => 'in_delivery',
+        ];
+
+        $so_status = null;
+        if (isset($data['data_sts'])) {
+            $so_status = $status_map[$data['data_sts']] ?? null;
+        }
+
+        if ($so_status !== null) {
+            $this->db->where('no_faktur', $kd_faktur); // ganti no_so → no_faktur
+            return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+        }
+
+        return false;
     }
 
     public function updatedsts($id, $data)
@@ -744,32 +861,36 @@ class M_Logistik extends CI_Model
 
     public function get_tmp_do()
     {
-        return $this->db->query("SELECT
-            a.id,
-            a.kd_faktur,
-            a.norut_do,
-            c.nama_customer,
-            c.alamat_kios,
-            c.regional,
-            b.kd_rute as kdrute,
-            c.telp1,
-            c.telp2,
-            COALESCE(c.jam_buka_tutup,'-') AS jam_buka_tutup,
-            COALESCE(c.karakteristik_kios,'-') AS toko
+        return $this->db->query("
+            SELECT
+                a.id,
+                a.kd_faktur,
+                a.norut_do,
+                c.nama_customer,
+                c.alamat_kios,
+                c.regional,
+                COALESCE(r.kd_rute, c.regional) AS kdrute,
+                c.telp1,
+                c.telp2,
+                COALESCE(c.jam_buka_tutup, '-')        AS jam_buka_tutup,
+                COALESCE(c.karakteristik_kios, '-')    AS toko
             FROM tb_tmp_do a
-            JOIN tb_pre_do b ON b.kd_faktur = a.kd_faktur
-            JOIN tb_customer c ON c.kd_customer = b.kd_customer
+            JOIN tbso_sales_order so ON so.no_faktur = a.kd_faktur
+            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
             GROUP BY a.kd_faktur
         ")->result();
     }
+
     public function getkdfaktur($kd)
     {
-        return $this->db->query("SELECT
-            a.kd_faktur,
-            a.norut_do
+        return $this->db->query("
+            SELECT
+                a.kd_faktur,
+                a.norut_do
             FROM tb_tmp_do a 
-            WHERE a.kd_faktur = '$kd'
-        ");
+            WHERE a.kd_faktur = ?
+        ", [$kd]);
     }
 
     public function update_sts_detail_checker($data, $id)
@@ -798,33 +919,121 @@ class M_Logistik extends CI_Model
         return $this->db->update('tb_do', $data);
     }
 
+    /**
+     * Update status konfirmasi sales pada tb_do
+     */
+    public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
+    {
+        $now = date('Y-m-d H:i:s');
+
+        // Update tb_do
+        $this->db->where('kd_do', $kd_do);
+        $this->db->update('tb_do', [
+            'sales_confirm_status' => $action,       // 'siap' atau 'belum_siap'
+            'sales_confirm_by'     => $confirm_by,
+            'sales_confirm_at'     => $now,
+            'sales_confirm_note'   => $note,
+            // Jika siap → status 3 (On Delivery), jika belum siap tetap 2
+            'status'               => ($action === 'siap') ? 3 : 2
+        ]);
+
+        // Insert log
+        $this->db->insert('tb_log_confirm_sales', [
+            'kd_do'      => $kd_do,
+            'action'     => $action,
+            'note'       => $note,
+            'confirm_by' => $confirm_by,
+            'confirm_at' => $now
+        ]);
+
+        return $this->db->affected_rows();
+    }
+
+    /**
+     * Ambil list DO untuk halaman Sales — hanya status 2 (menunggu konfirmasi)
+     * dan status 3 (sudah on delivery)
+     */
+    public function get_do_for_sales()
+    {
+        return $this->db->query("
+            SELECT
+                a.kd_do                     AS kddo,
+                a.tgl_create                AS createat,
+                a.tgl_pengiriman            AS tglkirim,
+                a.nolambung                 AS nopol,
+                a.regional                  AS rute,
+                a.status,
+                a.sales_confirm_status,
+                a.sales_confirm_by,
+                a.sales_confirm_at,
+                a.sales_confirm_note,
+                (
+                    SELECT COUNT(DISTINCT kd_barang)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalbarang,
+                (
+                    SELECT COUNT(DISTINCT kd_faktur)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalfaktur
+            FROM tb_do a
+            WHERE a.status IN (2, 3)
+            AND (
+                SELECT COUNT(DISTINCT kd_faktur)
+                FROM tb_detail_do
+                WHERE kd_do = a.kd_do
+            ) > 0
+            ORDER BY a.tgl_create DESC
+        ")->result();
+    }
+
+    /**
+     * Ambil list DO di body.php — sekarang status 1=draft, 2=menunggu sales, 3=on delivery
+     */
     public function getdo()
     {
-        return $this->db->query("SELECT 
-        a.kd_do AS kddo,
-        a.tgl_create AS createat,
-        a.tgl_pengiriman AS tglkirim,
-        a.nolambung AS nopol,
-        a.regional AS rute,
-        (
-            SELECT COUNT(DISTINCT kd_barang) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) AS totalbarang,
-        (
-            SELECT COUNT(DISTINCT kd_faktur) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) AS totalfaktur,
-        a.status AS status
-        FROM tb_do a
-        WHERE (
-            SELECT COUNT(DISTINCT kd_faktur) 
-            FROM tb_detail_do 
-            WHERE kd_do = a.kd_do
-        ) > 0
-        ORDER BY a.tgl_create DESC
+        return $this->db->query("
+            SELECT
+                a.kd_do                     AS kddo,
+                a.tgl_create                AS createat,
+                a.tgl_pengiriman            AS tglkirim,
+                a.nolambung                 AS nopol,
+                a.regional                  AS rute,
+                a.status,
+                a.sales_confirm_status,
+                a.sales_confirm_by,
+                a.sales_confirm_at,
+                (
+                    SELECT COUNT(DISTINCT kd_barang)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalbarang,
+                (
+                    SELECT COUNT(DISTINCT kd_faktur)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalfaktur
+            FROM tb_do a
+            WHERE (
+                SELECT COUNT(DISTINCT kd_faktur)
+                FROM tb_detail_do
+                WHERE kd_do = a.kd_do
+            ) > 0
+            ORDER BY a.tgl_create DESC
         ")->result();
+    }
+
+    /**
+     * Ambil log konfirmasi sales untuk satu DO
+     */
+    public function get_log_confirm_sales($kd_do)
+    {
+        return $this->db->query("
+            SELECT * FROM tb_log_confirm_sales
+            WHERE kd_do = ?
+            ORDER BY confirm_at DESC
+        ", [$kd_do])->result();
     }
 
     public function get_tmp_dokd($kd)
@@ -2474,10 +2683,9 @@ FROM (
 
     public function is_exist($kd_faktur)
     {
-        return $this->db
-            ->where('kd_faktur', $kd_faktur)
-            ->get('tb_pre_do')
-            ->num_rows() > 0;
+        // Cek apakah no_so sudah ada di tbso_sales_order
+        $this->db->where('no_so', $kd_faktur);
+        return $this->db->get('tbso_sales_order')->num_rows() > 0;
     }
 
     public function insert_data($data)
