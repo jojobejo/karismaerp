@@ -682,6 +682,68 @@ class C_Ics extends CI_Controller
         ]);
     }
 
+    public function print_lpb_record($id_lpb = 0)
+    {
+        $id_lpb = (int) $id_lpb;
+
+        if ($id_lpb <= 0) {
+            show_error('Parameter id_lpb tidak valid.', 400);
+            return;
+        }
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+
+        if (empty($header)) {
+            show_error('Data LPB tidak ditemukan.', 404);
+            return;
+        }
+
+        $data['page_title'] = 'Print LPB #' . $id_lpb;
+        $data['print_mode'] = 'single';
+        $data['records'] = [
+            [
+                'header' => $header,
+                'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+            ]
+        ];
+
+        $this->load->view('content/logistik/ics/print_record_lpb.php', $data);
+    }
+
+    public function print_lpb_records_all()
+    {
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+        $no_po = trim((string) $this->input->get('no_po', TRUE));
+
+        if ($kd_po === '') {
+            show_error('Parameter kd_po wajib diisi.', 400);
+            return;
+        }
+
+        $headers = $this->M_Logistik->get_lpb_print_headers_by_kd_po($kd_po);
+
+        if (empty($headers)) {
+            show_error('Record LPB untuk KD PO ini belum tersedia.', 404);
+            return;
+        }
+
+        $records = [];
+        foreach ($headers as $header) {
+            $records[] = [
+                'header' => $header,
+                'rows'   => $this->M_Logistik->get_lpb_record_detail_rows((int) $header['id_lpb'])
+            ];
+        }
+
+        $data['page_title'] = 'Print Semua Record LPB';
+        $data['print_mode'] = 'all';
+        $data['kd_po']      = $kd_po;
+        $data['no_po']      = $no_po !== '' ? $no_po : ($headers[0]['no_po'] ?? '-');
+        $data['records']    = $records;
+
+        $this->load->view('content/logistik/ics/print_record_lpb.php', $data);
+    }
+
     public function ajax_get_tmp_po_received_item()
     {
         while (ob_get_level()) ob_end_clean();
@@ -888,6 +950,8 @@ class C_Ics extends CI_Controller
             'no_po'       => trim((string) $this->input->post('no_po', TRUE)),
             'kd_po'       => trim((string) $this->input->post('kd_po', TRUE)),
             'kd_suplier'  => trim((string) $this->input->post('kd_suplier', TRUE)),
+            'nosj'        => trim((string) $this->input->post('nosj', TRUE)),
+            'tgl_sj'      => trim((string) $this->input->post('tgl_sj', TRUE)),
             'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
             'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
             'keterangan'  => trim((string) $this->input->post('keterangan', TRUE))

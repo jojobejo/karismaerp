@@ -194,6 +194,10 @@
                                 <h3 class="mb-1 font-weight-bold">Record Semua Data LPB</h3>
                             </div>
                             <div class="col-lg-4 text-lg-right mt-3 mt-lg-0">
+                                <button type="button" class="btn btn-success mb-2" id="btnPrintAllLpb">
+                                    <i class="fas fa-print mr-1"></i> Cetak Semua Faktur LPB
+                                </button>
+                                <br>
                                 <div class="h3 font-weight-bold mb-1"><?= htmlspecialchars($no_po ?? '-') ?></div>
                                 <div class="small">No PO: <?= htmlspecialchars($kd_po ?? '-') ?></div>
                             </div>
@@ -260,7 +264,12 @@
                                     <div>
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
                                     </div>
-                                    <div class="text-muted small" id="selectedLpbText">Belum ada LPB dipilih</div>
+                                    <div class="d-flex align-items-center" style="gap:10px;">
+                                        <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
+                                            <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
+                                        </button>
+                                        <div class="text-muted small" id="selectedLpbText">Belum ada LPB dipilih</div>
+                                    </div>
                                 </div>
                                 <div class="lpb-panel-body">
                                     <div id="lpbDetailLoading" class="lpb-loading-state" style="display:none;">
@@ -412,6 +421,14 @@
                         value: header.id_lpb || '-'
                     },
                     {
+                        label: 'Nomor SJ',
+                        value: header.nosj || '-'
+                    },
+                    {
+                        label: 'Tanggal SJ',
+                        value: header.tgl_sj || '-'
+                    },
+                    {
                         label: 'No Invoice',
                         value: header.no_invoice || '-'
                     },
@@ -549,6 +566,22 @@
                 });
             }
 
+            function printSelectedLpb() {
+                if (!selectedIdLpb) {
+                    Swal.fire('Validasi', 'Silakan pilih LPB yang ingin dicetak terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                window.open('<?= base_url('ics/print_lpb_record/') ?>' + selectedIdLpb, '_blank');
+            }
+
+            function printAllLpb() {
+                window.open(
+                    '<?= base_url('ics/print_lpb_records_all') ?>?kd_po=' + encodeURIComponent(kdPo) + '&no_po=' + encodeURIComponent('<?= htmlspecialchars($no_po ?? '', ENT_QUOTES) ?>'),
+                    '_blank'
+                );
+            }
+
             function applySearch() {
                 var keyword = ($('#lpbSearchInput').val() || '').toLowerCase();
                 var visibleCount = 0;
@@ -580,6 +613,14 @@
 
             $('#btnReloadLpbPage').on('click', function() {
                 loadList();
+            });
+
+            $('#btnPrintSelectedLpb').on('click', function() {
+                printSelectedLpb();
+            });
+
+            $('#btnPrintAllLpb').on('click', function() {
+                printAllLpb();
             });
 
             loadList();

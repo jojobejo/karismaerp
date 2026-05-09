@@ -753,4 +753,77 @@ class M_SalesOrder extends CI_Model
                         ->get('tb_set_tax')
                         ->result_array();
     }
+
+    public function get_do_for_sales()
+    {
+        return $this->db->query("
+            SELECT
+                a.kd_do                    AS kddo,
+                a.tgl_create               AS createat,
+                a.tgl_pengiriman           AS tglkirim,
+                a.nolambung                AS nopol,
+                a.regional                 AS rute,
+                a.status,
+                a.sales_confirm_status,
+                a.sales_confirm_by,
+                a.sales_confirm_at,
+                a.sales_confirm_note,
+                (
+                    SELECT COUNT(DISTINCT kd_barang)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalbarang,
+                (
+                    SELECT COUNT(DISTINCT kd_faktur)
+                    FROM tb_detail_do
+                    WHERE kd_do = a.kd_do
+                ) AS totalfaktur
+            FROM tb_do a
+            WHERE a.status IN (2, 3)
+              AND (
+                SELECT COUNT(DISTINCT kd_faktur)
+                FROM tb_detail_do
+                WHERE kd_do = a.kd_do
+              ) > 0
+            ORDER BY a.tgl_create DESC
+        ")->result();
+    }
+
+    public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
+    {
+        $now = date('Y-m-d H:i:s');
+
+        $this->db->where('kd_do', $kd_do);
+        $this->db->update('tb_do', [
+            'sales_confirm_status' => $action,
+            'sales_confirm_by'     => $confirm_by,
+            'sales_confirm_at'     => $now,
+            'sales_confirm_note'   => $note,
+            'status'               => ($action === 'siap') ? 3 : 2
+        ]);
+
+        $this->db->insert('tb_log_confirm_sales', [
+            'kd_do'      => $kd_do,
+            'action'     => $action,
+            'note'       => $note,
+            'confirm_by' => $confirm_by,
+            'confirm_at' => $now
+        ]);
+
+        return $this->db->affected_rows();
+    }
+
+    public function get_log_confirm_sales($kd_do)
+    {
+        return $this->db->query("
+            SELECT * FROM tb_log_confirm_sales
+            WHERE kd_do = ?
+            ORDER BY confirm_at DESC
+        ", [$kd_do])->result();
+    }
+
+    public function insertlog_do($data)
+    {
+        return $this->db->insert('tb_log_do', $data);
+    }
 }
