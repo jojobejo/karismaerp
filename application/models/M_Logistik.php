@@ -3091,6 +3091,8 @@ FROM (
         $sql = "SELECT
                 h.id_lpb,
                 h.kd_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_po,
                 h.no_invoice,
                 h.gudang_id,
@@ -3107,6 +3109,8 @@ FROM (
             GROUP BY
                 h.id_lpb,
                 h.kd_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_po,
                 h.no_invoice,
                 h.gudang_id,
@@ -3384,6 +3388,8 @@ FROM (
         $headerInsert = [
             'kd_po'       => $header['kd_po'],
             'no_po'       => $header['no_po'],
+            'nosj'        => $header['nosj'],
+            'tgl_sj'      => $this->_normalizeDate($header['tgl_sj'] ?? ''),
             'no_invoice'  => $header['no_invoice'],
             'gudang_id'   => $header['gudang_id'],
             'keterangan'  => $header['keterangan'],
@@ -3510,5 +3516,36 @@ FROM (
 
         $this->db->order_by('dl.id_detail_lpb', 'DESC');
         return $this->db->get()->result_array();
+    }
+
+    public function get_lpb_print_headers_by_kd_po($kd_po)
+    {
+        $sql = "SELECT
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.nosj,
+                h.tgl_sj,
+                h.no_invoice,
+                h.keterangan,
+                h.input_at,
+                COUNT(DISTINCT d.kd_barang) AS total_item,
+                COUNT(d.id_detail_lpb) AS total_baris,
+                COALESCE(SUM(d.qty_diterima), 0) AS total_qty
+            FROM tb_lpb h
+            LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+            WHERE h.kd_po = ?
+            GROUP BY
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.nosj,
+                h.tgl_sj,
+                h.no_invoice,
+                h.keterangan,
+                h.input_at
+            ORDER BY h.input_at DESC, h.id_lpb DESC";
+
+        return $this->db->query($sql, [$kd_po])->result_array();
     }
 }
