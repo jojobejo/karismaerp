@@ -187,6 +187,200 @@ class M_Hrd extends CI_Model
 
 
 
+    public function get_locations()
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_lokasi')
+            ->where('is_active', 1)
+            ->order_by('name', 'ASC')
+            ->get();
+    }
+
+    public function get_ratings()
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_issue_rating')
+            ->order_by('score', 'DESC')
+            ->get();
+    }
+
+    public function get_all_locations()
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_lokasi')
+            ->order_by('name', 'ASC')
+            ->get();
+    }
+
+    public function get_location_by_id($id)
+    {
+        return $this->db->get_where('tbhrd_lokasi', array('id' => $id))->row();
+    }
+
+    public function save_location($data)
+    {
+        if (!empty($data['id'])) {
+            $id = $data['id'];
+            unset($data['id']);
+            $this->db->where('id', $id);
+            return $this->db->update('tbhrd_lokasi', $data);
+        }
+        return $this->db->insert('tbhrd_lokasi', $data);
+    }
+
+    public function delete_location($id)
+    {
+        return $this->db->delete('tbhrd_lokasi', array('id' => $id));
+    }
+
+    public function get_all_ratings()
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_issue_rating')
+            ->order_by('score', 'DESC')
+            ->get();
+    }
+
+    public function get_rating_by_id($id)
+    {
+        return $this->db->get_where('tbhrd_issue_rating', array('id' => $id))->row();
+    }
+
+    public function save_rating($data)
+    {
+        if (!empty($data['id'])) {
+            $id = $data['id'];
+            unset($data['id']);
+            $this->db->where('id', $id);
+            return $this->db->update('tbhrd_issue_rating', $data);
+        }
+        return $this->db->insert('tbhrd_issue_rating', $data);
+    }
+
+    public function delete_rating($id)
+    {
+        return $this->db->delete('tbhrd_issue_rating', array('id' => $id));
+    }
+
+    public function get_statuses()
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_issue_status')
+            ->order_by('id', 'ASC')
+            ->get();
+    }
+
+    public function insert_environment_issue($data)
+    {
+        return $this->db->insert('tbhrd_environment_issues', $data);
+    }
+
+    public function insert_issue_evidence($data)
+    {
+        return $this->db->insert('tbhrd_issue_evidences', $data);
+    }
+
+    public function insert_issue_log($data)
+    {
+        return $this->db->insert('tbhrd_issue_logs', $data);
+    }
+
+    public function get_issue_list($filters = array())
+    {
+        $this->db->select('e.*, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name, u.username AS created_by')
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
+            ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->join('tb_user u', 'e.created_by = u.id', 'left');
+
+        if ($filters['location_id'] !== '' && $filters['location_id'] !== null) {
+            $this->db->where('e.location_id', $filters['location_id']);
+        }
+        if ($filters['status_id'] !== '' && $filters['status_id'] !== null) {
+            $this->db->where('e.status_id', $filters['status_id']);
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(e.report_datetime) >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(e.report_datetime) <=', $filters['date_to']);
+        }
+
+        return $this->db->order_by('e.report_datetime', 'DESC')->get();
+    }
+
+    public function get_issue_by_id($id)
+    {
+        return $this->db->select('e.*, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
+            ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->where('e.id', $id)
+            ->get()
+            ->row();
+    }
+
+    public function get_issue_evidences($issue_id)
+    {
+        return $this->db->select('*')
+            ->from('tbhrd_issue_evidences')
+            ->where('issue_id', $issue_id)
+            ->order_by('id', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function get_issue_logs($issue_id)
+    {
+        return $this->db->select('l.*, s.name AS status_name, u.username AS changed_by_name')
+            ->from('tbhrd_issue_logs l')
+            ->join('tbhrd_issue_status s', 'l.status_id = s.id', 'left')
+            ->join('tb_user u', 'l.changed_by = u.id', 'left')
+            ->where('l.issue_id', $issue_id)
+            ->order_by('l.changed_at', 'DESC')
+            ->get()
+            ->result();
+    }
+
+    public function update_environment_issue($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('tbhrd_environment_issues', $data);
+    }
+
+    public function get_issue_counts_by_location()
+    {
+        return $this->db->select('l.name AS location_name, COUNT(e.id) AS total')
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
+            ->group_by('e.location_id')
+            ->order_by('total', 'DESC')
+            ->get();
+    }
+
+    public function get_issue_counts_by_status()
+    {
+        return $this->db->select('e.status_id, s.name AS status_name, COUNT(e.id) AS total')
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->group_by('e.status_id')
+            ->order_by('total', 'DESC')
+            ->get();
+    }
+
+    public function get_issue_counts_by_rating()
+    {
+        return $this->db->select('r.name AS rating_name, r.score, COUNT(e.id) AS total')
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
+            ->where('e.rating_id >', 0)
+            ->group_by('e.rating_id')
+            ->order_by('r.score', 'DESC')
+            ->get();
+    }
+
     var $table = 'tb_lap_distribusi'; //nama tabel dari database
     var $column_order = array('tglkeluar', 'tglmasuk', 'nopol', 'nolambung', 'namadriver', 'namahelper', 'tujuan', 'jamkeluar', 'kmkeluar', 'jammasuk', 'kmmasuk', 'keterangan', 'id'); //field yang ada di table user
     var $column_search = array('nopol', 'namadriver', 'namahelper', 'tujuan'); //field yang diizin untuk pencarian 
