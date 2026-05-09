@@ -1,3 +1,4 @@
+<!-- views/content/sales/list_do.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <?php $this->load->view('partial/main/navbar') ?>
@@ -6,7 +7,17 @@
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
-                <h3>List Delivery Order — Sales</h3>
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">List Delivery Order — Sales</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
+                            <li class="breadcrumb-item active">List DO Sales</li>
+                        </ol>
+                    </div>
+                </div>
             </div>
         </div>
         <section class="content">

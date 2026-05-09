@@ -1,3 +1,4 @@
+<!-- views/content/sales/detail_do_sales.php -->
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <?php $this->load->view('partial/main/navbar') ?>
@@ -6,9 +7,20 @@
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
-                <a href="<?= base_url('sales/list_do') ?>" class="btn btn-primary mb-2">
-                    <i class="fas fa-arrow-left"></i> Kembali
-                </a>
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">Detail Delivery Order — Sales</h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
+                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order/list_do') ?>">List DO Sales</a></li>
+                            <li class="breadcrumb-item active">
+                                <?= isset($kdo[0]) ? htmlspecialchars($kdo[0]->kd_do) : 'Detail DO' ?>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,7 +178,7 @@ $(document).ready(function () {
         if (!confirm('Konfirmasi: ' + label + ' untuk DO ' + kd_do + '?')) return;
 
         $.ajax({
-            url: '<?= base_url("sales/confirm_loading") ?>',
+            url: '<?= base_url("sales_order/confirm_loading") ?>',
             type: 'POST',
             data: { kd_do: kd_do, action: action, note: note },
             dataType: 'json',

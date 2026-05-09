@@ -66,15 +66,49 @@
                                                     </div>
                                                     <div class="col-auto">
                                                         <?php foreach ($kdo as $k) : ?>
-                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info"><i class="fas fa-plus"></i> Tambah Faktur</a>
+                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
+                                                                <i class="fas fa-plus"></i> Tambah Faktur
+                                                            </a>
                                                         <?php endforeach; ?>
                                                     </div>
                                                 </div>
+
+                                            <?php elseif ($d->status == '2' && ($d->sales_confirm_status === 'belum_siap')) : ?>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <span class="btn btn-danger disabled">
+                                                            <i class="fas fa-times-circle"></i> Belum Siap Loading
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <small class="text-muted">
+                                                            Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
+                                                            <?php if (!empty($d->sales_confirm_note)) : ?>
+                                                                &mdash; Catatan: <em><?= htmlspecialchars($d->sales_confirm_note) ?></em>
+                                                            <?php endif; ?>
+                                                        </small>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                            <i class="fas fa-redo"></i> REPOST
+                                                        </button>
+                                                    </div>
+                                                </div>
+
                                             <?php elseif ($d->status == '2') : ?>
-                                                <a href="#" class="btn btn-info">DONE</a>
-                                                <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
-                                                    <i class="fas fa-redo"></i> REPOST
-                                                </button>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <span class="btn btn-info disabled">
+                                                            <i class="fas fa-clock"></i> Menunggu Konfirmasi Sales
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                            <i class="fas fa-redo"></i> REPOST
+                                                        </button>
+                                                    </div>
+                                                </div>
+
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -120,23 +154,19 @@
 
                                     <!-- FORM START -->
                                     <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
-                                        <?php if ($d->status == '1') : ?>
+                                        <?php if ($d->status == '1' || ($d->status == '2' && $d->sales_confirm_status === 'belum_siap')) : ?>
                                             <div class="row mb-2">
                                                 <div class="col-md" hidden>
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                                                        </div>
-                                                        <input type="text" class="form-control" value="<?= $k->kd_do ?>" name="do_isi" id="do_isi" readonly>
-                                                    </div>
+                                                    <input type="text" class="form-control" value="<?= $k->kd_do ?>" name="do_isi" id="do_isi" readonly>
                                                 </div>
-
                                                 <div class="col-md">
                                                     <div class="input-group">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-calendar"></i></span>
                                                         </div>
-                                                        <input type="date" class="form-control" placeholder="Tanggal Kirim" value="" name="tgl_isi" id="tgl_isi">
+                                                        <input type="date" class="form-control" placeholder="Tanggal Kirim"
+                                                            value="<?= $d->tgl_pengiriman ?? '' ?>"
+                                                            name="tgl_isi" id="tgl_isi">
                                                     </div>
                                                 </div>
                                             </div>
@@ -146,11 +176,13 @@
                                                     <div class="d-flex align-items-center flex-wrap gap-3 pt-2">
                                                         <span class="me-3 fw-semibold">Pilih Pengiriman:</span>
                                                         <div class="form-check form-check-inline">
-                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman" id="pengiriman_kantor" value="expedisi_kantor" checked>
+                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman"
+                                                                id="pengiriman_kantor" value="expedisi_kantor" checked>
                                                             <label class="form-check-label" for="pengiriman_kantor">Expedisi Kantor</label>
                                                         </div>
                                                         <div class="form-check form-check-inline">
-                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman" id="pengiriman_luar" value="expedisi_luar">
+                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman"
+                                                                id="pengiriman_luar" value="expedisi_luar">
                                                             <label class="form-check-label" for="pengiriman_luar">Expedisi Luar</label>
                                                         </div>
                                                     </div>
@@ -166,7 +198,10 @@
                                                         <select name="driver_isi" id="driver_isi" class="form-control" required>
                                                             <option value="" selected disabled>-- Pilih Driver --</option>
                                                             <?php foreach ($driver as $driver) : ?>
-                                                                <option value="<?= $driver->kd_driver ?>"><?= $driver->nama_driver ?></option>
+                                                                <option value="<?= $driver->kd_driver ?>"
+                                                                    <?= ($d->driver == $driver->kd_driver) ? 'selected' : '' ?>>
+                                                                    <?= $driver->nama_driver ?>
+                                                                </option>
                                                             <?php endforeach ?>
                                                         </select>
                                                     </div>
@@ -180,7 +215,10 @@
                                                         <select name="truck_isi" id="truck_isi" class="form-control" required>
                                                             <option value="" selected disabled>-- Pilih Kendaraan --</option>
                                                             <?php foreach ($truck as $truck) : ?>
-                                                                <option value="<?= $truck->id ?>"><?= $truck->nm_truk ?></option>
+                                                                <option value="<?= $truck->id ?>"
+                                                                    <?= ($d->nolambung == $truck->id) ? 'selected' : '' ?>>
+                                                                    <?= $truck->nm_truk ?>
+                                                                </option>
                                                             <?php endforeach ?>
                                                         </select>
                                                     </div>
@@ -191,7 +229,8 @@
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-user"></i></span>
                                                         </div>
-                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi" placeholder="Nama Driver">
+                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi"
+                                                            placeholder="Nama Driver">
                                                     </div>
                                                 </div>
 
@@ -200,11 +239,14 @@
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text"><i class="fas fa-truck-moving"></i></span>
                                                         </div>
-                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi" placeholder="No Lambung Truk">
+                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi"
+                                                            placeholder="No Lambung Truk">
                                                     </div>
                                                 </div>
                                             </div>
+
                                         <?php else : ?>
+                                            {{-- Status lain: tampilkan info saja --}}
                                         <?php endif; ?>
                                     <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
                                     <?php endif; ?>
@@ -308,13 +350,14 @@
                                     </table>
                                     <?php foreach ($kdo as $k) : ?>
                                         <div class="row">
-                                            <?php if ($d->status == '1') : ?>
+                                            <?php if ($d->status == '1' || ($d->status == '2' && $d->sales_confirm_status === 'belum_siap')) : ?>
+
                                                 <div class="col">
                                                     <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
-                                                        <i class="fas fa-check-double"></i> Rekam Draft Order
+                                                        <i class="fas fa-check-double"></i>
+                                                        <?= ($d->status == '2') ? 'Rekam Ulang & Kirim ke Sales' : 'Rekam Draft Order' ?>
                                                     </button>
                                                 </div>
-
                                                 <div class="col">
                                                     <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Order
@@ -330,6 +373,7 @@
                                                         <i class="fas fa-print"></i> Print Checker
                                                     </button>
                                                 </div>
+
                                             <?php else : ?>
                                                 <div class="col">
                                                     <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
