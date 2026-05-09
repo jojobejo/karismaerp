@@ -102,6 +102,38 @@
 
                     <div class="row">
                         <div class="col-lg-8">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card env-card">
+                                        <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title font-weight-bold">Pie Issue per Lokasi</h3>
+                                            <button type="button" class="btn btn-xs btn-outline-dark" id="btnLocationChartDetail">
+                                                <i class="fas fa-search-plus mr-1"></i> Detail
+                                            </button>
+                                        </div>
+                                        <div class="card-body pt-2">
+                                            <div class="env-chart-wrap">
+                                                <canvas id="locationPieChart" height="220"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card env-card">
+                                        <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title font-weight-bold">Pie Prioritas Rating</h3>
+                                            <button type="button" class="btn btn-xs btn-outline-dark" id="btnRatingChartDetail">
+                                                <i class="fas fa-search-plus mr-1"></i> Detail
+                                            </button>
+                                        </div>
+                                        <div class="card-body pt-2">
+                                            <div class="env-chart-wrap">
+                                                <canvas id="ratingPieChart" height="220"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="card env-card">
                                 <div class="card-header border-0 pb-0">
                                     <h3 class="card-title font-weight-bold">Daftar Issue</h3>
@@ -202,6 +234,64 @@
                                         <button type="submit" class="btn btn-dark"><i class="fas fa-save mr-1"></i> Simpan</button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="issueBreakdownModal" tabindex="-1" role="dialog" aria-hidden="true">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content env-modal">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="issueBreakdownTitle">Detail Analisa Issue</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-3" id="issueBreakdownSummary">
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Total Issue</small>
+                                                <strong id="breakdownTotalIssues">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Pending</small>
+                                                <strong id="breakdownPendingIssues">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Proses</small>
+                                                <strong id="breakdownProgressIssues">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Selesai</small>
+                                                <strong id="breakdownResolvedIssues">0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover env-table" id="issueBreakdownTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Lokasi</th>
+                                                    <th>Prioritas</th>
+                                                    <th>Deskripsi</th>
+                                                    <th>Lapor</th>
+                                                    <th>Due</th>
+                                                    <th>Status</th>
+                                                    <th>Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

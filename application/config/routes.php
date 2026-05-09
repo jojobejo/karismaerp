@@ -436,6 +436,7 @@ $route['hrd/penilaian_lingkungan/list']            = 'hrd/C_Hrd/get_environment_
 $route['hrd/penilaian_lingkungan/detail/(:num)']   = 'hrd/C_Hrd/get_environment_issue_detail/$1';
 $route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environment_issue';
 $route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
+$route['hrd/penilaian_lingkungan/breakdown']       = 'hrd/C_Hrd/get_environment_issue_breakdown';
 $route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
 $route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
 $route['hrd/penilaian_lingkungan/locations/delete']= 'hrd/C_Hrd/delete_hrd_location';
