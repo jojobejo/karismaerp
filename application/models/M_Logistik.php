@@ -667,6 +667,12 @@ class M_Logistik extends CI_Model
         ", [$kd_faktur])->result();
     }
 
+    public function sync_so_status_by_faktur($kd_faktur, $so_status)
+    {
+        $this->db->where('no_faktur', $kd_faktur);
+        return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+    }
+
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
@@ -786,10 +792,9 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd_faktur, $data)
     {
         $status_map = [
-            '1' => 'approved',
+            '1' => 'not in draft',
             '2' => 'in_delivery',
-            '3' => 'shipped',
-            '4' => 'in_delivery',
+            '3' => 'in draft',
         ];
 
         $so_status = null;
