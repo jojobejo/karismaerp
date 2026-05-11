@@ -424,7 +424,7 @@ class M_Logistik extends CI_Model
                 ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
-            WHERE so.status IN ('approved', 'draft')
+            WHERE so.status = 'list_do'                             
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = so.no_faktur
@@ -434,17 +434,10 @@ class M_Logistik extends CI_Model
                 WHERE t.kd_faktur = so.no_faktur
             )
             GROUP BY
-                so.no_so,
-                so.no_faktur,
-                so.tanggal_transaksi,
-                so.kd_customer,
-                so.status,
-                c.nama_customer,
-                c.nama_kios,
-                c.alamat_kios,
-                c.regional,
-                r.kd_rute,
-                r.keterangan
+                so.no_so, so.no_faktur, so.tanggal_transaksi,
+                so.kd_customer, so.status, c.nama_customer,
+                c.nama_kios, c.alamat_kios, c.regional,
+                r.kd_rute, r.keterangan
             ORDER BY so.tanggal_transaksi DESC
         ";
 
@@ -644,7 +637,7 @@ class M_Logistik extends CI_Model
             JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
             LEFT JOIN tb_detail_do d ON d.kd_faktur = so.no_faktur
-            WHERE so.status IN ('approved', 'draft')
+            WHERE so.status IN ('draft', 'list_do', 'proses_do')
             AND d.kd_faktur IS NULL
             GROUP BY so.no_so, so.no_faktur
         ")->result();
@@ -792,10 +785,10 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd_faktur, $data)
     {
         $status_map = [
-            '1' => 'draft',
-            '2' => 'in_delivery',
-            '3' => 'in_progress',
-            '4' => 'in_delivery',
+            '1' => 'list_do',
+            '2' => 'proses_do',     // masuk draft DO
+            '3' => 'selesai',       // on delivery
+            '4' => 'proses_do',
         ];
 
         $so_status = null;
@@ -928,22 +921,20 @@ class M_Logistik extends CI_Model
     /**
      * Update status konfirmasi sales pada tb_do
      */
+    // SESUDAH - status 3 = Siap Loading (bukan On Delivery)
     public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
     {
         $now = date('Y-m-d H:i:s');
 
-        // Update tb_do
         $this->db->where('kd_do', $kd_do);
         $this->db->update('tb_do', [
-            'sales_confirm_status' => $action,       // 'siap' atau 'belum_siap'
+            'sales_confirm_status' => $action,
             'sales_confirm_by'     => $confirm_by,
             'sales_confirm_at'     => $now,
             'sales_confirm_note'   => $note,
-            // Jika siap → status 3 (On Delivery), jika belum siap tetap 2
-            'status'               => ($action === 'siap') ? 3 : 2
+            'status'               => ($action === 'siap') ? 3 : 2  // 3 = Siap Loading
         ]);
 
-        // Insert log
         $this->db->insert('tb_log_confirm_sales', [
             'kd_do'      => $kd_do,
             'action'     => $action,

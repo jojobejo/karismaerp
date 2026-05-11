@@ -736,4 +736,31 @@ class C_SalesOrder extends CI_Controller
         echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
         exit;
     }
+
+    public function rekam($id_so)
+    {
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || $so['status'] !== 'draft') {
+            $this->session->set_flashdata('error', 'SO tidak dapat direkam.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
+
+        $this->M_SalesOrder->rekam_so($so['no_faktur']);
+
+        $this->M_ActivityLog->log(
+            $so['no_so']     ?? '',
+            $so['no_faktur'] ?? '',
+            'REKAM_SO',
+            'SO direkam, siap masuk ke Delivery Order.',
+            $this->_getUsername()
+        );
+
+        // ✅ Redirect ke so_list bukan detail
+        $this->session->set_flashdata('success',
+            'SO <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil direkam. ' .
+            'Faktur sudah tersedia di Delivery Order.'
+        );
+        redirect('sales_order');
+    }
 }

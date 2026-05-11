@@ -1358,6 +1358,7 @@ class C_Logistik extends CI_Controller
                 ];
                 $this->M_Logistik->insertlog_do($datalog);
 
+                // ✅ Update status SO ke 'selesai'
                 $faktur_list = $this->db
                     ->select('kd_faktur')
                     ->distinct()
@@ -1366,7 +1367,8 @@ class C_Logistik extends CI_Controller
                     ->result_array();
 
                 foreach ($faktur_list as $fk) {
-                    $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'done');
+                    $this->db->where('no_faktur', $fk['kd_faktur']);
+                    $this->db->update('tbso_sales_order', ['status' => 'selesai']);
                 }
             }
 
@@ -2126,7 +2128,7 @@ class C_Logistik extends CI_Controller
                 'kd_faktur'
             ));
             foreach ($kd_faktur_list as $fk) {
-                $this->M_Logistik->update_sts_pre_do($fk, ['data_sts' => '3']);
+                $this->M_Logistik->update_sts_pre_do($fk, ['data_sts' => '2']);
             }
 
             $this->M_Logistik->deletetmp_detdo($kd_do);

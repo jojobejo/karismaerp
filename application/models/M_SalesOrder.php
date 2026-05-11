@@ -813,6 +813,15 @@ class M_SalesOrder extends CI_Model
         return $this->db->affected_rows();
     }
 
+    public function rekam_so($no_faktur)
+    {
+        $this->db->where('no_faktur', $no_faktur);
+        return $this->db->update('tbso_sales_order', [
+            'status'    => 'list_do',
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
     public function get_log_confirm_sales($kd_do)
     {
         return $this->db->query("

@@ -141,7 +141,6 @@
                                 }
                                 ?>
 
-                                <!-- ✅ Tombol konfirmasi — muncul jika pending ATAU belum_siap -->
                                 <?php if (in_array($confirm_status, ['pending', 'belum_siap', null])) : ?>
                                 <div class="card card-body bg-light">
                                     <h6 class="mb-3">
@@ -149,29 +148,20 @@
                                         Konfirmasi Kesiapan Loading
                                     </h6>
                                     <div class="form-group mb-3">
-                                        <label style="font-size:13px;">Catatan <span class="text-muted">(opsional)</span></label>
+                                        <label style="font-size:13px;">
+                                            Catatan <span class="text-muted">(opsional)</span>
+                                        </label>
                                         <textarea id="confirm_note" class="form-control form-control-sm"
                                                 rows="2"
                                                 placeholder="Tambahkan catatan jika diperlukan..."></textarea>
                                     </div>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <button type="button"
-                                                    class="btn btn-success btn-block btn-confirm-loading"
-                                                    data-kd="<?= $k->kd_do ?>"
-                                                    data-action="siap">
-                                                <i class="fas fa-check mr-1"></i> Siap Loading
-                                            </button>
-                                        </div>
-                                        <div class="col-6">
-                                            <button type="button"
-                                                    class="btn btn-danger btn-block btn-confirm-loading"
-                                                    data-kd="<?= $k->kd_do ?>"
-                                                    data-action="belum_siap">
-                                                <i class="fas fa-times mr-1"></i> Belum Siap
-                                            </button>
-                                        </div>
-                                    </div>
+
+                                    <button type="button"
+                                            class="btn btn-success btn-block btn-confirm-loading"
+                                            data-kd="<?= $k->kd_do ?>"
+                                            data-action="siap">
+                                        <i class="fas fa-check mr-1"></i> Konfirmasi Siap Loading
+                                    </button>
                                 </div>
                                 <?php endif; ?>
                             </div>

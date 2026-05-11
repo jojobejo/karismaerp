@@ -342,7 +342,7 @@
                     var statusBadge = '';
                     var actionBtn   = '';
 
-                    if (l.data_sts === 'approved') {
+                    if (l.data_sts === 'list_do') {
                         statusBadge = '<span class="badge badge-secondary">NOT IN DRAFT</span>';
                         actionBtn   = `
                             <div class="row">

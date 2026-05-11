@@ -62,7 +62,7 @@
                                             <?php if ($d->status == '1') : ?>
                                                 <div class="row">
                                                     <div class="col-auto">
-                                                        <a href="#" class="btn btn-warning">DRAFT</a>
+                                                        <span class="btn btn-warning disabled">Draft</span>
                                                     </div>
                                                     <div class="col-auto">
                                                         <?php foreach ($kdo as $k) : ?>
@@ -70,28 +70,6 @@
                                                                 <i class="fas fa-plus"></i> Tambah Faktur
                                                             </a>
                                                         <?php endforeach; ?>
-                                                    </div>
-                                                </div>
-
-                                            <?php elseif ($d->status == '2' && ($d->sales_confirm_status === 'belum_siap')) : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-danger disabled">
-                                                            <i class="fas fa-times-circle"></i> Belum Siap Loading
-                                                        </span>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <small class="text-muted">
-                                                            Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
-                                                            <?php if (!empty($d->sales_confirm_note)) : ?>
-                                                                &mdash; Catatan: <em><?= htmlspecialchars($d->sales_confirm_note) ?></em>
-                                                            <?php endif; ?>
-                                                        </small>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
-                                                            <i class="fas fa-redo"></i> REPOST
-                                                        </button>
                                                     </div>
                                                 </div>
 
@@ -106,6 +84,45 @@
                                                         <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
                                                             <i class="fas fa-redo"></i> REPOST
                                                         </button>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <?php foreach ($kdo as $k) : ?>
+                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
+                                                                <i class="fas fa-plus"></i> Tambah Faktur
+                                                            </a>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+
+                                            <?php elseif ($d->status == '3') : ?>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <span class="btn btn-success disabled">
+                                                            <i class="fas fa-check-circle"></i> Siap Loading
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <small class="text-muted">
+                                                            Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
+                                                        </small>
+                                                    </div>
+                                                </div>
+
+                                            <?php elseif ($d->status == '4') : ?>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <span class="btn btn-primary disabled">
+                                                            <i class="fas fa-truck-loading"></i> Is Loading
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                            <?php elseif ($d->status == '5') : ?>
+                                                <div class="row">
+                                                    <div class="col-auto">
+                                                        <span class="btn btn-dark disabled">
+                                                            <i class="fas fa-truck"></i> On Delivery
+                                                        </span>
                                                     </div>
                                                 </div>
 
@@ -154,7 +171,7 @@
 
                                     <!-- FORM START -->
                                     <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
-                                        <?php if ($d->status == '1' || ($d->status == '2' && $d->sales_confirm_status === 'belum_siap')) : ?>
+                                        <?php if ($d->status == '1' || $d->status == '2') : ?>
                                             <div class="row mb-2">
                                                 <div class="col-md" hidden>
                                                     <input type="text" class="form-control" value="<?= $k->kd_do ?>" name="do_isi" id="do_isi" readonly>
@@ -256,10 +273,10 @@
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
                                             <tr>
-                                                <?php if ($d->status == '1') : ?>
+                                               <?php if ($d->status == '1' || $d->status == '2') : ?>
                                                     <th rowspan="2">#</th>
-                                                <?php elseif ($d->status == '2') : ?>
                                                 <?php endif; ?>
+
                                                 <th colspan="2">Data Kios</th>
                                                 <th rowspan="2">Rute</th>
                                                 <th colspan="2">TTB</th>
@@ -314,7 +331,7 @@
                                                             $telp2 = $row->telp2;
                                                         }
                                                     ?>
-                                                        <?php if ($d->status == '1') : ?>
+                                                        <?php if ($d->status == '1' || $d->status == '2') : ?>
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
                                                                 <div class="row">
                                                                     <div class="col-6">
@@ -339,7 +356,15 @@
                                                     <?php endif; ?>
                                                     <!-- <td><?= $norut_counter++ ?></td> -->
                                                     <td><?= $row->nm_barang ?></td>
-                                                    <td><?= $row->no_lot ?> - <?= $row->tgl_exp ?></td>
+                                                    <td>
+                                                        <?= $row->no_lot ?> - 
+                                                        <?php
+                                                            $d_exp = $row->tgl_exp;
+                                                            $fmt   = DateTime::createFromFormat('Y-m-d', $d_exp) 
+                                                                    ?: DateTime::createFromFormat('m/d/Y', $d_exp);
+                                                            echo $fmt ? $fmt->format('d/m/Y') : $d_exp;
+                                                        ?>
+                                                    </td>
                                                     <td><?= $row->qty_box ?></td>
                                                     <td><?= $row->qty_pcs ?></td>
                                                     <td><?= $row->qty ?></td>
@@ -350,49 +375,54 @@
                                     </table>
                                     <?php foreach ($kdo as $k) : ?>
                                         <div class="row">
-                                            <?php if ($d->status == '1' || ($d->status == '2' && $d->sales_confirm_status === 'belum_siap')) : ?>
 
+                                            <?php
+                                            $bisa_edit  = ($d->status == '1') || ($d->status == '2');
+                                            $sudah_siap = ($d->status == '3') || ($d->status == '4') || ($d->status == '5');
+                                            ?>
+
+                                            <?php if ($bisa_edit) : ?>
+
+                                                <!-- Rekam / Simpan -->
                                                 <div class="col">
                                                     <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
                                                         <i class="fas fa-check-double"></i>
-                                                        <?= ($d->status == '2') ? 'Rekam Ulang & Kirim ke Sales' : 'Rekam Draft Order' ?>
+                                                        <?= ($d->status == '2') ? 'Perbarui & Kirim' : 'Rekam Draft Order' ?>
                                                     </button>
                                                 </div>
+                                            <?php elseif ($sudah_siap) : ?>
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder" data-kd="<?= $k->kd_do ?>">
+                                                    <button type="button" class="btn btn-info btn-block mt-3"
+                                                            id="btnPrintOrdxer1" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Order
                                                     </button>
                                                 </div>
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-primary btn-block mt-3" id="btnPrintRegis" data-kd="<?= $k->kd_do ?>">
+                                                    <button type="button" class="btn btn-primary btn-block mt-3"
+                                                            id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Register
                                                     </button>
                                                 </div>
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker" data-kd="<?= $k->kd_do ?>">
+                                                    <button type="button" class="btn btn-warning btn-block mt-3"
+                                                            id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Checker
                                                     </button>
                                                 </div>
 
                                             <?php else : ?>
+
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-info btn-block mt-3" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Order
-                                                    </button>
+                                                    <div class="alert alert-info mt-3 mb-0">
+                                                        <i class="fas fa-clock mr-1"></i>
+                                                        Menunggu konfirmasi Sales. Tombol print akan tersedia setelah Sales mengkonfirmasi Siap Loading.
+                                                    </div>
                                                 </div>
-                                                <div class="col">
-                                                    <button type="button" class="btn btn-primary btn-block mt-3" id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Register
-                                                    </button>
-                                                </div>
-                                                <div class="col">
-                                                    <button type="button" class="btn btn-warning btn-block mt-3" id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Checker
-                                                    </button>
-                                                </div>
+
                                             <?php endif; ?>
+
                                         </div>
-                                    <?php endforeach; ?>
+                                        <?php endforeach; ?>
                                     <!-- LOGISTIK END -->
 
                                     <!-- TC START -->

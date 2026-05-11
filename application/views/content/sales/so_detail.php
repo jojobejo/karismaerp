@@ -114,20 +114,26 @@
                                         <td>
                                             <?php
                                             $badge = [
-                                                'draft'             => 'secondary',
+                                                'draft'      => 'secondary',
+                                                'list_do'    => 'info',
+                                                'proses_do'  => 'primary',
+                                                'selesai'    => 'success',
+                                                'cancelled'  => 'danger',
                                                 'waiting_approval'  => 'warning',
                                                 'approved'          => 'info',
                                                 'partial_delivered' => 'primary',
                                                 'completed'         => 'success',
-                                                'cancelled'         => 'danger',
                                             ];
                                             $label = [
-                                                'draft'             => 'Draft',
+                                                'draft'      => 'Draft',
+                                                'list_do'    => 'List DO',
+                                                'proses_do'  => 'Proses DO',
+                                                'selesai'    => 'Selesai',
+                                                'cancelled'  => 'Cancelled',
                                                 'waiting_approval'  => 'Waiting Approval',
                                                 'approved'          => 'Approved',
                                                 'partial_delivered' => 'Partial Delivered',
                                                 'completed'         => 'Completed',
-                                                'cancelled'         => 'Cancelled',
                                             ];
                                             $b = $badge[$so['status']] ?? 'secondary';
                                             $l = $label[$so['status']] ?? $so['status'];
@@ -282,6 +288,35 @@
                     </div>
                 </div>
 
+                <?php if ($so['status'] === 'draft'): ?>
+                <div class="d-flex justify-content-end mt-3 mb-4">
+
+                    <form method="post"
+                        action="<?= base_url('sales_order/rekam/' . $so['id_so']) ?>"
+                        id="formRekamSO">
+
+                        <button type="button"
+                                id="btnRekamSO"
+                                class="btn btn-success shadow"
+                                style="
+                                    border-radius: 50px;
+                                    padding: 14px 30px;
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    box-shadow: 0 4px 15px rgba(40,167,69,0.4) !important;
+                                    letter-spacing: 0.3px;
+                                    min-width: 190px;
+                                ">
+
+                            <i class="fas fa-check-double mr-2"></i>
+                            Rekam SO
+                        </button>
+
+                    </form>
+
+                </div>
+                <?php endif; ?>
+
             </div>
         </section>
     </div>
@@ -293,4 +328,22 @@
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
+<script>
+$(document).ready(function () {
+
+    // Tombol Rekam SO
+    $('#btnRekamSO').on('click', function () {
+        if (!confirm('Rekam SO ini?\nFaktur akan tampil di Delivery Order dan status berubah ke List DO.')) {
+            return;
+        }
+
+        var btn = $(this);
+        btn.prop('disabled', true)
+           .html('<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...');
+
+        $('#formRekamSO').submit();
+    });
+
+});
+</script>
 </body>

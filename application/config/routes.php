@@ -347,6 +347,7 @@ $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activi
 $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
+$route['sales_order/rekam/(:any)']                  = 'sales/C_SalesOrder/rekam/$1';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
