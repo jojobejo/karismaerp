@@ -2005,22 +2005,25 @@ class C_Logistik extends CI_Controller
     {
         switch ($action) {
             case 'revertdetail':
-                $update_pre_do = array(
-                    'data_sts'    => '1',
-                    'barang_sts'  => '1'
-                );
+                $update_pre_do = [
+                    'data_sts'   => '1',
+                    'barang_sts' => '1'
+                ];
 
+                // Update status SO kembali ke draft
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);
                 $this->M_Logistik->del_tmp_do_det($kd);
 
-                redirect('detail_fk/' . $kd);
+                // ✅ Redirect ke create_do bukan detail_fk
+                redirect('create_do');
                 break;
+
             case 'formlist':
-                $update_pre_do = array(
-                    'data_sts'    => '1',
-                    'barang_sts'  => '1'
-                );
+                $update_pre_do = [
+                    'data_sts'   => '1',
+                    'barang_sts' => '1'
+                ];
 
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);

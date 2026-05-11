@@ -113,7 +113,7 @@
                                         <select id="filterStatus" class="form-control form-control-sm">
                                             <option value="">— Semua Status —</option>
                                             <option value="1">Draft</option>
-                                            <option value="2_pending">Menunggu Konfirmasi Sales</option>
+                                            <option value="2_pending">Menunggu Konfirmasi</option>
                                             <option value="2_belum_siap">Belum Siap Loading</option>
                                             <option value="3">On Delivery</option>
                                             <option value="4">On Site</option>
@@ -173,8 +173,8 @@
                                                 $confirmCode = '';
                                             } elseif ($status == '2') {
                                                 if ($confirm === 'pending' || $confirm === null) {
-                                                    $datasts    = '<span class="badge badge-info">Menunggu Konfirmasi Sales</span>
-                                                                   <br><small class="text-danger"><i class="fas fa-exclamation-circle"></i> Sales belum konfirmasi siap loading</small>';
+                                                    $datasts    = '<span class="badge badge-info">Menunggu Konfirmasi</span>
+                                                                   <br><small class="text-danger"><i class="fas fa-exclamation-circle"></i> Sales belum konfirmasi</small>';
                                                     $statusCode  = '2';
                                                     $confirmCode = 'pending';
                                                 } elseif ($confirm === 'belum_siap') {

@@ -34,107 +34,145 @@
                     <div class="card-body">
 
                         <!-- Info DO -->
-                        <div class="col-md-6">
-                            <table class="table table-sm table-borderless">
-                                <tr><td><strong>Kode DO</strong></td><td>: <?= $k->kd_do ?></td></tr>
-                                <tr><td><strong>Regional</strong></td><td>: <?= $k->regional ?></td></tr>
-                                <tr><td><strong>Total Faktur</strong></td><td>: <?= $k->totalfaktur ?></td></tr>
-                                <tr><td><strong>Total Barang</strong></td><td>: <?= $k->total_barang ?></td></tr>
-                            </table>
+                        <div class="row mb-4">
+                            <!-- Kiri: Info + Progress -->
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Kode DO</strong></td><td>: <?= $k->kd_do ?></td></tr>
+                                    <tr><td><strong>Regional</strong></td><td>: <?= $k->regional ?></td></tr>
+                                    <tr><td><strong>Total Faktur</strong></td><td>: <?= $k->totalfaktur ?></td></tr>
+                                    <tr><td><strong>Total Barang</strong></td><td>: <?= $k->total_barang ?></td></tr>
+                                </table>
 
-                            <?php
-                            $tonase    = (float)$k->total_tonase_faktur;
-                            $kubikasi  = (float)$k->total_kubikasi;
-                            $max_ton   = 6;
-                            $max_kub   = 9;
+                                <?php
+                                $tonase   = (float)$k->total_tonase_faktur;
+                                $kubikasi = (float)$k->total_kubikasi;
+                                $max_ton  = 6;
+                                $max_kub  = 9;
 
-                            $pct_ton = min(100, round(($tonase   / $max_ton) * 100, 1));
-                            $pct_kub = min(100, round(($kubikasi / $max_kub) * 100, 1));
+                                $pct_ton = min(100, round(($tonase   / $max_ton) * 100, 1));
+                                $pct_kub = min(100, round(($kubikasi / $max_kub) * 100, 1));
 
-                            $sisa_ton = max(0, round($max_ton - $tonase,   3));
-                            $sisa_kub = max(0, round($max_kub - $kubikasi, 4));
+                                $sisa_ton = max(0, round($max_ton - $tonase,   3));
+                                $sisa_kub = max(0, round($max_kub - $kubikasi, 4));
 
-                            // warna bar tonase
-                            if ($pct_ton >= 100)      $bar_ton = 'danger';
-                            elseif ($pct_ton >= 80)   $bar_ton = 'warning';
-                            else                      $bar_ton = 'success';
+                                $bar_ton = $pct_ton >= 100 ? 'danger' : ($pct_ton >= 80 ? 'warning' : 'success');
+                                $bar_kub = $pct_kub >= 100 ? 'danger' : ($pct_kub >= 80 ? 'warning' : 'success');
+                                ?>
 
-                            // warna bar kubikasi
-                            if ($pct_kub >= 100)      $bar_kub = 'danger';
-                            elseif ($pct_kub >= 80)   $bar_kub = 'warning';
-                            else                      $bar_kub = 'success';
-                            ?>
-
-                            <!-- TONASE -->
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span><strong><i class="fas fa-weight mr-1"></i>Tonase</strong></span>
-                                    <span>
-                                        <strong><?= $tonase ?></strong> / <?= $max_ton ?> TON
-                                        <?php if ($pct_ton >= 100): ?>
-                                            <span class="badge badge-danger ml-1">PENUH</span>
-                                        <?php elseif ($pct_ton >= 80): ?>
-                                            <span class="badge badge-warning ml-1">HAMPIR PENUH</span>
-                                        <?php endif; ?>
-                                    </span>
-                                </div>
-                                <div class="progress" style="height:20px; border-radius:4px;">
-                                    <div class="progress-bar bg-<?= $bar_ton ?> progress-bar-striped"
-                                        role="progressbar"
-                                        style="width:<?= $pct_ton ?>%; font-size:12px; line-height:20px;"
-                                        aria-valuenow="<?= $pct_ton ?>"
-                                        aria-valuemin="0" aria-valuemax="100">
-                                        <?= $pct_ton ?>%
+                                <!-- TONASE -->
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><strong><i class="fas fa-weight mr-1"></i>Tonase</strong></span>
+                                        <span>
+                                            <strong><?= $tonase ?></strong> / <?= $max_ton ?> TON
+                                            <?php if ($pct_ton >= 100): ?>
+                                                <span class="badge badge-danger ml-1">PENUH</span>
+                                            <?php elseif ($pct_ton >= 80): ?>
+                                                <span class="badge badge-warning ml-1">HAMPIR PENUH</span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height:20px;border-radius:4px;">
+                                        <div class="progress-bar bg-<?= $bar_ton ?> progress-bar-striped"
+                                            role="progressbar"
+                                            style="width:<?= $pct_ton ?>%;font-size:12px;line-height:20px;"
+                                            aria-valuenow="<?= $pct_ton ?>" aria-valuemin="0" aria-valuemax="100">
+                                            <?= $pct_ton ?>%
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                        <span>Terpakai: <?= $tonase ?> TON</span>
+                                        <span>Sisa: <strong class="text-<?= $sisa_ton <= 0 ? 'danger' : 'success' ?>"><?= $sisa_ton ?> TON</strong></span>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between mt-1" style="font-size:12px; color:#6c757d;">
-                                    <span>Terpakai: <?= $tonase ?> TON</span>
-                                    <span>Sisa: <strong class="text-<?= $sisa_ton <= 0 ? 'danger' : 'success' ?>"><?= $sisa_ton ?> TON</strong></span>
+
+                                <!-- KUBIKASI -->
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><strong><i class="fas fa-cube mr-1"></i>Kubikasi</strong></span>
+                                        <span>
+                                            <strong><?= $kubikasi ?></strong> / <?= $max_kub ?> m³
+                                            <?php if ($pct_kub >= 100): ?>
+                                                <span class="badge badge-danger ml-1">PENUH</span>
+                                            <?php elseif ($pct_kub >= 80): ?>
+                                                <span class="badge badge-warning ml-1">HAMPIR PENUH</span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height:20px;border-radius:4px;">
+                                        <div class="progress-bar bg-<?= $bar_kub ?> progress-bar-striped"
+                                            role="progressbar"
+                                            style="width:<?= $pct_kub ?>%;font-size:12px;line-height:20px;"
+                                            aria-valuenow="<?= $pct_kub ?>" aria-valuemin="0" aria-valuemax="100">
+                                            <?= $pct_kub ?>%
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                        <span>Terpakai: <?= $kubikasi ?> m³</span>
+                                        <span>Sisa: <strong class="text-<?= $sisa_kub <= 0 ? 'danger' : 'success' ?>"><?= $sisa_kub ?> m³</strong></span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- KUBIKASI -->
-                            <div class="mb-2">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span><strong><i class="fas fa-cube mr-1"></i>Kubikasi</strong></span>
-                                    <span>
-                                        <strong><?= $kubikasi ?></strong> / <?= $max_kub ?> m³
-                                        <?php if ($pct_kub >= 100): ?>
-                                            <span class="badge badge-danger ml-1">PENUH</span>
-                                        <?php elseif ($pct_kub >= 80): ?>
-                                            <span class="badge badge-warning ml-1">HAMPIR PENUH</span>
-                                        <?php endif; ?>
-                                    </span>
-                                </div>
-                                <div class="progress" style="height:20px; border-radius:4px;">
-                                    <div class="progress-bar bg-<?= $bar_kub ?> progress-bar-striped"
-                                        role="progressbar"
-                                        style="width:<?= $pct_kub ?>%; font-size:12px; line-height:20px;"
-                                        aria-valuenow="<?= $pct_kub ?>"
-                                        aria-valuemin="0" aria-valuemax="100">
-                                        <?= $pct_kub ?>%
+                            <!-- ✅ Kanan: Status konfirmasi + Tombol -->
+                            <div class="col-md-6">
+                                <?php
+                                $confirm_status = $k->sales_confirm_status ?? 'pending';
+                                if ($confirm_status === 'pending' || $confirm_status === null) {
+                                    echo '<div class="alert alert-warning">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            <strong>Menunggu Konfirmasi</strong><br>
+                                        </div>';
+                                } elseif ($confirm_status === 'siap') {
+                                    echo '<div class="alert alert-success">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            <strong>Siap Loading</strong><br>
+                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small><br>
+                                            <small>Waktu: ' . ($k->sales_confirm_at ?? '-') . '</small>
+                                        </div>';
+                                } elseif ($confirm_status === 'belum_siap') {
+                                    echo '<div class="alert alert-danger">
+                                            <i class="fas fa-times-circle mr-1"></i>
+                                            <strong>Belum Siap Loading</strong><br>
+                                            <small>Catatan: ' . htmlspecialchars($k->sales_confirm_note ?? '-') . '</small><br>
+                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small>
+                                        </div>';
+                                }
+                                ?>
+
+                                <!-- ✅ Tombol konfirmasi — muncul jika pending ATAU belum_siap -->
+                                <?php if (in_array($confirm_status, ['pending', 'belum_siap', null])) : ?>
+                                <div class="card card-body bg-light">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-clipboard-check mr-1"></i>
+                                        Konfirmasi Kesiapan Loading
+                                    </h6>
+                                    <div class="form-group mb-3">
+                                        <label style="font-size:13px;">Catatan <span class="text-muted">(opsional)</span></label>
+                                        <textarea id="confirm_note" class="form-control form-control-sm"
+                                                rows="2"
+                                                placeholder="Tambahkan catatan jika diperlukan..."></textarea>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <button type="button"
+                                                    class="btn btn-success btn-block btn-confirm-loading"
+                                                    data-kd="<?= $k->kd_do ?>"
+                                                    data-action="siap">
+                                                <i class="fas fa-check mr-1"></i> Siap Loading
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button type="button"
+                                                    class="btn btn-danger btn-block btn-confirm-loading"
+                                                    data-kd="<?= $k->kd_do ?>"
+                                                    data-action="belum_siap">
+                                                <i class="fas fa-times mr-1"></i> Belum Siap
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between mt-1" style="font-size:12px; color:#6c757d;">
-                                    <span>Terpakai: <?= $kubikasi ?> m³</span>
-                                    <span>Sisa: <strong class="text-<?= $sisa_kub <= 0 ? 'danger' : 'success' ?>"><?= $sisa_kub ?> m³</strong></span>
-                                </div>
-                            </div>
-
-                            <!-- RINGKASAN KAPASITAS -->
-                            <div class="alert alert-<?= ($pct_ton >= 100 || $pct_kub >= 100) ? 'danger' : (($pct_ton >= 80 || $pct_kub >= 80) ? 'warning' : 'info') ?> py-2 mb-0" style="font-size:13px;">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                <?php if ($pct_ton >= 100 && $pct_kub >= 100): ?>
-                                    Tonase <strong>dan</strong> kubikasi sudah penuh.
-                                <?php elseif ($pct_ton >= 100): ?>
-                                    Tonase sudah mencapai batas maksimal.
-                                <?php elseif ($pct_kub >= 100): ?>
-                                    Kubikasi sudah mencapai batas maksimal.
-                                <?php elseif ($pct_ton >= 80 || $pct_kub >= 80): ?>
-                                    Kapasitas hampir penuh, pertimbangkan sebelum menambah faktur.
-                                <?php else: ?>
-                                    Kapasitas masih tersedia.
-                                    Sisa: <strong><?= $sisa_ton ?> TON</strong> / <strong><?= $sisa_kub ?> m³</strong>
                                 <?php endif; ?>
                             </div>
                         </div>

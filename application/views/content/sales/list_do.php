@@ -131,28 +131,37 @@
                             <tbody>
                                 <?php foreach ($listdo as $i) :
                                     $confirm = $i->sales_confirm_status ?? 'pending';
-                                    if ($confirm === 'pending' || $confirm === null) {
-                                        $badge = '<span class="badge badge-warning">Menunggu Konfirmasi</span>';
-                                    } elseif ($confirm === 'siap') {
-                                        $badge = '<span class="badge badge-success">Siap Loading</span>';
+
+                                    // Badge status
+                                    if ($confirm === 'siap') {
+                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#0a3d1f;background:#c3e6cb;padding:3px 10px;border-radius:20px;border:1px solid #82c99a;">
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Siap Loading
+                                                </span>';
+                                    } elseif ($confirm === 'belum_siap') {
+                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#5c0a0a;background:#f5c6cb;padding:3px 10px;border-radius:20px;border:1px solid #e8909a;">
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#c62828;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Belum Siap
+                                                </span>';
                                     } else {
-                                        $badge = '<span class="badge badge-danger">Belum Siap Loading</span>';
+                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#533400;background:#fde7aa;padding:3px 10px;border-radius:20px;border:1px solid #f5c76a;">
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#d4820a;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Menunggu
+                                                </span>';
                                     }
-                                ?>
+
+                                    $icon_eye = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+                                    ?>
                                     <tr>
                                         <td><?= $i->kddo ?></td>
                                         <td><?= $i->createat ?></td>
                                         <td><?= $i->rute ?></td>
-                                        <td><?= $i->totalfaktur ?></td>
-                                        <td><?= $i->totalbarang ?></td>
+                                        <td class="text-center"><?= $i->totalfaktur ?></td>
+                                        <td class="text-center"><?= $i->totalbarang ?></td>
                                         <td><?= $badge ?></td>
-                                        <td>
+                                        <td class="text-center">
                                             <a href="<?= base_url('sales_order/detail_do/') . $i->kddo ?>"
-                                               class="btn btn-sm btn-info btn-block">
-                                                <i class="fas fa-eye"></i>
-                                                <?php if ($confirm === 'pending') : ?>
-                                                    <span class="badge badge-light ml-1">Konfirmasi</span>
-                                                <?php endif; ?>
+                                            style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#e8f4fd;color:#1a73e8;border-radius:8px;border:1px solid #b8d9f8;text-decoration:none;transition:all .15s ease;"
+                                            aria-label="Detail DO"
+                                            title="Lihat Detail">
+                                                <?= $icon_eye ?>
                                             </a>
                                         </td>
                                     </tr>
@@ -194,4 +203,31 @@ $(document).ready(function () {
         table.column(5).search($(this).val()).draw();
     });
 });
+function konfirmDO(kd_do, action) {
+    var label = action === 'siap' ? 'Siap Loading' : 'Belum Siap Loading';
+    if (!confirm('Konfirmasi: ' + label + ' untuk DO ' + kd_do + '?')) return;
+
+    var note = '';
+    if (action === 'belum_siap') {
+        note = prompt('Catatan (opsional):') || '';
+    }
+
+    $.ajax({
+        url: '<?= base_url("sales_order/confirm_loading") ?>',
+        type: 'POST',
+        data: { kd_do: kd_do, action: action, note: note },
+        dataType: 'json',
+        success: function (res) {
+            if (res.msg === 'success') {
+                alert(res.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + res.message);
+            }
+        },
+        error: function () {
+            alert('Terjadi kesalahan koneksi.');
+        }
+    });
+}
 </script>
