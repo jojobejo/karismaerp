@@ -125,37 +125,39 @@
         <!-- /.sidebar-menu -->
       </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'SC') : ?>
-      <div class="sidebar">
-        <!-- Sidebar Menu -->
-        <nav class="mt-2">
-          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order') ?>" class="nav-link">
-                <i class="nav-icon fas fa-database"></i>
-                <p>
-                  Sales Order
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('sales_order/list_do') ?>" class="nav-link">
-                <i class="nav-icon fas fa-database"></i>
-                <p>
-                  List Delivery Order
-                </p>
-              </a>
-            </li>
-            <li class="nav-item">
-              <a href="<?php echo base_url('logout') ?>" class="nav-link">
-                <i class="nav-icon fas fa-sign-out-alt"></i>
-                <p>
-                  Log Out
-                </p>
-              </a>
-            </li>
-        </nav>
-        <!-- /.sidebar-menu -->
-      </div>
+    <div class="sidebar">
+      <!-- Sidebar Menu -->
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+          <!-- Sales Order -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('sales_order') ?>" class="nav-link">
+              <i class="nav-icon fas fa-shopping-cart"></i>
+              <p>Sales Order</p>
+            </a>
+          </li>
+
+          <!-- Delivery Order -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('sales_order/list_do') ?>" class="nav-link">
+              <i class="nav-icon fas fa-truck"></i>
+              <p>List Delivery Order</p>
+            </a>
+          </li>
+
+          <!-- Logout -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('logout') ?>" class="nav-link">
+              <i class="nav-icon fas fa-sign-out-alt"></i>
+              <p>Log Out</p>
+            </a>
+          </li>
+
+        </ul>
+      </nav>
+      <!-- /.sidebar-menu -->
+    </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINICS') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->

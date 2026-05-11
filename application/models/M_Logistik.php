@@ -667,6 +667,12 @@ class M_Logistik extends CI_Model
         ", [$kd_faktur])->result();
     }
 
+    public function sync_so_status_by_faktur($kd_faktur, $so_status)
+    {
+        $this->db->where('no_faktur', $kd_faktur);
+        return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+    }
+
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
@@ -786,9 +792,9 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd_faktur, $data)
     {
         $status_map = [
-            '1' => 'approved',
+            '1' => 'draft',
             '2' => 'in_delivery',
-            '3' => 'shipped',
+            '3' => 'in_progress',
             '4' => 'in_delivery',
         ];
 
@@ -798,7 +804,7 @@ class M_Logistik extends CI_Model
         }
 
         if ($so_status !== null) {
-            $this->db->where('no_faktur', $kd_faktur); // ganti no_so → no_faktur
+            $this->db->where('no_faktur', $kd_faktur);
             return $this->db->update('tbso_sales_order', ['status' => $so_status]);
         }
 
@@ -1128,41 +1134,79 @@ class M_Logistik extends CI_Model
 
     public function detail_fk($kd)
     {
-        return $this->db->query("SELECT
-            a.id,
-            a.kd_faktur,
-            a.kd_barang,
-            c.nama_barang,
-            a.qty,
-            c.berat as gr_berat,
-            (c.berat/1000) as convert_kg,
-            (a.qty * (c.berat/1000)) AS total_berat,
-            a.satuan,
-            a.no_lot,
-            a.tgl_exp,
-            a.barang_sts
-            FROM tb_pre_do a
-            LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-            GROUP BY a.id
-        ")->result();
+        // Coba ambil dari tbso_sales_order_detail dulu
+        $result = $this->db->query("
+            SELECT
+                sod.id                              AS id,
+                so.no_faktur                        AS kd_faktur,
+                sod.kd_barang,
+                mb.nama_barang,
+                sod.qty,
+                mb.berat                            AS gr_berat,
+                (mb.berat / 1000)                   AS convert_kg,
+                (sod.qty * (mb.berat / 1000))       AS total_berat,
+                sod.satuan,
+                sod.no_lot,
+                sod.expired_date                    AS tgl_exp,
+                1                                   AS barang_sts
+            FROM tbso_sales_order so
+            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
+            JOIN tb_master_barang_all mb ON mb.kd_barang = sod.kd_barang
+            WHERE so.no_faktur = ?
+        ", [$kd])->result();
+
+        // Fallback ke tb_pre_do jika kosong
+        if (empty($result)) {
+            $result = $this->db->query("
+                SELECT
+                    a.id, a.kd_faktur, a.kd_barang,
+                    c.nama_barang,
+                    a.qty,
+                    c.berat     AS gr_berat,
+                    (c.berat/1000)          AS convert_kg,
+                    (a.qty * (c.berat/1000)) AS total_berat,
+                    a.satuan, a.no_lot, a.tgl_exp, a.barang_sts
+                FROM tb_pre_do a
+                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+                WHERE a.kd_faktur = ?
+                GROUP BY a.id
+            ", [$kd])->result();
+        }
+
+        return $result;
     }
 
     public function det_customer($kd)
     {
-        return $this->db->query("SELECT
-            b.nama_customer,
-            b.nama_kios,
-            b.regional,
-            a.upload_sts,
-            a.data_sts,
-            a.barang_sts
-            FROM tb_pre_do a
-            JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            WHERE a.kd_faktur = '$kd'
+        // Coba dari tbso_sales_order dulu
+        $result = $this->db->query("
+            SELECT
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                so.status       AS upload_sts,
+                so.status       AS data_sts,
+                1               AS barang_sts
+            FROM tbso_sales_order so
+            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.no_faktur = ?
             LIMIT 1
-        ")->result();
+        ", [$kd])->result();
+
+        // Fallback ke tb_pre_do
+        if (empty($result)) {
+            $result = $this->db->query("
+                SELECT
+                    b.nama_customer, b.nama_kios, b.regional,
+                    a.upload_sts, a.data_sts, a.barang_sts
+                FROM tb_pre_do a
+                JOIN tb_customer b ON b.kd_customer = a.kd_customer
+                WHERE a.kd_faktur = ?
+                LIMIT 1
+            ", [$kd])->result();
+        }
+
+        return $result;
     }
 
     public function select_driver()
@@ -1200,6 +1244,8 @@ class M_Logistik extends CI_Model
             ->get()
             ->row();
     }
+
+    
 
     public function getbarangics()
     {
