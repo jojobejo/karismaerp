@@ -134,6 +134,7 @@
                                 <?php foreach ($kdo as $k) : ?>
                                     <input type="hidden" id="do_isi" name="do_isi" value="<?= $k->kd_do ?>">
                                     <?php $this->load->view('content/logistik/modal/modal_detail_do'); ?>
+
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
                                         <div>: <?= $k->kd_do ?></div>
@@ -152,121 +153,142 @@
                                         <div>: <?= $k->regional ?></div>
                                         <div><a href="#" data-toggle="modal" data-target="#edited_rute" class="btn btn-warning btn-sm ml-2"><i class="fas fa-pencil-alt"></i></a></div>
                                     </div>
+
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Total Customer</div>
                                         <div>: <?= $k->totalfaktur ?></div>
                                     </div>
+
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Total Barang</div>
                                         <div>: <?= $k->total_barang ?></div>
                                     </div>
-                                    <div class="mb-2 d-flex">
-                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Tonase</div>
-                                        <div>: <?= $k->total_tonase_faktur . ' (TON)' ?></div>
+
+                                    <!-- ============================================================
+                                        TONASE & KUBIKASI — dengan progress bar & kuota
+                                    ============================================================ -->
+                                    <?php
+                                        // Batas default (sesuai konstanta di M_SalesOrder)
+                                        $batas_ton = 6;    // ton
+                                        $batas_kub = 9;    // m³
+
+                                        $total_ton = (float)($k->total_tonase_faktur ?? 0);
+                                        $total_kub = (float)($k->total_kubikasi      ?? 0);
+
+                                        $pct_ton = $batas_ton > 0 ? min(($total_ton / $batas_ton) * 100, 100) : 0;
+                                        $pct_kub = $batas_kub > 0 ? min(($total_kub / $batas_kub) * 100, 100) : 0;
+
+                                        $color_ton = $total_ton > $batas_ton ? 'danger' : 'success';
+                                        $color_kub = $total_kub > $batas_kub ? 'danger' : 'info';
+
+                                        $sisa_ton = max(0, $batas_ton - $total_ton);
+                                        $sisa_kub = max(0, $batas_kub - $total_kub);
+                                    ?>
+
+                                    <div class="row mt-3 mb-3">
+                                        <!-- Tonase -->
+                                        <div class="col-md-6">
+                                            <div class="card card-outline card-<?= $color_ton ?> mb-0">
+                                                <div class="card-header py-2">
+                                                    <h6 class="card-title mb-0">
+                                                        <i class="fas fa-weight mr-1"></i> Tonase
+                                                        <?php if ($total_ton > $batas_ton): ?>
+                                                            <span class="badge badge-danger ml-1">Melebihi!</span>
+                                                        <?php endif; ?>
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body py-2">
+                                                    <!-- Progress bar -->
+                                                    <div class="progress mb-2" style="height:14px; border-radius:7px;">
+                                                        <div class="progress-bar bg-<?= $color_ton ?> progress-bar-striped"
+                                                            role="progressbar"
+                                                            style="width: <?= number_format($pct_ton, 2) ?>%"
+                                                            title="<?= number_format($pct_ton, 1) ?>%">
+                                                            <?php if ($pct_ton >= 20): ?>
+                                                                <?= number_format($pct_ton, 1) ?>%
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Info baris -->
+                                                    <div class="row text-center small">
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Terpakai</div>
+                                                            <div class="font-weight-bold text-<?= $color_ton ?>">
+                                                                <?= number_format($total_ton, 3) ?> ton
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Batas</div>
+                                                            <div class="font-weight-bold">
+                                                                <?= number_format($batas_ton, 1) ?> ton
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Sisa</div>
+                                                            <div class="font-weight-bold text-<?= $sisa_ton > 0 ? 'success' : 'danger' ?>">
+                                                                <?= $sisa_ton > 0
+                                                                    ? number_format($sisa_ton, 3).' ton'
+                                                                    : '<i class="fas fa-exclamation-triangle"></i> Penuh' ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Kubikasi -->
+                                        <div class="col-md-6">
+                                            <div class="card card-outline card-<?= $color_kub ?> mb-0">
+                                                <div class="card-header py-2">
+                                                    <h6 class="card-title mb-0">
+                                                        <i class="fas fa-cube mr-1"></i> Kubikasi
+                                                        <?php if ($total_kub > $batas_kub): ?>
+                                                            <span class="badge badge-danger ml-1">Melebihi!</span>
+                                                        <?php endif; ?>
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body py-2">
+                                                    <!-- Progress bar -->
+                                                    <div class="progress mb-2" style="height:14px; border-radius:7px;">
+                                                        <div class="progress-bar bg-<?= $color_kub ?> progress-bar-striped"
+                                                            role="progressbar"
+                                                            style="width: <?= number_format($pct_kub, 2) ?>%"
+                                                            title="<?= number_format($pct_kub, 1) ?>%">
+                                                            <?php if ($pct_kub >= 20): ?>
+                                                                <?= number_format($pct_kub, 1) ?>%
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Info baris -->
+                                                    <div class="row text-center small">
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Terpakai</div>
+                                                            <div class="font-weight-bold text-<?= $color_kub ?>">
+                                                                <?= number_format($total_kub, 4) ?> m³
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Batas</div>
+                                                            <div class="font-weight-bold">
+                                                                <?= number_format($batas_kub, 1) ?> m³
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4">
+                                                            <div class="text-muted">Sisa</div>
+                                                            <div class="font-weight-bold text-<?= $sisa_kub > 0 ? 'success' : 'danger' ?>">
+                                                                <?= $sisa_kub > 0
+                                                                    ? number_format($sisa_kub, 4).' m³'
+                                                                    : '<i class="fas fa-exclamation-triangle"></i> Penuh' ?>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mb-2 d-flex">
-                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Kubikasi</div>
-                                        <div>: <?= $k->total_kubikasi . ' (m³)' ?></div>
-                                    </div>
-
-                                    <!-- FORM START -->
-                                    <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
-                                        <?php if ($d->status == '1' || $d->status == '2') : ?>
-                                            <div class="row mb-2">
-                                                <div class="col-md" hidden>
-                                                    <input type="text" class="form-control" value="<?= $k->kd_do ?>" name="do_isi" id="do_isi" readonly>
-                                                </div>
-                                                <div class="col-md">
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-calendar"></i></span>
-                                                        </div>
-                                                        <input type="date" class="form-control" placeholder="Tanggal Kirim"
-                                                            value="<?= $d->tgl_pengiriman ?? '' ?>"
-                                                            name="tgl_isi" id="tgl_isi">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row mb-2">
-                                                <div class="col-md">
-                                                    <div class="d-flex align-items-center flex-wrap gap-3 pt-2">
-                                                        <span class="me-3 fw-semibold">Pilih Pengiriman:</span>
-                                                        <div class="form-check form-check-inline">
-                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman"
-                                                                id="pengiriman_kantor" value="expedisi_kantor" checked>
-                                                            <label class="form-check-label" for="pengiriman_kantor">Expedisi Kantor</label>
-                                                        </div>
-                                                        <div class="form-check form-check-inline">
-                                                            <input class="form-check-input" type="radio" name="jenis_pengiriman"
-                                                                id="pengiriman_luar" value="expedisi_luar">
-                                                            <label class="form-check-label" for="pengiriman_luar">Expedisi Luar</label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row mb-2">
-                                                <div class="col-md" id="select_driver_wrapper">
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-truck"></i></span>
-                                                        </div>
-                                                        <select name="driver_isi" id="driver_isi" class="form-control" required>
-                                                            <option value="" selected disabled>-- Pilih Driver --</option>
-                                                            <?php foreach ($driver as $driver) : ?>
-                                                                <option value="<?= $driver->kd_driver ?>"
-                                                                    <?= ($d->driver == $driver->kd_driver) ? 'selected' : '' ?>>
-                                                                    <?= $driver->nama_driver ?>
-                                                                </option>
-                                                            <?php endforeach ?>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md" id="select_truck_wrapper">
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
-                                                        </div>
-                                                        <select name="truck_isi" id="truck_isi" class="form-control" required>
-                                                            <option value="" selected disabled>-- Pilih Kendaraan --</option>
-                                                            <?php foreach ($truck as $truck) : ?>
-                                                                <option value="<?= $truck->id ?>"
-                                                                    <?= ($d->nolambung == $truck->id) ? 'selected' : '' ?>>
-                                                                    <?= $truck->nm_truk ?>
-                                                                </option>
-                                                            <?php endforeach ?>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md d-none" id="input_driver_luar_wrapper">
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                                        </div>
-                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi"
-                                                            placeholder="Nama Driver">
-                                                    </div>
-                                                </div>
-
-                                                <div class="col-md d-none" id="input_truck_luar_wrapper">
-                                                    <div class="input-group">
-                                                        <div class="input-group-prepend">
-                                                            <span class="input-group-text"><i class="fas fa-truck-moving"></i></span>
-                                                        </div>
-                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi"
-                                                            placeholder="No Lambung Truk">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                        <?php else : ?>
-                                            {{-- Status lain: tampilkan info saja --}}
-                                        <?php endif; ?>
-                                    <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
-                                    <?php endif; ?>
+                                    <!-- END TONASE KUBIKASI -->
                                 <?php endforeach; ?>
                                 <!-- END FORM -->
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
@@ -393,7 +415,7 @@
                                             <?php elseif ($sudah_siap) : ?>
                                                 <div class="col">
                                                     <button type="button" class="btn btn-info btn-block mt-3"
-                                                            id="btnPrintOrdxer1" data-kd="<?= $k->kd_do ?>">
+                                                            id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Order
                                                     </button>
                                                 </div>
@@ -402,7 +424,7 @@
                                                             id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
                                                         <i class="fas fa-print"></i> Print Register
                                                     </button>
-                                                </div>
+                                                </div>  
                                                 <div class="col">
                                                     <button type="button" class="btn btn-warning btn-block mt-3"
                                                             id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
