@@ -351,6 +351,7 @@ class M_SalesOrder extends CI_Model
             $row['berat_gram']  = (float)($row['tonase_satuan']   ?? 0);
             $row['kubikasi_m3'] = (float)($row['kubikasi_satuan'] ?? 0);
             $row['hrg_pokok']   = (float)($row['hrg_pokok']       ?? 0);
+            $row['disc']        = (float)($row['disc']            ?? 0);
             $row['gudang']      = $row['gudang_id'] ?? '';
 
             if (!isset($row['qty_box']) || $row['qty_box'] === null) {
@@ -753,26 +754,9 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     public function update_qty_delivered($id_so_detail, $qty_delivered)
     {
-        $this->db->where('id', $id_so_detail);
-        $this->db->update('tbso_sales_order_detail', ['qty_delivered' => $qty_delivered]);
-        $detail = $this->db->get_where('tbso_sales_order_detail', ['id'=>$id_so_detail])->row_array();
-        if ($detail) {
-            $all = $this->db->get_where('tbso_sales_order_detail', ['id_so'=>$detail['id_so']])->result_array();
-            $all_done = true; $any_done = false;
-            foreach ($all as $item) {
-                if ($item['qty_delivered'] >= $item['qty']) $any_done = true;
-                else $all_done = false;
-            }
-            if ($all_done) {
-                $this->update_status($detail['id_so'], 'completed', 'system');
-                $this->db->where('id_so', $detail['id_so']);
-                $this->db->update('tbso_stock_reservation', ['status' => 'released']);
-            } elseif ($any_done) {
-                $this->update_status($detail['id_so'], 'partial_delivered', 'system');
-            }
-        }
+        // tidak dipakai — bisa dihapus nanti
     }
-    
+
     // ----------------------------------------------------------------
     // GET KD PO DARI MASTER BARANG
     // ----------------------------------------------------------------

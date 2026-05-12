@@ -64,18 +64,17 @@
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
                     </div>
+
                     <?php if ($so['status'] === 'draft'): ?>
                     <div class="col-auto">
                         <a href="<?= base_url('sales_order/edit/' . $so['id_so']) ?>" class="btn btn-warning">
                             <i class="fas fa-pencil-alt"></i> Edit SO
                         </a>
                     </div>
-                    <?php endif; ?>
-                    <?php if (!in_array($so['status'], ['completed', 'cancelled'])): ?>
                     <div class="col-auto">
                         <form method="post"
-                              action="<?= base_url('sales_order/cancel/' . $so['id_so']) ?>"
-                              onsubmit="return confirm('Yakin ingin membatalkan SO ini?')">
+                            action="<?= base_url('sales_order/cancel/' . $so['id_so']) ?>"
+                            onsubmit="return confirm('Yakin ingin membatalkan SO ini?')">
                             <button type="submit" class="btn btn-danger">
                                 <i class="fas fa-ban"></i> Batalkan SO
                             </button>
@@ -236,12 +235,11 @@
                                         <th>Exp Date</th>
                                         <th>No Lot</th>
                                         <th class="text-right">Qty Order</th>
-                                        <th class="text-right">Qty Terkirim</th>
                                         <th>Satuan</th>
                                         <th class="text-right">Harga Satuan</th>
+                                        <th class="text-right">Disc%</th>
                                         <th class="text-right">Pajak</th>
                                         <th class="text-right">Total</th>
-                                        <th class="text-center">Ket</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -261,7 +259,6 @@
                                         </td>
                                         <td><?= htmlspecialchars($d['no_lot'] ?? '-') ?></td>
                                         <td class="text-right"><?= number_format($d['qty'], 2) ?></td>
-                                        <td class="text-right"><?= number_format($d['qty_delivered'], 2) ?></td>
                                         <td><?= htmlspecialchars($d['satuan']) ?></td>
                                         <td class="text-right">
                                             Rp <?= number_format($d['hrg_satuan'], 2) ?>
@@ -271,6 +268,7 @@
                                                 </span>
                                             <?php endif; ?>
                                         </td>
+                                        <td class="text-right"><?= number_format($d['disc'] ?? 0, 2) ?>%</td>
                                         <td class="text-right"><?= $d['pajak'] ?>%</td>
                                         <td class="text-right">Rp <?= number_format($d['total_harga'], 2) ?></td>
                                     </tr>
@@ -280,7 +278,6 @@
                                     <tr class="bg-light font-weight-bold">
                                         <td colspan="10" class="text-right">GRAND TOTAL</td>
                                         <td class="text-right">Rp <?= number_format($grand, 2) ?></td>
-                                        <td></td>
                                     </tr>
                                 </tfoot>
                             </table>
