@@ -102,10 +102,9 @@
                                         <?php
                                         $status_list = [
                                             'draft'             => 'Draft',
-                                            'in_progress'       => 'On Progress',
-                                            'done'              => 'Done',
-                                            'partial_delivered' => 'Partial Delivered',
-                                            'completed'         => 'Completed',
+                                            'list_do'           => 'List DO',
+                                            'in_progress'       => 'Proses DO',
+                                            'selesai'           => 'Selesai',
                                             'cancelled'         => 'Cancelled',
                                         ];
                                         foreach ($status_list as $val => $lbl):
@@ -164,19 +163,17 @@
                                     <?php
                                     $badge_status = [
                                         'draft'             => 'secondary',
+                                        'list_do'           => 'info',
                                         'in_progress'       => 'primary',   
-                                        'done'              => 'success',   
-                                        'partial_delivered' => 'primary',
-                                        'completed'         => 'success',
+                                        'selesai'           => 'success',          
                                         'cancelled'         => 'danger',
                                     ];
 
                                     $label_status = [
                                         'draft'             => 'Draft',
-                                        'in_progress'       => 'On Progress',   
-                                        'done'              => 'Done',          
-                                        'partial_delivered' => 'Partial Delivered',
-                                        'completed'         => 'Completed',
+                                        'list_do'           => 'List DO',
+                                        'in_progress'       => 'Proses DO',   
+                                        'selesai'           => 'Selesai',          
                                         'cancelled'         => 'Cancelled',
                                     ];
                                     foreach ($so_list as $row):

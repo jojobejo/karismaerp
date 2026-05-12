@@ -180,69 +180,36 @@
                     <button class="btn btn-primary mb-2 btn-block" onclick="toggleDataPreDO()" id="btnhide"><i class="fas fa-eye"></i> Faktur Penjualan <i class="fas fa-eye"></i> </button>
                     <div class="card" id="pre_do" style="display: none;">
                         <div class="card-body">
-                            <table id="dailyod" class="table table-bordered table-striped">
+                            <div class="row mb-2" id="bulk_action_bar" style="display:none;">
+                                <div class="col-auto">
+                                    <button class="btn btn-success btn-sm" id="btnTambahDipilih">
+                                        <i class="fas fa-plus"></i> Tambah yang Dipilih (<span id="jumlah_dipilih">0</span>)
+                                    </button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-secondary btn-sm" id="btnBatalPilih">
+                                        <i class="fas fa-times"></i> Batal Pilih
+                                    </button>
+                                </div>
+                            </div>
+                            <table id="dailyod" class="table table-bordered table-striped table-hover table-sm">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
-                                        <td>TANGGAL TRANSAKSI</td>
-                                        <td>FAKTUR</td>
-                                        <td>NAMA CUSTOMER</td>
-                                        <td>KIOS</td>
-                                        <td>ALAMAT KIOS</td>
-                                        <td>RUTE</td>
-                                        <td>REGIONAL</td>
-                                        <td>ITEM</td>
-                                        <td>Status</td>
-                                        <td>#</td>
+                                        <th style="width:40px; text-align:center;">
+                                            <input type="checkbox" id="chkAll" title="Pilih Semua">
+                                        </th>
+                                        <th>TANGGAL TRANSAKSI</th>
+                                        <th>FAKTUR</th>
+                                        <th>NAMA CUSTOMER</th>
+                                        <th>KIOS</th>
+                                        <th>ALAMAT KIOS</th>
+                                        <th>RUTE</th>
+                                        <th>REGIONAL</th>
+                                        <th style="text-align:center;">ITEM</th>
+                                        <th style="text-align:center;">STATUS</th>
+                                        <th style="text-align:center; width:100px;">#</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <?php foreach ($list_faktur as $l) :
-                                        $status = $l->data_sts;
-                                        if (!empty($l->tgl_inputer_fmt)) {
-                                            $tgl_inputer = $l->tgl_inputer_fmt;
-                                        } elseif (!empty($l->tgl_inputer)) {
-                                            $date_obj = DateTime::createFromFormat('j/n/Y', $l->tgl_inputer);
-                                            $tgl_inputer = $date_obj ? $date_obj->format('d/m/Y') : '-';
-                                        } else {
-                                            $tgl_inputer = '-';
-                                        }
-                                    ?>
-                                        <tr>
-                                            <td><?= $tgl_inputer ?></td>
-                                            <td><?= $l->kd_faktur ?></td>
-                                            <td><?= $l->nama_customer ?></td>
-                                            <td><?= $l->nama_kios ?></td>
-                                            <td><?= $l->alamat_kios ?></td>
-                                            <td><?= $l->kd_rute ?></td>
-                                            <td><?= $l->regional ?></td>
-                                            <td><?= $l->total_barang ?></td>
-                                            <?php if ($status == 1) : ?>
-                                                <td><span class="badge badge-secondary">NOT IN DRAFT</span></td>
-                                                <td>
-                                                    <div class="row">
-                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                        <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formlist' ?>" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
-                                                        <!-- <a href="#" class="btn btn-warning btn-block btn-sm btn-open-mbarang" data-id="<?= $l->kd_faktur ?>"><i class="fas fa-hourglass-half"></i></a> -->
-                                                    </div>
-                                                </td>
-                                            <?php elseif ($status == 2) : ?>
-                                                <td><span class="badge badge-success">ON DRAFT</span></td>
-                                                <td>
-                                                    <div class="row">
-                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                    </div>
-                                                </td>
-                                                <!-- <?php elseif ($status == 4) : ?>
-                                                <td><span class="badge badge-warning">FAKTUR PENDING</span></td>
-                                                <td>
-                                                    <div class="row">
-                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                                    </div>
-                                                </td> -->
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -293,26 +260,59 @@
     </div>
     <!-- ./wrapper -->
 
-    <script> ///ppp///
-        function toggleDataPreDO() {
-            var tableDiv = document.getElementById("pre_do");
-
-            if (tableDiv.style.display === "none") {
-                tableDiv.style.display = "block";
-                loadFakturPenjualan(); // load data setiap kali dibuka
-            } else {
-                tableDiv.style.display = "none";
-            }
+    <script>
+    // =============================================
+    // TOGGLE FAKTUR PENJUALAN
+    // =============================================
+    function toggleDataPreDO() {
+        var tableDiv = document.getElementById("pre_do");
+        if (tableDiv.style.display === "none") {
+            tableDiv.style.display = "block";
+            loadFakturPenjualan();
+        } else {
+            tableDiv.style.display = "none";
         }
+    }
 
-        function loadFakturPenjualan() {
-        // Destroy DataTable dulu jika sudah diinit
+    // =============================================
+    // INIT DATATABLE
+    // =============================================
+    function initDailyodTable() {
+        $('#dailyod').DataTable({
+            paging:       true,
+            lengthChange: true,
+            lengthMenu:   [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
+            searching:    true,
+            ordering:     true,
+            info:         true,
+            autoWidth:    false,
+            responsive:   true,
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
+            },
+            order: [[1, 'asc']], // urutkan berdasarkan tanggal
+            columnDefs: [
+                { orderable: false, targets: [0, 10] }, // checkbox & aksi tidak bisa diurutkan
+                { className: 'text-center', targets: [0, 8, 9, 10] }
+            ]
+        });
+    }
+
+    // =============================================
+    // LOAD FAKTUR PENJUALAN VIA AJAX
+    // =============================================
+    function loadFakturPenjualan() {
         if ($.fn.DataTable.isDataTable('#dailyod')) {
             $('#dailyod').DataTable().destroy();
         }
 
+        // Reset checkbox
+        $('#chkAll').prop('checked', false);
+        $('#bulk_action_bar').hide();
+        $('#jumlah_dipilih').text(0);
+
         var tbody = $('#dailyod tbody');
-        tbody.html('<tr><td colspan="10" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
+        tbody.html('<tr><td colspan="11" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>');
 
         $.ajax({
             url: '<?= base_url("get_list_faktur_ajax") ?>',
@@ -322,51 +322,53 @@
                 tbody.empty();
 
                 if (!response || !response.status) {
-                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Gagal memuat data: ' + (response.message || '') + '</td></tr>');
-                    // Reinit DataTable walau kosong
-                    $('#dailyod').DataTable({
-                        "paging": false, "searching": false, "info": false, "ordering": false
-                    });
+                    tbody.html('<tr><td colspan="11" class="text-center text-danger">Gagal memuat data: ' + (response.message || '') + '</td></tr>');
+                    initDailyodTable();
                     return;
                 }
 
                 if (response.data.length === 0) {
-                    tbody.html('<tr><td colspan="10" class="text-center">Tidak ada data SO yang approved.</td></tr>');
-                    $('#dailyod').DataTable({
-                        "paging": false, "searching": false, "info": false, "ordering": false
-                    });
+                    tbody.html('<tr><td colspan="11" class="text-center">Tidak ada data faktur.</td></tr>');
+                    initDailyodTable();
                     return;
                 }
 
                 $.each(response.data, function(i, l) {
                     var statusBadge = '';
-                    var actionBtn   = '';
+                    var canAdd      = false;
 
-                    if (l.data_sts === 'list_do') {
+                    if (l.data_sts === 'list_do' || l.data_sts === 'approved') {
                         statusBadge = '<span class="badge badge-secondary">NOT IN DRAFT</span>';
-                        actionBtn   = `
+                        canAdd      = true;
+                    } else if (l.data_sts === 'draft') {
+                        statusBadge = '<span class="badge badge-warning">DRAFT</span>';
+                        canAdd      = true;
+                    } else if (l.data_sts === 'proses_do') {
+                        statusBadge = '<span class="badge badge-info">PROSES DO</span>';
+                        canAdd      = false;
+                    } else if (l.data_sts === 'in_delivery') {
+                        statusBadge = '<span class="badge badge-success">ON DRAFT</span>';
+                        canAdd      = false;
+                    } else {
+                        statusBadge = '<span class="badge badge-light">' + l.data_sts + '</span>';
+                        canAdd      = false;
+                    }
+
+                    var checkboxCell = '';
+                    var actionBtn    = '';
+
+                    if (canAdd) {
+                        checkboxCell = `<td class="text-center">
+                            <input type="checkbox" class="chk-faktur" value="${l.kd_faktur}">
+                        </td>`;
+                        actionBtn = `
                             <div class="row">
                                 <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                                 <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
                             </div>`;
-                    } else if (l.data_sts === 'in_delivery') {
-                        statusBadge = '<span class="badge badge-success">ON DRAFT</span>';
-                        actionBtn   = `
-                            <div class="row">
-                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                            </div>`;
-                    } else if (l.data_sts === 'draft') {
-                        statusBadge = '<span class="badge badge-secondary">DRAFT</span>';
-                        actionBtn   = `
-                            <div class="row">
-                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" 
-                                class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" 
-                                class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
-                            </div>`;
                     } else {
-                        statusBadge = `<span class="badge badge-light">${l.data_sts}</span>`;
-                        actionBtn   = `
+                        checkboxCell = '<td class="text-center">-</td>';
+                        actionBtn = `
                             <div class="row">
                                 <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                             </div>`;
@@ -374,6 +376,7 @@
 
                     tbody.append(`
                         <tr>
+                            ${checkboxCell}
                             <td>${l.tgl_inputer}</td>
                             <td>${l.kd_faktur}</td>
                             <td>${l.nama_customer}</td>
@@ -388,166 +391,179 @@
                     `);
                 });
 
-                // Reinit DataTable setelah data terisi
-                $('#dailyod').DataTable({
-                    "paging":       true,
-                    "lengthChange": false,
-                    "searching":    true,
-                    "ordering":     false,
-                    "info":         true,
-                    "autoWidth":    false,
-                    "responsive":   true,
-                });
+                initDailyodTable();
             },
             error: function(xhr, status, error) {
                 console.error("AJAX Error:", xhr.responseText);
-                tbody.html('<tr><td colspan="10" class="text-center text-danger">Error: ' + error + '</td></tr>');
-                $('#dailyod').DataTable({
-                    "paging": false, "searching": false, "info": false, "ordering": false
-                });
+                tbody.html('<tr><td colspan="11" class="text-center text-danger">Error: ' + error + '</td></tr>');
+                initDailyodTable();
             }
         });
     }
 
-        $(document).ready(function() {
+    // =============================================
+    // DOCUMENT READY
+    // =============================================
+    $(document).ready(function() {
 
-            // Load tmp DO saat halaman dibuka
-            function loadTmpDo() {
-                $.ajax({
-                    url: '<?= base_url("get_tmp_do") ?>',
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(response) {
-                        // response sudah dihandle oleh PHP loop di view
-                        // jika perlu reload tabel tmp, tambahkan di sini
-                    },
-                    error: function() {
-                        console.warn('Gagal mengambil data tmp DO');
-                    }
-                });
+        // ----- CHECKBOX BULK ACTION -----
+        $(document).on('change', '#chkAll', function() {
+            var checked = $(this).prop('checked');
+            $('.chk-faktur').prop('checked', checked);
+            updateBulkBar();
+        });
+
+        $(document).on('change', '.chk-faktur', function() {
+            updateBulkBar();
+            var total   = $('.chk-faktur').length;
+            var checked = $('.chk-faktur:checked').length;
+            $('#chkAll').prop('checked', total === checked && total > 0);
+        });
+
+        function updateBulkBar() {
+            var jumlah = $('.chk-faktur:checked').length;
+            if (jumlah > 0) {
+                $('#bulk_action_bar').show();
+                $('#jumlah_dipilih').text(jumlah);
+            } else {
+                $('#bulk_action_bar').hide();
+                $('#jumlah_dipilih').text(0);
+            }
+        }
+
+        $('#btnBatalPilih').on('click', function() {
+            $('.chk-faktur, #chkAll').prop('checked', false);
+            $('#bulk_action_bar').hide();
+            $('#jumlah_dipilih').text(0);
+        });
+
+        $('#btnTambahDipilih').on('click', function() {
+            var dipilih = [];
+            $('.chk-faktur:checked').each(function() {
+                dipilih.push($(this).val());
+            });
+
+            if (dipilih.length === 0) {
+                alert('Pilih minimal satu faktur terlebih dahulu.');
+                return;
             }
 
-            $("#cancelEdit").on("click", function() {
-                $("#editRow").hide();
-            });
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Memproses ' + dipilih.length + ' faktur...');
 
-            $(".btn-nurut").on("click", function(e) {
-                e.preventDefault();
-                var row = $(this).closest("tr");
-                var id  = row.data("id");
-
-                $.ajax({
-                    url: "<?= base_url('get_tmpdonorut') ?>",
-                    type: "POST",
-                    data: { id: id },
-                    dataType: "json",
-                    success: function(data) {
-                        $("#id").val(data.id);
-                        $("#nourut").val(data.norut_do);
-                        $("#editRow").insertAfter(row).show();
-                    }
-                });
-            });
-
-            $("#editForm").on("submit", function(e) {
-                e.preventDefault();
-                $.ajax({
-                    url: "<?= base_url('update_norut') ?>",
-                    type: "POST",
-                    data: $(this).serialize(),
-                    dataType: "json",
-                    success: function(response) {
-                        if (response.status === "success") {
-                            alert("Nomor urut pengiriman telah berhasil diperbarui!");
-                            location.reload();
-                        } else {
-                            alert("Terjadi kesalahan, silakan coba lagi.");
-                        }
-                    },
-                    error: function() {
-                        alert("Gagal memperbarui data.");
-                    }
-                });
-            });
-
-            $("#rekamdo").on('click', function() {
-                var kd_do   = $("#do_isi").val().trim();
-                var tgl_krim = $("#tgl_isi").val();
-                var platno  = $("#plat_isi").val();
-                var kota    = $("#regional_isi").val().trim();
-                var driver  = $("#driver_isi").val();
-
-                $("input").css("border", "");
-
-                var isValid = true;
-
-                if (!kd_do) {
-                    $("#do_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-                if (!kota) {
-                    alert('Rute harus diisi');
-                    $("#regional_isi").css("border", "2px solid red");
-                    isValid = false;
-                }
-
-                if (!isValid) return;
-
-                $.ajax({
-                    url: "<?= base_url('rekam_do') ?>",
-                    type: "POST",
-                    data: {
-                        kd_do:    kd_do,
-                        tgl_krim: tgl_krim,
-                        platno:   platno,
-                        kota:     kota,
-                        driver:   driver
-                    },
-                    dataType: "json",
-                    cache: false,
-                    success: function(data) {
-                        if (data.msg == "success") {
-                            alert('Data berhasil direkam');
-                            window.location.href = "<?= base_url('create_do') ?>";
-                        } else {
-                            alert(data.message || 'Ada kesalahan data');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Terjadi kesalahan: ' + error);
-                    }
-                });
+            prosesInsertBerurutan(dipilih, 0, function() {
+                alert(dipilih.length + ' faktur berhasil ditambahkan.');
+                location.reload();
             });
         });
-    </script>
 
-    <script>
-        $(document).ready(function() {
-            $('.btn-open-mbarang').on('click', function() {
-                const rowId = $(this).data('id');
+        function prosesInsertBerurutan(list, index, callback) {
+            if (index >= list.length) {
+                callback();
+                return;
+            }
 
-                $.ajax({
-                    url: "<?= base_url('logistik/get_faktur') ?>",
-                    method: "POST",
-                    data: {
-                        id: rowId
-                    },
-                    dataType: "json",
-                    success: function(data) {
-                        if (!data) {
-                            alert("Data tidak ditemukan.");
-                            return;
-                        }
+            var kd_faktur = list[index];
 
-                        $('#modal_id').val(data.id);
-                        $('#modal_nama_barang').val(data.nama_barang);
-                        $('#modalAddOpname').modal('show');
-                    },
-                    error: function() {
-                        alert('Gagal mengambil data faktur.');
-                    }
-                });
+            $.ajax({
+                url: '<?= base_url("insert_tmp/") ?>' + kd_faktur + '/formlist',
+                type: 'GET',
+                success: function() {
+                    prosesInsertBerurutan(list, index + 1, callback);
+                },
+                error: function() {
+                    console.warn('Gagal insert faktur: ' + kd_faktur);
+                    prosesInsertBerurutan(list, index + 1, callback);
+                }
+            });
+        }
+
+        // ----- EDIT NORUT -----
+        $("#cancelEdit").on("click", function() {
+            $("#editRow").hide();
+        });
+
+        $(".btn-nurut").on("click", function(e) {
+            e.preventDefault();
+            var row = $(this).closest("tr");
+            var id  = row.data("id");
+
+            $.ajax({
+                url: "<?= base_url('get_tmpdonorut') ?>",
+                type: "POST",
+                data: { id: id },
+                dataType: "json",
+                success: function(data) {
+                    $("#id").val(data.id);
+                    $("#nourut").val(data.norut_do);
+                    $("#editRow").insertAfter(row).show();
+                }
             });
         });
-    </script>
-///ppp///
+
+        $("#editForm").on("submit", function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: "<?= base_url('update_norut') ?>",
+                type: "POST",
+                data: $(this).serialize(),
+                dataType: "json",
+                success: function(response) {
+                    if (response.status === "success") {
+                        alert("Nomor urut berhasil diperbarui!");
+                        location.reload();
+                    } else {
+                        alert("Terjadi kesalahan, silakan coba lagi.");
+                    }
+                },
+                error: function() {
+                    alert("Gagal memperbarui data.");
+                }
+            });
+        });
+
+        // ----- REKAM DO -----
+        $("#rekamdo").on('click', function() {
+            var kd_do  = $("#do_isi").val().trim();
+            var kota   = $("#regional_isi").val().trim();
+
+            $("input").css("border", "");
+
+            if (!kd_do) {
+                $("#do_isi").css("border", "2px solid red");
+                return;
+            }
+            if (!kota) {
+                alert('Rute harus diisi');
+                $("#regional_isi").css("border", "2px solid red");
+                return;
+            }
+
+            $.ajax({
+                url: "<?= base_url('rekam_do') ?>",
+                type: "POST",
+                data: {
+                    kd_do:    kd_do,
+                    tgl_krim: $("#tgl_isi").val(),
+                    platno:   $("#plat_isi").val(),
+                    kota:     kota,
+                    driver:   $("#driver_isi").val()
+                },
+                dataType: "json",
+                cache: false,
+                success: function(data) {
+                    if (data.msg == "success") {
+                        alert('Data berhasil direkam');
+                        window.location.href = "<?= base_url('create_do') ?>";
+                    } else {
+                        alert(data.message || 'Ada kesalahan data');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Terjadi kesalahan: ' + error);
+                }
+            });
+        });
+
+    }); // end document.ready
+</script>
