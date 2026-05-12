@@ -234,7 +234,7 @@ $(document).ready(function () {
         responsive:  true,
         autoWidth:   false,
         pageLength:  25,
-        order:       [[0, 'desc']],
+        order:       [[1, 'desc']],
         columnDefs:  [{ orderable: false, targets: -1 }],
         language: {
             search:      "Cari:",

@@ -21,22 +21,20 @@
             </div>
             <?php
             // Hitung summary dari $listdo
-            $total_do        = count($listdo);
-            $total_pending   = 0;
-            $total_siap      = 0;
-            $total_blm_siap  = 0;
+            $total_do      = count($listdo);
+            $total_pending = 0;
+            $total_siap    = 0;
 
             foreach ($listdo as $i) {
                 $confirm = $i->sales_confirm_status ?? 'pending';
-                if ($confirm === 'siap')             $total_siap++;
-                elseif ($confirm === 'belum_siap')   $total_blm_siap++;
-                else                                 $total_pending++;
+                if ($confirm === 'siap') $total_siap++;
+                else                     $total_pending++;
             }
             ?>
 
             <!-- SUMMARY CARDS -->
             <div class="row mb-3">
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-4">
                     <div class="info-box shadow-sm">
                         <span class="info-box-icon bg-secondary elevation-1">
                             <i class="fas fa-truck"></i>
@@ -47,7 +45,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-4">
                     <div class="info-box shadow-sm">
                         <span class="info-box-icon bg-warning elevation-1">
                             <i class="fas fa-clock"></i>
@@ -58,7 +56,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-sm-3">
+                <div class="col-6 col-sm-4">
                     <div class="info-box shadow-sm">
                         <span class="info-box-icon bg-success elevation-1">
                             <i class="fas fa-check-circle"></i>
@@ -69,30 +67,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-sm-3">
-                    <div class="info-box shadow-sm">
-                        <span class="info-box-icon bg-danger elevation-1">
-                            <i class="fas fa-times-circle"></i>
-                        </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Belum Siap Loading</span>
-                            <span class="info-box-number"><?= $total_blm_siap ?></span>
-                        </div>
-                    </div>
-                </div>
             </div>
-
-            <!-- ALERT jika ada yang belum dikonfirmasi -->
-            <?php if ($total_pending > 0) : ?>
-            <?php endif; ?>
-
-            <?php if ($total_blm_siap > 0) : ?>
-            <div class="alert alert-danger alert-dismissible fade show py-2 mb-3">
-                <i class="fas fa-times-circle mr-1"></i>
-                Terdapat <strong><?= $total_blm_siap ?> DO</strong> yang ditandai <strong>Belum Siap Loading</strong> dan perlu ditinjau ulang.
-                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-            </div>
-            <?php endif; ?>
         </div>
         
         <section class="content">
@@ -110,7 +85,6 @@
                                     <option value="">— Semua Status —</option>
                                     <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
                                     <option value="Siap Loading">Siap Loading</option>
-                                    <option value="Belum Siap Loading">Belum Siap Loading</option>
                                 </select>
                             </div>
                         </div>
@@ -137,13 +111,9 @@
                                         $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#0a3d1f;background:#c3e6cb;padding:3px 10px;border-radius:20px;border:1px solid #82c99a;">
                                                     <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Siap Loading
                                                 </span>';
-                                    } elseif ($confirm === 'belum_siap') {
-                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#5c0a0a;background:#f5c6cb;padding:3px 10px;border-radius:20px;border:1px solid #e8909a;">
-                                                    <span style="width:7px;height:7px;border-radius:50%;background:#c62828;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Belum Siap
-                                                </span>';
                                     } else {
                                         $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#533400;background:#fde7aa;padding:3px 10px;border-radius:20px;border:1px solid #f5c76a;">
-                                                    <span style="width:7px;height:7px;border-radius:50%;background:#d4820a;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Menunggu
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#d4820a;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Menunggu Konfirmasi
                                                 </span>';
                                     }
 
@@ -203,19 +173,14 @@ $(document).ready(function () {
         table.column(5).search($(this).val()).draw();
     });
 });
-function konfirmDO(kd_do, action) {
-    var label = action === 'siap' ? 'Siap Loading' : 'Belum Siap Loading';
-    if (!confirm('Konfirmasi: ' + label + ' untuk DO ' + kd_do + '?')) return;
 
-    var note = '';
-    if (action === 'belum_siap') {
-        note = prompt('Catatan (opsional):') || '';
-    }
+function konfirmDO(kd_do, action) {
+    if (!confirm('Konfirmasi: Siap Loading untuk DO ' + kd_do + '?')) return;
 
     $.ajax({
         url: '<?= base_url("sales_order/confirm_loading") ?>',
         type: 'POST',
-        data: { kd_do: kd_do, action: action, note: note },
+        data: { kd_do: kd_do, action: action },
         dataType: 'json',
         success: function (res) {
             if (res.msg === 'success') {

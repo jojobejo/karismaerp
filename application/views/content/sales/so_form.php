@@ -8,6 +8,7 @@
 
     $batas_ton = isset($batas_tonase)   ? $batas_tonase   : 6;
     $batas_kub = isset($batas_kubikasi) ? $batas_kubikasi : 9;
+    $gid_aktif = $is_edit ? ($so['gudang_id'] ?? '') : ($gudang_id ?? '');
 
     function escAttr($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     function escJs($v)   {
@@ -135,15 +136,26 @@
                                         </div>
                                     </div>
 
-                                    <!-- Gudang — diisi otomatis dari barang yang dipilih -->
+                                    <!-- Gudang — PILIH DULU sebelum barang -->
                                     <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">Gudang</label>
+                                        <label class="col-sm-4 col-form-label">
+                                            Gudang <span class="text-danger">*</span>
+                                        </label>
                                         <div class="col-sm-8">
-                                            <input type="text" class="form-control" id="gudang_display"
-                                                value="<?= $is_edit ? escAttr($so['gudang_id'] ?? '') : escAttr($gudang_id ?? '') ?>"
-                                                readonly placeholder="-- otomatis dari barang --">
-                                            <input type="hidden" name="gudang_id" id="gudang_id_input"
-                                                value="<?= $is_edit ? escAttr($so['gudang_id'] ?? '') : escAttr($gudang_id ?? '') ?>">
+                                            <select name="gudang_id" id="gudang_id_input"
+                                                    class="form-control" required>
+                                                <option value="">-- Pilih Gudang --</option>
+                                                <?php foreach ($gudang_list as $g): ?>
+                                                    <option value="<?= escAttr($g['id_gudang']) ?>"
+                                                        <?= ((string)$gid_aktif === (string)$g['id_gudang']) ? 'selected' : '' ?>>
+                                                        <?= escAttr($g['nama_gudang']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small id="gudang-hint" class="text-warning d-none">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                Pilih gudang terlebih dahulu sebelum menambah barang.
+                                            </small>
                                         </div>
                                     </div>
 
@@ -472,6 +484,20 @@ foreach (($approver_list ?? []) as $a) {
 }
 ?>
 var APPROVER_LIST = <?= json_encode($approver_safe, JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
+
+/* ---------- Data gudang ---------- */
+<?php
+$gudang_safe = [];
+foreach(($gudang_list ?? []) as $g) {
+    $gudang_safe[] = [
+        'id_gudang'     => (string)$g['id_gudang'],
+        'nama_gudang'   => mb_convert_encoding($g['nama_gudang'] ?? '', 'UTF-8', 'UTF-8'),
+    ];
+}
+?>
+
+var GUDANG_LIST = <?= json_encode($gudang_safe, JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
+var GUDANG_AWAL = '<?= escJs((string)$gid_aktif) ?>';
 /* ================================================================
    UTILS
 ================================================================ */
@@ -578,7 +604,8 @@ function buatBaris(idx, d) {
     h += '<div class="d-flex align-items-center">';
     h +=   '<div class="flex-grow-1">';
     h +=     '<small class="text-muted" id="kdlbl_'+idx+'">'+(kd||'&mdash;')+'</small><br>';
-    h +=     '<span id="nmlbl_'+idx+'">'+(nm ? esc(nm) : '&mdash;')+'</span>';
+    h +=     '<span id="nmlbl_'+idx+'" class="'+(nm?'':'text-muted small')+'">'
+            + (nm ? esc(nm) : '← Klik Pilih untuk memilih barang')+'</span>';
     h +=   '</div>';
     h +=   '<button type="button" class="btn btn-xs btn-outline-primary ml-1 btn-pick"'
          +  ' data-idx="'+idx+'">'
@@ -587,7 +614,7 @@ function buatBaris(idx, d) {
     h += '</div>';
     h += '<div class="mt-1 small">';
     h +=   '<span class="text-success font-weight-bold">';
-    h +=     'Avail: <span id="avail-box_'+idx+'" data-avail-box="'+avBox+'">'+fmtNum(avBox,0)+'</span> box';
+    h +=     'Stock: <span id="avail-box_'+idx+'" data-avail-box="'+avBox+'">'+fmtNum(avBox,0)+'</span> box';
     h +=   '</span>';
     h +=   ' + <span class="text-info">';
     h +=     '<span id="avail-ecer_'+idx+'" data-avail-ecer="'+avEcer+'" data-avail-total="'+av+'">'
@@ -772,18 +799,14 @@ function bindBaris(idx) {
             var bg     = parseFloat(opt.dataset.ton || 0);
             var km     = parseFloat(opt.dataset.kub || 0);
             var isi    = parseInt(opt.dataset.isi   || 1); if (isi < 1) isi = 1;
-            var gudang = opt.dataset.gudang || '';
 
+            // Gudang sudah fix dari select dropdown, tidak perlu diupdate dari barang
             document.getElementById('bg_' +idx).value = bg;
             document.getElementById('km_' +idx).value = km;
             document.getElementById('isi_'+idx).value = isi;
             document.getElementById('lot_'+idx).value = lot;
             var elLotLbl = document.getElementById('lotlbl_'+idx);
             if (elLotLbl) elLotLbl.value = lot || '';
-
-            /* Gudang → update di Informasi SO */
-            document.getElementById('gudang_display').value  = gudang || '-';
-            document.getElementById('gudang_id_input').value = gudang || '';
 
             /* Update avail */
             var avBox  = Math.floor(av / isi);
@@ -993,11 +1016,21 @@ function cekNegoGlobal() {
    LOAD STOK (AJAX)
 ================================================================ */
 function loadStock() {
+    var gudangId = document.getElementById('gudang_id_input').value;
+
+    // Proteksi: harus pilih gudang dulu
+    if (!gudangId) {
+        document.getElementById('gudang-hint').classList.remove('d-none');
+        alert('Pilih gudang terlebih dahulu!');
+        return false;
+    }
+    document.getElementById('gudang-hint').classList.add('d-none');
+
     document.getElementById('stock-body').innerHTML =
         '<tr><td colspan="12" class="text-center py-3">'
-        + '<i class="fas fa-spinner fa-spin mr-1"></i> Memuat...</td></tr>';
+        + '<i class="fas fa-spinner fa-spin mr-1"></i> Memuat stok gudang...</td></tr>';
 
-    fetch(BASE_URL + 'sales_order/get_stock')
+    fetch(BASE_URL + 'sales_order/get_stock?gudang_id=' + encodeURIComponent(gudangId))
         .then(function(r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
@@ -1013,13 +1046,13 @@ function loadStock() {
                 + '<i class="fas fa-exclamation-triangle mr-1"></i>'
                 + esc(err.message) + '</td></tr>';
         });
+    return true;
 }
 
 function renderStock(data) {
     var q = (document.getElementById('stock-search').value || '').toLowerCase();
     var filtered = q
         ? data.filter(function(d) {
-            // Handle both 'kd_barang' and 'kode_barang' field names
             var kd = d.kd_barang || d.kode_barang || '';
             return String(kd).toLowerCase().indexOf(q) >= 0
                 || String(d.nama_barang||'').toLowerCase().indexOf(q) >= 0;
@@ -1029,14 +1062,15 @@ function renderStock(data) {
     if (!filtered.length) {
         document.getElementById('stock-body').innerHTML =
             '<tr><td colspan="12" class="text-center text-muted py-3">'
-            + '<i class="fas fa-inbox mr-1"></i> Tidak ada stok</td></tr>';
+            + '<i class="fas fa-inbox mr-1"></i> Tidak ada stok untuk gudang ini</td></tr>';
         return;
     }
 
-    var html = '', lastKd = null;
+    var html = '';
+    var lastKd = null;
+
     filtered.forEach(function(d) {
-        // Handle both 'kd_barang' and 'kode_barang' field names
-        var kd = d.kd_barang || d.kode_barang || '';
+        var kd      = d.kd_barang || d.kode_barang || '';
         var isNew   = (kd !== lastKd);
         lastKd      = kd;
         var isi     = parseInt(d.isi_per_box || 1);
@@ -1045,47 +1079,82 @@ function renderStock(data) {
         var avEcer  = parseInt(d.available_ecer || 0);
         var beratKg = (parseFloat(d.berat_gram  || 0) / 1000).toFixed(3);
         var kubStr  = parseFloat(d.kubikasi_m3  || 0).toFixed(6);
+        var expDate = d.exp_date || d.expired_date || '';
+
+        /* Nama gudang dari GUDANG_LIST */
+        var gdgId  = String(d.gudang_id || d.gudang || '');
+        var gdgObj = null;
+        for (var gi = 0; gi < GUDANG_LIST.length; gi++) {
+            if (String(GUDANG_LIST[gi].id_gudang) === gdgId) {
+                gdgObj = GUDANG_LIST[gi];
+                break;
+            }
+        }
+        var gdgNama = gdgObj ? gdgObj.nama_gudang : (gdgId || '-');
 
         html += '<tr class="'+(isNew ? 'table-light' : '')+'">';
+
+        /* Nama barang */
         html += '<td>';
         html += '<small class="text-muted d-block">'+esc(kd)+'</small>';
         html += isNew
-            ? '<b>'+esc(d.nama_barang)+'</b>'
-            : '<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang);
+            ? '<b>'+esc(d.nama_barang||'')+'</b>'
+            : '<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang||'');
         html += '</td>';
-        // Handle both 'exp_date' and 'expired_date' field names
-        var expDate = d.exp_date || d.expired_date || '';
+
+        /* Exp date */
         html += '<td>'+(expDate
-            ? '<span class="badge '+(isExpiringSoon(expDate)?'badge-warning':'badge-success')+'">'
-              + formatTgl(expDate)+'</span>'
+            ? '<span class="badge '+(isExpiringSoon(expDate) ? 'badge-warning' : 'badge-success')+'">'
+              + esc(formatTgl(expDate))+'</span>'
             : '-')+'</td>';
-        html += '<td>'+(d.no_lot || '-')+'</td>';
-        html += '<td class="text-right"><b class="text-success">'+fmtNum(avBox, 0)+' box</b></td>';
-        html += '<td class="text-right"><span class="text-info">'+fmtNum(avEcer, 0)+' pcs</span></td>';
-        html += '<td class="text-right text-muted"><small>'+fmtNum(avTotal, 0)+' pcs</small></td>';
+
+        /* No lot */
+        html += '<td>'+esc(d.no_lot || '-')+'</td>';
+
+        /* Avail box */
+        html += '<td class="text-right"><b class="text-success">'+fmtNum(avBox,0)+' box</b></td>';
+
+        /* Sisa ecer */
+        html += '<td class="text-right"><span class="text-info">'+fmtNum(avEcer,0)+' pcs</span></td>';
+
+        /* Total pcs */
+        html += '<td class="text-right text-muted"><small>'+fmtNum(avTotal,0)+' pcs</small></td>';
+
+        /* Isi/box */
         html += '<td class="text-center"><span class="badge badge-secondary">'+isi+'</span></td>';
-        html += '<td>'+esc(d.satuan || '')+'</td>';
+
+        /* Satuan */
+        html += '<td>'+esc(d.satuan||'')+'</td>';
+
+        /* Berat */
         html += '<td class="text-right"><small>'+beratKg+' kg</small></td>';
+
+        /* Kubik */
         html += '<td class="text-right"><small>'+kubStr+' m³</small></td>';
-        // Handle both 'gudang' and 'gudang_id' field names
-        var gudang = d.gudang || d.gudang_id || '-';
-        html += '<td><small class="text-muted">'+esc(String(gudang))+'</small></td>';
+
+        /* Gudang — tampilkan nama, bukan ID */
+        html += '<td><small class="text-muted">'+esc(gdgNama)+'</small></td>';
+
+        /* Tombol Pilih */
         html += '<td class="text-center">';
         html += '<button type="button" class="btn btn-xs btn-primary btn-pick-stock"';
-        html += ' data-kd="'+esc(kd)+'"';
-        html += ' data-nm="'+esc(d.nama_barang||'')+'"';
-        html += ' data-exp="'+esc(expDate)+'"';
-        html += ' data-lot="'+esc(d.no_lot||'')+'"';
-        html += ' data-sat="'+esc(d.satuan||'')+'"';
-        html += ' data-av="'+avTotal+'"';
-        html += ' data-ton="'+(parseFloat(d.berat_gram)||0)+'"';
-        html += ' data-kub="'+(parseFloat(d.kubikasi_m3)||0)+'"';
-        html += ' data-isi="'+isi+'"';                         /* ← PENTING */
-        html += ' data-gudang="'+esc(String(gudang))+'"';
-        html += ' data-pk="'+(parseFloat(d.hpp||d.hpp)||0)+'">';
+        html += ' data-kd="'   +esc(kd)+'\"';
+        html += ' data-nm="'   +esc(d.nama_barang||'')+'\"';
+        html += ' data-exp="'  +esc(expDate)+'\"';
+        html += ' data-lot="'  +esc(d.no_lot||'')+'\"';
+        html += ' data-sat="'  +esc(d.satuan||'')+'\"';
+        html += ' data-av="'   +avTotal+'\"';
+        html += ' data-ton="'  +(parseFloat(d.berat_gram||0))+'\"';
+        html += ' data-kub="'  +(parseFloat(d.kubikasi_m3||0))+'\"';
+        html += ' data-isi="'  +isi+'\"';
+        html += ' data-gudang="'+esc(gdgId)+'\"';
+        html += ' data-pk="'   +(parseFloat(d.hpp||0))+'\">';
         html += '<i class="fas fa-check"></i> Pilih</button>';
-        html += '</td></tr>';
+        html += '</td>';
+
+        html += '</tr>';
     });
+
     document.getElementById('stock-body').innerHTML = html;
 }
 
@@ -1135,9 +1204,17 @@ document.getElementById('item-body').addEventListener('click', function(e) {
     }
     var p = e.target.closest('.btn-pick');
     if (p) {
+        var gudangId = document.getElementById('gudang_id_input').value;
+        if (!gudangId) {
+            document.getElementById('gudang-hint').classList.remove('d-none');
+            document.getElementById('gudang_id_input').focus();
+            alert('Pilih gudang terlebih dahulu!');
+            return;
+        }
         currentRowIdx = parseInt(p.dataset.idx);
-        loadStock();
-        $('#modal-stock').modal('show');
+        if (loadStock()) {
+            $('#modal-stock').modal('show');
+        }
     }
 });
 
@@ -1172,8 +1249,6 @@ document.getElementById('stock-body').addEventListener('click', function(e) {
 
     /* Gudang dari barang */
     var gudang = btn.dataset.gudang || '';
-    document.getElementById('gudang_display').value  = gudang || '-';
-    document.getElementById('gudang_id_input').value = gudang || '';
 
     /* Isi dropdown expired date dari semua baris stok barang ini */
     /* Handle both 'kd_barang' (from tberp_stock_batch) and 'kode_barang' (from v_available_stock) */
@@ -1258,10 +1333,59 @@ document.getElementById('stock-search').addEventListener('input', function() {
 
 /* Tambah baris kosong & buka modal pilih barang */
 document.getElementById('btn-add-row').addEventListener('click', function() {
+    var gudangId = document.getElementById('gudang_id_input').value;
+    if (!gudangId) {
+        document.getElementById('gudang-hint').classList.remove('d-none');
+        document.getElementById('gudang_id_input').focus();
+        alert('Pilih gudang terlebih dahulu sebelum menambah barang!');
+        return;
+    }
+
+    // Hapus placeholder jika masih ada
+    var ph = document.getElementById('row-placeholder');
+    if (ph) ph.remove();
+
     tambahBaris({});
-    // Langsung buka modal setelah baris ditambahkan
-    loadStock();
-    $('#modal-stock').modal('show');
+    if (loadStock()) {
+        $('#modal-stock').modal('show');
+    }
+});
+
+document.getElementById('gudang_id_input').addEventListener('change', function() {
+    var gudangId = this.value;
+    if (!gudangId) {
+        stockCache = [];
+        document.getElementById('gudang-hint').classList.remove('d-none');
+        return;
+    }
+    document.getElementById('gudang-hint').classList.add('d-none');
+
+    // Cek apakah ada baris yang sudah dipilih barangnya (kd_barang tidak kosong)
+    var adaBarangTerpilih = false;
+    document.querySelectorAll('#item-body tr').forEach(function(tr) {
+        var i  = tr.dataset.idx;
+        if (!i) return; // skip placeholder
+        var kd = (document.getElementById('kd_'+i) || {value:''}).value;
+        if (kd) adaBarangTerpilih = true;
+    });
+
+    if (adaBarangTerpilih) {
+        if (!confirm('Mengganti gudang akan menghapus semua item yang sudah dipilih. Lanjutkan?')) {
+            this.value = this.dataset.prevVal || '';
+            return;
+        }
+        // Hapus semua baris lalu buat 1 baris kosong baru
+        document.getElementById('item-body').innerHTML = '';
+        rowIdx = 0;
+        tambahBaris({});
+        hitungGrand();
+        hitungTK();
+    }
+    // Jika belum ada barang terpilih (baris masih kosong),
+    // tidak perlu reset apapun — baris kosong tetap ada
+
+    this.dataset.prevVal = gudangId;
+    stockCache = []; // reset cache agar load ulang sesuai gudang baru
 });
 
 /* Validasi submit */
@@ -1305,98 +1429,103 @@ document.getElementById('form-so').addEventListener('submit', function(e) {
 /* ================================================================
    INIT
 ================================================================ */
-if (EDIT_DETAILS.length) {
-    EDIT_DETAILS.forEach(function(d) { tambahBaris(d); });
-    hitungGrand();
-    hitungTK();
+(function() {
+    var elGudang = document.getElementById('gudang_id_input');
 
-    /* Load stok untuk update avail & expired options */
-    fetch(BASE_URL + 'sales_order/get_stock')
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-            if (res.status !== 'ok') return;
-            stockCache = res.data || [];
+    if (EDIT_DETAILS.length) {
+        // ── MODE EDIT ──────────────────────────────────────────
+        if (elGudang) elGudang.dataset.prevVal = GUDANG_AWAL;
 
-            document.querySelectorAll('#item-body tr').forEach(function(tr) {
-                var i      = tr.dataset.idx;
-                var kd     = (document.getElementById('kd_' +i)||{value:''}).value;
-                var expVal = (document.getElementById('exp_'+i)||{}).value || '';
-                if (!kd) return;
+        EDIT_DETAILS.forEach(function(d) { tambahBaris(d); });
+        hitungGrand();
+        hitungTK();
+        cekNegoGlobal();
 
-                /* Rebuild dropdown expired - handle both field name formats */
-                var rows = stockCache.filter(function(s){
-                    return (s.kd_barang || s.kode_barang) === kd;
-                });
-                var sel  = document.getElementById('exp_'+i);
-                if (sel && rows.length) {
-                    sel.innerHTML = '<option value="">-- Pilih Expired Date --</option>';
-                    rows.forEach(function(s) {
-                        var opt    = document.createElement('option');
-                        /* Handle both exp_date and expired_date */
-                        var expDate = s.exp_date || s.expired_date || '';
-                        opt.value  = expDate;
-                        var isiS   = parseInt(s.isi_per_box || 1);
-                        var avBox  = Math.floor(parseFloat(s.available_stock||0) / isiS);
-                        var avEcer = Math.floor(parseFloat(s.available_stock||0) % isiS);
-                        opt.textContent = formatTgl(expDate)
-                            + (s.no_lot ? ' | Lot: '+s.no_lot : '')
-                            + ' ['+fmtNum(avBox,0)+' box + '+fmtNum(avEcer,0)+' pcs]';
-                        opt.dataset.ton    = parseFloat(s.berat_gram    || 0);
-                        opt.dataset.kub    = parseFloat(s.kubikasi_m3   || 0);
-                        opt.dataset.av     = parseFloat(s.available_stock || 0);
-                        opt.dataset.lot    = s.no_lot || '';
-                        opt.dataset.isi    = parseInt(s.isi_per_box || 1);
-                        opt.dataset.gudang = s.gudang || s.gudang_id || '';
-                        if (expDate === expVal) opt.selected = true;
-                        sel.appendChild(opt);
+        // Load stok sesuai gudang SO yang sedang diedit
+        if (GUDANG_AWAL) {
+            fetch(BASE_URL + 'sales_order/get_stock?gudang_id=' + encodeURIComponent(GUDANG_AWAL))
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.status !== 'ok') return;
+                    stockCache = res.data || [];
+
+                    document.querySelectorAll('#item-body tr').forEach(function(tr) {
+                        var i      = tr.dataset.idx;
+                        var kd     = (document.getElementById('kd_' +i)||{value:''}).value;
+                        var expVal = (document.getElementById('exp_'+i)||{value:''}).value || '';
+                        if (!kd) return;
+
+                        // Rebuild dropdown expired date
+                        var barisCocok = stockCache.filter(function(s){
+                            return (s.kd_barang || s.kode_barang) === kd;
+                        });
+                        var sel = document.getElementById('exp_'+i);
+                        if (sel && barisCocok.length) {
+                            sel.innerHTML = '<option value="">-- Pilih Expired Date --</option>';
+                            barisCocok.forEach(function(s) {
+                                var opt     = document.createElement('option');
+                                var expDate = s.exp_date || s.expired_date || '';
+                                opt.value   = expDate;
+                                var isiS    = parseInt(s.isi_per_box || 1);
+                                var avBox   = Math.floor(parseFloat(s.available_stock||0) / isiS);
+                                var avEcer  = Math.floor(parseFloat(s.available_stock||0) % isiS);
+                                opt.textContent = formatTgl(expDate)
+                                    + (s.no_lot ? ' | Lot: '+s.no_lot : '')
+                                    + ' ['+fmtNum(avBox,0)+' box + '+fmtNum(avEcer,0)+' pcs]';
+                                opt.dataset.ton    = parseFloat(s.berat_gram    || 0);
+                                opt.dataset.kub    = parseFloat(s.kubikasi_m3   || 0);
+                                opt.dataset.av     = parseFloat(s.available_stock || 0);
+                                opt.dataset.lot    = s.no_lot || '';
+                                opt.dataset.isi    = parseInt(s.isi_per_box || 1);
+                                opt.dataset.gudang = s.gudang_id || s.gudang || '';
+                                if (expDate === expVal) opt.selected = true;
+                                sel.appendChild(opt);
+                            });
+                        }
+
+                        // Update avail dari stok yang cocok
+                        var cocok = stockCache.filter(function(s){
+                            var sKd  = s.kd_barang || s.kode_barang || '';
+                            var sExp = s.exp_date  || s.expired_date || '';
+                            return sKd === kd && sExp === expVal;
+                        });
+                        var stok = cocok.length ? cocok[0] : null;
+                        if (stok) {
+                            var isiS   = parseInt(stok.isi_per_box || 1);
+                            var avS    = parseFloat(stok.available_stock || 0);
+                            var avBoxS = Math.floor(avS / isiS);
+                            var avEcS  = Math.floor(avS % isiS);
+
+                            var elB = document.getElementById('avail-box_'+i);
+                            var elE = document.getElementById('avail-ecer_'+i);
+                            if (elB) { elB.textContent = fmtNum(avBoxS,0); elB.dataset.availBox = avBoxS; }
+                            if (elE) { elE.textContent = fmtNum(avEcS,0);  elE.dataset.availEcer = avEcS; elE.dataset.availTotal = avS; }
+
+                            var mxB = document.getElementById('maxbox_'+i);
+                            var mxE = document.getElementById('maxecer_'+i);
+                            if (mxB) mxB.textContent = fmtNum(avBoxS, 0);
+                            if (mxE) mxE.textContent = fmtNum(avEcS, 0)+' pcs';
+
+                            document.getElementById('isi_'+i).value = isiS;
+                            document.getElementById('bg_' +i).value = stok.berat_gram  || 0;
+                            document.getElementById('km_' +i).value = stok.kubikasi_m3 || 0;
+                        }
+                        hitungBaris(i);
                     });
-                }
-
-                /* Update avail dari match - handle both field name formats */
-                var match = stockCache.filter(function(s){
-                    var sKd = s.kd_barang || s.kode_barang || '';
-                    var sExp = s.exp_date || s.expired_date || '';
-                    return sKd === kd && sExp === expVal;
+                })
+                .catch(function(err) {
+                    console.warn('Gagal load stok untuk edit:', err);
                 });
-                var stok = match.length ? match[0] : null;
-                if (stok) {
-                    var isi    = parseInt(stok.isi_per_box || 1);
-                    var av     = parseFloat(stok.available_stock || 0);
-                    var avBox  = Math.floor(av / isi);
-                    var avEcer = Math.floor(av % isi);
+        }
 
-                    var elB = document.getElementById('avail-box_'+i);
-                    var elE = document.getElementById('avail-ecer_'+i);
-                    if (elB) { elB.textContent = fmtNum(avBox,0); elB.dataset.availBox = avBox; }
-                    if (elE) { elE.textContent = fmtNum(avEcer,0); elE.dataset.availEcer = avEcer; elE.dataset.availTotal = av; }
-
-                    var mxB = document.getElementById('maxbox_'+i);
-                    var mxE = document.getElementById('maxecer_'+i);
-                    if (mxB) mxB.textContent = fmtNum(avBox, 0);
-                    if (mxE) mxE.textContent = fmtNum(avEcer, 0)+' pcs';
-
-                    document.getElementById('isi_'+i).value = isi;
-                    document.getElementById('bg_' +i).value = stok.berat_gram  || 0;
-                    document.getElementById('km_' +i).value = stok.kubikasi_m3 || 0;
-
-                    /* Update gudang di Informasi SO */
-                    var gudang = stok.gudang || stok.gudang_id || '-';
-                    document.getElementById('gudang_display').value  = gudang;
-                    document.getElementById('gudang_id_input').value = gudang;
-                }
-
-                hitungBaris(i);
-            });
-        })
-        .catch(function(err) {
-            console.warn('Gagal load stok untuk edit:', err);
-        });
-
-} else {
-    tambahBaris({});
-    hitungGrand();
-    hitungTK();
-    cekNegoGlobal(); 
-}
+    } else {
+        // ── MODE CREATE ────────────────────────────────────────
+        if (elGudang) elGudang.dataset.prevVal = '';
+        tambahBaris({});
+        hitungGrand();
+        hitungTK();
+        cekNegoGlobal();
+    }
+})();
 </script>
 </body>

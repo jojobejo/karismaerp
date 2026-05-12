@@ -138,11 +138,12 @@ class C_SalesOrder extends CI_Controller
     public function create()
     {
         $data['page_title']     = 'KARISMA - Buat Sales Order';
-        $data['no_so']          = '';   // kosong, diisi manual user
+        $data['no_so']          = '';
         $data['no_faktur']      = $this->M_SalesOrder->generate_no_faktur();
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
+        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list(); // ← TAMBAH
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
         $data['details']        = [];
@@ -285,6 +286,7 @@ class C_SalesOrder extends CI_Controller
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
+        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list(); // ← TAMBAH
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
@@ -506,7 +508,11 @@ class C_SalesOrder extends CI_Controller
 
         try {
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
-            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi(null, $kd_barang);
+            $gudang_id = $this->input->get('gudang_id', true);
+            // Jaga sebagai string, bukan integer
+            $gudang_id = ($gudang_id !== null && $gudang_id !== '') ? (string)$gudang_id : null;
+
+            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
 
             foreach ($stock as &$row) {
                 $row['available_stock'] = (float)($row['available_stock'] ?? 0);
@@ -519,7 +525,10 @@ class C_SalesOrder extends CI_Controller
                 $row['p']               = (float)($row['p']              ?? 0);
                 $row['l']               = (float)($row['l']              ?? 0);
                 $row['t']               = (float)($row['t']              ?? 0);
-                foreach (['kode_barang','nama_barang','satuan','exp_date','no_lot','gudang'] as $f) {
+                $row['gudang_id']       = (string)($row['gudang_id'] ?? '');
+                $row['gudang']          = (string)($row['gudang']    ?? $row['gudang_id']);
+
+                foreach (['kd_barang','nama_barang','satuan','exp_date','no_lot','gudang','gudang_id'] as $f) {
                     if (isset($row[$f])) {
                         $row[$f] = mb_convert_encoding((string)$row[$f], 'UTF-8', 'UTF-8');
                     }
@@ -532,6 +541,10 @@ class C_SalesOrder extends CI_Controller
 
             header('Content-Type: application/json; charset=utf-8');
             echo $json;
+
+            $this->db->save_queries = true;
+            error_log('get_stock gudang_id=' . $gudang_id . ' total=' . count($stock));
+            error_log('last query: ' . $this->db->last_query());
 
         } catch (Exception $e) {
             header('Content-Type: application/json; charset=utf-8');

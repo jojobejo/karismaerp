@@ -73,6 +73,16 @@ class M_SalesOrder extends CI_Model
                         ->result_array();
     }
 
+    public function get_gudang_list()
+    {
+        return $this->db
+            ->where('is_active', 1)
+            ->where_in('tipe', ['INDUK']) // hanya gudang INDUK untuk SO
+            ->order_by('nama_gudang', 'ASC')
+            ->get('tb_gudang')
+            ->result_array();
+    }
+
     public function get_customer($id)
     {
         return $this->db->get_where('tb_customer', ['id' => $id])->row_array();
@@ -192,28 +202,75 @@ class M_SalesOrder extends CI_Model
     // ----------------------------------------------------------------
     public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
     {
-        // First, try to get data from tberp_stock_batch
-        $this->db->select('sb.*, mb.nama_barang,
-                           (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock');
+        // Cast gudang_id ke string untuk pencocokan varchar
+        $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
+
+        // Coba dari tberp_stock_batch dulu
+        $this->db->select('sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
+                        sb.qty_on_hand, sb.qty_reserved,
+                        (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock,
+                        mb.nama_barang');
         $this->db->from('tberp_stock_batch sb');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
         $this->db->where('(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) >', 0);
-        
+
         if (!empty($kd_barang)) {
             $this->db->where('sb.kd_barang', $kd_barang);
         }
-        if (!empty($gudang_id)) {
-            $this->db->where('sb.gudang_id', $gudang_id);
+        if (!empty($gudang_id_str)) {
+            // Cast kedua sisi ke CHAR agar varchar vs int tidak mismatch
+            $this->db->where("CAST(sb.gudang_id AS CHAR) = CAST('" . $this->db->escape_str($gudang_id_str) . "' AS CHAR)");
         }
-        
+
         $stocks = $this->db->get()->result_array();
 
-        // If tberp_stock_batch is empty, fallback to v_available_stock
+        // Fallback: hitung dari tberp_stock_ledger jika stock_batch kosong
         if (empty($stocks)) {
-            $this->db->where('available_stock >', 0);
-            if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
-            if (!empty($gudang_id)) $this->db->where('gudang', $gudang_id);
-            $stocks = $this->db->get('v_available_stock')->result_array();
+            $sql = "SELECT 
+                        kd_barang,
+                        gudang_id,
+                        no_lot,
+                        expired_date,
+                        SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
+                        - SUM(CASE WHEN tipe IN ('OUT','RESERVE','ADJOUT','RJUAL') THEN qty ELSE 0 END)
+                        + SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS available_stock,
+                        SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
+                        - SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS qty_reserved,
+                        SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END) AS qty_on_hand,
+                        NULL AS nama_barang
+                    FROM tberp_stock_ledger
+                    WHERE 1=1";
+            $params = [];
+
+            if (!empty($gudang_id_str)) {
+                $sql .= " AND CAST(gudang_id AS CHAR) = CAST(? AS CHAR)";
+                $params[] = $gudang_id_str;
+            }
+            if (!empty($kd_barang)) {
+                $sql .= " AND kd_barang = ?";
+                $params[] = $kd_barang;
+            }
+
+            $sql .= " GROUP BY kd_barang, gudang_id, no_lot, expired_date
+                    HAVING available_stock > 0";
+
+            $stocks = $this->db->query($sql, $params)->result_array();
+
+            // Ambil nama_barang dari master
+            if (!empty($stocks)) {
+                $kd_list = array_unique(array_column($stocks, 'kd_barang'));
+                $masters = $this->db->where_in('kd_barang', $kd_list)
+                                    ->get('tb_master_barang_all')
+                                    ->result_array();
+                $masterMap = [];
+                foreach ($masters as $m) {
+                    $masterMap[$m['kd_barang']] = $m;
+                }
+                foreach ($stocks as &$s) {
+                    $s['nama_barang'] = $masterMap[$s['kd_barang']]['nama_barang'] ?? '';
+                }
+                unset($s);
+            }
         }
 
         if (empty($stocks)) return [];
@@ -223,9 +280,8 @@ class M_SalesOrder extends CI_Model
 
         foreach ($stocks as &$row) {
             $kd = $row['kd_barang'];
-            $m  = isset($master[$kd]) ? $master[$kd] : [];
+            $m  = $master[$kd] ?? [];
 
-            // Use master data if nama_barang is empty
             if (empty($row['nama_barang']) && !empty($m['nama_barang'])) {
                 $row['nama_barang'] = $m['nama_barang'];
             }
@@ -237,24 +293,20 @@ class M_SalesOrder extends CI_Model
             $row['l']           = $m['l']           ?? 0;
             $row['t']           = $m['t']           ?? 0;
             $row['isi_per_box'] = $m['isi_per_box'] ?? 1;
-            $row['satuan']      = $m['satuan'] ?? ($row['satuan'] ?? '');
+            $row['satuan']      = $m['satuan']      ?? ($row['satuan'] ?? '');
 
-            // Normalize expired_date to YYYY-MM-DD for form/JS
-            // Handle both tberp_stock_batch (expired_date) and v_available_stock (exp_date)
+            // Normalize expired_date → YYYY-MM-DD
             if (isset($row['expired_date'])) {
                 $row['exp_date'] = $this->_normalizeDate($row['expired_date']);
-                $row['gudang']   = $row['gudang_id'] ?? '';
-                $row['qty_on_hand']  = (float)($row['qty_on_hand'] ?? $row['available_stock'] ?? 0);
-                $row['qty_reserved'] = (float)($row['qty_reserved'] ?? 0);
+                $row['gudang']   = (string)($row['gudang_id'] ?? '');
             } else {
-                // From v_available_stock
                 $row['exp_date'] = $this->_normalizeDate($row['exp_date'] ?? '');
-                $row['gudang']   = $row['gudang'] ?? '';
-                $row['qty_on_hand']  = (float)($row['available_stock'] ?? 0);
-                $row['qty_reserved'] = 0;
+                $row['gudang']   = (string)($row['gudang'] ?? '');
             }
 
-            // Available = qty_on_hand - qty_reserved
+            // Pastikan gudang_id selalu string
+            $row['gudang_id'] = (string)($row['gudang_id'] ?? $row['gudang'] ?? '');
+
             $av  = (float)($row['available_stock'] ?? 0);
             $isi = max(1, (int)$row['isi_per_box']);
 
