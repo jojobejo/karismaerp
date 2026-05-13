@@ -598,4 +598,31 @@ class M_Checker extends CI_Model
             'total_pause_secs_siapkan' => $total,
         ]);
     }
+
+    public function ganti_checker_bongkaran($id, $nik_ck, $nama_ck)
+    {
+        return $this->db->where('id_bongkaran', $id)
+                        ->update('tb_bongkaran_checker', [
+                            'nik_checker' => $nik_ck,
+                            'nm_checker'  => $nama_ck,
+                        ]);
+    }
+
+    public function ganti_checker_kk($id, $nik_ck, $nama_ck)
+    {
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_kk', [
+                            'nik_checker' => $nik_ck,
+                            'nm_checker'  => $nama_ck,
+                        ]);
+    }
+
+    public function ganti_checker_lk($id, $nik_ck, $nama_ck)
+    {
+        return $this->db->where('id', $id)
+                        ->update('tb_loading_lk', [
+                            'nik_checker' => $nik_ck,
+                            'nm_checker'  => $nama_ck,
+                        ]);
+    }
 }

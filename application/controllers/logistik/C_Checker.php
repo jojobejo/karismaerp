@@ -839,4 +839,70 @@ class C_Checker extends CI_Controller
         $ok = $this->M_Checker->resume_siapkan_lk($id);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Penyiapan LK dilanjutkan' : 'Gagal resume']);
     }
+
+    // ================================================================
+    // GANTI CHECKER — BONGKARAN
+    // ================================================================
+    public function ganti_checker()
+    {
+        if (!$this->isMCK()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Manager Checker yang bisa mengganti checker']); return;
+        }
+        $id      = (int)$this->input->post('id');
+        $nik_ck  = $this->input->post('nik_checker', true);
+        $nama_ck = $this->input->post('nm_checker',  true);
+        if (!$nik_ck || !$nama_ck) {
+            echo json_encode(['status' => false, 'msg' => 'Pilih checker terlebih dahulu']); return;
+        }
+        $row = $this->M_Checker->get_by_id($id);
+        if (!$row || !in_array($row['status'], ['PROSES'])) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya bongkaran yang sedang PROSES yang bisa diganti checkernya']); return;
+        }
+        $ok = $this->M_Checker->ganti_checker_bongkaran($id, $nik_ck, $nama_ck);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker berhasil diganti' : 'Gagal mengganti checker']);
+    }
+
+    // ================================================================
+    // GANTI CHECKER — LOADING KK
+    // ================================================================
+    public function ganti_checker_kk()
+    {
+        if (!$this->isMCK()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Manager Checker yang bisa mengganti checker']); return;
+        }
+        $id      = (int)$this->input->post('id');
+        $nik_ck  = $this->input->post('nik_checker', true);
+        $nama_ck = $this->input->post('nm_checker',  true);
+        if (!$nik_ck || !$nama_ck) {
+            echo json_encode(['status' => false, 'msg' => 'Pilih checker terlebih dahulu']); return;
+        }
+        $row = $this->M_Checker->get_kk_by_id($id);
+        if (!$row || !in_array($row['status'], ['PENYIAPAN_BARANG', 'SIAP_LOADING', 'PROSES_LOADING'])) {
+            echo json_encode(['status' => false, 'msg' => 'Status tidak memungkinkan untuk ganti checker']); return;
+        }
+        $ok = $this->M_Checker->ganti_checker_kk($id, $nik_ck, $nama_ck);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker KK berhasil diganti' : 'Gagal mengganti checker']);
+    }
+
+    // ================================================================
+    // GANTI CHECKER — LOADING LK
+    // ================================================================
+    public function ganti_checker_lk()
+    {
+        if (!$this->isMCK()) {
+            echo json_encode(['status' => false, 'msg' => 'Hanya Manager Checker yang bisa mengganti checker']); return;
+        }
+        $id      = (int)$this->input->post('id');
+        $nik_ck  = $this->input->post('nik_checker', true);
+        $nama_ck = $this->input->post('nm_checker',  true);
+        if (!$nik_ck || !$nama_ck) {
+            echo json_encode(['status' => false, 'msg' => 'Pilih checker terlebih dahulu']); return;
+        }
+        $row = $this->M_Checker->get_lk_by_id($id);
+        if (!$row || !in_array($row['status'], ['PENYIAPAN_BARANG', 'SIAP_LOADING', 'PROSES_LOADING'])) {
+            echo json_encode(['status' => false, 'msg' => 'Status tidak memungkinkan untuk ganti checker']); return;
+        }
+        $ok = $this->M_Checker->ganti_checker_lk($id, $nik_ck, $nama_ck);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker LK berhasil diganti' : 'Gagal mengganti checker']);
+    }
 }
