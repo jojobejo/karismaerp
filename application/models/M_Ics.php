@@ -684,16 +684,13 @@ class M_Ics extends CI_Model
         return $this->db->query("SELECT 
             a.*,
             IFNULL(s.jumlah_barang, 0) AS jumlah_barang,
-            IFNULL(s.pic, '-') AS pic,
-            IFNULL(s.kordinat, '-') AS kordinat,
-            IFNULL(s.kordinat1, '-') AS kordinat1
+            IFNULL(s.pic, '-') AS pic
             FROM tb_master_barang_all a
             LEFT JOIN (
             SELECT 
                 nama_barang,
                 COUNT(*) AS jumlah_barang,
-                MAX(barang_pic) AS pic,
-                MAX(koordinat_id) AS kordinat
+                MAX(barang_pic) AS pic
             FROM tb_saldo_awal
             GROUP BY nama_barang
         ) s ON s.nama_barang = a.nama_barang

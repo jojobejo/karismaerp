@@ -60,6 +60,10 @@ $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard';
 
+$route['stockopname']                               = 'Authlog';
+$route['process_opname']                            = 'Authlog/process';
+$route['logout_opname']                             = 'Authlog/logout';
+
 // Penilaian Lingkungan Kantor alias route
 $route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingkungan';
 
@@ -233,7 +237,7 @@ $route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/det
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
-$route['stockopname']                               = 'logistik/C_Logistik/stockopname';
+
 $route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
 $route['detailbarang/(:any)']                       = 'logistik/C_Logistik/detailbarang/$1';
 $route['forminput/(:any)/(:any)']                   = 'logistik/C_Logistik/forminput/$1/$2';
@@ -257,6 +261,9 @@ $route['export_compare_allbarang']                  = 'logistik/C_Logistik/expor
 $route['usropname_input']                           = 'logistik/C_Logistik/usropname_input';
 $route['delete_opname/(:any)']                      = 'logistik/C_Logistik/delete_opname/$1';
 $route['data_final_input_opname']                   = 'logistik/C_Logistik/data_final_input_opname';
+
+$route['dashboard_opname']                          = 'logistik/C_Opname/index';
+
 
 //LOGISTIK - DO
 $route['data_preview_do']                           = 'logistik/C_Logistik/preview_csv';
@@ -438,7 +445,7 @@ $route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environme
 $route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
 $route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
 $route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
-$route['hrd/penilaian_lingkungan/locations/delete']= 'hrd/C_Hrd/delete_hrd_location';
+$route['hrd/penilaian_lingkungan/locations/delete'] = 'hrd/C_Hrd/delete_hrd_location';
 $route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
 $route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
 $route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
