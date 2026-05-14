@@ -2,84 +2,175 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * M_SalesOrder.php
+ * M_SalesOrder.php  — REVISI ALUR BARU
  *
- * GUDANG: v_available_stock.gudang = tb_karyawan.wilayah (integer)
- *         tbso_stock_reservation.gudang_id harus sama nilainya (integer).
+ * PERUBAHAN UTAMA:
+ *  - SO tidak lagi memiliki no_faktur. No_faktur ada di tbso_faktur_penjualan.
+ *  - SO memiliki status: draft → open → completed | cancelled
+ *  - Faktur Penjualan dibuat dari SO yang berstatus open (bisa >1 faktur per SO).
+ *  - Pengiriman parsial: qty_order vs qty_faktur vs qty_outstanding.
+ *  - Qty Reserved tetap berjalan: saat SO dibuat → reserved, saat difakturkan → RELEASE
+ *    reserved lama + OUT untuk faktur baru.
+ *  - SO dianggap Completed apabila seluruh qty_outstanding = 0.
  *
- * FORMAT exp_date di view: DD/MM/YYYY (text/varchar)
- *   Form mengirim YYYY-MM-DD → dikonversi DD/MM/YYYY saat query/simpan.
+ * TABEL BARU yang dibutuhkan:
+ *  - tbso_faktur_penjualan  : header faktur (no_faktur, id_so, ...)
+ *  - tbso_faktur_detail     : detail faktur (per baris barang per faktur)
+ *  - tbso_sales_order       : HAPUS kolom no_faktur (sudah pindah ke tabel faktur)
+ *  - tbso_sales_order_detail: tambah kolom qty_faktur, qty_outstanding
  *
- * STOK BERKURANG:
- *   v_available_stock JOIN tbso_stock_reservation ON:
- *     kd_barang = kd_barang
- *     exp_date  = exp_date   ← harus sama format (DD/MM/YYYY)
- *     gudang    = gudang_id  ← harus sama nilai (integer wilayah)
- *     status    = 'active'
+ * DDL RINGKAS (jalankan sekali di DB):
+ * -----------------------------------------------------------------------
+ * ALTER TABLE tbso_sales_order
+ *   DROP COLUMN IF EXISTS no_faktur,
+ *   MODIFY COLUMN status ENUM('draft','open','completed','cancelled')
+ *     NOT NULL DEFAULT 'draft';
+ *
+ * ALTER TABLE tbso_sales_order_detail
+ *   ADD COLUMN qty_faktur    DECIMAL(12,3) NOT NULL DEFAULT 0
+ *     COMMENT 'total qty yang sudah dibuat faktur',
+ *   ADD COLUMN qty_outstanding DECIMAL(12,3) GENERATED ALWAYS AS
+ *     (qty - qty_faktur) STORED
+ *     COMMENT 'sisa qty belum difakturkan';
+ *
+ * CREATE TABLE IF NOT EXISTS tbso_faktur_penjualan (
+ *   id_faktur       INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ *   no_faktur       VARCHAR(30) NOT NULL UNIQUE,
+ *   id_so           INT UNSIGNED NOT NULL,
+ *   no_so           VARCHAR(30) NOT NULL,
+ *   kd_customer     VARCHAR(20) NOT NULL,
+ *   customer_name   VARCHAR(100),
+ *   gudang_id       VARCHAR(10),
+ *   tanggal_faktur  DATE NOT NULL,
+ *   total_tonase    DECIMAL(12,6) DEFAULT 0,
+ *   total_kubikasi  DECIMAL(12,6) DEFAULT 0,
+ *   catatan         TEXT,
+ *   status          ENUM('draft','confirmed','cancelled') DEFAULT 'draft',
+ *   create_by       VARCHAR(50),
+ *   create_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+ *   update_by       VARCHAR(50),
+ *   update_at       DATETIME ON UPDATE CURRENT_TIMESTAMP,
+ *   INDEX idx_id_so (id_so),
+ *   INDEX idx_no_faktur (no_faktur)
+ * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ *
+ * CREATE TABLE IF NOT EXISTS tbso_faktur_detail (
+ *   id_faktur_detail INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ *   id_faktur        INT UNSIGNED NOT NULL,
+ *   no_faktur        VARCHAR(30) NOT NULL,
+ *   id_so            INT UNSIGNED NOT NULL,
+ *   id_so_detail     INT UNSIGNED NOT NULL,
+ *   kd_barang        VARCHAR(30) NOT NULL,
+ *   nama_barang      VARCHAR(150),
+ *   no_lot           VARCHAR(50),
+ *   expired_date     DATE,
+ *   qty              DECIMAL(12,3) NOT NULL,
+ *   qty_box          DECIMAL(12,3) DEFAULT 0,
+ *   qty_satuan       DECIMAL(12,3) DEFAULT 0,
+ *   isi_per_box      INT DEFAULT 1,
+ *   satuan           VARCHAR(20),
+ *   hrg_satuan       DECIMAL(16,2) DEFAULT 0,
+ *   hrg_pokok        DECIMAL(16,2) DEFAULT 0,
+ *   disc             DECIMAL(5,2) DEFAULT 0,
+ *   pajak            DECIMAL(5,2) DEFAULT 0,
+ *   subtotal_before_disc DECIMAL(16,2) DEFAULT 0,
+ *   subtotal_after_disc  DECIMAL(16,2) DEFAULT 0,
+ *   total_harga      DECIMAL(16,2) DEFAULT 0,
+ *   berat_gram       DECIMAL(12,4) DEFAULT 0,
+ *   kubikasi_m3      DECIMAL(12,6) DEFAULT 0,
+ *   tonase_satuan    DECIMAL(12,6) DEFAULT 0,
+ *   kubikasi_satuan  DECIMAL(12,6) DEFAULT 0,
+ *   gudang_id        VARCHAR(10),
+ *   create_by        VARCHAR(50),
+ *   INDEX idx_no_faktur (no_faktur),
+ *   INDEX idx_id_so_detail (id_so_detail)
+ * ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ * -----------------------------------------------------------------------
  */
+
 class M_SalesOrder extends CI_Model
 {
     const BATAS_TONASE   = 6;
     const BATAS_KUBIKASI = 9;
 
-    // ----------------------------------------------------------------
-    // HELPER tanggal
-    // ----------------------------------------------------------------
+    // ================================================================
+    // HELPER — TANGGAL
+    // ================================================================
+
     private function _normalizeDate($raw)
     {
         $raw = trim((string)$raw);
         if (!$raw) return null;
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) return $raw;
         if (preg_match('/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/', $raw, $m))
-            return $m[3].'-'.$m[2].'-'.$m[1];
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
         return $raw;
     }
 
-    // YYYY-MM-DD → DD/MM/YYYY (format kolom exp_date di view & reservasi)
+    // YYYY-MM-DD → DD/MM/YYYY (untuk tbso_stock_reservation.exp_date)
     private function _toViewDate($ymd)
     {
         $ymd = $this->_normalizeDate($ymd);
         if (!$ymd) return '';
         $p = explode('-', $ymd);
-        return count($p) === 3 ? $p[2].'/'.$p[1].'/'.$p[0] : $ymd;
+        return count($p) === 3 ? $p[2] . '/' . $p[1] . '/' . $p[0] : $ymd;
     }
 
-    // ----------------------------------------------------------------
-    // GENERATE NOMOR SO
-    // ----------------------------------------------------------------
-    public function generate_no_faktur()
-    {
-        $prefix = 'INV' . date('dmY');
+    // ================================================================
+    // GENERATE NOMOR
+    // ================================================================
 
-        $this->db->like('no_faktur', $prefix, 'after');
-        $this->db->order_by('no_faktur', 'DESC');
-        $this->db->limit(1);
-        $row = $this->db->get('tbso_sales_order')->row();
+    /**
+     * Generate No. SO — format: SO/YYYYMM/XXXX
+     */
+    public function generate_no_so()
+    {
+        $prefix = 'SO/' . date('dmy') . '/';
+
+        $row = $this->db
+            ->like('no_so', $prefix, 'after')
+            ->order_by('no_so', 'DESC')
+            ->limit(1)
+            ->get('tbso_sales_order')
+            ->row();
 
         if ($row) {
-            $last = (int) substr($row->no_faktur, -4);
+            $last = (int)substr($row->no_so, -4);
             return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
         }
         return $prefix . '0001';
     }
 
-    // ----------------------------------------------------------------
-    // CUSTOMER
-    // ----------------------------------------------------------------
+    /**
+     * Generate No. Faktur — format: INV/YYYYMM/XXXX
+     * Faktur sekarang hidup di tbso_faktur_penjualan.
+     */
+    public function generate_no_faktur()
+    {
+        $prefix = 'INV/' . date('dmy') . '/';
+
+        $row = $this->db
+            ->like('no_faktur', $prefix, 'after')
+            ->order_by('no_faktur', 'DESC')
+            ->limit(1)
+            ->get('tbso_faktur_penjualan')
+            ->row();
+
+        if ($row) {
+            $last = (int)substr($row->no_faktur, -4);
+            return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return $prefix . '0001';
+    }
+
+    // ================================================================
+    // MASTER DATA
+    // ================================================================
+
     public function get_customers()
     {
         return $this->db->order_by('nama_customer', 'ASC')
-                        ->get('tb_customer')
-                        ->result_array();
-    }
-
-    public function get_gudang_list()
-    {
-        return $this->db
-            ->where('is_active', 1)
-            ->where_in('tipe', ['INDUK']) // hanya gudang INDUK untuk SO
-            ->order_by('nama_gudang', 'ASC')
-            ->get('tb_gudang')
+            ->get('tb_customer')
             ->result_array();
     }
 
@@ -88,51 +179,37 @@ class M_SalesOrder extends CI_Model
         return $this->db->get_where('tb_customer', ['id' => $id])->row_array();
     }
 
-    // ----------------------------------------------------------------
-    // STOK
-    // ----------------------------------------------------------------
-    public function get_available_stock($gudang_id = null, $kd_barang = null)
+    public function get_gudang_list()
     {
-        $this->db->where('available_stock >', 0);
-        if (!empty($gudang_id)) $this->db->where('gudang', $gudang_id);
-        if ($kd_barang)         $this->db->where('kode_barang', $kd_barang);
-        return $this->db->get('v_available_stock')->result_array();
+        return $this->db
+            ->where('is_active', 1)
+            ->where_in('tipe', ['INDUK'])
+            ->order_by('nama_gudang', 'ASC')
+            ->get('tb_gudang')
+            ->result_array();
     }
 
-    /**
-     * Cek stok satu item dari tberp_stock_batch.
-     * exp_date input (YYYY-MM-DD) akan dicocokkan dengan kolom expired_date.
-     * Available = qty_on_hand - qty_reserved
-     * gudang_id kosong → SUM semua gudang (fallback saat session belum set).
-     */
-    public function cek_stock($kd_barang, $exp_date, $gudang_id)
+    public function get_tax_list()
     {
-        $ymd = $this->_normalizeDate($exp_date);
-
-        if (!empty($gudang_id)) {
-            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
-                           qty_on_hand, qty_reserved,
-                           (qty_on_hand - COALESCE(qty_reserved, 0)) AS available_stock
-                    FROM tberp_stock_batch
-                    WHERE kd_barang = ? AND expired_date = ? AND gudang_id = ?
-                    LIMIT 1";
-            return $this->db->query($sql, [$kd_barang, $ymd, $gudang_id])->row_array();
-        } else {
-            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
-                           SUM(qty_on_hand) AS qty_on_hand,
-                           SUM(COALESCE(qty_reserved, 0)) AS qty_reserved,
-                           (SUM(qty_on_hand) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
-                    FROM tberp_stock_batch
-                    WHERE kd_barang = ? AND expired_date = ?
-                    GROUP BY kd_barang, expired_date
-                    LIMIT 1";
-            return $this->db->query($sql, [$kd_barang, $ymd])->row_array();
-        }
+        return $this->db->order_by('nm_tax', 'ASC')
+            ->get('tb_set_tax')
+            ->result_array();
     }
 
-    // ----------------------------------------------------------------
+    public function get_approver_list()
+    {
+        return $this->db
+            ->select('id, nm_karyawan, jobdesk, departemen')
+            ->where('nm_karyawan !=', '')
+            ->order_by('nm_karyawan', 'ASC')
+            ->get('tb_karyawan')
+            ->result_array();
+    }
+
+    // ================================================================
     // MASTER BARANG
-    // ----------------------------------------------------------------
+    // ================================================================
+
     public function get_detail_barang($kd_barang)
     {
         $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
@@ -144,26 +221,37 @@ class M_SalesOrder extends CI_Model
     {
         if (empty($kd_list)) return [];
         $rows = $this->db->where_in('kd_barang', array_unique($kd_list))
-                         ->get('tb_master_barang_all')
-                         ->result_array();
+            ->get('tb_master_barang_all')
+            ->result_array();
         $map = [];
-        foreach ($rows as $r) { $map[$r['kd_barang']] = $this->_normalize_barang($r); }
+        foreach ($rows as $r) {
+            $map[$r['kd_barang']] = $this->_normalize_barang($r);
+        }
         return $map;
     }
 
     private function _normalize_barang(array $row)
     {
         $berat = 0;
-        foreach (['berat','berat_gram','weight','berat_satuan','gr'] as $c) {
-            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $berat=(float)$row[$c]; break; }
+        foreach (['berat', 'berat_gram', 'weight', 'berat_satuan', 'gr'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $berat = (float)$row[$c];
+                break;
+            }
         }
         $kubikasi = 0;
-        foreach (['kubikasi','kubikasi_m3','volume','kubik','cbm'] as $c) {
-            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $kubikasi=(float)$row[$c]; break; }
+        foreach (['kubikasi', 'kubikasi_m3', 'volume', 'kubik', 'cbm'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $kubikasi = (float)$row[$c];
+                break;
+            }
         }
         $hpp = 0;
-        foreach (['hpp','harga_pokok','cost','cogs','h_pokok'] as $c) {
-            if (array_key_exists($c,$row) && $row[$c]!==null && $row[$c]!=='') { $hpp=(float)$row[$c]; break; }
+        foreach (['hpp', 'harga_pokok', 'cost', 'cogs', 'h_pokok'] as $c) {
+            if (array_key_exists($c, $row) && $row[$c] !== null && $row[$c] !== '') {
+                $hpp = (float)$row[$c];
+                break;
+            }
         }
 
         $p = (int)($row['p'] ?? $row['panjang'] ?? $row['length'] ?? 0);
@@ -171,15 +259,21 @@ class M_SalesOrder extends CI_Model
         $t = (int)($row['t'] ?? $row['tinggi']  ?? $row['height'] ?? 0);
 
         $isi = 0;
-        foreach (['isi_box','qty_isi','isi','isi_per_box','qty_per_box','jumlah_isi'] as $c) {
-            if (array_key_exists($c,$row) && (int)$row[$c]>0) { $isi=(int)$row[$c]; break; }
+        foreach (['isi_box', 'qty_isi', 'isi', 'isi_per_box', 'qty_per_box', 'jumlah_isi'] as $c) {
+            if (array_key_exists($c, $row) && (int)$row[$c] > 0) {
+                $isi = (int)$row[$c];
+                break;
+            }
         }
         if ($isi < 1 && $p > 0 && $l > 0 && $t > 0) $isi = $p * $l * $t;
         if ($isi < 1) $isi = 1;
 
         $satuan = '';
-        foreach (['satuan','unit','uom','satuan_kecil'] as $c) {
-            if (!empty($row[$c])) { $satuan = (string)$row[$c]; break; }
+        foreach (['satuan', 'unit', 'uom', 'satuan_kecil'] as $c) {
+            if (!empty($row[$c])) {
+                $satuan = (string)$row[$c];
+                break;
+            }
         }
 
         $row['berat_gram']  = $berat;
@@ -194,78 +288,63 @@ class M_SalesOrder extends CI_Model
         return $row;
     }
 
-    // ----------------------------------------------------------------
-    // STOK + DIMENSI — AJAX /get_stock
-    // PERUBAHAN: Menggunakan tberp_stock_ledger dan tberp_stock_batch
-    //            Available = qty_on_hand - qty_reserved
-    //            JOIN with master barang to get nama_barang
-    // ----------------------------------------------------------------
+    // ================================================================
+    // STOK
+    // ================================================================
+
     public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
     {
-        // Cast gudang_id ke string untuk pencocokan varchar
         $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
 
-        // Coba dari tberp_stock_batch dulu
+        // Ambil dari tberp_stock_batch
         $this->db->select('sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
-                        sb.qty_on_hand, sb.qty_reserved,
-                        (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock,
-                        mb.nama_barang');
+                           sb.qty_on_hand, sb.qty_reserved,
+                           (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock,
+                           mb.nama_barang');
         $this->db->from('tberp_stock_batch sb');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
         $this->db->where('(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) >', 0);
 
-        if (!empty($kd_barang)) {
-            $this->db->where('sb.kd_barang', $kd_barang);
-        }
+        if (!empty($kd_barang))     $this->db->where('sb.kd_barang', $kd_barang);
         if (!empty($gudang_id_str)) {
-            // Cast kedua sisi ke CHAR agar varchar vs int tidak mismatch
-            $this->db->where("CAST(sb.gudang_id AS CHAR) = CAST('" . $this->db->escape_str($gudang_id_str) . "' AS CHAR)");
+            $this->db->where(
+                "CAST(sb.gudang_id AS CHAR) = CAST('" . $this->db->escape_str($gudang_id_str) . "' AS CHAR)"
+            );
         }
 
         $stocks = $this->db->get()->result_array();
 
-        // Fallback: hitung dari tberp_stock_ledger jika stock_batch kosong
+        // Fallback: hitung dari tberp_stock_ledger
         if (empty($stocks)) {
-            $sql = "SELECT 
-                        kd_barang,
-                        gudang_id,
-                        no_lot,
-                        expired_date,
-                        SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
-                        - SUM(CASE WHEN tipe IN ('OUT','RESERVE','ADJOUT','RJUAL') THEN qty ELSE 0 END)
-                        + SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS available_stock,
-                        SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
-                        - SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS qty_reserved,
-                        SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END) AS qty_on_hand,
-                        NULL AS nama_barang
-                    FROM tberp_stock_ledger
-                    WHERE 1=1";
+            $sql    = "SELECT
+                           kd_barang, gudang_id, no_lot, expired_date,
+                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
+                           - SUM(CASE WHEN tipe IN ('OUT','RESERVE','ADJOUT','RJUAL') THEN qty ELSE 0 END)
+                           + SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS available_stock,
+                           SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
+                           - SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS qty_reserved,
+                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END) AS qty_on_hand,
+                           NULL AS nama_barang
+                       FROM tberp_stock_ledger WHERE 1=1";
             $params = [];
 
             if (!empty($gudang_id_str)) {
-                $sql .= " AND CAST(gudang_id AS CHAR) = CAST(? AS CHAR)";
+                $sql     .= " AND CAST(gudang_id AS CHAR) = CAST(? AS CHAR)";
                 $params[] = $gudang_id_str;
             }
             if (!empty($kd_barang)) {
-                $sql .= " AND kd_barang = ?";
+                $sql     .= " AND kd_barang = ?";
                 $params[] = $kd_barang;
             }
 
-            $sql .= " GROUP BY kd_barang, gudang_id, no_lot, expired_date
-                    HAVING available_stock > 0";
+            $sql    .= " GROUP BY kd_barang, gudang_id, no_lot, expired_date HAVING available_stock > 0";
+            $stocks  = $this->db->query($sql, $params)->result_array();
 
-            $stocks = $this->db->query($sql, $params)->result_array();
-
-            // Ambil nama_barang dari master
             if (!empty($stocks)) {
-                $kd_list = array_unique(array_column($stocks, 'kd_barang'));
-                $masters = $this->db->where_in('kd_barang', $kd_list)
-                                    ->get('tb_master_barang_all')
-                                    ->result_array();
+                $kd_list  = array_unique(array_column($stocks, 'kd_barang'));
+                $masters  = $this->db->where_in('kd_barang', $kd_list)->get('tb_master_barang_all')->result_array();
                 $masterMap = [];
-                foreach ($masters as $m) {
-                    $masterMap[$m['kd_barang']] = $m;
-                }
+                foreach ($masters as $m) $masterMap[$m['kd_barang']] = $m;
                 foreach ($stocks as &$s) {
                     $s['nama_barang'] = $masterMap[$s['kd_barang']]['nama_barang'] ?? '';
                 }
@@ -275,8 +354,7 @@ class M_SalesOrder extends CI_Model
 
         if (empty($stocks)) return [];
 
-        $kd_list = array_column($stocks, 'kd_barang');
-        $master  = $this->_get_master_bulk($kd_list);
+        $master = $this->_get_master_bulk(array_column($stocks, 'kd_barang'));
 
         foreach ($stocks as &$row) {
             $kd = $row['kd_barang'];
@@ -295,7 +373,6 @@ class M_SalesOrder extends CI_Model
             $row['isi_per_box'] = $m['isi_per_box'] ?? 1;
             $row['satuan']      = $m['satuan']      ?? ($row['satuan'] ?? '');
 
-            // Normalize expired_date → YYYY-MM-DD
             if (isset($row['expired_date'])) {
                 $row['exp_date'] = $this->_normalizeDate($row['expired_date']);
                 $row['gudang']   = (string)($row['gudang_id'] ?? '');
@@ -304,7 +381,6 @@ class M_SalesOrder extends CI_Model
                 $row['gudang']   = (string)($row['gudang'] ?? '');
             }
 
-            // Pastikan gudang_id selalu string
             $row['gudang_id'] = (string)($row['gudang_id'] ?? $row['gudang'] ?? '');
 
             $av  = (float)($row['available_stock'] ?? 0);
@@ -318,19 +394,59 @@ class M_SalesOrder extends CI_Model
         return $stocks;
     }
 
-    // ----------------------------------------------------------------
+    /**
+     * Cek stok satu item dari tberp_stock_batch.
+     */
+    public function cek_stock($kd_barang, $exp_date, $gudang_id)
+    {
+        $ymd = $this->_normalizeDate($exp_date);
+
+        if (!empty($gudang_id)) {
+            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
+                           qty_on_hand, qty_reserved,
+                           (qty_on_hand - COALESCE(qty_reserved, 0)) AS available_stock
+                    FROM tberp_stock_batch
+                    WHERE kd_barang = ? AND expired_date = ? AND gudang_id = ?
+                    LIMIT 1";
+            return $this->db->query($sql, [$kd_barang, $ymd, $gudang_id])->row_array();
+        }
+
+        $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
+                       SUM(qty_on_hand) AS qty_on_hand,
+                       SUM(COALESCE(qty_reserved, 0)) AS qty_reserved,
+                       (SUM(qty_on_hand) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
+                FROM tberp_stock_batch
+                WHERE kd_barang = ? AND expired_date = ?
+                GROUP BY kd_barang, expired_date
+                LIMIT 1";
+        return $this->db->query($sql, [$kd_barang, $ymd])->row_array();
+    }
+
+    // ================================================================
     // LIST SO
-    // ----------------------------------------------------------------
+    // ================================================================
+
     public function get_all_so($filter = [])
     {
-        $this->db->select('so.*, c.nama_customer');
+        $this->db->select('
+            so.*,
+            c.nama_customer,
+            COALESCE(SUM(sd.qty), 0)             AS total_qty_order,
+            COALESCE(SUM(sd.qty_faktur), 0)      AS total_qty_faktur,
+            COALESCE(SUM(sd.qty_outstanding), 0) AS total_qty_outstanding
+        ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
-        if (!empty($filter['status']))          $this->db->where('so.status', $filter['status']);
-        if (!empty($filter['date1']))           $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
-        if (!empty($filter['date2']))           $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
-        if (!empty($filter['customer_id']))     $this->db->where('so.kd_customer', $filter['customer_id']);
+        $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
+
+        if (!empty($filter['status']))      $this->db->where('so.status', $filter['status']);
+        if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
+        if (!empty($filter['customer_id'])) $this->db->where('so.kd_customer', $filter['customer_id']);
+
+        $this->db->group_by('so.id_so');
         $this->db->order_by('so.create_at', 'DESC');
+
         return $this->db->get()->result_array();
     }
 
@@ -343,226 +459,561 @@ class M_SalesOrder extends CI_Model
         return $this->db->get()->row_array();
     }
 
-    public function get_so_detail($no_faktur)
+    /**
+     * Detail baris SO — termasuk qty_faktur & qty_outstanding.
+     * PK tabel adalah `id`; di-alias menjadi `id_so_detail` agar
+     * kode controller & view konsisten memakai nama id_so_detail.
+     */
+    public function get_so_detail($id_so)
     {
-        $rows = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
+        // Alias id → id_so_detail agar tidak perlu ubah controller/view
+        $rows = $this->db
+            ->select('d.id AS id_so_detail, d.*')
+            ->from('tbso_sales_order_detail d')
+            ->where('d.id_so', $id_so)
+            ->get()
+            ->result_array();
 
         foreach ($rows as &$row) {
-            $row['berat_gram']  = (float)($row['tonase_satuan']   ?? 0);
-            $row['kubikasi_m3'] = (float)($row['kubikasi_satuan'] ?? 0);
-            $row['hrg_pokok']   = (float)($row['hrg_pokok']       ?? 0);
-            $row['disc']        = (float)($row['disc']            ?? 0);
-            $row['gudang']      = $row['gudang_id'] ?? '';
+            $row['berat_gram']      = (float)($row['berat_gram']       ?? 0);
+            $row['kubikasi_m3']     = (float)($row['kubikasi_m3']      ?? 0);
+            $row['hrg_pokok']       = (float)($row['hrg_pokok']        ?? 0);
+            $row['disc']            = (float)($row['disc']             ?? 0);
+            $row['qty_faktur']      = (float)($row['qty_faktur']       ?? 0);
+            // qty_outstanding adalah GENERATED COLUMN; fallback manual jika null
+            $row['qty_outstanding'] = (float)($row['qty_outstanding']
+                ?? ($row['qty'] - $row['qty_faktur']));
 
             if (!isset($row['qty_box']) || $row['qty_box'] === null) {
-                $isi = max(1, (int)($row['isi_per_box'] ?? 1));
+                $isi               = max(1, (int)($row['isi_per_box'] ?? 1));
                 $row['qty_box']    = floor((float)$row['qty'] / $isi);
                 $row['qty_satuan'] = fmod((float)$row['qty'], $isi);
             }
         }
         unset($row);
+
         return $rows;
     }
 
-    // ----------------------------------------------------------------
-    // SIMPAN SO
-    //
-    // PERUBAHAN: Menggunakan tberp_stock_ledger dengan tipe 'RESERVE'
-    //            dan update tberp_stock_batch.qty_reserved
-    // ----------------------------------------------------------------
+    // ================================================================
+    // SIMPAN SO (BARU — tanpa no_faktur)
+    // ================================================================
+
+    /**
+     * Simpan Sales Order baru.
+     * Status awal: 'draft'.
+     * no_faktur TIDAK ada di SO — faktur dibuat terpisah lewat buat_faktur().
+     * Qty Reserved tetap berjalan saat SO dibuat agar stok ter-lock.
+     */
     public function simpan_so($header, $details)
     {
         $this->db->trans_start();
-        $this->db->insert('tbso_sales_order', $header);
-        $id_so     = $this->db->insert_id();
-        $no_faktur = $header['no_faktur'];
-        $no_so = $header['no_so'];
+
+        // Header SO — pastikan tidak ada kolom no_faktur
+        $so_data = [
+            'no_so'             => $header['no_so'],
+            'tanggal_transaksi' => $header['tanggal_transaksi'],
+            'kd_customer'       => $header['kd_customer'],
+            'customer_name'     => $header['customer_name'],
+            'gudang_id'         => $header['gudang_id'],
+            'batas_tonase'      => $header['batas_tonase'],
+            'batas_kubikasi'    => $header['batas_kubikasi'],
+            'total_tonase'      => $header['total_tonase'],
+            'total_kubikasi'    => $header['total_kubikasi'],
+            'status'            => 'draft',
+            'catatan'           => $header['catatan'] ?? null,
+            'create_by'         => $header['create_by'],
+            'create_at'         => date('Y-m-d H:i:s'),
+        ];
+
+        $this->db->insert('tbso_sales_order', $so_data);
+        $id_so    = $this->db->insert_id();
+        $no_so    = $header['no_so'];
         $gudang_id = $header['gudang_id'];
 
         foreach ($details as $d) {
-            $d['no_faktur'] = $no_faktur;
-            $d['no_so']     = $no_so;
+            $d['id_so']          = $id_so;
+            $d['no_so']          = $no_so;
+            $d['qty_faktur']     = 0;   // belum ada faktur
+            // qty_outstanding = generated column di DB, tidak perlu diisi
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
-            // Simpan ke tbso_stock_reservation (untuk kompatibilitas)
-            $this->db->insert('tbso_stock_reservation', [
-                'no_faktur'    => $no_faktur,
-                'no_so'        => $no_so,
-                'id_so_detail' => $id_detail,
-                'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $this->_toViewDate($d['expired_date']),
-                'no_lot'       => $d['no_lot'],
-                'gudang_id'    => $gudang_id,
-                'qty_reserved' => $d['qty'],
-                'status'       => 'active',
-            ]);
-
-            // Simpan ke tberp_stock_ledger dengan tipe RESERVE (jika tabel ada)
-            try {
-                $this->db->insert('tberp_stock_ledger', [
-                    'kd_barang'    => $d['kd_barang'],
-                    'gudang_id'    => $gudang_id,
-                    'no_lot'       => $d['no_lot'],
-                    'expired_date' => $this->_normalizeDate($d['expired_date']),
-                    'qty'          => $d['qty'],
-                    'tipe'         => 'RESERVE',
-                    'ref_no'       => $no_faktur,
-                    'ref_type'     => 'SALES_ORDER',
-                    'created_at'   => date('Y-m-d H:i:s'),
-                ]);
-            } catch (Exception $e) {
-                // Ignore if table doesn't exist
-            }
-
-            // Update tberp_stock_batch.qty_reserved (jika tabel ada)
-            try {
-                $exp_date_normalized = $this->_normalizeDate($d['expired_date']);
-                $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('gudang_id', $gudang_id);
-                if (!empty($d['no_lot'])) {
-                    $this->db->where('no_lot', $d['no_lot']);
-                }
-                if (!empty($exp_date_normalized)) {
-                    $this->db->where('expired_date', $exp_date_normalized);
-                }
-                $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$d['qty'], FALSE);
-                $this->db->set('update_at', date('Y-m-d H:i:s'));
-                $this->db->update('tberp_stock_batch');
-            } catch (Exception $e) {
-                // Ignore if table doesn't exist
-            }
+            // ── RESERVED STOK ──────────────────────────────────────────
+            $this->_reservasi_stok(
+                $no_so, null, $id_detail,
+                $d['kd_barang'], $d['expired_date'], $d['no_lot'],
+                $gudang_id, $d['qty']
+            );
         }
 
+        // Update jumlah_item
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['jumlah_item' => count($details)]);
-        $this->db->trans_complete();
 
+        $this->db->trans_complete();
         return $this->db->trans_status() ? $id_so : false;
     }
 
-    // ----------------------------------------------------------------
-    // UPDATE SO
-    // PERUBAHAN: Handle stock ledger RELEASE untuk old data dan RESERVE untuk new data
-    //            Also update tberp_stock_batch.qty_reserved
-    // ----------------------------------------------------------------
-    public function update_so($id_so, $header, $details)
+    // ================================================================
+    // REKAM SO (Draft → Open)
+    // ================================================================
+
+    /**
+     * Mengubah status SO dari 'draft' menjadi 'open'.
+     * SO berstatus open sudah dapat dibuatkan Faktur Penjualan.
+     */
+    public function rekam_so($id_so, $update_by)
     {
-        $this->db->trans_start();
-        $no_faktur = $header['no_faktur'];
-        $no_so = $header['no_so'];
-        $gudang_id = $header['gudang_id'];
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so || $so['status'] !== 'draft') return false;
 
         $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order', $header);
+        return $this->db->update('tbso_sales_order', [
+            'status'    => 'open',
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
 
-        // Get old details for releasing stock
-        $old_details = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
+    // ================================================================
+    // UPDATE SO (hanya boleh saat Draft)
+    // ================================================================
 
-        // Release old stock_reservation
-        $this->db->where('no_faktur', $no_faktur);
-        $this->db->update('tbso_stock_reservation', ['status' => 'released']);
+    public function update_so($id_so, $header, $details)
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so || $so['status'] !== 'draft') return false;
 
-        // Release old stock_ledger (add RELEASE entry to reverse RESERVE)
+        $this->db->trans_start();
+
+        $no_so    = $so['no_so'];
+        $gudang_id = $header['gudang_id'];
+
+        // Update header
+        $this->db->where('id_so', $id_so);
+        $this->db->update('tbso_sales_order', [
+            'tanggal_transaksi' => $header['tanggal_transaksi'],
+            'kd_customer'       => $header['kd_customer'],
+            'customer_name'     => $header['customer_name'],
+            'gudang_id'         => $gudang_id,
+            'batas_tonase'      => $header['batas_tonase'],
+            'batas_kubikasi'    => $header['batas_kubikasi'],
+            'total_tonase'      => $header['total_tonase'],
+            'total_kubikasi'    => $header['total_kubikasi'],
+            'catatan'           => $header['catatan'] ?? null,
+            'update_by'         => $header['update_by'],
+            'update_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        // Release reservasi lama
+        $old_details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
         foreach ($old_details as $old) {
-            $this->db->insert('tberp_stock_ledger', [
-                'kd_barang'    => $old['kd_barang'],
-                'gudang_id'    => $gudang_id,
-                'no_lot'       => $old['no_lot'],
-                'expired_date' => $old['expired_date'],
-                'qty'          => $old['qty'],
-                'tipe'         => 'RELEASE',
-                'ref_no'       => $no_faktur,
-                'ref_type'     => 'SALES_ORDER',
-                'created_at'   => date('Y-m-d H:i:s'),
-            ]);
-
-            // Decrease qty_reserved in tberp_stock_batch for old items
-            $this->db->where('kd_barang', $old['kd_barang']);
-            $this->db->where('gudang_id', $gudang_id);
-            $this->db->where('no_lot', $old['no_lot']);
-            $this->db->where('expired_date', $old['expired_date']);
-            $this->db->set('qty_reserved', 'qty_reserved - ' . (float)$old['qty'], FALSE);
-            $this->db->set('update_at', date('Y-m-d H:i:s'));
-            $this->db->update('tberp_stock_batch');
+            $this->_release_stok(
+                $no_so, null, $old['kd_barang'],
+                $old['expired_date'], $old['no_lot'],
+                $gudang_id, $old['qty']
+            );
         }
 
-        // Delete old details
-        $this->db->delete('tbso_sales_order_detail', ['no_faktur' => $no_faktur]);
+        // Hapus detail lama
+        $this->db->delete('tbso_sales_order_detail', ['id_so' => $id_so]);
 
-        // Insert new details and create new reservations
+        // Insert detail baru + reservasi baru
         foreach ($details as $d) {
-            $d['no_faktur'] = $no_faktur;
-            $d['no_so']     = $no_so;
+            $d['id_so']      = $id_so;
+            $d['no_so']      = $no_so;
+            $d['qty_faktur'] = 0;
             $this->db->insert('tbso_sales_order_detail', $d);
             $id_detail = $this->db->insert_id();
 
-            // Simpan ke tbso_stock_reservation (untuk kompatibilitas)
-            $this->db->insert('tbso_stock_reservation', [
-                'no_faktur'    => $no_faktur,
-                'no_so'        => $no_so,
-                'id_so_detail' => $id_detail,
-                'kd_barang'    => $d['kd_barang'],
-                'exp_date'     => $this->_toViewDate($d['expired_date']),
-                'no_lot'       => $d['no_lot'],
-                'gudang_id'    => $gudang_id,
-                'qty_reserved' => $d['qty'],
-                'status'       => 'active',
-            ]);
-
-            // Simpan ke tberp_stock_ledger dengan tipe RESERVE
-            $this->db->insert('tberp_stock_ledger', [
-                'kd_barang'    => $d['kd_barang'],
-                'gudang_id'    => $gudang_id,
-                'no_lot'       => $d['no_lot'],
-                'expired_date' => $this->_normalizeDate($d['expired_date']),
-                'qty'          => $d['qty'],
-                'tipe'         => 'RESERVE',
-                'ref_no'       => $no_faktur,
-                'ref_type'     => 'SALES_ORDER',
-                'created_at'   => date('Y-m-d H:i:s'),
-            ]);
-
-            // Update tberp_stock_batch.qty_reserved
-            $this->db->where('kd_barang', $d['kd_barang']);
-            $this->db->where('gudang_id', $gudang_id);
-            $this->db->where('no_lot', $d['no_lot']);
-            $this->db->where('expired_date', $this->_normalizeDate($d['expired_date']));
-            $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$d['qty'], FALSE);
-            $this->db->set('update_at', date('Y-m-d H:i:s'));
-            $this->db->update('tberp_stock_batch');
+            $this->_reservasi_stok(
+                $no_so, null, $id_detail,
+                $d['kd_barang'], $d['expired_date'], $d['no_lot'],
+                $gudang_id, $d['qty']
+            );
         }
 
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', ['jumlah_item' => count($details)]);
+
         $this->db->trans_complete();
         return $this->db->trans_status();
     }
 
-    // ----------------------------------------------------------------
+    // ================================================================
+    // FAKTUR PENJUALAN
+    // ================================================================
+
+    /**
+     * Ambil daftar faktur milik sebuah SO.
+     */
+    public function get_faktur_by_so($id_so)
+    {
+        return $this->db
+            ->where('id_so', $id_so)
+            ->order_by('create_at', 'ASC')
+            ->get('tbso_faktur_penjualan')
+            ->result_array();
+    }
+
+    /**
+     * Ambil header faktur berdasarkan id_faktur.
+     */
+    public function get_faktur($id_faktur)
+    {
+        $this->db->select('f.*, c.nama_customer');
+        $this->db->from('tbso_faktur_penjualan f');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->where('f.id_faktur', $id_faktur);
+        return $this->db->get()->row_array();
+    }
+
+    /**
+     * Ambil detail baris faktur.
+     */
+    public function get_faktur_detail($id_faktur)
+    {
+        return $this->db
+            ->get_where('tbso_faktur_detail', ['id_faktur' => $id_faktur])
+            ->result_array();
+    }
+
+    /**
+     * Buat Faktur Penjualan dari SO yang sudah berstatus 'open'.
+     *
+     * $faktur_header: array berisi no_faktur, tanggal_faktur, catatan, create_by, dsb.
+     * $faktur_items : array baris item. Setiap item WAJIB punya:
+     *                 id_so_detail, kd_barang, qty (≤ qty_outstanding), ...
+     *
+     * Alur stok:
+     *  1. RELEASE reserved sejumlah qty faktur (stok tidak lagi di-lock untuk SO).
+     *  2. OUT stok sejumlah qty faktur (stok keluar fisik).
+     *  3. Tambah qty_faktur di tbso_sales_order_detail.
+     *  4. Kurangi qty_reserved di tberp_stock_batch.
+     *  5. Cek apakah semua outstanding = 0 → ubah status SO ke 'completed'.
+     */
+    public function buat_faktur($id_so, $faktur_header, $faktur_items)
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so || $so['status'] !== 'open') return false;
+
+        // Validasi: qty faktur tidak boleh melebihi outstanding
+        $errors = $this->_validasi_qty_faktur($id_so, $faktur_items);
+        if (!empty($errors)) return ['errors' => $errors];
+
+        $this->db->trans_start();
+
+        $no_faktur = $faktur_header['no_faktur'];
+        $gudang_id = $so['gudang_id'];
+
+        // ── Insert header faktur ────────────────────────────────────
+        $fh = [
+            'no_faktur'     => $no_faktur,
+            'id_so'         => $id_so,
+            'no_so'         => $so['no_so'],
+            'kd_customer'   => $so['kd_customer'],
+            'customer_name' => $so['customer_name'],
+            'gudang_id'     => $gudang_id,
+            'tanggal_faktur' => $faktur_header['tanggal_faktur'],
+            'catatan'       => $faktur_header['catatan'] ?? null,
+            'status'        => 'confirmed',
+            'create_by'     => $faktur_header['create_by'],
+            'create_at'     => date('Y-m-d H:i:s'),
+        ];
+
+        // Hitung total tonase & kubikasi faktur ini
+        $total_tonase   = 0;
+        $total_kubikasi = 0;
+        foreach ($faktur_items as $item) {
+            $total_tonase   += (float)$item['qty'] * ((float)($item['berat_gram'] ?? 0) / 1000000);
+            $total_kubikasi += (float)$item['qty'] * (float)($item['kubikasi_m3'] ?? 0);
+        }
+        $fh['total_tonase']   = round($total_tonase, 6);
+        $fh['total_kubikasi'] = round($total_kubikasi, 6);
+
+        $this->db->insert('tbso_faktur_penjualan', $fh);
+        $id_faktur = $this->db->insert_id();
+
+        // ── Insert detail faktur + update stok ─────────────────────
+        foreach ($faktur_items as $item) {
+            $qty_item = (float)$item['qty'];
+
+            $fd = [
+                'id_faktur'           => $id_faktur,
+                'no_faktur'           => $no_faktur,
+                'id_so'               => $id_so,
+                'id_so_detail'        => $item['id_so_detail'],
+                'kd_barang'           => $item['kd_barang'],
+                'nama_barang'         => $item['nama_barang']    ?? '',
+                'no_lot'              => $item['no_lot']         ?? null,
+                'expired_date'        => $this->_normalizeDate($item['expired_date'] ?? ''),
+                'qty'                 => $qty_item,
+                'qty_box'             => $item['qty_box']        ?? 0,
+                'qty_satuan'          => $item['qty_satuan']     ?? 0,
+                'isi_per_box'         => $item['isi_per_box']    ?? 1,
+                'satuan'              => $item['satuan']         ?? '',
+                'hrg_satuan'          => $item['hrg_satuan']     ?? 0,
+                'hrg_pokok'           => $item['hrg_pokok']      ?? 0,
+                'disc'                => $item['disc']           ?? 0,
+                'pajak'               => $item['pajak']          ?? 0,
+                'subtotal_before_disc' => $item['subtotal_before_disc'] ?? 0,
+                'subtotal_after_disc'  => $item['subtotal_after_disc']  ?? 0,
+                'total_harga'         => $item['total_harga']    ?? 0,
+                'berat_gram'          => $item['berat_gram']     ?? 0,
+                'kubikasi_m3'         => $item['kubikasi_m3']    ?? 0,
+                'gudang_id'           => $gudang_id,
+                'create_by'           => $faktur_header['create_by'],
+            ];
+            $this->db->insert('tbso_faktur_detail', $fd);
+
+            $exp_normalized = $this->_normalizeDate($item['expired_date'] ?? '');
+
+            // 1. Release reserved (stok tidak lagi di-lock oleh SO untuk qty ini)
+            $this->_release_stok(
+                $so['no_so'], $no_faktur,
+                $item['kd_barang'], $item['expired_date'],
+                $item['no_lot'] ?? '', $gudang_id, $qty_item,
+                'FAKTUR_PENJUALAN'
+            );
+
+            // 2. OUT stok (barang keluar fisik)
+            try {
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $item['kd_barang'],
+                    'gudang_id'    => $gudang_id,
+                    'no_lot'       => $item['no_lot'] ?? null,
+                    'expired_date' => $exp_normalized,
+                    'qty'          => $qty_item,
+                    'tipe'         => 'OUT',
+                    'ref_no'       => $no_faktur,
+                    'ref_type'     => 'FAKTUR_PENJUALAN',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+            } catch (Exception $e) { /* ignore */ }
+
+            // 3. Update tberp_stock_batch: kurangi qty_on_hand & qty_reserved
+            try {
+                $this->db->where('kd_barang', $item['kd_barang']);
+                $this->db->where('gudang_id', $gudang_id);
+                if (!empty($item['no_lot']))  $this->db->where('no_lot', $item['no_lot']);
+                if (!empty($exp_normalized))  $this->db->where('expired_date', $exp_normalized);
+                $this->db->set('qty_on_hand',  'qty_on_hand - '  . $qty_item, false);
+                $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
+                $this->db->set('update_at', date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+            } catch (Exception $e) { /* ignore */ }
+
+            // 4. Tambah qty_faktur di SO detail
+            $this->db->where('id', $item['id_so_detail']);
+            $this->db->set('qty_faktur', 'qty_faktur + ' . $qty_item, false);
+            $this->db->update('tbso_sales_order_detail');
+
+            // 5. Update tbso_stock_reservation: kurangi qty_reserved
+            //    (bagian yang sudah difakturkan tidak perlu reserved lagi)
+            $this->db->where('no_so',        $so['no_so']);
+            $this->db->where('kd_barang',    $item['kd_barang']);
+            $this->db->where('id_so_detail', $item['id_so_detail']);  // filter presisi
+            $this->db->where('status',       'active');
+            $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
+            $this->db->update('tbso_stock_reservation');
+        }
+
+        // ── Cek apakah semua outstanding = 0 → Completed ────────────
+        $this->_cek_dan_complete_so($id_so);
+
+        $this->db->trans_complete();
+        return $this->db->trans_status() ? $id_faktur : false;
+    }
+
+    /**
+     * Validasi bahwa qty faktur tidak melebihi qty_outstanding masing-masing detail.
+     */
+    private function _validasi_qty_faktur($id_so, array $faktur_items)
+    {
+        $errors = [];
+        foreach ($faktur_items as $item) {
+            $sd = $this->db->get_where('tbso_sales_order_detail', [
+                'id' => $item['id_so_detail'],
+                'id_so'        => $id_so,
+            ])->row_array();
+
+            if (!$sd) {
+                $errors[] = "Item SO (id: {$item['id_so_detail']}) tidak ditemukan.";
+                continue;
+            }
+
+            $outstanding = (float)$sd['qty'] - (float)$sd['qty_faktur'];
+            $diminta     = (float)$item['qty'];
+
+            if ($diminta <= 0) {
+                $errors[] = "Qty faktur untuk <b>{$sd['nama_barang']}</b> harus lebih dari 0.";
+            } elseif ($diminta > $outstanding) {
+                $errors[] = "Qty faktur untuk <b>{$sd['nama_barang']}</b> melebihi outstanding. "
+                    . "Outstanding: {$outstanding} pcs, Diminta: {$diminta} pcs.";
+            }
+        }
+        return $errors;
+    }
+
+    /**
+     * Periksa apakah semua baris SO sudah terpenuh (outstanding = 0).
+     * Jika ya, ubah status SO menjadi 'completed'.
+     */
+    private function _cek_dan_complete_so($id_so)
+    {
+        $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+        $all_done = true;
+        foreach ($rows as $r) {
+            $outstanding = (float)$r['qty'] - (float)$r['qty_faktur'];
+            if ($outstanding > 0.001) {
+                $all_done = false;
+                break;
+            }
+        }
+        if ($all_done) {
+            $this->db->where('id_so', $id_so);
+            $this->db->update('tbso_sales_order', [
+                'status'    => 'completed',
+                'update_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+    }
+
+    // ================================================================
+    // HELPER STOK — reservasi & release
+    // ================================================================
+
+    /**
+     * Reservasi stok: insert ke tbso_stock_reservation + tberp_stock_ledger (RESERVE)
+     *                 + update tberp_stock_batch.qty_reserved.
+     * no_faktur boleh null (saat SO dibuat, faktur belum ada).
+     */
+    private function _reservasi_stok(
+        $no_so, $no_faktur, $id_so_detail,
+        $kd_barang, $exp_date, $no_lot,
+        $gudang_id, $qty
+    ) {
+        $exp_normalized = $this->_normalizeDate($exp_date);
+        $exp_view       = $this->_toViewDate($exp_date);
+
+        // tbso_stock_reservation
+        $this->db->insert('tbso_stock_reservation', [
+            'no_so'        => $no_so,
+            'no_faktur'    => $no_faktur,   // null saat SO baru
+            'id_so_detail' => $id_so_detail,
+            'kd_barang'    => $kd_barang,
+            'exp_date'     => $exp_view,
+            'no_lot'       => $no_lot,
+            'gudang_id'    => $gudang_id,
+            'qty_reserved' => $qty,
+            'status'       => 'active',
+        ]);
+
+        // tberp_stock_ledger (RESERVE)
+        try {
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd_barang,
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $no_lot,
+                'expired_date' => $exp_normalized,
+                'qty'          => $qty,
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $no_so,
+                'ref_type'     => 'SALES_ORDER',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+        } catch (Exception $e) { /* ignore */ }
+
+        // tberp_stock_batch.qty_reserved
+        try {
+            $this->db->where('kd_barang', $kd_barang);
+            $this->db->where('gudang_id', $gudang_id);
+            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
+            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
+            $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$qty, false);
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+            $this->db->update('tberp_stock_batch');
+        } catch (Exception $e) { /* ignore */ }
+    }
+
+    /**
+     * Release stok: update tbso_stock_reservation → released
+     *               + insert tberp_stock_ledger (RELEASE)
+     *               + kurangi tberp_stock_batch.qty_reserved
+     */
+    private function _release_stok(
+        $no_so, $no_faktur,
+        $kd_barang, $exp_date, $no_lot,
+        $gudang_id, $qty,
+        $ref_type = 'SALES_ORDER'
+    ) {
+        $exp_normalized = $this->_normalizeDate($exp_date);
+
+        // Update reservation
+        $this->db->where('no_so', $no_so);
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->where('exp_date', $this->_toViewDate($exp_date));
+        $this->db->where('status', 'active');
+        $this->db->update('tbso_stock_reservation', ['status' => 'released']);
+
+        // tberp_stock_ledger (RELEASE)
+        try {
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd_barang,
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $no_lot,
+                'expired_date' => $exp_normalized,
+                'qty'          => $qty,
+                'tipe'         => 'RELEASE',
+                'ref_no'       => $no_faktur ?? $no_so,
+                'ref_type'     => $ref_type,
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+        } catch (Exception $e) { /* ignore */ }
+
+        // tberp_stock_batch — JANGAN kurangi qty_on_hand di sini
+        // (qty_on_hand dikurangi saat OUT, bukan saat RELEASE)
+        try {
+            $this->db->where('kd_barang', $kd_barang);
+            $this->db->where('gudang_id', $gudang_id);
+            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
+            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
+            $this->db->set('qty_reserved', 'GREATEST(0, qty_reserved - ' . (float)$qty . ')', false);
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+            $this->db->update('tberp_stock_batch');
+        } catch (Exception $e) { /* ignore */ }
+    }
+
+    // ================================================================
     // VALIDASI STOK
-    // ----------------------------------------------------------------
+    // ================================================================
+
+    /**
+     * Validasi stok saat membuat/update SO.
+     * $exclude_id_so: lewati reserved milik SO ini sendiri (saat edit).
+     */
     public function validasi_stok($details, $gudang_id, $exclude_id_so = null)
     {
         $errors = [];
-        
-        // Ambil no_faktur dari id_so yang di-exclude
-        $exclude_no_faktur = null;
+
+        $exclude_no_so = null;
         if ($exclude_id_so) {
             $so = $this->db->get_where('tbso_sales_order', ['id_so' => $exclude_id_so])->row_array();
-            $exclude_no_faktur = $so['no_faktur'] ?? null;
+            $exclude_no_so = $so['no_so'] ?? null;
         }
 
         foreach ($details as $d) {
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
 
-            if ($exclude_no_faktur) {
+            // Kembalikan reserved milik SO yang sedang diedit
+            if ($exclude_no_so) {
                 $this->db->select('SUM(qty_reserved) as qty');
-                $this->db->where('no_faktur', $exclude_no_faktur); // ← no_faktur
+                $this->db->where('no_so',    $exclude_no_so);
                 $this->db->where('kd_barang', $d['kd_barang']);
                 $this->db->where('exp_date',  $this->_toViewDate($d['expired_date']));
-                $this->db->where('status', 'active');
+                $this->db->where('status',   'active');
                 $res       = $this->db->get('tbso_stock_reservation')->row_array();
                 $available += $res ? (float)$res['qty'] : 0;
             }
@@ -578,20 +1029,23 @@ class M_SalesOrder extends CI_Model
                 $req_ecer = (int)($d['qty_satuan'] ?? 0);
 
                 $errors[] = "Stok tidak cukup: <b>{$d['nama_barang']}</b> "
-                        . "(Exp: {$d['expired_date']}) — "
-                        . "Diminta: {$req_box} box + {$req_ecer} pcs = {$diminta} pcs, "
-                        . "Tersedia: {$av_box} box + {$av_ecer} pcs = {$available} pcs";
+                    . "(Exp: {$d['expired_date']}) — "
+                    . "Diminta: {$req_box} box + {$req_ecer} pcs = {$diminta} pcs, "
+                    . "Tersedia: {$av_box} box + {$av_ecer} pcs = {$available} pcs";
             }
         }
         return $errors;
     }
-    // ----------------------------------------------------------------
+
+    // ================================================================
     // VALIDASI TONASE + KUBIKASI
-    // ----------------------------------------------------------------
-    public function validasi_tonase_kubikasi($details,
+    // ================================================================
+
+    public function validasi_tonase_kubikasi(
+        $details,
         $batas_tonase   = self::BATAS_TONASE,
-        $batas_kubikasi = self::BATAS_KUBIKASI)
-    {
+        $batas_kubikasi = self::BATAS_KUBIKASI
+    ) {
         $batas_tonase   = ($batas_tonase   > 0) ? (float)$batas_tonase   : self::BATAS_TONASE;
         $batas_kubikasi = ($batas_kubikasi > 0) ? (float)$batas_kubikasi : self::BATAS_KUBIKASI;
 
@@ -607,11 +1061,12 @@ class M_SalesOrder extends CI_Model
         $warnings = [];
 
         if ($total_tonase > $batas_tonase && $total_kubikasi <= $batas_kubikasi)
-            $warnings[] = "Tonase melebihi batas (".round($total_tonase,3)." ton &gt; {$batas_tonase} ton).";
+            $warnings[] = "Tonase melebihi batas (" . round($total_tonase, 3) . " ton &gt; {$batas_tonase} ton).";
         elseif ($total_kubikasi > $batas_kubikasi && $total_tonase <= $batas_tonase)
-            $warnings[] = "Kubikasi melebihi batas (".round($total_kubikasi,4)." m³ &gt; {$batas_kubikasi} m³).";
+            $warnings[] = "Kubikasi melebihi batas (" . round($total_kubikasi, 4) . " m³ &gt; {$batas_kubikasi} m³).";
         elseif ($total_tonase > $batas_tonase && $total_kubikasi > $batas_kubikasi)
-            $warnings[] = "Tonase (".round($total_tonase,3)." ton) DAN kubikasi (".round($total_kubikasi,4)." m³) melebihi batas!";
+            $warnings[] = "Tonase (" . round($total_tonase, 3) . " ton) DAN kubikasi ("
+                . round($total_kubikasi, 4) . " m³) melebihi batas!";
 
         return [
             'total_tonase'   => $total_tonase,
@@ -622,144 +1077,109 @@ class M_SalesOrder extends CI_Model
         ];
     }
 
-    // ----------------------------------------------------------------
-    // GET DAFTAR KARYAWAN — untuk dropdown pilih approver di form SO
-    // ----------------------------------------------------------------
-    public function get_approver_list()
-    {
-        return $this->db
-            ->select('id, nm_karyawan, jobdesk, departemen')
-            ->where('nm_karyawan !=', '')
-            ->order_by('nm_karyawan', 'ASC')
-            ->get('tb_karyawan')
-            ->result_array();
-    }
-
-    public function simpan_request_approval($no_faktur, $no_so, $keterangan, $req_by, $approve_by)
-    {
-        // Cek apakah sudah ada pending untuk no_faktur ini
-        $ada = $this->db->get_where('tbso_so_approval', [
-            'no_faktur' => $no_faktur,
-            'status'    => 'pending',
-        ])->row_array();
- 
-        if (!$ada) {
-            $this->db->insert('tbso_so_approval', [
-                'no_faktur'  => $no_faktur,
-                'no_so'      => $no_so,
-                'tipe'       => 'harga',
-                'keterangan' => $keterangan,
-                'req_by'     => $req_by,
-                'approve_by' => $approve_by,
-                'status'     => 'pending',
-                'req_at'     => date('Y-m-d H:i:s'),
-            ]);
-        }
-
-        $this->db->where('no_faktur', $no_faktur);
-        $this->db->update('tbso_sales_order', [
-            'status'     => 'waiting_approval',
-            'approve_by' => $approve_by,
-        ]);
-    }
- 
-    // ----------------------------------------------------------------
-    // GET PENDING APPROVAL — untuk halaman daftar approval
-    // Filter by approve_by agar hanya tampil yang relevan
-    // ----------------------------------------------------------------
-    public function get_pending_approval($approve_by = null)
-    {
-        $this->db->select('ap.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi, so.no_so');
-        $this->db->from('tbso_so_approval ap');
-        $this->db->join('tbso_sales_order so', 'so.no_faktur = ap.no_faktur', 'left');
-        $this->db->where('ap.status', 'pending');
-        if (!empty($approve_by)) {
-            $this->db->where('ap.approve_by', $approve_by);
-        }
-        $this->db->order_by('ap.req_at', 'DESC');
-        return $this->db->get()->result_array();
-    }
- 
-    // ----------------------------------------------------------------
-    // PROSES APPROVAL
-    // ----------------------------------------------------------------
-    public function proses_approval($id, $status, $note, $act_by)
-    {
-        $this->db->where('id', $id);
-        $this->db->update('tbso_so_approval', [
-            'status' => $status,
-            'note'   => $note,
-            'act_by' => $act_by,
-            'act_at' => date('Y-m-d H:i:s'),
-        ]);
- 
-        $row = $this->db->get_where('tbso_so_approval', ['id' => $id])->row_array();
-        if ($row) {
-            $new_status = ($status === 'approved') ? 'approved' : 'draft';
-            $this->db->where('no_faktur', $row['no_faktur']);
-            $this->db->update('tbso_sales_order', ['status' => $new_status]);
-        }
-    }
-
-    // ----------------------------------------------------------------
+    // ================================================================
     // UPDATE STATUS SO
-    // PERUBAHAN: Handle stock ledger RELEASE when cancelling SO
-    // ----------------------------------------------------------------
+    // ================================================================
+
     public function update_status($id_so, $status, $update_by)
     {
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so) return false;
 
         $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order', ['status' => $status, 'update_by' => $update_by]);
+        $this->db->update('tbso_sales_order', [
+            'status'    => $status,
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
 
-        if ($status === 'cancelled' && $so) {
-            $no_faktur = $so['no_faktur'];
+        // Saat dibatalkan: release semua reservasi yang masih aktif
+        if ($status === 'cancelled') {
+            $no_so    = $so['no_so'];
             $gudang_id = $so['gudang_id'];
-
-            // Release stock_reservation
-            $this->db->where('no_faktur', $no_faktur);
-            $this->db->update('tbso_stock_reservation', ['status' => 'released']);
-
-            // Get details for releasing stock_ledger and batch
-            $details = $this->db->get_where('tbso_sales_order_detail', ['no_faktur' => $no_faktur])->result_array();
+            $details  = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
 
             foreach ($details as $d) {
-                // Add RELEASE entry to stock_ledger to reverse the RESERVE
-                $this->db->insert('tberp_stock_ledger', [
-                    'kd_barang'    => $d['kd_barang'],
-                    'gudang_id'    => $gudang_id,
-                    'no_lot'       => $d['no_lot'],
-                    'expired_date' => $d['expired_date'],
-                    'qty'          => $d['qty'],
-                    'tipe'         => 'RELEASE',
-                    'ref_no'       => $no_faktur,
-                    'ref_type'     => 'SALES_ORDER_CANCEL',
-                    'created_at'   => date('Y-m-d H:i:s'),
-                ]);
+                // Hanya release sisa outstanding (belum difakturkan)
+                $outstanding = (float)$d['qty'] - (float)$d['qty_faktur'];
+                if ($outstanding <= 0) continue;
 
-                // Decrease qty_reserved in tberp_stock_batch
-                $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('gudang_id', $gudang_id);
-                $this->db->where('no_lot', $d['no_lot']);
-                $this->db->where('expired_date', $d['expired_date']);
-                $this->db->set('qty_reserved', 'qty_reserved - ' . (float)$d['qty'], FALSE);
-                $this->db->set('update_at', date('Y-m-d H:i:s'));
-                $this->db->update('tberp_stock_batch');
+                $this->_release_stok(
+                    $no_so, null,
+                    $d['kd_barang'], $d['expired_date'],
+                    $d['no_lot'] ?? '', $gudang_id,
+                    $outstanding,
+                    'SALES_ORDER_CANCEL'
+                );
             }
         }
+
+        return true;
     }
 
-    // ----------------------------------------------------------------
-    // PARTIAL DELIVERY
-    // ----------------------------------------------------------------
-    public function update_qty_delivered($id_so_detail, $qty_delivered)
-    {
-        // tidak dipakai — bisa dihapus nanti
-    }
+    // ================================================================
+    // APPROVAL
+    // ================================================================
 
-    // ----------------------------------------------------------------
-    // GET KD PO DARI MASTER BARANG
-    // ----------------------------------------------------------------
+    // public function simpan_request_approval($no_so, $keterangan, $req_by, $approve_by)
+    // {
+    //     $ada = $this->db->get_where('tbso_so_approval', [
+    //         'no_so'  => $no_so,
+    //         'status' => 'pending',
+    //     ])->row_array();
+
+    //     if (!$ada) {
+    //         $this->db->insert('tbso_so_approval', [
+    //             'no_so'      => $no_so,
+    //             'tipe'       => 'harga',
+    //             'keterangan' => $keterangan,
+    //             'req_by'     => $req_by,
+    //             'approve_by' => $approve_by,
+    //             'status'     => 'pending',
+    //             'req_at'     => date('Y-m-d H:i:s'),
+    //         ]);
+    //     }
+
+    //     $this->db->where('no_so', $no_so);
+    //     $this->db->update('tbso_sales_order', [
+    //         'status'     => 'waiting_approval',
+    //         'approve_by' => $approve_by,
+    //     ]);
+    // }
+
+    // public function get_pending_approval($approve_by = null)
+    // {
+    //     $this->db->select('ap.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi');
+    //     $this->db->from('tbso_so_approval ap');
+    //     $this->db->join('tbso_sales_order so', 'so.no_so = ap.no_so', 'left');
+    //     $this->db->where('ap.status', 'pending');
+    //     if (!empty($approve_by)) $this->db->where('ap.approve_by', $approve_by);
+    //     $this->db->order_by('ap.req_at', 'DESC');
+    //     return $this->db->get()->result_array();
+    // }
+
+    // public function proses_approval($id, $status, $note, $act_by)
+    // {
+    //     $this->db->where('id', $id);
+    //     $this->db->update('tbso_so_approval', [
+    //         'status' => $status,
+    //         'note'   => $note,
+    //         'act_by' => $act_by,
+    //         'act_at' => date('Y-m-d H:i:s'),
+    //     ]);
+
+    //     $row = $this->db->get_where('tbso_so_approval', ['id' => $id])->row_array();
+    //     if ($row) {
+    //         $new_status = ($status === 'approved') ? 'draft' : 'draft'; // kembali ke draft, bukan langsung open
+    //         $this->db->where('no_so', $row['no_so']);
+    //         $this->db->update('tbso_sales_order', ['status' => $new_status]);
+    //     }
+    // }
+
+    // ================================================================
+    // GET REF_NO dari stock ledger
+    // ================================================================
+
     public function get_ref_no($kd_barang, $exp_date, $no_lot = '')
     {
         $ymd = $this->_normalizeDate($exp_date);
@@ -768,27 +1188,18 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tberp_stock_ledger');
         $this->db->where('kd_barang', $kd_barang);
         $this->db->where('expired_date', $ymd);
-
-        if (!empty($no_lot)) {
-            $this->db->where('no_lot', $no_lot);
-        }
-
+        if (!empty($no_lot)) $this->db->where('no_lot', $no_lot);
         $this->db->where_in('tipe', ['IN', 'SALDO_AWAL']);
         $this->db->order_by('created_at', 'DESC');
         $this->db->limit(1);
+
         $row = $this->db->get()->row_array();
         return $row ? $row['ref_no'] : null;
     }
 
-    // ----------------------------------------------------------------
-    // DAFTAR PAJAK dari tb_set_tax
-    // ----------------------------------------------------------------
-    public function get_tax_list()
-    {
-        return $this->db->order_by('nm_tax', 'ASC')
-                        ->get('tb_set_tax')
-                        ->result_array();
-    }
+    // ================================================================
+    // LIST DO (tidak berubah — DO tetap dari luar modul SO)
+    // ================================================================
 
     public function get_do_for_sales()
     {
@@ -804,23 +1215,11 @@ class M_SalesOrder extends CI_Model
                 a.sales_confirm_by,
                 a.sales_confirm_at,
                 a.sales_confirm_note,
-                (
-                    SELECT COUNT(DISTINCT kd_barang)
-                    FROM tb_detail_do
-                    WHERE kd_do = a.kd_do
-                ) AS totalbarang,
-                (
-                    SELECT COUNT(DISTINCT kd_faktur)
-                    FROM tb_detail_do
-                    WHERE kd_do = a.kd_do
-                ) AS totalfaktur
+                (SELECT COUNT(DISTINCT kd_barang) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalbarang,
+                (SELECT COUNT(DISTINCT kd_faktur)  FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalfaktur
             FROM tb_do a
             WHERE a.status IN (2, 3)
-              AND (
-                SELECT COUNT(DISTINCT kd_faktur)
-                FROM tb_detail_do
-                WHERE kd_do = a.kd_do
-              ) > 0
+              AND (SELECT COUNT(DISTINCT kd_faktur) FROM tb_detail_do WHERE kd_do = a.kd_do) > 0
             ORDER BY a.tgl_create DESC
         ")->result();
     }
@@ -828,42 +1227,29 @@ class M_SalesOrder extends CI_Model
     public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
     {
         $now = date('Y-m-d H:i:s');
-
         $this->db->where('kd_do', $kd_do);
         $this->db->update('tb_do', [
             'sales_confirm_status' => $action,
             'sales_confirm_by'     => $confirm_by,
             'sales_confirm_at'     => $now,
             'sales_confirm_note'   => $note,
-            'status'               => ($action === 'siap') ? 3 : 2
+            'status'               => ($action === 'siap') ? 3 : 2,
         ]);
-
         $this->db->insert('tb_log_confirm_sales', [
             'kd_do'      => $kd_do,
             'action'     => $action,
             'note'       => $note,
             'confirm_by' => $confirm_by,
-            'confirm_at' => $now
+            'confirm_at' => $now,
         ]);
-
         return $this->db->affected_rows();
-    }
-
-    public function rekam_so($no_faktur)
-    {
-        $this->db->where('no_faktur', $no_faktur);
-        return $this->db->update('tbso_sales_order', [
-            'status'    => 'list_do',
-            'update_at' => date('Y-m-d H:i:s'),
-        ]);
     }
 
     public function get_log_confirm_sales($kd_do)
     {
         return $this->db->query("
             SELECT * FROM tb_log_confirm_sales
-            WHERE kd_do = ?
-            ORDER BY confirm_at DESC
+            WHERE kd_do = ? ORDER BY confirm_at DESC
         ", [$kd_do])->result();
     }
 

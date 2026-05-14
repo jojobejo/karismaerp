@@ -14,14 +14,13 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // HELPER — Ambil data user yang sedang login dari session / DB.
+    // HELPER — user session
     // ================================================================
     private function _getCurrentUser()
     {
         $id   = $this->session->userdata('id_karyawan')
              ?? $this->session->userdata('id')
              ?? $this->session->userdata('user_id')
-             ?? $this->session->userdata('karyawan_id')
              ?? null;
 
         $usn  = $this->session->userdata('username')
@@ -32,30 +31,20 @@ class C_SalesOrder extends CI_Controller
         $nama = $this->session->userdata('nm_karyawan')
              ?? $this->session->userdata('nama')
              ?? $this->session->userdata('name')
-             ?? $this->session->userdata('nama_user')
              ?? null;
 
         $wil  = $this->session->userdata('wilayah')
              ?? $this->session->userdata('wilayah_id')
              ?? $this->session->userdata('gudang_id')
-             ?? $this->session->userdata('id_wilayah')
              ?? null;
 
         if (!empty($nama) && !empty($wil)) {
-            return [
-                'nm_karyawan' => $nama,
-                'wilayah'     => $wil,
-                'username'    => $usn ?? $nama,
-            ];
+            return ['nm_karyawan' => $nama, 'wilayah' => $wil, 'username' => $usn ?? $nama];
         }
 
         $row = null;
-        if (!empty($id)) {
-            $row = $this->db->get_where('tb_karyawan', ['id' => $id])->row_array();
-        }
-        if (!$row && !empty($usn)) {
-            $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
-        }
+        if (!empty($id))  $row = $this->db->get_where('tb_karyawan', ['id'       => $id])->row_array();
+        if (!$row && !empty($usn)) $row = $this->db->get_where('tb_karyawan', ['username' => $usn])->row_array();
 
         if ($row) {
             return [
@@ -64,54 +53,20 @@ class C_SalesOrder extends CI_Controller
                 'username'    => $row['username']    ?? 'system',
             ];
         }
-
         return ['nm_karyawan' => 'system', 'wilayah' => '', 'username' => 'system'];
     }
 
-    private function _getUsername()
-    {
-        return $this->_getCurrentUser()['nm_karyawan'];
-    }
+    private function _getUsername()  { return $this->_getCurrentUser()['nm_karyawan']; }
 
     private function _getGudangId($post = [])
     {
         if (!empty($post['gudang_id'])) return $post['gudang_id'];
         $wil = $this->_getCurrentUser()['wilayah'];
-        if (!empty($wil)) return $wil;
-        return '';
+        return !empty($wil) ? $wil : '';
     }
 
     // ================================================================
-    // HELPER — Decode id_so dari URI segment (:any)
-    //
-    // Dengan route $route['sales_order/detail/(:any)'] = '.../$1',
-    // CodeIgniter meneruskan seluruh sisa URI sebagai satu string
-    // dengan '/' di antaranya. Kita tinggal rawurldecode saja.
-    //
-    // Contoh URI : sales_order/detail/SO%2F202604%2F0003
-    //   → $encoded : SO%2F202604%2F0003  → decode → SO/202604/0003  ✓
-    //
-    // Contoh URI : sales_order/detail/SO/202604/0003
-    //   → $encoded : SO/202604/0003      → decode → SO/202604/0003  ✓
-    // ================================================================
-    private function _decodeId($encoded)
-    {
-        return rawurldecode((string)$encoded);
-    }
-
-    // ================================================================
-    // HELPER — redirect ke detail, encode '/' → %2F agar 1 segment
-    // ================================================================
-    private function _redirectDetail($id_so)
-    {
-        // rawurlencode mengubah '/' → '%2F'
-        // Hasilnya: sales_order/detail/SO%2F202604%2F0003
-        // Route (:any) menangkap seluruh string itu sebagai $1
-        redirect('sales_order/detail/' . rawurlencode($id_so));
-    }
-
-    // ================================================================
-    // LIST
+    // LIST SO
     // ================================================================
     public function index()
     {
@@ -133,17 +88,16 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // FORM CREATE
+    // FORM CREATE SO
     // ================================================================
     public function create()
     {
         $data['page_title']     = 'KARISMA - Buat Sales Order';
-        $data['no_so']          = '';
-        $data['no_faktur']      = $this->M_SalesOrder->generate_no_faktur();
+        $data['no_so']          = $this->M_SalesOrder->generate_no_so();
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
-        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list(); // ← TAMBAH
+        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
         $data['details']        = [];
@@ -156,7 +110,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // STORE (POST)
+    // STORE SO (POST)
     // ================================================================
     public function store()
     {
@@ -172,6 +126,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        // Validasi stok
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
@@ -185,12 +140,10 @@ class C_SalesOrder extends CI_Controller
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
         }
 
-        $no_so    = $post['no_so'];
-        $no_faktur = $post['no_faktur'];
+        $no_so = $post['no_so'] ?? $this->M_SalesOrder->generate_no_so();
 
         $header = [
-            'no_so'             => $post['no_so'],
-            'no_faktur'         => $no_faktur,
+            'no_so'             => $no_so,
             'tanggal_transaksi' => $post['tanggal'],
             'kd_customer'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
@@ -199,47 +152,52 @@ class C_SalesOrder extends CI_Controller
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
-            'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
             'create_by'         => $this->_getUsername(),
         ];
 
-        $id_so = $this->M_SalesOrder->simpan_so($header, $details); // return int
+        $id_so = $this->M_SalesOrder->simpan_so($header, $details);
 
         if ($id_so) {
-            $aksi = $is_nego ? 'CREATE_NEGO' : 'CREATE';
-            $detail_str = [];
-            foreach ($details as $d) {
-                $detail_str[] = $d['nama_barang']
-                    .' | Box: '.$d['qty_box']
-                    .' | Ecer: '.$d['qty_satuan'].' pcs'
-                    .' | Total: '.$d['qty'].' pcs';
-            }
-            $ket           = 'SO baru dibuat. Customer: '.$post['customer_name'].'. Total item: '.count($details);
-            $detail_produk = implode("\n", $detail_str);
-            $this->M_ActivityLog->log($no_so, $no_faktur, $aksi, $ket, $this->_getUsername(), $detail_produk);
+            // Activity log
+            $detail_str = array_map(function($d) {
+                return $d['nama_barang']
+                    . ' | Box: ' . $d['qty_box']
+                    . ' | Ecer: ' . $d['qty_satuan'] . ' pcs'
+                    . ' | Total: ' . $d['qty'] . ' pcs';
+            }, $details);
+
+            $this->M_ActivityLog->log(
+                $no_so, '', 'CREATE_SO',
+                'SO baru dibuat. Customer: ' . $post['customer_name'] . '. Total item: ' . count($details),
+                $this->_getUsername(),
+                implode("\n", $detail_str)
+            );
 
             if ($is_nego) {
-                // Ambil approver dari baris pertama yang nego
                 $approve_by = '';
                 foreach ($details as $d) {
                     if (!empty($d['is_nego']) && !empty($d['approve_by'])) {
-                        $approve_by = $d['approve_by'];
-                        break;
+                        $approve_by = $d['approve_by']; break;
                     }
                 }
-                $ket_approval = 'Harga item berbeda dari HPP. Dibuat oleh: '.$this->_getUsername();
                 $this->M_SalesOrder->simpan_request_approval(
-                    $no_faktur, $no_so, $ket_approval, $this->_getUsername(), $approve_by
+                    $no_so,
+                    'Harga item berbeda dari HPP. Dibuat oleh: ' . $this->_getUsername(),
+                    $this->_getUsername(),
+                    $approve_by
                 );
                 $this->session->set_flashdata('warning',
-                    'SO berhasil disimpan. Menunggu approval dari <b>'.$approve_by.'</b>.');
+                    'SO berhasil disimpan dengan status <b>Draft</b>. Menunggu approval dari <b>' . $approve_by . '</b>.');
             } elseif (!empty($tk['warnings'])) {
-                $this->session->set_flashdata('warning', '<b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
+                $this->session->set_flashdata('warning',
+                    'SO berhasil disimpan. <b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
-                $this->session->set_flashdata('success', 'Sales Order <b>' . $no_so . '</b> berhasil dibuat.');
+                $this->session->set_flashdata('success',
+                    'Sales Order <b>' . $no_so . '</b> berhasil dibuat dengan status <b>Draft</b>.');
             }
-            redirect('sales_order/detail/' . $id_so); // id_so = integer, aman di URL
+
+            redirect('sales_order/detail/' . $id_so);
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan SO.');
             redirect('sales_order/create');
@@ -247,18 +205,33 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // DETAIL
-    // Route: $route['sales_order/detail/(:any)'] = 'C_SalesOrder/detail/$1';
-    // $encoded = seluruh sisa path setelah "detail/", mis: SO%2F202604%2F0003
+    // DETAIL SO
     // ================================================================
     public function detail($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
 
-        $data['page_title'] = 'KARISMA - Detail SO ' . $id_so;
-        $data['so']         = $so;
-        $data['details'] = $this->M_SalesOrder->get_so_detail($so['no_faktur']);
+        $details  = $this->M_SalesOrder->get_so_detail($id_so);
+        $fakturs  = $this->M_SalesOrder->get_faktur_by_so($id_so);
+
+        // Hitung ringkasan qty per baris
+        $total_order       = 0;
+        $total_faktur      = 0;
+        $total_outstanding = 0;
+        foreach ($details as $d) {
+            $total_order       += (float)$d['qty'];
+            $total_faktur      += (float)$d['qty_faktur'];
+            $total_outstanding += (float)($d['qty'] - $d['qty_faktur']);
+        }
+
+        $data['page_title']        = 'KARISMA - Detail SO ' . ($so['no_so'] ?? $id_so);
+        $data['so']                = $so;
+        $data['details']           = $details;
+        $data['fakturs']           = $fakturs;
+        $data['total_order']       = $total_order;
+        $data['total_faktur']      = $total_faktur;
+        $data['total_outstanding'] = $total_outstanding;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -266,27 +239,25 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // FORM EDIT
-    // Route: $route['sales_order/edit/(:any)'] = 'C_SalesOrder/edit/$1';
+    // FORM EDIT SO (hanya saat Draft)
     // ================================================================
     public function edit($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || $so['status'] !== 'draft') {
-            $this->session->set_flashdata('error', 'SO tidak dapat diedit.');
+            $this->session->set_flashdata('error', 'SO tidak dapat diedit. Hanya SO berstatus Draft yang dapat diedit.');
             redirect('sales_order');
             return;
         }
 
-        $data['page_title']     = 'KARISMA - Edit SO ' . $id_so;
+        $data['page_title']     = 'KARISMA - Edit SO ' . $so['no_so'];
         $data['no_so']          = $so['no_so'] ?? '';
-        $data['no_faktur']      = $so['no_faktur'] ?? '';
         $data['so']             = $so;
-        $data['details']        = $this->M_SalesOrder->get_so_detail($so['no_faktur']);
+        $data['details']        = $this->M_SalesOrder->get_so_detail($id_so);
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
-        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list(); // ← TAMBAH
+        $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi'] = M_SalesOrder::BATAS_KUBIKASI;
@@ -297,8 +268,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // UPDATE (POST)
-    // Route: $route['sales_order/update/(:any)'] = 'C_SalesOrder/update/$1';
+    // UPDATE SO (POST)
     // ================================================================
     public function update($id_so)
     {
@@ -311,14 +281,14 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
-            redirect('sales_order/edit/' . rawurlencode($id_so));
+            redirect('sales_order/edit/' . $id_so);
             return;
         }
 
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id, $id_so);
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
-            redirect('sales_order/edit/' . rawurlencode($id_so));
+            redirect('sales_order/edit/' . $id_so);
             return;
         }
 
@@ -329,8 +299,6 @@ class C_SalesOrder extends CI_Controller
         }
 
         $header = [
-            'no_so'             => $post['no_so']     ?? ($so['no_so']     ?? ''),
-            'no_faktur'         => $post['no_faktur'] ?? ($so['no_faktur'] ?? ''),
             'tanggal_transaksi' => $post['tanggal'],
             'kd_customer'       => $post['customer_id'],
             'customer_name'     => $post['customer_name'],
@@ -339,7 +307,6 @@ class C_SalesOrder extends CI_Controller
             'batas_kubikasi'    => $tk['batas_kubikasi'],
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
-            'status'            => $is_nego ? 'waiting_approval' : 'draft',
             'catatan'           => $post['catatan'] ?? null,
             'update_by'         => $this->_getUsername(),
         ];
@@ -347,116 +314,253 @@ class C_SalesOrder extends CI_Controller
         $result = $this->M_SalesOrder->update_so($id_so, $header, $details);
 
         if ($result) {
-            // Activity log
-            $so_data   = $this->M_SalesOrder->get_so($id_so);
-            $no_so_log = $so_data['no_so']    ?? '';
-            $no_fak    = $so_data['no_faktur'] ?? '';
-            $detail_str = [];
-            foreach ($details as $d) {
-                $detail_str[] = $d['nama_barang']
-                    .' | Box: '.$d['qty_box']
-                    .' | Ecer: '.$d['qty_satuan'].' pcs'
-                    .' | Total: '.$d['qty'].' pcs';
-            }
-            $ket           = 'SO diupdate. Customer: '.($post['customer_name']??'').'. Total item: '.count($details);
-            $detail_produk = implode("\n", $detail_str);
-            $this->M_ActivityLog->log($no_so_log, $no_fak, 'UPDATE', $ket, $this->_getUsername(), $detail_produk);
+            $so_fresh = $this->M_SalesOrder->get_so($id_so);
+            $detail_str = array_map(function($d) {
+                return $d['nama_barang']
+                    . ' | Box: ' . $d['qty_box']
+                    . ' | Ecer: ' . $d['qty_satuan'] . ' pcs'
+                    . ' | Total: ' . $d['qty'] . ' pcs';
+            }, $details);
+
+            $this->M_ActivityLog->log(
+                $so_fresh['no_so'] ?? '', '', 'UPDATE_SO',
+                'SO diupdate. Customer: ' . ($post['customer_name'] ?? '') . '. Total item: ' . count($details),
+                $this->_getUsername(),
+                implode("\n", $detail_str)
+            );
 
             if ($is_nego) {
-                $approve_by   = $post['approve_by'] ?? '';
-                $ket_approval = 'Harga item berbeda dari HPP. Diupdate oleh: '.$this->_getUsername();
+                $approve_by = $post['approve_by'] ?? '';
                 $this->M_SalesOrder->simpan_request_approval(
-                    $post['no_faktur'] ?? '',
-                    $post['no_so']     ?? '',
-                    $ket_approval,
+                    $so_fresh['no_so'] ?? '',
+                    'Harga item berbeda dari HPP. Diupdate oleh: ' . $this->_getUsername(),
                     $this->_getUsername(),
                     $approve_by
                 );
             }
+
             if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', implode('<br>', $tk['warnings']));
             } else {
-                $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil diupdate.');
+                $this->session->set_flashdata('success', 'Sales Order <b>' . ($so_fresh['no_so'] ?? $id_so) . '</b> berhasil diupdate.');
             }
-            $this->_redirectDetail($id_so);
+            redirect('sales_order/detail/' . $id_so);
         } else {
-            $this->session->set_flashdata('error', 'Gagal update SO.');
-            redirect('sales_order/edit/' . rawurlencode($id_so));
+            $this->session->set_flashdata('error', 'Gagal update SO. Pastikan SO masih berstatus Draft.');
+            redirect('sales_order/edit/' . $id_so);
         }
     }
 
     // ================================================================
-    // CANCEL
-    // Route: $route['sales_order/cancel/(:any)'] = 'C_SalesOrder/cancel/$1';
+    // REKAM SO — Draft → Open
+    // ================================================================
+    public function rekam($id_so)
+    {
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || $so['status'] !== 'draft') {
+            $this->session->set_flashdata('error', 'SO tidak dapat direkam. Hanya SO berstatus Draft yang dapat direkam.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
+
+        $result = $this->M_SalesOrder->rekam_so($id_so, $this->_getUsername());
+
+        if ($result) {
+            $this->M_ActivityLog->log(
+                $so['no_so'] ?? '', '', 'REKAM_SO',
+                'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.',
+                $this->_getUsername()
+            );
+            $this->session->set_flashdata('success',
+                'SO <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil direkam. Status: <b>Open</b>. '
+                . 'Faktur Penjualan dapat dibuat sekarang.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal merekam SO.');
+        }
+
+        redirect('sales_order/detail/' . $id_so);
+    }
+
+    // ================================================================
+    // CANCEL SO
     // ================================================================
     public function cancel($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
 
-        if (!$so || in_array($so['status'], ['completed', 'cancelled'])) {
+        if (in_array($so['status'], ['completed', 'cancelled'])) {
             $this->session->set_flashdata('error', 'SO tidak dapat dibatalkan.');
-            $this->_redirectDetail($id_so);
+            redirect('sales_order/detail/' . $id_so);
             return;
         }
+
+        // Cek apakah sudah ada faktur yang dibuat
+        $fakturs = $this->M_SalesOrder->get_faktur_by_so($id_so);
+        if (!empty($fakturs)) {
+            $this->session->set_flashdata('error',
+                'SO tidak dapat dibatalkan karena sudah memiliki <b>' . count($fakturs) . ' Faktur Penjualan</b>. '
+                . 'Batalkan semua faktur terlebih dahulu.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
+
         $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->_getUsername());
 
-        // Activity log
-        $so_data = $this->M_SalesOrder->get_so($id_so);
         $this->M_ActivityLog->log(
-            $so_data['no_so']    ?? '',
-            $so_data['no_faktur'] ?? '',
-            'CANCEL',
+            $so['no_so'] ?? '', '', 'CANCEL_SO',
             'SO dibatalkan.',
             $this->_getUsername()
         );
 
-        $this->session->set_flashdata('success', 'Sales Order <b>' . $id_so . '</b> berhasil dibatalkan.');
+        $this->session->set_flashdata('success', 'Sales Order <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil dibatalkan.');
         redirect('sales_order');
     }
 
     // ================================================================
-    // APPROVAL
+    // FAKTUR PENJUALAN — Form buat faktur dari SO
     // ================================================================
-    public function approval()
+    public function form_faktur($id_so)
     {
-        $user        = $this->_getCurrentUser();
-        $approve_by  = $user['nm_karyawan'];
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || $so['status'] !== 'open') {
+            $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang berstatus Open.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
 
-        $data['page_title']    = 'KARISMA - Approval SO';
-        $data['list']          = $this->M_SalesOrder->get_pending_approval($approve_by);
-        $data['approver_name'] = $approve_by;
+        $details = $this->M_SalesOrder->get_so_detail($id_so);
+
+        // Filter hanya item yang masih ada outstanding
+        $items_outstanding = array_filter($details, function($d) {
+            return ((float)$d['qty'] - (float)$d['qty_faktur']) > 0;
+        });
+
+        if (empty($items_outstanding)) {
+            $this->session->set_flashdata('error', 'Semua item pada SO ini sudah difakturkan seluruhnya.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
+
+        $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
+        $data['so']                = $so;
+        $data['details']           = array_values($items_outstanding);
+        $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur();
+        $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
+        $data['batas_tonase']      = M_SalesOrder::BATAS_TONASE;
+        $data['batas_kubikasi']    = M_SalesOrder::BATAS_KUBIKASI;
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/so_approval.php', $data);
+        $this->load->view('content/sales/faktur_form.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function approve()
+    // ================================================================
+    // SIMPAN FAKTUR (POST)
+    // ================================================================
+    public function simpan_faktur($id_so)
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $status_approval = $this->input->post('status', true);
-        $id_approval     = $this->input->post('id',     true);
-        $note            = $this->input->post('note',   true);
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || $so['status'] !== 'open') {
+            $this->session->set_flashdata('error', 'SO tidak valid atau tidak berstatus Open.');
+            redirect('sales_order/detail/' . $id_so);
+            return;
+        }
 
-        $this->M_SalesOrder->proses_approval($id_approval, $status_approval, $note, $this->_getUsername());
+        $post         = $this->input->post(null, true);
+        $faktur_items = $this->_parse_faktur_items($post);
 
-        // Activity log
-        $approval  = $this->db->get_where('tbso_so_approval', ['id' => $id_approval])->row_array();
-        $aksi_appr = ($status_approval === 'approved') ? 'APPROVE' : 'REJECT';
-        $ket_appr  = 'SO '.($status_approval === 'approved' ? 'disetujui' : 'ditolak').'. Note: '.$note;
-        $this->M_ActivityLog->log(
-            $approval['no_so']    ?? '',
-            $approval['no_faktur'] ?? '',
-            $aksi_appr,
-            $ket_appr,
-            $this->_getUsername()
-        );
+        if (empty($faktur_items)) {
+            $this->session->set_flashdata('error', 'Minimal 1 item harus dimasukkan ke faktur.');
+            redirect('sales_order/form_faktur/' . $id_so);
+            return;
+        }
 
-        $msg = ($status_approval === 'approved') ? 'disetujui' : 'ditolak';
-        $this->session->set_flashdata('success', "SO berhasil <b>{$msg}</b>.");
-        redirect('sales_order/approval');
+        // Validasi stok untuk qty yang akan difakturkan
+        $gudang_id    = $so['gudang_id'];
+        $stock_errors = [];
+        foreach ($faktur_items as $item) {
+            $stock = $this->M_SalesOrder->cek_stock($item['kd_barang'], $item['expired_date'], $gudang_id);
+            $available = $stock ? (float)$stock['available_stock'] : 0;
+            if ((float)$item['qty'] > $available + (float)($stock['qty_reserved'] ?? 0)) {
+                $stock_errors[] = "Stok fisik tidak mencukupi untuk <b>{$item['nama_barang']}</b>.";
+            }
+        }
+        if (!empty($stock_errors)) {
+            $this->session->set_flashdata('error', implode('<br>', $stock_errors));
+            redirect('sales_order/form_faktur/' . $id_so);
+            return;
+        }
+
+        $no_faktur = $post['no_faktur'] ?? $this->M_SalesOrder->generate_no_faktur();
+
+        $faktur_header = [
+            'no_faktur'      => $no_faktur,
+            'tanggal_faktur' => $post['tanggal_faktur'],
+            'catatan'        => $post['catatan'] ?? null,
+            'create_by'      => $this->_getUsername(),
+        ];
+
+        $result = $this->M_SalesOrder->buat_faktur($id_so, $faktur_header, $faktur_items);
+
+        if (is_array($result) && isset($result['errors'])) {
+            $this->session->set_flashdata('error', implode('<br>', $result['errors']));
+            redirect('sales_order/form_faktur/' . $id_so);
+            return;
+        }
+
+        if ($result) {
+            $so_fresh = $this->M_SalesOrder->get_so($id_so);
+
+            $detail_str = array_map(function($item) {
+                return $item['nama_barang'] . ' | Qty: ' . $item['qty'] . ' pcs';
+            }, $faktur_items);
+
+            $this->M_ActivityLog->log(
+                $so['no_so'] ?? '', $no_faktur, 'BUAT_FAKTUR',
+                'Faktur Penjualan ' . $no_faktur . ' dibuat dari SO ' . $so['no_so'] . '. Item: ' . count($faktur_items),
+                $this->_getUsername(),
+                implode("\n", $detail_str)
+            );
+
+            // Cek apakah SO sudah completed
+            if (($so_fresh['status'] ?? '') === 'completed') {
+                $this->session->set_flashdata('success',
+                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. '
+                    . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.');
+            } else {
+                $this->session->set_flashdata('success',
+                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih berstatus <b>Open</b> — masih ada outstanding.');
+            }
+
+            redirect('sales_order/detail/' . $id_so);
+        } else {
+            $this->session->set_flashdata('error', 'Gagal menyimpan Faktur Penjualan.');
+            redirect('sales_order/form_faktur/' . $id_so);
+        }
+    }
+
+    // ================================================================
+    // DETAIL FAKTUR
+    // ================================================================
+    public function detail_faktur($id_faktur)
+    {
+        $faktur  = $this->M_SalesOrder->get_faktur($id_faktur);
+        if (!$faktur) show_404();
+
+        $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        $so      = $this->M_SalesOrder->get_so($faktur['id_so']);
+
+        $data['page_title'] = 'KARISMA - Faktur ' . $faktur['no_faktur'];
+        $data['faktur']     = $faktur;
+        $data['details']    = $details;
+        $data['so']         = $so;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     // ================================================================
@@ -469,10 +573,10 @@ class C_SalesOrder extends CI_Controller
         $offset   = ($page - 1) * $per_page;
 
         $filter = [
-            'no_so'    => $this->input->get('no_so',    true) ?? '',
-            'aksi'     => $this->input->get('aksi',     true) ?? '',
-            'tanggal'  => $this->input->get('tanggal',  true) ?? '',
-            'keyword'  => $this->input->get('keyword',  true) ?? '',
+            'no_so'   => $this->input->get('no_so',   true) ?? '',
+            'aksi'    => $this->input->get('aksi',    true) ?? '',
+            'tanggal' => $this->input->get('tanggal', true) ?? '',
+            'keyword' => $this->input->get('keyword', true) ?? '',
         ];
 
         $data['page_title'] = 'KARISMA - Activity Log SO';
@@ -487,12 +591,10 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    // AJAX — activity log per SO (untuk tab di halaman detail)
     public function activity_log_so($id_so)
     {
-        $so      = $this->M_SalesOrder->get_so($id_so);
-        $no_so   = $so['no_so'] ?? '';
-        $logs    = $this->M_ActivityLog->get_by_no_so($no_so);
+        $so   = $this->M_SalesOrder->get_so($id_so);
+        $logs = $this->M_ActivityLog->get_by_no_so($so['no_so'] ?? '');
 
         if (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
@@ -505,11 +607,9 @@ class C_SalesOrder extends CI_Controller
     public function get_stock()
     {
         if (ob_get_level()) ob_end_clean();
-
         try {
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
             $gudang_id = $this->input->get('gudang_id', true);
-            // Jaga sebagai string, bukan integer
             $gudang_id = ($gudang_id !== null && $gudang_id !== '') ? (string)$gudang_id : null;
 
             $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
@@ -522,11 +622,8 @@ class C_SalesOrder extends CI_Controller
                 $row['kubikasi_m3']     = (float)($row['kubikasi_m3']    ?? 0);
                 $row['hpp']             = (float)($row['hpp']            ?? 0);
                 $row['isi_per_box']     = (int)($row['isi_per_box']      ?? 1);
-                $row['p']               = (float)($row['p']              ?? 0);
-                $row['l']               = (float)($row['l']              ?? 0);
-                $row['t']               = (float)($row['t']              ?? 0);
-                $row['gudang_id']       = (string)($row['gudang_id'] ?? '');
-                $row['gudang']          = (string)($row['gudang']    ?? $row['gudang_id']);
+                $row['gudang_id']       = (string)($row['gudang_id']     ?? '');
+                $row['gudang']          = (string)($row['gudang']        ?? $row['gudang_id']);
 
                 foreach (['kd_barang','nama_barang','satuan','exp_date','no_lot','gudang','gudang_id'] as $f) {
                     if (isset($row[$f])) {
@@ -541,11 +638,6 @@ class C_SalesOrder extends CI_Controller
 
             header('Content-Type: application/json; charset=utf-8');
             echo $json;
-
-            $this->db->save_queries = true;
-            error_log('get_stock gudang_id=' . $gudang_id . ' total=' . count($stock));
-            error_log('last query: ' . $this->db->last_query());
-
         } catch (Exception $e) {
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(500);
@@ -566,7 +658,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // PRIVATE — Parse POST detail item
+    // PRIVATE — parse POST detail SO
     // ================================================================
     private function _parse_detail_post($post)
     {
@@ -582,15 +674,13 @@ class C_SalesOrder extends CI_Controller
             $qty_satuan  = (float)($post['qty_satuan'][$i]   ?? 0);
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
             $pajak       = (float)($post['pajak'][$i]        ?? 0);
-
-            $disc        = (float)($post['disc'][$i] ?? 0);
+            $disc        = (float)($post['disc'][$i]         ?? 0);
             $qty_kecil   = ($qty_box * $isi_per_box) + $qty_satuan;
 
             $subtotal_before_disc = $hrg * $qty_kecil;
             $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
             $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
             $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
-            $approve_by_item      = trim($post['approve_by'][$i] ?? '');
 
             $ref_no = $this->M_SalesOrder->get_ref_no(
                 $kd,
@@ -599,34 +689,85 @@ class C_SalesOrder extends CI_Controller
             );
 
             $details[] = [
-                'produk_id'    => $post['produk_id'][$i]    ?? '',
-                'kd_barang'    => $kd,
-                'nama_barang'  => $post['nama_barang'][$i]  ?? '',
-                'qty'          => $qty_kecil,
-                'qty_box'      => $qty_box,
-                'qty_satuan'   => $qty_satuan,
-                'isi_per_box'  => $isi_per_box,
-                'satuan'       => $post['satuan'][$i]        ?? '',
-                'expired_date' => $post['expired_date'][$i]  ?? '',
-                'no_lot'       => $post['no_lot'][$i]        ?? null,
-                'ref_no'       => $ref_no,
-                'pajak'        => $pajak,
-                'disc'         => $disc,
+                'kd_barang'            => $kd,
+                'nama_barang'          => $post['nama_barang'][$i]  ?? '',
+                'qty'                  => $qty_kecil,
+                'qty_box'              => $qty_box,
+                'qty_satuan'           => $qty_satuan,
+                'isi_per_box'          => $isi_per_box,
+                'satuan'               => $post['satuan'][$i]        ?? '',
+                'expired_date'         => $post['expired_date'][$i]  ?? '',
+                'no_lot'               => $post['no_lot'][$i]        ?? null,
+                'ref_no'               => $ref_no,
+                'pajak'                => $pajak,
+                'disc'                 => $disc,
                 'subtotal_before_disc' => $subtotal_before_disc,
                 'subtotal_after_disc'  => $subtotal_after_disc,
-                'hrg_satuan'   => $hrg,
-                'hrg_pokok'    => $hrg_pk,
-                'total_harga'  => $total_tax,
-                'berat_gram'   => (float)($post['berat_gram'][$i]  ?? 0),
-                'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
-                'kode_akun'    => $post['kode_akun'][$i]     ?? null,
-                'approve_by'   => $approve_by_item,
-                'create_by'    => $this->_getUsername(),
+                'hrg_satuan'           => $hrg,
+                'hrg_pokok'            => $hrg_pk,
+                'total_harga'          => $total_tax,
+                'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
+                'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
+                'is_nego'              => $is_nego,
+                'approve_by'           => trim($post['approve_by'][$i] ?? ''),
+                'create_by'            => $this->_getUsername(),
             ];
         }
         return $details;
     }
 
+    // ================================================================
+    // PRIVATE — parse POST item faktur
+    // ================================================================
+    private function _parse_faktur_items($post)
+    {
+        $items = [];
+        if (empty($post['id_so_detail']) || !is_array($post['id_so_detail'])) return $items;
+
+        foreach ($post['id_so_detail'] as $i => $id_so_detail) {
+            if (empty($id_so_detail)) continue;
+
+            $qty = (float)($post['qty_faktur'][$i] ?? 0);
+            if ($qty <= 0) continue; // lewati item dengan qty 0
+
+            $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
+            $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
+            $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+            $pajak       = (float)($post['pajak'][$i]        ?? 0);
+            $disc        = (float)($post['disc'][$i]         ?? 0);
+
+            $subtotal_before_disc = $hrg * $qty;
+            $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
+            $total_harga          = $subtotal_after_disc   * (1 + $pajak / 100);
+
+            $items[] = [
+                'id_so_detail'         => $id_so_detail,
+                'kd_barang'            => $post['kd_barang'][$i]      ?? '',
+                'nama_barang'          => $post['nama_barang'][$i]     ?? '',
+                'no_lot'               => $post['no_lot'][$i]          ?? null,
+                'expired_date'         => $post['expired_date'][$i]    ?? '',
+                'qty'                  => $qty,
+                'qty_box'              => floor($qty / $isi_per_box),
+                'qty_satuan'           => fmod($qty, $isi_per_box),
+                'isi_per_box'          => $isi_per_box,
+                'satuan'               => $post['satuan'][$i]          ?? '',
+                'hrg_satuan'           => $hrg,
+                'hrg_pokok'            => $hrg_pk,
+                'disc'                 => $disc,
+                'pajak'                => $pajak,
+                'subtotal_before_disc' => $subtotal_before_disc,
+                'subtotal_after_disc'  => $subtotal_after_disc,
+                'total_harga'          => $total_harga,
+                'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
+                'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
+            ];
+        }
+        return $items;
+    }
+
+    // ================================================================
+    // LIST DO (tidak berubah)
+    // ================================================================
     public function list_do()
     {
         $data['page_title'] = 'KARISMA - SALES - LIST DO';
@@ -637,36 +778,28 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    /**
-     * Halaman Detail DO untuk Sales — view only + tombol konfirmasi
-     */
     public function detail_do($kd_do)
     {
-        // Ambil data sama seperti C_Logistik::detail_do tapi tanpa aksi edit
         $query = $this->db->query("
-            SELECT
-                x.norut, d.nama_customer AS nama_kios, d.telp1, d.telp2,
-                x.kd_rute, d.regional, x.id, x.kd_faktur, x.tgl_transaksi,
-                x.note_faktur, c.kd_barang AS kd_system, c.nama_barang AS nm_barang,
-                x.no_lot, x.nominal_p, x.jtempo, x.tgl_exp, x.satuan,
-                x.status, x.kd_do, x.qty,
-                (c.p * c.l * c.t) AS dimensi,
-                FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
-                (x.qty % (c.p * c.l * c.t)) AS qty_pcs
+            SELECT x.norut, d.nama_customer AS nama_kios, d.telp1, d.telp2,
+                   x.kd_rute, d.regional, x.id, x.kd_faktur, x.tgl_transaksi,
+                   x.note_faktur, c.kd_barang AS kd_system, c.nama_barang AS nm_barang,
+                   x.no_lot, x.nominal_p, x.jtempo, x.tgl_exp, x.satuan,
+                   x.status, x.kd_do, x.qty,
+                   (c.p * c.l * c.t) AS dimensi,
+                   FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
+                   (x.qty % (c.p * c.l * c.t)) AS qty_pcs
             FROM (
-                SELECT
-                    a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
-                    a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
-                    a.tgl_exp, a.nominal_p, a.jtempo, a.note_faktur,
-                    a.satuan, a.status,
-                    SUM(a.qty) AS qty
+                SELECT a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
+                       a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
+                       a.tgl_exp, a.nominal_p, a.jtempo, a.note_faktur,
+                       a.satuan, a.status, SUM(a.qty) AS qty
                 FROM tb_detail_do a
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 WHERE b.kd_do = ?
-                GROUP BY
-                    a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
-                    a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
-                    a.tgl_exp, a.nominal_p, a.jtempo, a.satuan, a.status
+                GROUP BY a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
+                         a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
+                         a.tgl_exp, a.nominal_p, a.jtempo, a.satuan, a.status
             ) x
             JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
             JOIN tb_customer d ON d.kd_customer = x.kd_customer
@@ -674,24 +807,23 @@ class C_SalesOrder extends CI_Controller
         ", [$kd_do]);
 
         $query1 = $this->db->query("
-            SELECT
-                b.id, b.kd_do, b.regional, b.nolambung, b.driver,
-                b.status, b.sales_confirm_status, b.sales_confirm_by,
-                b.sales_confirm_at, b.sales_confirm_note,
-                COUNT(DISTINCT a.kd_barang) AS total_barang,
-                ROUND(SUM(a.qty * m.berat)/1000000, 2) AS total_tonase_faktur,
-                ROUND(SUM(a.qty * m.kubikasi), 2) AS total_kubikasi,
-                COUNT(DISTINCT a.kd_customer) AS totalfaktur
+            SELECT b.id, b.kd_do, b.regional, b.nolambung, b.driver, b.status,
+                   b.sales_confirm_status, b.sales_confirm_by,
+                   b.sales_confirm_at, b.sales_confirm_note,
+                   COUNT(DISTINCT a.kd_barang) AS total_barang,
+                   ROUND(SUM(a.qty * m.berat)/1000000, 2) AS total_tonase_faktur,
+                   ROUND(SUM(a.qty * m.kubikasi), 2) AS total_kubikasi,
+                   COUNT(DISTINCT a.kd_customer) AS totalfaktur
             FROM tb_detail_do a
             JOIN tb_do b ON b.kd_do = a.kd_do
             JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
             WHERE b.kd_do = ?
-            GROUP BY b.id, b.kd_do, b.regional, b.nolambung, b.driver,
-                     b.status, b.sales_confirm_status, b.sales_confirm_by,
+            GROUP BY b.id, b.kd_do, b.regional, b.nolambung, b.driver, b.status,
+                     b.sales_confirm_status, b.sales_confirm_by,
                      b.sales_confirm_at, b.sales_confirm_note
         ", [$kd_do]);
 
-        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $query2      = $this->db->where('kd_do', $kd_do)->get('tb_do');
         $log_confirm = $this->M_Logistik->get_log_confirm_sales($kd_do);
 
         $data['page_title']  = 'KARISMA - SALES - DETAIL DO';
@@ -706,10 +838,6 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    /**
-     * Endpoint konfirmasi loading dari Sales
-     * POST: kd_do, action (siap/belum_siap), note
-     */
     public function confirm_loading()
     {
         while (ob_get_level()) ob_end_clean();
@@ -733,47 +861,20 @@ class C_SalesOrder extends CI_Controller
 
         $this->M_Logistik->update_sales_confirm($kd_do, $action, $confirm_by, $note);
 
-        $msg = ($action === 'siap')
-            ? 'Konfirmasi Siap Loading berhasil. DO sekarang On Delivery.'
-            : 'DO ditandai Belum Siap Loading.';
-
         if ($action === 'siap') {
             $this->M_Logistik->insertlog_do([
                 'kd_do'      => $kd_do,
                 'tgl_input'  => date('d/m/Y'),
                 'keterangan' => 'SALES CONFIRM - SIAP LOADING oleh ' . $confirm_by,
-                'inputer'    => $confirm_by
+                'inputer'    => $confirm_by,
             ]);
         }
 
+        $msg = ($action === 'siap')
+            ? 'Konfirmasi Siap Loading berhasil. DO sekarang On Delivery.'
+            : 'DO ditandai Belum Siap Loading.';
+
         echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
         exit;
-    }
-
-    public function rekam($id_so)
-    {
-        $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || $so['status'] !== 'draft') {
-            $this->session->set_flashdata('error', 'SO tidak dapat direkam.');
-            redirect('sales_order/detail/' . $id_so);
-            return;
-        }
-
-        $this->M_SalesOrder->rekam_so($so['no_faktur']);
-
-        $this->M_ActivityLog->log(
-            $so['no_so']     ?? '',
-            $so['no_faktur'] ?? '',
-            'REKAM_SO',
-            'SO direkam, siap masuk ke Delivery Order.',
-            $this->_getUsername()
-        );
-
-        // ✅ Redirect ke so_list bukan detail
-        $this->session->set_flashdata('success',
-            'SO <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil direkam. ' .
-            'Faktur sudah tersedia di Delivery Order.'
-        );
-        redirect('sales_order');
     }
 }

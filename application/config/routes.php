@@ -339,15 +339,20 @@ $route['sales_order/detail/(:any)']                 = 'sales/C_SalesOrder/detail
 $route['sales_order/edit/(:any)']                   = 'sales/C_SalesOrder/edit/$1';
 $route['sales_order/update/(:any)']                 = 'sales/C_SalesOrder/update/$1';
 $route['sales_order/cancel/(:any)']                 = 'sales/C_SalesOrder/cancel/$1';
+$route['sales_order/rekam/(:any)']                  = 'sales/C_SalesOrder/rekam/$1';
 $route['sales_order/approval']                      = 'sales/C_SalesOrder/approval';
 $route['sales_order/approve']                       = 'sales/C_SalesOrder/approve';
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
 $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
+$route['sales_order/activity_log_so/(:any)']        = 'sales/C_SalesOrder/activity_log_so/$1';  // tambahan
+$route['sales_order/form_faktur/(:any)']            = 'sales/C_SalesOrder/form_faktur/$1';       // tambahan
+$route['sales_order/simpan_faktur/(:any)']          = 'sales/C_SalesOrder/simpan_faktur/$1';     // tambahan
+$route['sales_order/detail_faktur/(:any)']          = 'sales/C_SalesOrder/detail_faktur/$1';     // tambahan
 $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
-$route['sales_order/rekam/(:any)']                  = 'sales/C_SalesOrder/rekam/$1';
+
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
