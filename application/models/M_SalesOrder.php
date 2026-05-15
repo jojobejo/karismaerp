@@ -431,9 +431,12 @@ class M_SalesOrder extends CI_Model
         $this->db->select('
             so.*,
             c.nama_customer,
-            COALESCE(SUM(sd.qty), 0)             AS total_qty_order,
-            COALESCE(SUM(sd.qty_faktur), 0)      AS total_qty_faktur,
-            COALESCE(SUM(sd.qty_outstanding), 0) AS total_qty_outstanding
+            COUNT(sd.id)                                                        AS jumlah_item,
+            SUM(CASE WHEN (sd.qty - COALESCE(sd.qty_faktur, 0)) <= 0
+                    THEN 1 ELSE 0 END)                                         AS jumlah_item_diterima,
+            COALESCE(SUM(sd.qty), 0)                                            AS total_qty_order,
+            COALESCE(SUM(sd.qty_faktur), 0)                                     AS total_qty_faktur,
+            COALESCE(SUM(sd.qty_outstanding), 0)                                AS total_qty_outstanding
         ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');

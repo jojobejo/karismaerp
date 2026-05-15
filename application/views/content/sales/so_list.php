@@ -133,9 +133,8 @@
                                 <th>No SO</th>
                                 <th>Tanggal</th>
                                 <th>Customer</th>
-                                <th class="text-center">Item</th>
-                                <th class="text-right">Qty Order</th>
-                                <th class="text-right">Qty Faktur</th>
+                                <th class="text-right">Item Diorder</th>
+                                <th class="text-right">Item Selesai</th>
                                 <th class="text-right">Outstanding</th>
                                 <th class="text-center" style="min-width:170px;">Progress</th>
                                 <th class="text-center">Status</th>
@@ -167,10 +166,10 @@
                                 foreach ($so_list as $row):
                                     $badge      = $badge_map[$row['status']] ?? 'secondary';
                                     $label      = $label_map[$row['status']] ?? $row['status'];
-                                    $outstanding = (float)($row['total_qty_outstanding'] ?? 0);
-                                    $qty_order   = (float)($row['total_qty_order']       ?? 0);
-                                    $qty_faktur  = (float)($row['total_qty_faktur']       ?? 0);
-                                    $pct         = $qty_order > 0 ? round(($qty_faktur / $qty_order) * 100, 1) : 0;
+                                    $item_diorder  = (int)($row['jumlah_item']          ?? 0);
+                                    $item_diterima = (int)($row['jumlah_item_diterima']  ?? 0);
+                                    $outstanding   = $item_diorder - $item_diterima;
+                                    $pct           = $item_diorder > 0 ? round(($item_diterima / $item_diorder) * 100, 1) : 0;
 
                                     if ($row['status'] === 'completed' || $pct >= 100) {
                                         $bar_color = 'success';
@@ -191,12 +190,11 @@
                                     </td>
                                     <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tanggal_transaksi'])) ?></td>
                                     <td><?= htmlspecialchars($row['customer_name']) ?></td>
-                                    <td class="text-center"><?= number_format($row['jumlah_item']) ?></td>
-                                    <td class="text-right"><?= number_format($qty_order) ?></td>
-                                    <td class="text-right text-success font-weight-bold">
-                                        <?= number_format($qty_faktur) ?>
+                                    <td class="text-center"><?= number_format($item_diorder) ?></td>
+                                    <td class="text-center text-success font-weight-bold">
+                                        <?= number_format($item_diterima) ?>
                                     </td>
-                                    <td class="text-right <?= $outstanding > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                                    <td class="text-center <?= $outstanding > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
                                         <?= number_format($outstanding) ?>
                                     </td>
 
@@ -261,7 +259,7 @@ $(document).ready(function () {
         pageLength:  25,
         order:       [[1, 'desc']],
         columnDefs:  [
-            { orderable: false, targets: [7, 9] }
+            { orderable: false, targets: [6, 8] }
         ],
         language: {
             search:      "Cari:",
