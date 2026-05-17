@@ -85,6 +85,8 @@
 .s-proses_loading   { background:#fff3e0; color:#e65100; }
 .s-done             { background:#e8f5e9; color:#1b5e20; }
 .s-pause            { background:#ffebee; color:#c62828; }
+.s-barang_siap  { background:#e8f5e9; color:#1b5e20; }
+.s-menunggu     { background:#f3f4f6; color:#6b7280; }
 
 /* ── Layout utama: 2 kolom ── */
 .detail-main {
@@ -380,10 +382,12 @@ $is_loading        = $row['status'] === 'PROSES_LOADING';
 
 // Status display
 $status_map = [
-    'CETAK_DO'         => ['label'=>'Cetak DO',         'cls'=>'s-cetak_do',         'icon'=>'fa-print'],
-    'DO_SELESAI'       => ['label'=>'DO Selesai',        'cls'=>'s-do_selesai',        'icon'=>'fa-file-alt'],
-    'PENYIAPAN_BARANG' => ['label'=>'Penyiapan Barang',  'cls'=>'s-penyiapan_barang',  'icon'=>'fa-boxes'],
+    'MENUNGGU'         => ['label'=>'Menunggu',          'cls'=>'s-siap_loading',      'icon'=>'fa-hourglass-half'],
     'SIAP_LOADING'     => ['label'=>'Siap Loading',      'cls'=>'s-siap_loading',      'icon'=>'fa-check-circle'],
+    'CETAK_DO'         => ['label'=>'Cetak DO',          'cls'=>'s-cetak_do',          'icon'=>'fa-print'],
+    'DO_SELESAI'       => ['label'=>'DO Selesai',         'cls'=>'s-do_selesai',        'icon'=>'fa-file-alt'],
+    'PENYIAPAN_BARANG' => ['label'=>'Penyiapan Barang',  'cls'=>'s-penyiapan_barang',  'icon'=>'fa-boxes'],
+    'BARANG_SIAP'      => ['label'=>'Barang Siap',       'cls'=>'s-siap_loading',      'icon'=>'fa-check-circle'],
     'PROSES_LOADING'   => ['label'=>'Proses Loading',    'cls'=>'s-proses_loading',    'icon'=>'fa-truck'],
     'DONE'             => ['label'=>'Done ✓',            'cls'=>'s-done',              'icon'=>'fa-check-double'],
 ];
@@ -556,9 +560,15 @@ if (!empty($row['waktu_mulai'])) {
                                         </div>
                                     </div>
                                     <div class="info-cell">
-                                        <div class="ic-label">Wkt DO Selesai</div>
+                                        <div class="ic-label">Wkt Siap Loading</div>
                                         <div class="ic-val" style="font-size:12px;">
-                                            <?= !empty($row['waktu_do_selesai']) ? $fn_fmt_dt($row['waktu_do_selesai']) : '<span class="muted">-</span>' ?>
+                                            <?= !empty($row['waktu_siap_loading']) ? $fn_fmt_dt($row['waktu_siap_loading']) : '<span class="muted">-</span>' ?>
+                                        </div>
+                                    </div>
+                                    <div class="info-cell">
+                                        <div class="ic-label">Wkt Cetak DO</div>
+                                        <div class="ic-val" style="font-size:12px;">
+                                            <?= !empty($row['waktu_cetak_do']) ? $fn_fmt_dt($row['waktu_cetak_do']) : '<span class="muted">-</span>' ?>
                                         </div>
                                     </div>
                                     <div class="info-cell no-border-b">
@@ -582,12 +592,40 @@ if (!empty($row['waktu_mulai'])) {
                                 <div class="tl-wrap">
                                     <div class="timeline">
 
+                                        <!-- Siap Loading -->
+                                        <div class="tl-item">
+                                            <div class="tl-dot <?= !empty($row['waktu_siap_loading']) ? 'done' : 'pending' ?>"></div>
+                                            <div class="tl-title">Siap Loading</div>
+                                            <div class="tl-meta">
+                                                <?= !empty($row['waktu_siap_loading']) ? $fn_fmt_dt($row['waktu_siap_loading']) : 'Belum' ?>
+                                            </div>
+                                        </div>
+
+                                        <!-- Cetak DO -->
+                                        <div class="tl-item">
+                                            <div class="tl-dot <?= !empty($row['waktu_cetak_do']) ? 'done' : 'pending' ?>"></div>
+                                            <div class="tl-title">Cetak DO</div>
+                                            <div class="tl-meta">
+                                                <?= !empty($row['waktu_cetak_do']) ? $fn_fmt_dt($row['waktu_cetak_do']) : 'Belum' ?>
+                                            </div>
+                                        </div>
+
                                         <!-- DO Selesai -->
                                         <div class="tl-item">
-                                            <div class="tl-dot <?= !empty($row['waktu_do_selesai']) ? 'done' : 'pending' ?>"></div>
+                                            <div class="tl-dot <?= $row['status'] === 'DO_SELESAI' || !empty($row['waktu_mulai_siapkan']) ? 'done' : 'pending' ?>"></div>
                                             <div class="tl-title">DO Selesai</div>
                                             <div class="tl-meta">
-                                                <?= !empty($row['waktu_do_selesai']) ? $fn_fmt_dt($row['waktu_do_selesai']) : 'Belum' ?>
+                                                <?php
+                                                // DO Selesai tidak punya waktu tersendiri di DB,
+                                                // ditandai dengan status DO_SELESAI atau sudah masuk penyiapan
+                                                if ($row['status'] === 'DO_SELESAI'):
+                                                    echo 'Status: DO Selesai';
+                                                elseif (!empty($row['waktu_mulai_siapkan'])):
+                                                    echo 'Sudah (lanjut ke penyiapan)';
+                                                else:
+                                                    echo 'Belum';
+                                                endif;
+                                                ?>
                                             </div>
                                         </div>
 
@@ -656,6 +694,18 @@ if (!empty($row['waktu_mulai'])) {
                                     <i class="fas fa-clock"></i> Rincian Waktu
                                 </div>
                                 <div class="info-grid">
+                                    <div class="info-cell">
+                                        <div class="ic-label">Siap Loading</div>
+                                        <div class="ic-val" style="font-size:12px; color:var(--c-teal);">
+                                            <?= !empty($row['waktu_siap_loading']) ? $fn_fmt_dt($row['waktu_siap_loading']) : '<span class="muted">-</span>' ?>
+                                        </div>
+                                    </div>
+                                    <div class="info-cell">
+                                        <div class="ic-label">Cetak DO</div>
+                                        <div class="ic-val" style="font-size:12px; color:var(--c-blue);">
+                                            <?= !empty($row['waktu_cetak_do']) ? $fn_fmt_dt($row['waktu_cetak_do']) : '<span class="muted">-</span>' ?>
+                                        </div>
+                                    </div>
                                     <div class="info-cell">
                                         <div class="ic-label">Mulai Siapkan</div>
                                         <div class="ic-val" style="font-size:12px;">
