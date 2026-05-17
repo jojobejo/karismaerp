@@ -188,16 +188,16 @@ class M_Checker extends CI_Model
 
     public function update_kk($id, $data)
     {
-        // Jika status berubah ke DO_SELESAI → isi waktu_do_selesai otomatis
-        if (isset($data['status'])) {
-            if ($data['status'] === 'DO_SELESAI') {
-                $data['waktu_do_selesai'] = date('Y-m-d H:i:s');
-            } elseif ($data['status'] === 'CETAK_DO') {
-                // Jika dikembalikan ke CETAK_DO → hapus waktu_do_selesai
-                $data['waktu_do_selesai'] = null;
-            }
-        }
+        // Logika waktu_do_selesai sudah dipindah ke controller
         return $this->db->where('id', $id)->update('tb_loading_kk', $data);
+    }
+
+    public function set_siap_loading_kk($id)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_kk', [
+            'status'              => 'SIAP_LOADING',
+            'waktu_siap_loading'  => date('Y-m-d H:i:s'),
+        ]);
     }
 
     public function start_kk($id, $nik, $nama, $pintu = null)
@@ -253,16 +253,16 @@ class M_Checker extends CI_Model
     
     public function update_lk($id, $data)
     {
-        // Jika status berubah ke DO_SELESAI → isi waktu_do_selesai otomatis
-        if (isset($data['status'])) {
-            if ($data['status'] === 'DO_SELESAI') {
-                $data['waktu_do_selesai'] = date('Y-m-d H:i:s');
-            } elseif ($data['status'] === 'CETAK_DO') {
-                // Jika dikembalikan ke CETAK_DO → hapus waktu_do_selesai
-                $data['waktu_do_selesai'] = null;
-            }
-        }
+        // Logika waktu_do_selesai sudah dipindah ke controller
         return $this->db->where('id', $id)->update('tb_loading_lk', $data);
+    }
+
+    public function set_siap_loading_lk($id)
+    {
+        return $this->db->where('id', $id)->update('tb_loading_lk', [
+            'status'              => 'SIAP_LOADING',
+            'waktu_siap_loading'  => date('Y-m-d H:i:s'),
+        ]);
     }
     public function start_lk($id, $nik, $nama, $pintu = null)
     {
@@ -502,7 +502,7 @@ class M_Checker extends CI_Model
     public function done_siapkan_kk($id)
     {
         return $this->db->where('id', $id)->update('tb_loading_kk', [
-            'status'               => 'SIAP_LOADING',
+            'status'               => 'BARANG_SIAP',
             'progres_siapkan'      => 100,
             'waktu_selesai_siapkan'=> date('Y-m-d H:i:s'),
             'is_paused_siapkan'    => 0,
@@ -564,7 +564,7 @@ class M_Checker extends CI_Model
     public function done_siapkan_lk($id)
     {
         return $this->db->where('id', $id)->update('tb_loading_lk', [
-            'status'               => 'SIAP_LOADING',
+            'status'               => 'BARANG_SIAP',
             'progres_siapkan'      => 100,
             'waktu_selesai_siapkan'=> date('Y-m-d H:i:s'),
             'is_paused_siapkan'    => 0,

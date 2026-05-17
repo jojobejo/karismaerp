@@ -10,6 +10,11 @@ class C_Checker extends CI_Controller
     const ROLE_SALES      = 'SALESCK';
     const ROLE_DIREKTUR   = 'DIREKTURCK';
 
+    private function canCreateLoading()
+    {
+        return $this->role() === self::ROLE_SALES;
+    }
+
     private function isDoer()
     {
         return in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK]);
@@ -279,17 +284,27 @@ class C_Checker extends CI_Controller
     // ================================================================
     public function store_kk()
     {
-        if ($this->role() !== self::ROLE_ADMLOG) {
+        if (!in_array($this->role(), [self::ROLE_ADMLOG, self::ROLE_SALES])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $ok = $this->M_Checker->create_kk([
             'kode'       => $this->M_Checker->generate_kode_kk(),
             'tgl'        => date('Y-m-d'),
             'keterangan' => $this->input->post('keterangan', true),
-            'status'     => 'CETAK_DO',
+            'status'     => 'MENUNGGU', // status awal MENUNGGU
             'created_by' => $this->nama(),
         ]);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data KK ditambahkan' : 'Gagal']);
+    }
+
+    public function siap_loading_kk()
+    {
+        if ($this->role() !== self::ROLE_SALES) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        $ok = $this->M_Checker->set_siap_loading_kk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal']);
     }
 
     public function update_kk()
@@ -299,8 +314,27 @@ class C_Checker extends CI_Controller
         }
         $id   = (int)$this->input->post('id');
         $data = [];
-        if ($this->input->post('keterangan') !== null) $data['keterangan'] = $this->input->post('keterangan', true);
-        if ($this->input->post('status')     !== null) $data['status']     = $this->input->post('status',     true);
+        if ($this->input->post('keterangan') !== null) 
+            $data['keterangan'] = $this->input->post('keterangan', true);
+        
+        if ($this->input->post('status') !== null) {
+            $status    = $this->input->post('status', true);
+            $row       = $this->M_Checker->get_kk_by_id($id);
+            $status_skr = $row['status'] ?? '';
+
+            // Validasi: DO_SELESAI hanya bisa jika sudah CETAK_DO
+            if ($status === 'DO_SELESAI' && $status_skr !== 'CETAK_DO') {
+                echo json_encode(['status' => false, 'msg' => 'Status harus CETAK DO terlebih dahulu sebelum DO SELESAI']); return;
+            }
+
+            $data['status'] = $status;
+
+            if ($status === 'CETAK_DO') {
+                $data['waktu_cetak_do'] = date('Y-m-d H:i:s'); 
+            } elseif ($status === 'SIAP_LOADING') {
+                $data['waktu_cetak_do'] = null;
+            }
+        }
         $ok = $this->M_Checker->update_kk($id, $data);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'KK diperbarui' : 'Gagal']);
     }
@@ -316,7 +350,7 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Keterangan tidak boleh kosong']); return;
         }
         $row = $this->M_Checker->get_kk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI'])) {
+        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
             echo json_encode(['status' => false, 'msg' => 'KK sudah diproses, tidak bisa diedit']); return;
         }
         $ok = $this->M_Checker->edit_kk($id, $ket);
@@ -330,7 +364,7 @@ class C_Checker extends CI_Controller
         }
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_kk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI'])) {
+        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
             echo json_encode(['status' => false, 'msg' => 'KK sudah diproses, tidak bisa dihapus']); return;
         }
         $ok = $this->M_Checker->hapus_kk($id);
@@ -345,9 +379,9 @@ class C_Checker extends CI_Controller
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_kk_by_id($id);
 
-        // ← PERBAIKAN: cek status SIAP_LOADING bukan DO_SELESAI
-        if (!$row || $row['status'] !== 'SIAP_LOADING') {
-            echo json_encode(['status' => false, 'msg' => 'Status harus SIAP LOADING sebelum bisa start loading']); return;
+        // ← PERBAIKAN: cek status BARANG_SIAP bukan SIAP_LOADING
+        if (!$row || $row['status'] !== 'BARANG_SIAP') {
+            echo json_encode(['status' => false, 'msg' => 'Status harus BARANG SIAP sebelum bisa start loading']); return;
         }
 
         // Checker & pintu diambil dari data existing (sudah diset saat siapkan barang)
@@ -412,17 +446,27 @@ class C_Checker extends CI_Controller
     // ================================================================
     public function store_lk()
     {
-        if ($this->role() !== self::ROLE_ADMLOG) {
+        if (!in_array($this->role(), [self::ROLE_ADMLOG, self::ROLE_SALES])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $ok = $this->M_Checker->create_lk([
             'kode'       => $this->M_Checker->generate_kode_lk(),
             'tgl'        => date('Y-m-d'),
             'keterangan' => $this->input->post('keterangan', true),
-            'status'     => 'CETAK_DO',
+            'status'     => 'MENUNGGU', // status awal MENUNGGU
             'created_by' => $this->nama(),
         ]);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data LK ditambahkan' : 'Gagal']);
+    }
+
+    public function siap_loading_lk()
+    {
+        if ($this->role() !== self::ROLE_SALES) {
+            echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
+        }
+        $id = (int)$this->input->post('id');
+        $ok = $this->M_Checker->set_siap_loading_lk($id);
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal']);
     }
 
     public function update_lk()
@@ -432,8 +476,27 @@ class C_Checker extends CI_Controller
         }
         $id   = (int)$this->input->post('id');
         $data = [];
-        if ($this->input->post('keterangan') !== null) $data['keterangan'] = $this->input->post('keterangan', true);
-        if ($this->input->post('status')     !== null) $data['status']     = $this->input->post('status',     true);
+        if ($this->input->post('keterangan') !== null)
+            $data['keterangan'] = $this->input->post('keterangan', true);
+
+        if ($this->input->post('status') !== null) {
+            $status     = $this->input->post('status', true);
+            $row        = $this->M_Checker->get_lk_by_id($id);
+            $status_skr = $row['status'] ?? '';
+
+            // Validasi: DO_SELESAI hanya bisa jika sudah CETAK_DO
+            if ($status === 'DO_SELESAI' && $status_skr !== 'CETAK_DO') {
+                echo json_encode(['status' => false, 'msg' => 'Status harus CETAK DO terlebih dahulu sebelum DO SELESAI']); return;
+            }
+
+            $data['status'] = $status;
+
+            if ($status === 'CETAK_DO') {
+                $data['waktu_cetak_do'] = date('Y-m-d H:i:s'); // ← ganti nama kolom
+            } elseif ($status === 'SIAP_LOADING') {
+                $data['waktu_cetak_do'] = null; // ← reset jika mundur
+            }
+        }
         $ok = $this->M_Checker->update_lk($id, $data);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'LK diperbarui' : 'Gagal']);
     }
@@ -449,7 +512,7 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Keterangan tidak boleh kosong']); return;
         }
         $row = $this->M_Checker->get_lk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI'])) {
+        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
             echo json_encode(['status' => false, 'msg' => 'LK sudah diproses, tidak bisa diedit']); return;
         }
         $ok = $this->M_Checker->edit_lk($id, $ket);
@@ -463,7 +526,7 @@ class C_Checker extends CI_Controller
         }
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_lk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','CETAK_DO','DO_SELESAI'])) {
+        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
             echo json_encode(['status' => false, 'msg' => 'LK sudah diproses, tidak bisa dihapus']); return;
         }
         $ok = $this->M_Checker->hapus_lk($id);
@@ -478,9 +541,9 @@ class C_Checker extends CI_Controller
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_lk_by_id($id);
 
-        // ← PERBAIKAN: cek status SIAP_LOADING bukan DO_SELESAI
-        if (!$row || $row['status'] !== 'SIAP_LOADING') {
-            echo json_encode(['status' => false, 'msg' => 'Status harus SIAP LOADING sebelum bisa start loading']); return;
+        // ← PERBAIKAN: cek status BARANG_SIAP bukan SIAP_LOADING
+        if (!$row || $row['status'] !== 'BARANG_SIAP') {
+            echo json_encode(['status' => false, 'msg' => 'Status harus BARANG SIAP sebelum bisa start loading']); return;
         }
 
         // Checker & pintu diambil dari data existing
