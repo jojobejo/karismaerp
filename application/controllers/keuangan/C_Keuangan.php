@@ -604,7 +604,6 @@ class C_Keuangan extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/master_barang.php', $data);
         $this->load->view('partial/main/footergdg.php');
-        $this->load->view('content/keuangan/ajax/ajax_master_barang.php', $data);
     }
 
     private function response_json($payload = [], $code = 200)
@@ -618,15 +617,17 @@ class C_Keuangan extends CI_Controller
     private function master_barang_payload()
     {
         return [
-            'kode_barang' => trim((string)$this->input->post('kode_barang', true)),
             'nama_barang' => trim((string)$this->input->post('nama_barang', true)),
-            'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
+            'kd_supplier' => trim((string)$this->input->post('kd_supplier', true)),
             'satuan'      => trim((string)$this->input->post('satuan', true)),
-            'berat'       => (float)$this->input->post('berat', true),
-            'kubikasi'    => (float)$this->input->post('kubikasi', true),
+            'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
+            'qrcode'      => trim((string)$this->input->post('qrcode', true)),
+            'barcode'     => trim((string)$this->input->post('barcode', true)),
             'p'           => (int)$this->input->post('p', true),
             'l'           => (int)$this->input->post('l', true),
             't'           => (int)$this->input->post('t', true),
+            'berat'       => (int)$this->input->post('berat', true),
+            'kubikasi'    => (float)$this->input->post('kubikasi', true),
         ];
     }
 
@@ -641,31 +642,31 @@ class C_Keuangan extends CI_Controller
             $search = trim((string)$searchInput['value']);
         }
 
-        if ($length <= 0) {
-            $length = 10;
-        }
-
-        $rows = $this->M_Keuangan->master_barang_all($length, $start, $search);
+        $rows = $this->M_Logistik->master_barang_all($length, $start, $search);
         $data = [];
 
         foreach ($rows as $row) {
             $data[] = [
-                'kode_barang' => $row->kode_barang,
-                'nama_barang' => $row->nama_barang,
-                'bahan_aktif' => $row->bahan_aktif,
-                'satuan'      => $row->satuan,
-                'berat'       => $row->berat,
-                'kubikasi'    => $row->kubikasi,
-                'dimensi'     => $row->dimensi,
-                'aksi'        => '<button type="button" class="btn btn-sm btn-warning btn-edit-master mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
+                'nama_barang'   => $row->nama_barang,
+                'nama_suplier'  => $row->nama_suplier,
+                'satuan'        => $row->satuan,
+                'bahan_aktif'   => $row->bahan_aktif,
+                'lokasi_barang' => $row->lokasi_barang,
+                'qrcode'        => $row->qrcode,
+                'barcode'       => $row->barcode,                'p'             => (int)$row->p,
+                'l'             => (int)$row->l,
+                't'             => (int)$row->t,
+                'dimensi'       => (int)$row->dimensi,
+                'berat'         => (int)$row->berat,
+                'kubikasi'      => (float)$row->kubikasi,                'aksi'          => '<button type="button" class="btn btn-sm btn-warning btn-edit-master mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
                                   <button type="button" class="btn btn-sm btn-danger btn-delete-master" data-id="' . (int)$row->id . '" data-nama="' . html_escape($row->nama_barang) . '"><i class="fas fa-trash"></i></button>',
             ];
         }
 
         $this->response_json([
             'draw'            => $draw,
-            'recordsTotal'    => $this->M_Keuangan->master_barang_count_all(),
-            'recordsFiltered' => $this->M_Keuangan->master_barang_count_filtered($search),
+            'recordsTotal'    => $this->M_Logistik->master_barang_count_all(),
+            'recordsFiltered' => $this->M_Logistik->master_barang_count_filtered($search),
             'data'            => $data,
         ]);
     }
@@ -680,7 +681,7 @@ class C_Keuangan extends CI_Controller
             ], 422);
         }
 
-        $detail = $this->M_Keuangan->master_barang_by_id($id);
+        $detail = $this->M_Logistik->master_barang_by_id($id);
         if (!$detail) {
             return $this->response_json([
                 'status' => false,
@@ -697,14 +698,14 @@ class C_Keuangan extends CI_Controller
     public function master_barang_store()
     {
         $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if ($payload['nama_barang'] === '' || $payload['kd_supplier'] === '') {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
+                'message' => 'Nama barang dan kode supplier wajib diisi.',
             ], 422);
         }
 
-        $ok = $this->M_Keuangan->master_barang_store($payload);
+        $ok = $this->M_Logistik->master_barang_store($payload);
 
         $this->response_json([
             'status' => (bool)$ok,
@@ -723,14 +724,14 @@ class C_Keuangan extends CI_Controller
         }
 
         $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if ($payload['nama_barang'] === '' || $payload['kd_supplier'] === '') {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
+                'message' => 'Nama barang dan kode supplier wajib diisi.',
             ], 422);
         }
 
-        $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+        $ok = $this->M_Logistik->master_barang_update($id, $payload);
 
         $this->response_json([
             'status' => (bool)$ok,
@@ -748,7 +749,7 @@ class C_Keuangan extends CI_Controller
             ], 422);
         }
 
-        $ok = $this->M_Keuangan->master_barang_delete($id);
+        $ok = $this->M_Logistik->master_barang_delete($id);
 
         $this->response_json([
             'status' => (bool)$ok,

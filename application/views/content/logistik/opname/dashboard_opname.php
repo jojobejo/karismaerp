@@ -14,6 +14,13 @@
 
             <div class="content-header">
                 <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-auto">
+                            <a href="<?= base_url('master_barang') ?>" class="btn btn-primary mb-2">
+                                <i class="fas fa-upload mr-1"></i>Master Barang
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 

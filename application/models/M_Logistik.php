@@ -1,4 +1,3 @@
-<!-- models/M_logistik.php -->
 <?php
 
 use JetBrains\PhpStorm\Internal\ReturnTypeContract;
@@ -1245,7 +1244,7 @@ class M_Logistik extends CI_Model
             ->row();
     }
 
-    
+
 
     public function getbarangics()
     {
@@ -3593,5 +3592,121 @@ FROM (
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
         return $this->db->query($sql, [$kd_po])->result_array();
+    }
+
+    // Master Barang methods
+    public function master_barang_all($limit = null, $offset = 0, $search = '')
+    {
+        $this->db->select("
+            m.id,
+            COALESCE(m.kd_barang, m.kode_barang_system) AS kode_barang,
+            m.nama_barang,
+            s.nama_suplier,
+            m.satuan,
+            m.bhn_aktif AS bahan_aktif,
+            COALESCE(gw.nama_wilayah, 'Tidak ada lokasi') AS lokasi_barang,
+            m.qrcode,
+            m.barcode,
+            m.p,
+            m.l,
+            m.t,
+            (COALESCE(m.p, 0) * COALESCE(m.l, 0) * COALESCE(m.t, 0)) AS dimensi,
+            m.berat,
+            m.kubikasi
+        ", false);
+        $this->db->from('tb_master_barang_all m');
+        $this->db->join('tb_suplier s', 's.kd_suplier = m.kd_supplier', 'left');
+        $this->db->join('tb_gudang_wilayah gw', 'gw.id_wilayah = m.id_wilayah', 'left');
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('m.kd_barang', $search, 'both', false);
+            $this->db->or_like('m.kode_barang_system', $search, 'both', false);
+            $this->db->or_like('m.nama_barang', $search, 'both', false);
+            $this->db->or_like('s.nama_suplier', $search, 'both', false);
+            $this->db->or_like('m.bhn_aktif', $search);
+            $this->db->or_like('m.satuan', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('m.nama_barang', 'ASC');
+
+        if ($limit !== null && (int)$limit > 0) {
+            $this->db->limit((int)$limit, (int)$offset);
+        }
+
+        return $this->db->get()->result();
+    }
+
+    public function master_barang_count_all()
+    {
+        return $this->db->count_all('tb_master_barang_all');
+    }
+
+    public function master_barang_count_filtered($search = '')
+    {
+        $this->db->from('tb_master_barang_all m');
+        $this->db->join('tb_suplier s', 's.kd_suplier = m.kd_supplier', 'left');
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('m.kd_barang', $search, 'both', false);
+            $this->db->or_like('m.kode_barang_system', $search, 'both', false);
+            $this->db->or_like('m.nama_barang', $search, 'both', false);
+            $this->db->or_like('s.nama_suplier', $search, 'both', false);
+            $this->db->or_like('m.bhn_aktif', $search);
+            $this->db->or_like('m.satuan', $search);
+            $this->db->group_end();
+        }
+
+        return $this->db->count_all_results();
+    }
+
+    public function master_barang_by_id($id)
+    {
+        $this->db->select("
+            m.id,
+            COALESCE(m.kd_barang, m.kode_barang_system) AS kode_barang,
+            m.nama_barang,
+            s.nama_suplier,
+            m.satuan,
+            m.bhn_aktif AS bahan_aktif,
+            COALESCE(gw.nama_wilayah, 'Tidak ada lokasi') AS lokasi_barang,
+            m.qrcode,
+            m.barcode,
+            m.kd_supplier,
+            m.berat,
+            m.kubikasi,
+            m.p,
+            m.l,
+            m.t
+        ", false);
+        $this->db->from('tb_master_barang_all m');
+        $this->db->join('tb_suplier s', 's.kd_suplier = m.kd_supplier', 'left');
+        $this->db->join('tb_gudang_wilayah gw', 'gw.id_wilayah = m.id_wilayah', 'left');
+        $this->db->where('m.id', (int)$id);
+        return $this->db->get()->row();
+    }
+
+    public function master_barang_store($data)
+    {
+        // Generate kode_barang if not provided
+        if (!isset($data['kd_barang']) || $data['kd_barang'] === '') {
+            $data['kd_barang'] = 'BRG' . date('YmdHis');
+        }
+        if (!isset($data['kode_barang_system']) || $data['kode_barang_system'] === '') {
+            $data['kode_barang_system'] = $data['kd_barang'];
+        }
+        return $this->db->insert('tb_master_barang_all', $data);
+    }
+
+    public function master_barang_update($id, $data)
+    {
+        return $this->db->where('id', (int)$id)->update('tb_master_barang_all', $data);
+    }
+
+    public function master_barang_delete($id)
+    {
+        return $this->db->where('id', (int)$id)->delete('tb_master_barang_all');
     }
 }

@@ -1,4 +1,5 @@
 <!-- views/content/logistik/body.php -->
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
 
@@ -125,7 +126,7 @@
                                             <option value="">— Semua Rute —</option>
                                             <?php
                                             $ruteList = array_unique(array_column((array)$listdo, 'rute'));
-                                            foreach ($ruteList as $rute): ?>
+                                            foreach ($ruteList as $rute) : ?>
                                                 <option value="<?= htmlspecialchars($rute) ?>"><?= htmlspecialchars($rute) ?></option>
                                             <?php endforeach; ?>
                                         </select>
@@ -197,11 +198,7 @@
                                                 $confirmCode = '';
                                             }
                                         ?>
-                                            <tr
-                                                data-status="<?= $statusCode ?>"
-                                                data-confirm="<?= $confirmCode ?>"
-                                                data-rute="<?= htmlspecialchars($i->rute) ?>"
-                                                data-tgl="<?= date('Y-m-d', strtotime(str_replace('/', '-', $i->createat))) ?>">
+                                            <tr data-status="<?= $statusCode ?>" data-confirm="<?= $confirmCode ?>" data-rute="<?= htmlspecialchars($i->rute) ?>" data-tgl="<?= date('Y-m-d', strtotime(str_replace('/', '-', $i->createat))) ?>">
                                                 <td class="text-center rownum"></td>
                                                 <td><strong><?= $i->kddo ?></strong></td>
                                                 <td><?= $i->createat ?></td>
@@ -273,76 +270,89 @@
 
     <!-- ✅ SCRIPT DATATABLES + FILTER -->
     <script>
-    $(document).ready(function () {
+        $(document).ready(function() {
 
-        var table = $('#tbDashboardLogistik').DataTable({
-            responsive: true,
-            pageLength: 25,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Semua']],
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
-            },
-            columnDefs: [
-                { orderable: false, targets: [0, 7] },
-                { className: 'text-center', targets: [0, 4, 5, 7] }
-            ],
-            order: [[2, 'desc']],
-            drawCallback: function () {
-                // nomor urut manual
-                var api = this.api();
-                api.column(0, { search: 'applied', order: 'applied' }).nodes().each(function (cell, i) {
-                    cell.innerHTML = i + 1;
-                });
-            }
-        });
-
-        // Filter tombol Cari
-        window.applyDOFilter = function () {
-            var sts       = $('#filterStatus').val();
-            var rute      = $('#filterRute').val();
-            var dateFrom  = $('#filterDateFrom').val();
-            var dateTo    = $('#filterDateTo').val();
-
-            $.fn.dataTable.ext.search = [];
-
-            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-                var row         = table.row(dataIndex).node();
-                var rowStatus   = $(row).data('status')  ? String($(row).data('status'))  : '';
-                var rowConfirm  = $(row).data('confirm') ? String($(row).data('confirm')) : '';
-                var rowRute     = $(row).data('rute')    ? String($(row).data('rute'))    : '';
-                var rowTgl      = $(row).data('tgl')     ? String($(row).data('tgl'))     : '';
-
-                // Filter status
-                if (sts) {
-                    if (sts === '2_pending'    && !(rowStatus === '2' && rowConfirm === 'pending'))    return false;
-                    if (sts === '2_belum_siap' && !(rowStatus === '2' && rowConfirm === 'belum_siap')) return false;
-                    if (sts === '1' && rowStatus !== '1') return false;
-                    if (sts === '3' && rowStatus !== '3') return false;
-                    if (sts === '4' && rowStatus !== '4') return false;
+            var table = $('#tbDashboardLogistik').DataTable({
+                responsive: true,
+                pageLength: 25,
+                lengthMenu: [
+                    [10, 25, 50, 100, -1],
+                    [10, 25, 50, 100, 'Semua']
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
+                },
+                columnDefs: [{
+                        orderable: false,
+                        targets: [0, 7]
+                    },
+                    {
+                        className: 'text-center',
+                        targets: [0, 4, 5, 7]
+                    }
+                ],
+                order: [
+                    [2, 'desc']
+                ],
+                drawCallback: function() {
+                    // nomor urut manual
+                    var api = this.api();
+                    api.column(0, {
+                        search: 'applied',
+                        order: 'applied'
+                    }).nodes().each(function(cell, i) {
+                        cell.innerHTML = i + 1;
+                    });
                 }
-
-                // Filter rute
-                if (rute && rowRute !== rute) return false;
-
-                // Filter tanggal
-                if (dateFrom && rowTgl < dateFrom) return false;
-                if (dateTo   && rowTgl > dateTo)   return false;
-
-                return true;
             });
 
-            table.draw();
-        };
+            // Filter tombol Cari
+            window.applyDOFilter = function() {
+                var sts = $('#filterStatus').val();
+                var rute = $('#filterRute').val();
+                var dateFrom = $('#filterDateFrom').val();
+                var dateTo = $('#filterDateTo').val();
 
-        window.resetDOFilter = function () {
-            $('#filterStatus').val('');
-            $('#filterRute').val('');
-            $('#filterDateFrom').val('');
-            $('#filterDateTo').val('');
-            $.fn.dataTable.ext.search = [];
-            table.search('').draw();
-        };
+                $.fn.dataTable.ext.search = [];
 
-        // Enter di search DataTables sudah built-in
-    });
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    var row = table.row(dataIndex).node();
+                    var rowStatus = $(row).data('status') ? String($(row).data('status')) : '';
+                    var rowConfirm = $(row).data('confirm') ? String($(row).data('confirm')) : '';
+                    var rowRute = $(row).data('rute') ? String($(row).data('rute')) : '';
+                    var rowTgl = $(row).data('tgl') ? String($(row).data('tgl')) : '';
+
+                    // Filter status
+                    if (sts) {
+                        if (sts === '2_pending' && !(rowStatus === '2' && rowConfirm === 'pending')) return false;
+                        if (sts === '2_belum_siap' && !(rowStatus === '2' && rowConfirm === 'belum_siap')) return false;
+                        if (sts === '1' && rowStatus !== '1') return false;
+                        if (sts === '3' && rowStatus !== '3') return false;
+                        if (sts === '4' && rowStatus !== '4') return false;
+                    }
+
+                    // Filter rute
+                    if (rute && rowRute !== rute) return false;
+
+                    // Filter tanggal
+                    if (dateFrom && rowTgl < dateFrom) return false;
+                    if (dateTo && rowTgl > dateTo) return false;
+
+                    return true;
+                });
+
+                table.draw();
+            };
+
+            window.resetDOFilter = function() {
+                $('#filterStatus').val('');
+                $('#filterRute').val('');
+                $('#filterDateFrom').val('');
+                $('#filterDateTo').val('');
+                $.fn.dataTable.ext.search = [];
+                table.search('').draw();
+            };
+
+            // Enter di search DataTables sudah built-in
+        });
     </script>
