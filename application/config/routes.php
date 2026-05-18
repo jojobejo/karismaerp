@@ -410,3 +410,6 @@ $route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_
 $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
+$route['checker/push_notif']                        = 'logistik/C_Checker/push_notif';
+$route['checker/get_notif']                         = 'logistik/C_Checker/get_notif';
+$route['checker/read_notif']                        = 'logistik/C_Checker/read_notif';

@@ -980,4 +980,36 @@ class C_Checker extends CI_Controller
         $ok = $this->M_Checker->ganti_checker_lk($id, $nik_ck, $nama_ck);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Checker LK berhasil diganti' : 'Gagal mengganti checker']);
     }
+
+    // ================================================================
+    // NOTIFIKASI
+    // ================================================================
+    public function push_notif()
+    {
+        if ($this->role() !== self::ROLE_SALES) {
+            echo json_encode(['status' => false]); return;
+        }
+        $type = $this->input->post('type', true);
+        $ket  = $this->input->post('keterangan', true);
+        $ok   = $this->M_Checker->push_notif($type, $ket);
+        echo json_encode(['status' => (bool)$ok]);
+    }
+
+    public function get_notif()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false, 'data' => []]); return;
+        }
+        $data = $this->M_Checker->get_unread_notif();
+        echo json_encode(['status' => true, 'data' => $data]);
+    }
+
+    public function read_notif()
+    {
+        if ($this->role() !== self::ROLE_ADMLOG) {
+            echo json_encode(['status' => false]); return;
+        }
+        $ok = $this->M_Checker->mark_notif_read();
+        echo json_encode(['status' => (bool)$ok]);
+    }
 }

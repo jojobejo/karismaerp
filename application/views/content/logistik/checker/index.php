@@ -1520,9 +1520,9 @@ tr.row-pending { background:#fafafa !important; }
                 <tbody>
                 <?php
                 $rute_kk = [
-                    'BLI-1'=>'Kintamani','BLI-2'=>'Tabanan','KD-1'=>'Nganjuk','KD-2'=>'Tulungagung',
-                    'MD-1'=>'Ngawi','MD-2'=>'Ponorogo','MLG'=>'Malang','P-1'=>'Tuban',
-                    'P-2'=>'Bojonegoro','SBY'=>'Surabaya','MDR'=>'Madura',
+                    'BWI-1'=>'Sanggar Kalipait','BWI-2'=>'Sempu Muncar','JWS'=>'Wongsorejo',
+                    'JBR'=>'Sempolan','JUT'=>'Sukowono','JLS'=>'Ambulu Kencong',
+                    'LMJ'=>'Lumajang','PRB'=>'Probolinggo','STB'=>'Situbondo','KRS'=>'Kraksaan',
                 ];
                 foreach ($rute_kk as $kode => $nama) : ?>
                 <tr>
@@ -1563,9 +1563,9 @@ tr.row-pending { background:#fafafa !important; }
                 <tbody>
                 <?php
                 $rute_lk = [
-                    'BWI-1'=>'Sanggar Kalipait','BWI-2'=>'Sempu Muncar','JWS'=>'Wongsorejo',
-                    'JBR'=>'Sempolan','JUT'=>'Sukowono','JLS'=>'Ambulu Kencong',
-                    'LMJ'=>'Lumajang','PRB'=>'Probolinggo','STB'=>'Situbondo','KRS'=>'Kraksaan',
+                    'BLI-1'=>'Kintamani','BLI-2'=>'Tabanan','KD-1'=>'Nganjuk','KD-2'=>'Tulungagung',
+                    'MD-1'=>'Ngawi','MD-2'=>'Ponorogo','MLG'=>'Malang','P-1'=>'Tuban',
+                    'P-2'=>'Bojonegoro','SBY'=>'Surabaya','MDR'=>'Madura',
                 ];
                 foreach ($rute_lk as $kode => $nama) : ?>
                 <tr>
@@ -2009,9 +2009,15 @@ $(document).ready(function () {
                 if (res1.id) {
                     var siapUrl = (type === 'kk') ? 'checker/siap_loading_kk' : 'checker/siap_loading_lk';
                     ajaxPost(siapUrl, { id: res1.id }, function (res2) {
+                        // Kirim notifikasi ke ADMLOG
+                        ajaxPost('checker/push_notif', {
+                            type: type,
+                            keterangan: kode
+                        }, function () {});
+
                         Swal.fire({
                             icon: 'success', title: 'Berhasil!',
-                            text: kode + ' — ' + nama + ' sudah masuk antrian SIAP LOADING.',
+                            text: kode + ' sudah masuk antrian SIAP LOADING.',
                             timer: 2000, showConfirmButton: false
                         }).then(function () {
                             $('#modalPilihRuteKK, #modalPilihRuteLK').modal('hide');
@@ -2027,5 +2033,132 @@ $(document).ready(function () {
         });
     });
 });
+<?php if ($role === 'ADMLOG') : ?>
+// ================================================================
+// NOTIFIKASI REAL-TIME — ADMLOG ONLY
+// ================================================================
+(function () {
+    function playDing() {
+        try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+            var notes = [
+                { freq: 523,  start: 0.0, dur: 0.4 },
+                { freq: 659,  start: 0.3, dur: 0.4 },
+                { freq: 784,  start: 0.6, dur: 0.4 },
+                { freq: 1047, start: 0.9, dur: 0.6 },
+                { freq: 784,  start: 1.4, dur: 0.3 },
+                { freq: 1047, start: 1.6, dur: 0.8 },
+            ];
+
+            var sequenceDuration = 2.6; // detik per satu putaran
+            var totalDuration    = 15;  // total detik bunyi
+            var repeats          = Math.ceil(totalDuration / sequenceDuration);
+
+            for (var r = 0; r < repeats; r++) {
+                (function (repeatIndex) {
+                    var offset = repeatIndex * sequenceDuration;
+                    notes.forEach(function (n) {
+                        var osc  = ctx.createOscillator();
+                        var gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc.type = 'sine';
+                        osc.frequency.value = n.freq;
+
+                        var t = ctx.currentTime + offset + n.start;
+                        gain.gain.setValueAtTime(0, t);
+                        gain.gain.linearRampToValueAtTime(0.35, t + 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + n.dur);
+
+                        osc.start(t);
+                        osc.stop(t + n.dur + 0.1);
+                    });
+                })(r);
+            }
+
+            window._notifAudioCtx = ctx;
+
+            setTimeout(function () {
+                try { ctx.close(); } catch(e) {}
+            }, totalDuration * 1000);
+
+        } catch(e) {}
+    }
+
+    // Tambahkan container toast jika belum ada
+    if (!document.getElementById('notif-container')) {
+        var container = document.createElement('div');
+        container.id = 'notif-container';
+        container.style.cssText = [
+            'position:fixed', 'top:70px', 'right:20px', 'z-index:9999',
+            'display:flex', 'flex-direction:column', 'gap:8px',
+            'max-width:320px'
+        ].join(';');
+        document.body.appendChild(container);
+    }
+
+    function showToast(item) {
+        var label = item.type === 'kk' ? 'Loading KK' : 'Loading LK';
+        var color = item.type === 'kk' ? '#1b5e20' : '#1565c0';
+
+        var toast = document.createElement('div');
+        toast.style.cssText = [
+            'background:#fff', 'border-left:5px solid ' + color,
+            'box-shadow:0 4px 16px rgba(0,0,0,0.18)',
+            'border-radius:6px', 'padding:12px 16px',
+            'font-size:13px', 'position:relative',
+            'animation:slideIn 0.3s ease'
+        ].join(';');
+
+        toast.innerHTML =
+            '<div style="font-weight:700;color:' + color + ';margin-bottom:3px;">' +
+            '<i class="fas fa-bell mr-1"></i> ' + label + ' Siap Loading</div>' +
+            '<div style="color:#333;">Rute <b>' + item.keterangan + '</b> menunggu proses DO.</div>' +
+            '<div style="color:#999;font-size:11px;margin-top:4px;">' + item.created_at + '</div>' +
+            '<button onclick="this.parentElement.remove()" ' +
+            'style="position:absolute;top:6px;right:8px;background:none;border:none;' +
+            'font-size:16px;cursor:pointer;color:#aaa;line-height:1;">&times;</button>';
+
+        document.getElementById('notif-container').appendChild(toast);
+
+        // Auto hilang setelah 8 detik
+        setTimeout(function () {
+            if (toast.parentElement) {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s';
+                setTimeout(function () { if (toast.parentElement) toast.remove(); }, 500);
+            }
+        }, 8000);
+    }
+
+    // Tambah CSS animasi
+    var style = document.createElement('style');
+    style.innerHTML = '@keyframes slideIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}';
+    document.head.appendChild(style);
+
+    // Polling setiap 15 detik
+    function pollNotif() {
+        $.getJSON(BASE + 'checker/get_notif', function (res) {
+            if (res.status && res.data && res.data.length > 0) {
+                playDing();
+                res.data.forEach(function (item) {
+                    showToast(item);
+                });
+                // Tandai sudah dibaca
+                $.post(BASE + 'checker/read_notif');
+            }
+        });
+    }
+
+    // Jalankan pertama kali setelah 3 detik, lalu tiap 15 detik
+    setTimeout(function () {
+        pollNotif();
+        setInterval(pollNotif, 15000);
+    }, 3000);
+
+})();
+<?php endif; ?>
 </script>
 </body>

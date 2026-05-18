@@ -625,4 +625,30 @@ class M_Checker extends CI_Model
                             'nm_checker'  => $nama_ck,
                         ]);
     }
+
+    // ================================================================
+    // NOTIFIKASI
+    // ================================================================
+    public function push_notif($type, $keterangan)
+    {
+        return $this->db->insert('tb_notifikasi', [
+            'type'       => $type,
+            'keterangan' => $keterangan,
+            'created_at' => date('Y-m-d H:i:s'),
+            'is_read'    => 0,
+        ]);
+    }
+
+    public function get_unread_notif()
+    {
+        return $this->db
+            ->where('is_read', 0)
+            ->order_by('id', 'ASC')
+            ->get('tb_notifikasi')->result_array();
+    }
+
+    public function mark_notif_read()
+    {
+        return $this->db->where('is_read', 0)->update('tb_notifikasi', ['is_read' => 1]);
+    }
 }
