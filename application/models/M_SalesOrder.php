@@ -9,8 +9,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *  - SO memiliki status: draft → open → completed | cancelled
  *  - Faktur Penjualan dibuat dari SO yang berstatus open (bisa >1 faktur per SO).
  *  - Pengiriman parsial: qty_order vs qty_faktur vs qty_outstanding.
- *  - Qty Reserved tetap berjalan: saat SO dibuat → reserved, saat difakturkan → RELEASE
- *    reserved lama + OUT untuk faktur baru.
+ *  - Qty Reserved berjalan di tberp_stock_batch: saat SO direkam → RESERVE,
+ *    saat difakturkan → OUT dan qty_reserved ikut berkurang.
  *  - SO dianggap Completed apabila seluruh qty_outstanding = 0.
  *
  * TABEL BARU yang dibutuhkan:
@@ -107,13 +107,18 @@ class M_SalesOrder extends CI_Model
         return $raw;
     }
 
-    // YYYY-MM-DD → DD/MM/YYYY (untuk tbso_stock_reservation.exp_date)
+    // YYYY-MM-DD → DD/MM/YYYY
     private function _toViewDate($ymd)
     {
         $ymd = $this->_normalizeDate($ymd);
         if (!$ymd) return '';
         $p = explode('-', $ymd);
         return count($p) === 3 ? $p[2] . '/' . $p[1] . '/' . $p[0] : $ymd;
+    }
+
+    private function _stockQtyColumn()
+    {
+        return $this->db->field_exists('qty', 'tberp_stock_batch') ? 'qty' : 'qty_on_hand';
     }
 
     // ================================================================
@@ -295,15 +300,16 @@ class M_SalesOrder extends CI_Model
     public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
     {
         $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
+        $qty_col = $this->_stockQtyColumn();
 
         // Ambil dari tberp_stock_batch
         $this->db->select('sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
-                           sb.qty_on_hand, sb.qty_reserved,
-                           (sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) AS available_stock,
+                           sb.' . $qty_col . ' AS qty_on_hand, sb.qty_reserved,
+                           (sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) AS available_stock,
                            mb.nama_barang');
         $this->db->from('tberp_stock_batch sb');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
-        $this->db->where('(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)) >', 0);
+        $this->db->where('(sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) >', 0);
 
         if (!empty($kd_barang))     $this->db->where('sb.kd_barang', $kd_barang);
         if (!empty($gudang_id_str)) {
@@ -319,11 +325,21 @@ class M_SalesOrder extends CI_Model
             $sql    = "SELECT
                            kd_barang, gudang_id, no_lot, expired_date,
                            SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
-                           - SUM(CASE WHEN tipe IN ('OUT','RESERVE','ADJOUT','RJUAL') THEN qty ELSE 0 END)
-                           + SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS available_stock,
-                           SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
-                           - SUM(CASE WHEN tipe = 'RELEASE' THEN qty ELSE 0 END) AS qty_reserved,
-                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END) AS qty_on_hand,
+                           - SUM(CASE WHEN tipe IN ('OUT','ADJOUT','RJUAL') THEN qty ELSE 0 END)
+                           - GREATEST(
+                               SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
+                               - SUM(CASE WHEN tipe = 'OUT' AND ref_type = 'FAKTUR PENJUALAN' THEN qty ELSE 0 END)
+                               - SUM(CASE WHEN tipe = 'CANCEL_RESERVE' THEN qty ELSE 0 END),
+                               0
+                           ) AS available_stock,
+                           GREATEST(
+                               SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
+                               - SUM(CASE WHEN tipe = 'OUT' AND ref_type = 'FAKTUR PENJUALAN' THEN qty ELSE 0 END)
+                               - SUM(CASE WHEN tipe = 'CANCEL_RESERVE' THEN qty ELSE 0 END),
+                               0
+                           ) AS qty_reserved,
+                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
+                           - SUM(CASE WHEN tipe IN ('OUT','ADJOUT','RJUAL') THEN qty ELSE 0 END) AS qty_on_hand,
                            NULL AS nama_barang
                        FROM tberp_stock_ledger WHERE 1=1";
             $params = [];
@@ -400,11 +416,12 @@ class M_SalesOrder extends CI_Model
     public function cek_stock($kd_barang, $exp_date, $gudang_id)
     {
         $ymd = $this->_normalizeDate($exp_date);
+        $qty_col = $this->_stockQtyColumn();
 
         if (!empty($gudang_id)) {
             $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
-                           qty_on_hand, qty_reserved,
-                           (qty_on_hand - COALESCE(qty_reserved, 0)) AS available_stock
+                           {$qty_col} AS qty_on_hand, qty_reserved,
+                           ({$qty_col} - COALESCE(qty_reserved, 0)) AS available_stock
                     FROM tberp_stock_batch
                     WHERE kd_barang = ? AND expired_date = ? AND gudang_id = ?
                     LIMIT 1";
@@ -412,9 +429,9 @@ class M_SalesOrder extends CI_Model
         }
 
         $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
-                       SUM(qty_on_hand) AS qty_on_hand,
+                       SUM({$qty_col}) AS qty_on_hand,
                        SUM(COALESCE(qty_reserved, 0)) AS qty_reserved,
-                       (SUM(qty_on_hand) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
+                       (SUM({$qty_col}) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
                 FROM tberp_stock_batch
                 WHERE kd_barang = ? AND expired_date = ?
                 GROUP BY kd_barang, expired_date
@@ -532,7 +549,6 @@ class M_SalesOrder extends CI_Model
         $this->db->insert('tbso_sales_order', $so_data);
         $id_so    = $this->db->insert_id();
         $no_so    = $header['no_so'];
-        $gudang_id = $header['gudang_id'];
 
         foreach ($details as $d) {
             $d['id_so']          = $id_so;
@@ -540,14 +556,7 @@ class M_SalesOrder extends CI_Model
             $d['qty_faktur']     = 0;   // belum ada faktur
             // qty_outstanding = generated column di DB, tidak perlu diisi
             $this->db->insert('tbso_sales_order_detail', $d);
-            $id_detail = $this->db->insert_id();
 
-            // ── RESERVED STOK ──────────────────────────────────────────
-            $this->_reservasi_stok(
-                $no_so, null, $id_detail,
-                $d['kd_barang'], $d['expired_date'], $d['no_lot'],
-                $gudang_id, $d['qty']
-            );
         }
 
         // Update jumlah_item
@@ -571,12 +580,36 @@ class M_SalesOrder extends CI_Model
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
         if (!$so || $so['status'] !== 'draft') return false;
 
+        $details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+
+        $this->db->trans_start();
+
+        foreach ($details as $d) {
+            $reserved = $this->_reservasi_stok(
+                $so['no_so'],
+                $d['id'],
+                $d['kd_barang'],
+                $d['expired_date'],
+                $d['no_lot'] ?? null,
+                $so['gudang_id'],
+                $d['qty']
+            );
+
+            if (!$reserved) {
+                $this->db->trans_rollback();
+                return false;
+            }
+        }
+
         $this->db->where('id_so', $id_so);
-        return $this->db->update('tbso_sales_order', [
+        $this->db->update('tbso_sales_order', [
             'status'    => 'open',
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
     }
 
     // ================================================================
@@ -609,32 +642,15 @@ class M_SalesOrder extends CI_Model
             'update_at'         => date('Y-m-d H:i:s'),
         ]);
 
-        // Release reservasi lama
-        $old_details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
-        foreach ($old_details as $old) {
-            $this->_release_stok(
-                $no_so, null, $old['kd_barang'],
-                $old['expired_date'], $old['no_lot'],
-                $gudang_id, $old['qty']
-            );
-        }
-
         // Hapus detail lama
         $this->db->delete('tbso_sales_order_detail', ['id_so' => $id_so]);
 
-        // Insert detail baru + reservasi baru
+        // Insert detail baru. Draft belum menyentuh stok.
         foreach ($details as $d) {
             $d['id_so']      = $id_so;
             $d['no_so']      = $no_so;
             $d['qty_faktur'] = 0;
             $this->db->insert('tbso_sales_order_detail', $d);
-            $id_detail = $this->db->insert_id();
-
-            $this->_reservasi_stok(
-                $no_so, null, $id_detail,
-                $d['kd_barang'], $d['expired_date'], $d['no_lot'],
-                $gudang_id, $d['qty']
-            );
         }
 
         $this->db->where('id_so', $id_so);
@@ -690,10 +706,9 @@ class M_SalesOrder extends CI_Model
      *                 id_so_detail, kd_barang, qty (≤ qty_outstanding), ...
      *
      * Alur stok:
-     *  1. RELEASE reserved sejumlah qty faktur (stok tidak lagi di-lock untuk SO).
-     *  2. OUT stok sejumlah qty faktur (stok keluar fisik).
+     *  1. OUT stok sejumlah qty faktur (stok keluar fisik).
+     *  2. Kurangi qty_reserved di tberp_stock_batch.
      *  3. Tambah qty_faktur di tbso_sales_order_detail.
-     *  4. Kurangi qty_reserved di tberp_stock_batch.
      *  5. Cek apakah semua outstanding = 0 → ubah status SO ke 'completed'.
      */
     public function buat_faktur($id_so, $faktur_header, $faktur_items)
@@ -772,16 +787,25 @@ class M_SalesOrder extends CI_Model
 
             $exp_normalized = $this->_normalizeDate($item['expired_date'] ?? '');
 
-            // 1. Release reserved (stok tidak lagi di-lock oleh SO untuk qty ini)
-            $this->_release_stok(
-                $so['no_so'], $no_faktur,
-                $item['kd_barang'], $item['expired_date'],
-                $item['no_lot'] ?? '', $gudang_id, $qty_item,
-                'FAKTUR_PENJUALAN'
-            );
-
-            // 2. OUT stok (barang keluar fisik)
+            // 1. Update tberp_stock_batch: kurangi qty fisik & qty_reserved
             try {
+                $qty_col = $this->_stockQtyColumn();
+                $this->db->where('kd_barang', $item['kd_barang']);
+                $this->db->where('gudang_id', $gudang_id);
+                if (!empty($item['no_lot']))  $this->db->where('no_lot', $item['no_lot']);
+                if (!empty($exp_normalized))  $this->db->where('expired_date', $exp_normalized);
+                $this->db->where($qty_col . ' >=', $qty_item);
+                $this->db->where('qty_reserved >=', $qty_item);
+                $this->db->set($qty_col, $qty_col . ' - ' . $qty_item, false);
+                $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
+                $this->db->set('update_at', date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+
+                if ($this->db->affected_rows() < 1) {
+                    $this->db->trans_rollback();
+                    return false;
+                }
+
                 $this->db->insert('tberp_stock_ledger', [
                     'kd_barang'    => $item['kd_barang'],
                     'gudang_id'    => $gudang_id,
@@ -789,37 +813,19 @@ class M_SalesOrder extends CI_Model
                     'expired_date' => $exp_normalized,
                     'qty'          => $qty_item,
                     'tipe'         => 'OUT',
-                    'ref_no'       => $no_faktur,
-                    'ref_type'     => 'FAKTUR_PENJUALAN',
+                    'ref_no'       => $so['no_so'],
+                    'ref_type'     => 'FAKTUR PENJUALAN',
                     'created_at'   => date('Y-m-d H:i:s'),
                 ]);
-            } catch (Exception $e) { /* ignore */ }
+            } catch (Exception $e) {
+                $this->db->trans_rollback();
+                return false;
+            }
 
-            // 3. Update tberp_stock_batch: kurangi qty_on_hand & qty_reserved
-            try {
-                $this->db->where('kd_barang', $item['kd_barang']);
-                $this->db->where('gudang_id', $gudang_id);
-                if (!empty($item['no_lot']))  $this->db->where('no_lot', $item['no_lot']);
-                if (!empty($exp_normalized))  $this->db->where('expired_date', $exp_normalized);
-                $this->db->set('qty_on_hand',  'qty_on_hand - '  . $qty_item, false);
-                $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
-                $this->db->set('update_at', date('Y-m-d H:i:s'));
-                $this->db->update('tberp_stock_batch');
-            } catch (Exception $e) { /* ignore */ }
-
-            // 4. Tambah qty_faktur di SO detail
+            // 3. Tambah qty_faktur di SO detail
             $this->db->where('id', $item['id_so_detail']);
             $this->db->set('qty_faktur', 'qty_faktur + ' . $qty_item, false);
             $this->db->update('tbso_sales_order_detail');
-
-            // 5. Update tbso_stock_reservation: kurangi qty_reserved
-            //    (bagian yang sudah difakturkan tidak perlu reserved lagi)
-            $this->db->where('no_so',        $so['no_so']);
-            $this->db->where('kd_barang',    $item['kd_barang']);
-            $this->db->where('id_so_detail', $item['id_so_detail']);  // filter presisi
-            $this->db->where('status',       'active');
-            $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
-            $this->db->update('tbso_stock_reservation');
         }
 
         // ── Cek apakah semua outstanding = 0 → Completed ────────────
@@ -884,37 +890,32 @@ class M_SalesOrder extends CI_Model
     }
 
     // ================================================================
-    // HELPER STOK — reservasi & release
+    // HELPER STOK — reservasi
     // ================================================================
 
     /**
-     * Reservasi stok: insert ke tbso_stock_reservation + tberp_stock_ledger (RESERVE)
+     * Reservasi stok: insert ke tberp_stock_ledger (RESERVE)
      *                 + update tberp_stock_batch.qty_reserved.
-     * no_faktur boleh null (saat SO dibuat, faktur belum ada).
      */
     private function _reservasi_stok(
-        $no_so, $no_faktur, $id_so_detail,
+        $no_so, $id_so_detail,
         $kd_barang, $exp_date, $no_lot,
         $gudang_id, $qty
     ) {
         $exp_normalized = $this->_normalizeDate($exp_date);
-        $exp_view       = $this->_toViewDate($exp_date);
 
-        // tbso_stock_reservation
-        $this->db->insert('tbso_stock_reservation', [
-            'no_so'        => $no_so,
-            'no_faktur'    => $no_faktur,   // null saat SO baru
-            'id_so_detail' => $id_so_detail,
-            'kd_barang'    => $kd_barang,
-            'exp_date'     => $exp_view,
-            'no_lot'       => $no_lot,
-            'gudang_id'    => $gudang_id,
-            'qty_reserved' => $qty,
-            'status'       => 'active',
-        ]);
-
-        // tberp_stock_ledger (RESERVE)
         try {
+            $qty_col = $this->_stockQtyColumn();
+            $this->db->where('kd_barang', $kd_barang);
+            $this->db->where('gudang_id', $gudang_id);
+            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
+            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
+            $this->db->where('(' . $qty_col . ' - COALESCE(qty_reserved, 0)) >=', (float)$qty, false);
+            $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$qty, false);
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+            $this->db->update('tberp_stock_batch');
+            if ($this->db->affected_rows() < 1) return false;
+
             $this->db->insert('tberp_stock_ledger', [
                 'kd_barang'    => $kd_barang,
                 'gudang_id'    => $gudang_id,
@@ -926,57 +927,21 @@ class M_SalesOrder extends CI_Model
                 'ref_type'     => 'SALES_ORDER',
                 'created_at'   => date('Y-m-d H:i:s'),
             ]);
-        } catch (Exception $e) { /* ignore */ }
+        } catch (Exception $e) { return false; }
 
-        // tberp_stock_batch.qty_reserved
-        try {
-            $this->db->where('kd_barang', $kd_barang);
-            $this->db->where('gudang_id', $gudang_id);
-            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
-            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
-            $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$qty, false);
-            $this->db->set('update_at', date('Y-m-d H:i:s'));
-            $this->db->update('tberp_stock_batch');
-        } catch (Exception $e) { /* ignore */ }
+        return true;
     }
 
     /**
-     * Release stok: update tbso_stock_reservation → released
-     *               + insert tberp_stock_ledger (RELEASE)
-     *               + kurangi tberp_stock_batch.qty_reserved
+     * Kurangi qty_reserved batch tanpa mengubah stok fisik.
      */
-    private function _release_stok(
-        $no_so, $no_faktur,
-        $kd_barang, $exp_date, $no_lot,
-        $gudang_id, $qty,
-        $ref_type = 'SALES_ORDER'
+    private function _kurangi_reserved_batch(
+        $no_so, $kd_barang, $exp_date, $no_lot,
+        $gudang_id, $qty
     ) {
         $exp_normalized = $this->_normalizeDate($exp_date);
 
-        // Update reservation
-        $this->db->where('no_so', $no_so);
-        $this->db->where('kd_barang', $kd_barang);
-        $this->db->where('exp_date', $this->_toViewDate($exp_date));
-        $this->db->where('status', 'active');
-        $this->db->update('tbso_stock_reservation', ['status' => 'released']);
-
-        // tberp_stock_ledger (RELEASE)
-        try {
-            $this->db->insert('tberp_stock_ledger', [
-                'kd_barang'    => $kd_barang,
-                'gudang_id'    => $gudang_id,
-                'no_lot'       => $no_lot,
-                'expired_date' => $exp_normalized,
-                'qty'          => $qty,
-                'tipe'         => 'RELEASE',
-                'ref_no'       => $no_faktur ?? $no_so,
-                'ref_type'     => $ref_type,
-                'created_at'   => date('Y-m-d H:i:s'),
-            ]);
-        } catch (Exception $e) { /* ignore */ }
-
         // tberp_stock_batch — JANGAN kurangi qty_on_hand di sini
-        // (qty_on_hand dikurangi saat OUT, bukan saat RELEASE)
         try {
             $this->db->where('kd_barang', $kd_barang);
             $this->db->where('gudang_id', $gudang_id);
@@ -985,6 +950,18 @@ class M_SalesOrder extends CI_Model
             $this->db->set('qty_reserved', 'GREATEST(0, qty_reserved - ' . (float)$qty . ')', false);
             $this->db->set('update_at', date('Y-m-d H:i:s'));
             $this->db->update('tberp_stock_batch');
+
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd_barang,
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $no_lot,
+                'expired_date' => $exp_normalized,
+                'qty'          => $qty,
+                'tipe'         => 'CANCEL_RESERVE',
+                'ref_no'       => $no_so,
+                'ref_type'     => 'SALES_ORDER_CANCEL',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
         } catch (Exception $e) { /* ignore */ }
     }
 
@@ -1000,26 +977,9 @@ class M_SalesOrder extends CI_Model
     {
         $errors = [];
 
-        $exclude_no_so = null;
-        if ($exclude_id_so) {
-            $so = $this->db->get_where('tbso_sales_order', ['id_so' => $exclude_id_so])->row_array();
-            $exclude_no_so = $so['no_so'] ?? null;
-        }
-
         foreach ($details as $d) {
             $stock     = $this->cek_stock($d['kd_barang'], $d['expired_date'], $gudang_id);
             $available = $stock ? (float)$stock['available_stock'] : 0;
-
-            // Kembalikan reserved milik SO yang sedang diedit
-            if ($exclude_no_so) {
-                $this->db->select('SUM(qty_reserved) as qty');
-                $this->db->where('no_so',    $exclude_no_so);
-                $this->db->where('kd_barang', $d['kd_barang']);
-                $this->db->where('exp_date',  $this->_toViewDate($d['expired_date']));
-                $this->db->where('status',   'active');
-                $res       = $this->db->get('tbso_stock_reservation')->row_array();
-                $available += $res ? (float)$res['qty'] : 0;
-            }
 
             $available = round($available, 3);
             $diminta   = round((float)$d['qty'], 3);
@@ -1096,23 +1056,19 @@ class M_SalesOrder extends CI_Model
             'update_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Saat dibatalkan: release semua reservasi yang masih aktif
         if ($status === 'cancelled') {
-            $no_so    = $so['no_so'];
             $gudang_id = $so['gudang_id'];
             $details  = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
 
             foreach ($details as $d) {
-                // Hanya release sisa outstanding (belum difakturkan)
                 $outstanding = (float)$d['qty'] - (float)$d['qty_faktur'];
                 if ($outstanding <= 0) continue;
 
-                $this->_release_stok(
-                    $no_so, null,
+                $this->_kurangi_reserved_batch(
+                    $so['no_so'],
                     $d['kd_barang'], $d['expired_date'],
                     $d['no_lot'] ?? '', $gudang_id,
-                    $outstanding,
-                    'SALES_ORDER_CANCEL'
+                    $outstanding
                 );
             }
         }
@@ -1183,7 +1139,7 @@ class M_SalesOrder extends CI_Model
     // GET REF_NO dari stock ledger
     // ================================================================
 
-    public function get_ref_no($kd_barang, $exp_date, $no_lot = '')
+    public function get_ref_no($kd_barang, $exp_date, $no_lot = '', $gudang_id = null)
     {
         $ymd = $this->_normalizeDate($exp_date);
 
@@ -1192,6 +1148,7 @@ class M_SalesOrder extends CI_Model
         $this->db->where('kd_barang', $kd_barang);
         $this->db->where('expired_date', $ymd);
         if (!empty($no_lot)) $this->db->where('no_lot', $no_lot);
+        if (!empty($gudang_id)) $this->db->where('gudang_id', $gudang_id);
         $this->db->where_in('tipe', ['IN', 'SALDO_AWAL']);
         $this->db->order_by('created_at', 'DESC');
         $this->db->limit(1);

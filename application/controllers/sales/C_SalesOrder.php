@@ -685,7 +685,8 @@ class C_SalesOrder extends CI_Controller
             $ref_no = $this->M_SalesOrder->get_ref_no(
                 $kd,
                 $post['expired_date'][$i] ?? '',
-                $post['no_lot'][$i]       ?? ''
+                $post['no_lot'][$i]       ?? '',
+                $this->_getGudangId($post)
             );
 
             $details[] = [
