@@ -1063,7 +1063,7 @@ tr.row-pending { background:#fafafa !important; }
                                     } elseif (in_array($role, ['MANAGERCK','CHECKER'])) {
                                         $show_detail_kk = ($kk['status'] === 'DONE');
                                     } elseif ($role === 'SALESCK') {
-                                        $show_detail_kk = ($kk['status'] !== 'MENUNGGU');
+                                        $show_detail_kk = !in_array($kk['status'], ['MENUNGGU', 'SIAP_LOADING']);
                                     } else {
                                         $show_detail_kk = true;
                                     }
