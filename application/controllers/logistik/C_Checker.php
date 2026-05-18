@@ -291,10 +291,11 @@ class C_Checker extends CI_Controller
             'kode'       => $this->M_Checker->generate_kode_kk(),
             'tgl'        => date('Y-m-d'),
             'keterangan' => $this->input->post('keterangan', true),
-            'status'     => 'MENUNGGU', // status awal MENUNGGU
+            'status'     => 'MENUNGGU',
             'created_by' => $this->nama(),
         ]);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data KK ditambahkan' : 'Gagal']);
+        $id = $ok ? $this->db->insert_id() : null;
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data KK ditambahkan' : 'Gagal', 'id' => $id]);
     }
 
     public function siap_loading_kk()
@@ -359,13 +360,18 @@ class C_Checker extends CI_Controller
 
     public function hapus_kk()
     {
-        if ($this->role() !== self::ROLE_ADMLOG) {
+        if (!in_array($this->role(), [self::ROLE_ADMLOG, self::ROLE_SALES])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_kk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
-            echo json_encode(['status' => false, 'msg' => 'KK sudah diproses, tidak bisa dihapus']); return;
+
+        $allowed = ($this->role() === self::ROLE_SALES)
+            ? ['MENUNGGU', 'SIAP_LOADING']
+            : ['MENUNGGU', 'SIAP_LOADING', 'CETAK_DO', 'DO_SELESAI'];
+
+        if (!$row || !in_array($row['status'], $allowed)) {
+            echo json_encode(['status' => false, 'msg' => 'Status ini tidak bisa dihapus']); return;
         }
         $ok = $this->M_Checker->hapus_kk($id);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading KK berhasil dihapus' : 'Gagal hapus']);
@@ -453,10 +459,11 @@ class C_Checker extends CI_Controller
             'kode'       => $this->M_Checker->generate_kode_lk(),
             'tgl'        => date('Y-m-d'),
             'keterangan' => $this->input->post('keterangan', true),
-            'status'     => 'MENUNGGU', // status awal MENUNGGU
+            'status'     => 'MENUNGGU',
             'created_by' => $this->nama(),
         ]);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data LK ditambahkan' : 'Gagal']);
+        $id = $ok ? $this->db->insert_id() : null;
+        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Data LK ditambahkan' : 'Gagal', 'id' => $id]);
     }
 
     public function siap_loading_lk()
@@ -521,13 +528,18 @@ class C_Checker extends CI_Controller
 
     public function hapus_lk()
     {
-        if ($this->role() !== self::ROLE_ADMLOG) {
+        if (!in_array($this->role(), [self::ROLE_ADMLOG, self::ROLE_SALES])) {
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id  = (int)$this->input->post('id');
         $row = $this->M_Checker->get_lk_by_id($id);
-        if (!$row || !in_array($row['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI'])) {
-            echo json_encode(['status' => false, 'msg' => 'LK sudah diproses, tidak bisa dihapus']); return;
+
+        $allowed = ($this->role() === self::ROLE_SALES)
+            ? ['MENUNGGU', 'SIAP_LOADING']
+            : ['MENUNGGU', 'SIAP_LOADING', 'CETAK_DO', 'DO_SELESAI'];
+
+        if (!$row || !in_array($row['status'], $allowed)) {
+            echo json_encode(['status' => false, 'msg' => 'Status ini tidak bisa dihapus']); return;
         }
         $ok = $this->M_Checker->hapus_lk($id);
         echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Loading LK berhasil dihapus' : 'Gagal hapus']);

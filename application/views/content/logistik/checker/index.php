@@ -93,13 +93,13 @@ tr.row-pending { background:#fafafa !important; }
                     <?php endif; ?>
                     <?php if ($role === 'SALESCK') : ?>
                     <div class="col-auto">
-                        <button class="btn btn-info" data-toggle="modal" data-target="#modalTambahKK">
-                            <i class="fas fa-plus"></i> Tambah Loading KK
+                        <button class="btn btn-info" data-toggle="modal" data-target="#modalPilihRuteKK">
+                            <i class="fas fa-truck-loading"></i> Loading KK
                         </button>
                     </div>
                     <div class="col-auto">
-                        <button class="btn btn-warning" data-toggle="modal" data-target="#modalTambahLK">
-                            <i class="fas fa-plus"></i> Tambah Loading LK
+                        <button class="btn btn-warning" data-toggle="modal" data-target="#modalPilihRuteLK">
+                            <i class="fas fa-truck"></i> Loading LK
                         </button>
                     </div>
                     <div class="col-auto">
@@ -704,7 +704,7 @@ tr.row-pending { background:#fafafa !important; }
                                     } elseif (in_array($role, ['MANAGERCK','CHECKER'])) {
                                         $show_detail_lk = ($lk['status'] === 'DONE');
                                     } elseif ($role === 'SALESCK') {
-                                        $show_detail_lk = ($lk['status'] !== 'MENUNGGU');
+                                        $show_detail_lk = !in_array($lk['status'], ['MENUNGGU','SIAP_LOADING']);
                                     } else {
                                         $show_detail_lk = true;
                                     }
@@ -742,6 +742,13 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php if ($lk['status'] === 'MENUNGGU'): ?>
                                             <button class="btn btn-sm btn-primary btn-siap-loading-lk" data-id="<?= $lk['id'] ?>">
                                                 <i class="fas fa-check-circle mr-1"></i> Siap Loading
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if (in_array($lk['status'], ['MENUNGGU','SIAP_LOADING'])): ?>
+                                            <button class="btn btn-sm btn-danger btn-hapus-lk"
+                                                data-id="<?= $lk['id'] ?>"
+                                                data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
+                                                <i class="fas fa-trash"></i> Hapus
                                             </button>
                                         <?php endif; ?>
 
@@ -1094,6 +1101,13 @@ tr.row-pending { background:#fafafa !important; }
                                         <?php if ($kk['status'] === 'MENUNGGU'): ?>
                                             <button class="btn btn-sm btn-primary btn-siap-loading-kk" data-id="<?= $kk['id'] ?>">
                                                 <i class="fas fa-check-circle mr-1"></i> Siap Loading
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php if (in_array($kk['status'], ['MENUNGGU','SIAP_LOADING'])): ?>
+                                            <button class="btn btn-sm btn-danger btn-hapus-kk"
+                                                data-id="<?= $kk['id'] ?>"
+                                                data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
+                                                <i class="fas fa-trash"></i> Hapus
                                             </button>
                                         <?php endif; ?>
 
@@ -1488,6 +1502,96 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
+<?php if ($role === 'SALESCK') : ?>
+
+<!-- ===== MODAL LOADING KK — PILIH RUTE ===== -->
+<div class="modal fade" id="modalPilihRuteKK" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header bg-success text-white">
+            <h5 class="modal-title"><i class="fas fa-truck-loading mr-2"></i> Loading KK — Pilih Rute</h5>
+            <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body p-2">
+            <p class="text-muted small mb-2"><i class="fas fa-info-circle mr-1"></i> Klik <b>Siap Loading</b> pada rute yang akan dikirim.</p>
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="thead-dark">
+                    <tr><th style="width:90px">Kode</th><th>Nama Rute</th><th style="width:130px" class="text-center">Aksi</th></tr>
+                </thead>
+                <tbody>
+                <?php
+                $rute_kk = [
+                    'BLI-1'=>'Kintamani','BLI-2'=>'Tabanan','KD-1'=>'Nganjuk','KD-2'=>'Tulungagung',
+                    'MD-1'=>'Ngawi','MD-2'=>'Ponorogo','MLG'=>'Malang','P-1'=>'Tuban',
+                    'P-2'=>'Bojonegoro','SBY'=>'Surabaya','MDR'=>'Madura',
+                ];
+                foreach ($rute_kk as $kode => $nama) : ?>
+                <tr>
+                    <td><span class="badge badge-success" style="font-size:12px;"><?= $kode ?></span></td>
+                    <td><?= $nama ?></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-primary btn-siap-loading-rute"
+                                data-type="kk"
+                                data-kode="<?= $kode ?>"
+                                data-nama="<?= $nama ?>">
+                            <i class="fas fa-check-circle mr-1"></i> Siap Loading
+                        </button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+        </div>
+    </div></div>
+</div>
+
+<!-- ===== MODAL LOADING LK — PILIH RUTE ===== -->
+<div class="modal fade" id="modalPilihRuteLK" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title"><i class="fas fa-truck mr-2"></i> Loading LK — Pilih Rute</h5>
+            <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body p-2">
+            <p class="text-muted small mb-2"><i class="fas fa-info-circle mr-1"></i> Klik <b>Siap Loading</b> pada rute yang akan dikirim.</p>
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="thead-dark">
+                    <tr><th style="width:90px">Kode</th><th>Nama Rute</th><th style="width:130px" class="text-center">Aksi</th></tr>
+                </thead>
+                <tbody>
+                <?php
+                $rute_lk = [
+                    'BWI-1'=>'Sanggar Kalipait','BWI-2'=>'Sempu Muncar','JWS'=>'Wongsorejo',
+                    'JBR'=>'Sempolan','JUT'=>'Sukowono','JLS'=>'Ambulu Kencong',
+                    'LMJ'=>'Lumajang','PRB'=>'Probolinggo','STB'=>'Situbondo','KRS'=>'Kraksaan',
+                ];
+                foreach ($rute_lk as $kode => $nama) : ?>
+                <tr>
+                    <td><span class="badge badge-primary" style="font-size:12px;"><?= $kode ?></span></td>
+                    <td><?= $nama ?></td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-primary btn-siap-loading-rute"
+                                data-type="lk"
+                                data-kode="<?= $kode ?>"
+                                data-nama="<?= $nama ?>">
+                            <i class="fas fa-check-circle mr-1"></i> Siap Loading
+                        </button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+        </div>
+    </div></div>
+</div>
+
+<?php endif; ?>
+
 <script>
 var BASE = '<?= base_url() ?>';
 function ajaxPost(url, data, cb) {
@@ -1874,6 +1978,51 @@ $(document).ready(function () {
                     timer: res.status ? 2000 : 0,
                     showConfirmButton: !res.status
                 }).then(function () { if (res.status) location.reload(); });
+            });
+        });
+    });
+
+    // ── SALESCK: Siap Loading dari pilih rute ────────────────────────
+    $(document).on('click', '.btn-siap-loading-rute', function () {
+        var type = $(this).data('type');   // kk | lk
+        var kode = $(this).data('kode');
+        var nama = $(this).data('nama');
+        var label = type.toUpperCase();
+
+        Swal.fire({
+            title: 'Siap Loading ' + label + '?',
+            html: 'Rute: <b>' + kode + ' — ' + nama + '</b><br>Data akan langsung masuk antrian <b>SIAP LOADING</b>.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check-circle mr-1"></i> Ya, Siap Loading',
+            cancelButtonText: 'Batal'
+        }).then(function (r) {
+            if (!r.isConfirmed) return;
+
+            var storeUrl = (type === 'kk') ? 'checker/store_kk' : 'checker/store_lk';
+
+            ajaxPost(storeUrl, { keterangan: kode }, function (res1) {
+                if (!res1.status) { alert(res1.msg); return; }
+
+                if (res1.id) {
+                    var siapUrl = (type === 'kk') ? 'checker/siap_loading_kk' : 'checker/siap_loading_lk';
+                    ajaxPost(siapUrl, { id: res1.id }, function (res2) {
+                        Swal.fire({
+                            icon: 'success', title: 'Berhasil!',
+                            text: kode + ' — ' + nama + ' sudah masuk antrian SIAP LOADING.',
+                            timer: 2000, showConfirmButton: false
+                        }).then(function () {
+                            $('#modalPilihRuteKK, #modalPilihRuteLK').modal('hide');
+                            location.reload();
+                        });
+                    });
+                } else {
+                    // Jika controller belum return id, tetap reload
+                    $('#modalPilihRuteKK, #modalPilihRuteLK').modal('hide');
+                    location.reload();
+                }
             });
         });
     });
