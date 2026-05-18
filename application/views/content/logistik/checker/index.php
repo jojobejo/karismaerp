@@ -2038,6 +2038,16 @@ $(document).ready(function () {
 // NOTIFIKASI REAL-TIME — ADMLOG ONLY
 // ================================================================
 (function () {
+
+    // ── Minta izin notifikasi browser saat halaman dibuka ──────
+    function requestPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+    requestPermission();
+
+    // ── Bunyi notifikasi ────────────────────────────────────────
     function playDing() {
         try {
             var ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2051,8 +2061,8 @@ $(document).ready(function () {
                 { freq: 1047, start: 1.6, dur: 0.8 },
             ];
 
-            var sequenceDuration = 2.6; // detik per satu putaran
-            var totalDuration    = 15;  // total detik bunyi
+            var sequenceDuration = 2.6;
+            var totalDuration    = 15;
             var repeats          = Math.ceil(totalDuration / sequenceDuration);
 
             for (var r = 0; r < repeats; r++) {
@@ -2063,15 +2073,12 @@ $(document).ready(function () {
                         var gain = ctx.createGain();
                         osc.connect(gain);
                         gain.connect(ctx.destination);
-
                         osc.type = 'sine';
                         osc.frequency.value = n.freq;
-
                         var t = ctx.currentTime + offset + n.start;
                         gain.gain.setValueAtTime(0, t);
                         gain.gain.linearRampToValueAtTime(0.35, t + 0.05);
                         gain.gain.exponentialRampToValueAtTime(0.001, t + n.dur);
-
                         osc.start(t);
                         osc.stop(t + n.dur + 0.1);
                     });
@@ -2079,7 +2086,6 @@ $(document).ready(function () {
             }
 
             window._notifAudioCtx = ctx;
-
             setTimeout(function () {
                 try { ctx.close(); } catch(e) {}
             }, totalDuration * 1000);
@@ -2087,21 +2093,43 @@ $(document).ready(function () {
         } catch(e) {}
     }
 
-    // Tambahkan container toast jika belum ada
+    // ── Kirim notifikasi Windows/browser ───────────────────────
+    function showBrowserNotif(item) {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+
+        var label = item.type === 'kk' ? 'Loading KK' : 'Loading LK';
+        var color = item.type === 'kk' ? '#1b5e20'    : '#1565c0';
+
+        var notif = new Notification('🔔 ' + label + ' — Siap Loading', {
+            body: 'Rute ' + item.keterangan + ' menunggu proses DO.\n' + item.created_at,
+            icon: BASE + 'assets/images/Karisma.png',  // logo aplikasi
+            badge: BASE + 'assets/images/Karisma.png',
+            tag: 'siap-loading-' + item.id,            // mencegah duplikat
+            requireInteraction: true,                  // notif tidak auto hilang sampai diklik
+        });
+
+        // Klik notif → fokus ke tab aplikasi
+        notif.onclick = function () {
+            window.focus();
+            notif.close();
+        };
+    }
+
+    // ── Toast dalam aplikasi (tetap ada sebagai fallback) ───────
     if (!document.getElementById('notif-container')) {
         var container = document.createElement('div');
         container.id = 'notif-container';
         container.style.cssText = [
             'position:fixed', 'top:70px', 'right:20px', 'z-index:9999',
-            'display:flex', 'flex-direction:column', 'gap:8px',
-            'max-width:320px'
+            'display:flex', 'flex-direction:column', 'gap:8px', 'max-width:320px'
         ].join(';');
         document.body.appendChild(container);
     }
 
     function showToast(item) {
         var label = item.type === 'kk' ? 'Loading KK' : 'Loading LK';
-        var color = item.type === 'kk' ? '#1b5e20' : '#1565c0';
+        var color = item.type === 'kk' ? '#1b5e20'    : '#1565c0';
 
         var toast = document.createElement('div');
         toast.style.cssText = [
@@ -2117,13 +2145,12 @@ $(document).ready(function () {
             '<i class="fas fa-bell mr-1"></i> ' + label + ' Siap Loading</div>' +
             '<div style="color:#333;">Rute <b>' + item.keterangan + '</b> menunggu proses DO.</div>' +
             '<div style="color:#999;font-size:11px;margin-top:4px;">' + item.created_at + '</div>' +
-            '<button onclick="this.parentElement.remove()" ' +
+            '<button onclick="this.parentElement.remove();try{window._notifAudioCtx.close();}catch(e){}" ' +
             'style="position:absolute;top:6px;right:8px;background:none;border:none;' +
             'font-size:16px;cursor:pointer;color:#aaa;line-height:1;">&times;</button>';
 
         document.getElementById('notif-container').appendChild(toast);
 
-        // Auto hilang setelah 8 detik
         setTimeout(function () {
             if (toast.parentElement) {
                 toast.style.opacity = '0';
@@ -2133,26 +2160,25 @@ $(document).ready(function () {
         }, 8000);
     }
 
-    // Tambah CSS animasi
+    // ── CSS animasi ─────────────────────────────────────────────
     var style = document.createElement('style');
     style.innerHTML = '@keyframes slideIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}';
     document.head.appendChild(style);
 
-    // Polling setiap 15 detik
+    // ── Polling ─────────────────────────────────────────────────
     function pollNotif() {
         $.getJSON(BASE + 'checker/get_notif', function (res) {
             if (res.status && res.data && res.data.length > 0) {
                 playDing();
                 res.data.forEach(function (item) {
-                    showToast(item);
+                    showBrowserNotif(item);   // notif Windows
+                    showToast(item);          // toast dalam app (fallback)
                 });
-                // Tandai sudah dibaca
                 $.post(BASE + 'checker/read_notif');
             }
         });
     }
 
-    // Jalankan pertama kali setelah 3 detik, lalu tiap 15 detik
     setTimeout(function () {
         pollNotif();
         setInterval(pollNotif, 15000);
