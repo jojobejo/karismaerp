@@ -3005,6 +3005,81 @@ FROM (
         return $this->db->query($sql, $params)->result_array();
     }
 
+    public function get_lpb_admin_po($date1 = null, $date2 = null)
+    {
+        $sql = "SELECT
+            po.kd_po,
+            po.tgl_transaksi,
+            po.no_po,
+            po.kdsupp,
+            CASE
+                WHEN po.nm_suplier IS NULL OR po.nm_suplier = '' THEN po.kdsupp
+                ELSE po.nm_suplier
+            END AS nm_suplier,
+            po.total_qty_order,
+            COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
+            CASE
+                WHEN po.total_qty_order <= 0 THEN 0
+                WHEN COALESCE(rcv.total_qty_diterima, 0) >= po.total_qty_order THEN 100
+                ELSE ROUND((COALESCE(rcv.total_qty_diterima, 0) / po.total_qty_order) * 100, 2)
+            END AS progress_persen,
+            CASE
+                WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 'belum'
+                WHEN COALESCE(rcv.total_qty_diterima, 0) < po.total_qty_order THEN 'partial'
+                ELSE 'done'
+            END AS status
+        FROM (
+            SELECT
+                pp.kd_po,
+                MAX(pp.tgl_transaksi) AS tgl_transaksi,
+                MAX(pp.no_po) AS no_po,
+                MAX(pp.kd_suplier) AS kdsupp,
+                MAX(supp.nama_suplier) AS nm_suplier,
+                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
+            FROM tb_pre_po pp
+            LEFT JOIN tb_suplier supp
+                ON supp.kd_suplier = pp.kd_suplier
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+
+            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= "
+            GROUP BY pp.kd_po
+        ) po
+        LEFT JOIN (
+            SELECT
+                h.kd_po,
+                SUM(d.qty_diterima) AS total_qty_diterima
+            FROM tb_lpb h
+            INNER JOIN tb_lpb_detail d
+                ON d.id_lpb = h.id_lpb
+            GROUP BY h.kd_po
+        ) rcv
+            ON rcv.kd_po = po.kd_po
+        ORDER BY
+            CASE
+                WHEN COALESCE(rcv.total_qty_diterima, 0) > 0
+                    AND COALESCE(rcv.total_qty_diterima, 0) < po.total_qty_order THEN 1
+                WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 2
+                ELSE 3
+            END ASC,
+            STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC,
+            po.no_po DESC";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function get_barang_by_po()
     {
         while (ob_get_level()) ob_end_clean();
@@ -3412,6 +3487,13 @@ FROM (
         $this->db->order_by('t.id_tmp_recieved', 'ASC');
 
         return $this->db->get()->result_array();
+    }
+
+    public function update_pre_po_status_by_kd_po($kd_po, $status)
+    {
+        return $this->db
+            ->where('kd_po', $kd_po)
+            ->update('tb_pre_po', ['status' => $status]);
     }
 
     private function _normalizeDate($raw)

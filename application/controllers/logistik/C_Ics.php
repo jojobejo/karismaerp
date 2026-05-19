@@ -571,9 +571,13 @@ class C_Ics extends CI_Controller
         $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
         $this->load->model('Api/M_Api', 'apiPo');
+        $isAdminPo = strtoupper(trim((string) $this->session->userdata('jobdesk'))) === 'ADMIN PO';
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['lpb']        = $this->M_Logistik->get_lpb($date1, $date2);
+        $data['is_admin_po'] = $isAdminPo;
+        $data['lpb']        = $isAdminPo
+            ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
+            : $this->M_Logistik->get_lpb($date1, $date2);
         $data['date1']      = $date1;
         $data['date2']      = $date2;
         $data['sync_api_url'] = base_url('sync_pre_po_erp');
@@ -1059,15 +1063,28 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $updatedPrePoStatus = $this->M_Logistik->update_pre_po_status_by_kd_po($payload['kd_po'], 2);
+
+        if (!$updatedPrePoStatus || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'update_pre_po_status',
+                'message' => 'LPB berhasil dibuat, tetapi status PO gagal diperbarui.'
+            ]);
+            return;
+        }
+
         $this->db->trans_commit();
 
         echo json_encode([
             'status'  => 'success',
             'step'    => 'save_final',
-            'message' => 'Penerimaan berhasil disimpan ke LPB dan draft temporary sudah dibersihkan.',
+            'message' => 'Penerimaan berhasil disimpan ke LPB, status PO diperbarui, dan draft temporary sudah dibersihkan.',
             'debug'   => [
                 'id_lpb'       => $idLpb,
                 'no_po'        => $payload['no_po'],
+                'kd_po'        => $payload['kd_po'],
                 'total_detail' => count($tmpRows)
             ]
         ]);

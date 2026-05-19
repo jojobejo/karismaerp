@@ -204,7 +204,7 @@
                         </div>
                     </div>
 
-                    <div class="row mb-4">
+                    <div class="row mb-4" id="recapStatsRow">
                         <div class="col-md-4 mb-3">
                             <div class="lpb-stat-card">
                                 <div class="lpb-stat-label">Total LPB</div>

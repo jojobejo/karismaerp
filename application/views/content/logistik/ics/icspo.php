@@ -4,6 +4,7 @@ $lastSyncTime = !empty($last_sync['sync_time']) ? $last_sync['sync_time'] : '-';
 $lastSyncInserted = isset($last_sync['inserted']) ? (int) $last_sync['inserted'] : 0;
 $lastSyncUpdated = isset($last_sync['updated']) ? (int) $last_sync['updated'] : 0;
 $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 0;
+$isAdminPo = !empty($is_admin_po);
 ?>
 <style>
     .sync-summary-card {
@@ -131,7 +132,7 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-                    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
+                    <?php if (!$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
                         <div class="row">
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3">
@@ -156,113 +157,50 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                         </div>
                     <?php endif; ?>
 
-                    <div class="card sync-summary-card mb-4">
-                        <div class="card-header bg-primary text-white">
-                            <h3 class="card-title mb-0">
-                                <i class="fas fa-sync-alt mr-2"></i> Sinkronisasi Purchase Order dari kiu_po
-                            </h3>
-                        </div>
-                        <div class="card-body">
-                            <div id="sync-alert" class="alert d-none" role="alert"></div>
-
-                            <div class="sync-toolbar mb-3">
-                                <div>
-                                    <button id="btn-sync-po" class="btn btn-primary">
-                                        <i class="fas fa-sync-alt mr-1"></i> Sinkronisasi PO ERP
-                                    </button>
-                                </div>
-                                <div class="sync-meta text-md-right">
-                                    <div>API Source: <strong>http://localhost/kiu_po/get_data_pre_po_erp</strong></div>
-                                    <div>Waktu sync terakhir: <strong id="sync-last-time"><?= htmlspecialchars($lastSyncTime) ?></strong></div>
-                                </div>
-                            </div>
-
-                            <div class="row mb-3" id="header-title-sync">
-                                <div class="col-md-3 col-6 mb-3">
-                                    <div class="sync-stat-box sync-stat-primary">
-                                        <h4 id="sync-total-inserted"><?= $lastSyncInserted ?></h4>
-                                        <p>Data baru tersimpan</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 col-6 mb-3">
-                                    <div class="sync-stat-box sync-stat-success">
-                                        <h4 id="sync-total-updated"><?= $lastSyncUpdated ?></h4>
-                                        <p>Data berhasil diperbarui</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 col-6 mb-3">
-                                    <div class="sync-stat-box sync-stat-warning">
-                                        <h4 id="sync-total-skipped"><?= $lastSyncSkipped ?></h4>
-                                        <p>Data dilewati</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-3 col-6 mb-3">
-                                    <div class="sync-stat-box sync-stat-dark">
-                                        <h4 id="sync-total-rows"><?= count($sync_rows) ?></h4>
-                                        <p>Baris ditampilkan</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- <div class="table-responsive">
-                                <table class="table table-bordered table-hover table-sync-result mb-0">
-                                    <thead class="thead-light text-center">
-                                        <tr>
-                                            <th>No PO</th>
-                                            <th>KD PO</th>
-                                            <th>Tgl Transaksi</th>
-                                            <th>Supplier</th>
-                                            <th>KD Barang</th>
-                                            <th>Satuan</th>
-                                            <th>Qty</th>
-                                            <th>Harga Satuan</th>
-                                            <th>Harga Total</th>
-                                            <th>Status</th>
-                                            <th>Sync At</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="sync-result-body">
-                                        <?php if (!empty($sync_rows)) : ?>
-                                            <?php foreach ($sync_rows as $row) : ?>
-                                                <tr>
-                                                    <td><?= htmlspecialchars($row['no_po']) ?></td>
-                                                    <td><?= htmlspecialchars($row['kd_po']) ?></td>
-                                                    <td><?= htmlspecialchars($row['tgl_transaksi']) ?></td>
-                                                    <td><?= htmlspecialchars($row['kd_suplier']) ?></td>
-                                                    <td><?= htmlspecialchars($row['kd_barang']) ?></td>
-                                                    <td><?= htmlspecialchars($row['satuan']) ?></td>
-                                                    <td class="text-right"><?= number_format((float) $row['qty'], 0, ',', '.') ?></td>
-                                                    <td class="text-right"><?= number_format((float) $row['hrg_satuan'], 0, ',', '.') ?></td>
-                                                    <td class="text-right"><?= number_format((float) $row['harga_total'], 0, ',', '.') ?></td>
-                                                    <td class="text-center">
-                                                        <?php if ((int) $row['status'] === 2) : ?>
-                                                            <span class="badge badge-success">Sudah Difakturkan</span>
-                                                        <?php else : ?>
-                                                            <span class="badge badge-warning">Belum Difakturkan</span>
-                                                        <?php endif; ?>
-                                                    </td>
-                                                    <td><?= htmlspecialchars($row['create_at']) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        <?php else : ?>
-                                            <tr>
-                                                <td colspan="11" class="text-center text-muted">Belum ada data hasil sinkronisasi.</td>
-                                            </tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div> -->
-                        </div>
-                    </div>
-
                     <div class="card">
                         <div class="card-header bg-primary text-white">
                             <h3 class="card-title">
-                                <i class="fas fa-plus-circle mr-2"></i> Data LPB (Laporan Penerimaan Barang)
+                                <i class="fas fa-plus-circle mr-2"></i> <?= $isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)' ?>
                             </h3>
+                            <?php if (!$isAdminPo) : ?>
+                                <div class="sync-meta text-md-right">
+                                    <div>Waktu sync terakhir: <strong id="sync-last-time"><?= htmlspecialchars($lastSyncTime) ?></strong></div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <div class="card-body">
+                            <?php if (!$isAdminPo) : ?>
+                            <div class="container-fluid px-0">
+                                <div class="row mb-3" id="header-title-sync">
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-primary">
+                                            <h4 id="sync-total-inserted"><?= $lastSyncInserted ?></h4>
+                                            <p>Data baru tersimpan</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-success">
+                                            <h4 id="sync-total-updated"><?= $lastSyncUpdated ?></h4>
+                                            <p>Data berhasil diperbarui</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-warning">
+                                            <h4 id="sync-total-skipped"><?= $lastSyncSkipped ?></h4>
+                                            <p>Data dilewati</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-dark">
+                                            <h4 id="sync-total-rows"><?= count($sync_rows) ?></h4>
+                                            <p>Baris ditampilkan</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
                             <div class="container-fluid px-0">
                                 <form action="<?= base_url('ics/icspo') ?>" method="post">
                                     <div class="row mb-3">
@@ -280,7 +218,7 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                     </div>
                                 </form>
 
-                                <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS') : ?>
+                                <?php if (!$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS') : ?>
                                     <div class="row mb-3" id="button-row-lpb">
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
@@ -291,6 +229,11 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                             <a class="btn btn-success btn-block" href="<?= base_url('ics/retur') ?>">
                                                 <i class="fas fa-undo"></i> Data Retur
                                             </a>
+                                        </div>
+                                        <div class="col-md-2 col-sm-6 mb-2">
+                                            <button class="btn btn-primary btn-block" id="btn-sync-po">
+                                                <i class="fas fa-sync"></i> Sync PO
+                                            </button>
                                         </div>
                                     </div>
                                 <?php elseif ($this->session->userdata('lv') == '2') : ?>
@@ -336,6 +279,16 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
+                                            <?php if ($isAdminPo) : ?>
+                                            <tr>
+                                                <th>No PO</th>
+                                                <th>Tgl Transaksi</th>
+                                                <th>Nama Supplier</th>
+                                                <th class="text-center">Progress</th>
+                                                <th class="text-center">Status</th>
+                                                <th class="text-center" style="width:90px;">#</th>
+                                            </tr>
+                                            <?php else : ?>
                                             <tr>
                                                 <th>No PO</th>
                                                 <th>Tgl Transaksi</th>
@@ -348,6 +301,7 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                                 <th class="text-center">Status</th>
                                                 <th class="text-center" style="width:90px;">#</th>
                                             </tr>
+                                            <?php endif; ?>
                                         </thead>
                                         <tbody>
                                             <?php if (!empty($lpb)) : ?>
@@ -383,6 +337,30 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                                         $badge = '<span class="badge badge-danger px-2 py-1"><i class="fas fa-times mr-1"></i> Belum</span>';
                                                     }
                                                 ?>
+                                                    <?php if ($isAdminPo) : ?>
+                                                    <tr class="<?= $rowClass ?>">
+                                                        <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
+                                                        <td>
+                                                            <div class="po-progress-wrap">
+                                                                <div class="po-progress-label">
+                                                                    <span><?= $progressText ?>%</span>
+                                                                    <span><?= htmlspecialchars(ucfirst($status)) ?></span>
+                                                                </div>
+                                                                <div class="po-progress-track">
+                                                                    <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center"><?= $badge ?></td>
+                                                        <td class="text-center">
+                                                            <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm">
+                                                                <i class="fas fa-list"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    <?php else : ?>
                                                     <tr class="<?= $rowClass ?>">
                                                         <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                         <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
@@ -412,10 +390,11 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
                                                             </a>
                                                         </td>
                                                     </tr>
+                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             <?php else : ?>
                                                 <tr>
-                                                    <td colspan="10" class="text-center text-muted">
+                                                    <td colspan="<?= $isAdminPo ? 6 : 10 ?>" class="text-center text-muted">
                                                         <i class="fas fa-inbox mr-1"></i> Tidak ada data
                                                     </td>
                                                 </tr>

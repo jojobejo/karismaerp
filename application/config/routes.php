@@ -100,6 +100,38 @@ $route['master_customer/store']                     = 'keuangan/C_Keuangan/maste
 $route['master_customer/update']                    = 'keuangan/C_Keuangan/master_customer_update';
 $route['master_customer/delete']                    = 'keuangan/C_Keuangan/master_customer_delete';
 
+// MASTER - USER MANAGEMENT
+$route['master/user-management']                    = 'master/C_Usermanagement';
+$route['master/user-management/list']               = 'master/C_Usermanagement/list';
+$route['master/user-management/detail/(:num)']      = 'master/C_Usermanagement/detail/$1';
+$route['master/user-management/save']               = 'master/C_Usermanagement/save';
+$route['master/user-management/update/(:num)']      = 'master/C_Usermanagement/update/$1';
+$route['master/user-management/delete/(:num)']      = 'master/C_Usermanagement/delete/$1';
+$route['master/user-management/reset-password/(:num)'] = 'master/C_Usermanagement/reset_password/$1';
+$route['master/user-management/toggle-status/(:num)'] = 'master/C_Usermanagement/toggle_status/$1';
+$route['master/user-management/options']            = 'master/C_Usermanagement/select_options';
+$route['master/jobdesk']                            = 'master/C_Jobdesk';
+$route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
+$route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
+$route['master/jobdesk/save']                       = 'master/C_Jobdesk/save';
+$route['master/jobdesk/update/(:num)']              = 'master/C_Jobdesk/update/$1';
+$route['master/jobdesk/delete/(:num)']              = 'master/C_Jobdesk/delete/$1';
+$route['master/akses-level']                        = 'master/C_Akseslevel';
+$route['master/akses-level/list']                   = 'master/C_Akseslevel/list';
+$route['master/akses-level/detail/(:num)']          = 'master/C_Akseslevel/detail/$1';
+$route['master/akses-level/save']                   = 'master/C_Akseslevel/save';
+$route['master/akses-level/update/(:num)']          = 'master/C_Akseslevel/update/$1';
+$route['master/akses-level/delete/(:num)']          = 'master/C_Akseslevel/delete/$1';
+$route['master/akses-level/matrix/(:num)']          = 'master/C_Akseslevel/matrix/$1';
+$route['master/akses-level/update-permission']      = 'master/C_Akseslevel/update_permission';
+$route['master/menu']                               = 'master/C_Menu';
+$route['master/menu/list']                          = 'master/C_Menu/list';
+$route['master/menu/detail/(:num)']                 = 'master/C_Menu/detail/$1';
+$route['master/menu/save']                          = 'master/C_Menu/save';
+$route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
+$route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
+$route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
+
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
 

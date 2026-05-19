@@ -28,18 +28,33 @@ class Auth extends CI_Controller
 
             foreach ($check_password as $key) {
                 if ($key->username == $username && password_verify($password, $key->password)) {
+                    if (isset($key->status) && (int)$key->status !== 1) {
+                        $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
+                        $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
+                        redirect('Auth');
+                        return;
+                    }
+
                     $data_session = array(
                         'id'            => $key->id,
+                        'id_karyawan'   => $key->id,
                         'nik'           => $key->nik,
+                        'username'      => $key->username,
                         'departemen'    => $key->departemen,
                         'lv'            => $key->akses_lv,
+                        'akses_lv'      => $key->akses_lv,
+                        'akses_lv_id'   => $key->akses_lv_id ?? $key->akses_lv,
                         'jobdesk'       => $key->jobdesk,
+                        'jobdesk_id'    => $key->jobdesk_id ?? null,
                         'nama'          => $key->nm_karyawan,
                         'tim'           => $key->tim,
-                        'wilayah'       => $key->wilayah
+                        'wilayah'       => $key->wilayah,
+                        'logged_in'     => true
                     );
-                    $this->session->set_userdata('logged_in', true);
                     $this->session->set_userdata($data_session);
+                    $this->M_Auth->update_last_login($key->id);
+                    $this->M_Auth->log_login($key, 'success', 'Login berhasil');
+
                     if ($key->username === 'admin') {
                         redirect('dashboard_penilaian');
                     } else if ($key->jobdesk == 'LOGISTIK') {
@@ -70,6 +85,8 @@ class Auth extends CI_Controller
                         redirect('logistik/distibusi');
                     } else if ($key->jobdesk == 'ADMINLOGLPB') {
                         redirect('ics/icspo');
+                    } else if ($key->jobdesk == 'ADMIN PO') {
+                        redirect('ics/icspo');
                     } else if ($key->jobdesk == 'ADMLOG') {
                         redirect('checker');
                     } else if ($key->jobdesk == 'CHECKER') {
@@ -86,13 +103,17 @@ class Auth extends CI_Controller
                         redirect('sales_order');
                     } else if ($key->jobdesk == 'SUPERADMIN') {
                         redirect('penilaian_lingkungan');
+                    } else {
+                        redirect('dashboard');
                     }
                 } else {
+                    $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Password salah');
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
                     redirect('Auth');
                 }
             }
         } else {
+            $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Username tidak ditemukan');
             $this->session->set_flashdata("gagal", "username salah");
             redirect('Auth');
         }
