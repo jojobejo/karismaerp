@@ -1270,7 +1270,6 @@ class C_Logistik extends CI_Controller
         ];
 
         $insert_batch   = [];
-        $ledger_rows    = [];
         $kd_faktur_list = [];
 
         foreach ($getdetail as $det) {
@@ -1287,13 +1286,6 @@ class C_Logistik extends CI_Controller
             ];
 
             $kd_faktur_list[] = $det->kd_faktur;
-
-            $ledger_rows[] = [
-                'kd_barang' => $det->kd_barang,
-                'no_lot'    => $det->no_lot,
-                'tgl_exp'   => $det->tgl_exp,
-                'qty'       => $det->qty,
-            ];
         }
 
         $kd_faktur_list = array_unique($kd_faktur_list);
@@ -1305,10 +1297,6 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
         foreach ($kd_faktur_list as $fk) {
             $this->M_Logistik->sync_so_status_by_faktur($fk, 'in_progress');
-        }
-
-        if (!empty($ledger_rows)) {
-            $this->M_Logistik->finalize_ledger_do($ledger_rows, $kd, $kd_faktur_list);
         }
 
         echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam, menunggu konfirmasi Sales.']);
@@ -1463,14 +1451,23 @@ class C_Logistik extends CI_Controller
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdfaktur']       = $kdfaktur;
         $data['list_faktur']    = $this->M_Logistik->get_list_by_rute();
+        $data['do_summary']     = $this->M_Logistik->get_do_tonase_kubikasi_summary($kdfaktur);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/list_faktur_by_rute.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function insertfromdraft($kddo, $kdfaktur)
+    public function insertfromdraft($kddo = null, $kdfaktur = null)
     {
+        $kddo = $kddo !== null ? rawurldecode($kddo) : trim((string)$this->input->get('kddo', true));
+        $kdfaktur = $kdfaktur !== null ? rawurldecode($kdfaktur) : trim((string)$this->input->get('kd_faktur', true));
+
+        if ($kddo === '' || $kdfaktur === '') {
+            show_404();
+            return;
+        }
+
         date_default_timezone_set("Asia/Jakarta");
         $get_pre_do = $this->M_Logistik->get_do_cust($kdfaktur);
         $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kdfaktur);
@@ -1750,8 +1747,16 @@ class C_Logistik extends CI_Controller
         echo json_encode($data);
     }
 
-    public function insert_tmp($kd, $action)
+    public function insert_tmp($kd = null, $action = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        $action = $action !== null ? $action : trim((string)$this->input->get('action', true));
+
+        if ($kd === '' || $action === '') {
+            show_404();
+            return;
+        }
+
         switch ($action) {
 
             case 'formdetail':
@@ -1802,7 +1807,7 @@ class C_Logistik extends CI_Controller
 
                     $this->M_Logistik->insert_tmp_do($datainsert);
                     $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
-                    redirect('detail_fk/' . $kd);
+                    redirect('detail_fk?kd_faktur=' . rawurlencode($kd));
                 }
                 break;
 
@@ -1909,7 +1914,7 @@ class C_Logistik extends CI_Controller
                     }
                 }
 
-                redirect('detail_fk_pnd/' . $kdfaktur);
+                redirect('detail_fk_pnd/' . rawurlencode($kdfaktur));
                 break;
 
             case 'formonsite':
@@ -2002,8 +2007,16 @@ class C_Logistik extends CI_Controller
         echo json_encode($query);
     }
 
-    public function revert_do($kd, $action)
+    public function revert_do($kd = null, $action = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        $action = $action !== null ? $action : trim((string)$this->input->get('action', true));
+
+        if ($kd === '' || $action === '') {
+            show_404();
+            return;
+        }
+
         switch ($action) {
             case 'revertdetail':
                 $update_pre_do = [
@@ -2163,8 +2176,14 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function detail_fk($kd)
+    public function detail_fk($kd = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        if ($kd === '') {
+            show_404();
+            return;
+        }
+
         if (substr($kd, -3) === 'PND') {
             $kd_bersih = substr($kd, 0, -3);
         } else {

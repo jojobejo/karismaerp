@@ -454,30 +454,6 @@ class M_Logistik extends CI_Model
         return $this->db->query($sql)->result();
     }
 
-    public function insert_ledger_do_draft(array $detailRows, $kd_do, $gudang_id = null)
-    {
-        if (empty($detailRows)) return false;
-
-        $gudang_id = $gudang_id ?? '6';
-        $rows      = [];
-
-        foreach ($detailRows as $row) {
-            $rows[] = [
-                'kd_barang'    => $row['kd_barang'],
-                'gudang_id'    => $gudang_id,
-                'no_lot'       => $row['no_lot']      ?? null,
-                'expired_date' => $row['tgl_exp']     ?? null,
-                'qty'          => $row['qty'],
-                'tipe'         => 'RESERVE',
-                'ref_no'       => $kd_do,
-                'ref_type'     => 'DELIVERY_ORDER',
-                'created_at'   => date('Y-m-d H:i:s'),
-            ];
-        }
-
-        return $this->db->insert_batch('tberp_stock_ledger', $rows);
-    }
-
     public function finalize_ledger_do(array $detailRows, $kd_do, array $kd_faktur_list, $gudang_id = '6')
     {
         if (empty($detailRows)) return false;
@@ -641,6 +617,8 @@ class M_Logistik extends CI_Model
                 COALESCE(r.kd_rute, c.regional)     AS kd_rute,
                 COALESCE(r.keterangan, c.regional)   AS keterangan_rute,
                 COUNT(DISTINCT fd.kd_barang)         AS total_barang,
+                ROUND(SUM(fd.qty * COALESCE(mb.berat, fd.berat_gram, 0)) / 1000000, 3) AS total_tonase_faktur,
+                ROUND(SUM(fd.qty * COALESCE(mb.kubikasi, fd.kubikasi_m3, 0)), 4) AS total_kubikasi,
                 CASE
                     WHEN d.kd_faktur IS NOT NULL THEN 'proses_do'
                     WHEN t.kd_faktur IS NOT NULL THEN 'in_delivery'
@@ -649,6 +627,7 @@ class M_Logistik extends CI_Model
             FROM tbso_faktur_penjualan f
             JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
             JOIN tb_customer c ON c.kd_customer = f.kd_customer
+            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
             LEFT JOIN tb_detail_do d ON d.kd_faktur = f.no_faktur
             LEFT JOIN tb_tmp_detaildo t ON t.kd_faktur = f.no_faktur
@@ -657,6 +636,18 @@ class M_Logistik extends CI_Model
             AND t.kd_faktur IS NULL
             GROUP BY f.id_faktur, f.no_faktur
         ")->result();
+    }
+
+    public function get_do_tonase_kubikasi_summary($kd_do)
+    {
+        return $this->db->query("
+            SELECT
+                ROUND(COALESCE(SUM(d.qty * COALESCE(m.berat, 0)), 0) / 1000000, 3) AS total_tonase_faktur,
+                ROUND(COALESCE(SUM(d.qty * COALESCE(m.kubikasi, 0)), 0), 4) AS total_kubikasi
+            FROM tb_detail_do d
+            LEFT JOIN tb_master_barang_all m ON m.kd_barang = d.kd_barang
+            WHERE d.kd_do = ?
+        ", [$kd_do])->row();
     }
 
     public function get_do_cust($kd_faktur)

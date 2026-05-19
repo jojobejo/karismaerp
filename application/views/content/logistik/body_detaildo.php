@@ -289,6 +289,100 @@
                                         </div>
                                     </div>
                                     <!-- END TONASE KUBIKASI -->
+
+                                    <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK' && ($d->status == '1' || $d->status == '2')) : ?>
+                                        <?php
+                                            $tgl_pengiriman = '';
+                                            if (!empty($d->tgl_pengiriman) && $d->tgl_pengiriman !== '0000-00-00') {
+                                                $tgl_pengiriman_ts = strtotime($d->tgl_pengiriman);
+                                                $tgl_pengiriman = $tgl_pengiriman_ts ? date('Y-m-d', $tgl_pengiriman_ts) : '';
+                                            }
+
+                                            $is_luar = false;
+                                            if (!empty($d->driver) && !empty($d->nolambung)) {
+                                                $driver_exists = false;
+                                                foreach ($driver as $drv_check) {
+                                                    if ((string)$drv_check->kd_driver === (string)$d->driver) {
+                                                        $driver_exists = true;
+                                                        break;
+                                                    }
+                                                }
+
+                                                $truck_exists = false;
+                                                foreach ($truck as $trk_check) {
+                                                    if ((string)$trk_check->id === (string)$d->nolambung) {
+                                                        $truck_exists = true;
+                                                        break;
+                                                    }
+                                                }
+
+                                                $is_luar = !$driver_exists || !$truck_exists;
+                                            }
+                                        ?>
+                                        <div class="border rounded p-3 mb-3">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <div class="form-group mb-2">
+                                                        <label for="tgl_isi">Tanggal Pengiriman</label>
+                                                        <input type="date" class="form-control" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <div class="form-group mb-2">
+                                                        <label>Jenis Pengiriman</label>
+                                                        <div class="d-flex flex-wrap">
+                                                            <div class="custom-control custom-radio mr-3">
+                                                                <input class="custom-control-input" type="radio" id="jenis_kantor" name="jenis_pengiriman" value="expedisi_kantor" <?= !$is_luar ? 'checked' : '' ?>>
+                                                                <label for="jenis_kantor" class="custom-control-label">Ekspedisi Kantor</label>
+                                                            </div>
+                                                            <div class="custom-control custom-radio">
+                                                                <input class="custom-control-input" type="radio" id="jenis_luar" name="jenis_pengiriman" value="expedisi_luar" <?= $is_luar ? 'checked' : '' ?>>
+                                                                <label for="jenis_luar" class="custom-control-label">Ekspedisi Luar</label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3" id="select_driver_wrapper">
+                                                    <div class="form-group mb-2">
+                                                        <label for="driver_isi">Driver</label>
+                                                        <select class="form-control" name="driver_isi" id="driver_isi">
+                                                            <option value="">Pilih Driver</option>
+                                                            <?php foreach ($driver as $drv) : ?>
+                                                                <option value="<?= htmlspecialchars($drv->kd_driver, ENT_QUOTES, 'UTF-8') ?>" <?= (string)$d->driver === (string)$drv->kd_driver ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($drv->nama_driver, ENT_QUOTES, 'UTF-8') ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 d-none" id="input_driver_luar_wrapper">
+                                                    <div class="form-group mb-2">
+                                                        <label for="driver_luar_isi">Driver Luar</label>
+                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi" value="<?= $is_luar ? htmlspecialchars($d->driver, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="Nama driver">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3" id="select_truck_wrapper">
+                                                    <div class="form-group mb-2">
+                                                        <label for="truck_isi">Kendaraan</label>
+                                                        <select class="form-control" name="truck_isi" id="truck_isi">
+                                                            <option value="">Pilih Kendaraan</option>
+                                                            <?php foreach ($truck as $trk) : ?>
+                                                                <option value="<?= htmlspecialchars($trk->id, ENT_QUOTES, 'UTF-8') ?>" <?= (string)$d->nolambung === (string)$trk->id ? 'selected' : '' ?>>
+                                                                    <?= htmlspecialchars($trk->noplat, ENT_QUOTES, 'UTF-8') ?><?= !empty($trk->nm_truk) ? ' - ' . htmlspecialchars($trk->nm_truk, ENT_QUOTES, 'UTF-8') : '' ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3 d-none" id="input_truck_luar_wrapper">
+                                                    <div class="form-group mb-2">
+                                                        <label for="truck_luar_isi">Kendaraan Luar</label>
+                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi" value="<?= $is_luar ? htmlspecialchars($d->nolambung, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="No. plat / kendaraan">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                                 <!-- END FORM -->
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>

@@ -43,10 +43,10 @@
                                             <td>
                                                 <div class="row">
                                                     <div class="col-6">
-                                                        <a href="<?= base_url('detail_fk/') . $l->kd_faktur ?>" class="btn btn-info btn-sm btn-block"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('detail_fk?kd_faktur=' . rawurlencode($l->kd_faktur)) ?>" class="btn btn-info btn-sm btn-block"><i class="fas fa-eye"></i></a>
                                                     </div>
                                                     <div class="col-6">
-                                                        <a href="<?= base_url('insert_tmp/') . $l->kd_faktur . '/' . 'formonsite' ?>" class="btn btn-success btn-sm btn-block"><i class="fas fa-plus"></i></a>
+                                                        <a href="<?= base_url('insert_tmp?kd_faktur=' . rawurlencode($l->kd_faktur) . '&action=formonsite') ?>" class="btn btn-success btn-sm btn-block"><i class="fas fa-plus"></i></a>
                                                     </div>
                                                 </div>
                                             </td>

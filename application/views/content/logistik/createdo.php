@@ -138,10 +138,10 @@
                                             <td style="width: 15%;">
                                                 <div class="row">
                                                     <div class="col p-0">
-                                                        <a href="<?= base_url('detail_fk/') . $tmp->kd_faktur ?>" class="btn btn-primary btn-block"><i class="fas fa-eye"></i></a>
+                                                        <a href="<?= base_url('detail_fk?kd_faktur=' . rawurlencode($tmp->kd_faktur)) ?>" class="btn btn-primary btn-block"><i class="fas fa-eye"></i></a>
                                                     </div>
                                                     <div class="col p-">
-                                                        <a href="<?= base_url('revert_do/') . $tmp->kd_faktur . '/' . 'formlist' ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
+                                                        <a href="<?= base_url('revert_do?kd_faktur=' . rawurlencode($tmp->kd_faktur) . '&action=formlist') ?>" class="btn btn-block btn-warning"><i class="fas fa-undo"></i></a>
                                                     </div>
                                                     <!-- <div class="col p-0">
                                                         <button class="btn btn-info btn-block btn-nurut" data-id="<?= $tmp->id ?>">
@@ -334,6 +334,7 @@
                 }
 
                 $.each(response.data, function(i, l) {
+                    var kdFakturUrl = encodeURIComponent(l.kd_faktur || '');
                     var statusBadge = '';
                     var canAdd      = false;
 
@@ -363,14 +364,14 @@
                         </td>`;
                         actionBtn = `
                             <div class="row">
-                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
-                                <a href="<?= base_url('insert_tmp/') ?>${l.kd_faktur}/formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
+                                <a href="<?= base_url('detail_fk') ?>?kd_faktur=${kdFakturUrl}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('insert_tmp') ?>?kd_faktur=${kdFakturUrl}&action=formlist" class="btn btn-success btn-block btn-sm"><i class="fas fa-plus"></i></a>
                             </div>`;
                     } else {
                         checkboxCell = '<td class="text-center">-</td>';
                         actionBtn = `
                             <div class="row">
-                                <a href="<?= base_url('detail_fk/') ?>${l.kd_faktur}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
+                                <a href="<?= base_url('detail_fk') ?>?kd_faktur=${kdFakturUrl}" class="btn btn-info btn-block btn-sm"><i class="fas fa-eye"></i></a>
                             </div>`;
                     }
 
@@ -466,7 +467,11 @@
             var kd_faktur = list[index];
 
             $.ajax({
-                url: '<?= base_url("insert_tmp/") ?>' + kd_faktur + '/formlist',
+                url: '<?= base_url("insert_tmp") ?>',
+                data: {
+                    kd_faktur: kd_faktur,
+                    action: 'formlist'
+                },
                 type: 'GET',
                 success: function() {
                     prosesInsertBerurutan(list, index + 1, callback);

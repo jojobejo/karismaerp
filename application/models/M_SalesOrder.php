@@ -152,7 +152,7 @@ class M_SalesOrder extends CI_Model
      */
     public function generate_no_faktur()
     {
-        $prefix = 'INV/' . date('dmy') . '/';
+        $prefix = 'INV-' . date('dmy') . '-';
 
         $row = $this->db
             ->like('no_faktur', $prefix, 'after')

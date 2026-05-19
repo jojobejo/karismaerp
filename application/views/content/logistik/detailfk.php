@@ -192,18 +192,18 @@
                             <?php if ($status_faktur == '1') : ?>
                                 <div class="row">
                                     <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'onsite' ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
+                                        <a href="<?= base_url('insert_tmp?kd_faktur=' . rawurlencode($kdfaktur) . '&action=formonsite') ?>" class="btn btn-info btn-block mt-4 mb-2">Input On Site</a>
                                     </div>
                                     <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formlist_pending' ?>" class="btn btn-warning btn-block mt-4 mb-2">Input to Pending</a>
+                                        <a href="<?= base_url('insert_tmp?kd_faktur=' . rawurlencode($kdfaktur) . '&action=formlist_pending') ?>" class="btn btn-warning btn-block mt-4 mb-2">Input to Pending</a>
                                     </div>
                                     <div class="col-4">
-                                        <a href="<?= base_url('insert_tmp/') . $kdfaktur . '/' . 'formdetail' ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
+                                        <a href="<?= base_url('insert_tmp?kd_faktur=' . rawurlencode($kdfaktur) . '&action=formdetail') ?>" class="btn btn-success btn-block mt-4 mb-2">Input To Draft</a>
                                     </div>
                                 </div>
                             <?php elseif ($status_faktur == '4') : ?>
                             <?php else : ?>
-                                <a href="<?= base_url('revert_do/') . $kdfaktur . '/' . 'revertdetail' ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
+                                <a href="<?= base_url('revert_do?kd_faktur=' . rawurlencode($kdfaktur) . '&action=revertdetail') ?>" class="btn btn-warning btn-block mt-4 mb-2">Revert DO</a>
                             <?php endif; ?>
 
                         <?php endforeach; ?>
