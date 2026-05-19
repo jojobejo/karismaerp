@@ -3,78 +3,123 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class C_Api extends CI_Controller
 {
+    protected $syncPrePoUrl = 'http://localhost/kiu_po/get_data_pre_po_erp';
+
     public function __construct()
     {
         parent::__construct();
-        $this->load->model('M_Api', 'preDo');
-
-        header('Content-Type: application/json');
-        header('Access-Control-Allow-Origin: *');
+        $this->load->model('Api/M_Api', 'apiModel');
+        date_default_timezone_set('Asia/Jakarta');
     }
-
-    /**
-     * GET /api/predo
-     * ?limit=50&offset=0
-     */
 
     public function index()
     {
-        $limit  = (int) $this->input->get('limit') ?: 100;
-        $offset = (int) $this->input->get('offset') ?: 0;
+        $limit  = (int) $this->input->get('limit', true);
+        $offset = (int) $this->input->get('offset', true);
 
-        $data = $this->preDo->get_all($limit, $offset);
+        if ($limit <= 0) {
+            $limit = 100;
+        }
 
-        echo json_encode([
+        if ($offset < 0) {
+            $offset = 0;
+        }
+
+        $data = $this->apiModel->get_all($limit, $offset);
+
+        return $this->_json_response([
             'status' => true,
             'total'  => count($data),
             'data'   => $data
         ]);
     }
 
-    /**
-     * GET /api/predo/faktur/{kode_faktur}
-     */
-
-    public function faktur($kode_faktur)
+    public function faktur($kode_faktur = null)
     {
         if (!$kode_faktur) {
-            $this->_bad_request('Kode faktur wajib diisi');
-            return;
+            return $this->_json_response([
+                'status'  => false,
+                'message' => 'Kode faktur wajib diisi'
+            ], 400);
         }
 
-        $data = $this->preDo->get_by_kode_faktur($kode_faktur);
+        $data = $this->apiModel->get_by_kode_faktur($kode_faktur);
 
-        echo json_encode([
-            'status' => $data ? true : false,
+        return $this->_json_response([
+            'status' => !empty($data),
             'data'   => $data
         ]);
     }
 
-    /**
-     * GET /api/predo/kdupdate/{kdupdate}
-     */
-    public function kdupdate($kdupdate)
+    public function kdupdate($kdupdate = null)
     {
         if (!$kdupdate) {
-            $this->_bad_request('kdupdate wajib diisi');
-            return;
+            return $this->_json_response([
+                'status'  => false,
+                'message' => 'kdupdate wajib diisi'
+            ], 400);
         }
 
-        $data = $this->preDo->get_by_kdupdate($kdupdate);
+        $data = $this->apiModel->get_by_kdupdate($kdupdate);
 
-        echo json_encode([
+        return $this->_json_response([
             'status' => true,
             'total'  => count($data),
             'data'   => $data
         ]);
     }
 
-    private function _bad_request($message)
+    public function sync_pre_po_erp()
     {
-        http_response_code(400);
-        echo json_encode([
-            'status'  => false,
-            'message' => $message
-        ]);
+        if (strtoupper($this->input->method(true)) !== 'POST') {
+            return $this->_json_response([
+                'status'  => false,
+                'message' => 'Method tidak diizinkan'
+            ], 405);
+        }
+
+        try {
+            $result = $this->apiModel->sync_pre_po_from_remote($this->syncPrePoUrl);
+
+            if (!$result['status']) {
+                return $this->_json_response([
+                    'status'   => false,
+                    'message'  => $result['message'],
+                    'inserted' => 0,
+                    'updated'  => 0,
+                    'skipped'  => (int) ($result['skipped'] ?? 0)
+                ], $result['http_code']);
+            }
+
+            return $this->_json_response([
+                'status'        => true,
+                'message'       => 'Sinkronisasi berhasil',
+                'inserted'      => (int) $result['inserted'],
+                'updated'       => (int) $result['updated'],
+                'skipped'       => (int) $result['skipped'],
+                'total_fetched' => (int) $result['total_fetched'],
+                'sync_time'     => $result['sync_time'],
+                'rows'          => $this->apiModel->get_recent_pre_po(100),
+                'last_sync'     => $this->apiModel->get_last_sync_info()
+            ]);
+        } catch (Exception $e) {
+            log_message('error', 'sync_pre_po_erp exception: ' . $e->getMessage());
+
+            return $this->_json_response([
+                'status'   => false,
+                'message'  => 'Gagal sinkronisasi: ' . $e->getMessage(),
+                'inserted' => 0,
+                'updated'  => 0,
+                'skipped'  => 0
+            ], 500);
+        }
+    }
+
+    private function _json_response(array $payload, $httpCode = 200)
+    {
+        return $this->output
+            ->set_status_header($httpCode)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 }

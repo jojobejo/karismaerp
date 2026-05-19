@@ -570,11 +570,15 @@ class C_Ics extends CI_Controller
     {
         $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
+        $this->load->model('Api/M_Api', 'apiPo');
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['lpb']        = $this->M_Logistik->get_lpb($date1, $date2);
         $data['date1']      = $date1;
         $data['date2']      = $date2;
+        $data['sync_api_url'] = base_url('sync_pre_po_erp');
+        $data['sync_rows']    = $this->apiPo->get_recent_pre_po(100);
+        $data['last_sync']    = $this->apiPo->get_last_sync_info();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icspo.php', $data);

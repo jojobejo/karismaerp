@@ -353,6 +353,7 @@ $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confir
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
+$route['sync_pre_po_erp']                          = 'api/C_Api/sync_pre_po_erp';
 
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';
@@ -438,7 +439,7 @@ $route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environme
 $route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
 $route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
 $route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
-$route['hrd/penilaian_lingkungan/locations/delete']= 'hrd/C_Hrd/delete_hrd_location';
+$route['hrd/penilaian_lingkungan/locations/delete'] = 'hrd/C_Hrd/delete_hrd_location';
 $route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
 $route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
 $route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
