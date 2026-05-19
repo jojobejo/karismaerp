@@ -1367,8 +1367,7 @@ class C_Logistik extends CI_Controller
                     ->result_array();
 
                 foreach ($faktur_list as $fk) {
-                    $this->db->where('no_faktur', $fk['kd_faktur']);
-                    $this->db->update('tbso_sales_order', ['status' => 'selesai']);
+                    $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'selesai');
                 }
             }
 
@@ -1995,9 +1994,9 @@ class C_Logistik extends CI_Controller
     public function get_faktur()
     {
         $id = $this->input->post('kdfaktur');
-        $this->db->select('a.nama_barang as nama_barang,a.qty as qty,a.satuan as satuan');
-        $this->db->from('tb_pre_do a');
-        $this->db->where('a.kd_faktur', $id);
+        $this->db->select('a.nama_barang AS nama_barang, a.qty AS qty, a.satuan AS satuan');
+        $this->db->from('tbso_faktur_detail a');
+        $this->db->where('a.no_faktur', $id);
         $query = $this->db->get()->row();
 
         echo json_encode($query);
@@ -2122,7 +2121,6 @@ class C_Logistik extends CI_Controller
                 $update_ids[] = $tmp->id_pre_do;
             }
 
-            // Update status SO di tbso_sales_order
             $kd_faktur_list = array_unique(array_column(
                 array_map(function($t){ return ['kd_faktur' => $t->kd_faktur]; }, $tmpdetail),
                 'kd_faktur'
