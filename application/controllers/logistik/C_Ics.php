@@ -629,6 +629,7 @@ class C_Ics extends CI_Controller
         $data['kd_po']      = $kd_po;
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
+        $data['is_admin_po'] = $this->is_admin_po_jobdesk();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
@@ -687,6 +688,293 @@ class C_Ics extends CI_Controller
             'status' => 'success',
             'header' => $header,
             'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+        ]);
+    }
+
+    private function json_response($payload)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload);
+    }
+
+    private function active_user_name()
+    {
+        return $this->session->userdata('nama')
+            ?: $this->session->userdata('nama_user')
+            ?: $this->session->userdata('username')
+            ?: $this->session->userdata('nik')
+            ?: 'SYSTEM';
+    }
+
+    private function is_admin_po_jobdesk()
+    {
+        return strtoupper(trim((string) $this->session->userdata('jobdesk'))) === 'ADMIN PO';
+    }
+
+    private function reject_non_admin_po_ajax()
+    {
+        if ($this->is_admin_po_jobdesk()) {
+            return FALSE;
+        }
+
+        $this->json_response([
+            'status'  => 'error',
+            'message' => 'Akses fitur ini hanya untuk ADMIN PO.',
+            'html'    => ''
+        ]);
+
+        return TRUE;
+    }
+
+    private function rupiah($value)
+    {
+        return 'Rp ' . number_format((float) $value, 0, ',', '.');
+    }
+
+    private function render_pre_po_adjustment_cards($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-box-open fa-2x mb-2"></i><div>Data PRE PO untuk adjustment belum tersedia.</div></div>';
+        }
+
+        $html = '
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover lpb-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">No</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Satuan</th>
+                            <th class="text-right">Harga Satuan</th>
+                            <th class="text-right">Harga Total</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+
+        $no = 1;
+        foreach ($rows as $row) {
+            $kdBarang = htmlspecialchars((string) ($row['kd_barang'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $namaBarang = htmlspecialchars((string) ($row['nama_barang'] ?? '-'), ENT_QUOTES, 'UTF-8');
+            $qty = (float) ($row['qty'] ?? 0);
+            $satuan = htmlspecialchars((string) ($row['satuan'] ?? '-'), ENT_QUOTES, 'UTF-8');
+            $hargaSatuan = (float) ($row['hrg_satuan'] ?? 0);
+            $hargaTotal = (float) ($row['harga_total'] ?? 0);
+
+            $html .= '
+                <tr>
+                    <td class="text-center">' . $no . '</td>
+                    <td class="font-weight-bold">' . $kdBarang . '</td>
+                    <td>' . $namaBarang . '</td>
+                    <td class="text-center">' . htmlspecialchars(number_format($qty, 0, ',', '.'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-center">' . $satuan . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaSatuan) . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaTotal) . '</td>
+                    <td class="text-center">
+                        <button type="button"
+                            class="btn btn-warning btn-sm js-open-adjustment"
+                            data-kd-barang="' . $kdBarang . '"
+                            data-nama-barang="' . $namaBarang . '"
+                            data-qty="' . htmlspecialchars((string) $qty, ENT_QUOTES, 'UTF-8') . '"
+                            data-satuan="' . $satuan . '"
+                            data-harga-satuan="' . htmlspecialchars((string) $hargaSatuan, ENT_QUOTES, 'UTF-8') . '"
+                            data-harga-total="' . htmlspecialchars((string) $hargaTotal, ENT_QUOTES, 'UTF-8') . '">
+                            <i class="fas fa-money-bill-wave mr-1"></i> Adjustment Harga
+                        </button>
+                    </td>
+                </tr>';
+            $no++;
+        }
+        $html .= '</tbody></table></div>';
+
+        return $html;
+    }
+
+    private function render_history_invoice($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-file-invoice fa-2x mb-2"></i><div>History invoice belum tersedia.</div></div>';
+        }
+
+        $html = '<div class="list-group">';
+        foreach ($rows as $row) {
+            $html .= '<div class="list-group-item">
+                <div class="d-flex justify-content-between" style="gap:12px; flex-wrap:wrap;">
+                    <div class="font-weight-bold">' . htmlspecialchars((string) ($row['no_invoice'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                    <span class="badge badge-primary">' . htmlspecialchars((string) ($row['action_type'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span>
+                </div>
+                <div class="text-muted small mt-2">' . htmlspecialchars((string) ($row['keterangan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                <div class="small mt-2"><i class="fas fa-user mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_oleh'] ?? '-'), ENT_QUOTES, 'UTF-8') . ' <span class="text-muted ml-2"><i class="fas fa-clock mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_pada'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span></div>
+            </div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    private function render_history_adjustment($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-history fa-2x mb-2"></i><div>History adjustment belum tersedia.</div></div>';
+        }
+
+        $html = '<div class="list-group">';
+        foreach ($rows as $row) {
+            $html .= '<div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start" style="gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <div class="font-weight-bold">' . htmlspecialchars((string) ($row['kd_barang'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                        <div class="text-muted small">' . htmlspecialchars((string) ($row['alasan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="small">Harga: <strong>' . $this->rupiah($row['harga_satuan_lama'] ?? 0) . '</strong> ke <strong>' . $this->rupiah($row['harga_satuan_baru'] ?? 0) . '</strong></div>
+                        <div class="small">Total: <strong>' . $this->rupiah($row['harga_total_lama'] ?? 0) . '</strong> ke <strong>' . $this->rupiah($row['harga_total_baru'] ?? 0) . '</strong></div>
+                    </div>
+                </div>
+                <div class="small mt-2"><i class="fas fa-user mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_oleh'] ?? '-'), ENT_QUOTES, 'UTF-8') . ' <span class="text-muted ml-2"><i class="fas fa-clock mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_pada'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span></div>
+            </div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    public function ajax_get_pre_po_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_pre_po_adjustment($kd_po);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Data PRE PO berhasil dimuat.',
+            'html'    => $this->render_pre_po_adjustment_cards($rows),
+            'rows'    => $rows
+        ]);
+    }
+
+    public function ajax_submit_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->post('kd_po', TRUE));
+        $kd_barang = trim((string) $this->input->post('kd_barang', TRUE));
+        $hargaBaru = (float) $this->input->post('harga_satuan_baru', TRUE);
+        $alasan = trim((string) $this->input->post('alasan', TRUE));
+
+        if ($kd_po === '' || $kd_barang === '' || $hargaBaru < 0 || $alasan === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Data adjustment belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->submit_adjustment([
+            'kd_po'              => $kd_po,
+            'kd_barang'          => $kd_barang,
+            'harga_satuan_baru'  => $hargaBaru,
+            'alasan'             => $alasan,
+            'dilakukan_oleh'     => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Adjustment harga gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $rows = $this->M_Logistik->get_pre_po_adjustment($kd_po);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Adjustment harga berhasil disimpan.',
+            'html'    => $this->render_pre_po_adjustment_cards($rows)
+        ]);
+    }
+
+    public function ajax_history_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+        $kd_barang = trim((string) $this->input->get('kd_barang', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_history_adjustment($kd_po, $kd_barang);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'History adjustment berhasil dimuat.',
+            'html'    => $this->render_history_adjustment($rows)
+        ]);
+    }
+
+    public function ajax_history_invoice()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_history_invoice($kd_po);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'History invoice berhasil dimuat.',
+            'html'    => $this->render_history_invoice($rows)
+        ]);
+    }
+
+    public function ajax_update_invoice()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $no_invoice = trim((string) $this->input->post('no_invoice', TRUE));
+        $nosj = trim((string) $this->input->post('nosj', TRUE));
+        $tgl_sj = trim((string) $this->input->post('tgl_sj', TRUE));
+        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+
+        if ($id_lpb <= 0 || $no_invoice === '' || $nosj === '' || $tgl_sj === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Data invoice belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_invoice_lpb([
+            'id_lpb'         => $id_lpb,
+            'no_invoice'     => $no_invoice,
+            'nosj'           => $nosj,
+            'tgl_sj'         => $tgl_sj,
+            'keterangan'     => $keterangan,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update invoice LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Invoice LPB berhasil diperbarui.',
+            'html'    => ''
         ]);
     }
 

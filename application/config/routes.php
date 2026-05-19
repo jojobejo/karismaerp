@@ -180,6 +180,11 @@ $route['ics/detail_po']                             = 'logistik/C_Ics/detail_po'
 $route['ics/detail_record_lpb']                     = 'logistik/C_Ics/detail_record_lpb';
 $route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
 $route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';
+$route['ics/ajax_get_pre_po_adjustment']            = 'logistik/C_Ics/ajax_get_pre_po_adjustment';
+$route['ics/ajax_submit_adjustment']                = 'logistik/C_Ics/ajax_submit_adjustment';
+$route['ics/ajax_history_adjustment']               = 'logistik/C_Ics/ajax_history_adjustment';
+$route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_history_invoice';
+$route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
 $route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
 $route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';
 $route['ics/ajax_save_tmp_po_received']             = 'logistik/C_Ics/ajax_save_tmp_po_received';
@@ -264,6 +269,8 @@ $route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/det
 
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
+$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
+$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
 $route['stockopname']                               = 'logistik/C_Logistik/stockopname';
 $route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
@@ -446,10 +453,6 @@ $route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_
 $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
-
-// LPB
-$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
-$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

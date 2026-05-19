@@ -178,11 +178,12 @@
                             border-color: #243cff;
                             vertical-align: middle;
                         }
+
                     </style>
 
                     <div class="row mb-3">
                         <div class="col-auto">
-                            <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($no_po ?? '') . '&kd_suplier=' . urlencode($kd_suplier ?? '')) ?>" class="btn btn-primary">
+                            <a href="<?= !empty($is_admin_po) ? base_url('ics/icspo') : base_url('ics/detail_po?no_po=' . urlencode($no_po ?? '') . '&kd_suplier=' . urlencode($kd_suplier ?? '')) ?>" class="btn btn-primary">
                                 <i class="fas fa-arrow-left mr-1"></i> Kembali ke Detail PO
                             </a>
                         </div>
@@ -225,6 +226,34 @@
                         </div>
                     </div>
 
+                    <?php if (!empty($is_admin_po)) : ?>
+                    <div class="lpb-panel mb-4" id="prePoAdjustmentPanel">
+                        <div class="lpb-panel-header">
+                            <div>
+                                <h3 class="card-title mb-0 font-weight-bold">LPB Invoice & Adjustment Harga</h3>
+                            </div>
+                            <div class="d-flex align-items-center" style="gap:8px; flex-wrap:wrap;">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnHistoryInvoiceAll">
+                                    <i class="fas fa-file-invoice mr-1"></i> History Invoice
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm" id="btnHistoryAdjustmentAll">
+                                    <i class="fas fa-history mr-1"></i> History Adjustment
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnReloadPrePoAdjustment">
+                                    <i class="fas fa-sync-alt mr-1"></i> Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="lpb-panel-body">
+                            <div id="prePoAdjustmentLoading" class="lpb-loading-state">
+                                <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                                <div>Memuat data PRE PO...</div>
+                            </div>
+                            <div id="prePoAdjustmentContainer" style="display:none;"></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="row">
                         <div class="col-lg-4 mb-4">
                             <div class="lpb-panel h-100">
@@ -265,6 +294,11 @@
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
                                     </div>
                                     <div class="d-flex align-items-center" style="gap:10px;">
+                                        <?php if (!empty($is_admin_po)) : ?>
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
+                                            <i class="fas fa-file-invoice mr-1"></i> Update Invoice
+                                        </button>
+                                        <?php endif; ?>
                                         <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
                                             <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
                                         </button>
@@ -317,11 +351,131 @@
         <aside class="control-sidebar control-sidebar-dark"></aside>
     </div>
 
+    <?php if (!empty($is_admin_po)) : ?>
+    <div class="modal fade" id="modalAdjustmentHarga" tabindex="-1" role="dialog" aria-labelledby="modalAdjustmentHargaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <form id="formAdjustmentHarga" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAdjustmentHargaLabel">Adjustment Harga</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="adjKdBarang" name="kd_barang">
+                    <div class="form-group">
+                        <label>Barang</label>
+                        <input type="text" class="form-control" id="adjNamaBarang" readonly>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Harga Lama</label>
+                                <input type="text" class="form-control" id="adjHargaLamaText" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Harga Baru</label>
+                                <input type="number" min="0" step="1" class="form-control" id="adjHargaBaru" name="harga_satuan_baru" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Qty</label>
+                                <input type="number" class="form-control" id="adjQty" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Total Baru</label>
+                                <input type="text" class="form-control" id="adjTotalBaruText" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Alasan Adjustment</label>
+                        <textarea class="form-control" id="adjAlasan" name="alasan" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btnSubmitAdjustment">
+                        <i class="fas fa-save mr-1"></i> Simpan Adjustment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalHistoryLpb" tabindex="-1" role="dialog" aria-labelledby="modalHistoryLpbLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalHistoryLpbLabel">History</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="historyLpbLoading" class="lpb-loading-state" style="display:none;">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
+                        <div>Memuat history...</div>
+                    </div>
+                    <div id="historyLpbContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpdateInvoice" tabindex="-1" role="dialog" aria-labelledby="modalUpdateInvoiceLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <form id="formUpdateInvoice" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalUpdateInvoiceLabel">Update Invoice</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="invoiceIdLpb" name="id_lpb">
+                    <div class="form-group">
+                        <label>No Invoice</label>
+                        <input type="text" class="form-control" id="invoiceNo" name="no_invoice" required>
+                    </div>
+                    <div class="form-group">
+                        <label>No Surat Jalan</label>
+                        <input type="text" class="form-control" id="invoiceNosj" name="nosj" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tanggal Surat Jalan</label>
+                        <input type="date" class="form-control" id="invoiceTglSj" name="tgl_sj" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Keterangan</label>
+                        <textarea class="form-control" id="invoiceKeterangan" name="keterangan" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitInvoice">
+                        <i class="fas fa-save mr-1"></i> Simpan Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <script>
         $(function() {
             var kdPo = '<?= htmlspecialchars($kd_po ?? '', ENT_QUOTES) ?>';
+            var canManagePoInvoice = <?= !empty($is_admin_po) ? 'true' : 'false' ?>;
             var allRows = [];
             var selectedIdLpb = 0;
+            var selectedHeader = null;
+            var isSubmittingAdjustment = false;
+            var isSubmittingInvoice = false;
 
             function escHtml(value) {
                 return $('<div>').text(value == null ? '' : value).html();
@@ -332,6 +486,60 @@
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2
                 }).format(parseFloat(value) || 0);
+            }
+
+            function formatRupiah(value) {
+                return 'Rp ' + new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(parseFloat(value) || 0);
+            }
+
+            function loadPrePoAdjustment() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                $('#prePoAdjustmentLoading').show();
+                $('#prePoAdjustmentContainer').hide().empty();
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_get_pre_po_adjustment') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        kd_po: kdPo
+                    },
+                    success: function(res) {
+                        $('#prePoAdjustmentLoading').hide();
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Data PRE PO tidak dapat dimuat.', 'error');
+                            return;
+                        }
+
+                        $('#prePoAdjustmentContainer').html(res.html || '').show();
+                    },
+                    error: function() {
+                        $('#prePoAdjustmentLoading').hide();
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat mengambil data PRE PO.', 'error');
+                    }
+                });
+            }
+
+            function refreshPrePoAdjustmentHtml(html) {
+                if (html) {
+                    $('#prePoAdjustmentContainer').html(html).show();
+                    $('#prePoAdjustmentLoading').hide();
+                    return;
+                }
+
+                loadPrePoAdjustment();
+            }
+
+            function updateAdjustmentTotal() {
+                var qty = parseFloat($('#adjQty').val()) || 0;
+                var hargaBaru = parseFloat($('#adjHargaBaru').val()) || 0;
+                $('#adjTotalBaruText').val(formatRupiah(qty * hargaBaru));
             }
 
             function updateStats(rows) {
@@ -400,6 +608,7 @@
 
             function resetDetailState() {
                 selectedIdLpb = 0;
+                selectedHeader = null;
                 $('#selectedLpbText').text('Belum ada LPB dipilih');
                 $('#lpbDetailLoading').hide();
                 $('#lpbDetailWrap').hide();
@@ -518,7 +727,8 @@
                             return;
                         }
 
-                        renderDetailHeader(res.header || {});
+                        selectedHeader = res.header || {};
+                        renderDetailHeader(selectedHeader);
                         renderDetailTable(res.rows || []);
                         $('#selectedLpbText').text('LPB #' + (res.header.id_lpb || idLpb));
                         $('#lpbDetailLoading').hide();
@@ -582,6 +792,47 @@
                 );
             }
 
+            function openUpdateInvoiceModal() {
+                if (!selectedIdLpb || !selectedHeader) {
+                    Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                $('#invoiceIdLpb').val(selectedHeader.id_lpb || selectedIdLpb);
+                $('#invoiceNo').val(selectedHeader.no_invoice || '');
+                $('#invoiceNosj').val(selectedHeader.nosj || '');
+                $('#invoiceTglSj').val(selectedHeader.tgl_sj || '');
+                $('#invoiceKeterangan').val(selectedHeader.keterangan || '');
+                $('#modalUpdateInvoice').modal('show');
+            }
+
+            function loadHistory(title, url, data) {
+                $('#modalHistoryLpbLabel').text(title);
+                $('#historyLpbContent').empty();
+                $('#historyLpbLoading').show();
+                $('#modalHistoryLpb').modal('show');
+
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    dataType: 'json',
+                    data: data,
+                    success: function(res) {
+                        $('#historyLpbLoading').hide();
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'History tidak dapat dimuat.', 'error');
+                            return;
+                        }
+
+                        $('#historyLpbContent').html(res.html || '');
+                    },
+                    error: function() {
+                        $('#historyLpbLoading').hide();
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat mengambil history.', 'error');
+                    }
+                });
+            }
+
             function applySearch() {
                 var keyword = ($('#lpbSearchInput').val() || '').toLowerCase();
                 var visibleCount = 0;
@@ -607,12 +858,173 @@
                 loadDetail(idLpb);
             });
 
+            $(document).on('click', '.js-open-adjustment', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                var btn = $(this);
+                var kdBarang = btn.attr('data-kd-barang') || '';
+                var namaBarang = btn.attr('data-nama-barang') || '-';
+
+                $('#adjKdBarang').val(kdBarang);
+                $('#adjNamaBarang').val(kdBarang + ' - ' + namaBarang);
+                $('#adjQty').val(btn.data('qty') || 0);
+                $('#adjHargaLamaText').val(formatRupiah(btn.data('harga-satuan') || 0));
+                $('#adjHargaBaru').val(btn.data('harga-satuan') || 0);
+                $('#adjAlasan').val('');
+                updateAdjustmentTotal();
+                $('#modalAdjustmentHarga').modal('show');
+            });
+
+            $('#btnHistoryInvoiceAll').on('click', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                loadHistory(
+                    'History Invoice',
+                    '<?= base_url('ics/ajax_history_invoice') ?>', {
+                        kd_po: kdPo
+                    }
+                );
+            });
+
+            $('#btnHistoryAdjustmentAll').on('click', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                loadHistory(
+                    'History Adjustment',
+                    '<?= base_url('ics/ajax_history_adjustment') ?>', {
+                        kd_po: kdPo
+                    }
+                );
+            });
+
+            $('#adjHargaBaru').on('input', function() {
+                updateAdjustmentTotal();
+            });
+
+            $('#formAdjustmentHarga').on('submit', function(e) {
+                e.preventDefault();
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                if (isSubmittingAdjustment) {
+                    return;
+                }
+
+                if (!$.trim($('#adjAlasan').val())) {
+                    Swal.fire('Validasi', 'Alasan adjustment wajib diisi.', 'warning');
+                    return;
+                }
+
+                isSubmittingAdjustment = true;
+                $('#btnSubmitAdjustment').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_submit_adjustment') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        kd_po: kdPo,
+                        kd_barang: $('#adjKdBarang').val(),
+                        harga_satuan_baru: $('#adjHargaBaru').val(),
+                        alasan: $('#adjAlasan').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Adjustment harga gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalAdjustmentHarga').modal('hide');
+                        refreshPrePoAdjustmentHtml(res.html || '');
+                        Swal.fire('Berhasil', res.message || 'Adjustment harga berhasil disimpan.', 'success');
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan adjustment harga.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingAdjustment = false;
+                        $('#btnSubmitAdjustment').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Adjustment');
+                    }
+                });
+            });
+
             $('#lpbSearchInput').on('input', function() {
                 applySearch();
             });
 
             $('#btnReloadLpbPage').on('click', function() {
                 loadList();
+            });
+
+            $('#btnReloadPrePoAdjustment').on('click', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                loadPrePoAdjustment();
+            });
+
+            $('#btnUpdateInvoice').on('click', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                openUpdateInvoiceModal();
+            });
+
+            $('#formUpdateInvoice').on('submit', function(e) {
+                e.preventDefault();
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                if (isSubmittingInvoice) {
+                    return;
+                }
+
+                isSubmittingInvoice = true;
+                $('#btnSubmitInvoice').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_update_invoice') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: $('#invoiceIdLpb').val(),
+                        no_invoice: $('#invoiceNo').val(),
+                        nosj: $('#invoiceNosj').val(),
+                        tgl_sj: $('#invoiceTglSj').val(),
+                        keterangan: $('#invoiceKeterangan').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Update invoice gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalUpdateInvoice').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'Invoice LPB berhasil diperbarui.', 'success');
+                        loadList();
+                        if (selectedIdLpb) {
+                            loadDetail(selectedIdLpb);
+                        }
+                        loadPrePoAdjustment();
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan invoice LPB.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingInvoice = false;
+                        $('#btnSubmitInvoice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Invoice');
+                    }
+                });
             });
 
             $('#btnPrintSelectedLpb').on('click', function() {
@@ -623,6 +1035,9 @@
                 printAllLpb();
             });
 
+            if (canManagePoInvoice) {
+                loadPrePoAdjustment();
+            }
             loadList();
         });
     </script>

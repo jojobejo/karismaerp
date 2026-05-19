@@ -3249,6 +3249,8 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_invoice,
                 h.gudang_id,
                 COALESCE(g.nama_gudang, '-') AS nama_gudang,
@@ -3265,6 +3267,8 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_invoice,
                 h.gudang_id,
                 g.nama_gudang,
@@ -3494,6 +3498,141 @@ FROM (
         return $this->db
             ->where('kd_po', $kd_po)
             ->update('tb_pre_po', ['status' => $status]);
+    }
+
+    public function get_pre_po_adjustment($kd_po)
+    {
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            pp.qty,
+            pp.satuan,
+            pp.hrg_satuan,
+            pp.harga_total,
+            pp.status
+        ');
+        $this->db->from('tb_pre_po pp');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        $this->db->where('pp.kd_po', $kd_po);
+        $this->db->order_by('pp.id_pre_po', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function submit_adjustment($payload)
+    {
+        $row = $this->db
+            ->where('kd_po', $payload['kd_po'])
+            ->where('kd_barang', $payload['kd_barang'])
+            ->limit(1)
+            ->get('tb_pre_po')
+            ->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $qty = (float) $row['qty'];
+        $hargaBaru = (float) $payload['harga_satuan_baru'];
+        $totalBaru = $qty * $hargaBaru;
+
+        $this->db->where('id_pre_po', $row['id_pre_po']);
+        $updated = $this->db->update('tb_pre_po', [
+            'hrg_satuan'  => $hargaBaru,
+            'harga_total' => $totalBaru
+        ]);
+
+        if (!$updated) {
+            return FALSE;
+        }
+
+        if (!$this->update_pre_po_status_by_kd_po($row['kd_po'], 2)) {
+            return FALSE;
+        }
+
+        return $this->db->insert('tb_pre_po_adjustment_log', [
+            'kd_po'              => $row['kd_po'],
+            'kd_barang'          => $row['kd_barang'],
+            'harga_satuan_lama'  => $row['hrg_satuan'],
+            'harga_satuan_baru'  => $hargaBaru,
+            'harga_total_lama'   => $row['harga_total'],
+            'harga_total_baru'   => $totalBaru,
+            'alasan'             => $payload['alasan'],
+            'dilakukan_oleh'     => $payload['dilakukan_oleh'],
+            'dilakukan_pada'     => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    public function get_history_adjustment($kd_po, $kd_barang = '')
+    {
+        $this->db->from('tb_pre_po_adjustment_log');
+        $this->db->where('kd_po', $kd_po);
+
+        if ($kd_barang !== '') {
+            $this->db->where('kd_barang', $kd_barang);
+        }
+
+        $this->db->order_by('dilakukan_pada', 'DESC');
+        if ($this->db->field_exists('id', 'tb_pre_po_adjustment_log')) {
+            $this->db->order_by('id', 'DESC');
+        }
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_history_invoice($kd_po)
+    {
+        $this->db->where('kd_po', $kd_po);
+        $this->db->order_by('dilakukan_pada', 'DESC');
+        if ($this->db->field_exists('id', 'tb_lpb_log')) {
+            $this->db->order_by('id', 'DESC');
+        }
+
+        return $this->db->get('tb_lpb_log')->result_array();
+    }
+
+    public function update_invoice_lpb($payload)
+    {
+        $row = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->limit(1)
+            ->get('tb_lpb')
+            ->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $updated = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->update('tb_lpb', [
+                'no_invoice' => $payload['no_invoice'],
+                'nosj'       => $payload['nosj'],
+                'tgl_sj'     => $this->_normalizeDate($payload['tgl_sj']),
+                'keterangan' => $payload['keterangan']
+            ]);
+
+        if (!$updated) {
+            return FALSE;
+        }
+
+        $logged = $this->db->insert('tb_lpb_log', [
+            'kd_po'          => $row['kd_po'],
+            'no_invoice'     => $payload['no_invoice'],
+            'action_type'    => 'UPDATE_INVOICE',
+            'keterangan'     => $payload['keterangan'],
+            'dilakukan_oleh' => $payload['dilakukan_oleh'],
+            'dilakukan_pada' => date('Y-m-d H:i:s')
+        ]);
+
+        if (!$logged) {
+            return FALSE;
+        }
+
+        return $this->update_pre_po_status_by_kd_po($row['kd_po'], 2);
     }
 
     private function _normalizeDate($raw)
