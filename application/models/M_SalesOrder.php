@@ -302,14 +302,13 @@ class M_SalesOrder extends CI_Model
         $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
         $qty_col = $this->_stockQtyColumn();
 
-        // Ambil dari tberp_stock_batch
         $this->db->select('sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
-                           sb.' . $qty_col . ' AS qty_on_hand, sb.qty_reserved,
-                           (sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) AS available_stock,
-                           mb.nama_barang');
+                           SUM(sb.' . $qty_col . ') AS qty_on_hand,
+                           SUM(COALESCE(sb.qty_reserved, 0)) AS qty_reserved,
+                           (SUM(sb.' . $qty_col . ') - SUM(COALESCE(sb.qty_reserved, 0))) AS available_stock,
+                           MAX(mb.nama_barang) AS nama_barang', false);
         $this->db->from('tberp_stock_batch sb');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
-        $this->db->where('(sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) >', 0);
 
         if (!empty($kd_barang))     $this->db->where('sb.kd_barang', $kd_barang);
         if (!empty($gudang_id_str)) {
@@ -317,6 +316,12 @@ class M_SalesOrder extends CI_Model
                 "CAST(sb.gudang_id AS CHAR) = CAST('" . $this->db->escape_str($gudang_id_str) . "' AS CHAR)"
             );
         }
+
+        $this->db->group_by(['sb.kd_barang', 'sb.gudang_id', 'sb.no_lot', 'sb.expired_date']);
+        $this->db->having('available_stock >', 0);
+        $this->db->order_by('sb.kd_barang', 'ASC');
+        $this->db->order_by('sb.no_lot', 'ASC');
+        $this->db->order_by('sb.expired_date', 'ASC');
 
         $stocks = $this->db->get()->result_array();
 
@@ -472,7 +477,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so($id_so)
     {
-        $this->db->select('so.*, c.nama_customer');
+        $this->db->select('so.*, c.nama_customer, c.regional');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->where('so.id_so', $id_so);
@@ -739,6 +744,17 @@ class M_SalesOrder extends CI_Model
             'create_by'     => $faktur_header['create_by'],
             'create_at'     => date('Y-m-d H:i:s'),
         ];
+
+        $optional_header_fields = [
+            'tanggal_jatuh_tempo',
+            'salesman',
+            'cara_pembayaran',
+        ];
+        foreach ($optional_header_fields as $field) {
+            if ($this->db->field_exists($field, 'tbso_faktur_penjualan')) {
+                $fh[$field] = $faktur_header[$field] ?? null;
+            }
+        }
 
         // Hitung total tonase & kubikasi faktur ini
         $total_tonase   = 0;

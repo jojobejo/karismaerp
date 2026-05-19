@@ -53,6 +53,7 @@
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>.
                 Anda dapat mengisi qty sebagian (parsial) sesuai stok yang tersedia.
                 Qty tidak boleh melebihi kolom <em>Outstanding</em>.
+                Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11%' : 'Non Pajak' ?></strong>.
             </div>
 
             <form action="<?= base_url('sales_order/simpan_faktur/' . $so['id_so']) ?>" method="post"
@@ -75,6 +76,25 @@
                                     <label>Tanggal Faktur <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control" name="tanggal_faktur"
                                            value="<?= date('Y-m-d') ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tgl Jatuh Tempo <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" name="tanggal_jatuh_tempo"
+                                           value="<?= date('Y-m-d') ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Salesman</label>
+                                    <input type="text" class="form-control" name="salesman"
+                                           value="<?= htmlspecialchars($this->session->userdata('nama') ?? $this->session->userdata('username') ?? '') ?>"
+                                           placeholder="Nama salesman">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cara Pembayaran <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="cara_pembayaran" required>
+                                        <option value="cash">Cash</option>
+                                        <option value="transfer">Transfer</option>
+                                        <option value="tempo">Tempo</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Catatan</label>
@@ -128,9 +148,17 @@
                                             <input type="hidden" name="hrg_satuan[]"     value="<?= $d['hrg_satuan'] ?>">
                                             <input type="hidden" name="hrg_pokok[]"      value="<?= $d['hrg_pokok'] ?>">
                                             <input type="hidden" name="disc[]"           value="<?= $d['disc'] ?>">
-                                            <input type="hidden" name="pajak[]"          value="<?= $d['pajak'] ?? 0 ?>">
+                                            <input type="hidden" name="pajak[]"          value="<?= (float)($d['pajak'] ?? 0) ?>">
                                             <input type="hidden" name="berat_gram[]"     value="<?= $d['berat_gram'] ?>">
                                             <input type="hidden" name="kubikasi_m3[]"    value="<?= $d['kubikasi_m3'] ?>">
+                                            <input type="hidden" name="qty_faktur[]"     class="qty-faktur"
+                                                   value="<?= $outstanding ?>"
+                                                   data-harga="<?= $d['hrg_satuan'] ?>"
+                                                   data-disc="<?= $d['disc'] ?>"
+                                                   data-pajak="<?= $d['pajak'] ?? 0 ?>"
+                                                   data-row="<?= $i ?>"
+                                                   data-isi="<?= $isi ?>"
+                                                   data-outstanding="<?= $outstanding ?>">
 
                                             <td>
                                                 <strong><?= htmlspecialchars($d['nama_barang']) ?></strong>
@@ -160,21 +188,20 @@
                                             <td class="text-right" style="min-width:130px;">
                                                 <div class="input-group input-group-sm">
                                                     <input type="number"
-                                                           class="form-control text-right qty-faktur"
-                                                           name="qty_faktur[]"
+                                                           class="form-control text-right qty-input"
+                                                           name="qty_input[]"
                                                            value="<?= $outstanding ?>"
                                                            min="0"
-                                                           max="<?= $outstanding ?>"
                                                            step="1"
-                                                           data-harga="<?= $d['hrg_satuan'] ?>"
-                                                           data-disc="<?= $d['disc'] ?>"
-                                                           data-pajak="<?= $d['pajak'] ?? 0 ?>"
                                                            data-row="<?= $i ?>">
                                                     <div class="input-group-append">
-                                                        <span class="input-group-text">pcs</span>
+                                                        <select class="custom-select qty-mode" name="qty_mode[]" data-row="<?= $i ?>" style="max-width:74px">
+                                                            <option value="pcs" selected>pcs</option>
+                                                            <option value="box">box</option>
+                                                        </select>
                                                     </div>
                                                 </div>
-                                                <small class="text-muted">
+                                                <small class="text-muted qty-helper" data-row="<?= $i ?>">
                                                     maks <?= number_format($outstanding) ?> pcs
                                                 </small>
                                             </td>
@@ -193,7 +220,15 @@
                                     <tfoot class="thead-light">
                                         <tr>
                                             <th colspan="5" class="text-right">Total Nilai Faktur:</th>
-                                            <th class="text-right" id="grandTotal">Rp 0</th>
+                                            <th class="text-right" id="totalNilaiFaktur">Rp 0</th>
+                                        </tr>
+                                        <tr>
+                                            <th colspan="5" class="text-right">Tax: <?= number_format((float)($tax_rate ?? 0), 0) ?>(%)</th>
+                                            <th class="text-right" id="totalTax">Rp 0</th>
+                                        </tr>
+                                        <tr>
+                                            <th colspan="5" class="text-right">Grand Total Harga:</th>
+                                            <th class="text-right" id="grandTotalHarga">Rp 0</th>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -231,8 +266,44 @@
 <script>
 $(document).ready(function () {
 
+    function syncQty($input) {
+        const row = $input.data('row');
+        const $hidden = $('.qty-faktur[data-row="' + row + '"]');
+        const $mode = $('.qty-mode[data-row="' + row + '"]');
+        const $helper = $('.qty-helper[data-row="' + row + '"]');
+        const isi = parseFloat($hidden.data('isi')) || 1;
+        const outstanding = parseFloat($hidden.data('outstanding')) || 0;
+        const mode = $mode.val() || 'pcs';
+        let qtyInput = parseFloat($input.val()) || 0;
+        let qtyPcs = mode === 'box' ? qtyInput * isi : qtyInput;
+
+        if (qtyPcs > outstanding) {
+            qtyPcs = outstanding;
+            qtyInput = mode === 'box' ? Math.floor(outstanding / isi) : outstanding;
+            $input.val(qtyInput);
+        }
+
+        $hidden.val(qtyPcs);
+
+        const isPartial = qtyPcs > 0 && qtyPcs < outstanding;
+        $input.toggleClass('text-danger font-weight-bold', isPartial);
+        $helper
+            .toggleClass('text-danger font-weight-bold', isPartial)
+            .text(mode === 'box'
+                ? 'maks ' + Math.floor(outstanding / isi).toLocaleString('id-ID') + ' box = ' + outstanding.toLocaleString('id-ID') + ' pcs'
+                : 'maks ' + outstanding.toLocaleString('id-ID') + ' pcs');
+    }
+
+    function syncAllQty() {
+        $('.qty-input').each(function() {
+            syncQty($(this));
+        });
+    }
+
     function hitungSubtotal() {
-        let grandTotal = 0;
+        let totalNilaiFaktur = 0;
+        let totalTax = 0;
+        let grandTotalHarga = 0;
 
         $('.qty-faktur').each(function () {
             const row    = $(this).data('row');
@@ -240,40 +311,54 @@ $(document).ready(function () {
             const harga  = parseFloat($(this).data('harga')) || 0;
             const disc   = parseFloat($(this).data('disc'))  || 0;
             const pajak  = parseFloat($(this).data('pajak')) || 0;
-            const maxQty = parseFloat($(this).attr('max'))   || 0;
-
-            // Paksa tidak melebihi max outstanding
-            if (qty > maxQty) {
-                $(this).val(maxQty);
-                return;
-            }
 
             const sub    = qty * harga;
             const afterD = sub  * (1 - disc / 100);
-            const total  = afterD * (1 + pajak / 100);
+            const tax    = afterD * (pajak / 100);
+            const total  = afterD + tax;
 
-            grandTotal += total;
+            totalNilaiFaktur += afterD;
+            totalTax += tax;
+            grandTotalHarga += total;
 
             $('[data-row="' + row + '"].subtotal').text(
                 'Rp ' + total.toLocaleString('id-ID', { minimumFractionDigits: 0 })
             );
         });
 
-        $('#grandTotal').text('Rp ' + grandTotal.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+        $('#totalNilaiFaktur').text('Rp ' + totalNilaiFaktur.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+        $('#totalTax').text('Rp ' + totalTax.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+        $('#grandTotalHarga').text('Rp ' + grandTotalHarga.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
     }
 
     // Hitung saat pertama kali dan saat nilai berubah
+    syncAllQty();
     hitungSubtotal();
-    $(document).on('input change', '.qty-faktur', hitungSubtotal);
+    $(document).on('input change', '.qty-input', function() {
+        syncQty($(this));
+        hitungSubtotal();
+    });
+    $(document).on('change', '.qty-mode', function() {
+        const row = $(this).data('row');
+        const $input = $('.qty-input[data-row="' + row + '"]');
+        const $hidden = $('.qty-faktur[data-row="' + row + '"]');
+        const isi = parseFloat($hidden.data('isi')) || 1;
+        const qtyPcs = parseFloat($hidden.val()) || 0;
+        $input.val(this.value === 'box' ? Math.floor(qtyPcs / isi) : qtyPcs);
+        syncQty($input);
+        hitungSubtotal();
+    });
 
     // Validasi sebelum submit
     $('#formFaktur').on('submit', function (e) {
+        syncAllQty();
+        hitungSubtotal();
         let adaQty = false;
         let adaMelewati = false;
 
         $('.qty-faktur').each(function () {
             const qty    = parseFloat($(this).val()) || 0;
-            const maxQty = parseFloat($(this).attr('max')) || 0;
+            const maxQty = parseFloat($(this).data('outstanding')) || 0;
             if (qty > 0)      adaQty = true;
             if (qty > maxQty) adaMelewati = true;
         });

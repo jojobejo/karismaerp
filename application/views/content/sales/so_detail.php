@@ -65,11 +65,10 @@
                         <i class="fas fa-times"></i> Batalkan SO
                     </a>
                 <?php endif; ?>
-                <?php if ($so['status'] === 'open'): ?>
-                    <a href="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>"
-                       class="btn btn-success btn-sm">
+                <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                    <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-sm btn-buat-faktur-pilih">
                         <i class="fas fa-file-invoice-dollar"></i> Buat Faktur Penjualan
-                    </a>
+                    </button>
                 <?php endif; ?>
             </div>
 
@@ -192,6 +191,10 @@
                                     <td><strong><?= htmlspecialchars($so['customer_name']) ?></strong></td>
                                 </tr>
                                 <tr>
+                                    <td class="text-muted pl-3">Rute / Regional</td>
+                                    <td><?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?></td>
+                                </tr>
+                                <tr>
                                     <td class="text-muted pl-3">Gudang</td>
                                     <td><?= htmlspecialchars($so['gudang_id']) ?></td>
                                 </tr>
@@ -230,77 +233,112 @@
                         <i class="fas fa-list-ul mr-1"></i> Item Sales Order
                         <span class="badge badge-info ml-1"><?= count($details) ?> item</span>
                     </h3>
+                    <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                        <div class="card-tools">
+                            <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-xs btn-buat-faktur-pilih">
+                                <i class="fas fa-file-invoice-dollar"></i> Fakturkan Item Dipilih
+                            </button>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-sm table-bordered table-hover mb-0">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>#</th>
-                                <th>Barang</th>
-                                <th>Lot / Exp</th>
-                                <th class="text-right">Qty Order</th>
-                                <th class="text-right">Difakturkan</th>
-                                <th class="text-right">Outstanding</th>
-                                <th class="text-right">Harga</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($details)): ?>
-                                <tr><td colspan="7" class="text-center text-muted py-3">Tidak ada item</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($details as $i => $d):
-                                    $outstanding_item = (float)$d['qty'] - (float)$d['qty_faktur'];
-                                    $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
-                                    $ord_box = floor($d['qty'] / $isi);
-                                    $ord_pcs = fmod($d['qty'], $isi);
-                                    $fak_box = floor($d['qty_faktur'] / $isi);
-                                    $fak_pcs = fmod($d['qty_faktur'], $isi);
-                                    $out_box = floor($outstanding_item / $isi);
-                                    $out_pcs = fmod($outstanding_item, $isi);
-                                ?>
-                                <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
-                                    <td><?= $i + 1 ?></td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($d['nama_barang']) ?></strong>
-                                        <br><small class="text-muted"><?= htmlspecialchars($d['kd_barang']) ?></small>
-                                    </td>
-                                    <td>
-                                        <small>
-                                            <?php if (!empty($d['no_lot'])): ?>
-                                                Lot: <code><?= htmlspecialchars($d['no_lot']) ?></code><br>
-                                            <?php endif; ?>
-                                            Exp: <?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?>
-                                        </small>
-                                    </td>
-                                    <td class="text-right">
-                                        <?= $ord_box > 0 ? $ord_box . ' box' : '' ?>
-                                        <?= $ord_pcs > 0 ? ($ord_box > 0 ? ' + ' : '') . (int)$ord_pcs . ' pcs' : '' ?>
-                                        <?php if ($ord_box == 0 && $ord_pcs == 0): ?><?= (int)$d['qty'] ?> pcs<?php endif; ?>
-                                    </td>
-                                    <td class="text-right text-success">
-                                        <?php if ($d['qty_faktur'] > 0): ?>
-                                            <?= $fak_box > 0 ? $fak_box . ' box' : '' ?>
-                                            <?= $fak_pcs > 0 ? ($fak_box > 0 ? ' + ' : '') . (int)$fak_pcs . ' pcs' : '' ?>
-                                            <?php if ($fak_box == 0 && $fak_pcs == 0): ?><?= (int)$d['qty_faktur'] ?> pcs<?php endif; ?>
-                                        <?php else: ?>
-                                            <span class="text-muted">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="text-right <?= $outstanding_item > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
-                                        <?php if ($outstanding_item > 0): ?>
-                                            <?= $out_box > 0 ? $out_box . ' box' : '' ?>
-                                            <?= $out_pcs > 0 ? ($out_box > 0 ? ' + ' : '') . (int)$out_pcs . ' pcs' : '' ?>
-                                            <?php if ($out_box == 0 && $out_pcs == 0): ?><?= (int)$outstanding_item ?> pcs<?php endif; ?>
-                                        <?php else: ?>
-                                            <i class="fas fa-check text-success"></i> Lunas
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="text-right">Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?></td>
+                    <form id="form-pilih-faktur" action="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>" method="get">
+                        <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                            <div class="px-3 py-2 border-bottom bg-light">
+                                <div class="form-inline">
+                                    <label class="mr-2 mb-1 mb-sm-0 font-weight-bold">Jenis Faktur</label>
+                                    <select name="tax_mode" id="tax-mode-faktur" class="form-control form-control-sm">
+                                        <option value="non_pajak" selected>Non Pajak (0%)</option>
+                                        <option value="pajak">Pajak (11%)</option>
+                                    </select>
+                                    <small class="text-muted ml-sm-2 mt-1 mt-sm-0">Berlaku untuk item SO yang dipilih.</small>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <table class="table table-sm table-bordered table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                                        <th class="text-center" style="width:42px">
+                                            <input type="checkbox" id="check-all-faktur" title="Pilih semua item outstanding">
+                                        </th>
+                                    <?php endif; ?>
+                                    <th>#</th>
+                                    <th>Barang</th>
+                                    <th>Lot / Exp</th>
+                                    <th class="text-right">Qty Order</th>
+                                    <th class="text-right">Difakturkan</th>
+                                    <th class="text-right">Outstanding</th>
+                                    <th class="text-right">Harga</th>
                                 </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($details)): ?>
+                                    <tr><td colspan="<?= ($so['status'] === 'open' && $total_outstanding > 0) ? 8 : 7 ?>" class="text-center text-muted py-3">Tidak ada item</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($details as $i => $d):
+                                        $outstanding_item = (float)$d['qty'] - (float)$d['qty_faktur'];
+                                        $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
+                                        $ord_box = floor($d['qty'] / $isi);
+                                        $ord_pcs = fmod($d['qty'], $isi);
+                                        $fak_box = floor($d['qty_faktur'] / $isi);
+                                        $fak_pcs = fmod($d['qty_faktur'], $isi);
+                                        $out_box = floor($outstanding_item / $isi);
+                                        $out_pcs = fmod($outstanding_item, $isi);
+                                    ?>
+                                    <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
+                                        <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                                            <td class="text-center align-middle">
+                                                <?php if ($outstanding_item > 0): ?>
+                                                    <input type="checkbox" class="check-item-faktur" name="item[]" value="<?= (int)$d['id_so_detail'] ?>">
+                                                <?php else: ?>
+                                                    <i class="fas fa-check text-success"></i>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
+                                        <td><?= $i + 1 ?></td>
+                                        <td>
+                                            <strong><?= htmlspecialchars($d['nama_barang']) ?></strong>
+                                            <br><small class="text-muted"><?= htmlspecialchars($d['kd_barang']) ?></small>
+                                        </td>
+                                        <td>
+                                            <small>
+                                                <?php if (!empty($d['no_lot'])): ?>
+                                                    Lot: <code><?= htmlspecialchars($d['no_lot']) ?></code><br>
+                                                <?php endif; ?>
+                                                Exp: <?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?>
+                                            </small>
+                                        </td>
+                                        <td class="text-right">
+                                            <?= $ord_box > 0 ? $ord_box . ' box' : '' ?>
+                                            <?= $ord_pcs > 0 ? ($ord_box > 0 ? ' + ' : '') . (int)$ord_pcs . ' pcs' : '' ?>
+                                            <?php if ($ord_box == 0 && $ord_pcs == 0): ?><?= (int)$d['qty'] ?> pcs<?php endif; ?>
+                                        </td>
+                                        <td class="text-right text-success">
+                                            <?php if ($d['qty_faktur'] > 0): ?>
+                                                <?= $fak_box > 0 ? $fak_box . ' box' : '' ?>
+                                                <?= $fak_pcs > 0 ? ($fak_box > 0 ? ' + ' : '') . (int)$fak_pcs . ' pcs' : '' ?>
+                                                <?php if ($fak_box == 0 && $fak_pcs == 0): ?><?= (int)$d['qty_faktur'] ?> pcs<?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-right <?= $outstanding_item > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                                            <?php if ($outstanding_item > 0): ?>
+                                                <?= $out_box > 0 ? $out_box . ' box' : '' ?>
+                                                <?= $out_pcs > 0 ? ($out_box > 0 ? ' + ' : '') . (int)$out_pcs . ' pcs' : '' ?>
+                                                <?php if ($out_box == 0 && $out_pcs == 0): ?><?= (int)$outstanding_item ?> pcs<?php endif; ?>
+                                            <?php else: ?>
+                                                <i class="fas fa-check text-success"></i> Lunas
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-right">Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </form>
                 </div>
             </div>
 
@@ -314,10 +352,9 @@
                     </h3>
                     <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
                         <div class="card-tools">
-                            <a href="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>"
-                               class="btn btn-success btn-xs">
+                            <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-xs btn-buat-faktur-pilih">
                                 <i class="fas fa-plus"></i> Buat Faktur Baru
-                            </a>
+                            </button>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -326,12 +363,11 @@
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
                             Belum ada Faktur Penjualan.
-                            <?php if ($so['status'] === 'open'): ?>
+                            <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
                                 <br>
-                                <a href="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>"
-                                   class="btn btn-success btn-sm mt-2">
+                                <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-sm mt-2 btn-buat-faktur-pilih">
                                     <i class="fas fa-plus"></i> Buat Faktur Pertama
-                                </a>
+                                </button>
                             <?php elseif ($so['status'] === 'draft'): ?>
                                 <br><small>Rekam SO terlebih dahulu untuk dapat membuat Faktur.</small>
                             <?php endif; ?>
@@ -413,6 +449,27 @@
 
 <script>
 $(document).ready(function () {
+    $('#check-all-faktur').on('change', function() {
+        $('.check-item-faktur').prop('checked', this.checked);
+    });
+
+    $(document).on('change', '.check-item-faktur', function() {
+        const total = $('.check-item-faktur').length;
+        const checked = $('.check-item-faktur:checked').length;
+        $('#check-all-faktur').prop('checked', total > 0 && checked === total);
+    });
+
+    $('#form-pilih-faktur').on('submit', function(e) {
+        if ($('.check-item-faktur:checked').length < 1) {
+            e.preventDefault();
+            if (window.Swal) {
+                Swal.fire('Peringatan', 'Pilih minimal 1 item SO yang akan difakturkan.', 'warning');
+            } else {
+                alert('Pilih minimal 1 item SO yang akan difakturkan.');
+            }
+        }
+    });
+
     $.getJSON('<?= base_url('sales_order/activity_log_so/' . $so['id_so']) ?>', function(resp) {
         if (!resp.data || !resp.data.length) {
             $('#logContainer').html('<div class="text-center text-muted py-3">Belum ada aktivitas.</div>');

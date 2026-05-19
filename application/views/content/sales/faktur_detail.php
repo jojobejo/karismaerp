@@ -75,10 +75,28 @@
                                     <td class="text-muted">Tanggal Faktur</td>
                                     <td><?= date('d/m/Y', strtotime($faktur['tanggal_faktur'])) ?></td>
                                 </tr>
+                                <?php if (!empty($faktur['tanggal_jatuh_tempo'])): ?>
+                                <tr>
+                                    <td class="text-muted">Tgl Jatuh Tempo</td>
+                                    <td><?= date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) ?></td>
+                                </tr>
+                                <?php endif; ?>
                                 <tr>
                                     <td class="text-muted">Customer</td>
                                     <td><strong><?= htmlspecialchars($faktur['customer_name']) ?></strong></td>
                                 </tr>
+                                <?php if (!empty($faktur['salesman'])): ?>
+                                <tr>
+                                    <td class="text-muted">Salesman</td>
+                                    <td><?= htmlspecialchars($faktur['salesman']) ?></td>
+                                </tr>
+                                <?php endif; ?>
+                                <?php if (!empty($faktur['cara_pembayaran'])): ?>
+                                <tr>
+                                    <td class="text-muted">Cara Pembayaran</td>
+                                    <td><span class="badge badge-info"><?= htmlspecialchars(ucfirst($faktur['cara_pembayaran'])) ?></span></td>
+                                </tr>
+                                <?php endif; ?>
                                 <tr>
                                     <td class="text-muted">Gudang</td>
                                     <td><?= htmlspecialchars($faktur['gudang_id']) ?></td>

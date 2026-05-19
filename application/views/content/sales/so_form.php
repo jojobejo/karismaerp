@@ -220,7 +220,6 @@
                                             <th style="width:160px">Harga/Pcs</th>
                                             <th style="width:65px" class="text-center">Disc%</th>
                                             <th style="width:110px" class="text-right">Stl&nbsp;Disc</th>
-                                            <th style="width:85px">Pajak</th>
                                             <th style="width:115px" class="text-right">Subtotal</th>
                                             <th style="width:36px"></th>
                                         </tr>
@@ -228,7 +227,7 @@
                                     <tbody id="item-body"></tbody>
                                     <tfoot>
                                         <tr class="bg-light font-weight-bold">
-                                            <td colspan="10" class="text-right">GRAND TOTAL</td>
+                                            <td colspan="9" class="text-right">GRAND TOTAL</td>
                                             <td class="text-right" id="total-grand">0</td>
                                             <td></td>
                                         </tr>
@@ -357,15 +356,6 @@ foreach ($customers as $c) {
 var CUSTOMERS = <?= json_encode(array_values($customers_safe), JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
 
 <?php
-$tax_safe = [];
-foreach (($tax_list ?? []) as $t) {
-    $tax_safe[] = ['id' => (int)$t['id_tax'], 'nm' => (float)$t['nm_tax']];
-}
-usort($tax_safe, function($a,$b){ return $a['nm'] <=> $b['nm']; });
-?>
-var TAX_LIST = <?= json_encode($tax_safe, JSON_UNESCAPED_UNICODE) ?>;
-
-<?php
 $approver_safe = [];
 foreach (($approver_list ?? []) as $a) {
     $approver_safe[] = [
@@ -433,7 +423,6 @@ function buatBaris(idx, d) {
     var hrg    = parseFloat(d.hrg_satuan  || 0);
     var pk     = parseFloat(d.hrg_pokok   || 0);
     var disc   = parseFloat(d.disc        || 0);
-    var pajak  = parseFloat(d.pajak       || 0);
     var akun   = d.kode_akun    || '';
     var beratG = parseFloat(d.berat_gram  || 0);
     var kubikM = parseFloat(d.kubikasi_m3 || 0);
@@ -454,7 +443,7 @@ function buatBaris(idx, d) {
     var qtyKecil  = (qtyBox * isi) + qtySat;
     var subBefore = hrg * qtyKecil;
     var subDisc   = subBefore * (1 - disc / 100);
-    var sub       = subDisc   * (1 + pajak / 100);
+    var sub       = subDisc;
     var expSoon   = exp && isExpiringSoon(exp);
     var hargaClass = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) ? 'text-danger' : '';
     var approveBy  = d.approve_by || '';
@@ -480,6 +469,7 @@ function buatBaris(idx, d) {
        + '<input type="hidden" name="berat_gram[]"  id="bg_'+idx+'" value="'+beratG+'">'
        + '<input type="hidden" name="kubikasi_m3[]" id="km_'+idx+'" value="'+kubikM+'">'
        + '<input type="hidden" name="isi_per_box[]" id="isi_'+idx+'" value="'+isi+'">'
+       + '<input type="hidden" name="pajak[]"       value="0">'
        + '<div class="d-flex align-items-center">'
        +   '<div class="flex-grow-1">'
        +     '<small class="text-muted" id="kdlbl_'+idx+'">'+(kd||'&mdash;')+'</small><br>'
@@ -548,17 +538,10 @@ function buatBaris(idx, d) {
     /* 8 Stl Disc */
     h += '<td class="text-right align-middle"><small class="text-muted d-block" style="font-size:10px">stl disc</small><b id="subdisc_'+idx+'">'+fmtNum(subDisc)+'</b></td>';
 
-    /* 9 Pajak */
-    h += '<td><select name="pajak[]" id="pjk_'+idx+'" class="form-control form-control-sm">';
-    TAX_LIST.forEach(function(t) {
-        h += '<option value="'+t.nm+'"'+(Math.abs(t.nm-pajak)<0.001?' selected':'')+'>'+t.nm+'%</option>';
-    });
-    h += '</select></td>';
-
-    /* 10 Subtotal */
+    /* 9 Subtotal */
     h += '<td class="text-right align-middle"><b id="sub_'+idx+'">'+fmtNum(sub)+'</b></td>';
 
-    /* 11 Hapus */
+    /* 10 Hapus */
     h += '<td class="text-center align-middle"><button type="button" class="btn btn-xs btn-danger btn-remove" data-idx="'+idx+'"><i class="fas fa-trash"></i></button></td>';
 
     h += '</tr>';
@@ -575,7 +558,7 @@ function tambahBaris(d) {
 }
 
 function bindBaris(idx) {
-    ['hrg_','qtybox_','qtyecer_','disc_','pjk_'].forEach(function(f) {
+    ['hrg_','qtybox_','qtyecer_','disc_'].forEach(function(f) {
         var el = document.getElementById(f+idx);
         if (!el) return;
         el.addEventListener('input',  function(){ hitungBaris(idx); });
@@ -649,7 +632,7 @@ function bindBaris(idx) {
 function hitungBaris(idx) {
     function v(id) { var e=document.getElementById(id); return e?parseFloat(e.value)||0:0; }
     var hrg=v('hrg_'+idx), qBox=v('qtybox_'+idx), qSat=v('qtyecer_'+idx);
-    var disc=v('disc_'+idx), pjk=v('pjk_'+idx), pk=v('pk_'+idx);
+    var disc=v('disc_'+idx), pk=v('pk_'+idx);
     var isi=getIsi(idx);
     var isNego = hrg>0 && pk>0 && Math.abs(hrg-pk)>0.001;
     var elH = document.getElementById('hrg_'+idx);
@@ -657,7 +640,7 @@ function hitungBaris(idx) {
 
     var qK   = (qBox*isi)+qSat;
     var sD   = hrg*qK*(1-disc/100);
-    var tot  = sD*(1+pjk/100);
+    var tot  = sD;
 
     var elQ  = document.getElementById('qtylbl_' +idx);
     var elSD = document.getElementById('subdisc_'+idx);
@@ -683,9 +666,8 @@ function hitungGrand() {
         var qB =parseFloat((document.getElementById('qtybox_'+i)||{value:0}).value)||0;
         var qE =parseFloat((document.getElementById('qtyecer_'+i)||{value:0}).value)||0;
         var d  =parseFloat((document.getElementById('disc_'+i)||{value:0}).value)||0;
-        var p  =parseFloat((document.getElementById('pjk_'+i)||{value:0}).value)||0;
         var qK =(qB*getIsi(i))+qE;
-        g += hrg*qK*(1-d/100)*(1+p/100);
+        g += hrg*qK*(1-d/100);
     });
     document.getElementById('total-grand').textContent = fmtNum(g);
 }
@@ -772,11 +754,12 @@ function renderStock(data) {
         var avB=parseInt(d.available_box||0);
         var avE=parseInt(d.available_ecer||0);
         var exp=d.exp_date||d.expired_date||'';
+        var stockKey=d.stock_key||[kd, String(d.gudang_id||''), d.no_lot||'', exp].join('|');
         var gdgId=String(d.gudang_id||'');
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
 
-        html+='<tr class="'+(isNew?'table-light':'')+'">';
+        html+='<tr class="'+(isNew?'table-light':'')+'" data-stock-key="'+esc(stockKey)+'">';
         html+='<td><small class="text-muted d-block">'+esc(kd)+'</small>'+(isNew?'<b>'+esc(d.nama_barang||'')+'</b>':'<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang||''))+'</td>';
         html+='<td>'+(exp?'<span class="badge '+(isExpiringSoon(exp)?'badge-warning':'badge-success')+'">'+esc(formatTgl(exp))+'</span>':'-')+'</td>';
         html+='<td>'+esc(d.no_lot||'-')+'</td>';
@@ -792,7 +775,8 @@ function renderStock(data) {
             +' data-kd="'+esc(kd)+'" data-nm="'+esc(d.nama_barang||'')+'" data-exp="'+esc(exp)+'"'
             +' data-lot="'+esc(d.no_lot||'')+'" data-sat="'+esc(d.satuan||'')+'" data-av="'+avT+'"'
             +' data-ton="'+parseFloat(d.berat_gram||0)+'" data-kub="'+parseFloat(d.kubikasi_m3||0)+'"'
-            +' data-isi="'+isi+'" data-gudang="'+esc(gdgId)+'" data-pk="'+parseFloat(d.hpp||0)+'">'
+            +' data-isi="'+isi+'" data-gudang="'+esc(gdgId)+'" data-pk="'+parseFloat(d.hpp||0)+'"'
+            +' data-stock-key="'+esc(stockKey)+'">'
             +'<i class="fas fa-check"></i> Pilih</button></td>';
         html+='</tr>';
     });
@@ -827,6 +811,7 @@ function applyBarangKeBaris(i, btn) {
     rows.forEach(function(s){
         var opt=document.createElement('option');
         var ed=s.exp_date||s.expired_date||'';
+        var stockKey=s.stock_key||[kd, String(s.gudang_id||''), s.no_lot||'', ed].join('|');
         opt.value=ed;
         var isiS=parseInt(s.isi_per_box||1);
         var avB=Math.floor(parseFloat(s.available_stock||0)/isiS);
@@ -838,7 +823,8 @@ function applyBarangKeBaris(i, btn) {
         opt.dataset.lot=s.no_lot||'';
         opt.dataset.isi=parseInt(s.isi_per_box||1);
         opt.dataset.gudang=s.gudang_id||'';
-        if (ed===btn.dataset.exp) opt.selected=true;
+        opt.dataset.stockKey=stockKey;
+        if (stockKey===(btn.dataset.stockKey||'')) opt.selected=true;
         sel.appendChild(opt);
     });
     if (rows.length===1) sel.selectedIndex=1;

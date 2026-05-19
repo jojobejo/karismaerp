@@ -430,23 +430,44 @@ class C_SalesOrder extends CI_Controller
         }
 
         $details = $this->M_SalesOrder->get_so_detail($id_so);
+        $selected_items = $this->input->get('item', true);
+        if (!is_array($selected_items)) {
+            $selected_items = $selected_items !== null && $selected_items !== '' ? [$selected_items] : [];
+        }
+        $selected_items = array_filter(array_map('intval', $selected_items));
+        $tax_mode = strtolower(trim($this->input->get('tax_mode', true) ?? 'non_pajak'));
+        $tax_rate = $tax_mode === 'pajak' ? 11 : 0;
 
         // Filter hanya item yang masih ada outstanding
         $items_outstanding = array_filter($details, function($d) {
             return ((float)$d['qty'] - (float)$d['qty_faktur']) > 0;
         });
 
+        if (!empty($selected_items)) {
+            $items_outstanding = array_filter($items_outstanding, function($d) use ($selected_items) {
+                return in_array((int)$d['id_so_detail'], $selected_items, true);
+            });
+        }
+
         if (empty($items_outstanding)) {
-            $this->session->set_flashdata('error', 'Semua item pada SO ini sudah difakturkan seluruhnya.');
+            $message = !empty($selected_items)
+                ? 'Item yang dipilih tidak valid atau sudah difakturkan seluruhnya.'
+                : 'Semua item pada SO ini sudah difakturkan seluruhnya.';
+            $this->session->set_flashdata('error', $message);
             redirect('sales_order/detail/' . $id_so);
             return;
         }
 
         $data['page_title']        = 'KARISMA - Buat Faktur Penjualan dari SO ' . $so['no_so'];
         $data['so']                = $so;
-        $data['details']           = array_values($items_outstanding);
+        $data['details']           = array_map(function($item) use ($tax_rate) {
+            $item['pajak'] = $tax_rate;
+            return $item;
+        }, array_values($items_outstanding));
         $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur();
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
+        $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
+        $data['tax_rate']          = $tax_rate;
         $data['batas_tonase']      = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi']    = M_SalesOrder::BATAS_KUBIKASI;
 
@@ -495,12 +516,19 @@ class C_SalesOrder extends CI_Controller
         }
 
         $no_faktur = $post['no_faktur'] ?? $this->M_SalesOrder->generate_no_faktur();
+        $cara_pembayaran = strtolower(trim($post['cara_pembayaran'] ?? 'cash'));
+        if (!in_array($cara_pembayaran, ['cash', 'transfer', 'tempo'], true)) {
+            $cara_pembayaran = 'cash';
+        }
 
         $faktur_header = [
-            'no_faktur'      => $no_faktur,
-            'tanggal_faktur' => $post['tanggal_faktur'],
-            'catatan'        => $post['catatan'] ?? null,
-            'create_by'      => $this->_getUsername(),
+            'no_faktur'             => $no_faktur,
+            'tanggal_faktur'        => $post['tanggal_faktur'],
+            'tanggal_jatuh_tempo'   => $post['tanggal_jatuh_tempo'] ?? null,
+            'salesman'              => trim($post['salesman'] ?? ''),
+            'cara_pembayaran'       => $cara_pembayaran,
+            'catatan'               => $post['catatan'] ?? null,
+            'create_by'             => $this->_getUsername(),
         ];
 
         $result = $this->M_SalesOrder->buat_faktur($id_so, $faktur_header, $faktur_items);
@@ -624,8 +652,14 @@ class C_SalesOrder extends CI_Controller
                 $row['isi_per_box']     = (int)($row['isi_per_box']      ?? 1);
                 $row['gudang_id']       = (string)($row['gudang_id']     ?? '');
                 $row['gudang']          = (string)($row['gudang']        ?? $row['gudang_id']);
+                $row['stock_key']       = implode('|', [
+                    $row['kd_barang'] ?? '',
+                    $row['gudang_id'] ?? '',
+                    $row['no_lot'] ?? '',
+                    $row['exp_date'] ?? $row['expired_date'] ?? '',
+                ]);
 
-                foreach (['kd_barang','nama_barang','satuan','exp_date','no_lot','gudang','gudang_id'] as $f) {
+                foreach (['kd_barang','nama_barang','satuan','exp_date','no_lot','gudang','gudang_id','stock_key'] as $f) {
                     if (isset($row[$f])) {
                         $row[$f] = mb_convert_encoding((string)$row[$f], 'UTF-8', 'UTF-8');
                     }
@@ -728,12 +762,16 @@ class C_SalesOrder extends CI_Controller
         foreach ($post['id_so_detail'] as $i => $id_so_detail) {
             if (empty($id_so_detail)) continue;
 
-            $qty = (float)($post['qty_faktur'][$i] ?? 0);
-            if ($qty <= 0) continue; // lewati item dengan qty 0
-
             $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
             $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+            $qty_input   = isset($post['qty_input'][$i])
+                ? (float)$post['qty_input'][$i]
+                : (float)($post['qty_faktur'][$i] ?? 0);
+            $qty_mode    = strtolower(trim($post['qty_mode'][$i] ?? 'pcs'));
+            $qty         = $qty_mode === 'box' ? ($qty_input * $isi_per_box) : $qty_input;
+            if ($qty <= 0) continue; // lewati item dengan qty 0
+
             $pajak       = (float)($post['pajak'][$i]        ?? 0);
             $disc        = (float)($post['disc'][$i]         ?? 0);
 
