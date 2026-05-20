@@ -692,6 +692,7 @@ class M_Logistik extends CI_Model
                 f.kd_customer,
                 COALESCE(r.kd_rute, c.regional)                    AS kd_rute,
                 f.tanggal_faktur                                    AS tgl_inputer,
+                COALESCE(f.catatan, '')                             AS note_faktur,
                 fd.kd_barang,
                 COALESCE(fd.nama_barang, mb.nama_barang)             AS nama_barang,
                 fd.qty                                              AS qty,

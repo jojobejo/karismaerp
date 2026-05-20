@@ -1073,7 +1073,7 @@ class C_Logistik extends CI_Controller
         }
 
         $query = $this->db->query("SELECT
-            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,x.note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
+            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
             x.no_lot,x.nominal_p,x.jtempo,x.tgl_exp,x.satuan,x.status,x.kd_do,x.qty,(c.p * c.l * c.t)      AS dimensi,FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
             (x.qty % (c.p * c.l * c.t)) AS qty_pcs
         FROM (
@@ -1110,11 +1110,13 @@ class C_Logistik extends CI_Controller
                 a.tgl_exp,
                 a.nominal_p,
                 a.jtempo,
+                a.note_faktur,
                 a.satuan,
                 a.status
         ) x
         JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
         JOIN tb_customer d ON d.kd_customer = x.kd_customer
+        LEFT JOIN tbso_faktur_penjualan fp ON fp.no_faktur = x.kd_faktur
         ORDER BY
             d.nama_customer ASC,
             x.kd_faktur ASC,
@@ -1468,11 +1470,46 @@ class C_Logistik extends CI_Controller
             return;
         }
 
+        $this->_insert_faktur_to_do($kddo, $kdfaktur);
+        redirect('list_faktur/' . $kddo);
+    }
+
+    public function insertfromdraft_batch()
+    {
+        $kddo = trim((string)$this->input->post('kddo', true));
+        $fakturs = $this->input->post('kd_faktur', true);
+
+        if ($kddo === '' || empty($fakturs) || !is_array($fakturs)) {
+            $this->session->set_flashdata('warning', 'Pilih minimal 1 faktur terlebih dahulu.');
+            redirect($kddo !== '' ? 'list_faktur/' . $kddo : 'logistik');
+            return;
+        }
+
+        $success = 0;
+        foreach (array_unique($fakturs) as $kd_faktur) {
+            $kd_faktur = trim((string)$kd_faktur);
+            if ($kd_faktur !== '' && $this->_insert_faktur_to_do($kddo, $kd_faktur)) {
+                $success++;
+            }
+        }
+
+        if ($success > 0) {
+            $this->session->set_flashdata('success', $success . ' faktur berhasil ditambahkan ke DO.');
+        } else {
+            $this->session->set_flashdata('warning', 'Tidak ada faktur yang berhasil ditambahkan.');
+        }
+
+        redirect('list_faktur/' . $kddo);
+    }
+
+    private function _insert_faktur_to_do($kddo, $kdfaktur)
+    {
         date_default_timezone_set("Asia/Jakarta");
         $get_pre_do = $this->M_Logistik->get_do_cust($kdfaktur);
         $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kdfaktur);
 
         $now = date("Y-m-d H:i:s");
+        $inserted = false;
 
         if ($get_pre_do) {
             $data_tmp_det_do = [];
@@ -1498,6 +1535,7 @@ class C_Logistik extends CI_Controller
                         'no_lot'        => $det->no_lot,
                         'tgl_exp'       => $det->tgl_exp,
                         'norut'         => 0,
+                        'note_faktur'   => $det->note_faktur ?? '',
                         'dt_status'     => 1,
                         'status'        => 1,
                         'create_at'     => $now
@@ -1505,6 +1543,7 @@ class C_Logistik extends CI_Controller
                 }
                 if (!empty($data_tmp_det_do)) {
                     $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
+                    $inserted = true;
                 }
                 $update_pre_do = array(
                     'data_sts' => '3'
@@ -1512,7 +1551,7 @@ class C_Logistik extends CI_Controller
                 $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
             }
         }
-        redirect('list_faktur/' . $kddo);
+        return $inserted;
     }
 
     public function print_do($kd_do)
@@ -1789,6 +1828,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                             );
                             $this->M_Logistik->insert_tmp_detdo($tmp_det_do);
@@ -1841,6 +1881,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                                 'create_at'     => $now
                             );
@@ -1897,6 +1938,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                                 'create_at'     => $now
                             );
@@ -1951,6 +1993,7 @@ class C_Logistik extends CI_Controller
                                 'norut'         => '0',
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'dt_status'     => '1',
                                 'status'        => '4',
                                 'input_at'      => $todaydo,

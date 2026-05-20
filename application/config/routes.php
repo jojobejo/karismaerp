@@ -274,6 +274,7 @@ $route['cancel_fk/(:any)/(:any)']                   = 'logistik/C_Logistik/cance
 $route['detail_fk']                                 = 'logistik/C_Logistik/detail_fk';
 $route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detail_fk/$1';
 $route['insertfromdraft']                           = 'logistik/C_Logistik/insertfromdraft';
+$route['insertfromdraft_batch']                     = 'logistik/C_Logistik/insertfromdraft_batch';
 $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';

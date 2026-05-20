@@ -22,6 +22,15 @@
 
             <section class="content">
                 <div class="container-fluid">
+                    <?php foreach (['success' => 'success', 'warning' => 'warning', 'error' => 'danger'] as $flash_key => $flash_class) : ?>
+                        <?php if ($msg = $this->session->flashdata($flash_key)) : ?>
+                            <div class="alert alert-<?= $flash_class ?> alert-dismissible fade show">
+                                <?= $msg ?>
+                                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+
                     <?php
                     $batas_ton = 6;
                     $batas_kub = 9;
@@ -90,6 +99,14 @@
                             <h3 class="card-title">List Faktur Tambahan</h3>
                         </div>
                         <div class="card-body">
+                            <form id="formTambahFakturDipilih" action="<?= base_url('insertfromdraft_batch') ?>" method="post">
+                                <input type="hidden" name="kddo" value="<?= htmlspecialchars($kdfaktur, ENT_QUOTES, 'UTF-8') ?>">
+                                <div class="mb-2">
+                                    <button type="submit" class="btn btn-success btn-sm" id="btnTambahFakturDipilih" disabled>
+                                        <i class="fas fa-plus"></i> Tambah Faktur Dipilih
+                                    </button>
+                                    <span class="text-muted small ml-2"><span id="jumlahFakturDipilih">0</span> faktur dipilih</span>
+                                </div>
                             <table id="lsfakturbyrute" class="table table-bordered table-striped">
                                 <thead style="background-color: #212529; color:white;">
                                     <tr>
@@ -117,6 +134,8 @@
                                         <tr>
                                             <td class="text-center">
                                                 <input type="checkbox" class="chk-faktur-estimasi"
+                                                    name="kd_faktur[]"
+                                                    value="<?= htmlspecialchars($l->kd_faktur, ENT_QUOTES, 'UTF-8') ?>"
                                                     data-tonase="<?= $tonase ?>"
                                                     data-kubikasi="<?= $kubikasi ?>">
                                             </td>
@@ -138,6 +157,7 @@
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -194,8 +214,13 @@
 
                 var elTotalTonase = document.getElementById('totalTonase');
                 var elTotalKubikasi = document.getElementById('totalKubikasi');
+                var jumlahDipilih = document.querySelectorAll('.chk-faktur-estimasi:checked').length;
+                var elJumlahDipilih = document.getElementById('jumlahFakturDipilih');
+                var btnTambahDipilih = document.getElementById('btnTambahFakturDipilih');
                 elTotalTonase.textContent = fmt(totalTonase, 3) + ' ton';
                 elTotalKubikasi.textContent = fmt(totalKubikasi, 4) + ' m³';
+                if (elJumlahDipilih) elJumlahDipilih.textContent = jumlahDipilih;
+                if (btnTambahDipilih) btnTambahDipilih.disabled = jumlahDipilih < 1;
                 elTotalTonase.className = 'font-weight-bold ' + (totalTonase > batasTonase ? 'text-danger' : 'text-success');
                 elTotalKubikasi.className = 'font-weight-bold ' + (totalKubikasi > batasKubikasi ? 'text-danger' : 'text-info');
 
@@ -223,6 +248,22 @@
                     updateEstimasi();
                 }
             });
+
+            var formBatch = document.getElementById('formTambahFakturDipilih');
+            if (formBatch) {
+                formBatch.addEventListener('submit', function(e) {
+                    var checked = document.querySelectorAll('.chk-faktur-estimasi:checked').length;
+                    if (checked < 1) {
+                        e.preventDefault();
+                        alert('Pilih minimal 1 faktur terlebih dahulu.');
+                        return;
+                    }
+
+                    if (!confirm('Tambahkan ' + checked + ' faktur yang dipilih ke DO ini?')) {
+                        e.preventDefault();
+                    }
+                });
+            }
 
             updateEstimasi();
         })();
