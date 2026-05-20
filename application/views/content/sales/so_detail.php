@@ -380,8 +380,24 @@
                                     <td class="text-right"><?= number_format($f['total_tonase'], 3) ?> ton</td>
                                     <td class="text-center">
                                         <?php
-                                        $fs_badge = ['confirmed' => 'success', 'draft' => 'secondary', 'cancelled' => 'danger'];
-                                        $fs_label = ['confirmed' => 'Confirmed', 'draft' => 'Draft', 'cancelled' => 'Cancelled'];
+                                        $fs_badge = [
+                                            'confirmed'   => 'success',
+                                            'draft'       => 'warning',
+                                            'cancelled'   => 'danger',
+                                            'in_progress' => 'primary',
+                                            'proses_do'   => 'info',
+                                            'selesai'     => 'success',
+                                            'completed'   => 'success',
+                                        ];
+                                        $fs_label = [
+                                            'confirmed'   => 'Confirmed',
+                                            'draft'       => 'Draft',
+                                            'cancelled'   => 'Cancelled',
+                                            'in_progress' => 'In Progress',
+                                            'proses_do'   => 'Proses DO',
+                                            'selesai'     => 'Selesai',
+                                            'completed'   => 'Completed',
+                                        ];
                                         ?>
                                         <span class="badge badge-<?= $fs_badge[$f['status']] ?? 'secondary' ?>">
                                             <?= $fs_label[$f['status']] ?? $f['status'] ?>

@@ -1,4 +1,23 @@
 <!-- views/content/sales/so_list.php -->
+<style>
+    #tabelSO_wrapper {
+        padding: 12px;
+    }
+
+    #tabelSO_wrapper .dataTables_length,
+    #tabelSO_wrapper .dataTables_filter {
+        margin-bottom: 12px;
+    }
+
+    #tabelSO_wrapper .dataTables_info,
+    #tabelSO_wrapper .dataTables_paginate {
+        margin-top: 12px;
+    }
+
+    #tabelSO_wrapper .dataTables_filter input {
+        margin-left: 6px;
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -126,7 +145,7 @@
                         <span class="badge badge-light"><?= count($so_list) ?> SO</span>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
                     <table class="table table-bordered table-hover table-sm" id="tabelSO">
                         <thead class="thead-dark">
                             <tr>
@@ -182,7 +201,7 @@
                                         $bar_color = 'secondary';
                                     }
                                 ?>
-                                <tr class="<?= $outstanding > 0 && $row['status'] === 'open' ? 'table-warning' : '' ?>">
+                                <tr>
                                     <td>
                                         <a href="<?= base_url('sales_order/detail/' . $row['id_so']) ?>"
                                            class="font-weight-bold">
