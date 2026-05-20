@@ -50,9 +50,7 @@
             <div class="alert alert-info mb-3">
                 <i class="fas fa-info-circle mr-1"></i>
                 Membuat Faktur Penjualan dari SO <strong><?= htmlspecialchars($so['no_so']) ?></strong>
-                &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>.
-                Anda dapat mengisi qty sebagian (parsial) sesuai stok yang tersedia.
-                Qty tidak boleh melebihi kolom <em>Outstanding</em>.
+                &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
                 Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11%' : 'Non Pajak' ?></strong>.
             </div>
 
@@ -75,11 +73,22 @@
                                 <div class="form-group">
                                     <label>Tanggal Faktur <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control" name="tanggal_faktur"
+                                           id="tanggalFaktur"
                                            value="<?= date('Y-m-d') ?>" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="jtempo" id="jtempo" required>
+                                        <option value="0">0 Hari</option>
+                                        <option value="30">30 Hari</option>
+                                        <option value="60">60 Hari</option>
+                                        <option value="90">90 Hari</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label>Tgl Jatuh Tempo <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control" name="tanggal_jatuh_tempo"
+                                           id="tanggalJatuhTempo"
                                            value="<?= date('Y-m-d') ?>" required>
                                 </div>
                                 <div class="form-group">
@@ -266,6 +275,16 @@
 <script>
 $(document).ready(function () {
 
+    function updateTanggalJatuhTempo() {
+        const tanggalFaktur = $('#tanggalFaktur').val();
+        const tempo = parseInt($('#jtempo').val(), 10) || 0;
+        if (!tanggalFaktur) return;
+
+        const date = new Date(tanggalFaktur + 'T00:00:00');
+        date.setDate(date.getDate() + tempo);
+        $('#tanggalJatuhTempo').val(date.toISOString().slice(0, 10));
+    }
+
     function syncQty($input) {
         const row = $input.data('row');
         const $hidden = $('.qty-faktur[data-row="' + row + '"]');
@@ -332,6 +351,9 @@ $(document).ready(function () {
     }
 
     // Hitung saat pertama kali dan saat nilai berubah
+    updateTanggalJatuhTempo();
+    $('#tanggalFaktur, #jtempo').on('change', updateTanggalJatuhTempo);
+
     syncAllQty();
     hitungSubtotal();
     $(document).on('input change', '.qty-input', function() {

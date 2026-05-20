@@ -65,11 +65,6 @@
                         <i class="fas fa-times"></i> Batalkan SO
                     </a>
                 <?php endif; ?>
-                <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
-                    <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-sm btn-buat-faktur-pilih">
-                        <i class="fas fa-file-invoice-dollar"></i> Buat Faktur Penjualan
-                    </button>
-                <?php endif; ?>
             </div>
 
             <?php
@@ -350,25 +345,13 @@
                         Faktur Penjualan
                         <span class="badge badge-success ml-1"><?= count($fakturs) ?></span>
                     </h3>
-                    <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
-                        <div class="card-tools">
-                            <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-xs btn-buat-faktur-pilih">
-                                <i class="fas fa-plus"></i> Buat Faktur Baru
-                            </button>
-                        </div>
-                    <?php endif; ?>
                 </div>
                 <div class="card-body p-0">
                     <?php if (empty($fakturs)): ?>
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>
                             Belum ada Faktur Penjualan.
-                            <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
-                                <br>
-                                <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-sm mt-2 btn-buat-faktur-pilih">
-                                    <i class="fas fa-plus"></i> Buat Faktur Pertama
-                                </button>
-                            <?php elseif ($so['status'] === 'draft'): ?>
+                            <?php if ($so['status'] === 'draft'): ?>
                                 <br><small>Rekam SO terlebih dahulu untuk dapat membuat Faktur.</small>
                             <?php endif; ?>
                         </div>
@@ -449,6 +432,10 @@
 
 <script>
 $(document).ready(function () {
+    function escapeHtml(value) {
+        return $('<div>').text(value || '').html();
+    }
+
     $('#check-all-faktur').on('change', function() {
         $('.check-item-faktur').prop('checked', this.checked);
     });
@@ -480,11 +467,12 @@ $(document).ready(function () {
             + '<th>Waktu</th><th>Aksi</th><th>Keterangan</th><th>Oleh</th>'
             + '</tr></thead><tbody>';
         resp.data.forEach(function(log) {
+            const oleh = log.dilakukan_oleh || log.created_by || log.create_by || '-';
             html += '<tr>'
-                + '<td><small>' + (log.created_at || '') + '</small></td>'
-                + '<td><span class="badge badge-secondary">' + (log.aksi || '') + '</span></td>'
-                + '<td><small>' + (log.keterangan || '') + '</small></td>'
-                + '<td><small>' + (log.created_by || '') + '</small></td>'
+                + '<td><small>' + escapeHtml(log.created_at) + '</small></td>'
+                + '<td><span class="badge badge-secondary">' + escapeHtml(log.aksi) + '</span></td>'
+                + '<td><small>' + escapeHtml(log.keterangan) + '</small></td>'
+                + '<td><small>' + escapeHtml(oleh) + '</small></td>'
                 + '</tr>';
         });
         html += '</tbody></table>';

@@ -520,6 +520,10 @@ class C_SalesOrder extends CI_Controller
         if (!in_array($cara_pembayaran, ['cash', 'transfer', 'tempo'], true)) {
             $cara_pembayaran = 'cash';
         }
+        $jtempo = (int)($post['jtempo'] ?? 0);
+        if (!in_array($jtempo, [0, 30, 60, 90], true)) {
+            $jtempo = 0;
+        }
 
         $faktur_header = [
             'no_faktur'             => $no_faktur,
@@ -527,6 +531,8 @@ class C_SalesOrder extends CI_Controller
             'tanggal_jatuh_tempo'   => $post['tanggal_jatuh_tempo'] ?? null,
             'salesman'              => trim($post['salesman'] ?? ''),
             'cara_pembayaran'       => $cara_pembayaran,
+            'jtempo'                => $jtempo,
+            'tempo'                 => $jtempo,
             'catatan'               => $post['catatan'] ?? null,
             'create_by'             => $this->_getUsername(),
         ];

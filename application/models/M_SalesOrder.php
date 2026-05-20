@@ -152,7 +152,7 @@ class M_SalesOrder extends CI_Model
      */
     public function generate_no_faktur()
     {
-        $prefix = 'INV-' . date('dmy') . '-';
+        $prefix = 'INV' . date('dmy');
 
         $row = $this->db
             ->like('no_faktur', $prefix, 'after')
@@ -453,6 +453,7 @@ class M_SalesOrder extends CI_Model
         $this->db->select('
             so.*,
             c.nama_customer,
+            c.regional,
             COUNT(sd.id)                                                        AS jumlah_item,
             SUM(CASE WHEN (sd.qty - COALESCE(sd.qty_faktur, 0)) <= 0
                     THEN 1 ELSE 0 END)                                         AS jumlah_item_diterima,
@@ -749,6 +750,8 @@ class M_SalesOrder extends CI_Model
             'tanggal_jatuh_tempo',
             'salesman',
             'cara_pembayaran',
+            'jtempo',
+            'tempo',
         ];
         foreach ($optional_header_fields as $field) {
             if ($this->db->field_exists($field, 'tbso_faktur_penjualan')) {

@@ -1,4 +1,133 @@
 <!-- views/content/sales/faktur_detail.php -->
+<style>
+    .invoice-print-header {
+        display: none;
+    }
+
+    .invoice-print-title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin-bottom: 2px;
+    }
+
+    .invoice-print-meta {
+        text-align: right;
+        font-size: 12px;
+    }
+
+    @media print {
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
+
+        body {
+            background: #fff !important;
+            color: #000 !important;
+            font-size: 11px;
+        }
+
+        .main-header,
+        .main-sidebar,
+        .main-footer,
+        .control-sidebar,
+        .preloader,
+        .content-header,
+        .no-print {
+            display: none !important;
+        }
+
+        .content-wrapper {
+            margin-left: 0 !important;
+            min-height: 0 !important;
+            background: #fff !important;
+        }
+
+        .content,
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .invoice-print-header {
+            display: flex !important;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .row {
+            display: block !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        .col-md-5,
+        .col-md-7 {
+            max-width: 100% !important;
+            flex: 0 0 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .card {
+            border: 0 !important;
+            box-shadow: none !important;
+            margin-bottom: 10px !important;
+        }
+
+        .card-header {
+            background: #f2f2f2 !important;
+            color: #000 !important;
+            border: 1px solid #000 !important;
+            padding: 5px 8px !important;
+        }
+
+        .card-title {
+            font-size: 12px !important;
+            font-weight: 700 !important;
+        }
+
+        .card-body {
+            border: 1px solid #000 !important;
+            border-top: 0 !important;
+        }
+
+        .table {
+            width: 100% !important;
+            font-size: 10.5px !important;
+            color: #000 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .table th,
+        .table td {
+            padding: 4px 5px !important;
+            border-color: #333 !important;
+            vertical-align: top !important;
+        }
+
+        .thead-dark th,
+        .thead-light th {
+            background: #e9ecef !important;
+            color: #000 !important;
+        }
+
+        a {
+            color: #000 !important;
+            text-decoration: none !important;
+        }
+
+        .badge {
+            border: 1px solid #000 !important;
+            background: #fff !important;
+            color: #000 !important;
+        }
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -39,8 +168,24 @@
     <section class="content">
         <div class="container-fluid">
 
+            <div class="invoice-print-header">
+                <div>
+                    <div class="invoice-print-title">FAKTUR PENJUALAN</div>
+                    <div><strong>PT. Karisma Indoargo Universal</strong></div>
+                    <div>No. Faktur: <?= htmlspecialchars($faktur['no_faktur']) ?></div>
+                    <div>No. SO: <?= htmlspecialchars($so['no_so']) ?></div>
+                </div>
+                <div class="invoice-print-meta">
+                    <div>Tanggal Faktur: <?= date('d/m/Y', strtotime($faktur['tanggal_faktur'])) ?></div>
+                    <?php if (!empty($faktur['tanggal_jatuh_tempo'])): ?>
+                        <div>Jatuh Tempo: <?= date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) ?></div>
+                    <?php endif; ?>
+                    <div>Customer: <strong><?= htmlspecialchars($faktur['customer_name']) ?></strong></div>
+                </div>
+            </div>
+
             <!-- Tombol Aksi -->
-            <div class="mb-3">
+            <div class="mb-3 no-print">
                 <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>"
                    class="btn btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> Kembali ke SO
@@ -95,6 +240,13 @@
                                 <tr>
                                     <td class="text-muted">Cara Pembayaran</td>
                                     <td><span class="badge badge-info"><?= htmlspecialchars(ucfirst($faktur['cara_pembayaran'])) ?></span></td>
+                                </tr>
+                                <?php endif; ?>
+                                <?php $tempo_hari = $faktur['jtempo'] ?? $faktur['tempo'] ?? null; ?>
+                                <?php if ($tempo_hari !== null && $tempo_hari !== ''): ?>
+                                <tr>
+                                    <td class="text-muted">Tempo</td>
+                                    <td><?= (int)$tempo_hari ?> Hari</td>
                                 </tr>
                                 <?php endif; ?>
                                 <tr>
@@ -161,12 +313,28 @@
                                 </thead>
                                 <tbody>
                                     <?php
+                                    $total_nilai_faktur = 0;
+                                    $total_tax = 0;
                                     $grand_total = 0;
+                                    $tax_rates = [];
                                     foreach ($details as $i => $d):
                                         $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
                                         $qty_box = floor($d['qty'] / $isi);
                                         $qty_pcs = fmod($d['qty'], $isi);
-                                        $grand_total += (float)$d['total_harga'];
+                                        $nilai_faktur = (float)($d['subtotal_after_disc'] ?? 0);
+                                        if ($nilai_faktur <= 0) {
+                                            $nilai_faktur = (float)$d['qty'] * (float)$d['hrg_satuan'];
+                                            $nilai_faktur = $nilai_faktur * (1 - ((float)($d['disc'] ?? 0) / 100));
+                                        }
+                                        $tax_rate = (float)($d['pajak'] ?? 0);
+                                        $tax_value = $nilai_faktur * ($tax_rate / 100);
+                                        $total_nilai_faktur += $nilai_faktur;
+                                        $total_tax += $tax_value;
+                                        $total_harga = (float)($d['total_harga'] ?? 0);
+                                        $grand_total += $total_harga > 0 ? $total_harga : ($nilai_faktur + $tax_value);
+                                        if ($tax_rate > 0) {
+                                            $tax_rates[(string)$tax_rate] = $tax_rate;
+                                        }
                                     ?>
                                     <tr>
                                         <td><?= $i + 1 ?></td>
@@ -204,6 +372,20 @@
                                 <tfoot class="thead-light">
                                     <tr>
                                         <th colspan="6" class="text-right">Total Nilai Faktur:</th>
+                                        <th class="text-right">
+                                            <strong>Rp <?= number_format($total_nilai_faktur, 0, ',', '.') ?></strong>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="6" class="text-right">
+                                            Tax<?= !empty($tax_rates) ? ': ' . implode(', ', array_map(function($rate) { return number_format($rate, 0) . '(%)'; }, $tax_rates)) : ': 0(%)' ?>
+                                        </th>
+                                        <th class="text-right">
+                                            <strong>Rp <?= number_format($total_tax, 0, ',', '.') ?></strong>
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th colspan="6" class="text-right">Grand Total Harga:</th>
                                         <th class="text-right">
                                             <strong>Rp <?= number_format($grand_total, 0, ',', '.') ?></strong>
                                         </th>

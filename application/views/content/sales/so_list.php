@@ -133,6 +133,7 @@
                                 <th>No SO</th>
                                 <th>Tanggal</th>
                                 <th>Customer</th>
+                                <th>Rute</th>
                                 <th class="text-right">Item Diorder</th>
                                 <th class="text-right">Item Selesai</th>
                                 <th class="text-right">Outstanding</th>
@@ -190,6 +191,7 @@
                                     </td>
                                     <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tanggal_transaksi'])) ?></td>
                                     <td><?= htmlspecialchars($row['customer_name']) ?></td>
+                                    <td><?= !empty($row['regional']) ? htmlspecialchars($row['regional']) : '<span class="text-muted">-</span>' ?></td>
                                     <td class="text-center"><?= number_format($item_diorder) ?></td>
                                     <td class="text-center text-success font-weight-bold">
                                         <?= number_format($item_diterima) ?>
@@ -224,12 +226,6 @@
                                            class="btn btn-sm btn-info" title="Detail">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <?php if ($row['status'] === 'open'): ?>
-                                            <a href="<?= base_url('sales_order/form_faktur/' . $row['id_so']) ?>"
-                                               class="btn btn-sm btn-success" title="Buat Faktur">
-                                                <i class="fas fa-file-invoice"></i>
-                                            </a>
-                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -259,7 +255,7 @@ $(document).ready(function () {
         pageLength:  25,
         order:       [[1, 'desc']],
         columnDefs:  [
-            { orderable: false, targets: [6, 8] }
+            { orderable: false, targets: [7, 9] }
         ],
         language: {
             search:      "Cari:",
