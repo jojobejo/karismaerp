@@ -302,11 +302,11 @@ class M_SalesOrder extends CI_Model
         $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
         $qty_col = $this->_stockQtyColumn();
 
-        $this->db->select('sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
-                           SUM(sb.' . $qty_col . ') AS qty_on_hand,
-                           SUM(COALESCE(sb.qty_reserved, 0)) AS qty_reserved,
-                           (SUM(sb.' . $qty_col . ') - SUM(COALESCE(sb.qty_reserved, 0))) AS available_stock,
-                           MAX(mb.nama_barang) AS nama_barang', false);
+        $this->db->select('sb.id AS stock_batch_id, sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
+                           sb.' . $qty_col . ' AS qty_on_hand,
+                           COALESCE(sb.qty_reserved, 0) AS qty_reserved,
+                           (sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) AS available_stock,
+                           mb.nama_barang AS nama_barang', false);
         $this->db->from('tberp_stock_batch sb');
         $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
 
@@ -317,61 +317,13 @@ class M_SalesOrder extends CI_Model
             );
         }
 
-        $this->db->group_by(['sb.kd_barang', 'sb.gudang_id', 'sb.no_lot', 'sb.expired_date']);
         $this->db->having('available_stock >', 0);
         $this->db->order_by('sb.kd_barang', 'ASC');
         $this->db->order_by('sb.no_lot', 'ASC');
         $this->db->order_by('sb.expired_date', 'ASC');
+        $this->db->order_by('sb.id', 'ASC');
 
         $stocks = $this->db->get()->result_array();
-
-        // Fallback: hitung dari tberp_stock_ledger
-        if (empty($stocks)) {
-            $sql    = "SELECT
-                           kd_barang, gudang_id, no_lot, expired_date,
-                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
-                           - SUM(CASE WHEN tipe IN ('OUT','ADJOUT','RJUAL') THEN qty ELSE 0 END)
-                           - GREATEST(
-                               SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
-                               - SUM(CASE WHEN tipe = 'OUT' AND ref_type = 'FAKTUR PENJUALAN' THEN qty ELSE 0 END)
-                               - SUM(CASE WHEN tipe = 'CANCEL_RESERVE' THEN qty ELSE 0 END),
-                               0
-                           ) AS available_stock,
-                           GREATEST(
-                               SUM(CASE WHEN tipe = 'RESERVE' THEN qty ELSE 0 END)
-                               - SUM(CASE WHEN tipe = 'OUT' AND ref_type = 'FAKTUR PENJUALAN' THEN qty ELSE 0 END)
-                               - SUM(CASE WHEN tipe = 'CANCEL_RESERVE' THEN qty ELSE 0 END),
-                               0
-                           ) AS qty_reserved,
-                           SUM(CASE WHEN tipe IN ('SALDO_AWAL','IN','ADJIN','RBELI') THEN qty ELSE 0 END)
-                           - SUM(CASE WHEN tipe IN ('OUT','ADJOUT','RJUAL') THEN qty ELSE 0 END) AS qty_on_hand,
-                           NULL AS nama_barang
-                       FROM tberp_stock_ledger WHERE 1=1";
-            $params = [];
-
-            if (!empty($gudang_id_str)) {
-                $sql     .= " AND CAST(gudang_id AS CHAR) = CAST(? AS CHAR)";
-                $params[] = $gudang_id_str;
-            }
-            if (!empty($kd_barang)) {
-                $sql     .= " AND kd_barang = ?";
-                $params[] = $kd_barang;
-            }
-
-            $sql    .= " GROUP BY kd_barang, gudang_id, no_lot, expired_date HAVING available_stock > 0";
-            $stocks  = $this->db->query($sql, $params)->result_array();
-
-            if (!empty($stocks)) {
-                $kd_list  = array_unique(array_column($stocks, 'kd_barang'));
-                $masters  = $this->db->where_in('kd_barang', $kd_list)->get('tb_master_barang_all')->result_array();
-                $masterMap = [];
-                foreach ($masters as $m) $masterMap[$m['kd_barang']] = $m;
-                foreach ($stocks as &$s) {
-                    $s['nama_barang'] = $masterMap[$s['kd_barang']]['nama_barang'] ?? '';
-                }
-                unset($s);
-            }
-        }
 
         if (empty($stocks)) return [];
 
@@ -418,30 +370,35 @@ class M_SalesOrder extends CI_Model
     /**
      * Cek stok satu item dari tberp_stock_batch.
      */
-    public function cek_stock($kd_barang, $exp_date, $gudang_id)
+    public function cek_stock($kd_barang, $exp_date, $gudang_id, $no_lot = null)
     {
         $ymd = $this->_normalizeDate($exp_date);
         $qty_col = $this->_stockQtyColumn();
 
-        if (!empty($gudang_id)) {
-            $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
-                           {$qty_col} AS qty_on_hand, qty_reserved,
-                           ({$qty_col} - COALESCE(qty_reserved, 0)) AS available_stock
-                    FROM tberp_stock_batch
-                    WHERE kd_barang = ? AND expired_date = ? AND gudang_id = ?
-                    LIMIT 1";
-            return $this->db->query($sql, [$kd_barang, $ymd, $gudang_id])->row_array();
-        }
-
-        $sql = "SELECT kd_barang, gudang_id, no_lot, expired_date,
+        $sql = "SELECT kd_barang,
+                       MAX(gudang_id) AS gudang_id,
+                       " . (!empty($no_lot) ? "MAX(no_lot)" : "NULL") . " AS no_lot,
+                       expired_date,
                        SUM({$qty_col}) AS qty_on_hand,
                        SUM(COALESCE(qty_reserved, 0)) AS qty_reserved,
                        (SUM({$qty_col}) - SUM(COALESCE(qty_reserved, 0))) AS available_stock
                 FROM tberp_stock_batch
-                WHERE kd_barang = ? AND expired_date = ?
-                GROUP BY kd_barang, expired_date
+                WHERE kd_barang = ? AND expired_date = ?";
+        $params = [$kd_barang, $ymd];
+
+        if (!empty($gudang_id)) {
+            $sql .= " AND gudang_id = ?";
+            $params[] = $gudang_id;
+        }
+
+        if (!empty($no_lot)) {
+            $sql .= " AND no_lot = ?";
+            $params[] = $no_lot;
+        }
+
+        $sql .= " GROUP BY kd_barang, expired_date
                 LIMIT 1";
-        return $this->db->query($sql, [$kd_barang, $ymd])->row_array();
+        return $this->db->query($sql, $params)->row_array();
     }
 
     // ================================================================
@@ -1153,28 +1110,6 @@ class M_SalesOrder extends CI_Model
     //         $this->db->update('tbso_sales_order', ['status' => $new_status]);
     //     }
     // }
-
-    // ================================================================
-    // GET REF_NO dari stock ledger
-    // ================================================================
-
-    public function get_ref_no($kd_barang, $exp_date, $no_lot = '', $gudang_id = null)
-    {
-        $ymd = $this->_normalizeDate($exp_date);
-
-        $this->db->select('ref_no');
-        $this->db->from('tberp_stock_ledger');
-        $this->db->where('kd_barang', $kd_barang);
-        $this->db->where('expired_date', $ymd);
-        if (!empty($no_lot)) $this->db->where('no_lot', $no_lot);
-        if (!empty($gudang_id)) $this->db->where('gudang_id', $gudang_id);
-        $this->db->where_in('tipe', ['IN', 'SALDO_AWAL']);
-        $this->db->order_by('created_at', 'DESC');
-        $this->db->limit(1);
-
-        $row = $this->db->get()->row_array();
-        return $row ? $row['ref_no'] : null;
-    }
 
     // ================================================================
     // LIST DO (tidak berubah — DO tetap dari luar modul SO)

@@ -504,7 +504,12 @@ class C_SalesOrder extends CI_Controller
         $gudang_id    = $so['gudang_id'];
         $stock_errors = [];
         foreach ($faktur_items as $item) {
-            $stock = $this->M_SalesOrder->cek_stock($item['kd_barang'], $item['expired_date'], $gudang_id);
+            $stock = $this->M_SalesOrder->cek_stock(
+                $item['kd_barang'],
+                $item['expired_date'],
+                $gudang_id,
+                $item['no_lot'] ?? null
+            );
             $available = $stock ? (float)$stock['available_stock'] : 0;
             if ((float)$item['qty'] > $available + (float)($stock['qty_reserved'] ?? 0)) {
                 $stock_errors[] = "Stok fisik tidak mencukupi untuk <b>{$item['nama_barang']}</b>.";
@@ -660,6 +665,7 @@ class C_SalesOrder extends CI_Controller
                 $row['gudang_id']       = (string)($row['gudang_id']     ?? '');
                 $row['gudang']          = (string)($row['gudang']        ?? $row['gudang_id']);
                 $row['stock_key']       = implode('|', [
+                    $row['stock_batch_id'] ?? $row['id'] ?? '',
                     $row['kd_barang'] ?? '',
                     $row['gudang_id'] ?? '',
                     $row['no_lot'] ?? '',
@@ -723,13 +729,6 @@ class C_SalesOrder extends CI_Controller
             $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
             $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
 
-            $ref_no = $this->M_SalesOrder->get_ref_no(
-                $kd,
-                $post['expired_date'][$i] ?? '',
-                $post['no_lot'][$i]       ?? '',
-                $this->_getGudangId($post)
-            );
-
             $details[] = [
                 'kd_barang'            => $kd,
                 'nama_barang'          => $post['nama_barang'][$i]  ?? '',
@@ -740,7 +739,7 @@ class C_SalesOrder extends CI_Controller
                 'satuan'               => $post['satuan'][$i]        ?? '',
                 'expired_date'         => $post['expired_date'][$i]  ?? '',
                 'no_lot'               => $post['no_lot'][$i]        ?? null,
-                'ref_no'               => $ref_no,
+                'ref_no'               => null,
                 'pajak'                => $pajak,
                 'disc'                 => $disc,
                 'subtotal_before_disc' => $subtotal_before_disc,

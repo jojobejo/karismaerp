@@ -754,7 +754,7 @@ function renderStock(data) {
         var avB=parseInt(d.available_box||0);
         var avE=parseInt(d.available_ecer||0);
         var exp=d.exp_date||d.expired_date||'';
-        var stockKey=d.stock_key||[kd, String(d.gudang_id||''), d.no_lot||'', exp].join('|');
+        var stockKey=d.stock_key||[String(d.stock_batch_id||d.id||''), kd, String(d.gudang_id||''), d.no_lot||'', exp].join('|');
         var gdgId=String(d.gudang_id||'');
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
@@ -811,7 +811,7 @@ function applyBarangKeBaris(i, btn) {
     rows.forEach(function(s){
         var opt=document.createElement('option');
         var ed=s.exp_date||s.expired_date||'';
-        var stockKey=s.stock_key||[kd, String(s.gudang_id||''), s.no_lot||'', ed].join('|');
+        var stockKey=s.stock_key||[String(s.stock_batch_id||s.id||''), kd, String(s.gudang_id||''), s.no_lot||'', ed].join('|');
         opt.value=ed;
         var isiS=parseInt(s.isi_per_box||1);
         var avB=Math.floor(parseFloat(s.available_stock||0)/isiS);
