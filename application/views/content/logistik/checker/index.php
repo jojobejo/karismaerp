@@ -1,7 +1,7 @@
 <!-- view/content/logistik/checker/index.php -->
 <?php
 $allow_salesck_manual_loading = false;
-$allow_admlog_checker_actions = false;
+$allow_admlog_checker_actions = true;
 ?>
 
 <!-- STYLE TAMBAHAN -->
@@ -553,7 +553,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = true; // selalu tampil kolom aksi (minimal tombol Detail)
-                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK']); // yang bisa operasi
+                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK','ADMLOG','SALESCK']); // yang bisa operasi
                         $can_edit_lk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_lk  = 13;
                         $lk_aktif    = array_filter($list_lk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
@@ -719,16 +719,6 @@ tr.row-pending { background:#fafafa !important; }
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <button class="btn btn-sm btn-warning btn-edit-lk"
-                                                    data-id="<?= $lk['id'] ?>"
-                                                    data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
-                                                    <i class="fas fa-pencil-alt"></i> Edit
-                                                </button>
-                                                <button class="btn btn-sm btn-danger btn-hapus-lk"
-                                                    data-id="<?= $lk['id'] ?>"
-                                                    data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
-                                                    <i class="fas fa-trash"></i> Hapus
-                                                </button>
                                             </div>
                                         <?php endif; ?>
 
@@ -919,7 +909,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = true;
-                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK']);
+                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK','ADMLOG','SALESCK']);
                         $can_edit_kk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_kk  = 13;
                         $kk_aktif    = array_filter($list_kk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
@@ -1078,16 +1068,6 @@ tr.row-pending { background:#fafafa !important; }
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <button class="btn btn-sm btn-warning btn-edit-kk"
-                                                    data-id="<?= $kk['id'] ?>"
-                                                    data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
-                                                    <i class="fas fa-pencil-alt"></i> Edit
-                                                </button>
-                                                <button class="btn btn-sm btn-danger btn-hapus-kk"
-                                                    data-id="<?= $kk['id'] ?>"
-                                                    data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
-                                                    <i class="fas fa-trash"></i> Hapus
-                                                </button>
                                             </div>
                                         <?php endif; ?>
 
