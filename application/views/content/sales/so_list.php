@@ -73,6 +73,11 @@
                     </a>
                 </div>
                 <div class="col-auto">
+                    <a href="<?= base_url('sales_order/faktur_rute') ?>" class="btn btn-success">
+                        <i class="fas fa-route"></i> Faktur per Rute
+                    </a>
+                </div>
+                <div class="col-auto">
                     <a href="<?= base_url('checker') ?>" class="btn btn-warning">
                         <i class="fas fa-warehouse"></i> Activity Warehouse
                     </a>

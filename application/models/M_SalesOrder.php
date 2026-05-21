@@ -661,6 +661,94 @@ class M_SalesOrder extends CI_Model
             ->result_array();
     }
 
+    private function _pending_faktur_rute_sql($routeFilter = false)
+    {
+        $whereRoute = $routeFilter ? " AND COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ? " : "";
+
+        return "
+            SELECT
+                f.id_faktur,
+                f.no_faktur,
+                f.no_so,
+                f.kd_customer,
+                COALESCE(f.customer_name, c.nama_customer) AS customer_name,
+                f.tanggal_faktur,
+                f.status,
+                so.id_so,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                c.kd_rute AS kd_rute_customer,
+                COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COUNT(DISTINCT fd.kd_barang) AS total_barang,
+                SUM(fd.qty) AS total_qty,
+                COALESCE(
+                    NULLIF(f.total_tonase, 0),
+                    ROUND(SUM(fd.qty * COALESCE(NULLIF(fd.berat_gram, 0), mb.berat, 0)) / 1000000, 6)
+                ) AS total_tonase,
+                COALESCE(
+                    NULLIF(f.total_kubikasi, 0),
+                    ROUND(SUM(fd.qty * COALESCE(NULLIF(fd.kubikasi_m3, 0), mb.kubikasi, 0)), 6)
+                ) AS total_kubikasi
+            FROM tbso_faktur_penjualan f
+            JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
+            LEFT JOIN tbso_sales_order so ON so.id_so = f.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = c.kd_rute
+            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            WHERE f.status = 'confirmed'
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do d
+                WHERE d.kd_faktur = f.no_faktur
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_tmp_detaildo t
+                WHERE t.kd_faktur = f.no_faktur
+            )
+            {$whereRoute}
+            GROUP BY
+                f.id_faktur, f.no_faktur, f.no_so, f.kd_customer,
+                f.customer_name, f.tanggal_faktur, f.status,
+                f.total_tonase, f.total_kubikasi, so.id_so,
+                c.nama_customer, c.nama_kios, c.alamat_kios,
+                c.regional, c.kd_rute, r.keterangan
+        ";
+    }
+
+    public function get_pending_faktur_rute_summary()
+    {
+        $sql = "
+            SELECT
+                x.kd_rute,
+                x.nama_rute,
+                COUNT(*) AS total_faktur,
+                ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi
+            FROM (
+                " . $this->_pending_faktur_rute_sql(false) . "
+            ) x
+            GROUP BY x.kd_rute, x.nama_rute
+            ORDER BY x.kd_rute ASC
+        ";
+
+        return $this->db->query($sql)->result_array();
+    }
+
+    public function get_pending_faktur_by_rute($kd_rute = '')
+    {
+        $kd_rute = trim((string)$kd_rute);
+        $params = [];
+        $sql = $this->_pending_faktur_rute_sql($kd_rute !== '');
+
+        if ($kd_rute !== '') {
+            $params[] = $kd_rute;
+        }
+
+        $sql .= " ORDER BY tanggal_faktur DESC, no_faktur DESC";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     /**
      * Buat Faktur Penjualan dari SO yang sudah berstatus 'open'.
      *

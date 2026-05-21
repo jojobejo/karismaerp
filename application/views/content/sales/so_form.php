@@ -310,12 +310,12 @@
                 <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="customer-search" class="form-control mb-2" placeholder="Cari nama customer...">
+                <input type="text" id="customer-search" class="form-control mb-2" placeholder="Cari nama customer / kode rute...">
                 <div style="max-height:450px;overflow-y:auto">
                     <table class="table table-bordered table-sm table-hover mb-0">
                         <thead class="thead-dark sticky-top">
                             <tr>
-                                <th>Nama Customer</th><th>Nama Kios</th><th>Alamat</th>
+                                <th>Nama Customer</th><th>Nama Kios</th><th>KD Rute</th>
                             </tr>
                         </thead>
                         <tbody id="customer-body"></tbody>
@@ -842,7 +842,9 @@ function applyBarangKeBaris(i, btn) {
 function renderCustomers(q) {
     q = (q||'').toLowerCase();
     var list = q ? CUSTOMERS.filter(function(c){
-        return String(c.nama_customer||'').toLowerCase().indexOf(q) >= 0;
+        return String(c.nama_customer||'').toLowerCase().indexOf(q) >= 0 ||
+               String(c.nama_kios||'').toLowerCase().indexOf(q) >= 0 ||
+               String(c.kd_rute||'').toLowerCase().indexOf(q) >= 0;
     }) : CUSTOMERS;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
@@ -855,7 +857,7 @@ function renderCustomers(q) {
               + ' style="cursor:pointer" title="Klik untuk memilih">'
               + '<td><b>'+esc(c.nama_customer||'')+'</b></td>'
               + '<td><small>'+esc(c.nama_kios||'-')+'</small></td>'
-              + '<td><small>'+esc(c.alamat_kios||'-')+'</small></td>'
+              + '<td><span class="badge badge-primary">'+esc(c.kd_rute||'-')+'</span></td>'
               + '</tr>';
     });
     document.getElementById('customer-body').innerHTML = html;

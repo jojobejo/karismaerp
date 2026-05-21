@@ -604,6 +604,43 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
+    // FAKTUR PER RUTE - confirmed dan belum masuk Delivery Order
+    // ================================================================
+    public function faktur_rute()
+    {
+        $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
+
+        $routes = $this->M_SalesOrder->get_pending_faktur_rute_summary();
+        if ($selected_rute === '' && !empty($routes)) {
+            $selected_rute = $routes[0]['kd_rute'];
+        }
+
+        $fakturs = $this->M_SalesOrder->get_pending_faktur_by_rute($selected_rute);
+
+        $total_tonase = 0;
+        $total_kubikasi = 0;
+        foreach ($fakturs as $f) {
+            $total_tonase += (float)($f['total_tonase'] ?? 0);
+            $total_kubikasi += (float)($f['total_kubikasi'] ?? 0);
+        }
+
+        $data['page_title']       = 'KARISMA - Faktur per Rute';
+        $data['routes']           = $routes;
+        $data['selected_rute']    = $selected_rute;
+        $data['fakturs']          = $fakturs;
+        $data['batas_tonase']     = M_SalesOrder::BATAS_TONASE;
+        $data['batas_kubikasi']   = M_SalesOrder::BATAS_KUBIKASI;
+        $data['total_tonase']     = round($total_tonase, 3);
+        $data['total_kubikasi']   = round($total_kubikasi, 4);
+        $data['sisa_tonase']      = round(M_SalesOrder::BATAS_TONASE - $total_tonase, 3);
+        $data['sisa_kubikasi']    = round(M_SalesOrder::BATAS_KUBIKASI - $total_kubikasi, 4);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_rute.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // ================================================================
     // ACTIVITY LOG
     // ================================================================
     public function activity_log()
