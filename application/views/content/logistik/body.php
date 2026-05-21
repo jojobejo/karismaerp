@@ -83,6 +83,11 @@
                                     <i class="fas fa-weight mr-1"></i>Tonase Rekap
                                 </a>
                             </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('checker') ?>" class="btn btn-warning mb-2">
+                                    <i class="fas fa-warehouse mr-1"></i>Activity Warehouse
+                                </a>
+                            </div>
                         </div>
 
                     </div>

@@ -1105,6 +1105,27 @@ class M_Logistik extends CI_Model
         return $this->db->update('tb_do', $data);
     }
 
+    public function get_rute_do_options()
+    {
+        $this->db->select('kd_rute, keterangan, jenis_rute');
+        $this->db->from('tb_rutecs');
+        $this->db->where_in('jenis_rute', ['LK', 'KK']);
+        $this->db->order_by('jenis_rute', 'ASC');
+        $this->db->order_by('kd_rute', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function get_rute_do($kd_rute)
+    {
+        return $this->db
+            ->select('kd_rute, keterangan, jenis_rute')
+            ->where('kd_rute', $kd_rute)
+            ->where_in('jenis_rute', ['LK', 'KK'])
+            ->limit(1)
+            ->get('tb_rutecs')
+            ->row();
+    }
+
     public function get_tonase_kubikasi($kd_do = null)
     {
         if (!$kd_do) {

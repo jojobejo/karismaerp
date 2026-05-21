@@ -52,6 +52,7 @@
                 Membuat Faktur Penjualan dari SO <strong><?= htmlspecialchars($so['no_so']) ?></strong>
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
                 Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11%' : 'Non Pajak' ?></strong>.
+                Rute / Regional: <strong><?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?></strong>
             </div>
 
             <form action="<?= base_url('sales_order/simpan_faktur/' . $so['id_so']) ?>" method="post"
@@ -102,7 +103,8 @@
                                     <select class="form-control" name="cara_pembayaran" required>
                                         <option value="cash">Cash</option>
                                         <option value="transfer">Transfer</option>
-                                        <option value="tempo">Tempo</option>
+                                        <option value="bg">BG</option>
+                                        <option value="bonus">Bonus</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

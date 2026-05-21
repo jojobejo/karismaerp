@@ -1,4 +1,8 @@
 <!-- view/content/logistik/checker/index.php -->
+<?php
+$allow_salesck_manual_loading = false;
+$allow_admlog_checker_actions = false;
+?>
 
 <!-- STYLE TAMBAHAN -->
 <style>
@@ -92,16 +96,6 @@ tr.row-pending { background:#fafafa !important; }
                     </div>
                     <?php endif; ?>
                     <?php if ($role === 'SALESCK') : ?>
-                    <div class="col-auto">
-                        <button class="btn btn-info" data-toggle="modal" data-target="#modalPilihRuteKK">
-                            <i class="fas fa-truck-loading"></i> Loading KK
-                        </button>
-                    </div>
-                    <div class="col-auto">
-                        <button class="btn btn-warning" data-toggle="modal" data-target="#modalPilihRuteLK">
-                            <i class="fas fa-truck"></i> Loading LK
-                        </button>
-                    </div>
                     <div class="col-auto">
                         <a href="<?= base_url('checker/arsip') ?>" class="btn btn-secondary">
                             <i class="fas fa-archive mr-1"></i> Lihat Arsip
@@ -559,14 +553,14 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = true; // selalu tampil kolom aksi (minimal tombol Detail)
-                        $can_ops_lk  = in_array($role, ['ADMLOG','CHECKER','MANAGERCK','SALESCK']); // yang bisa operasi
-                        $can_edit_lk = ($role === 'ADMLOG');
+                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK']); // yang bisa operasi
+                        $can_edit_lk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_lk  = 13;
                         $lk_aktif    = array_filter($list_lk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
                         $lk_pending  = array_filter($list_lk, fn($r) => in_array($r['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI']));
                         $lk_done     = array_filter($list_lk, fn($r) => $r['status'] === 'DONE');
 
-                        $renderLK = function($lk) use (&$no, $role, $nik, $has_aksi_lk, $can_ops_lk, $can_edit_lk, $fn_pintu) {
+                        $renderLK = function($lk) use (&$no, $role, $nik, $has_aksi_lk, $can_ops_lk, $can_edit_lk, $fn_pintu, $allow_admlog_checker_actions) {
                             $lk_done_s         = $lk['status'] === 'DONE';
                             $lk_progres        = (int)($lk['progres'] ?? 0);
                             $lk_started        = $lk['status'] === 'PROSES_LOADING';
@@ -675,7 +669,7 @@ tr.row-pending { background:#fafafa !important; }
                                     <span class="badge badge-danger"><i class="fas fa-pause mr-1"></i>PAUSE SIAPKAN</span>
                                 <?php elseif ($is_paused) : ?>
                                     <span class="badge badge-danger"><i class="fas fa-pause mr-1"></i>PAUSE</span>
-                                <?php elseif ($role === 'ADMLOG' && in_array($lk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
+                                <?php elseif ($role === 'ADMLOG' && $allow_admlog_checker_actions && in_array($lk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
                                     <select class="form-control form-control-sm select-status-lk" data-id="<?= $lk['id'] ?>" style="min-width:120px;">
                                         <?php
                                         if ($lk['status'] === 'SIAP_LOADING') {
@@ -925,14 +919,14 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = true;
-                        $can_ops_kk  = in_array($role, ['ADMLOG','CHECKER','MANAGERCK','SALESCK']);
-                        $can_edit_kk = ($role === 'ADMLOG');
+                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK']);
+                        $can_edit_kk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_kk  = 13;
                         $kk_aktif    = array_filter($list_kk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
                         $kk_pending  = array_filter($list_kk, fn($r) => in_array($r['status'], ['MENUNGGU','SIAP_LOADING','CETAK_DO','DO_SELESAI']));
                         $kk_done     = array_filter($list_kk, fn($r) => $r['status'] === 'DONE');
 
-                        $renderKK = function($kk) use (&$no, $role, $nik, $has_aksi_kk, $can_ops_kk, $can_edit_kk, $fn_pintu) {
+                        $renderKK = function($kk) use (&$no, $role, $nik, $has_aksi_kk, $can_ops_kk, $can_edit_kk, $fn_pintu, $allow_admlog_checker_actions) {
                             $kk_done_s         = $kk['status'] === 'DONE';
                             $kk_progres        = (int)($kk['progres'] ?? 0);
                             $kk_started        = $kk['status'] === 'PROSES_LOADING';
@@ -1033,7 +1027,7 @@ tr.row-pending { background:#fafafa !important; }
                                     <span class="badge badge-danger"><i class="fas fa-pause mr-1"></i>PAUSE SIAPKAN</span>
                                 <?php elseif ($is_paused) : ?>
                                     <span class="badge badge-danger"><i class="fas fa-pause mr-1"></i>PAUSE</span>
-                                <?php elseif ($role === 'ADMLOG' && in_array($kk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
+                                <?php elseif ($role === 'ADMLOG' && $allow_admlog_checker_actions && in_array($kk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
                                     <select class="form-control form-control-sm select-status-kk" data-id="<?= $kk['id'] ?>" style="min-width:120px;">
                                         <?php
                                         if ($kk['status'] === 'SIAP_LOADING') {
@@ -1325,7 +1319,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if (in_array($role, ['ADMLOG', 'SALESCK'])) : ?>
+<?php if (($role === 'ADMLOG' && $allow_admlog_checker_actions) || ($role === 'SALESCK' && $allow_salesck_manual_loading)) : ?>
 <div class="modal fade" id="modalTambahKK" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-success text-white">
@@ -1358,7 +1352,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if ($role === 'ADMLOG') : ?>
+<?php if ($role === 'ADMLOG' && $allow_admlog_checker_actions) : ?>
 <div class="modal fade" id="modalEditKK" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog"><div class="modal-content">
         <div class="modal-header bg-warning">
@@ -1502,7 +1496,7 @@ tr.row-pending { background:#fafafa !important; }
 </div>
 <?php endif; ?>
 
-<?php if ($role === 'SALESCK') : ?>
+<?php if ($role === 'SALESCK' && $allow_salesck_manual_loading) : ?>
 
 <!-- ===== MODAL LOADING KK — PILIH RUTE ===== -->
 <div class="modal fade" id="modalPilihRuteKK" tabindex="-1" aria-hidden="true">
@@ -1519,12 +1513,10 @@ tr.row-pending { background:#fafafa !important; }
                 </thead>
                 <tbody>
                 <?php
-                $rute_kk = [
-                    'BWI-1'=>'Sanggar Kalipait','BWI-2'=>'Sempu Muncar','JWS'=>'Wongsorejo',
-                    'JBR'=>'Sempolan','JUT'=>'Sukowono','JLS'=>'Ambulu Kencong',
-                    'LMJ'=>'Lumajang','PRB'=>'Probolinggo','STB'=>'Situbondo','KRS'=>'Kraksaan',
-                ];
-                foreach ($rute_kk as $kode => $nama) : ?>
+                foreach (($rute_kk ?? []) as $rute) :
+                    $kode = $rute['kd_rute'];
+                    $nama = $rute['keterangan'];
+                ?>
                 <tr>
                     <td><span class="badge badge-success" style="font-size:12px;"><?= $kode ?></span></td>
                     <td><?= $nama ?></td>
@@ -1562,12 +1554,10 @@ tr.row-pending { background:#fafafa !important; }
                 </thead>
                 <tbody>
                 <?php
-                $rute_lk = [
-                    'BLI-1'=>'Kintamani','BLI-2'=>'Tabanan','KD-1'=>'Nganjuk','KD-2'=>'Tulungagung',
-                    'MD-1'=>'Ngawi','MD-2'=>'Ponorogo','MLG'=>'Malang','P-1'=>'Tuban',
-                    'P-2'=>'Bojonegoro','SBY'=>'Surabaya','MDR'=>'Madura',
-                ];
-                foreach ($rute_lk as $kode => $nama) : ?>
+                foreach (($rute_lk ?? []) as $rute) :
+                    $kode = $rute['kd_rute'];
+                    $nama = $rute['keterangan'];
+                ?>
                 <tr>
                     <td><span class="badge badge-primary" style="font-size:12px;"><?= $kode ?></span></td>
                     <td><?= $nama ?></td>

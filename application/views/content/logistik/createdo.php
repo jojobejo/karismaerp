@@ -52,10 +52,24 @@
                                 <div class="col-md">
                                     <div class="input-group">
                                         <div class="input-group-prepend">
-                                            <span class="input-group-text"><i class="fas fa-clipboard"></i></span>
+                                            <span class="input-group-text"><i class="fas fa-route"></i></span>
                                         </div>
-                                        <input type="text" class="form-control" placeholder="Rute" value="" name="regional_isi" id="regional_isi">
+                                        <select class="form-control" name="regional_isi" id="regional_isi">
+                                            <option value="">Pilih Rute Pengiriman</option>
+                                            <?php foreach (['LK' => 'Luar Kota', 'KK' => 'Karisidenan'] as $jenis => $label) : ?>
+                                                <optgroup label="<?= $jenis ?> - <?= $label ?>">
+                                                    <?php foreach (($rute_options ?? []) as $rute) : ?>
+                                                        <?php if ($rute->jenis_rute !== $jenis) continue; ?>
+                                                        <option value="<?= htmlspecialchars($rute->kd_rute, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <?= htmlspecialchars($rute->kd_rute, ENT_QUOTES, 'UTF-8') ?>
+                                                            - <?= htmlspecialchars($rute->keterangan, ENT_QUOTES, 'UTF-8') ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </optgroup>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
+                                    <small class="text-muted">Rute LK/KK diambil dari master rute.</small>
                                 </div>
                                 <div class="col-md" hidden>
                                     <div class="input-group">

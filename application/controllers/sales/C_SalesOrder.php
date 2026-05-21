@@ -9,6 +9,7 @@ class C_SalesOrder extends CI_Controller
         $this->load->model('M_SalesOrder');
         $this->load->model('M_Logistik');
         $this->load->model('M_ActivityLog');
+        $this->load->model('M_Checker');
         $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
     }
@@ -913,6 +914,7 @@ class C_SalesOrder extends CI_Controller
                 'keterangan' => 'SALES CONFIRM - SIAP LOADING oleh ' . $confirm_by,
                 'inputer'    => $confirm_by,
             ]);
+            $this->M_Checker->sync_do_activity($kd_do, 'siap_loading', $confirm_by);
         }
 
         $msg = ($action === 'siap')

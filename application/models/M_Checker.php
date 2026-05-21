@@ -105,6 +105,19 @@ class M_Checker extends CI_Model
 
     public function create($data)           { return $this->db->insert('tb_bongkaran', $data); }
 
+    public function get_rute_by_type($jenis_rute = null)
+    {
+        $this->db->select('kd_rute, keterangan, jenis_rute');
+        $this->db->from('tb_rutecs');
+        if ($jenis_rute) {
+            $this->db->where('jenis_rute', strtoupper($jenis_rute));
+        } else {
+            $this->db->where_in('jenis_rute', ['LK', 'KK']);
+        }
+        $this->db->order_by('kd_rute', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
     public function start($id, $nik, $nama, $pintu = null)
     {
         $this->db->where('id', $id)->update('tb_bongkaran', [
@@ -263,6 +276,82 @@ class M_Checker extends CI_Model
             'status'              => 'SIAP_LOADING',
             'waktu_siap_loading'  => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    public function sync_do_activity($kd_do, $event, $by = null)
+    {
+        $do = $this->db
+            ->select('kd_do, regional')
+            ->where('kd_do', $kd_do)
+            ->limit(1)
+            ->get('tb_do')
+            ->row_array();
+
+        if (!$do || empty($do['regional'])) {
+            return false;
+        }
+
+        $rute = trim((string)$do['regional']);
+        $type = $this->detect_loading_type_by_rute($rute);
+        if (!$type) {
+            return false;
+        }
+
+        $table = $type === 'kk' ? 'tb_loading_kk' : 'tb_loading_lk';
+        $row = $this->db
+            ->where('keterangan', $rute)
+            ->where('is_archived', 0)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get($table)
+            ->row_array();
+
+        if (!$row) {
+            $kode = $type === 'kk' ? $this->generate_kode_kk() : $this->generate_kode_lk();
+            $this->db->insert($table, [
+                'kode'       => $kode,
+                'tgl'        => date('Y-m-d'),
+                'keterangan' => $rute,
+                'status'     => 'MENUNGGU',
+                'created_by' => $by ?: 'system',
+            ]);
+            $id = $this->db->insert_id();
+            $row = $this->db->where('id', $id)->get($table)->row_array();
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $data = [];
+        if ($event === 'siap_loading') {
+            $data['status'] = 'SIAP_LOADING';
+            $data['waktu_siap_loading'] = !empty($row['waktu_siap_loading']) ? $row['waktu_siap_loading'] : $now;
+        } elseif ($event === 'cetak_do') {
+            $data['status'] = 'CETAK_DO';
+            if (empty($row['waktu_siap_loading'])) {
+                $data['waktu_siap_loading'] = $now;
+            }
+            $data['waktu_cetak_do'] = !empty($row['waktu_cetak_do']) ? $row['waktu_cetak_do'] : $now;
+        } else {
+            return false;
+        }
+
+        return $this->db->where('id', $row['id'])->update($table, $data);
+    }
+
+    private function detect_loading_type_by_rute($rute)
+    {
+        $rute = strtoupper(trim((string)$rute));
+        $row = $this->db
+            ->select('jenis_rute')
+            ->where('kd_rute', $rute)
+            ->limit(1)
+            ->get('tb_rutecs')
+            ->row_array();
+
+        if (!empty($row['jenis_rute']) && in_array(strtoupper($row['jenis_rute']), ['LK', 'KK'], true)) {
+            return strtolower($row['jenis_rute']);
+        }
+
+        return null;
     }
     public function start_lk($id, $nik, $nama, $pintu = null)
     {

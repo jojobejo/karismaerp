@@ -72,6 +72,11 @@
                         <i class="fas fa-history"></i> Activity Log
                     </a>
                 </div>
+                <div class="col-auto">
+                    <a href="<?= base_url('checker') ?>" class="btn btn-warning">
+                        <i class="fas fa-warehouse"></i> Activity Warehouse
+                    </a>
+                </div>
             </div>
 
             <!-- FILTER -->

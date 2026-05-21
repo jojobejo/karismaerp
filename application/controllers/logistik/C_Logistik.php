@@ -12,6 +12,7 @@ class C_Logistik extends CI_Controller
         parent::__construct();
         $this->load->model('M_Logistik');
         $this->load->model('M_Keuangan');
+        $this->load->model('M_Checker');
         $this->load->helper('stock_helper');
         $this->load->helper('login_auth');
         is_logged_in();
@@ -962,6 +963,7 @@ class C_Logistik extends CI_Controller
         $data['tmp_faktur']             = $this->M_Logistik->get_tmp_do();
         $data['generate_do']            = $this->M_Logistik->generate_kd_do();
         $data['qcount_tonase_kubikasi'] = $this->M_Logistik->get_tonase_kubikasi();
+        $data['rute_options']           = $this->M_Logistik->get_rute_do_options();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
@@ -1167,6 +1169,7 @@ class C_Logistik extends CI_Controller
 
         $data['driver']         = $this->M_Logistik->getalldriver();
         $data['truck']          = $this->M_Logistik->getallplat();
+        $data['rute_options']   = $this->M_Logistik->get_rute_do_options();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
@@ -1178,6 +1181,12 @@ class C_Logistik extends CI_Controller
         $id         = $this->input->post('id');
         $kd_do      = $this->input->post('kddo');
         $regional   = $this->input->post('regional');
+
+        if (!$this->M_Logistik->get_rute_do($regional)) {
+            $this->session->set_flashdata('error', 'Rute tidak valid atau belum memiliki tipe LK/KK.');
+            redirect('detail_do/' . $kd_do);
+            return;
+        }
 
         $edit   = array(
             'regional'  => $regional
@@ -1347,6 +1356,7 @@ class C_Logistik extends CI_Controller
                     'inputer'    => $confirm_by
                 ];
                 $this->M_Logistik->insertlog_do($datalog);
+                $this->M_Checker->sync_do_activity($kd_do, 'siap_loading', $confirm_by);
 
                 // ✅ Update status SO ke 'selesai'
                 $faktur_list = $this->db
@@ -1565,6 +1575,7 @@ class C_Logistik extends CI_Controller
         if (!$do) {
             show_404();
         }
+        $this->M_Checker->sync_do_activity($kd_do, 'cetak_do', $this->session->userdata('nama'));
         $status = $do->status;
         $query = $this->db->query("SELECT
             x.norut,
@@ -2123,6 +2134,11 @@ class C_Logistik extends CI_Controller
 
         if (!$kd_do || !$kota) {
             echo json_encode(['msg' => 'error', 'message' => 'Data tidak lengkap']);
+            exit;
+        }
+
+        if (!$this->M_Logistik->get_rute_do($kota)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid atau belum memiliki tipe LK/KK']);
             exit;
         }
 

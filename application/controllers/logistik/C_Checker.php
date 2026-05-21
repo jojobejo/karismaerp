@@ -10,11 +10,6 @@ class C_Checker extends CI_Controller
     const ROLE_SALES      = 'SALESCK';
     const ROLE_DIREKTUR   = 'DIREKTURCK';
 
-    private function canCreateLoading()
-    {
-        return $this->role() === self::ROLE_SALES;
-    }
-
     private function isDoer()
     {
         return in_array($this->role(), [self::ROLE_CHECKER, self::ROLE_MANAGERCK]);
@@ -45,7 +40,17 @@ class C_Checker extends CI_Controller
 
     private function role()
     {
-        return strtoupper($this->session->userdata('jobdesk'));
+        $jobdesk = strtoupper((string) $this->session->userdata('jobdesk'));
+
+        if (in_array($jobdesk, ['SALES', 'SALESMAN', 'SALESORDER', 'SALES_ORDER', 'SC'], true)) {
+            return self::ROLE_SALES;
+        }
+
+        if (in_array($jobdesk, ['LOGISTIK', 'ADMLOGISTIK', 'ADMIN LOGISTIK', 'ADMIN_LOGISTIK', 'DISTRIBUSI'], true)) {
+            return self::ROLE_ADMLOG;
+        }
+
+        return $jobdesk;
     }
 
     private function nama()
@@ -75,6 +80,8 @@ class C_Checker extends CI_Controller
                               : [];
         $data['kode_baru_kk'] = $this->M_Checker->generate_kode_kk();
         $data['kode_baru_lk'] = $this->M_Checker->generate_kode_lk();
+        $data['rute_kk']      = $this->M_Checker->get_rute_by_type('KK');
+        $data['rute_lk']      = $this->M_Checker->get_rute_by_type('LK');
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/checker/index.php', $data);
