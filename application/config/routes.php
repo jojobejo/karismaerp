@@ -394,6 +394,7 @@ $route['sales_order/faktur_rute']                   = 'sales/C_SalesOrder/faktur
 $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
+$route['sales_order/confirm_rute_loading']          = 'sales/C_SalesOrder/confirm_rute_loading';
 
 
 // COBA API

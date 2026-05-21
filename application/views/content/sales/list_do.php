@@ -174,25 +174,4 @@ $(document).ready(function () {
     });
 });
 
-function konfirmDO(kd_do, action) {
-    if (!confirm('Konfirmasi: Siap Loading untuk DO ' + kd_do + '?')) return;
-
-    $.ajax({
-        url: '<?= base_url("sales_order/confirm_loading") ?>',
-        type: 'POST',
-        data: { kd_do: kd_do, action: action },
-        dataType: 'json',
-        success: function (res) {
-            if (res.msg === 'success') {
-                alert(res.message);
-                window.location.reload();
-            } else {
-                alert('Error: ' + res.message);
-            }
-        },
-        error: function () {
-            alert('Terjadi kesalahan koneksi.');
-        }
-    });
-}
 </script>

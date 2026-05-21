@@ -292,6 +292,16 @@ class M_Checker extends CI_Model
         }
 
         $rute = trim((string)$do['regional']);
+        return $this->sync_route_activity($rute, $event, $by);
+    }
+
+    public function sync_route_activity($rute, $event, $by = null)
+    {
+        $rute = trim((string)$rute);
+        if ($rute === '' || strtoupper($rute) === 'TANPA_RUTE') {
+            return false;
+        }
+
         $type = $this->detect_loading_type_by_rute($rute);
         if (!$type) {
             return false;
@@ -322,7 +332,9 @@ class M_Checker extends CI_Model
         $now = date('Y-m-d H:i:s');
         $data = [];
         if ($event === 'siap_loading') {
-            $data['status'] = 'SIAP_LOADING';
+            if (!in_array($row['status'] ?? '', ['CETAK_DO','DO_SELESAI','PENYIAPAN_BARANG','BARANG_SIAP','PROSES_LOADING','DONE'], true)) {
+                $data['status'] = 'SIAP_LOADING';
+            }
             $data['waktu_siap_loading'] = !empty($row['waktu_siap_loading']) ? $row['waktu_siap_loading'] : $now;
         } elseif ($event === 'cetak_do') {
             $data['status'] = 'CETAK_DO';

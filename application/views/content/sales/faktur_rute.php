@@ -107,6 +107,14 @@
                     <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke SO
                     </a>
+                    <?php if (!empty($selected_rute) && strtoupper($selected_rute) !== 'TANPA_RUTE' && !empty($fakturs)): ?>
+                    <button type="button"
+                            class="btn btn-success btn-sm ml-1"
+                            id="btnConfirmRuteLoading"
+                            data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                        <i class="fas fa-check-circle mr-1"></i> Konfirmasi Siap Loading
+                    </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row">
@@ -121,7 +129,7 @@
                                 <?php if (empty($routes)): ?>
                                     <div class="text-center text-muted py-4">
                                         <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                        Tidak ada faktur confirmed yang belum masuk DO
+                                        Tidak ada master rute
                                     </div>
                                 <?php else: ?>
                                     <?php foreach ($routes as $r):
@@ -301,6 +309,28 @@ $(document).ready(function () {
             emptyTable: "Tidak ada faktur",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
+    });
+
+    $('#btnConfirmRuteLoading').on('click', function () {
+        var rute = $(this).data('rute');
+        if (!rute) return;
+        if (!confirm('Konfirmasi rute ' + rute + ' sebagai SIAP LOADING?')) return;
+
+        $.ajax({
+            url: '<?= base_url("sales_order/confirm_rute_loading") ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: { kd_rute: rute },
+            success: function (res) {
+                alert(res.message || 'Selesai');
+                if (res.msg === 'success') {
+                    window.location.reload();
+                }
+            },
+            error: function () {
+                alert('Terjadi kesalahan koneksi.');
+            }
+        });
     });
 });
 </script>

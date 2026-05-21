@@ -720,16 +720,28 @@ class M_SalesOrder extends CI_Model
     {
         $sql = "
             SELECT
-                x.kd_rute,
-                x.nama_rute,
-                COUNT(*) AS total_faktur,
-                ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
-                ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi
-            FROM (
-                " . $this->_pending_faktur_rute_sql(false) . "
-            ) x
-            GROUP BY x.kd_rute, x.nama_rute
-            ORDER BY x.kd_rute ASC
+                r.kd_rute,
+                COALESCE(NULLIF(r.keterangan, ''), r.kd_rute) AS nama_rute,
+                COALESCE(p.total_faktur, 0) AS total_faktur,
+                COALESCE(p.total_tonase, 0) AS total_tonase,
+                COALESCE(p.total_kubikasi, 0) AS total_kubikasi
+            FROM tb_rutecs r
+            LEFT JOIN (
+                SELECT
+                    x.kd_rute,
+                    COUNT(*) AS total_faktur,
+                    ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                    ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi
+                FROM (
+                    " . $this->_pending_faktur_rute_sql(false) . "
+                ) x
+                GROUP BY x.kd_rute
+            ) p ON p.kd_rute = r.kd_rute
+            ORDER BY
+                COALESCE(p.total_tonase, 0) DESC,
+                COALESCE(p.total_kubikasi, 0) DESC,
+                COALESCE(p.total_faktur, 0) DESC,
+                r.kd_rute ASC
         ";
 
         return $this->db->query($sql)->result_array();

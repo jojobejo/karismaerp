@@ -960,4 +960,33 @@ class C_SalesOrder extends CI_Controller
         echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
         exit;
     }
+
+    public function confirm_rute_loading()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_rute = trim((string)$this->input->post('kd_rute', true));
+        if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
+            echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid.']);
+            exit;
+        }
+
+        $confirm_by = $this->_getUsername();
+        $ok = $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $confirm_by);
+
+        if (!$ok) {
+            echo json_encode([
+                'msg'     => 'error',
+                'message' => 'Gagal konfirmasi. Pastikan rute terdaftar sebagai rute LK atau KK.'
+            ]);
+            exit;
+        }
+
+        echo json_encode([
+            'msg'     => 'success',
+            'message' => 'Rute ' . $kd_rute . ' berhasil dikonfirmasi Siap Loading dan masuk Activity Warehouse.'
+        ]);
+        exit;
+    }
 }

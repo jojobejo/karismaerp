@@ -141,29 +141,6 @@
                                 }
                                 ?>
 
-                                <?php if (in_array($confirm_status, ['pending', 'belum_siap', null])) : ?>
-                                <div class="card card-body bg-light">
-                                    <h6 class="mb-3">
-                                        <i class="fas fa-clipboard-check mr-1"></i>
-                                        Konfirmasi Kesiapan Loading
-                                    </h6>
-                                    <div class="form-group mb-3">
-                                        <label style="font-size:13px;">
-                                            Catatan <span class="text-muted">(opsional)</span>
-                                        </label>
-                                        <textarea id="confirm_note" class="form-control form-control-sm"
-                                                rows="2"
-                                                placeholder="Tambahkan catatan jika diperlukan..."></textarea>
-                                    </div>
-
-                                    <button type="button"
-                                            class="btn btn-success btn-block btn-confirm-loading"
-                                            data-kd="<?= $k->kd_do ?>"
-                                            data-action="siap">
-                                        <i class="fas fa-check mr-1"></i> Konfirmasi Siap Loading
-                                    </button>
-                                </div>
-                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -256,33 +233,3 @@
     </footer>
 </div>
 
-<script>
-$(document).ready(function () {
-    $('.btn-confirm-loading').on('click', function () {
-        var kd_do  = $(this).data('kd');
-        var action = $(this).data('action');
-        var note   = $('#confirm_note').val();
-        var label  = action === 'siap' ? 'Siap Loading' : 'Belum Siap Loading';
-
-        if (!confirm('Konfirmasi: ' + label + ' untuk DO ' + kd_do + '?')) return;
-
-        $.ajax({
-            url: '<?= base_url("sales_order/confirm_loading") ?>',
-            type: 'POST',
-            data: { kd_do: kd_do, action: action, note: note },
-            dataType: 'json',
-            success: function (res) {
-                if (res.msg === 'success') {
-                    alert(res.message);
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + res.message);
-                }
-            },
-            error: function () {
-                alert('Terjadi kesalahan koneksi.');
-            }
-        });
-    });
-});
-</script>
