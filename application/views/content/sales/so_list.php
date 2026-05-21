@@ -1,21 +1,34 @@
 <!-- views/content/sales/so_list.php -->
 <style>
     #tabelSO_wrapper {
-        padding: 12px;
+        padding: 4px 6px;
     }
 
     #tabelSO_wrapper .dataTables_length,
     #tabelSO_wrapper .dataTables_filter {
-        margin-bottom: 12px;
+        margin-bottom: 4px;
     }
 
     #tabelSO_wrapper .dataTables_info,
     #tabelSO_wrapper .dataTables_paginate {
-        margin-top: 12px;
+        margin-top: 6px;
     }
 
     #tabelSO_wrapper .dataTables_filter input {
         margin-left: 6px;
+        height: 30px;
+        padding: 3px 8px;
+        max-width: 180px;
+    }
+
+    #tabelSO_wrapper .dataTables_length select {
+        height: 30px;
+        padding: 3px 6px;
+    }
+
+    #tabelSO_wrapper .row:first-child {
+        align-items: center;
+        margin-bottom: 4px;
     }
 </style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -135,14 +148,6 @@
                         </div>
                     </form>
                 </div>
-            </div>
-
-            <!-- LEGENDA STATUS -->
-            <div class="mb-2 small">
-                <span class="badge badge-secondary px-2 py-1 mr-1">Draft</span> Belum direkam &nbsp;|&nbsp;
-                <span class="badge badge-primary px-2 py-1 mr-1">Open</span> Aktif, bisa buat faktur &nbsp;|&nbsp;
-                <span class="badge badge-success px-2 py-1 mr-1">Completed</span> Semua item terpenuhi &nbsp;|&nbsp;
-                <span class="badge badge-danger px-2 py-1 mr-1">Cancelled</span> Dibatalkan
             </div>
 
             <!-- TABEL SO -->

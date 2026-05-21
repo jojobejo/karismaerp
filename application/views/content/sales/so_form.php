@@ -169,27 +169,37 @@
                                     </div>
                                     <div class="mb-3">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <small><b>Tonase:</b> <span id="lbl-tonase">0,000</span> ton</small>
-                                            <small class="text-muted">Maks <?= $batas_ton ?> ton</small>
+                                            <span><strong><i class="fas fa-weight mr-1"></i>Tonase</strong></span>
+                                            <span>
+                                                <strong><span id="lbl-tonase">0,000</span></strong> / <?= $batas_ton ?> ton
+                                                <span id="lbl-tonase-warn" class="badge badge-danger ml-1 d-none">PENUH</span>
+                                            </span>
                                         </div>
-                                        <div class="progress" style="height:12px">
-                                            <div class="progress-bar bg-success" id="tonase-bar" style="width:0%"></div>
+                                        <div class="progress" style="height:20px;border-radius:4px;">
+                                            <div class="progress-bar bg-success progress-bar-striped" id="tonase-bar"
+                                                role="progressbar" style="width:0%;font-size:12px;line-height:20px;">0%</div>
                                         </div>
-                                        <small id="lbl-tonase-warn" class="text-danger d-none font-weight-bold">
-                                            <i class="fas fa-exclamation-triangle"></i> Melebihi batas tonase!
-                                        </small>
+                                        <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                            <span>Terpakai: <span id="lbl-tonase-used">0,000</span> ton</span>
+                                            <span>Sisa: <strong id="lbl-tonase-sisa" class="text-success"><?= $batas_ton ?> ton</strong></span>
+                                        </div>
                                     </div>
                                     <div class="mb-2">
                                         <div class="d-flex justify-content-between mb-1">
-                                            <small><b>Kubikasi:</b> <span id="lbl-kubikasi">0,00000</span> m³</small>
-                                            <small class="text-muted">Maks <?= $batas_kub ?> m³</small>
+                                            <span><strong><i class="fas fa-cube mr-1"></i>Kubikasi</strong></span>
+                                            <span>
+                                                <strong><span id="lbl-kubikasi">0,00000</span></strong> / <?= $batas_kub ?> m3
+                                                <span id="lbl-kubikasi-warn" class="badge badge-danger ml-1 d-none">PENUH</span>
+                                            </span>
                                         </div>
-                                        <div class="progress" style="height:12px">
-                                            <div class="progress-bar bg-info" id="kubikasi-bar" style="width:0%"></div>
+                                        <div class="progress" style="height:20px;border-radius:4px;">
+                                            <div class="progress-bar bg-info progress-bar-striped" id="kubikasi-bar"
+                                                role="progressbar" style="width:0%;font-size:12px;line-height:20px;">0%</div>
                                         </div>
-                                        <small id="lbl-kubikasi-warn" class="text-danger d-none font-weight-bold">
-                                            <i class="fas fa-exclamation-triangle"></i> Melebihi batas kubikasi!
-                                        </small>
+                                        <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                            <span>Terpakai: <span id="lbl-kubikasi-used">0,00000</span> m3</span>
+                                            <span>Sisa: <strong id="lbl-kubikasi-sisa" class="text-success"><?= $batas_kub ?> m3</strong></span>
+                                        </div>
                                     </div>
                                     <div class="mt-3 p-2 bg-light rounded border small">
                                         Total pcs: <b id="lbl-total-kecil">0</b>
@@ -344,6 +354,44 @@ if ($is_edit && !empty($details)) {
 }
 ?>
 var EDIT_DETAILS = <?= json_encode(array_values($edit_details_safe), JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
+
+function salesToast(type, message) {
+    if (window.Swal) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: type || 'info',
+            title: String(message || '').indexOf('<') >= 0 ? undefined : (message || ''),
+            html: String(message || '').indexOf('<') >= 0 ? message : undefined,
+            timer: 2600,
+            showConfirmButton: false,
+            timerProgressBar: true
+        });
+    } else {
+        alert(String(message || '').replace(/<br\s*\/?>/gi, '\n'));
+    }
+}
+
+function salesConfirm(options) {
+    options = options || {};
+    if (window.Swal) {
+        return Swal.fire({
+            title: options.title || 'Konfirmasi',
+            text: options.text || 'Lanjutkan proses ini?',
+            icon: options.icon || 'question',
+            showCancelButton: true,
+            confirmButtonText: options.confirmText || 'Ya',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: options.confirmColor || '#007bff',
+            cancelButtonColor: '#6c757d'
+        }).then(function(result){ return result.isConfirmed; });
+    }
+    return Promise.resolve(confirm((options.title ? options.title + '\n' : '') + (options.text || 'Lanjutkan proses ini?')));
+}
+
+function salesLoading(show, text) {
+    // sengaja no-op: proyek sudah memakai Bootstrap/AdminLTE tanpa overlay tambahan
+}
 
 <?php
 $customers_safe = [];
@@ -565,6 +613,18 @@ function bindBaris(idx) {
         el.addEventListener('change', function(){ hitungBaris(idx); });
     });
 
+    var elHarga = document.getElementById('hrg_'+idx);
+    if (elHarga) {
+        elHarga.addEventListener('blur', function() {
+            if (String(this.value).trim() !== '') return;
+            var pk = parseFloat((document.getElementById('pk_'+idx) || {value: 0}).value) || 0;
+            if (pk > 0) {
+                this.value = pk;
+                hitungBaris(idx);
+            }
+        });
+    }
+
     /* Validasi qty box */
     var elBox = document.getElementById('qtybox_'+idx);
     if (elBox) elBox.addEventListener('change', function() {
@@ -572,7 +632,7 @@ function bindBaris(idx) {
         var avTot = elE ? parseFloat(elE.dataset.availTotal||0) : 0;
         var maxB  = Math.floor(avTot / getIsi(idx));
         var v     = parseInt(this.value)||0;
-        if (v > maxB) { this.value = maxB; hitungBaris(idx); alert('Qty box melebihi stok! Maks '+maxB+' box.'); }
+        if (v > maxB) { this.value = maxB; hitungBaris(idx); salesToast('warning', 'Qty box melebihi stok. Maks ' + maxB + ' box.'); }
     });
 
     /* Validasi qty eceran */
@@ -586,7 +646,7 @@ function bindBaris(idx) {
         if (v > sisa) {
             this.value = Math.max(0, Math.floor(sisa));
             hitungBaris(idx);
-            alert(sisa<=0 ? 'Stok habis.' : 'Maks '+Math.floor(sisa)+' pcs eceran.');
+            salesToast('warning', sisa<=0 ? 'Stok habis.' : 'Maks ' + Math.floor(sisa) + ' pcs eceran.');
         }
     });
 
@@ -685,14 +745,34 @@ function hitungTK() {
     });
     document.getElementById('lbl-tonase').textContent      = fmtNum(tT,3);
     document.getElementById('lbl-kubikasi').textContent    = fmtNum(tK,5);
+    var tonUsed = document.getElementById('lbl-tonase-used');
+    var kubUsed = document.getElementById('lbl-kubikasi-used');
+    if (tonUsed) tonUsed.textContent = fmtNum(tT,3);
+    if (kubUsed) kubUsed.textContent = fmtNum(tK,5);
+    var sisaT = Math.max(0, BATAS_TONASE - tT);
+    var sisaK = Math.max(0, BATAS_KUBIKASI - tK);
+    var sisaTEl = document.getElementById('lbl-tonase-sisa');
+    var sisaKEl = document.getElementById('lbl-kubikasi-sisa');
+    if (sisaTEl) { sisaTEl.textContent = fmtNum(sisaT,3) + ' ton'; sisaTEl.className = tT > BATAS_TONASE ? 'text-danger' : 'text-success'; }
+    if (sisaKEl) { sisaKEl.textContent = fmtNum(sisaK,4) + ' m3'; sisaKEl.className = tK > BATAS_KUBIKASI ? 'text-danger' : 'text-success'; }
     document.getElementById('lbl-total-kecil').textContent = fmtNum(tP,0);
     document.getElementById('lbl-total-box').textContent   = fmtNum(tB,0);
     document.getElementById('lbl-total-ecer').textContent  = fmtNum(tE,0);
 
     var bT=document.getElementById('tonase-bar');
     var bK=document.getElementById('kubikasi-bar');
-    if(bT){ bT.style.width=(BATAS_TONASE>0?Math.min(tT/BATAS_TONASE*100,100):0).toFixed(2)+'%'; bT.className='progress-bar '+(tT>BATAS_TONASE?'bg-danger':'bg-success'); }
-    if(bK){ bK.style.width=(BATAS_KUBIKASI>0?Math.min(tK/BATAS_KUBIKASI*100,100):0).toFixed(2)+'%'; bK.className='progress-bar '+(tK>BATAS_KUBIKASI?'bg-danger':'bg-info'); }
+    var pctT = BATAS_TONASE>0 ? Math.min(tT/BATAS_TONASE*100,100) : 0;
+    var pctK = BATAS_KUBIKASI>0 ? Math.min(tK/BATAS_KUBIKASI*100,100) : 0;
+    if(bT){
+        bT.style.width=pctT.toFixed(2)+'%';
+        bT.className='progress-bar progress-bar-striped '+(tT>BATAS_TONASE?'bg-danger':(pctT>=80?'bg-warning':'bg-success'));
+        bT.textContent=pctT.toFixed(1)+'%';
+    }
+    if(bK){
+        bK.style.width=pctK.toFixed(2)+'%';
+        bK.className='progress-bar progress-bar-striped '+(tK>BATAS_KUBIKASI?'bg-danger':(pctK>=80?'bg-warning':'bg-info'));
+        bK.textContent=pctK.toFixed(1)+'%';
+    }
     var wT=document.getElementById('lbl-tonase-warn');   if(wT) wT.classList.toggle('d-none',tT<=BATAS_TONASE);
     var wK=document.getElementById('lbl-kubikasi-warn'); if(wK) wK.classList.toggle('d-none',tK<=BATAS_KUBIKASI);
 }
@@ -704,7 +784,7 @@ function loadStock(callback) {
     var gid = document.getElementById('gudang_id_input').value;
     if (!gid) {
         document.getElementById('gudang-hint').classList.remove('d-none');
-        alert('Pilih gudang terlebih dahulu!');
+        salesToast('warning', 'Pilih gudang terlebih dahulu.');
         return;
     }
     document.getElementById('gudang-hint').classList.add('d-none');
@@ -719,6 +799,7 @@ function loadStock(callback) {
     document.getElementById('stock-body').innerHTML =
         '<tr><td colspan="12" class="text-center py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat stok...</td></tr>';
 
+    salesLoading(true, 'Memuat stok barang...');
     fetch(BASE_URL + 'sales_order/get_stock?gudang_id=' + encodeURIComponent(gid))
         .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(res){
@@ -731,6 +812,9 @@ function loadStock(callback) {
         .catch(function(err){
             document.getElementById('stock-body').innerHTML =
                 '<tr><td colspan="12" class="text-center text-danger py-3">'+esc(err.message)+'</td></tr>';
+        })
+        .finally(function(){
+            salesLoading(false);
         });
 }
 
@@ -759,7 +843,7 @@ function renderStock(data) {
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
 
-        html+='<tr class="'+(isNew?'table-light':'')+'" data-stock-key="'+esc(stockKey)+'">';
+        html+='<tr class="'+(isNew?'table-light':'')+' tr-pick-stock-row" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
         html+='<td><small class="text-muted d-block">'+esc(kd)+'</small>'+(isNew?'<b>'+esc(d.nama_barang||'')+'</b>':'<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang||''))+'</td>';
         html+='<td>'+(exp?'<span class="badge '+(isExpiringSoon(exp)?'badge-warning':'badge-success')+'">'+esc(formatTgl(exp))+'</span>':'-')+'</td>';
         html+='<td>'+esc(d.no_lot||'-')+'</td>';
@@ -853,7 +937,7 @@ function renderCustomers(q) {
     }
     var html = '';
     list.forEach(function(c){
-        html += '<tr class="tr-pick-customer" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'"'
+        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'"'
               + ' style="cursor:pointer" title="Klik untuk memilih">'
               + '<td><b>'+esc(c.nama_customer||'')+'</b></td>'
               + '<td><small>'+esc(c.nama_kios||'-')+'</small></td>'
@@ -861,6 +945,32 @@ function renderCustomers(q) {
               + '</tr>';
     });
     document.getElementById('customer-body').innerHTML = html;
+}
+
+function focusTableRow(selector, current, step) {
+    var rows = Array.prototype.slice.call(document.querySelectorAll(selector));
+    if (!rows.length) return;
+    var idx = current ? rows.indexOf(current) : -1;
+    var next = idx < 0 ? 0 : Math.max(0, Math.min(rows.length - 1, idx + step));
+    rows[next].focus();
+    rows[next].scrollIntoView({ block: 'nearest' });
+}
+
+function chooseCustomerRow(tr) {
+    if (!tr) return;
+    document.getElementById('customer_id').value      = tr.dataset.kd;
+    document.getElementById('customer_name').value    = tr.dataset.nama;
+    document.getElementById('customer_display').value = tr.dataset.nama;
+    document.getElementById('customer_validation').style.display = 'none';
+    $('#modal-customer').modal('hide');
+}
+
+function chooseStockRow(tr) {
+    if (!tr || currentRowIdx === null) return;
+    var btn = tr.querySelector('.btn-pick-stock');
+    if (!btn) return;
+    applyBarangKeBaris(currentRowIdx, btn);
+    $('#modal-stock').modal('hide');
 }
 
 /* ================================================================
@@ -876,7 +986,7 @@ document.getElementById('item-body').addEventListener('click', function(e) {
     if (p) {
         if (!document.getElementById('gudang_id_input').value) {
             document.getElementById('gudang-hint').classList.remove('d-none');
-            alert('Pilih gudang terlebih dahulu!'); return;
+            salesToast('warning', 'Pilih gudang terlebih dahulu.'); return;
         }
         currentRowIdx = parseInt(p.dataset.idx);   // ← baris yang menekan Pilih
         document.getElementById('stock-search').value = '';
@@ -892,6 +1002,21 @@ document.getElementById('stock-body').addEventListener('click', function(e) {
     $('#modal-stock').modal('hide');
 });
 
+document.getElementById('stock-search').addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusTableRow('#stock-body .tr-pick-stock-row', null, 1);
+    }
+});
+
+document.getElementById('stock-body').addEventListener('keydown', function(e) {
+    var tr = e.target.closest('.tr-pick-stock-row');
+    if (!tr) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusTableRow('#stock-body .tr-pick-stock-row', tr, 1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); focusTableRow('#stock-body .tr-pick-stock-row', tr, -1); }
+    if (e.key === 'Enter') { e.preventDefault(); chooseStockRow(tr); }
+});
+
 /* ── TOMBOL TAMBAH BARIS ──────────────────────────────────────────
    FIX BUG: tambahBaris() dulu → ambil newIdx → set currentRowIdx
    BARU buka modal. Dengan ini pilih barang masuk ke baris BARU,
@@ -901,7 +1026,7 @@ document.getElementById('btn-add-row').addEventListener('click', function() {
     if (!document.getElementById('gudang_id_input').value) {
         document.getElementById('gudang-hint').classList.remove('d-none');
         document.getElementById('gudang_id_input').focus();
-        alert('Pilih gudang terlebih dahulu!'); return;
+        salesToast('warning', 'Pilih gudang terlebih dahulu.'); return;
     }
     var newIdx    = tambahBaris({});   // buat baris → dapat idx-nya
     currentRowIdx = newIdx;            // arahkan modal ke baris baru
@@ -917,27 +1042,74 @@ function bukaMdlCustomer() {
     document.getElementById('customer-search').value = '';
     renderCustomers('');
     $('#modal-customer').modal('show');
-    setTimeout(function(){ document.getElementById('customer-search').focus(); }, 400);
 }
 elCustDisp.addEventListener('focus', bukaMdlCustomer);
 elCustDisp.addEventListener('click', bukaMdlCustomer);
 
+function focusCustomerSearch() {
+    [0, 80, 180, 350].forEach(function(delay) {
+        setTimeout(function(){
+            if (!$('#modal-customer').hasClass('show')) return;
+            var el = document.getElementById('customer-search');
+            el.focus();
+            el.select();
+        }, delay);
+    });
+}
+
+$('#modal-customer').on('shown.bs.modal', function(){
+    focusCustomerSearch();
+});
+$('#modal-customer').on('click', function(e){
+    if (e.target === this) focusCustomerSearch();
+});
+$('#modal-stock').on('shown.bs.modal', function(){
+    setTimeout(function(){
+        var el = document.getElementById('stock-search');
+        el.focus();
+        el.select();
+    }, 50);
+});
+
 document.getElementById('customer-search').addEventListener('input', function(){ renderCustomers(this.value); });
 document.getElementById('customer-body').addEventListener('click', function(e){
     var tr = e.target.closest('.tr-pick-customer');
+    chooseCustomerRow(tr);
+});
+document.getElementById('customer-search').addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusTableRow('#customer-body .tr-pick-customer', null, 1);
+    }
+});
+document.getElementById('customer-body').addEventListener('keydown', function(e){
+    var tr = e.target.closest('.tr-pick-customer');
     if (!tr) return;
-    document.getElementById('customer_id').value      = tr.dataset.kd;
-    document.getElementById('customer_name').value    = tr.dataset.nama;
-    document.getElementById('customer_display').value = tr.dataset.nama;
-    document.getElementById('customer_validation').style.display = 'none';
-    $('#modal-customer').modal('hide');
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusTableRow('#customer-body .tr-pick-customer', tr, 1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); focusTableRow('#customer-body .tr-pick-customer', tr, -1); }
+    if (e.key === 'Enter') { e.preventDefault(); chooseCustomerRow(tr); }
 });
 
 /* Cari barang */
 document.getElementById('stock-search').addEventListener('input', function(){ renderStock(stockCache); });
 
+document.getElementById('form-so').addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA') return;
+    if (e.target.closest('.modal')) return;
+    var tag = e.target.tagName;
+    if (!['INPUT','SELECT'].includes(tag)) return;
+    e.preventDefault();
+    var focusables = Array.prototype.slice.call(this.querySelectorAll('input:not([type="hidden"]), select, textarea, button, a.btn'))
+        .filter(function(el) {
+            return el.offsetParent !== null && !el.disabled && el.tabIndex !== -1;
+        });
+    var idx = focusables.indexOf(e.target);
+    if (idx >= 0 && idx < focusables.length - 1) focusables[idx + 1].focus();
+});
+
 /* Ganti gudang */
 document.getElementById('gudang_id_input').addEventListener('change', function(){
+    var el = this;
     var gid = this.value;
     if (!gid) { stockCache=[]; stockLoaded=false; document.getElementById('gudang-hint').classList.remove('d-none'); return; }
     document.getElementById('gudang-hint').classList.add('d-none');
@@ -949,27 +1121,42 @@ document.getElementById('gudang_id_input').addEventListener('change', function()
     });
 
     if (adaBarang) {
-        if (!confirm('Mengganti gudang akan menghapus semua item. Lanjutkan?')) {
-            this.value=this.dataset.prevVal||''; return;
-        }
-        document.getElementById('item-body').innerHTML='';
-        rowIdx=0;
-        tambahBaris({});
-        hitungGrand(); hitungTK();
+        salesConfirm({
+            title: 'Ganti gudang?',
+            text: 'Mengganti gudang akan menghapus semua item yang sudah dipilih.',
+            icon: 'warning',
+            confirmText: 'Ya, ganti gudang',
+            confirmColor: '#dc2626'
+        }).then(function(ok) {
+            if (!ok) {
+                el.value = el.dataset.prevVal || '';
+                return;
+            }
+            document.getElementById('item-body').innerHTML='';
+            rowIdx=0;
+            tambahBaris({});
+            hitungGrand(); hitungTK();
+            el.dataset.prevVal=gid;
+            stockCache=[]; stockLoaded=false;
+        });
+        return;
     }
     this.dataset.prevVal=gid;
     stockCache=[]; stockLoaded=false;
 });
 
 /* Submit */
+var soSubmitConfirmed = false;
 document.getElementById('form-so').addEventListener('submit', function(e){
     if (!document.getElementById('customer_id').value) {
         e.preventDefault();
         document.getElementById('customer_validation').style.display='block';
-        document.getElementById('btn-pilih-customer').focus(); return;
+        document.getElementById('customer_display').focus();
+        salesToast('warning', 'Pilih customer terlebih dahulu.');
+        return;
     }
     var rows=document.querySelectorAll('#item-body tr');
-    if (!rows.length) { e.preventDefault(); alert('Minimal 1 item barang harus ditambahkan!'); return; }
+    if (!rows.length) { e.preventDefault(); salesToast('warning', 'Minimal 1 item barang harus ditambahkan.'); return; }
     var errs=[];
     rows.forEach(function(tr){
         var i=tr.dataset.idx;
@@ -983,7 +1170,24 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         else if(qB>Math.floor(avT/getIsi(i))) errs.push(nm+': qty box melebihi stok');
         else if(qK>avT) errs.push(nm+': total '+qK+' pcs melebihi stok '+avT+' pcs');
     });
-    if(errs.length){ e.preventDefault(); alert('Peringatan:\n\u2022 '+errs.join('\n\u2022 ')); }
+    if(errs.length){ e.preventDefault(); salesToast('error', errs.join('<br>')); return; }
+
+    if (!soSubmitConfirmed) {
+        e.preventDefault();
+        var form = this;
+        salesConfirm({
+            title: 'Simpan Sales Order?',
+            text: 'Pastikan customer, gudang, dan item barang sudah benar.',
+            icon: 'question',
+            confirmText: 'Ya, simpan SO',
+            confirmColor: '#2563eb'
+        }).then(function(ok) {
+            if (!ok) return;
+            soSubmitConfirmed = true;
+            salesLoading(true, 'Menyimpan Sales Order...');
+            form.submit();
+        });
+    }
 });
 
 /* ================================================================
@@ -998,6 +1202,7 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         hitungGrand(); hitungTK();
 
         if (GUDANG_AWAL) {
+            salesLoading(true, 'Memuat stok awal...');
             fetch(BASE_URL+'sales_order/get_stock?gudang_id='+encodeURIComponent(GUDANG_AWAL))
                 .then(function(r){ return r.json(); })
                 .then(function(res){
@@ -1051,7 +1256,8 @@ document.getElementById('form-so').addEventListener('submit', function(e){
                         hitungBaris(i);
                     });
                 })
-                .catch(function(e){ console.warn('Gagal load stok edit:',e); });
+                .catch(function(e){ console.warn('Gagal load stok edit:',e); })
+                .finally(function(){ salesLoading(false); });
         }
     } else {
         if (elG) elG.dataset.prevVal='';

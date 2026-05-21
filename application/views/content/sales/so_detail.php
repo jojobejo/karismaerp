@@ -45,7 +45,7 @@
             <?php endforeach; ?>
 
             <!-- TOMBOL AKSI -->
-            <div class="mb-3">
+            <div class="sales-action-bar">
                 <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> Kembali
                 </a>
@@ -56,12 +56,14 @@
                     </a>
                     <a href="<?= base_url('sales_order/rekam/' . $so['id_so']) ?>"
                        class="btn btn-primary btn-sm"
-                       onclick="return confirm('Rekam SO ini? Status akan berubah menjadi Open dan SO tidak dapat diedit lagi.')">
+                       data-confirm-title="Rekam SO?"
+                       data-confirm-text="Status akan berubah menjadi Open dan SO tidak dapat diedit lagi.">
                         <i class="fas fa-check"></i> Rekam SO
                     </a>
                     <a href="<?= base_url('sales_order/cancel/' . $so['id_so']) ?>"
                        class="btn btn-danger btn-sm"
-                       onclick="return confirm('Batalkan SO ini?')">
+                       data-confirm-title="Batalkan SO?"
+                       data-confirm-text="Sales Order ini akan dibatalkan.">
                         <i class="fas fa-times"></i> Batalkan SO
                     </a>
                 <?php endif; ?>
@@ -452,6 +454,49 @@ $(document).ready(function () {
         return $('<div>').text(value || '').html();
     }
 
+    function salesToast(type, message) {
+        if (window.Swal) {
+            Swal.fire({ toast:true, position:'top-end', icon:type || 'info', title:message || '', timer:2600, showConfirmButton:false });
+        } else {
+            alert(message || '');
+        }
+    }
+
+    function salesConfirm(options) {
+        options = options || {};
+        if (window.Swal) {
+            return Swal.fire({
+                title: options.title || 'Konfirmasi',
+                text: options.text || 'Lanjutkan proses ini?',
+                icon: options.icon || 'question',
+                showCancelButton: true,
+                confirmButtonText: options.confirmText || 'Ya',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: options.confirmColor || '#007bff'
+            }).then(function(result){ return result.isConfirmed; });
+        }
+        return Promise.resolve(confirm((options.title ? options.title + '\n' : '') + (options.text || 'Lanjutkan proses ini?')));
+    }
+
+    function salesLoading(show, text) {}
+
+    $(document).on('click', 'a[data-confirm-title]', function(e) {
+        e.preventDefault();
+        const href = this.href;
+        const isDanger = $(this).hasClass('btn-danger');
+        salesConfirm({
+            title: $(this).data('confirm-title'),
+            text: $(this).data('confirm-text'),
+            icon: isDanger ? 'warning' : 'question',
+            confirmText: isDanger ? 'Ya, batalkan' : 'Ya, rekam',
+            confirmColor: isDanger ? '#dc2626' : '#2563eb'
+        }).then(function(ok) {
+            if (!ok) return;
+            salesLoading(true, 'Memproses SO...');
+            window.location.href = href;
+        });
+    });
+
     $('#check-all-faktur').on('change', function() {
         $('.check-item-faktur').prop('checked', this.checked);
     });
@@ -465,11 +510,7 @@ $(document).ready(function () {
     $('#form-pilih-faktur').on('submit', function(e) {
         if ($('.check-item-faktur:checked').length < 1) {
             e.preventDefault();
-            if (window.Swal) {
-                Swal.fire('Peringatan', 'Pilih minimal 1 item SO yang akan difakturkan.', 'warning');
-            } else {
-                alert('Pilih minimal 1 item SO yang akan difakturkan.');
-            }
+            salesToast('warning', 'Pilih minimal 1 item SO yang akan difakturkan.');
         }
     });
 

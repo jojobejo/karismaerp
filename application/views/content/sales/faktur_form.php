@@ -276,6 +276,40 @@
 
 <script>
 $(document).ready(function () {
+    function salesToast(type, message) {
+        if (window.Swal) {
+            Swal.fire({ toast:true, position:'top-end', icon:type || 'info', title:message || '', timer:2600, showConfirmButton:false });
+        } else {
+            alert(message || '');
+        }
+    }
+
+    function salesConfirm(options) {
+        options = options || {};
+        if (window.Swal) {
+            return Swal.fire({
+                title: options.title || 'Konfirmasi',
+                text: options.text || 'Lanjutkan proses ini?',
+                icon: options.icon || 'question',
+                showCancelButton: true,
+                confirmButtonText: options.confirmText || 'Ya',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: options.confirmColor || '#28a745'
+            }).then(function(result){ return result.isConfirmed; });
+        }
+        return Promise.resolve(confirm((options.title ? options.title + '\n' : '') + (options.text || 'Lanjutkan proses ini?')));
+    }
+
+    function setButtonLoading(button, loading, text) {
+        if (!button) return;
+        var $btn = $(button);
+        if (loading) {
+            if (!$btn.data('original-html')) $btn.data('original-html', $btn.html());
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>' + (text || 'Memproses'));
+        } else {
+            $btn.prop('disabled', false).html($btn.data('original-html'));
+        }
+    }
 
     function updateTanggalJatuhTempo() {
         const tanggalFaktur = $('#tanggalFaktur').val();
@@ -362,6 +396,22 @@ $(document).ready(function () {
         syncQty($(this));
         hitungSubtotal();
     });
+    $(document).on('focus', '.qty-input', function() {
+        this.select();
+    });
+    $('#formFaktur').on('keydown', 'input, select, textarea', function(e) {
+        if (e.key !== 'Enter' || $(this).is('textarea')) return;
+        e.preventDefault();
+        const focusables = $('#formFaktur')
+            .find('input:not([type="hidden"]), select, textarea, button')
+            .filter(':visible:not(:disabled)');
+        const idx = focusables.index(this);
+        if (idx >= 0 && idx < focusables.length - 1) {
+            focusables.eq(idx + 1).focus();
+        } else {
+            $('#btnSimpanFaktur').focus();
+        }
+    });
     $(document).on('change', '.qty-mode', function() {
         const row = $(this).data('row');
         const $input = $('.qty-input[data-row="' + row + '"]');
@@ -372,6 +422,8 @@ $(document).ready(function () {
         syncQty($input);
         hitungSubtotal();
     });
+
+    let fakturSubmitConfirmed = false;
 
     // Validasi sebelum submit
     $('#formFaktur').on('submit', function (e) {
@@ -389,16 +441,32 @@ $(document).ready(function () {
 
         if (!adaQty) {
             e.preventDefault();
-            Swal.fire('Peringatan', 'Minimal 1 item harus memiliki qty lebih dari 0.', 'warning');
+            salesToast('warning', 'Minimal 1 item harus memiliki qty lebih dari 0.');
             return;
         }
         if (adaMelewati) {
             e.preventDefault();
-            Swal.fire('Error', 'Qty faktur tidak boleh melebihi qty outstanding.', 'error');
+            salesToast('error', 'Qty faktur tidak boleh melebihi qty outstanding.');
             return;
         }
 
-        $('#btnSimpanFaktur').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyimpan...');
+        if (!fakturSubmitConfirmed) {
+            e.preventDefault();
+            salesConfirm({
+                title: 'Simpan Faktur?',
+                text: 'Pastikan qty dan data faktur sudah benar.',
+                icon: 'question',
+                confirmText: 'Ya, simpan faktur',
+                confirmColor: '#16a34a'
+            }).then(function(ok) {
+                if (!ok) return;
+                fakturSubmitConfirmed = true;
+                $('#formFaktur').trigger('submit');
+            });
+            return;
+        }
+
+        setButtonLoading(document.getElementById('btnSimpanFaktur'), true, 'Menyimpan');
     });
 });
 </script>

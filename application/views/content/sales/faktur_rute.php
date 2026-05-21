@@ -33,7 +33,13 @@
         line-height: 1.2;
     }
     .route-card .route-tonase {
-        color: #111827;
+        color: #15803d;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+    .route-card .route-kubikasi {
+        color: #0369a1;
         font-size: 11px;
         font-weight: 700;
         line-height: 1.15;
@@ -50,6 +56,24 @@
     .quota-box .progress-bar {
         font-size: 11px;
         line-height: 18px;
+    }
+    .quota-box .info-box {
+        align-items: center;
+        min-height: 82px;
+    }
+    .quota-box .info-box-icon {
+        flex: 0 0 64px;
+        width: 64px;
+        height: 64px;
+        min-height: 64px;
+        max-height: 64px;
+        align-self: center;
+        border-radius: 8px;
+        margin-left: 8px;
+        font-size: 28px;
+    }
+    .quota-box .info-box-icon > i {
+        line-height: 64px;
     }
     #tabelFakturRute_wrapper {
         padding: 12px;
@@ -150,7 +174,7 @@
                                                 <span class="route-tonase">
                                                     <?= number_format((float)$r['total_tonase'], 3) ?> ton
                                                 </span>
-                                                <span class="route-meta">
+                                                <span class="route-kubikasi">
                                                     <?= number_format((float)$r['total_kubikasi'], 4) ?> m3
                                                 </span>
                                             </div>
@@ -293,6 +317,41 @@
 
 <script>
 $(document).ready(function () {
+    function salesToast(type, message) {
+        if (window.Swal) {
+            Swal.fire({ toast:true, position:'top-end', icon:type || 'info', title:message || '', timer:2600, showConfirmButton:false });
+        } else {
+            alert(message || '');
+        }
+    }
+
+    function salesConfirm(options) {
+        options = options || {};
+        if (window.Swal) {
+            return Swal.fire({
+                title: options.title || 'Konfirmasi',
+                text: options.text || 'Lanjutkan proses ini?',
+                icon: options.icon || 'question',
+                showCancelButton: true,
+                confirmButtonText: options.confirmText || 'Ya',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: options.confirmColor || '#28a745'
+            }).then(function(result){ return result.isConfirmed; });
+        }
+        return Promise.resolve(confirm((options.title ? options.title + '\n' : '') + (options.text || 'Lanjutkan proses ini?')));
+    }
+
+    function setButtonLoading(button, loading, text) {
+        if (!button) return;
+        var $btn = $(button);
+        if (loading) {
+            if (!$btn.data('original-html')) $btn.data('original-html', $btn.html());
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>' + (text || 'Memproses'));
+        } else {
+            $btn.prop('disabled', false).html($btn.data('original-html'));
+        }
+    }
+
     $('#tabelFakturRute').DataTable({
         responsive: true,
         autoWidth: false,
@@ -314,22 +373,35 @@ $(document).ready(function () {
     $('#btnConfirmRuteLoading').on('click', function () {
         var rute = $(this).data('rute');
         if (!rute) return;
-        if (!confirm('Konfirmasi rute ' + rute + ' sebagai SIAP LOADING?')) return;
 
-        $.ajax({
-            url: '<?= base_url("sales_order/confirm_rute_loading") ?>',
-            type: 'POST',
-            dataType: 'json',
-            data: { kd_rute: rute },
-            success: function (res) {
-                alert(res.message || 'Selesai');
-                if (res.msg === 'success') {
-                    window.location.reload();
+        var btn = this;
+        salesConfirm({
+            title: 'Konfirmasi Siap Loading?',
+            text: 'Rute ' + rute + ' akan masuk ke Activity Warehouse.',
+            icon: 'question',
+            confirmText: 'Ya, konfirmasi',
+            confirmColor: '#16a34a'
+        }).then(function(ok) {
+            if (!ok) return;
+            setButtonLoading(btn, true, 'Konfirmasi');
+            $.ajax({
+                url: '<?= base_url("sales_order/confirm_rute_loading") ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: { kd_rute: rute },
+                success: function (res) {
+                    salesToast(res.msg === 'success' ? 'success' : 'error', res.message || 'Selesai');
+                    if (res.msg === 'success') {
+                        setTimeout(function(){ window.location.reload(); }, 800);
+                    }
+                },
+                error: function () {
+                    salesToast('error', 'Terjadi kesalahan koneksi.');
+                },
+                complete: function () {
+                    setButtonLoading(btn, false);
                 }
-            },
-            error: function () {
-                alert('Terjadi kesalahan koneksi.');
-            }
+            });
         });
     });
 });
