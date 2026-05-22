@@ -990,7 +990,8 @@ document.getElementById('item-body').addEventListener('click', function(e) {
         }
         currentRowIdx = parseInt(p.dataset.idx);   // ← baris yang menekan Pilih
         document.getElementById('stock-search').value = '';
-        loadStock(function(){ $('#modal-stock').modal('show'); });
+        $('#modal-stock').modal('show');
+        loadStock();
     }
 });
 
@@ -1031,9 +1032,8 @@ document.getElementById('btn-add-row').addEventListener('click', function() {
     var newIdx    = tambahBaris({});   // buat baris → dapat idx-nya
     currentRowIdx = newIdx;            // arahkan modal ke baris baru
     document.getElementById('stock-search').value = '';
-    loadStock(function(){
-        $('#modal-stock').modal('show');
-    });
+    $('#modal-stock').modal('show');
+    loadStock();
 });
 
 /* Customer */
