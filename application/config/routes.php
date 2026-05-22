@@ -175,6 +175,18 @@ $route['get_paket_by_id/(:any)']                = 'hrd/C_Hrd/get_paket_by_id/$1'
 $route['edit_penerimaan_paket']                 = 'hrd/C_Hrd/edit_penerimaan_paket';
 $route['hapus_penerimaan_paket']                = 'hrd/C_Hrd/hapus_penerimaan_paket';
 
+$route['hrd_truck_cek']                         = 'hrd/C_Hrd/hrd_truck_cek';
+$route['ajax_truck_checkup_list']               = 'hrd/C_Hrd/ajax_truck_checkup_list';
+$route['ajax_truck_checkup_detail/(:num)']      = 'hrd/C_Hrd/ajax_truck_checkup_detail/$1';
+$route['ajax_truck_checkup_save']               = 'hrd/C_Hrd/ajax_truck_checkup_save';
+$route['ajax_truck_master_checklist']           = 'hrd/C_Hrd/ajax_truck_master_checklist';
+$route['ajax_mekanik_kategori_list']            = 'hrd/C_Hrd/ajax_mekanik_kategori_list';
+$route['ajax_mekanik_kategori_save']            = 'hrd/C_Hrd/ajax_mekanik_kategori_save';
+$route['ajax_mekanik_kategori_delete']          = 'hrd/C_Hrd/ajax_mekanik_kategori_delete';
+$route['ajax_mekanik_kategori_detail_list']     = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_list';
+$route['ajax_mekanik_kategori_detail_save']     = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_save';
+$route['ajax_mekanik_kategori_detail_delete']   = 'hrd/C_Hrd/ajax_mekanik_kategori_detail_delete';
+
 $route['hrd_chelklist_kendaraan']               = 'hrd/C_Hrd/checklist_kendaraan';
 $route['store_checklist_kendaraan']             = 'hrd/C_Hrd/store_checklist_kendaraan';
 $route['all_laporan_chelist_kendaraan']         = 'hrd/C_Hrd/all_laporan_chelist_kendaraan';
@@ -189,13 +201,13 @@ $route['add_kpi_baru']                          = 'kpi/C_Kpi/addkpi';
 $route['detail_kpi/(:any)/(:any)']              = 'kpi/C_Kpi/detail_kpi/$1/$2';
 
 //UserAccount
-$route['userAdmin']                             = 'User/Admin';
-$route['addUser']                               = 'User/Admin/addUser';
+$route['userAdmin']                             = 'user/Admin';
+$route['addUser']                               = 'user/Admin/addUser';
 
 //IndeksNilaiKepuasanPelanggan
-$route['kepuasan_pelanggan']                    = 'Pelanggan/C_Pelanggan';
-$route['nilai_ipkp/(:any)']                     = 'Pelanggan/C_Pelanggan/input_nilai/$1';
-$route['ratingreview']                          = 'Pelanggan/C_Pelanggan/rating_review';
+$route['kepuasan_pelanggan']                    = 'pelanggan/C_Pelanggan';
+$route['nilai_ipkp/(:any)']                     = 'pelanggan/C_Pelanggan/input_nilai/$1';
+$route['ratingreview']                          = 'pelanggan/C_Pelanggan/rating_review';
 
 //RequestDesign
 $route['requestdesign']                         = 'requestdesign/C_requestdesign';
@@ -204,3 +216,5 @@ $route['editinventaris']                        = 'inventaris/C_Inventaris/editi
 $route['hapusinventaris1']                      = 'inventaris/C_Inventaris/hapusinventaris';
 $route['changeowner']                           = 'inventaris/C_Inventaris/changeowner';
 $route['selectowner']                           = 'inventaris/C_Inventaris/selectowner';
+
+

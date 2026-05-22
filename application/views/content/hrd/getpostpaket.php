@@ -1,4 +1,4 @@
-<?php if ($this->session->userdata('departemen') == 'KEUANGAN' || $this->session->userdata('departemen') == 'MIA' || $this->session->userdata('departemen') == 'HRD & GA' ) : ?>
+<?php if ($this->session->userdata('departemen') == 'KEUANGAN' || $this->session->userdata('departemen') == 'MIA' || $this->session->userdata('departemen') == 'HRD & GA') : ?>
 
     <body class="hold-transition sidebar-mini sidebar-collapse">
 
@@ -136,6 +136,7 @@
                                                 <th>Jam Diterima POS</th>
                                                 <th>Jam Konfirmasi</th>
                                                 <th>Status</th>
+                                                <th>Inputer</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
