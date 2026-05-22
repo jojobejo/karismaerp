@@ -1303,6 +1303,9 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
+        foreach ($kd_faktur_list as $fk) {
+            $this->M_Logistik->sync_so_status_by_faktur($fk, 'in_progress');
+        }
 
         if (!empty($ledger_rows)) {
             $this->M_Logistik->finalize_ledger_do($ledger_rows, $kd, $kd_faktur_list);
@@ -1354,6 +1357,17 @@ class C_Logistik extends CI_Controller
                     'inputer'    => $confirm_by
                 ];
                 $this->M_Logistik->insertlog_do($datalog);
+
+                $faktur_list = $this->db
+                    ->select('kd_faktur')
+                    ->distinct()
+                    ->where('kd_do', $kd_do)
+                    ->get('tb_detail_do')
+                    ->result_array();
+
+                foreach ($faktur_list as $fk) {
+                    $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'done');
+                }
             }
 
             echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
@@ -1391,6 +1405,17 @@ class C_Logistik extends CI_Controller
 
             $this->M_Logistik->insertlog_do($datalog);
             $this->M_Logistik->updated_repost_do($kd_do, $repostdo);
+
+            $faktur_list = $this->db
+                ->select('kd_faktur')
+                ->distinct()
+                ->where('kd_do', $kd_do)
+                ->get('tb_detail_do')
+                ->result_array();
+
+            foreach ($faktur_list as $fk) {
+                $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'draft');
+            }
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Gagal update status']);
         }
@@ -1980,22 +2005,25 @@ class C_Logistik extends CI_Controller
     {
         switch ($action) {
             case 'revertdetail':
-                $update_pre_do = array(
-                    'data_sts'    => '1',
-                    'barang_sts'  => '1'
-                );
+                $update_pre_do = [
+                    'data_sts'   => '1',
+                    'barang_sts' => '1'
+                ];
 
+                // Update status SO kembali ke draft
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);
                 $this->M_Logistik->del_tmp_do_det($kd);
 
-                redirect('detail_fk/' . $kd);
+                // ✅ Redirect ke create_do bukan detail_fk
+                redirect('create_do');
                 break;
+
             case 'formlist':
-                $update_pre_do = array(
-                    'data_sts'    => '1',
-                    'barang_sts'  => '1'
-                );
+                $update_pre_do = [
+                    'data_sts'   => '1',
+                    'barang_sts' => '1'
+                ];
 
                 $this->M_Logistik->update_sts_pre_do($kd, $update_pre_do);
                 $this->M_Logistik->del_tmp_do($kd);

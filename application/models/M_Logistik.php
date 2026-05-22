@@ -667,6 +667,12 @@ class M_Logistik extends CI_Model
         ", [$kd_faktur])->result();
     }
 
+    public function sync_so_status_by_faktur($kd_faktur, $so_status)
+    {
+        $this->db->where('no_faktur', $kd_faktur);
+        return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+    }
+
     public function insert_tmp_detdo_batch($data)
     {
         return $this->db->insert_batch('tb_tmp_detaildo', $data);
@@ -786,9 +792,9 @@ class M_Logistik extends CI_Model
     public function update_sts_pre_do($kd_faktur, $data)
     {
         $status_map = [
-            '1' => 'approved',
+            '1' => 'draft',
             '2' => 'in_delivery',
-            '3' => 'shipped',
+            '3' => 'in_progress',
             '4' => 'in_delivery',
         ];
 
@@ -798,7 +804,7 @@ class M_Logistik extends CI_Model
         }
 
         if ($so_status !== null) {
-            $this->db->where('no_faktur', $kd_faktur); // ganti no_so → no_faktur
+            $this->db->where('no_faktur', $kd_faktur);
             return $this->db->update('tbso_sales_order', ['status' => $so_status]);
         }
 
@@ -1128,41 +1134,79 @@ class M_Logistik extends CI_Model
 
     public function detail_fk($kd)
     {
-        return $this->db->query("SELECT
-            a.id,
-            a.kd_faktur,
-            a.kd_barang,
-            c.nama_barang,
-            a.qty,
-            c.berat as gr_berat,
-            (c.berat/1000) as convert_kg,
-            (a.qty * (c.berat/1000)) AS total_berat,
-            a.satuan,
-            a.no_lot,
-            a.tgl_exp,
-            a.barang_sts
-            FROM tb_pre_do a
-            LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
-            WHERE a.kd_faktur = '$kd'
-            GROUP BY a.id
-        ")->result();
+        // Coba ambil dari tbso_sales_order_detail dulu
+        $result = $this->db->query("
+            SELECT
+                sod.id                              AS id,
+                so.no_faktur                        AS kd_faktur,
+                sod.kd_barang,
+                mb.nama_barang,
+                sod.qty,
+                mb.berat                            AS gr_berat,
+                (mb.berat / 1000)                   AS convert_kg,
+                (sod.qty * (mb.berat / 1000))       AS total_berat,
+                sod.satuan,
+                sod.no_lot,
+                sod.expired_date                    AS tgl_exp,
+                1                                   AS barang_sts
+            FROM tbso_sales_order so
+            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
+            JOIN tb_master_barang_all mb ON mb.kd_barang = sod.kd_barang
+            WHERE so.no_faktur = ?
+        ", [$kd])->result();
+
+        // Fallback ke tb_pre_do jika kosong
+        if (empty($result)) {
+            $result = $this->db->query("
+                SELECT
+                    a.id, a.kd_faktur, a.kd_barang,
+                    c.nama_barang,
+                    a.qty,
+                    c.berat     AS gr_berat,
+                    (c.berat/1000)          AS convert_kg,
+                    (a.qty * (c.berat/1000)) AS total_berat,
+                    a.satuan, a.no_lot, a.tgl_exp, a.barang_sts
+                FROM tb_pre_do a
+                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+                WHERE a.kd_faktur = ?
+                GROUP BY a.id
+            ", [$kd])->result();
+        }
+
+        return $result;
     }
 
     public function det_customer($kd)
     {
-        return $this->db->query("SELECT
-            b.nama_customer,
-            b.nama_kios,
-            b.regional,
-            a.upload_sts,
-            a.data_sts,
-            a.barang_sts
-            FROM tb_pre_do a
-            JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            WHERE a.kd_faktur = '$kd'
+        // Coba dari tbso_sales_order dulu
+        $result = $this->db->query("
+            SELECT
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                so.status       AS upload_sts,
+                so.status       AS data_sts,
+                1               AS barang_sts
+            FROM tbso_sales_order so
+            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.no_faktur = ?
             LIMIT 1
-        ")->result();
+        ", [$kd])->result();
+
+        // Fallback ke tb_pre_do
+        if (empty($result)) {
+            $result = $this->db->query("
+                SELECT
+                    b.nama_customer, b.nama_kios, b.regional,
+                    a.upload_sts, a.data_sts, a.barang_sts
+                FROM tb_pre_do a
+                JOIN tb_customer b ON b.kd_customer = a.kd_customer
+                WHERE a.kd_faktur = ?
+                LIMIT 1
+            ", [$kd])->result();
+        }
+
+        return $result;
     }
 
     public function select_driver()
@@ -1200,6 +1244,8 @@ class M_Logistik extends CI_Model
             ->get()
             ->row();
     }
+
+    
 
     public function getbarangics()
     {
@@ -2959,6 +3005,81 @@ FROM (
         return $this->db->query($sql, $params)->result_array();
     }
 
+    public function get_lpb_admin_po($date1 = null, $date2 = null)
+    {
+        $sql = "SELECT
+            po.kd_po,
+            po.tgl_transaksi,
+            po.no_po,
+            po.kdsupp,
+            CASE
+                WHEN po.nm_suplier IS NULL OR po.nm_suplier = '' THEN po.kdsupp
+                ELSE po.nm_suplier
+            END AS nm_suplier,
+            po.total_qty_order,
+            COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
+            CASE
+                WHEN po.total_qty_order <= 0 THEN 0
+                WHEN COALESCE(rcv.total_qty_diterima, 0) >= po.total_qty_order THEN 100
+                ELSE ROUND((COALESCE(rcv.total_qty_diterima, 0) / po.total_qty_order) * 100, 2)
+            END AS progress_persen,
+            CASE
+                WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 'belum'
+                WHEN COALESCE(rcv.total_qty_diterima, 0) < po.total_qty_order THEN 'partial'
+                ELSE 'done'
+            END AS status
+        FROM (
+            SELECT
+                pp.kd_po,
+                MAX(pp.tgl_transaksi) AS tgl_transaksi,
+                MAX(pp.no_po) AS no_po,
+                MAX(pp.kd_suplier) AS kdsupp,
+                MAX(supp.nama_suplier) AS nm_suplier,
+                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
+            FROM tb_pre_po pp
+            LEFT JOIN tb_suplier supp
+                ON supp.kd_suplier = pp.kd_suplier
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang = pp.kd_barang
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+
+            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= "
+            GROUP BY pp.kd_po
+        ) po
+        LEFT JOIN (
+            SELECT
+                h.kd_po,
+                SUM(d.qty_diterima) AS total_qty_diterima
+            FROM tb_lpb h
+            INNER JOIN tb_lpb_detail d
+                ON d.id_lpb = h.id_lpb
+            GROUP BY h.kd_po
+        ) rcv
+            ON rcv.kd_po = po.kd_po
+        ORDER BY
+            CASE
+                WHEN COALESCE(rcv.total_qty_diterima, 0) > 0
+                    AND COALESCE(rcv.total_qty_diterima, 0) < po.total_qty_order THEN 1
+                WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 2
+                ELSE 3
+            END ASC,
+            STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC,
+            po.no_po DESC";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function get_barang_by_po()
     {
         while (ob_get_level()) ob_end_clean();
@@ -3128,6 +3249,8 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_invoice,
                 h.gudang_id,
                 COALESCE(g.nama_gudang, '-') AS nama_gudang,
@@ -3144,6 +3267,8 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                h.nosj,
+                h.tgl_sj,
                 h.no_invoice,
                 h.gudang_id,
                 g.nama_gudang,
@@ -3366,6 +3491,242 @@ FROM (
         $this->db->order_by('t.id_tmp_recieved', 'ASC');
 
         return $this->db->get()->result_array();
+    }
+
+    public function update_pre_po_status_by_kd_po($kd_po, $status)
+    {
+        return $this->db
+            ->where('kd_po', $kd_po)
+            ->update('tb_pre_po', ['status' => $status]);
+    }
+
+    public function get_pre_po_adjustment($kd_po)
+    {
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            pp.qty,
+            pp.satuan,
+            pp.hrg_satuan,
+            pp.harga_total,
+            pp.status
+        ');
+        $this->db->from('tb_pre_po pp');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        $this->db->where('pp.kd_po', $kd_po);
+        $this->db->order_by('pp.id_pre_po', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_pre_po_invoice_adjustment($kd_po)
+    {
+        $hasAdjustmentTable = $this->db->table_exists('tb_pre_po_invoice_adjustment');
+
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            ' . ($hasAdjustmentTable ? '
+                COALESCE(adj.qty, pp.qty, 0) AS qty,
+                COALESCE(adj.satuan, pp.satuan, "-") AS satuan,
+                COALESCE(adj.harga_satuan, pp.hrg_satuan, 0) AS harga_satuan,
+                COALESCE(adj.total_harga, (pp.qty * pp.hrg_satuan), 0) AS harga_total,
+                COALESCE(adj.harga, pp.hrg_satuan, 0) AS harga,
+                COALESCE(adj.harga_diskon, pp.hrg_satuan, 0) AS harga_diskon,
+                COALESCE(adj.total_harga_diskon, (pp.qty * COALESCE(adj.harga_diskon, pp.hrg_satuan)), 0) AS harga_total_diskon,
+                COALESCE(adj.tax_percent, 0) AS tax_percent,
+                COALESCE(adj.tax, 0) AS tax,
+                COALESCE(adj.tax_diskon, 0) AS tax_diskon,
+                COALESCE(adj.grand_total, COALESCE(adj.total_harga, (pp.qty * pp.hrg_satuan)) + COALESCE(adj.tax, 0), 0) AS grand_total,
+                COALESCE(adj.grand_total_diskon, COALESCE(adj.total_harga_diskon, (pp.qty * COALESCE(adj.harga_diskon, pp.hrg_satuan))) + COALESCE(adj.tax_diskon, 0), 0) AS grand_total_diskon
+            ' : '
+                pp.qty AS qty,
+                pp.satuan AS satuan,
+                pp.hrg_satuan AS harga_satuan,
+                (pp.qty * pp.hrg_satuan) AS harga_total,
+                pp.hrg_satuan AS harga,
+                pp.hrg_satuan AS harga_diskon,
+                (pp.qty * pp.hrg_satuan) AS harga_total_diskon,
+                0 AS tax_percent,
+                0 AS tax,
+                0 AS tax_diskon,
+                (pp.qty * pp.hrg_satuan) AS grand_total,
+                (pp.qty * pp.hrg_satuan) AS grand_total_diskon
+            ') . '
+        ');
+        $this->db->from('tb_pre_po pp');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        if ($hasAdjustmentTable) {
+            $this->db->join('tb_pre_po_invoice_adjustment adj', 'adj.kd_po = pp.kd_po AND adj.kd_barang = pp.kd_barang', 'left');
+        }
+        $this->db->where('pp.kd_po', $kd_po);
+        $this->db->order_by('pp.id_pre_po', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_pre_po_invoice_adjustment_summary($kd_po, $rows = null)
+    {
+        if ($rows === null) {
+            $rows = $this->get_pre_po_invoice_adjustment($kd_po);
+        }
+
+        $summary = [
+            'total_harga' => 0,
+            'total_harga_diskon' => 0,
+            'tax_percent' => 0,
+            'tax' => 0,
+            'tax_diskon' => 0,
+            'grand_total' => 0,
+            'grand_total_diskon' => 0
+        ];
+
+        foreach ($rows as $row) {
+            $summary['total_harga'] += (float) ($row['harga_total'] ?? 0);
+            $summary['total_harga_diskon'] += (float) ($row['harga_total_diskon'] ?? 0);
+            if ((float) ($row['tax_percent'] ?? 0) > 0) {
+                $summary['tax_percent'] = (float) $row['tax_percent'];
+            }
+        }
+
+        $summary['tax'] = ($summary['tax_percent'] / 100) * $summary['total_harga'];
+        $summary['tax_diskon'] = ($summary['tax_percent'] / 100) * $summary['total_harga_diskon'];
+        $summary['grand_total'] = $summary['total_harga'] + $summary['tax'];
+        $summary['grand_total_diskon'] = $summary['total_harga_diskon'] + $summary['tax_diskon'];
+
+        return $summary;
+    }
+
+    public function submit_adjustment($payload)
+    {
+        $row = $this->db
+            ->where('kd_po', $payload['kd_po'])
+            ->where('kd_barang', $payload['kd_barang'])
+            ->limit(1)
+            ->get('tb_pre_po')
+            ->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $qty = (float) $row['qty'];
+        $hargaBaru = (float) $payload['harga_satuan_baru'];
+        $totalBaru = $qty * $hargaBaru;
+
+        $this->db->where('id_pre_po', $row['id_pre_po']);
+        $updated = $this->db->update('tb_pre_po', [
+            'hrg_satuan'  => $hargaBaru,
+            'harga_total' => $totalBaru
+        ]);
+
+        if (!$updated) {
+            return FALSE;
+        }
+
+        if (!$this->update_pre_po_status_by_kd_po($row['kd_po'], 2)) {
+            return FALSE;
+        }
+
+        return $this->db->insert('tb_pre_po_adjustment_log', [
+            'kd_po'              => $row['kd_po'],
+            'kd_barang'          => $row['kd_barang'],
+            'harga_satuan_lama'  => $row['hrg_satuan'],
+            'harga_satuan_baru'  => $hargaBaru,
+            'harga_total_lama'   => $row['harga_total'],
+            'harga_total_baru'   => $totalBaru,
+            'alasan'             => $payload['alasan'],
+            'dilakukan_oleh'     => $payload['dilakukan_oleh'],
+            'dilakukan_pada'     => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    public function get_history_adjustment($kd_po, $kd_barang = '')
+    {
+        $this->db->from('tb_pre_po_adjustment_log');
+        $this->db->where('kd_po', $kd_po);
+
+        if ($kd_barang !== '') {
+            $this->db->where('kd_barang', $kd_barang);
+        }
+
+        $this->db->order_by('dilakukan_pada', 'DESC');
+        if ($this->db->field_exists('id', 'tb_pre_po_adjustment_log')) {
+            $this->db->order_by('id', 'DESC');
+        }
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_history_invoice($kd_po)
+    {
+        $this->db->where('kd_po', $kd_po);
+        $this->db->order_by('dilakukan_pada', 'DESC');
+        if ($this->db->field_exists('id', 'tb_lpb_log')) {
+            $this->db->order_by('id', 'DESC');
+        }
+
+        return $this->db->get('tb_lpb_log')->result_array();
+    }
+
+    public function get_history_diskon_sync($kd_po)
+    {
+        if (!$this->db->table_exists('tb_pre_po_diskon_history')) {
+            return [];
+        }
+
+        $this->db->where('kd_po', $kd_po);
+        $this->db->order_by('id_diskon_source', 'ASC');
+        $this->db->order_by('id', 'ASC');
+
+        return $this->db->get('tb_pre_po_diskon_history')->result_array();
+    }
+
+    public function update_invoice_lpb($payload)
+    {
+        $row = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->limit(1)
+            ->get('tb_lpb')
+            ->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $updated = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->update('tb_lpb', [
+                'no_invoice' => $payload['no_invoice'],
+                'nosj'       => $payload['nosj'],
+                'tgl_sj'     => $this->_normalizeDate($payload['tgl_sj']),
+                'keterangan' => $payload['keterangan']
+            ]);
+
+        if (!$updated) {
+            return FALSE;
+        }
+
+        $logged = $this->db->insert('tb_lpb_log', [
+            'kd_po'          => $row['kd_po'],
+            'no_invoice'     => $payload['no_invoice'],
+            'action_type'    => 'UPDATE_INVOICE',
+            'keterangan'     => $payload['keterangan'],
+            'dilakukan_oleh' => $payload['dilakukan_oleh'],
+            'dilakukan_pada' => date('Y-m-d H:i:s')
+        ]);
+
+        if (!$logged) {
+            return FALSE;
+        }
+
+        return $this->update_pre_po_status_by_kd_po($row['kd_po'], 2);
     }
 
     private function _normalizeDate($raw)

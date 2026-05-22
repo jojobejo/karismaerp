@@ -316,9 +316,9 @@
                                         <input type="text" class="form-control" id="final_no_po" value="<?= htmlspecialchars($no_po) ?>" readonly>
                                         <input type="hidden" id="final_kd_po" value="<?= htmlspecialchars($kd_po ?? '') ?>">
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
                                         <label class="font-weight-bold">Invoice <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="final_invoice" placeholder="Input nomor invoice">
+                                        <input type="text" class="form-control" id="final_invoice" value="-" readonly>
                                     </div>
                                     <div class="col-lg-3 col-md-6 mb-3">
                                         <label class="font-weight-bold">Gudang <span class="text-danger">*</span></label>
@@ -503,7 +503,7 @@
                 no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
                 nosj: '',
                 tgl_sj: '',
-                no_invoice: '',
+                no_invoice: '-',
                 gudang_id: '',
                 keterangan: ''
             };
@@ -919,7 +919,8 @@
                     return;
                 }
 
-                var invoice = $.trim($('#final_invoice').val());
+                $('#final_invoice').val('-');
+                var invoice = '-';
                 var nomorSj = $.trim($('#final_nosj').val());
                 var tanggalSj = $('#final_tgl_sj').val();
                 var gudangId = $('#final_gudang_id').val();

@@ -102,8 +102,8 @@
                                         <?php
                                         $status_list = [
                                             'draft'             => 'Draft',
-                                            'waiting_approval'  => 'Waiting Approval',
-                                            'approved'          => 'Approved',
+                                            'in_progress'       => 'On Progress',
+                                            'done'              => 'Done',
                                             'partial_delivered' => 'Partial Delivered',
                                             'completed'         => 'Completed',
                                             'cancelled'         => 'Cancelled',
@@ -164,16 +164,17 @@
                                     <?php
                                     $badge_status = [
                                         'draft'             => 'secondary',
-                                        'waiting_approval'  => 'warning',
-                                        'approved'          => 'info',
+                                        'in_progress'       => 'primary',   
+                                        'done'              => 'success',   
                                         'partial_delivered' => 'primary',
                                         'completed'         => 'success',
                                         'cancelled'         => 'danger',
                                     ];
+
                                     $label_status = [
                                         'draft'             => 'Draft',
-                                        'waiting_approval'  => 'Waiting Approval',
-                                        'approved'          => 'Approved',
+                                        'in_progress'       => 'On Progress',   
+                                        'done'              => 'Done',          
                                         'partial_delivered' => 'Partial Delivered',
                                         'completed'         => 'Completed',
                                         'cancelled'         => 'Cancelled',

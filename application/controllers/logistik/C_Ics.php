@@ -570,11 +570,26 @@ class C_Ics extends CI_Controller
     {
         $date1 = $this->input->post('date1');
         $date2 = $this->input->post('date2');
+        $this->load->model('Api/M_Api', 'apiPo');
+        $isAdminPo = $this->is_admin_po_jobdesk();
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+        $canSyncPo = (
+            ($this->session->userdata('lv') == '1' && strtoupper(trim((string) $this->session->userdata('jobdesk'))) !== 'ADMINICS')
+            || $isAdminPo
+            || $username === 'admpo'
+        );
 
         $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['lpb']        = $this->M_Logistik->get_lpb($date1, $date2);
+        $data['is_admin_po'] = $isAdminPo;
+        $data['can_sync_po'] = $canSyncPo;
+        $data['lpb']        = $isAdminPo
+            ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
+            : $this->M_Logistik->get_lpb($date1, $date2);
         $data['date1']      = $date1;
         $data['date2']      = $date2;
+        $data['sync_api_url'] = base_url('sync_pre_po_erp');
+        $data['sync_rows']    = $this->apiPo->get_recent_pre_po(100);
+        $data['last_sync']    = $this->apiPo->get_last_sync_info();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icspo.php', $data);
@@ -621,6 +636,7 @@ class C_Ics extends CI_Controller
         $data['kd_po']      = $kd_po;
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
+        $data['is_admin_po'] = $this->is_admin_po_jobdesk();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
@@ -679,6 +695,464 @@ class C_Ics extends CI_Controller
             'status' => 'success',
             'header' => $header,
             'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+        ]);
+    }
+
+    private function json_response($payload)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload);
+    }
+
+    private function active_user_name()
+    {
+        return $this->session->userdata('nama')
+            ?: $this->session->userdata('nama_user')
+            ?: $this->session->userdata('username')
+            ?: $this->session->userdata('nik')
+            ?: 'SYSTEM';
+    }
+
+    private function is_admin_po_jobdesk()
+    {
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        return $jobdesk === 'ADMIN PO' || $username === 'admpo';
+    }
+
+    private function reject_non_admin_po_ajax()
+    {
+        if ($this->is_admin_po_jobdesk()) {
+            return FALSE;
+        }
+
+        $this->json_response([
+            'status'  => 'error',
+            'message' => 'Akses fitur ini hanya untuk ADMIN PO.',
+            'html'    => ''
+        ]);
+
+        return TRUE;
+    }
+
+    private function rupiah($value)
+    {
+        return 'Rp ' . number_format((float) $value, 0, ',', '.');
+    }
+
+    private function render_pre_po_action_button($row)
+    {
+        $kdBarang = htmlspecialchars((string) ($row['kd_barang'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $namaBarang = htmlspecialchars((string) ($row['nama_barang'] ?? '-'), ENT_QUOTES, 'UTF-8');
+        $qty = (float) ($row['qty'] ?? 0);
+        $satuan = htmlspecialchars((string) ($row['satuan'] ?? '-'), ENT_QUOTES, 'UTF-8');
+        $hargaSatuan = (float) ($row['harga_satuan'] ?? ($row['hrg_satuan'] ?? ($row['harga'] ?? 0)));
+        $hargaTotal = (float) ($row['harga_total'] ?? ($qty * $hargaSatuan));
+
+        return '
+            <button type="button"
+                class="btn btn-warning btn-sm js-open-adjustment"
+                data-kd-barang="' . $kdBarang . '"
+                data-nama-barang="' . $namaBarang . '"
+                data-qty="' . htmlspecialchars((string) $qty, ENT_QUOTES, 'UTF-8') . '"
+                data-satuan="' . $satuan . '"
+                data-harga-satuan="' . htmlspecialchars((string) $hargaSatuan, ENT_QUOTES, 'UTF-8') . '"
+                data-harga-total="' . htmlspecialchars((string) $hargaTotal, ENT_QUOTES, 'UTF-8') . '">
+                <i class="fas fa-money-bill-wave mr-1"></i> Adjustment Harga
+            </button>';
+    }
+
+    private function render_pre_po_adjustment_cards($standardRows, $invoiceRows = [], $summary = [])
+    {
+        if (empty($standardRows) && empty($invoiceRows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-box-open fa-2x mb-2"></i><div>Data PRE PO untuk adjustment belum tersedia.</div></div>';
+        }
+
+        $html = '
+            <ul class="nav nav-tabs" id="lpbInvoiceAdjustmentTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="tab-data-lpb" data-toggle="tab" href="#pane-data-lpb" role="tab">
+                        <i class="fas fa-boxes mr-1"></i> Data LPB
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-invoice-adjustment" data-toggle="tab" href="#pane-invoice-adjustment" role="tab">
+                        <i class="fas fa-file-invoice-dollar mr-1"></i> Invoice & Adjustment Harga
+                    </a>
+                </li>
+            </ul>
+            <div class="tab-content pt-3" id="lpbInvoiceAdjustmentTabContent">
+                <div class="tab-pane fade show active" id="pane-data-lpb" role="tabpanel" aria-labelledby="tab-data-lpb">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover lpb-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">No</th>
+                            <th>Kode Barang</th>
+                            <th>Nama Barang</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-center">Satuan</th>
+                            <th class="text-right">Harga</th>
+                            <th class="text-right">Harga Total</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+
+        $no = 1;
+        foreach ($standardRows as $row) {
+            $kdBarang = htmlspecialchars((string) ($row['kd_barang'] ?? ''), ENT_QUOTES, 'UTF-8');
+            $namaBarang = htmlspecialchars((string) ($row['nama_barang'] ?? '-'), ENT_QUOTES, 'UTF-8');
+            $qty = (float) ($row['qty'] ?? 0);
+            $satuan = htmlspecialchars((string) ($row['satuan'] ?? '-'), ENT_QUOTES, 'UTF-8');
+            $hargaSatuan = (float) ($row['hrg_satuan'] ?? 0);
+            $hargaTotal = $qty * $hargaSatuan;
+
+            $html .= '
+                <tr>
+                    <td class="text-center">' . $no . '</td>
+                    <td class="font-weight-bold">' . $kdBarang . '</td>
+                    <td>' . $namaBarang . '</td>
+                    <td class="text-center">' . htmlspecialchars(number_format($qty, 0, ',', '.'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-center">' . $satuan . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaSatuan) . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaTotal) . '</td>
+                    <td class="text-center">' . $this->render_pre_po_action_button($row) . '</td>
+                </tr>';
+            $no++;
+        }
+        if (empty($standardRows)) {
+            $html .= '<tr><td colspan="8" class="text-center text-muted">Data LPB belum tersedia.</td></tr>';
+        }
+        $html .= '</tbody></table></div></div>';
+
+        $html .= '
+                <div class="tab-pane fade" id="pane-invoice-adjustment" role="tabpanel" aria-labelledby="tab-invoice-adjustment">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover lpb-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">No</th>
+                                    <th>Kode Barang</th>
+                                    <th>Nama Barang</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-center">Satuan</th>
+                                    <th class="text-right">Harga Satuan</th>
+                                    <th class="text-right">Harga Total</th>
+                                    <th class="text-right">Harga Diskon</th>
+                                    <th class="text-right">Harga Total Diskon</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
+
+        $no = 1;
+        foreach ($invoiceRows as $row) {
+            $qty = (float) ($row['qty'] ?? 0);
+            $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
+            $hargaDiskon = (float) ($row['harga_diskon'] ?? 0);
+            $hargaTotal = $qty * $hargaSatuan;
+            $hargaTotalDiskon = $qty * $hargaDiskon;
+
+            $html .= '
+                <tr>
+                    <td class="text-center">' . $no . '</td>
+                    <td class="font-weight-bold">' . htmlspecialchars((string) ($row['kd_barang'] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) ($row['nama_barang'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-center">' . htmlspecialchars(number_format($qty, 0, ',', '.'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-center">' . htmlspecialchars((string) ($row['satuan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaSatuan) . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaTotal) . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaDiskon) . '</td>
+                    <td class="text-right">' . $this->rupiah($hargaTotalDiskon) . '</td>
+                    <td class="text-center">' . $this->render_pre_po_action_button($row) . '</td>
+                </tr>';
+            $no++;
+        }
+        if (empty($invoiceRows)) {
+            $html .= '<tr><td colspan="10" class="text-center text-muted">Data invoice & adjustment harga belum tersedia.</td></tr>';
+        }
+        $html .= '</tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="6" class="text-right">Total Harga</th>
+                                    <th class="text-right">' . $this->rupiah($summary['total_harga'] ?? 0) . '</th>
+                                    <th class="text-right">Total Harga Diskon</th>
+                                    <th class="text-right">' . $this->rupiah($summary['total_harga_diskon'] ?? 0) . '</th>
+                                    <th></th>
+                                </tr>
+                                <tr>
+                                    <th colspan="6" class="text-right">Tax</th>
+                                    <th class="text-right">' . $this->rupiah($summary['tax'] ?? 0) . '</th>
+                                    <th class="text-right">Tax Diskon</th>
+                                    <th class="text-right">' . $this->rupiah($summary['tax_diskon'] ?? 0) . '</th>
+                                    <th></th>
+                                </tr>
+                                <tr>
+                                    <th colspan="6" class="text-right">Grand Total</th>
+                                    <th class="text-right">' . $this->rupiah($summary['grand_total'] ?? 0) . '</th>
+                                    <th class="text-right">Grand Total Diskon</th>
+                                    <th class="text-right">' . $this->rupiah($summary['grand_total_diskon'] ?? 0) . '</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>';
+
+        return $html;
+    }
+
+    private function render_history_invoice($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-file-invoice fa-2x mb-2"></i><div>History invoice belum tersedia.</div></div>';
+        }
+
+        $html = '<div class="list-group">';
+        foreach ($rows as $row) {
+            $html .= '<div class="list-group-item">
+                <div class="d-flex justify-content-between" style="gap:12px; flex-wrap:wrap;">
+                    <div class="font-weight-bold">' . htmlspecialchars((string) ($row['no_invoice'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                    <span class="badge badge-primary">' . htmlspecialchars((string) ($row['action_type'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span>
+                </div>
+                <div class="text-muted small mt-2">' . htmlspecialchars((string) ($row['keterangan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                <div class="small mt-2"><i class="fas fa-user mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_oleh'] ?? '-'), ENT_QUOTES, 'UTF-8') . ' <span class="text-muted ml-2"><i class="fas fa-clock mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_pada'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span></div>
+            </div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    private function render_history_diskon($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-tags fa-2x mb-2"></i><div>History diskon hasil sync KIU_PO belum tersedia.</div></div>';
+        }
+
+        $html = '
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover lpb-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="text-center">No</th>
+                            <th>Kode Supplier</th>
+                            <th>Nama Supplier</th>
+                            <th>Keterangan</th>
+                            <th class="text-right">Nominal</th>
+                            <th class="text-center">Synced At</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+
+        $no = 1;
+        foreach ($rows as $row) {
+            $html .= '
+                <tr>
+                    <td class="text-center">' . $no . '</td>
+                    <td>' . htmlspecialchars((string) ($row['kd_suplier'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) ($row['nama_suplier'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="history-diskon-keterangan">' . htmlspecialchars((string) ($row['keterangan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                    <td class="text-right">' . $this->rupiah($row['nominal'] ?? 0) . '</td>
+                    <td class="text-center">' . htmlspecialchars((string) ($row['synced_at'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</td>
+                </tr>';
+            $no++;
+        }
+
+        $html .= '</tbody></table></div>';
+
+        return $html;
+    }
+
+    private function render_history_adjustment($rows)
+    {
+        if (empty($rows)) {
+            return '<div class="lpb-empty-state"><i class="fas fa-history fa-2x mb-2"></i><div>History adjustment belum tersedia.</div></div>';
+        }
+
+        $html = '<div class="list-group">';
+        foreach ($rows as $row) {
+            $html .= '<div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start" style="gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <div class="font-weight-bold">' . htmlspecialchars((string) ($row['kd_barang'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                        <div class="text-muted small">' . htmlspecialchars((string) ($row['alasan'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="small">Harga: <strong>' . $this->rupiah($row['harga_satuan_lama'] ?? 0) . '</strong> ke <strong>' . $this->rupiah($row['harga_satuan_baru'] ?? 0) . '</strong></div>
+                        <div class="small">Total: <strong>' . $this->rupiah($row['harga_total_lama'] ?? 0) . '</strong> ke <strong>' . $this->rupiah($row['harga_total_baru'] ?? 0) . '</strong></div>
+                    </div>
+                </div>
+                <div class="small mt-2"><i class="fas fa-user mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_oleh'] ?? '-'), ENT_QUOTES, 'UTF-8') . ' <span class="text-muted ml-2"><i class="fas fa-clock mr-1"></i>' . htmlspecialchars((string) ($row['dilakukan_pada'] ?? '-'), ENT_QUOTES, 'UTF-8') . '</span></div>
+            </div>';
+        }
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    public function ajax_get_pre_po_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_pre_po_adjustment($kd_po);
+        $invoiceRows = $this->M_Logistik->get_pre_po_invoice_adjustment($kd_po);
+        $summary = $this->M_Logistik->get_pre_po_invoice_adjustment_summary($kd_po, $invoiceRows);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Data PRE PO berhasil dimuat.',
+            'html'    => $this->render_pre_po_adjustment_cards($rows, $invoiceRows, $summary),
+            'rows'    => $rows,
+            'invoice_rows' => $invoiceRows,
+            'summary' => $summary
+        ]);
+    }
+
+    public function ajax_submit_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->post('kd_po', TRUE));
+        $kd_barang = trim((string) $this->input->post('kd_barang', TRUE));
+        $hargaBaru = (float) $this->input->post('harga_satuan_baru', TRUE);
+        $alasan = trim((string) $this->input->post('alasan', TRUE));
+
+        if ($kd_po === '' || $kd_barang === '' || $hargaBaru < 0 || $alasan === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Data adjustment belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->submit_adjustment([
+            'kd_po'              => $kd_po,
+            'kd_barang'          => $kd_barang,
+            'harga_satuan_baru'  => $hargaBaru,
+            'alasan'             => $alasan,
+            'dilakukan_oleh'     => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Adjustment harga gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $rows = $this->M_Logistik->get_pre_po_adjustment($kd_po);
+        $invoiceRows = $this->M_Logistik->get_pre_po_invoice_adjustment($kd_po);
+        $summary = $this->M_Logistik->get_pre_po_invoice_adjustment_summary($kd_po, $invoiceRows);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Adjustment harga berhasil disimpan.',
+            'html'    => $this->render_pre_po_adjustment_cards($rows, $invoiceRows, $summary)
+        ]);
+    }
+
+    public function ajax_history_adjustment()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+        $kd_barang = trim((string) $this->input->get('kd_barang', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_history_adjustment($kd_po, $kd_barang);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'History adjustment berhasil dimuat.',
+            'html'    => $this->render_history_adjustment($rows)
+        ]);
+    }
+
+    public function ajax_history_invoice()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_history_invoice($kd_po);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'History invoice berhasil dimuat.',
+            'html'    => $this->render_history_invoice($rows)
+        ]);
+    }
+
+    public function ajax_history_diskon()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+
+        if ($kd_po === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Parameter kd_po wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $rows = $this->M_Logistik->get_history_diskon_sync($kd_po);
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'History diskon berhasil dimuat.',
+            'html'    => $this->render_history_diskon($rows)
+        ]);
+    }
+
+    public function ajax_update_invoice()
+    {
+        if ($this->reject_non_admin_po_ajax()) return;
+
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $no_invoice = trim((string) $this->input->post('no_invoice', TRUE));
+        $nosj = trim((string) $this->input->post('nosj', TRUE));
+        $tgl_sj = trim((string) $this->input->post('tgl_sj', TRUE));
+        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+
+        if ($id_lpb <= 0 || $no_invoice === '' || $nosj === '' || $tgl_sj === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Data invoice belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_invoice_lpb([
+            'id_lpb'         => $id_lpb,
+            'no_invoice'     => $no_invoice,
+            'nosj'           => $nosj,
+            'tgl_sj'         => $tgl_sj,
+            'keterangan'     => $keterangan,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update invoice LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Invoice LPB berhasil diperbarui.',
+            'html'    => ''
         ]);
     }
 
@@ -1055,15 +1529,28 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $updatedPrePoStatus = $this->M_Logistik->update_pre_po_status_by_kd_po($payload['kd_po'], 2);
+
+        if (!$updatedPrePoStatus || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'update_pre_po_status',
+                'message' => 'LPB berhasil dibuat, tetapi status PO gagal diperbarui.'
+            ]);
+            return;
+        }
+
         $this->db->trans_commit();
 
         echo json_encode([
             'status'  => 'success',
             'step'    => 'save_final',
-            'message' => 'Penerimaan berhasil disimpan ke LPB dan draft temporary sudah dibersihkan.',
+            'message' => 'Penerimaan berhasil disimpan ke LPB, status PO diperbarui, dan draft temporary sudah dibersihkan.',
             'debug'   => [
                 'id_lpb'       => $idLpb,
                 'no_po'        => $payload['no_po'],
+                'kd_po'        => $payload['kd_po'],
                 'total_detail' => count($tmpRows)
             ]
         ]);
@@ -1549,7 +2036,7 @@ class C_Ics extends CI_Controller
 
     public function sync_po_pre_do()
     {
-        $url = "https://10.10.10.26/kiu_po/get_po";
+        $url = "https://localhost/kiu_po/get_po";
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
