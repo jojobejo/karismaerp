@@ -154,15 +154,27 @@ class M_SalesOrder extends CI_Model
     {
         $prefix = 'INV' . date('dmy');
 
-        $row = $this->db
-            ->like('no_faktur', $prefix, 'after')
-            ->order_by('no_faktur', 'DESC')
-            ->limit(1)
-            ->get('tbso_faktur_penjualan')
-            ->row();
+        $row = $this->db->query("
+            SELECT nomor
+            FROM (
+                SELECT no_faktur AS nomor
+                FROM tbso_faktur_penjualan
+                WHERE no_faktur LIKE ?
+                UNION
+                SELECT kd_faktur AS nomor
+                FROM tb_detail_do
+                WHERE kd_faktur LIKE ?
+                UNION
+                SELECT kd_faktur AS nomor
+                FROM tb_tmp_detaildo
+                WHERE kd_faktur LIKE ?
+            ) faktur_terpakai
+            ORDER BY nomor DESC
+            LIMIT 1
+        ", [$prefix . '%', $prefix . '%', $prefix . '%'])->row();
 
         if ($row) {
-            $last = (int)substr($row->no_faktur, -4);
+            $last = (int)substr($row->nomor, -4);
             return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
         }
         return $prefix . '0001';
@@ -701,10 +713,12 @@ class M_SalesOrder extends CI_Model
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur
+                AND d.kd_customer = f.kd_customer
             )
             AND NOT EXISTS (
                 SELECT 1 FROM tb_tmp_detaildo t
                 WHERE t.kd_faktur = f.no_faktur
+                AND t.kd_customer = f.kd_customer
             )
             {$whereRoute}
             GROUP BY

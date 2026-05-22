@@ -102,6 +102,18 @@
                                                         </span>
                                                     </div>
                                                     <div class="col-auto">
+                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                            <i class="fas fa-redo"></i> REPOST
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-auto">
+                                                        <?php foreach ($kdo as $k) : ?>
+                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
+                                                                <i class="fas fa-plus"></i> Tambah Faktur
+                                                            </a>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                    <div class="col-auto">
                                                         <small class="text-muted">
                                                             Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
                                                         </small>
@@ -129,6 +141,12 @@
                                             <?php endif; ?>
                                         </div>
                                     </div>
+                                    <?php if (!empty($d->sales_confirm_note)) : ?>
+                                        <div class="alert alert-info py-2 mb-3">
+                                            <strong><i class="fas fa-sticky-note mr-1"></i> Catatan Sales:</strong>
+                                            <?= nl2br(htmlspecialchars($d->sales_confirm_note, ENT_QUOTES, 'UTF-8')) ?>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
                                 <?php endif; ?>
                                 <?php foreach ($kdo as $k) : ?>
@@ -290,7 +308,7 @@
                                     </div>
                                     <!-- END TONASE KUBIKASI -->
 
-                                    <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK' && ($d->status == '1' || $d->status == '2')) : ?>
+                                    <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK' && ($d->status == '1' || $d->status == '2' || $d->status == '3')) : ?>
                                         <?php
                                             $tgl_pengiriman = '';
                                             if (!empty($d->tgl_pengiriman) && $d->tgl_pengiriman !== '0000-00-00') {
@@ -389,7 +407,7 @@
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
                                             <tr>
-                                               <?php if ($d->status == '1' || $d->status == '2') : ?>
+                                               <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
                                                     <th rowspan="2">#</th>
                                                 <?php endif; ?>
 
@@ -447,7 +465,7 @@
                                                             $telp2 = $row->telp2;
                                                         }
                                                     ?>
-                                                        <?php if ($d->status == '1' || $d->status == '2') : ?>
+                                                        <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
                                                                 <div class="row">
                                                                     <div class="col-6">
@@ -493,8 +511,8 @@
                                         <div class="row">
 
                                             <?php
-                                            $bisa_edit  = ($d->status == '1') || ($d->status == '2');
-                                            $sudah_siap = ($d->status == '3') || ($d->status == '4') || ($d->status == '5');
+                                            $bisa_edit  = ($d->status == '1') || ($d->status == '2') || ($d->status == '3');
+                                            $sudah_siap = ($d->status == '4') || ($d->status == '5');
                                             ?>
 
                                             <?php if ($bisa_edit) : ?>
@@ -503,14 +521,14 @@
                                                 <div class="col">
                                                     <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
                                                         <i class="fas fa-check-double"></i>
-                                                        <?= ($d->status == '2') ? 'Perbarui & Kirim' : 'Rekam Draft Order' ?>
+                                                        <?= ($d->status == '3') ? 'Rekam Order' : (($d->status == '2') ? 'Perbarui & Kirim' : 'Rekam Draft Order') ?>
                                                     </button>
                                                 </div>
                                             <?php elseif ($sudah_siap) : ?>
                                                 <div class="col">
                                                     <button type="button" class="btn btn-info btn-block mt-3"
                                                             id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Order
+                                                        <i class="fas fa-print"></i> Print DO
                                                     </button>
                                                 </div>
                                                 <div class="col">
@@ -819,7 +837,6 @@
 
         $("#btnPrintOrder1").on('click', function() {
             var kd_do = $(this).data('kd');
-            var status = $("#print_status").val();
             var plat = $("#print_plat").val();
             var tgl = $("#print_tgl").val();
             var drive = $("#print_driver").val();

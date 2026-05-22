@@ -967,25 +967,44 @@ class C_SalesOrder extends CI_Controller
         header('Content-Type: application/json; charset=utf-8');
 
         $kd_rute = trim((string)$this->input->post('kd_rute', true));
+        $note = trim((string)$this->input->post('note', true));
         if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
             echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid.']);
             exit;
         }
 
-        $confirm_by = $this->_getUsername();
-        $ok = $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $confirm_by);
-
-        if (!$ok) {
+        if (!$this->M_Logistik->get_rute_do($kd_rute)) {
             echo json_encode([
                 'msg'     => 'error',
-                'message' => 'Gagal konfirmasi. Pastikan rute terdaftar sebagai rute LK atau KK.'
+                'message' => 'Rute belum terdaftar sebagai rute LK atau KK.'
             ]);
             exit;
         }
 
+        $confirm_by = $this->_getUsername();
+        $created = $this->M_Logistik->create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by);
+
+        if (!$created) {
+            echo json_encode([
+                'msg'     => 'error',
+                'message' => 'Tidak ada faktur confirmed yang dapat diproses untuk rute ini.'
+            ]);
+            exit;
+        }
+
+        $this->M_Logistik->insertlog_do([
+            'kd_do'      => $created['kd_do'],
+            'tgl_input'  => date('d/m/Y'),
+            'keterangan' => 'SALES SIAP LOADING RUTE ' . $kd_rute . ' oleh ' . $confirm_by,
+            'inputer'    => $confirm_by,
+        ]);
+
+        $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $confirm_by);
+
         echo json_encode([
             'msg'     => 'success',
-            'message' => 'Rute ' . $kd_rute . ' berhasil dikonfirmasi Siap Loading dan masuk Activity Warehouse.'
+            'message' => 'DO ' . $created['kd_do'] . ' dibuat Siap Loading dari '
+                . $created['total_faktur'] . ' faktur rute ' . $kd_rute . '.'
         ]);
         exit;
     }

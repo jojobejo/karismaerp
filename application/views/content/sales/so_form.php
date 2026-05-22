@@ -15,6 +15,27 @@
         return str_replace(['\\','\'',"\r","\n","\t"], ['\\\\',"\\'", '','',''], (string)$v);
     }
 ?>
+<style>
+    #tbl-stock-pick {
+        table-layout: fixed;
+        min-width: 980px;
+    }
+    #tbl-stock-pick .col-stock-name { width: 210px; }
+    #tbl-stock-pick .col-stock-exp { width: 88px; }
+    #tbl-stock-pick .col-stock-lot { width: 82px; }
+    #tbl-stock-pick .stock-lot-cell {
+        max-width: 82px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.15;
+    }
+    #tbl-stock-pick .col-stock-hidden,
+    #tbl-stock-pick tbody td:nth-child(9),
+    #tbl-stock-pick tbody td:nth-child(10),
+    #tbl-stock-pick tbody td:nth-child(11) {
+        display: none;
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -288,19 +309,21 @@
             <div class="modal-body">
                 <input type="text" id="stock-search" class="form-control mb-2" placeholder="Cari kode atau nama barang...">
                 <div style="max-height:420px;overflow-y:auto">
-                    <table class="table table-bordered table-sm table-hover mb-0">
+                    <table class="table table-bordered table-sm table-hover mb-0" id="tbl-stock-pick">
                         <thead class="thead-dark sticky-top">
                             <tr>
-                                <th>Nama Barang</th><th>Exp Date</th><th>No Lot</th>
+                                <th class="col-stock-name">Nama Barang</th><th class="col-stock-exp">Exp Date</th><th class="col-stock-lot">No Lot</th>
                                 <th class="text-right">Avail Box</th><th class="text-right">Sisa Ecer</th>
                                 <th class="text-right">Total Pcs</th><th class="text-center">Isi/Box</th>
-                                <th>Satuan</th><th class="text-right">Berat/pcs</th>
-                                <th class="text-right">Kubik/pcs</th><th>Gudang</th>
+                                <th>Satuan</th>
+                                <th class="col-stock-hidden">Berat/pcs</th>
+                                <th class="col-stock-hidden">Kubik/pcs</th>
+                                <th class="col-stock-hidden">Gudang</th>
                                 <th class="text-center">Pilih</th>
                             </tr>
                         </thead>
                         <tbody id="stock-body">
-                            <tr><td colspan="12" class="text-center text-muted py-3">
+                            <tr><td colspan="9" class="text-center text-muted py-3">
                                 <i class="fas fa-spinner fa-spin mr-1"></i> Memuat...
                             </td></tr>
                         </tbody>
@@ -846,7 +869,7 @@ function renderStock(data) {
         html+='<tr class="'+(isNew?'table-light':'')+' tr-pick-stock-row" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
         html+='<td><small class="text-muted d-block">'+esc(kd)+'</small>'+(isNew?'<b>'+esc(d.nama_barang||'')+'</b>':'<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang||''))+'</td>';
         html+='<td>'+(exp?'<span class="badge '+(isExpiringSoon(exp)?'badge-warning':'badge-success')+'">'+esc(formatTgl(exp))+'</span>':'-')+'</td>';
-        html+='<td>'+esc(d.no_lot||'-')+'</td>';
+        html+='<td class="stock-lot-cell">'+esc(d.no_lot||'-')+'</td>';
         html+='<td class="text-right"><b class="text-success">'+fmtNum(avB,0)+' box</b></td>';
         html+='<td class="text-right"><span class="text-info">'+fmtNum(avE,0)+' pcs</span></td>';
         html+='<td class="text-right text-muted"><small>'+fmtNum(avT,0)+' pcs</small></td>';
@@ -872,6 +895,8 @@ function renderStock(data) {
 ================================================================ */
 function applyBarangKeBaris(i, btn) {
     var kd = btn.dataset.kd;
+    var beratBarang = parseFloat(btn.dataset.ton || 0);
+    var kubikBarang = parseFloat(btn.dataset.kub || 0);
     document.getElementById('kd_'    +i).value       = kd;
     document.getElementById('nm_'    +i).value       = btn.dataset.nm;
     document.getElementById('kdlbl_' +i).textContent = kd;
@@ -879,6 +904,8 @@ function applyBarangKeBaris(i, btn) {
     document.getElementById('pk_'    +i).value       = btn.dataset.pk;
     document.getElementById('sat_'   +i).value       = btn.dataset.sat;
     document.getElementById('satlbl_'+i).value       = btn.dataset.sat;
+    document.getElementById('bg_'    +i).value       = beratBarang;
+    document.getElementById('km_'    +i).value       = kubikBarang;
 
     var isiDef = parseInt(btn.dataset.isi||1); if(isiDef<1) isiDef=1;
     document.getElementById('isi_'+i).value = isiDef;

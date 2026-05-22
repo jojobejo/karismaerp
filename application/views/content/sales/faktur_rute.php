@@ -375,20 +375,43 @@ $(document).ready(function () {
         if (!rute) return;
 
         var btn = this;
-        salesConfirm({
-            title: 'Konfirmasi Siap Loading?',
-            text: 'Rute ' + rute + ' akan masuk ke Activity Warehouse.',
-            icon: 'question',
-            confirmText: 'Ya, konfirmasi',
-            confirmColor: '#16a34a'
-        }).then(function(ok) {
-            if (!ok) return;
+        var askNote;
+        if (window.Swal) {
+            askNote = Swal.fire({
+                title: 'Siap Loading Rute ' + rute + '?',
+                text: 'Delivery Order Siap Loading akan dibuat dan faktur pindah ke Proses DO.',
+                input: 'textarea',
+                inputLabel: 'Catatan Sales',
+                inputPlaceholder: 'Catatan untuk logistik (opsional)',
+                inputAttributes: { rows: 3 },
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, siap loading',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#16a34a'
+            }).then(function(result) {
+                return result.isConfirmed ? { ok: true, note: result.value || '' } : { ok: false };
+            });
+        } else {
+            askNote = salesConfirm({
+                title: 'Konfirmasi Siap Loading?',
+                text: 'Rute ' + rute + ' akan dibuatkan Delivery Order Siap Loading.',
+                icon: 'question',
+                confirmText: 'Ya, siap loading',
+                confirmColor: '#16a34a'
+            }).then(function(ok) {
+                return { ok: ok, note: ok ? (prompt('Catatan Sales untuk logistik (opsional):', '') || '') : '' };
+            });
+        }
+
+        askNote.then(function(result) {
+            if (!result.ok) return;
             setButtonLoading(btn, true, 'Konfirmasi');
             $.ajax({
                 url: '<?= base_url("sales_order/confirm_rute_loading") ?>',
                 type: 'POST',
                 dataType: 'json',
-                data: { kd_rute: rute },
+                data: { kd_rute: rute, note: result.note || '' },
                 success: function (res) {
                     salesToast(res.msg === 'success' ? 'success' : 'error', res.message || 'Selesai');
                     if (res.msg === 'success') {

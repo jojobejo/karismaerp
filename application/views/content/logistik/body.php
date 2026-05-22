@@ -34,53 +34,8 @@
                         <!-- ✅ ACTION BUTTONS -->
                         <div class="row">
                             <div class="col-auto">
-                                <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">
-                                    <i class="fas fa-upload mr-1"></i>Update Data DO
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="https://10.10.10.12/zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">
-                                    <i class="fas fa-sync mr-1"></i>Ambil Data Penjualan (TODAY)
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#updatecs">
-                                    <i class="fas fa-user-edit mr-1"></i>Update Customer
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('faktur_on_site') ?>" class="btn btn-success mb-2">
-                                    <i class="fas fa-store mr-1"></i>Faktur Cash / On Site
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('master_barang') ?>" class="btn btn-info mb-2">
-                                    <i class="fas fa-box mr-1"></i>Master Barang
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('master_customer') ?>" class="btn btn-primary mb-2">
-                                    <i class="fas fa-users mr-1"></i>Master Customer
-                                </a>
-                            </div>
-                            <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">
                                     <i class="fas fa-plus mr-1"></i>Add Delivery Order
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('faktur_bintang') ?>" class="btn btn-info mb-2">
-                                    <i class="fas fa-star mr-1"></i>Faktur Bintang
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('view_faktur_not_list') ?>" class="btn btn-warning mb-2">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>Faktur Barang Belum Terdaftar
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('tonase_report') ?>" class="btn btn-primary mb-2">
-                                    <i class="fas fa-weight mr-1"></i>Tonase Rekap
                                 </a>
                             </div>
                             <div class="col-auto">
@@ -117,11 +72,9 @@
                                         <label class="text-muted" style="font-size:12px; font-weight:600;">Filter Status</label>
                                         <select id="filterStatus" class="form-control form-control-sm">
                                             <option value="">— Semua Status —</option>
-                                            <option value="1">Draft</option>
-                                            <option value="2">Menunggu Konfirmasi</option>
                                             <option value="3">Siap Loading</option>
-                                            <option value="4">Is Loading</option>  <!-- next -->
-                                            <option value="5">On Delivery</option> <!-- next -->
+                                            <option value="4">Is Loading</option>
+                                            <option value="5">On Delivery</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2 col-sm-6 mb-2">
@@ -187,8 +140,12 @@
                                                 $statusCode = '3';
                                                 $confirmCode = '';
                                             } elseif ($status == '4') {
-                                                $datasts    = '<span class="badge badge-primary">On Delivery</span>';
+                                                $datasts    = '<span class="badge badge-primary">Is Loading</span>';
                                                 $statusCode = '4';
+                                                $confirmCode = '';
+                                            } elseif ($status == '5') {
+                                                $datasts    = '<span class="badge badge-dark">On Delivery</span>';
+                                                $statusCode = '5';
                                                 $confirmCode = '';
                                             }
                                         ?>
@@ -218,6 +175,18 @@
                                                     </td>
                                                 <?php elseif ($i->status == '3') : ?>
                                                     <td>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                <?php elseif ($i->status == '4') : ?>
+                                                    <td>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                <?php elseif ($i->status == '5') : ?>
+                                                    <td>
                                                         <div class="row no-gutters">
                                                             <div class="col pr-1">
                                                                 <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
@@ -230,12 +199,6 @@
                                                                 </a>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                <?php elseif ($i->status == '4') : ?>
-                                                    <td>
-                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
                                                     </td>
                                                 <?php endif; ?>
                                             </tr>

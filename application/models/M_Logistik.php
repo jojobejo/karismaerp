@@ -413,10 +413,12 @@ class M_Logistik extends CI_Model
                     WHEN EXISTS (
                         SELECT 1 FROM tb_detail_do d
                         WHERE d.kd_faktur = f.no_faktur
+                        AND d.kd_customer = f.kd_customer
                     ) THEN 'proses_do'
                     WHEN EXISTS (
                         SELECT 1 FROM tb_tmp_detaildo t
                         WHERE t.kd_faktur = f.no_faktur
+                        AND t.kd_customer = f.kd_customer
                     ) THEN 'in_delivery'
                     ELSE 'list_do'
                 END                                                 AS data_sts,
@@ -438,10 +440,12 @@ class M_Logistik extends CI_Model
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur
+                AND d.kd_customer = f.kd_customer
             )
             AND NOT EXISTS (
                 SELECT 1 FROM tb_tmp_detaildo t
                 WHERE t.kd_faktur = f.no_faktur
+                AND t.kd_customer = f.kd_customer
             )
             GROUP BY
                 f.id_faktur, f.no_faktur, f.tanggal_faktur,
@@ -629,8 +633,12 @@ class M_Logistik extends CI_Model
             JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
-            LEFT JOIN tb_detail_do d ON d.kd_faktur = f.no_faktur
-            LEFT JOIN tb_tmp_detaildo t ON t.kd_faktur = f.no_faktur
+            LEFT JOIN tb_detail_do d
+                ON d.kd_faktur = f.no_faktur
+                AND d.kd_customer = f.kd_customer
+            LEFT JOIN tb_tmp_detaildo t
+                ON t.kd_faktur = f.no_faktur
+                AND t.kd_customer = f.kd_customer
             WHERE COALESCE(f.status, 'confirmed') <> 'cancelled'
             AND d.kd_faktur IS NULL
             AND t.kd_faktur IS NULL
@@ -671,6 +679,132 @@ class M_Logistik extends CI_Model
     {
         $this->db->where('no_faktur', $kd_faktur);
         return $this->db->update('tbso_faktur_penjualan', ['status' => $so_status]);
+    }
+
+    /**
+     * Buat DO Siap Loading langsung dari faktur confirmed pada satu rute.
+     * Faktur yang sudah masuk detail/tmp DO tidak ikut diproses lagi.
+     */
+    public function create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by)
+    {
+        $rows = $this->db->query("
+            SELECT
+                f.id_faktur,
+                f.no_faktur,
+                f.tanggal_faktur,
+                f.kd_customer,
+                COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
+                fd.id AS id_faktur_detail,
+                fd.kd_barang,
+                COALESCE(NULLIF(fd.nama_barang, ''), mb.nama_barang, '') AS nama_barang,
+                fd.qty,
+                COALESCE(fd.satuan, 'PCS') AS satuan,
+                COALESCE(fd.no_lot, '') AS no_lot,
+                fd.expired_date,
+                COALESCE(fd.hrg_satuan, 0) AS nominal_p,
+                COALESCE(f.jtempo, 0) AS jtempo
+            FROM tbso_faktur_penjualan f
+            JOIN tbso_faktur_detail fd
+                ON fd.id_faktur = f.id_faktur
+            JOIN tb_customer c
+                ON c.kd_customer = f.kd_customer
+            LEFT JOIN tb_master_barang_all mb
+                ON mb.kd_barang COLLATE utf8mb4_general_ci = fd.kd_barang
+            WHERE f.status = 'confirmed'
+            AND COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do d
+                WHERE d.kd_faktur = f.no_faktur
+                AND d.kd_customer = f.kd_customer
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_tmp_detaildo t
+                WHERE t.kd_faktur = f.no_faktur
+                AND t.kd_customer = f.kd_customer
+            )
+            ORDER BY f.tanggal_faktur ASC, f.no_faktur ASC, fd.id ASC
+        ", [$kd_rute])->result();
+
+        if (empty($rows)) return false;
+
+        date_default_timezone_set('Asia/Jakarta');
+        $now = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+        $today_view = date('d/m/Y');
+        $kd_do = $this->generate_kd_do();
+
+        $detail_rows = [];
+        $faktur_ids = [];
+        $faktur_numbers = [];
+
+        foreach ($rows as $row) {
+            $faktur_ids[(int)$row->id_faktur] = (int)$row->id_faktur;
+            $faktur_numbers[$row->no_faktur] = $row->no_faktur;
+
+            $detail_rows[] = [
+                'id_pre_do'     => (int)$row->id_faktur_detail,
+                'kd_do'         => $kd_do,
+                'kd_faktur'     => $row->no_faktur,
+                'tgl_transaksi' => $row->tanggal_faktur,
+                'kd_rute'       => $row->kd_rute,
+                'kd_customer'   => $row->kd_customer,
+                'kd_barang'     => $row->kd_barang,
+                'nama_barang'   => $row->nama_barang,
+                'qty'           => $row->qty,
+                'satuan'        => $row->satuan,
+                'no_lot'        => $row->no_lot,
+                'tgl_exp'       => $row->expired_date,
+                'norut'         => 0,
+                'nominal_p'     => $row->nominal_p,
+                'jtempo'        => $row->jtempo,
+                'note_faktur'   => $note,
+                'dt_status'     => 1,
+                'status'        => 1,
+                'input_at'      => $today_view,
+                'create_at'     => $now,
+            ];
+        }
+
+        $this->db->trans_begin();
+
+        $this->db->insert('tb_do', [
+            'kd_do'                => $kd_do,
+            'nolambung'            => '',
+            'regional'             => $kd_rute,
+            'driver'               => '',
+            'tgl_pengiriman'       => $today,
+            'tgl_create'           => $now,
+            'status'               => 3,
+            'sales_confirm_status' => 'siap',
+            'sales_confirm_by'     => $confirm_by,
+            'sales_confirm_at'     => $now,
+            'sales_confirm_note'   => $note,
+        ]);
+
+        if ($this->db->trans_status() && !empty($detail_rows)) {
+            $this->db->insert_batch('tb_detail_do', $detail_rows);
+        }
+
+        if ($this->db->trans_status() && !empty($faktur_ids)) {
+            $this->db->where_in('id_faktur', array_values($faktur_ids));
+            $this->db->update('tbso_faktur_penjualan', [
+                'status'    => 'proses_do',
+                'update_by' => $confirm_by,
+            ]);
+        }
+
+        if (!$this->db->trans_status()) {
+            $this->db->trans_rollback();
+            return false;
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'kd_do'        => $kd_do,
+            'total_faktur' => count($faktur_numbers),
+            'total_detail' => count($detail_rows),
+        ];
     }
 
     public function insert_tmp_detdo_batch($data)

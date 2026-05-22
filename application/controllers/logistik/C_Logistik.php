@@ -1075,7 +1075,7 @@ class C_Logistik extends CI_Controller
         }
 
         $query = $this->db->query("SELECT
-            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
+            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), NULLIF(bd.sales_confirm_note, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
             x.no_lot,x.nominal_p,x.jtempo,x.tgl_exp,x.satuan,x.status,x.kd_do,x.qty,(c.p * c.l * c.t)      AS dimensi,FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
             (x.qty % (c.p * c.l * c.t)) AS qty_pcs
         FROM (
@@ -1118,6 +1118,7 @@ class C_Logistik extends CI_Controller
         ) x
         JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
         JOIN tb_customer d ON d.kd_customer = x.kd_customer
+        JOIN tb_do bd ON bd.kd_do = x.kd_do
         LEFT JOIN tbso_faktur_penjualan fp ON fp.no_faktur = x.kd_faktur
         ORDER BY
             d.nama_customer ASC,
@@ -1256,15 +1257,19 @@ class C_Logistik extends CI_Controller
             exit;
         }
 
-        // STATUS 2 = Menunggu Konfirmasi Sales (bukan langsung on delivery)
+        $do_before_rekam = $this->db
+            ->select('status')
+            ->where('kd_do', $kd)
+            ->limit(1)
+            ->get('tb_do')
+            ->row();
+
+        // Rekam DO yang sudah Siap Loading menjadi On Delivery.
         $dataupdated_do = [
             'nolambung'             => $nolambung,
             'driver'                => $driver,
             'tgl_pengiriman'        => $tgldeliv,
-            'status'                => 2,                // ← status 2, bukan 3
-            'sales_confirm_status'  => 'pending',        // ← tandai menunggu konfirmasi
-            'sales_confirm_by'      => null,
-            'sales_confirm_at'      => null,
+            'status'                => 5,
         ];
 
         $dataupdateddetail_do = [
@@ -1276,7 +1281,7 @@ class C_Logistik extends CI_Controller
         $datalog = [
             'kd_do'      => $kd,
             'tgl_input'  => date('d/m/Y'),
-            'keterangan' => "POST - FAKTUR - MENUNGGU KONFIRMASI SALES",
+            'keterangan' => "REKAM ORDER - ON DELIVERY",
             'inputer'    => $this->session->userdata('nama')
         ];
 
@@ -1310,7 +1315,11 @@ class C_Logistik extends CI_Controller
             $this->M_Logistik->sync_so_status_by_faktur($fk, 'in_progress');
         }
 
-        echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam, menunggu konfirmasi Sales.']);
+        if ($do_before_rekam && (string)$do_before_rekam->status === '3') {
+            $this->M_Checker->sync_do_activity($kd, 'cetak_do', $this->session->userdata('nama'));
+        }
+
+        echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam menjadi On Delivery.']);
         exit;
     }
 
@@ -1575,7 +1584,6 @@ class C_Logistik extends CI_Controller
         if (!$do) {
             show_404();
         }
-        $this->M_Checker->sync_do_activity($kd_do, 'cetak_do', $this->session->userdata('nama'));
         $status = $do->status;
         $query = $this->db->query("SELECT
             x.norut,
