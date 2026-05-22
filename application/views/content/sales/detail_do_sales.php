@@ -118,25 +118,19 @@
                             <!-- ✅ Kanan: Status konfirmasi + Tombol -->
                             <div class="col-md-6">
                                 <?php
-                                $confirm_status = $k->sales_confirm_status ?? 'pending';
-                                if ($confirm_status === 'pending' || $confirm_status === null) {
-                                    echo '<div class="alert alert-warning">
-                                            <i class="fas fa-clock mr-1"></i>
-                                            <strong>Menunggu Konfirmasi</strong><br>
+                                $do_status = (string)($k->status ?? '');
+                                if ($do_status === '5') {
+                                    echo '<div class="alert alert-dark">
+                                            <i class="fas fa-truck mr-1"></i>
+                                            <strong>On Delivery</strong><br>
+                                            <small>DO sudah direkam oleh Logistik.</small>
                                         </div>';
-                                } elseif ($confirm_status === 'siap') {
+                                } else {
                                     echo '<div class="alert alert-success">
                                             <i class="fas fa-check-circle mr-1"></i>
                                             <strong>Siap Loading</strong><br>
                                             <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small><br>
                                             <small>Waktu: ' . ($k->sales_confirm_at ?? '-') . '</small>
-                                        </div>';
-                                } elseif ($confirm_status === 'belum_siap') {
-                                    echo '<div class="alert alert-danger">
-                                            <i class="fas fa-times-circle mr-1"></i>
-                                            <strong>Belum Siap Loading</strong><br>
-                                            <small>Catatan: ' . htmlspecialchars($k->sales_confirm_note ?? '-') . '</small><br>
-                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small>
                                         </div>';
                                 }
                                 ?>

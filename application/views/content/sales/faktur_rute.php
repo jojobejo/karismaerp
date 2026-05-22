@@ -44,6 +44,33 @@
         font-weight: 700;
         line-height: 1.15;
     }
+    .route-card .route-metric {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .route-card .route-ring {
+        --ring-pct: 0%;
+        --ring-color: #198754;
+        position: relative;
+        display: grid;
+        place-items: center;
+        flex: 0 0 18px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: conic-gradient(var(--ring-color) var(--ring-pct), #e5e7eb 0);
+    }
+    .route-card .route-ring::before {
+        content: "";
+        position: absolute;
+        inset: 3px;
+        border-radius: 50%;
+        background: #fff;
+    }
+    .route-card.active .route-ring::before {
+        background: #eaf4ff;
+    }
     .route-card .badge {
         font-size: 10px;
         padding: 2px 5px;
@@ -159,6 +186,12 @@
                                     <?php foreach ($routes as $r):
                                         $active = ($r['kd_rute'] === $selected_rute);
                                         $route_url = base_url('sales_order/faktur_rute?rute=' . rawurlencode($r['kd_rute']));
+                                        $route_tonase = (float)($r['total_tonase'] ?? 0);
+                                        $route_kubikasi = (float)($r['total_kubikasi'] ?? 0);
+                                        $route_pct_ton = $batas_tonase > 0 ? min(100, round(($route_tonase / $batas_tonase) * 100, 1)) : 0;
+                                        $route_pct_kub = $batas_kubikasi > 0 ? min(100, round(($route_kubikasi / $batas_kubikasi) * 100, 1)) : 0;
+                                        $route_ton_color = $route_tonase > $batas_tonase ? '#dc3545' : ($route_pct_ton >= 80 ? '#f59e0b' : '#198754');
+                                        $route_kub_color = $route_kubikasi > $batas_kubikasi ? '#dc3545' : ($route_pct_kub >= 80 ? '#f59e0b' : '#0ea5e9');
                                     ?>
                                         <a href="<?= $route_url ?>" class="route-card <?= $active ? 'active' : '' ?>">
                                             <div class="d-flex justify-content-between align-items-start">
@@ -171,11 +204,21 @@
                                                 <span class="badge badge-primary"><?= (int)$r['total_faktur'] ?></span>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center mt-1">
-                                                <span class="route-tonase">
-                                                    <?= number_format((float)$r['total_tonase'], 3) ?> ton
+                                                <span class="route-metric">
+                                                    <span class="route-tonase">
+                                                        <?= number_format($route_tonase, 3) ?> ton
+                                                    </span>
+                                                    <span title="Tonase <?= number_format($route_tonase, 3) ?> / <?= number_format($batas_tonase, 0) ?> ton (<?= number_format($route_pct_ton, 1) ?>%)">
+                                                        <span class="route-ring" style="--ring-pct:<?= $route_pct_ton ?>%;--ring-color:<?= $route_ton_color ?>;"></span>
+                                                    </span>
                                                 </span>
-                                                <span class="route-kubikasi">
-                                                    <?= number_format((float)$r['total_kubikasi'], 4) ?> m3
+                                                <span class="route-metric">
+                                                    <span class="route-kubikasi">
+                                                        <?= number_format($route_kubikasi, 4) ?> m3
+                                                    </span>
+                                                    <span title="Kubikasi <?= number_format($route_kubikasi, 4) ?> / <?= number_format($batas_kubikasi, 0) ?> m3 (<?= number_format($route_pct_kub, 1) ?>%)">
+                                                        <span class="route-ring" style="--ring-pct:<?= $route_pct_kub ?>%;--ring-color:<?= $route_kub_color ?>;"></span>
+                                                    </span>
                                                 </span>
                                             </div>
                                         </a>

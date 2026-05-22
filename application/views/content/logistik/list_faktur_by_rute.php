@@ -187,6 +187,32 @@
             var kubikasiAwal = <?= json_encode($kubikasi_awal) ?>;
             var batasTonase = <?= json_encode($batas_ton) ?>;
             var batasKubikasi = <?= json_encode($batas_kub) ?>;
+            var fakturTable = null;
+
+            if (window.jQuery && $.fn.DataTable) {
+                fakturTable = $('#lsfakturbyrute').DataTable({
+                    responsive: true,
+                    autoWidth: false,
+                    pageLength: 25,
+                    order: [[1, 'desc']],
+                    columnDefs: [
+                        { orderable: false, targets: [0, 10] }
+                    ],
+                    language: {
+                        search: "Cari:",
+                        lengthMenu: "Tampilkan _MENU_ data",
+                        info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                        zeroRecords: "Tidak ada faktur ditemukan",
+                        emptyTable: "Tidak ada faktur",
+                        paginate: {
+                            first: "Pertama",
+                            last: "Terakhir",
+                            next: "Berikutnya",
+                            previous: "Sebelumnya"
+                        }
+                    }
+                });
+            }
 
             function fmt(value, digits) {
                 return Number(value || 0).toLocaleString('id-ID', {

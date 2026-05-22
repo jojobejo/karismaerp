@@ -246,7 +246,7 @@
                                             <th style="min-width:155px">Expired / Lot</th>
                                             <th style="width:85px" class="text-center">Qty Box</th>
                                             <th style="width:85px" class="text-center">+Eceran</th>
-                                            <th style="width:80px" class="text-center">=Total Pcs</th>
+                                            <th style="width:80px" class="text-center">Pcs</th>
                                             <th style="width:60px">Satuan</th>
                                             <th style="width:160px">Harga/Pcs</th>
                                             <th style="width:65px" class="text-center">Disc%</th>

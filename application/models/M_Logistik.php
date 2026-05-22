@@ -1117,7 +1117,7 @@ class M_Logistik extends CI_Model
                     WHERE kd_do = a.kd_do
                 ) AS totalfaktur
             FROM tb_do a
-            WHERE a.status IN (2, 3)
+            WHERE a.status IN (3, 5)
             AND (
                 SELECT COUNT(DISTINCT kd_faktur)
                 FROM tb_detail_do

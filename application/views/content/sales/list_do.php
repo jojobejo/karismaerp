@@ -22,13 +22,12 @@
             <?php
             // Hitung summary dari $listdo
             $total_do      = count($listdo);
-            $total_pending = 0;
             $total_siap    = 0;
+            $total_delivery = 0;
 
             foreach ($listdo as $i) {
-                $confirm = $i->sales_confirm_status ?? 'pending';
-                if ($confirm === 'siap') $total_siap++;
-                else                     $total_pending++;
+                if ((string)($i->status ?? '') === '5') $total_delivery++;
+                else                                     $total_siap++;
             }
             ?>
 
@@ -47,23 +46,23 @@
                 </div>
                 <div class="col-6 col-sm-4">
                     <div class="info-box shadow-sm">
-                        <span class="info-box-icon bg-warning elevation-1">
-                            <i class="fas fa-clock"></i>
-                        </span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Menunggu Konfirmasi</span>
-                            <span class="info-box-number"><?= $total_pending ?></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-sm-4">
-                    <div class="info-box shadow-sm">
                         <span class="info-box-icon bg-success elevation-1">
                             <i class="fas fa-check-circle"></i>
                         </span>
                         <div class="info-box-content">
                             <span class="info-box-text">Siap Loading</span>
                             <span class="info-box-number"><?= $total_siap ?></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4">
+                    <div class="info-box shadow-sm">
+                        <span class="info-box-icon bg-dark elevation-1">
+                            <i class="fas fa-truck"></i>
+                        </span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">On Delivery</span>
+                            <span class="info-box-number"><?= $total_delivery ?></span>
                         </div>
                     </div>
                 </div>
@@ -83,8 +82,8 @@
                             <div class="col-auto">
                                 <select id="filterKonfirmasi" class="form-control form-control-sm" style="min-width:180px;">
                                     <option value="">— Semua Status —</option>
-                                    <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
                                     <option value="Siap Loading">Siap Loading</option>
+                                    <option value="On Delivery">On Delivery</option>
                                 </select>
                             </div>
                         </div>
@@ -98,22 +97,20 @@
                                     <th>Rute</th>
                                     <th>Total Faktur</th>
                                     <th>Total Barang</th>
-                                    <th>Status Konfirmasi</th>
+                                    <th>Status DO</th>
                                     <th>#</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($listdo as $i) :
-                                    $confirm = $i->sales_confirm_status ?? 'pending';
-
                                     // Badge status
-                                    if ($confirm === 'siap') {
-                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#0a3d1f;background:#c3e6cb;padding:3px 10px;border-radius:20px;border:1px solid #82c99a;">
-                                                    <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Siap Loading
+                                    if ((string)($i->status ?? '') === '5') {
+                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#fff;background:#343a40;padding:3px 10px;border-radius:20px;border:1px solid #1f2327;">
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;margin-right:5px;flex-shrink:0;"></span>On Delivery
                                                 </span>';
                                     } else {
-                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#533400;background:#fde7aa;padding:3px 10px;border-radius:20px;border:1px solid #f5c76a;">
-                                                    <span style="width:7px;height:7px;border-radius:50%;background:#d4820a;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Menunggu Konfirmasi
+                                        $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#0a3d1f;background:#c3e6cb;padding:3px 10px;border-radius:20px;border:1px solid #82c99a;">
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Siap Loading
                                                 </span>';
                                     }
 
@@ -168,7 +165,7 @@ $(document).ready(function () {
         columnDefs: [{ orderable: false, targets: -1 }]
     });
 
-    // Filter by kolom Status Konfirmasi (kolom index 5)
+    // Filter by kolom Status DO (kolom index 5)
     $('#filterKonfirmasi').on('change', function () {
         table.column(5).search($(this).val()).draw();
     });
