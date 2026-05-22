@@ -3522,6 +3522,87 @@ FROM (
         return $this->db->get()->result_array();
     }
 
+    public function get_pre_po_invoice_adjustment($kd_po)
+    {
+        $hasAdjustmentTable = $this->db->table_exists('tb_pre_po_invoice_adjustment');
+
+        $this->db->select('
+            pp.id_pre_po,
+            pp.no_po,
+            pp.kd_po,
+            pp.kd_barang,
+            COALESCE(mb.nama_barang, "-") AS nama_barang,
+            ' . ($hasAdjustmentTable ? '
+                COALESCE(adj.qty, pp.qty, 0) AS qty,
+                COALESCE(adj.satuan, pp.satuan, "-") AS satuan,
+                COALESCE(adj.harga_satuan, pp.hrg_satuan, 0) AS harga_satuan,
+                COALESCE(adj.total_harga, (pp.qty * pp.hrg_satuan), 0) AS harga_total,
+                COALESCE(adj.harga, pp.hrg_satuan, 0) AS harga,
+                COALESCE(adj.harga_diskon, pp.hrg_satuan, 0) AS harga_diskon,
+                COALESCE(adj.total_harga_diskon, (pp.qty * COALESCE(adj.harga_diskon, pp.hrg_satuan)), 0) AS harga_total_diskon,
+                COALESCE(adj.tax_percent, 0) AS tax_percent,
+                COALESCE(adj.tax, 0) AS tax,
+                COALESCE(adj.tax_diskon, 0) AS tax_diskon,
+                COALESCE(adj.grand_total, COALESCE(adj.total_harga, (pp.qty * pp.hrg_satuan)) + COALESCE(adj.tax, 0), 0) AS grand_total,
+                COALESCE(adj.grand_total_diskon, COALESCE(adj.total_harga_diskon, (pp.qty * COALESCE(adj.harga_diskon, pp.hrg_satuan))) + COALESCE(adj.tax_diskon, 0), 0) AS grand_total_diskon
+            ' : '
+                pp.qty AS qty,
+                pp.satuan AS satuan,
+                pp.hrg_satuan AS harga_satuan,
+                (pp.qty * pp.hrg_satuan) AS harga_total,
+                pp.hrg_satuan AS harga,
+                pp.hrg_satuan AS harga_diskon,
+                (pp.qty * pp.hrg_satuan) AS harga_total_diskon,
+                0 AS tax_percent,
+                0 AS tax,
+                0 AS tax_diskon,
+                (pp.qty * pp.hrg_satuan) AS grand_total,
+                (pp.qty * pp.hrg_satuan) AS grand_total_diskon
+            ') . '
+        ');
+        $this->db->from('tb_pre_po pp');
+        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        if ($hasAdjustmentTable) {
+            $this->db->join('tb_pre_po_invoice_adjustment adj', 'adj.kd_po = pp.kd_po AND adj.kd_barang = pp.kd_barang', 'left');
+        }
+        $this->db->where('pp.kd_po', $kd_po);
+        $this->db->order_by('pp.id_pre_po', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_pre_po_invoice_adjustment_summary($kd_po, $rows = null)
+    {
+        if ($rows === null) {
+            $rows = $this->get_pre_po_invoice_adjustment($kd_po);
+        }
+
+        $summary = [
+            'total_harga' => 0,
+            'total_harga_diskon' => 0,
+            'tax_percent' => 0,
+            'tax' => 0,
+            'tax_diskon' => 0,
+            'grand_total' => 0,
+            'grand_total_diskon' => 0
+        ];
+
+        foreach ($rows as $row) {
+            $summary['total_harga'] += (float) ($row['harga_total'] ?? 0);
+            $summary['total_harga_diskon'] += (float) ($row['harga_total_diskon'] ?? 0);
+            if ((float) ($row['tax_percent'] ?? 0) > 0) {
+                $summary['tax_percent'] = (float) $row['tax_percent'];
+            }
+        }
+
+        $summary['tax'] = ($summary['tax_percent'] / 100) * $summary['total_harga'];
+        $summary['tax_diskon'] = ($summary['tax_percent'] / 100) * $summary['total_harga_diskon'];
+        $summary['grand_total'] = $summary['total_harga'] + $summary['tax'];
+        $summary['grand_total_diskon'] = $summary['total_harga_diskon'] + $summary['tax_diskon'];
+
+        return $summary;
+    }
+
     public function submit_adjustment($payload)
     {
         $row = $this->db
@@ -3592,6 +3673,19 @@ FROM (
         }
 
         return $this->db->get('tb_lpb_log')->result_array();
+    }
+
+    public function get_history_diskon_sync($kd_po)
+    {
+        if (!$this->db->table_exists('tb_pre_po_diskon_history')) {
+            return [];
+        }
+
+        $this->db->where('kd_po', $kd_po);
+        $this->db->order_by('id_diskon_source', 'ASC');
+        $this->db->order_by('id', 'ASC');
+
+        return $this->db->get('tb_pre_po_diskon_history')->result_array();
     }
 
     public function update_invoice_lpb($payload)

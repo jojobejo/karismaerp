@@ -179,6 +179,23 @@
                             vertical-align: middle;
                         }
 
+                        .lpb-table tfoot th {
+                            background: #f3f6ff;
+                            border-color: #dbe4ff;
+                            color: #0f172a;
+                            vertical-align: middle;
+                        }
+
+                        #modalHistoryLpb .table th,
+                        #modalHistoryLpb .table td {
+                            white-space: nowrap;
+                        }
+
+                        #modalHistoryLpb .table td.history-diskon-keterangan {
+                            min-width: 360px;
+                            white-space: normal;
+                        }
+
                     </style>
 
                     <div class="row mb-3">
@@ -235,6 +252,9 @@
                             <div class="d-flex align-items-center" style="gap:8px; flex-wrap:wrap;">
                                 <button type="button" class="btn btn-outline-primary btn-sm" id="btnHistoryInvoiceAll">
                                     <i class="fas fa-file-invoice mr-1"></i> History Invoice
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" id="btnHistoryDiskonAll">
+                                    <i class="fas fa-tags mr-1"></i> History Diskon
                                 </button>
                                 <button type="button" class="btn btn-outline-warning btn-sm" id="btnHistoryAdjustmentAll">
                                     <i class="fas fa-history mr-1"></i> History Adjustment
@@ -409,7 +429,7 @@
     </div>
 
     <div class="modal fade" id="modalHistoryLpb" tabindex="-1" role="dialog" aria-labelledby="modalHistoryLpbLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalHistoryLpbLabel">History</h5>
@@ -885,6 +905,19 @@
                 loadHistory(
                     'History Invoice',
                     '<?= base_url('ics/ajax_history_invoice') ?>', {
+                        kd_po: kdPo
+                    }
+                );
+            });
+
+            $('#btnHistoryDiskonAll').on('click', function() {
+                if (!canManagePoInvoice) {
+                    return;
+                }
+
+                loadHistory(
+                    'History Diskon',
+                    '<?= base_url('ics/ajax_history_diskon') ?>', {
                         kd_po: kdPo
                     }
                 );

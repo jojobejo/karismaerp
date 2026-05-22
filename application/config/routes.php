@@ -184,6 +184,7 @@ $route['ics/ajax_get_pre_po_adjustment']            = 'logistik/C_Ics/ajax_get_p
 $route['ics/ajax_submit_adjustment']                = 'logistik/C_Ics/ajax_submit_adjustment';
 $route['ics/ajax_history_adjustment']               = 'logistik/C_Ics/ajax_history_adjustment';
 $route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_history_invoice';
+$route['ics/ajax_history_diskon']                   = 'logistik/C_Ics/ajax_history_diskon';
 $route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
 $route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
 $route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';

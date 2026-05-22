@@ -5,6 +5,8 @@ $lastSyncInserted = isset($last_sync['inserted']) ? (int) $last_sync['inserted']
 $lastSyncUpdated = isset($last_sync['updated']) ? (int) $last_sync['updated'] : 0;
 $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 0;
 $isAdminPo = !empty($is_admin_po);
+$canSyncPo = !empty($can_sync_po);
+$showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS';
 ?>
 <style>
     .sync-summary-card {
@@ -162,7 +164,7 @@ $isAdminPo = !empty($is_admin_po);
                             <h3 class="card-title">
                                 <i class="fas fa-plus-circle mr-2"></i> <?= $isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)' ?>
                             </h3>
-                            <?php if (!$isAdminPo) : ?>
+                            <?php if ($canSyncPo) : ?>
                                 <div class="sync-meta text-md-right">
                                     <div>Waktu sync terakhir: <strong id="sync-last-time"><?= htmlspecialchars($lastSyncTime) ?></strong></div>
                                 </div>
@@ -170,35 +172,35 @@ $isAdminPo = !empty($is_admin_po);
                         </div>
 
                         <div class="card-body">
-                            <?php if (!$isAdminPo) : ?>
-                                <div class="container-fluid px-0">
-                                    <div class="row mb-3" id="header-title-sync">
-                                        <div class="col-md-3 col-6 mb-3">
-                                            <div class="sync-stat-box sync-stat-primary">
-                                                <h4 id="sync-total-inserted"><?= $lastSyncInserted ?></h4>
-                                                <p>Data baru tersimpan</p>
-                                            </div>
+                            <?php if ($canSyncPo) : ?>
+                            <div class="container-fluid px-0" hidden>
+                                <div class="row mb-3" id="header-title-sync">
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-primary">
+                                            <h4 id="sync-total-inserted"><?= $lastSyncInserted ?></h4>
+                                            <p>Data baru tersimpan</p>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-3">
-                                            <div class="sync-stat-box sync-stat-success">
-                                                <h4 id="sync-total-updated"><?= $lastSyncUpdated ?></h4>
-                                                <p>Data berhasil diperbarui</p>
-                                            </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-success">
+                                            <h4 id="sync-total-updated"><?= $lastSyncUpdated ?></h4>
+                                            <p>Data berhasil diperbarui</p>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-3">
-                                            <div class="sync-stat-box sync-stat-warning">
-                                                <h4 id="sync-total-skipped"><?= $lastSyncSkipped ?></h4>
-                                                <p>Data dilewati</p>
-                                            </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-warning">
+                                            <h4 id="sync-total-skipped"><?= $lastSyncSkipped ?></h4>
+                                            <p>Data dilewati</p>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-3">
-                                            <div class="sync-stat-box sync-stat-dark">
-                                                <h4 id="sync-total-rows"><?= count($sync_rows) ?></h4>
-                                                <p>Baris ditampilkan</p>
-                                            </div>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-3">
+                                        <div class="sync-stat-box sync-stat-dark">
+                                            <h4 id="sync-total-rows"><?= count($sync_rows) ?></h4>
+                                            <p>Baris ditampilkan</p>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
                             <?php endif; ?>
 
                             <div class="container-fluid px-0">
@@ -218,8 +220,9 @@ $isAdminPo = !empty($is_admin_po);
                                     </div>
                                 </form>
 
-                                <?php if (!$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS') : ?>
+                                <?php if ($canSyncPo) : ?>
                                     <div class="row mb-3" id="button-row-lpb">
+                                        <?php if ($showLpbActions) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
                                                 <i class="fas fa-file-csv"></i> Data LPB
@@ -230,12 +233,14 @@ $isAdminPo = !empty($is_admin_po);
                                                 <i class="fas fa-undo"></i> Data Retur
                                             </a>
                                         </div>
+                                        <?php endif; ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <button class="btn btn-primary btn-block" id="btn-sync-po">
                                                 <i class="fas fa-sync"></i> Sync PO
                                             </button>
                                         </div>
                                     </div>
+                                    <div class="alert d-none" id="sync-alert"></div>
                                 <?php elseif ($this->session->userdata('lv') == '2') : ?>
                                     <div class="row mb-3">
                                         <div class="col-md-2 col-sm-6 mb-2">
@@ -280,27 +285,27 @@ $isAdminPo = !empty($is_admin_po);
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
                                             <?php if ($isAdminPo) : ?>
-                                                <tr>
-                                                    <th>No PO</th>
-                                                    <th>Tgl Transaksi</th>
-                                                    <th>Nama Supplier</th>
-                                                    <th class="text-center">Progress</th>
-                                                    <th class="text-center">Status</th>
-                                                    <th class="text-center" style="width:90px;">#</th>
-                                                </tr>
+                                            <tr>
+                                                <th>No PO</th>
+                                                <th>Tgl Transaksi</th>
+                                                <th>Nama Supplier</th>
+                                                <th class="text-center">Progress</th>
+                                                <th class="text-center">Status</th>
+                                                <th class="text-center" style="width:90px;">#</th>
+                                            </tr>
                                             <?php else : ?>
-                                                <tr>
-                                                    <th>No PO</th>
-                                                    <th>Tgl Transaksi</th>
-                                                    <th>Kode Supplier</th>
-                                                    <th>Nama Supplier</th>
-                                                    <th class="text-center">Total Barang Order</th>
-                                                    <th class="text-center">Total Barang Diterima</th>
-                                                    <th class="text-center">Progress</th>
-                                                    <th class="text-center">Input Terakhir</th>
-                                                    <th class="text-center">Status</th>
-                                                    <th class="text-center" style="width:90px;">#</th>
-                                                </tr>
+                                            <tr>
+                                                <th>No PO</th>
+                                                <th>Tgl Transaksi</th>
+                                                <th>Kode Supplier</th>
+                                                <th>Nama Supplier</th>
+                                                <th class="text-center">Total Barang Order</th>
+                                                <th class="text-center">Total Barang Diterima</th>
+                                                <th class="text-center">Progress</th>
+                                                <th class="text-center">Input Terakhir</th>
+                                                <th class="text-center">Status</th>
+                                                <th class="text-center" style="width:90px;">#</th>
+                                            </tr>
                                             <?php endif; ?>
                                         </thead>
                                         <tbody>
@@ -338,58 +343,58 @@ $isAdminPo = !empty($is_admin_po);
                                                     }
                                                 ?>
                                                     <?php if ($isAdminPo) : ?>
-                                                        <tr class="<?= $rowClass ?>">
-                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
-                                                            <td>
-                                                                <div class="po-progress-wrap">
-                                                                    <div class="po-progress-label">
-                                                                        <span><?= $progressText ?>%</span>
-                                                                        <span><?= htmlspecialchars(ucfirst($status)) ?></span>
-                                                                    </div>
-                                                                    <div class="po-progress-track">
-                                                                        <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
-                                                                    </div>
+                                                    <tr class="<?= $rowClass ?>">
+                                                        <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
+                                                        <td>
+                                                            <div class="po-progress-wrap">
+                                                                <div class="po-progress-label">
+                                                                    <span><?= $progressText ?>%</span>
+                                                                    <span><?= htmlspecialchars(ucfirst($status)) ?></span>
                                                                 </div>
-                                                            </td>
-                                                            <td class="text-center"><?= $badge ?></td>
-                                                            <td class="text-center">
-                                                                <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm">
-                                                                    <i class="fas fa-list"></i>
-                                                                </a>
-                                                            </td>
-                                                        </tr>
+                                                                <div class="po-progress-track">
+                                                                    <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center"><?= $badge ?></td>
+                                                        <td class="text-center">
+                                                            <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm">
+                                                                <i class="fas fa-list"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
                                                     <?php else : ?>
-                                                        <tr class="<?= $rowClass ?>">
-                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($row['kdsupp'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
-                                                            <td class="text-center font-weight-bold"><?= $jumlah_barang_order ?></td>
-                                                            <td class="text-center font-weight-bold <?= $jumlah_barang_diterima > 0 ? 'text-success' : 'text-danger' ?>">
-                                                                <?= $jumlah_barang_diterima ?>
-                                                            </td>
-                                                            <td>
-                                                                <div class="po-progress-wrap">
-                                                                    <div class="po-progress-label">
-                                                                        <span><?= $progressText ?>%</span>
-                                                                        <span><?= $jumlah_qty_diterima ?> / <?= $jumlah_qty_order ?></span>
-                                                                    </div>
-                                                                    <div class="po-progress-track">
-                                                                        <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
-                                                                    </div>
-                                                                    <div class="po-progress-note">Berdasarkan qty diterima</div>
+                                                    <tr class="<?= $rowClass ?>">
+                                                        <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['kdsupp'] ?? '') ?></td>
+                                                        <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
+                                                        <td class="text-center font-weight-bold"><?= $jumlah_barang_order ?></td>
+                                                        <td class="text-center font-weight-bold <?= $jumlah_barang_diterima > 0 ? 'text-success' : 'text-danger' ?>">
+                                                            <?= $jumlah_barang_diterima ?>
+                                                        </td>
+                                                        <td>
+                                                            <div class="po-progress-wrap">
+                                                                <div class="po-progress-label">
+                                                                    <span><?= $progressText ?>%</span>
+                                                                    <span><?= $jumlah_qty_diterima ?> / <?= $jumlah_qty_order ?></span>
                                                                 </div>
-                                                            </td>
-                                                            <td class="text-center"><?= htmlspecialchars($row['input_terakhir'] ?? '-') ?></td>
-                                                            <td class="text-center"><?= $badge ?></td>
-                                                            <td class="text-center">
-                                                                <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($row['no_po']) . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
-                                                                    <i class="fas fa-eye"></i> Detail
-                                                                </a>
-                                                            </td>
-                                                        </tr>
+                                                                <div class="po-progress-track">
+                                                                    <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
+                                                                </div>
+                                                                <div class="po-progress-note">Berdasarkan qty diterima</div>
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center"><?= htmlspecialchars($row['input_terakhir'] ?? '-') ?></td>
+                                                        <td class="text-center"><?= $badge ?></td>
+                                                        <td class="text-center">
+                                                            <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($row['no_po']) . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
+                                                                <i class="fas fa-eye"></i> Detail
+                                                            </a>
+                                                        </td>
+                                                    </tr>
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
                                             <?php else : ?>
@@ -533,7 +538,9 @@ $isAdminPo = !empty($is_admin_po);
                                 (response.message || 'Sinkronisasi berhasil') +
                                 ' | Inserted: <strong>' + (response.inserted || 0) + '</strong>' +
                                 ' | Updated: <strong>' + (response.updated || 0) + '</strong>' +
-                                ' | Skipped: <strong>' + (response.skipped || 0) + '</strong>'
+                                ' | Skipped: <strong>' + (response.skipped || 0) + '</strong>' +
+                                ' | Histori diskon: <strong>' + (response.discount_rows || 0) + '</strong>' +
+                                ' | Invoice adjustment: <strong>' + (response.invoice_adjustment_rows || 0) + '</strong>'
                             );
                         } else {
                             showSyncAlert('danger', response.message || 'Gagal sinkronisasi');

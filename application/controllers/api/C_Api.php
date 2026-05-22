@@ -97,6 +97,8 @@ class C_Api extends CI_Controller
                 'inserted'      => (int) $result['inserted'],
                 'updated'       => (int) $result['updated'],
                 'skipped'       => (int) $result['skipped'],
+                'discount_rows' => (int) ($result['discount_rows'] ?? 0),
+                'invoice_adjustment_rows' => (int) ($result['invoice_adjustment_rows'] ?? 0),
                 'total_fetched' => (int) $result['total_fetched'],
                 'sync_time'     => $result['sync_time'],
                 'rows'          => $this->apiModel->get_recent_pre_po(100),

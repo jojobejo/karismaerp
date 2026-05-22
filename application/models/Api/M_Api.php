@@ -5,6 +5,8 @@ class M_Api extends CI_Model
 {
     protected $preDoTable = 'tb_pre_do';
     protected $prePoTable = 'tb_pre_po';
+    protected $prePoDiscountHistoryTable = 'tb_pre_po_diskon_history';
+    protected $prePoInvoiceAdjustmentTable = 'tb_pre_po_invoice_adjustment';
     protected $syncCacheFile;
 
     public function __construct()
@@ -101,7 +103,12 @@ class M_Api extends CI_Model
 
     public function sync_pre_po_payload(array $rows, $sourceUrl = '')
     {
+        $this->ensure_pre_po_discount_history_table();
+        $this->ensure_pre_po_invoice_adjustment_table();
+
         $dedupedRows = [];
+        $discountHistoryMap = $this->collect_discount_histories($rows);
+        $invoiceAdjustmentRows = $this->collect_invoice_adjustment_rows($rows);
         $skipped = 0;
 
         foreach ($rows as $row) {
@@ -212,6 +219,30 @@ class M_Api extends CI_Model
             ];
         }
 
+        $discountSync = $this->replace_discount_histories($discountHistoryMap);
+        if (!$discountSync['status']) {
+            $this->db->trans_rollback();
+
+            return [
+                'status'    => false,
+                'message'   => $discountSync['message'],
+                'http_code' => 500,
+                'skipped'   => $skipped
+            ];
+        }
+
+        $invoiceAdjustmentSync = $this->upsert_invoice_adjustments($invoiceAdjustmentRows);
+        if (!$invoiceAdjustmentSync['status']) {
+            $this->db->trans_rollback();
+
+            return [
+                'status'    => false,
+                'message'   => $invoiceAdjustmentSync['message'],
+                'http_code' => 500,
+                'skipped'   => $skipped
+            ];
+        }
+
         $this->db->trans_commit();
 
         $syncTime = date('Y-m-d H:i:s');
@@ -221,6 +252,8 @@ class M_Api extends CI_Model
             'inserted'      => $inserted,
             'updated'       => $updated,
             'skipped'       => $skipped,
+            'discount_rows' => (int) $discountSync['rows'],
+            'invoice_adjustment_rows' => (int) $invoiceAdjustmentSync['rows'],
             'total_fetched' => count($rows)
         ];
         $this->save_last_sync_info($syncInfo);
@@ -231,6 +264,8 @@ class M_Api extends CI_Model
             'inserted'      => $inserted,
             'updated'       => $updated,
             'skipped'       => $skipped,
+            'discount_rows' => (int) $discountSync['rows'],
+            'invoice_adjustment_rows' => (int) $invoiceAdjustmentSync['rows'],
             'total_fetched' => count($rows),
             'sync_time'     => $syncTime,
             'http_code'     => 200
@@ -372,6 +407,312 @@ class M_Api extends CI_Model
         ];
     }
 
+    protected function collect_invoice_adjustment_rows(array $rows)
+    {
+        $map = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $normalized = $this->normalize_invoice_adjustment_row($row);
+            if ($normalized === null) {
+                continue;
+            }
+
+            $key = $this->build_invoice_adjustment_key($normalized['kd_po'], $normalized['kd_barang']);
+            $map[$key] = $normalized;
+        }
+
+        return array_values($map);
+    }
+
+    protected function normalize_invoice_adjustment_row(array $row)
+    {
+        $kdPo = trim((string) $this->pick_value($row, ['kd_po', 'kode_po']));
+        $kdBarang = trim((string) $this->pick_value($row, ['kd_barang', 'kode_barang']));
+
+        if ($kdPo === '' || $kdBarang === '') {
+            return null;
+        }
+
+        $qty = $this->sanitize_decimal($this->pick_value($row, ['qty', 'jumlah']));
+        $hargaSatuan = $this->sanitize_decimal($this->pick_value($row, ['harga_satuan', 'hrg_satuan']));
+        $harga = $this->sanitize_decimal($this->pick_value($row, ['harga', 'hrg_satuan', 'harga_satuan']));
+        $hargaDiskon = $this->sanitize_decimal($this->pick_value($row, ['harga_diskon', 'hrg_diskon']));
+        $totalHargaValue = $this->pick_value($row, ['total_harga', 'hrg_total', 'harga_total']);
+        $totalHargaDiskonValue = $this->pick_value($row, ['total_harga_diskon', 'hrg_total_diskon', 'harga_total_diskon']);
+        $totalHarga = $totalHargaValue === null || $totalHargaValue === ''
+            ? $qty * $hargaSatuan
+            : $this->sanitize_decimal($totalHargaValue);
+        $totalHargaDiskon = $totalHargaDiskonValue === null || $totalHargaDiskonValue === ''
+            ? $qty * $hargaDiskon
+            : $this->sanitize_decimal($totalHargaDiskonValue);
+        $taxPercent = $this->sanitize_decimal($this->pick_value($row, ['tax', 'pajak']));
+        $tax = ($taxPercent / 100) * $totalHarga;
+        $taxDiskonValue = $this->pick_value($row, ['tax_diskon', 'pajak_diskon']);
+        $taxDiskon = $taxDiskonValue === null || $taxDiskonValue === ''
+            ? ($taxPercent / 100) * $totalHargaDiskon
+            : $this->sanitize_decimal($taxDiskonValue);
+        $grandTotalValue = $this->pick_value($row, ['grand_total']);
+        $grandTotalDiskonValue = $this->pick_value($row, ['grand_total_diskon']);
+
+        return [
+            'no_po'              => trim((string) $this->pick_value($row, ['no_po', 'nomor_po'])),
+            'kd_po'              => $kdPo,
+            'tgl_transaksi'      => trim((string) $this->pick_value($row, ['tgl_transaksi', 'tanggal', 'tanggal_transaksi'])),
+            'kd_suplier'         => trim((string) $this->pick_value($row, ['kd_suplier', 'kdsupp', 'kode_supplier', 'kd_supplier'])),
+            'kd_barang'          => $kdBarang,
+            'satuan'             => trim((string) $this->pick_value($row, ['satuan'])),
+            'qty'                => $qty,
+            'harga_satuan'       => $hargaSatuan,
+            'harga'              => $harga,
+            'harga_diskon'       => $hargaDiskon,
+            'total_harga'        => $totalHarga,
+            'total_harga_diskon' => $totalHargaDiskon,
+            'tax_percent'        => $taxPercent,
+            'tax'                => $tax,
+            'tax_diskon'         => $taxDiskon,
+            'grand_total'        => $grandTotalValue === null || $grandTotalValue === '' ? $totalHarga + $tax : $this->sanitize_decimal($grandTotalValue),
+            'grand_total_diskon' => $grandTotalDiskonValue === null || $grandTotalDiskonValue === '' ? $totalHargaDiskon + $taxDiskon : $this->sanitize_decimal($grandTotalDiskonValue),
+            'source_payload'     => json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'synced_at'          => date('Y-m-d H:i:s')
+        ];
+    }
+
+    protected function collect_discount_histories(array $rows)
+    {
+        $map = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $kdPo = trim((string) $this->pick_value($row, ['kd_po', 'kode_po']));
+            if ($kdPo === '') {
+                continue;
+            }
+
+            $histories = $this->pick_value($row, [
+                'histori_diskon',
+                'history_diskon',
+                'diskon_history',
+                'discount_history',
+                'diskon',
+                'discounts'
+            ]);
+
+            if (!is_array($histories)) {
+                continue;
+            }
+
+            $normalizedRows = [];
+            foreach ($histories as $history) {
+                $normalized = $this->normalize_discount_history_row($kdPo, $history);
+                if ($normalized !== null) {
+                    $normalizedRows[] = $normalized;
+                }
+            }
+
+            if (!empty($normalizedRows)) {
+                $map[$kdPo] = $normalizedRows;
+            }
+        }
+
+        return $map;
+    }
+
+    protected function normalize_discount_history_row($kdPo, $row)
+    {
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $keterangan = trim((string) $this->pick_value($row, ['keterangan', 'description', 'note']));
+        $nominal = $this->sanitize_decimal($this->pick_value($row, ['nominal', 'nilai', 'amount']));
+
+        if ($keterangan === '' && $nominal == 0) {
+            return null;
+        }
+
+        return [
+            'kd_po'            => $kdPo,
+            'id_diskon_source' => (int) $this->sanitize_numeric($this->pick_value($row, ['id_diskon', 'id'])),
+            'kd_suplier'       => trim((string) $this->pick_value($row, ['kd_suplier', 'kd_supplier', 'kdsupp'])),
+            'no_po'            => trim((string) $this->pick_value($row, ['no_po', 'nomor_po'])),
+            'tgl_transaksi'    => trim((string) $this->pick_value($row, ['tgl_transaksi', 'tanggal', 'tanggal_transaksi'])),
+            'nama_suplier'     => trim((string) $this->pick_value($row, ['nama_suplier', 'nm_suplier', 'nama_supplier'])),
+            'keterangan'       => $keterangan,
+            'nominal'          => $nominal,
+            'source_payload'   => json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'synced_at'        => date('Y-m-d H:i:s')
+        ];
+    }
+
+    protected function replace_discount_histories(array $discountHistoryMap)
+    {
+        if (empty($discountHistoryMap)) {
+            return ['status' => true, 'rows' => 0];
+        }
+
+        $kdPoList = array_keys($discountHistoryMap);
+        $this->db->where_in('kd_po', $kdPoList)->delete($this->prePoDiscountHistoryTable);
+
+        if ($this->db->error()['code']) {
+            $error = $this->db->error();
+            return [
+                'status'  => false,
+                'message' => 'Gagal hapus histori diskon lama: ' . ($error['message'] ?? 'Unknown database error')
+            ];
+        }
+
+        $insertBatch = [];
+        foreach ($discountHistoryMap as $rows) {
+            foreach ($rows as $row) {
+                $insertBatch[] = $row;
+            }
+        }
+
+        $inserted = 0;
+        foreach (array_chunk($insertBatch, 500) as $chunk) {
+            $ok = $this->db->insert_batch($this->prePoDiscountHistoryTable, $chunk);
+            if ($ok === false) {
+                $error = $this->db->error();
+                return [
+                    'status'  => false,
+                    'message' => 'Gagal simpan histori diskon: ' . ($error['message'] ?? 'Unknown database error')
+                ];
+            }
+
+            $inserted += count($chunk);
+        }
+
+        return ['status' => true, 'rows' => $inserted];
+    }
+
+    protected function ensure_pre_po_discount_history_table()
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS `{$this->prePoDiscountHistoryTable}` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `kd_po` varchar(255) NOT NULL,
+            `id_diskon_source` int(11) DEFAULT NULL,
+            `kd_suplier` varchar(35) DEFAULT NULL,
+            `no_po` varchar(255) DEFAULT NULL,
+            `tgl_transaksi` varchar(25) DEFAULT NULL,
+            `nama_suplier` varchar(255) DEFAULT NULL,
+            `keterangan` varchar(255) DEFAULT NULL,
+            `nominal` double NOT NULL DEFAULT 0,
+            `source_payload` text DEFAULT NULL,
+            `synced_at` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            KEY `idx_kd_po` (`kd_po`),
+            KEY `idx_id_diskon_source` (`id_diskon_source`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+        $this->db->query($sql);
+    }
+
+    protected function upsert_invoice_adjustments(array $rows)
+    {
+        if (empty($rows)) {
+            return ['status' => true, 'rows' => 0];
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            $values = [];
+            foreach ($chunk as $row) {
+                $values[] = $this->db->escape($row['no_po']) . ',' .
+                    $this->db->escape($row['kd_po']) . ',' .
+                    $this->db->escape($row['tgl_transaksi']) . ',' .
+                    $this->db->escape($row['kd_suplier']) . ',' .
+                    $this->db->escape($row['kd_barang']) . ',' .
+                    $this->db->escape($row['satuan']) . ',' .
+                    (float) $row['qty'] . ',' .
+                    (float) $row['harga_satuan'] . ',' .
+                    (float) $row['harga'] . ',' .
+                    (float) $row['harga_diskon'] . ',' .
+                    (float) $row['total_harga'] . ',' .
+                    (float) $row['total_harga_diskon'] . ',' .
+                    (float) $row['tax_percent'] . ',' .
+                    (float) $row['tax'] . ',' .
+                    (float) $row['tax_diskon'] . ',' .
+                    (float) $row['grand_total'] . ',' .
+                    (float) $row['grand_total_diskon'] . ',' .
+                    $this->db->escape($row['source_payload']) . ',' .
+                    $this->db->escape($row['synced_at']);
+            }
+
+            $sql = "INSERT INTO `{$this->prePoInvoiceAdjustmentTable}` (
+                    `no_po`, `kd_po`, `tgl_transaksi`, `kd_suplier`, `kd_barang`, `satuan`, `qty`,
+                    `harga_satuan`, `harga`, `harga_diskon`, `total_harga`, `total_harga_diskon`,
+                    `tax_percent`, `tax`, `tax_diskon`, `grand_total`, `grand_total_diskon`,
+                    `source_payload`, `synced_at`
+                ) VALUES (" . implode('),(', $values) . ")
+                ON DUPLICATE KEY UPDATE
+                    `no_po` = VALUES(`no_po`),
+                    `tgl_transaksi` = VALUES(`tgl_transaksi`),
+                    `kd_suplier` = VALUES(`kd_suplier`),
+                    `satuan` = VALUES(`satuan`),
+                    `qty` = VALUES(`qty`),
+                    `harga_satuan` = VALUES(`harga_satuan`),
+                    `harga` = VALUES(`harga`),
+                    `harga_diskon` = VALUES(`harga_diskon`),
+                    `total_harga` = VALUES(`total_harga`),
+                    `total_harga_diskon` = VALUES(`total_harga_diskon`),
+                    `tax_percent` = VALUES(`tax_percent`),
+                    `tax` = VALUES(`tax`),
+                    `tax_diskon` = VALUES(`tax_diskon`),
+                    `grand_total` = VALUES(`grand_total`),
+                    `grand_total_diskon` = VALUES(`grand_total_diskon`),
+                    `source_payload` = VALUES(`source_payload`),
+                    `synced_at` = VALUES(`synced_at`)";
+
+            $ok = $this->db->query($sql);
+            if ($ok === false) {
+                $error = $this->db->error();
+                return [
+                    'status'  => false,
+                    'message' => 'Gagal simpan data invoice adjustment: ' . ($error['message'] ?? 'Unknown database error')
+                ];
+            }
+        }
+
+        return ['status' => true, 'rows' => count($rows)];
+    }
+
+    protected function ensure_pre_po_invoice_adjustment_table()
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS `{$this->prePoInvoiceAdjustmentTable}` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `no_po` varchar(255) DEFAULT NULL,
+            `kd_po` varchar(255) NOT NULL,
+            `tgl_transaksi` varchar(25) DEFAULT NULL,
+            `kd_suplier` varchar(35) DEFAULT NULL,
+            `kd_barang` varchar(35) NOT NULL,
+            `satuan` varchar(50) DEFAULT NULL,
+            `qty` double NOT NULL DEFAULT 0,
+            `harga_satuan` double NOT NULL DEFAULT 0,
+            `harga` double NOT NULL DEFAULT 0,
+            `harga_diskon` double NOT NULL DEFAULT 0,
+            `total_harga` double NOT NULL DEFAULT 0,
+            `total_harga_diskon` double NOT NULL DEFAULT 0,
+            `tax_percent` double NOT NULL DEFAULT 0,
+            `tax` double NOT NULL DEFAULT 0,
+            `tax_diskon` double NOT NULL DEFAULT 0,
+            `grand_total` double NOT NULL DEFAULT 0,
+            `grand_total_diskon` double NOT NULL DEFAULT 0,
+            `source_payload` text DEFAULT NULL,
+            `synced_at` datetime NOT NULL,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_kd_po_barang` (`kd_po`, `kd_barang`),
+            KEY `idx_kd_po` (`kd_po`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+        $this->db->query($sql);
+    }
+
     protected function get_existing_pre_po_map(array $dedupedRows)
     {
         $noPoList = [];
@@ -449,6 +790,11 @@ class M_Api extends CI_Model
         return trim((string) $noPo) . '||' . trim((string) $kdBarang);
     }
 
+    protected function build_invoice_adjustment_key($kdPo, $kdBarang)
+    {
+        return trim((string) $kdPo) . '||' . trim((string) $kdBarang);
+    }
+
     protected function pick_value(array $row, array $keys)
     {
         foreach ($keys as $key) {
@@ -471,5 +817,21 @@ class M_Api extends CI_Model
         }
 
         return preg_replace('/[^\d\-]/', '', (string) $value);
+    }
+
+    protected function sanitize_decimal($value)
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        $cleaned = preg_replace('/[^\d\.\,\-]/', '', (string) $value);
+        $cleaned = str_replace(',', '.', $cleaned);
+
+        return is_numeric($cleaned) ? (float) $cleaned : 0;
     }
 }
