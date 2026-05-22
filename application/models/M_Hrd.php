@@ -285,6 +285,29 @@ class M_Hrd extends CI_Model
         return $this->db->insert('tbhrd_issue_logs', $data);
     }
 
+    private function apply_issue_filters($filters = array(), $alias = 'e')
+    {
+        if (!is_array($filters)) {
+            $filters = array();
+        }
+
+        if (array_key_exists('location_id', $filters) && $filters['location_id'] !== '' && $filters['location_id'] !== null) {
+            $this->db->where($alias . '.location_id', $filters['location_id']);
+        }
+        if (array_key_exists('status_id', $filters) && $filters['status_id'] !== '' && $filters['status_id'] !== null) {
+            $this->db->where($alias . '.status_id', $filters['status_id']);
+        }
+        if (array_key_exists('rating_id', $filters) && $filters['rating_id'] !== '' && $filters['rating_id'] !== null) {
+            $this->db->where($alias . '.rating_id', $filters['rating_id']);
+        }
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(' . $alias . '.report_datetime) >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(' . $alias . '.report_datetime) <=', $filters['date_to']);
+        }
+    }
+
     public function get_issue_list($filters = array())
     {
         $this->db->select('e.*, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name, u.username AS created_by')
@@ -294,18 +317,7 @@ class M_Hrd extends CI_Model
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left');
 
-        if ($filters['location_id'] !== '' && $filters['location_id'] !== null) {
-            $this->db->where('e.location_id', $filters['location_id']);
-        }
-        if ($filters['status_id'] !== '' && $filters['status_id'] !== null) {
-            $this->db->where('e.status_id', $filters['status_id']);
-        }
-        if (!empty($filters['date_from'])) {
-            $this->db->where('DATE(e.report_datetime) >=', $filters['date_from']);
-        }
-        if (!empty($filters['date_to'])) {
-            $this->db->where('DATE(e.report_datetime) <=', $filters['date_to']);
-        }
+        $this->apply_issue_filters($filters, 'e');
 
         return $this->db->order_by('e.report_datetime', 'DESC')->get();
     }
@@ -350,35 +362,54 @@ class M_Hrd extends CI_Model
         return $this->db->update('tbhrd_environment_issues', $data);
     }
 
-    public function get_issue_counts_by_location()
+    public function get_issue_counts_by_location($filters = array())
     {
-        return $this->db->select('l.name AS location_name, COUNT(e.id) AS total')
+        $this->db->select('e.location_id, l.name AS location_name, COUNT(e.id) AS total')
             ->from('tbhrd_environment_issues e')
-            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
-            ->group_by('e.location_id')
+            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left');
+        $this->apply_issue_filters($filters, 'e');
+
+        return $this->db->group_by('e.location_id')
             ->order_by('total', 'DESC')
             ->get();
     }
 
-    public function get_issue_counts_by_status()
+    public function get_issue_counts_by_status($filters = array())
     {
-        return $this->db->select('e.status_id, s.name AS status_name, COUNT(e.id) AS total')
+        $this->db->select('e.status_id, s.name AS status_name, COUNT(e.id) AS total')
             ->from('tbhrd_environment_issues e')
-            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
-            ->group_by('e.status_id')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left');
+        $this->apply_issue_filters($filters, 'e');
+
+        return $this->db->group_by('e.status_id')
             ->order_by('total', 'DESC')
             ->get();
     }
 
-    public function get_issue_counts_by_rating()
+    public function get_issue_counts_by_rating($filters = array())
     {
-        return $this->db->select('r.name AS rating_name, r.score, COUNT(e.id) AS total')
+        $this->db->select('e.rating_id, r.name AS rating_name, r.score, COUNT(e.id) AS total')
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
-            ->where('e.rating_id >', 0)
-            ->group_by('e.rating_id')
+            ->where('e.rating_id >', 0);
+        $this->apply_issue_filters($filters, 'e');
+
+        return $this->db->group_by('e.rating_id')
             ->order_by('r.score', 'DESC')
             ->get();
+    }
+
+    public function get_issue_breakdown_summary($filters = array())
+    {
+        $this->db->select('COUNT(e.id) AS total_issues')
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%selesai%' OR LOWER(COALESCE(s.name, '')) LIKE '%done%' OR LOWER(COALESCE(s.name, '')) LIKE '%closed%' THEN 1 ELSE 0 END) AS total_resolved", false)
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%progress%' OR LOWER(COALESCE(s.name, '')) LIKE '%proses%' OR LOWER(COALESCE(s.name, '')) LIKE '%sedang%' THEN 1 ELSE 0 END) AS total_progress", false)
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%pending%' OR LOWER(COALESCE(s.name, '')) LIKE '%menunggu%' OR LOWER(COALESCE(s.name, '')) LIKE '%belum%' OR e.status_id = 0 THEN 1 ELSE 0 END) AS total_pending", false)
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left');
+        $this->apply_issue_filters($filters, 'e');
+
+        return $this->db->get()->row();
     }
 
     var $table = 'tb_lap_distribusi'; //nama tabel dari database

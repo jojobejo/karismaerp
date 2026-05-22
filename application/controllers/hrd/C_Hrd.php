@@ -1103,6 +1103,7 @@ class C_Hrd extends CI_Controller
         $filters = array(
             'location_id' => $this->input->get_post('location_id'),
             'status_id' => $this->input->get_post('status_id'),
+            'rating_id' => $this->input->get_post('rating_id'),
             'date_from' => $this->input->get_post('date_from'),
             'date_to' => $this->input->get_post('date_to'),
         );
@@ -1180,9 +1181,16 @@ class C_Hrd extends CI_Controller
         // temporarily disabled access check for get_environment_issue_stats
         // $this->_require_hak_akses(array(1, 3));
         $this->output->set_content_type('application/json');
-        $byLocation = $this->M_Hrd->get_issue_counts_by_location()->result();
-        $byRating = $this->M_Hrd->get_issue_counts_by_rating()->result();
-        $statusRows = $this->M_Hrd->get_issue_counts_by_status()->result();
+        $filters = array(
+            'location_id' => $this->input->get('location_id'),
+            'status_id' => $this->input->get('status_id'),
+            'rating_id' => $this->input->get('rating_id'),
+            'date_from' => $this->input->get('date_from'),
+            'date_to' => $this->input->get('date_to'),
+        );
+        $byLocation = $this->M_Hrd->get_issue_counts_by_location($filters)->result();
+        $byRating = $this->M_Hrd->get_issue_counts_by_rating($filters)->result();
+        $statusRows = $this->M_Hrd->get_issue_counts_by_status($filters)->result();
 
         $openCount = 0;
         $resolvedCount = 0;
@@ -1216,6 +1224,53 @@ class C_Hrd extends CI_Controller
             'resolved_count' => $resolvedCount,
             'by_location' => $byLocation,
             'by_rating' => $byRating,
+        ));
+    }
+
+    public function get_environment_issue_breakdown()
+    {
+        $this->output->set_content_type('application/json');
+
+        $type = strtolower(trim($this->input->get('type')));
+        $id = intval($this->input->get('id'));
+
+        if (!in_array($type, array('location', 'rating')) || $id <= 0) {
+            echo json_encode(array('status' => false, 'message' => 'Parameter detail tidak valid.'));
+            return;
+        }
+
+        $filters = array(
+            'location_id' => $this->input->get('location_id'),
+            'status_id' => $this->input->get('status_id'),
+            'rating_id' => $this->input->get('rating_id'),
+            'date_from' => $this->input->get('date_from'),
+            'date_to' => $this->input->get('date_to'),
+        );
+
+        if ($type === 'location') {
+            $filters['location_id'] = $id;
+        } else {
+            $filters['rating_id'] = $id;
+        }
+
+        $issues = $this->M_Hrd->get_issue_list($filters)->result();
+        $summary = $this->M_Hrd->get_issue_breakdown_summary($filters);
+
+        $title = 'Detail Issue';
+        if (!empty($issues)) {
+            if ($type === 'location') {
+                $title = 'Lokasi: ' . $issues[0]->location_name;
+            } else {
+                $title = 'Prioritas: ' . $issues[0]->rating_name . ' (' . $issues[0]->score . ')';
+            }
+        }
+
+        echo json_encode(array(
+            'status' => true,
+            'title' => $title,
+            'type' => $type,
+            'summary' => $summary,
+            'data' => $issues,
         ));
     }
 

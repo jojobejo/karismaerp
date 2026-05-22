@@ -20,8 +20,14 @@
     .env-badge-muted { background: #f1f5f9; color: #475569; }
     .env-mini-list .env-mini-item { align-items: center; border-bottom: 1px solid #edf1f5; display: flex; gap: 12px; justify-content: space-between; padding: 9px 0; }
     .env-mini-list .env-mini-item:last-child { border-bottom: 0; }
+    .env-mini-list .env-mini-item .env-mini-meta { flex: 1; min-width: 0; }
+    .env-mini-list .env-mini-item .env-mini-actions { flex-shrink: 0; }
     .env-progress { background: #e5e7eb; border-radius: 99px; height: 6px; margin-top: 6px; overflow: hidden; width: 100%; }
     .env-progress span { background: #111827; display: block; height: 100%; }
+    .env-chart-wrap { min-height: 240px; position: relative; }
+    .env-breakdown-stat { background: #f8fafc; border: 1px solid #e8edf2; border-radius: 8px; height: 100%; padding: 12px; }
+    .env-breakdown-stat small { color: #64748b; display: block; font-weight: 800; text-transform: uppercase; }
+    .env-breakdown-stat strong { color: #111827; display: block; font-size: 1.45rem; line-height: 1.2; margin-top: 4px; }
     .env-tabs .nav-link { border-radius: 6px; color: #475569; font-weight: 800; }
     .env-tabs .nav-link.active { background: #111827; color: #fff; }
     .env-master-panel { border: 1px solid #e8edf2; border-radius: 8px; padding: 14px; }
@@ -77,7 +83,13 @@
             ratings: '<?= site_url('hrd/penilaian_lingkungan/ratings') ?>',
             ratingsSave: '<?= site_url('hrd/penilaian_lingkungan/ratings/save') ?>',
             ratingsDelete: '<?= site_url('hrd/penilaian_lingkungan/ratings/delete') ?>',
+            breakdown: '<?= site_url('hrd/penilaian_lingkungan/breakdown') ?>',
             base: '<?= base_url('') ?>'
+        };
+
+        var dashboardCharts = {
+            location: null,
+            rating: null
         };
 
         function escapeHtml(value) {
@@ -169,9 +181,138 @@
             return '<span class="env-badge ' + cls + '">' + escapeHtml(label) + '</span>';
         }
 
+        function getDashboardFilters(extraParams) {
+            var params = {
+                location_id: $('#filterLocation').val() || '',
+                status_id: $('#filterStatus').val() || '',
+                date_from: $('#filterFrom').val() || '',
+                date_to: $('#filterTo').val() || ''
+            };
+            return $.extend({}, params, extraParams || {});
+        }
+
+        function buildChartColors(total) {
+            var palette = ['#0f766e', '#1d4ed8', '#c2410c', '#7c3aed', '#be185d', '#059669', '#b45309', '#334155', '#0284c7', '#4f46e5'];
+            var colors = [];
+            for (var i = 0; i < total; i++) {
+                colors.push(palette[i % palette.length]);
+            }
+            return colors;
+        }
+
+        function renderPieChart(chartKey, canvasId, rows, labelKey, idKey, valueKey) {
+            var canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            var labels = [];
+            var values = [];
+            var ids = [];
+            $.each(rows || [], function(_, item) {
+                labels.push(item[labelKey] || '-');
+                values.push(parseInt(item[valueKey], 10) || 0);
+                ids.push(item[idKey] || 0);
+            });
+
+            if (dashboardCharts[chartKey]) {
+                dashboardCharts[chartKey].destroy();
+                dashboardCharts[chartKey] = null;
+            }
+
+            dashboardCharts[chartKey] = new Chart(canvas, {
+                type: 'pie',
+                data: {
+                    labels: labels.length ? labels : ['Belum ada data'],
+                    datasets: [{
+                        data: values.length ? values : [1],
+                        backgroundColor: values.length ? buildChartColors(values.length) : ['#cbd5e1'],
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        metaIds: ids
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                color: '#334155',
+                                padding: 14
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return (context.label || '-') + ': ' + (context.parsed || 0) + ' issue';
+                                }
+                            }
+                        }
+                    },
+                    onClick: function(evt, elements) {
+                        if (!elements.length || !values.length) return;
+                        var index = elements[0].index;
+                        var selectedId = ids[index];
+                        if (!selectedId) return;
+                        openBreakdownModal(chartKey, selectedId, labels[index]);
+                    }
+                }
+            });
+        }
+
+        function renderBreakdownTable(rows) {
+            var tbody = '';
+            if (rows && rows.length) {
+                $.each(rows, function(index, item) {
+                    var ratingLabel = item.rating_name ? escapeHtml(item.rating_name) + ' <small class="text-muted">(' + escapeHtml(item.score) + ')</small>' : '<span class="text-muted">Belum dirating</span>';
+                    tbody += '<tr>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</td>' +
+                        '<td>' + ratingLabel + '</td>' +
+                        '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
+                        '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
+                        '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
+                        '<td>' + statusBadge(item.status_name) + '</td>' +
+                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>' +
+                        '</tr>';
+                });
+            } else {
+                tbody = '<tr><td colspan="8" class="text-center text-muted">Tidak ada data detail.</td></tr>';
+            }
+            $('#issueBreakdownTable tbody').html(tbody);
+        }
+
+        function openBreakdownModal(type, id, label) {
+            if (!$('#issueBreakdownModal').length) return;
+            $('#issueBreakdownTitle').text('Memuat detail ' + (label || 'issue') + '...');
+            $('#breakdownTotalIssues, #breakdownPendingIssues, #breakdownProgressIssues, #breakdownResolvedIssues').text('0');
+            renderBreakdownTable([]);
+            $('#issueBreakdownModal').modal('show');
+
+            $.getJSON(urls.breakdown, getDashboardFilters({
+                type: type,
+                id: id
+            }), function(response) {
+                if (!response.status) {
+                    toast(response.message || 'Gagal memuat detail issue.', 'error');
+                    return;
+                }
+
+                $('#issueBreakdownTitle').text(response.title || 'Detail Analisa Issue');
+                $('#breakdownTotalIssues').text((response.summary && response.summary.total_issues) || 0);
+                $('#breakdownPendingIssues').text((response.summary && response.summary.total_pending) || 0);
+                $('#breakdownProgressIssues').text((response.summary && response.summary.total_progress) || 0);
+                $('#breakdownResolvedIssues').text((response.summary && response.summary.total_resolved) || 0);
+                renderBreakdownTable(response.data || []);
+            }).fail(function(xhr) {
+                toast(ajaxErrorMessage(xhr, 'Terjadi kesalahan saat memuat detail issue.'), 'error');
+            });
+        }
+
         function loadStats() {
             if (!$('#summaryLocations').length) return;
-            $.getJSON(urls.stats, function(response) {
+            $.getJSON(urls.stats, getDashboardFilters(), function(response) {
                 if (!response.status) return;
                 $('#summaryLocations').text(response.location_count || 0);
                 $('#summaryOpen').text(response.open_count || 0);
@@ -191,28 +332,28 @@
                         var total = parseInt(item.total, 10) || 0;
                         var percent = Math.round((total / maxLocation) * 100);
                         locationRows += '<tr><td>' + escapeHtml(item.location_name || '-') + '</td><td class="text-right font-weight-bold">' + total + '</td></tr>';
-                        locationMini += '<div class="env-mini-item"><div class="w-100"><div class="d-flex justify-content-between"><span>' + escapeHtml(item.location_name || '-') + '</span><strong>' + total + '</strong></div><div class="env-progress"><span style="width:' + percent + '%"></span></div></div></div>';
+                        locationMini += '<div class="env-mini-item"><div class="env-mini-meta"><div class="d-flex justify-content-between"><span>' + escapeHtml(item.location_name || '-') + '</span><strong>' + total + '</strong></div><div class="env-progress"><span style="width:' + percent + '%"></span></div></div><div class="env-mini-actions"><button type="button" class="btn btn-xs btn-outline-dark btn-breakdown" data-type="location" data-id="' + escapeHtml(item.location_id) + '" data-label="' + escapeHtml(item.location_name || '-') + '">Detail</button></div></div>';
                     });
                 } else {
                     locationRows = '<tr><td colspan="2" class="text-center text-muted">Tidak ada data.</td></tr>';
                     locationMini = '<div class="text-muted">Tidak ada data.</div>';
                 }
-                $('#locationCountsTable tbody').html(locationRows);
                 $('#locationMiniList').html(locationMini);
+                renderPieChart('location', 'locationPieChart', response.by_location || [], 'location_name', 'location_id', 'total');
 
                 var ratingRows = '';
                 var ratingMini = '';
                 if (response.by_rating && response.by_rating.length) {
                     $.each(response.by_rating, function(_, item) {
                         ratingRows += '<tr><td>' + escapeHtml(item.rating_name || '-') + '</td><td>' + escapeHtml(item.score || 0) + '</td><td class="text-right font-weight-bold">' + escapeHtml(item.total || 0) + '</td></tr>';
-                        ratingMini += '<div class="env-mini-item"><span>' + escapeHtml(item.rating_name || '-') + ' <small class="text-muted">(' + escapeHtml(item.score || 0) + ')</small></span><strong>' + escapeHtml(item.total || 0) + '</strong></div>';
+                        ratingMini += '<div class="env-mini-item"><div class="env-mini-meta d-flex justify-content-between align-items-center"><span>' + escapeHtml(item.rating_name || '-') + ' <small class="text-muted">(' + escapeHtml(item.score || 0) + ')</small></span><strong>' + escapeHtml(item.total || 0) + '</strong></div><div class="env-mini-actions"><button type="button" class="btn btn-xs btn-outline-dark btn-breakdown" data-type="rating" data-id="' + escapeHtml(item.rating_id) + '" data-label="' + escapeHtml(item.rating_name || '-') + '">Detail</button></div></div>';
                     });
                 } else {
                     ratingRows = '<tr><td colspan="3" class="text-center text-muted">Tidak ada data.</td></tr>';
                     ratingMini = '<div class="text-muted">Tidak ada data.</div>';
                 }
-                $('#ratingCountsTable tbody').html(ratingRows);
                 $('#ratingMiniList').html(ratingMini);
+                renderPieChart('rating', 'ratingPieChart', response.by_rating || [], 'rating_name', 'rating_id', 'total');
             });
         }
 
@@ -509,6 +650,29 @@
 
         $('#reloadIssues, #filterLocation, #filterStatus, #filterFrom, #filterTo').on('click change', function() {
             loadIssueTable();
+            loadStats();
+        });
+
+        $(document).on('click', '.btn-breakdown', function() {
+            openBreakdownModal($(this).data('type'), $(this).data('id'), $(this).data('label'));
+        });
+
+        $('#btnLocationChartDetail').on('click', function() {
+            var firstItem = $('#locationMiniList').find('.btn-breakdown').first();
+            if (firstItem.length) {
+                openBreakdownModal(firstItem.data('type'), firstItem.data('id'), firstItem.data('label'));
+            } else {
+                toast('Belum ada data lokasi untuk ditampilkan.', 'info');
+            }
+        });
+
+        $('#btnRatingChartDetail').on('click', function() {
+            var firstItem = $('#ratingMiniList').find('.btn-breakdown').first();
+            if (firstItem.length) {
+                openBreakdownModal(firstItem.data('type'), firstItem.data('id'), firstItem.data('label'));
+            } else {
+                toast('Belum ada data prioritas untuk ditampilkan.', 'info');
+            }
         });
 
         $(document).on('click', '.btn-update-issue', function() {
