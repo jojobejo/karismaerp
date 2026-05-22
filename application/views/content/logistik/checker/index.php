@@ -725,7 +725,7 @@ tr.row-pending { background:#fafafa !important; }
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <button class="btn btn-sm btn-warning btn-edit-lk"
+                                                <!-- <button class="btn btn-sm btn-warning btn-edit-lk"
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
@@ -734,7 +734,7 @@ tr.row-pending { background:#fafafa !important; }
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
                                                     <i class="fas fa-trash"></i> Hapus
-                                                </button>
+                                                </button> -->
                                             </div>
                                         <?php endif; ?>
 
@@ -1084,7 +1084,7 @@ tr.row-pending { background:#fafafa !important; }
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <button class="btn btn-sm btn-warning btn-edit-kk"
+                                                <!-- <button class="btn btn-sm btn-warning btn-edit-kk"
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
@@ -1093,7 +1093,7 @@ tr.row-pending { background:#fafafa !important; }
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
                                                     <i class="fas fa-trash"></i> Hapus
-                                                </button>
+                                                </button> -->
                                             </div>
                                         <?php endif; ?>
 
@@ -1599,7 +1599,7 @@ function ajaxPost(url, data, cb) {
 }
 
 $(document).ready(function () {
-    setTimeout(function(){ location.reload(); }, 30000);
+    setTimeout(function(){ location.reload(); }, 300000);
 
     $('#btnSimpanBongkaran').on('click', function () {
         var ket = $('#inputKeterangan').val().trim();
