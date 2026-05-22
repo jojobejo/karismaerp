@@ -1,7 +1,7 @@
 <!-- view/content/logistik/checker/index.php -->
 <?php
 $allow_salesck_manual_loading = false;
-$allow_admlog_checker_actions = true;
+$allow_admlog_checker_actions = false;
 ?>
 
 <!-- STYLE TAMBAHAN -->
@@ -553,7 +553,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_lk = true; // selalu tampil kolom aksi (minimal tombol Detail)
-                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK','ADMLOG','SALESCK']); // yang bisa operasi
+                        $can_ops_lk  = in_array($role, ['CHECKER','MANAGERCK']); // yang bisa operasi
                         $can_edit_lk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_lk  = 13;
                         $lk_aktif    = array_filter($list_lk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
@@ -909,7 +909,7 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body table-responsive">
                         <?php
                         $has_aksi_kk = true;
-                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK','ADMLOG','SALESCK']);
+                        $can_ops_kk  = in_array($role, ['CHECKER','MANAGERCK']);
                         $can_edit_kk = ($role === 'ADMLOG' && $allow_admlog_checker_actions);
                         $colspan_kk  = 13;
                         $kk_aktif    = array_filter($list_kk, fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG','BARANG_SIAP']));
