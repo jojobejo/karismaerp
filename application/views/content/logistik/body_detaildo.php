@@ -18,7 +18,7 @@
 
     .faktur-action-grid {
         display: grid;
-        grid-template-columns: repeat(4, 34px);
+        grid-template-columns: repeat(6, 34px);
         gap: 4px;
         justify-content: center;
     }
@@ -498,11 +498,17 @@
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
                                                                 <span class="faktur-order-label">Urutan <?= $faktur_position + 1 ?></span>
                                                                 <div class="faktur-action-grid">
-                                                                    <button type="button" class="btn btn-sm btn-secondary btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Naikkan urutan" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
+                                                                    <button type="button" class="btn btn-sm btn-info btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Naikkan urutan" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
                                                                         <i class="fas fa-arrow-up"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm btn-secondary btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Turunkan urutan" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
+                                                                    <button type="button" class="btn btn-sm btn-warning btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Turunkan urutan" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
                                                                         <i class="fas fa-arrow-down"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-success btn-faktur-order" data-action="top" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Pindah ke paling atas" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
+                                                                        <i class="fas fa-angle-double-up"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-dark btn-faktur-order" data-action="bottom" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Pindah ke paling bawah" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
+                                                                        <i class="fas fa-angle-double-down"></i>
                                                                     </button>
                                                                     <button type="button" class="btn btn-sm btn-primary btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Edit note faktur">
                                                                         <i class="fas fa-envelope"></i>
@@ -791,8 +797,61 @@
                 }).get();
             }
 
-            function saveFakturOrder(order) {
+            function getFakturGroup(kdFaktur) {
+                var firstRow = $(".faktur-row").filter(function() {
+                    return $(this).data("faktur") === kdFaktur;
+                });
+                return firstRow.nextUntil(".faktur-row").addBack();
+            }
+
+            function updateFakturOrderControls() {
+                var order = getFakturOrder();
+
+                $(".faktur-row").each(function(index) {
+                    var kdFaktur = $(this).data("faktur");
+                    var group = getFakturGroup(kdFaktur);
+
+                    group.find(".faktur-order-label").text("Urutan " + (index + 1));
+                    group.find(".btn-faktur-order[data-action='up'], .btn-faktur-order[data-action='top']").prop("disabled", index === 0);
+                    group.find(".btn-faktur-order[data-action='down'], .btn-faktur-order[data-action='bottom']").prop("disabled", index === order.length - 1);
+                });
+            }
+
+            function moveFakturRows(kdFaktur, targetIndex) {
+                var order = getFakturOrder();
+                var currentIndex = order.indexOf(kdFaktur);
+
+                if (currentIndex < 0 || targetIndex < 0 || targetIndex >= order.length || currentIndex === targetIndex) {
+                    return false;
+                }
+
+                var group = getFakturGroup(kdFaktur);
+                var targetFaktur = order[targetIndex];
+                var targetGroup = getFakturGroup(targetFaktur);
+
+                if (targetIndex < currentIndex) {
+                    group.insertBefore(targetGroup.first());
+                } else {
+                    group.insertAfter(targetGroup.last());
+                }
+
+                updateFakturOrderControls();
+                return true;
+            }
+
+            function restoreFakturOrder(order) {
+                var tbody = $("#tb_checker_do tbody");
+
+                order.forEach(function(kdFaktur) {
+                    tbody.append(getFakturGroup(kdFaktur));
+                });
+
+                updateFakturOrderControls();
+            }
+
+            function saveFakturOrder(order, previousOrder) {
                 var kd_do = $("#do_isi").val().trim();
+                $(".btn-faktur-order").prop("disabled", true);
 
                 $.ajax({
                     url: "<?= base_url('do/update_urutan_faktur') ?>",
@@ -803,14 +862,17 @@
                     },
                     dataType: "JSON",
                     success: function(response) {
-                        if (response.msg === "success") {
-                            window.location.href = "<?= base_url('detail_do/') ?>" + kd_do;
-                        } else {
+                        if (response.msg !== "success") {
+                            restoreFakturOrder(previousOrder);
                             alert(response.message || "Gagal menyimpan urutan faktur");
                         }
                     },
                     error: function(xhr, status, error) {
+                        restoreFakturOrder(previousOrder);
                         alert("Terjadi kesalahan: " + error);
+                    },
+                    complete: function() {
+                        updateFakturOrderControls();
                     }
                 });
             }
@@ -818,23 +880,29 @@
             $(".btn-faktur-order").on("click", function() {
                 var kdFaktur = $(this).data("faktur");
                 var action = $(this).data("action");
-                var order = getFakturOrder();
-                var currentIndex = order.indexOf(kdFaktur);
+                var previousOrder = getFakturOrder();
+                var currentIndex = previousOrder.indexOf(kdFaktur);
 
                 if (currentIndex < 0) {
                     return;
                 }
 
-                var targetIndex = action === "up" ? currentIndex - 1 : currentIndex + 1;
-                if (targetIndex < 0 || targetIndex >= order.length) {
+                var targetIndex = currentIndex;
+                if (action === "up") {
+                    targetIndex = currentIndex - 1;
+                } else if (action === "down") {
+                    targetIndex = currentIndex + 1;
+                } else if (action === "top") {
+                    targetIndex = 0;
+                } else if (action === "bottom") {
+                    targetIndex = previousOrder.length - 1;
+                }
+
+                if (!moveFakturRows(kdFaktur, targetIndex)) {
                     return;
                 }
 
-                var moved = order[currentIndex];
-                order[currentIndex] = order[targetIndex];
-                order[targetIndex] = moved;
-
-                saveFakturOrder(order);
+                saveFakturOrder(getFakturOrder(), previousOrder);
             });
 
             $("#draftpost").on('click', function() {
