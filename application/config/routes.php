@@ -354,6 +354,7 @@ $route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/creat
 $route['list_faktur/(:any)']                        = 'logistik/C_Logistik/list_faktur_sortby_rute/$1';
 $route['acc_check/(:any)/(:any)/(:any)']            = 'logistik/C_Logistik/acc_check/$1/$2/$3';
 $route['rekam_order_check']                         = 'logistik/C_Logistik/rekam_order_check';
+$route['do/update_urutan_faktur']                   = 'logistik/C_Logistik/update_urutan_faktur_do';
 $route['do/repost_status']                          = 'logistik/C_Logistik/repost_status';
 $route['do/delete_ics_do']                          = 'logistik/C_Logistik/delete_ics_do';
 $route['print_do/(:any)']                           = 'logistik/C_Logistik/print_do/$1';

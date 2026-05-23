@@ -1048,6 +1048,25 @@ class M_Logistik extends CI_Model
         ]);
     }
 
+    public function update_urutan_faktur_do($kd_do, array $urutan_faktur)
+    {
+        if (empty($urutan_faktur)) {
+            return false;
+        }
+
+        $this->db->trans_start();
+        foreach ($urutan_faktur as $index => $kd_faktur) {
+            $this->db->where('kd_do', $kd_do);
+            $this->db->where('kd_faktur', $kd_faktur);
+            $this->db->update('tb_detail_do', [
+                'norut' => $index + 1
+            ]);
+        }
+        $this->db->trans_complete();
+
+        return $this->db->trans_status();
+    }
+
     public function update_checker_detail_done($kd, $sts, $data)
     {
         $this->db->where('kd_do', $kd);

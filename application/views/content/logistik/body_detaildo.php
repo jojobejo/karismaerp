@@ -15,6 +15,29 @@
         background-color: #343a40;
         color: #fff;
     }
+
+    .faktur-action-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 34px);
+        gap: 4px;
+        justify-content: center;
+    }
+
+    .faktur-action-grid .btn {
+        width: 34px;
+        height: 31px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .faktur-order-label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -435,23 +458,29 @@
                                             $prev_norut = null;
                                             $rowspan_count = [];
                                             $norut_counter = 1;
+                                            $faktur_order = [];
 
                                             foreach ($data_list as $row) {
                                                 if (!isset($rowspan_count[$row->kd_faktur])) {
                                                     $rowspan_count[$row->kd_faktur] = 0;
                                                 }
                                                 $rowspan_count[$row->kd_faktur]++;
+
+                                                if (!in_array($row->kd_faktur, $faktur_order)) {
+                                                    $faktur_order[] = $row->kd_faktur;
+                                                }
                                             }
 
                                             $printed_faktur = [];
                                             foreach ($data_list as $row) :
                                                 $show_faktur_info = !in_array($row->kd_faktur, $printed_faktur);
+                                                $faktur_position = array_search($row->kd_faktur, $faktur_order);
                                                 if ($show_faktur_info) {
                                                     $printed_faktur[] = $row->kd_faktur;
                                                     $norut_counter = 1;
                                                 }
                                             ?>
-                                                <tr>
+                                                <tr class="<?= $show_faktur_info ? 'faktur-row' : '' ?>" <?= $show_faktur_info ? 'data-faktur="' . htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                                                     <?php if ($show_faktur_info) :
                                                         if ($row->telp1 == NULL || "0") {
                                                             $telp1 = "-";
@@ -467,15 +496,20 @@
                                                     ?>
                                                         <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
                                                             <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
-                                                                <div class="row">
-                                                                    <div class="col-6">
-                                                                        <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-block btn-danger"><i class="fas fa-times-circle"></i></a>
-                                                                    </div>
-                                                                    <div class="col-6">
-                                                                        <button type="button" class="btn btn-sm btn-block btn-primary btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>">
-                                                                            <i class="fas fa-envelope"></i>
-                                                                        </button>
-                                                                    </div>
+                                                                <span class="faktur-order-label">Urutan <?= $faktur_position + 1 ?></span>
+                                                                <div class="faktur-action-grid">
+                                                                    <button type="button" class="btn btn-sm btn-secondary btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Naikkan urutan" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
+                                                                        <i class="fas fa-arrow-up"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-secondary btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Turunkan urutan" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
+                                                                        <i class="fas fa-arrow-down"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-primary btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Edit note faktur">
+                                                                        <i class="fas fa-envelope"></i>
+                                                                    </button>
+                                                                    <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-danger" title="Hapus faktur">
+                                                                        <i class="fas fa-times-circle"></i>
+                                                                    </a>
                                                                 </div>
                                                             </td>
                                                         <?php elseif ($d->status == '2') : ?>
@@ -749,6 +783,58 @@
 
                 $("#modal_kd_faktur").val(kdFaktur);
                 $("#modal_note_faktur_input").val(noteFaktur);
+            });
+
+            function getFakturOrder() {
+                return $(".faktur-row").map(function() {
+                    return $(this).data("faktur");
+                }).get();
+            }
+
+            function saveFakturOrder(order) {
+                var kd_do = $("#do_isi").val().trim();
+
+                $.ajax({
+                    url: "<?= base_url('do/update_urutan_faktur') ?>",
+                    type: "POST",
+                    data: {
+                        kd_do: kd_do,
+                        urutan: order
+                    },
+                    dataType: "JSON",
+                    success: function(response) {
+                        if (response.msg === "success") {
+                            window.location.href = "<?= base_url('detail_do/') ?>" + kd_do;
+                        } else {
+                            alert(response.message || "Gagal menyimpan urutan faktur");
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert("Terjadi kesalahan: " + error);
+                    }
+                });
+            }
+
+            $(".btn-faktur-order").on("click", function() {
+                var kdFaktur = $(this).data("faktur");
+                var action = $(this).data("action");
+                var order = getFakturOrder();
+                var currentIndex = order.indexOf(kdFaktur);
+
+                if (currentIndex < 0) {
+                    return;
+                }
+
+                var targetIndex = action === "up" ? currentIndex - 1 : currentIndex + 1;
+                if (targetIndex < 0 || targetIndex >= order.length) {
+                    return;
+                }
+
+                var moved = order[currentIndex];
+                order[currentIndex] = order[targetIndex];
+                order[targetIndex] = moved;
+
+                saveFakturOrder(order);
             });
 
             $("#draftpost").on('click', function() {

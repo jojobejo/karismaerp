@@ -1121,7 +1121,7 @@ class C_Logistik extends CI_Controller
         JOIN tb_do bd ON bd.kd_do = x.kd_do
         LEFT JOIN tbso_faktur_penjualan fp ON fp.no_faktur = x.kd_faktur
         ORDER BY
-            d.nama_customer ASC,
+            x.norut ASC,
             x.kd_faktur ASC,
             c.nama_barang ASC;", array($kd_do));
 
@@ -1175,6 +1175,50 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function update_urutan_faktur_do()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_do = trim($this->input->post('kd_do'));
+        $urutan = $this->input->post('urutan');
+
+        if ($kd_do === '' || !is_array($urutan) || empty($urutan)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data urutan faktur tidak lengkap']);
+            exit;
+        }
+
+        $urutan = array_values(array_unique(array_filter(array_map('trim', $urutan))));
+        if (empty($urutan)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data faktur tidak valid']);
+            exit;
+        }
+
+        $existing = $this->db->select('kd_faktur')
+            ->distinct()
+            ->where('kd_do', $kd_do)
+            ->get('tb_detail_do')
+            ->result_array();
+
+        $existing_faktur = array_column($existing, 'kd_faktur');
+        sort($existing_faktur);
+        $posted_faktur = $urutan;
+        sort($posted_faktur);
+
+        if ($existing_faktur !== $posted_faktur) {
+            echo json_encode(['msg' => 'error', 'message' => 'Ada faktur yang tidak ditemukan pada DO ini']);
+            exit;
+        }
+
+        $updated = $this->M_Logistik->update_urutan_faktur_do($kd_do, $urutan);
+
+        echo json_encode([
+            'msg' => $updated ? 'success' : 'error',
+            'message' => $updated ? 'Urutan faktur berhasil disimpan' : 'Gagal menyimpan urutan faktur'
+        ]);
+        exit;
     }
 
     public function edited_rute_do()
