@@ -16,27 +16,99 @@
         color: #fff;
     }
 
-    .faktur-action-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 34px);
-        gap: 4px;
-        justify-content: center;
-    }
-
-    .faktur-action-grid .btn {
-        width: 34px;
-        height: 31px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-
     .faktur-order-label {
         display: block;
         margin-bottom: 4px;
         font-size: 12px;
         font-weight: 600;
+    }
+
+    .detail-do-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .detail-do-heading h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .detail-do-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: 6px;
+        color: #495057;
+        background: #f1f3f5;
+        border: 1px solid #dee2e6;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-pill.is-warning {
+        color: #856404;
+        background: #fff8e1;
+        border-color: #ffe8a1;
+    }
+
+    .status-pill.is-info {
+        color: #0c5460;
+        background: #e8f6f8;
+        border-color: #bee5eb;
+    }
+
+    .status-pill.is-success {
+        color: #155724;
+        background: #eaf6ec;
+        border-color: #c3e6cb;
+    }
+
+    .status-pill.is-muted {
+        color: #495057;
+        background: #eef0f2;
+        border-color: #d8dde2;
+    }
+
+    .btn-soft {
+        color: #495057;
+        background: #fff;
+        border: 1px solid #ced4da;
+    }
+
+    .btn-soft:hover,
+    .btn-soft:focus {
+        color: #212529;
+        background: #f8f9fa;
+        border-color: #adb5bd;
+    }
+
+    .faktur-actions {
+        min-width: 92px;
+    }
+
+    .faktur-actions .dropdown-menu {
+        min-width: 190px;
+    }
+
+    .faktur-actions .dropdown-item {
+        font-size: 13px;
+    }
+
+    .faktur-actions .dropdown-item:disabled {
+        color: #adb5bd;
     }
 </style>
 
@@ -77,90 +149,44 @@
 
                             <div class="card-body">
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
-                                    <div class="row mb-4">
-                                        <div class="col-auto">
-                                            <h2>Detail Orders</h2>
-                                        </div>
-                                        <div class="col-auto">
-                                            <?php if ($d->status == '1') : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-warning disabled">Draft</span>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <?php foreach ($kdo as $k) : ?>
-                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
-                                                                <i class="fas fa-plus"></i> Tambah Faktur
-                                                            </a>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                </div>
+                                    <?php
+                                        $status_meta = [
+                                            '1' => ['label' => 'Draft', 'icon' => 'fas fa-file-alt', 'class' => 'is-warning'],
+                                            '2' => ['label' => 'Menunggu Konfirmasi Sales', 'icon' => 'fas fa-clock', 'class' => 'is-info'],
+                                            '3' => ['label' => 'Siap Loading', 'icon' => 'fas fa-check-circle', 'class' => 'is-success'],
+                                            '4' => ['label' => 'Is Loading', 'icon' => 'fas fa-truck-loading', 'class' => 'is-muted'],
+                                            '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-muted'],
+                                        ];
+                                        $current_status = $status_meta[$d->status] ?? ['label' => '-', 'icon' => 'fas fa-info-circle', 'class' => 'is-muted'];
+                                        $can_add_faktur = in_array($d->status, ['1', '2', '3']);
+                                        $can_repost = in_array($d->status, ['2', '3']);
+                                    ?>
+                                    <div class="detail-do-heading">
+                                        <h2>Detail Orders</h2>
+                                        <div class="detail-do-actions">
+                                            <span class="status-pill <?= $current_status['class'] ?>">
+                                                <i class="<?= $current_status['icon'] ?>"></i>
+                                                <?= $current_status['label'] ?>
+                                            </span>
 
-                                            <?php elseif ($d->status == '2') : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-info disabled">
-                                                            <i class="fas fa-clock"></i> Menunggu Konfirmasi Sales
-                                                        </span>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
-                                                            <i class="fas fa-redo"></i> REPOST
-                                                        </button>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <?php foreach ($kdo as $k) : ?>
-                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
-                                                                <i class="fas fa-plus"></i> Tambah Faktur
-                                                            </a>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                </div>
+                                            <?php if ($can_repost) : ?>
+                                                <button type="button" class="btn btn-sm btn-soft" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                    <i class="fas fa-redo mr-1"></i> Repost
+                                                </button>
+                                            <?php endif; ?>
 
-                                            <?php elseif ($d->status == '3') : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-success disabled">
-                                                            <i class="fas fa-check-circle"></i> Siap Loading
-                                                        </span>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <button type="button" class="btn btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
-                                                            <i class="fas fa-redo"></i> REPOST
-                                                        </button>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <?php foreach ($kdo as $k) : ?>
-                                                            <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-info">
-                                                                <i class="fas fa-plus"></i> Tambah Faktur
-                                                            </a>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                    <div class="col-auto">
-                                                        <small class="text-muted">
-                                                            Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
-                                                        </small>
-                                                    </div>
-                                                </div>
+                                            <?php if ($can_add_faktur) : ?>
+                                                <?php foreach ($kdo as $k) : ?>
+                                                    <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-sm btn-soft">
+                                                        <i class="fas fa-plus mr-1"></i> Tambah Faktur
+                                                    </a>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
 
-                                            <?php elseif ($d->status == '4') : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-primary disabled">
-                                                            <i class="fas fa-truck-loading"></i> Is Loading
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                            <?php elseif ($d->status == '5') : ?>
-                                                <div class="row">
-                                                    <div class="col-auto">
-                                                        <span class="btn btn-dark disabled">
-                                                            <i class="fas fa-truck"></i> On Delivery
-                                                        </span>
-                                                    </div>
-                                                </div>
-
+                                            <?php if ($d->status == '3') : ?>
+                                                <small class="text-muted">
+                                                    Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
+                                                </small>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -192,7 +218,7 @@
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Regional Pengiriman</div>
                                         <div>: <?= $k->regional ?></div>
-                                        <div><a href="#" data-toggle="modal" data-target="#edited_rute" class="btn btn-warning btn-sm ml-2"><i class="fas fa-pencil-alt"></i></a></div>
+                                        <div><a href="#" data-toggle="modal" data-target="#edited_rute" class="btn btn-sm btn-soft ml-2"><i class="fas fa-pencil-alt"></i></a></div>
                                     </div>
 
                                     <div class="mb-2 d-flex">
@@ -431,7 +457,7 @@
                                         <thead>
                                             <tr>
                                                <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
-                                                    <th rowspan="2">#</th>
+                                                    <th rowspan="2">Aksi</th>
                                                 <?php endif; ?>
 
                                                 <th colspan="2">Data Kios</th>
@@ -495,27 +521,33 @@
                                                         }
                                                     ?>
                                                         <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
-                                                            <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>">
+                                                            <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="faktur-actions">
                                                                 <span class="faktur-order-label">Urutan <?= $faktur_position + 1 ?></span>
-                                                                <div class="faktur-action-grid">
-                                                                    <button type="button" class="btn btn-sm btn-info btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Naikkan urutan" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
-                                                                        <i class="fas fa-arrow-up"></i>
+                                                                <div class="dropdown">
+                                                                    <button type="button" class="btn btn-sm btn-soft dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                                        Aksi
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm btn-warning btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Turunkan urutan" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
-                                                                        <i class="fas fa-arrow-down"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-sm btn-success btn-faktur-order" data-action="top" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Pindah ke paling atas" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
-                                                                        <i class="fas fa-angle-double-up"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-sm btn-dark btn-faktur-order" data-action="bottom" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Pindah ke paling bawah" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
-                                                                        <i class="fas fa-angle-double-down"></i>
-                                                                    </button>
-                                                                    <button type="button" class="btn btn-sm btn-primary btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>" title="Edit note faktur">
-                                                                        <i class="fas fa-envelope"></i>
-                                                                    </button>
-                                                                    <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="btn btn-sm btn-danger" title="Hapus faktur">
-                                                                        <i class="fas fa-times-circle"></i>
-                                                                    </a>
+                                                                    <div class="dropdown-menu">
+                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
+                                                                            <i class="fas fa-arrow-up mr-2"></i> Naikkan
+                                                                        </button>
+                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
+                                                                            <i class="fas fa-arrow-down mr-2"></i> Turunkan
+                                                                        </button>
+                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="top" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
+                                                                            <i class="fas fa-angle-double-up mr-2"></i> Paling atas
+                                                                        </button>
+                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="bottom" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
+                                                                            <i class="fas fa-angle-double-down mr-2"></i> Paling bawah
+                                                                        </button>
+                                                                        <div class="dropdown-divider"></div>
+                                                                        <button type="button" class="dropdown-item btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>">
+                                                                            <i class="fas fa-envelope mr-2"></i> Edit note
+                                                                        </button>
+                                                                        <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="dropdown-item text-danger">
+                                                                            <i class="fas fa-times-circle mr-2"></i> Hapus faktur
+                                                                        </a>
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                         <?php elseif ($d->status == '2') : ?>
@@ -566,22 +598,22 @@
                                                 </div>
                                             <?php elseif ($sudah_siap) : ?>
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-info btn-block mt-3"
-                                                            id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print DO
-                                                    </button>
-                                                </div>
-                                                <div class="col">
-                                                    <button type="button" class="btn btn-primary btn-block mt-3"
-                                                            id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Register
-                                                    </button>
-                                                </div>  
-                                                <div class="col">
-                                                    <button type="button" class="btn btn-warning btn-block mt-3"
-                                                            id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
-                                                        <i class="fas fa-print"></i> Print Checker
-                                                    </button>
+                                                    <div class="dropdown mt-3">
+                                                        <button type="button" class="btn btn-soft dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                            <i class="fas fa-print mr-1"></i> Print Dokumen
+                                                        </button>
+                                                        <div class="dropdown-menu">
+                                                            <button type="button" class="dropdown-item" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
+                                                                Print DO
+                                                            </button>
+                                                            <button type="button" class="dropdown-item" id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
+                                                                Print Register
+                                                            </button>
+                                                            <button type="button" class="dropdown-item" id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
+                                                                Print Checker
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                             <?php else : ?>
