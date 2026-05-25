@@ -59,6 +59,73 @@ class C_SalesOrder extends CI_Controller
 
     private function _getUsername()  { return $this->_getCurrentUser()['nm_karyawan']; }
 
+    private function _getFakturUserPrefix()
+    {
+        $current_id = $this->session->userdata('id_karyawan')
+            ?? $this->session->userdata('id')
+            ?? $this->session->userdata('user_id')
+            ?? null;
+        $current_username = $this->session->userdata('username')
+            ?? $this->session->userdata('user_name')
+            ?? $this->session->userdata('login')
+            ?? null;
+        $current_name = $this->session->userdata('nm_karyawan')
+            ?? $this->session->userdata('nama')
+            ?? $this->session->userdata('name')
+            ?? null;
+
+        $users = $this->db
+            ->select('id, username, nm_karyawan')
+            ->where_in('jobdesk', ['SC', 'SALES', 'SALESCOUNTER', 'SALESONLINE'])
+            ->order_by('id', 'ASC')
+            ->get('tb_karyawan')
+            ->result_array();
+
+        $index = $this->_findUserPrefixIndex($users, $current_id, $current_username, $current_name);
+
+        if ($index === null) {
+            $users = $this->db
+                ->select('id, username, nm_karyawan')
+                ->order_by('id', 'ASC')
+                ->get('tb_karyawan')
+                ->result_array();
+            $index = $this->_findUserPrefixIndex($users, $current_id, $current_username, $current_name);
+        }
+
+        return $index === null ? 'X' : $this->_numberToFakturPrefix($index + 1);
+    }
+
+    private function _findUserPrefixIndex(array $users, $current_id, $current_username, $current_name)
+    {
+        foreach ($users as $index => $user) {
+            if ($current_id !== null && (string)($user['id'] ?? '') === (string)$current_id) {
+                return $index;
+            }
+            if ($current_username !== null && (string)($user['username'] ?? '') === (string)$current_username) {
+                return $index;
+            }
+            if ($current_name !== null && (string)($user['nm_karyawan'] ?? '') === (string)$current_name) {
+                return $index;
+            }
+        }
+
+        return null;
+    }
+
+    private function _numberToFakturPrefix($number)
+    {
+        $number = max(1, (int)$number);
+        $prefix = '';
+
+        while ($number > 0) {
+            $number--;
+            $prefix = chr(65 + ($number % 26)) . $prefix;
+            $number = (int)floor($number / 26);
+        }
+
+        return $prefix;
+    }
+
     private function _getGudangId($post = [])
     {
         if (!empty($post['gudang_id'])) return $post['gudang_id'];
@@ -465,7 +532,7 @@ class C_SalesOrder extends CI_Controller
             $item['pajak'] = $tax_rate;
             return $item;
         }, array_values($items_outstanding));
-        $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur();
+        $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($this->_getFakturUserPrefix());
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
         $data['tax_rate']          = $tax_rate;
@@ -521,7 +588,14 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $no_faktur = $post['no_faktur'] ?? $this->M_SalesOrder->generate_no_faktur();
+        $faktur_prefix = $this->_getFakturUserPrefix();
+        $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
+        $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
+        $no_faktur = $posted_no_faktur;
+
+        if (strpos($posted_no_faktur, $expected_prefix) !== 0 || $this->M_SalesOrder->is_no_faktur_used($posted_no_faktur)) {
+            $no_faktur = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
+        }
         $cara_pembayaran = strtolower(trim($post['cara_pembayaran'] ?? 'cash'));
         if (!in_array($cara_pembayaran, ['cash', 'transfer', 'tempo'], true)) {
             $cara_pembayaran = 'cash';
@@ -808,11 +882,17 @@ class C_SalesOrder extends CI_Controller
             $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
             $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
-            $qty_input   = isset($post['qty_input'][$i])
-                ? (float)$post['qty_input'][$i]
-                : (float)($post['qty_faktur'][$i] ?? 0);
-            $qty_mode    = strtolower(trim($post['qty_mode'][$i] ?? 'pcs'));
-            $qty         = $qty_mode === 'box' ? ($qty_input * $isi_per_box) : $qty_input;
+            if (isset($post['qty_box_input'][$i]) || isset($post['qty_pcs_input'][$i])) {
+                $qty_box_input = (float)($post['qty_box_input'][$i] ?? 0);
+                $qty_pcs_input = (float)($post['qty_pcs_input'][$i] ?? 0);
+                $qty = ($qty_box_input * $isi_per_box) + $qty_pcs_input;
+            } else {
+                $qty_input   = isset($post['qty_input'][$i])
+                    ? (float)$post['qty_input'][$i]
+                    : (float)($post['qty_faktur'][$i] ?? 0);
+                $qty_mode    = strtolower(trim($post['qty_mode'][$i] ?? 'pcs'));
+                $qty         = $qty_mode === 'box' ? ($qty_input * $isi_per_box) : $qty_input;
+            }
             if ($qty <= 0) continue; // lewati item dengan qty 0
 
             $pajak       = (float)($post['pajak'][$i]        ?? 0);

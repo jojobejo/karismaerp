@@ -196,20 +196,31 @@
                                                 <!-- Simpan nilai max outstanding sebagai data attr -->
                                                 <input type="hidden" class="max-outstanding" value="<?= $outstanding ?>">
                                             </td>
-                                            <td class="text-right" style="min-width:130px;">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number"
-                                                           class="form-control text-right qty-input"
-                                                           name="qty_input[]"
-                                                           value="<?= $outstanding ?>"
-                                                           min="0"
-                                                           step="1"
-                                                           data-row="<?= $i ?>">
-                                                    <div class="input-group-append">
-                                                        <select class="custom-select qty-mode" name="qty_mode[]" data-row="<?= $i ?>" style="max-width:74px">
-                                                            <option value="pcs" selected>pcs</option>
-                                                            <option value="box">box</option>
-                                                        </select>
+                                            <td class="text-right" style="min-width:180px;">
+                                                <div class="d-flex align-items-center justify-content-end">
+                                                    <div class="input-group input-group-sm mr-1" style="max-width:86px;">
+                                                        <input type="number"
+                                                               class="form-control text-right qty-box-input"
+                                                               name="qty_box_input[]"
+                                                               value="<?= $out_box ?>"
+                                                               min="0"
+                                                               step="1"
+                                                               data-row="<?= $i ?>">
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text">box</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="input-group input-group-sm" style="max-width:86px;">
+                                                        <input type="number"
+                                                               class="form-control text-right qty-pcs-input"
+                                                               name="qty_pcs_input[]"
+                                                               value="<?= (int)$out_pcs ?>"
+                                                               min="0"
+                                                               step="1"
+                                                               data-row="<?= $i ?>">
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text">pcs</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <small class="text-muted qty-helper" data-row="<?= $i ?>">
@@ -321,37 +332,37 @@ $(document).ready(function () {
         $('#tanggalJatuhTempo').val(date.toISOString().slice(0, 10));
     }
 
-    function syncQty($input) {
-        const row = $input.data('row');
+    function syncQty(row) {
         const $hidden = $('.qty-faktur[data-row="' + row + '"]');
-        const $mode = $('.qty-mode[data-row="' + row + '"]');
+        const $boxInput = $('.qty-box-input[data-row="' + row + '"]');
+        const $pcsInput = $('.qty-pcs-input[data-row="' + row + '"]');
         const $helper = $('.qty-helper[data-row="' + row + '"]');
         const isi = parseFloat($hidden.data('isi')) || 1;
         const outstanding = parseFloat($hidden.data('outstanding')) || 0;
-        const mode = $mode.val() || 'pcs';
-        let qtyInput = parseFloat($input.val()) || 0;
-        let qtyPcs = mode === 'box' ? qtyInput * isi : qtyInput;
+        let qtyBox = parseFloat($boxInput.val()) || 0;
+        let qtyPcsSisa = parseFloat($pcsInput.val()) || 0;
+        let qtyPcs = (qtyBox * isi) + qtyPcsSisa;
 
         if (qtyPcs > outstanding) {
             qtyPcs = outstanding;
-            qtyInput = mode === 'box' ? Math.floor(outstanding / isi) : outstanding;
-            $input.val(qtyInput);
+            qtyBox = Math.floor(outstanding / isi);
+            qtyPcsSisa = outstanding - (qtyBox * isi);
+            $boxInput.val(qtyBox);
+            $pcsInput.val(qtyPcsSisa);
         }
 
         $hidden.val(qtyPcs);
 
         const isPartial = qtyPcs > 0 && qtyPcs < outstanding;
-        $input.toggleClass('text-danger font-weight-bold', isPartial);
+        $boxInput.add($pcsInput).toggleClass('text-danger font-weight-bold', isPartial);
         $helper
             .toggleClass('text-danger font-weight-bold', isPartial)
-            .text(mode === 'box'
-                ? 'maks ' + Math.floor(outstanding / isi).toLocaleString('id-ID') + ' box = ' + outstanding.toLocaleString('id-ID') + ' pcs'
-                : 'maks ' + outstanding.toLocaleString('id-ID') + ' pcs');
+            .text('total ' + qtyPcs.toLocaleString('id-ID') + ' pcs, maks ' + outstanding.toLocaleString('id-ID') + ' pcs');
     }
 
     function syncAllQty() {
-        $('.qty-input').each(function() {
-            syncQty($(this));
+        $('.qty-faktur').each(function() {
+            syncQty($(this).data('row'));
         });
     }
 
@@ -392,11 +403,11 @@ $(document).ready(function () {
 
     syncAllQty();
     hitungSubtotal();
-    $(document).on('input change', '.qty-input', function() {
-        syncQty($(this));
+    $(document).on('input change', '.qty-box-input, .qty-pcs-input', function() {
+        syncQty($(this).data('row'));
         hitungSubtotal();
     });
-    $(document).on('focus', '.qty-input', function() {
+    $(document).on('focus', '.qty-box-input, .qty-pcs-input', function() {
         this.select();
     });
     $('#formFaktur').on('keydown', 'input, select, textarea', function(e) {
@@ -412,17 +423,6 @@ $(document).ready(function () {
             $('#btnSimpanFaktur').focus();
         }
     });
-    $(document).on('change', '.qty-mode', function() {
-        const row = $(this).data('row');
-        const $input = $('.qty-input[data-row="' + row + '"]');
-        const $hidden = $('.qty-faktur[data-row="' + row + '"]');
-        const isi = parseFloat($hidden.data('isi')) || 1;
-        const qtyPcs = parseFloat($hidden.val()) || 0;
-        $input.val(this.value === 'box' ? Math.floor(qtyPcs / isi) : qtyPcs);
-        syncQty($input);
-        hitungSubtotal();
-    });
-
     let fakturSubmitConfirmed = false;
 
     // Validasi sebelum submit

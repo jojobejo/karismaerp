@@ -147,12 +147,13 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Generate No. Faktur — format: INV/YYYYMM/XXXX
+     * Generate No. Faktur — format: [prefix urutan user]INVDDMMYYXXXX
      * Faktur sekarang hidup di tbso_faktur_penjualan.
      */
-    public function generate_no_faktur()
+    public function generate_no_faktur($user_prefix = '')
     {
-        $prefix = 'INV' . date('dmy');
+        $user_prefix = preg_replace('/[^A-Z]/', '', strtoupper((string)$user_prefix));
+        $prefix = $user_prefix . 'INV' . date('dmy');
 
         $row = $this->db->query("
             SELECT nomor
@@ -178,6 +179,29 @@ class M_SalesOrder extends CI_Model
             return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
         }
         return $prefix . '0001';
+    }
+
+    public function is_no_faktur_used($no_faktur)
+    {
+        $row = $this->db->query("
+            SELECT nomor
+            FROM (
+                SELECT no_faktur AS nomor
+                FROM tbso_faktur_penjualan
+                WHERE no_faktur = ?
+                UNION
+                SELECT kd_faktur AS nomor
+                FROM tb_detail_do
+                WHERE kd_faktur = ?
+                UNION
+                SELECT kd_faktur AS nomor
+                FROM tb_tmp_detaildo
+                WHERE kd_faktur = ?
+            ) faktur_terpakai
+            LIMIT 1
+        ", [$no_faktur, $no_faktur, $no_faktur])->row();
+
+        return !empty($row);
     }
 
     // ================================================================
