@@ -53,6 +53,12 @@ class C_Checker extends CI_Controller
         return $this->session->userdata('nama');
     }
 
+    private function pushSiapLoadingNotif($type, $row)
+    {
+        if (!$row || empty($row['keterangan'])) return false;
+        return $this->M_Checker->push_notif($type, $row['keterangan']);
+    }
+
     // ----------------------------------------------------------------
     // HALAMAN
     // ----------------------------------------------------------------
@@ -304,8 +310,17 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
+        $row_before = $this->M_Checker->get_kk_by_id($id);
         $ok = $this->M_Checker->set_siap_loading_kk($id);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal']);
+        $notif = false;
+        if ($ok && (!$row_before || ($row_before['status'] ?? '') !== 'SIAP_LOADING')) {
+            $notif = $this->pushSiapLoadingNotif('kk', $this->M_Checker->get_kk_by_id($id));
+        }
+        echo json_encode([
+            'status' => (bool)$ok,
+            'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal',
+            'notif' => (bool)$notif,
+        ]);
     }
 
     public function update_kk()
@@ -472,8 +487,17 @@ class C_Checker extends CI_Controller
             echo json_encode(['status' => false, 'msg' => 'Akses ditolak']); return;
         }
         $id = (int)$this->input->post('id');
+        $row_before = $this->M_Checker->get_lk_by_id($id);
         $ok = $this->M_Checker->set_siap_loading_lk($id);
-        echo json_encode(['status' => (bool)$ok, 'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal']);
+        $notif = false;
+        if ($ok && (!$row_before || ($row_before['status'] ?? '') !== 'SIAP_LOADING')) {
+            $notif = $this->pushSiapLoadingNotif('lk', $this->M_Checker->get_lk_by_id($id));
+        }
+        echo json_encode([
+            'status' => (bool)$ok,
+            'msg' => $ok ? 'Status diubah menjadi SIAP LOADING' : 'Gagal',
+            'notif' => (bool)$notif,
+        ]);
     }
 
     public function update_lk()

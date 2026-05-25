@@ -2009,19 +2009,16 @@ $(document).ready(function () {
                 if (res1.id) {
                     var siapUrl = (type === 'kk') ? 'checker/siap_loading_kk' : 'checker/siap_loading_lk';
                     ajaxPost(siapUrl, { id: res1.id }, function (res2) {
-                        // Kirim notifikasi ke ADMLOG
-                        ajaxPost('checker/push_notif', {
-                            type: type,
-                            keterangan: kode
-                        }, function () {});
-
                         Swal.fire({
-                            icon: 'success', title: 'Berhasil!',
-                            text: kode + ' sudah masuk antrian SIAP LOADING.',
+                            icon: res2.status ? 'success' : 'error',
+                            title: res2.status ? 'Berhasil!' : 'Gagal',
+                            text: res2.status ? kode + ' sudah masuk antrian SIAP LOADING.' : res2.msg,
                             timer: 2000, showConfirmButton: false
                         }).then(function () {
-                            $('#modalPilihRuteKK, #modalPilihRuteLK').modal('hide');
-                            location.reload();
+                            if (res2.status) {
+                                $('#modalPilihRuteKK, #modalPilihRuteLK').modal('hide');
+                                location.reload();
+                            }
                         });
                     });
                 } else {
@@ -2166,7 +2163,12 @@ $(document).ready(function () {
     document.head.appendChild(style);
 
     // ── Polling ─────────────────────────────────────────────────
+    var notifPolling = false;
+
     function pollNotif() {
+        if (notifPolling) return;
+        notifPolling = true;
+
         $.getJSON(BASE + 'checker/get_notif', function (res) {
             if (res.status && res.data && res.data.length > 0) {
                 playDing();
@@ -2176,13 +2178,19 @@ $(document).ready(function () {
                 });
                 $.post(BASE + 'checker/read_notif');
             }
+        }).always(function () {
+            notifPolling = false;
         });
     }
 
-    setTimeout(function () {
+    $(function () {
         pollNotif();
-        setInterval(pollNotif, 15000);
-    }, 3000);
+        setInterval(pollNotif, 3000);
+        $(window).on('focus', pollNotif);
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) pollNotif();
+        });
+    });
 
 })();
 <?php endif; ?>
