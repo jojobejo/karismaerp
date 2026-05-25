@@ -1357,13 +1357,21 @@ class M_SalesOrder extends CI_Model
                 a.nolambung                AS nopol,
                 a.regional                 AS rute,
                 a.status,
-                a.sales_confirm_status,
-                a.sales_confirm_by,
-                a.sales_confirm_at,
-                a.sales_confirm_note,
+                lcs.action                 AS sales_confirm_status,
+                lcs.confirm_by             AS sales_confirm_by,
+                lcs.confirm_at             AS sales_confirm_at,
+                lcs.note                   AS sales_confirm_note,
                 (SELECT COUNT(DISTINCT kd_barang) FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalbarang,
                 (SELECT COUNT(DISTINCT kd_faktur)  FROM tb_detail_do WHERE kd_do = a.kd_do) AS totalfaktur
             FROM tb_do a
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = a.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
             WHERE a.status IN (2, 3)
               AND (SELECT COUNT(DISTINCT kd_faktur) FROM tb_detail_do WHERE kd_do = a.kd_do) > 0
             ORDER BY a.tgl_create DESC
@@ -1375,11 +1383,7 @@ class M_SalesOrder extends CI_Model
         $now = date('Y-m-d H:i:s');
         $this->db->where('kd_do', $kd_do);
         $this->db->update('tb_do', [
-            'sales_confirm_status' => $action,
-            'sales_confirm_by'     => $confirm_by,
-            'sales_confirm_at'     => $now,
-            'sales_confirm_note'   => $note,
-            'status'               => ($action === 'siap') ? 3 : 2,
+            'status' => ($action === 'siap') ? 3 : 2,
         ]);
         $this->db->insert('tb_log_confirm_sales', [
             'kd_do'      => $kd_do,

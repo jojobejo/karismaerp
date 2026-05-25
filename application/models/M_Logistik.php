@@ -775,10 +775,14 @@ class M_Logistik extends CI_Model
             'tgl_pengiriman'       => $today,
             'tgl_create'           => $now,
             'status'               => 3,
-            'sales_confirm_status' => 'siap',
-            'sales_confirm_by'     => $confirm_by,
-            'sales_confirm_at'     => $now,
-            'sales_confirm_note'   => $note,
+        ]);
+
+        $this->db->insert('tb_log_confirm_sales', [
+            'kd_do'      => $kd_do,
+            'action'     => 'siap',
+            'note'       => $note,
+            'confirm_by' => $confirm_by,
+            'confirm_at' => $now,
         ]);
 
         if ($this->db->trans_status() && !empty($detail_rows)) {
@@ -1089,11 +1093,7 @@ class M_Logistik extends CI_Model
 
         $this->db->where('kd_do', $kd_do);
         $this->db->update('tb_do', [
-            'sales_confirm_status' => $action,
-            'sales_confirm_by'     => $confirm_by,
-            'sales_confirm_at'     => $now,
-            'sales_confirm_note'   => $note,
-            'status'               => ($action === 'siap') ? 3 : 2  // 3 = Siap Loading
+            'status' => ($action === 'siap') ? 3 : 2  // 3 = Siap Loading
         ]);
 
         $this->db->insert('tb_log_confirm_sales', [
@@ -1121,10 +1121,10 @@ class M_Logistik extends CI_Model
                 a.nolambung                 AS nopol,
                 a.regional                  AS rute,
                 a.status,
-                a.sales_confirm_status,
-                a.sales_confirm_by,
-                a.sales_confirm_at,
-                a.sales_confirm_note,
+                lcs.action                  AS sales_confirm_status,
+                lcs.confirm_by              AS sales_confirm_by,
+                lcs.confirm_at              AS sales_confirm_at,
+                lcs.note                    AS sales_confirm_note,
                 (
                     SELECT COUNT(DISTINCT kd_barang)
                     FROM tb_detail_do
@@ -1136,6 +1136,14 @@ class M_Logistik extends CI_Model
                     WHERE kd_do = a.kd_do
                 ) AS totalfaktur
             FROM tb_do a
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = a.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
             WHERE a.status IN (3, 5)
             AND (
                 SELECT COUNT(DISTINCT kd_faktur)
@@ -1159,9 +1167,10 @@ class M_Logistik extends CI_Model
                 a.nolambung                 AS nopol,
                 a.regional                  AS rute,
                 a.status,
-                a.sales_confirm_status,
-                a.sales_confirm_by,
-                a.sales_confirm_at,
+                lcs.action                  AS sales_confirm_status,
+                lcs.confirm_by              AS sales_confirm_by,
+                lcs.confirm_at              AS sales_confirm_at,
+                lcs.note                    AS sales_confirm_note,
                 (
                     SELECT COUNT(DISTINCT kd_barang)
                     FROM tb_detail_do
@@ -1173,6 +1182,14 @@ class M_Logistik extends CI_Model
                     WHERE kd_do = a.kd_do
                 ) AS totalfaktur
             FROM tb_do a
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = a.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
             WHERE (
                 SELECT COUNT(DISTINCT kd_faktur)
                 FROM tb_detail_do

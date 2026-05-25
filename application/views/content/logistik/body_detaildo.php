@@ -26,7 +26,7 @@
     .detail-do-heading {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 12px;
         flex-wrap: wrap;
         margin-bottom: 20px;
@@ -82,6 +82,40 @@
         border-color: #d8dde2;
     }
 
+    .sales-note-box {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 720px;
+        margin-bottom: 18px;
+        padding: 10px 12px;
+        color: #344054;
+        background: #f8fafc;
+        border: 1px solid #d7dee8;
+        border-left: 4px solid #3b82f6;
+        border-radius: 6px;
+        white-space: normal;
+    }
+
+    .sales-note-box i {
+        margin-top: 3px;
+        color: #2563eb;
+    }
+
+    .sales-note-title {
+        display: block;
+        margin-bottom: 2px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #1f2937;
+        text-transform: uppercase;
+    }
+
+    .sales-note-text {
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
     .btn-soft {
         color: #495057;
         background: #fff;
@@ -129,12 +163,22 @@
             <div class="content-wrapper">
                 <div class="content-header">
                     <div class="container-fluid">
-                        <div class="row">
-                            <?php if ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
-                                <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
-                            <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
-                                <a href="<?= base_url('logistik') ?>" class="btn btn-primary mb-2 ml-2"><i class="fas fa-arrow-circle-left"></i></a>
-                            <?php endif; ?>
+                        <div class="row mb-2">
+                            <div class="col-sm-6 d-flex align-items-center">
+                                <?php if ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
+                                    <a href="<?= base_url('keuangan') ?>" class="btn btn-primary mr-2"><i class="fas fa-arrow-circle-left"></i></a>
+                                <?php elseif ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
+                                    <a href="<?= base_url('logistik') ?>" class="btn btn-primary mr-2"><i class="fas fa-arrow-circle-left"></i></a>
+                                <?php endif; ?>
+                                <h1 class="m-0">Detail Delivery Order</h1>
+                            </div>
+                            <div class="col-sm-6">
+                                <ol class="breadcrumb float-sm-right">
+                                    <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
+                                    <li class="breadcrumb-item"><a href="<?= base_url('logistik') ?>">Logistik</a></li>
+                                    <li class="breadcrumb-item active"><?= htmlspecialchars($d->kd_do ?? 'Detail DO', ENT_QUOTES, 'UTF-8') ?></li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -170,14 +214,14 @@
                                             </span>
 
                                             <?php if ($can_repost) : ?>
-                                                <button type="button" class="btn btn-sm btn-soft" id="btnunpost" data-kd="<?= $d->kd_do ?>">
+                                                <button type="button" class="btn btn-sm btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
                                                     <i class="fas fa-redo mr-1"></i> Repost
                                                 </button>
                                             <?php endif; ?>
 
                                             <?php if ($can_add_faktur) : ?>
                                                 <?php foreach ($kdo as $k) : ?>
-                                                    <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-sm btn-soft">
+                                                    <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-sm btn-success">
                                                         <i class="fas fa-plus mr-1"></i> Tambah Faktur
                                                     </a>
                                                 <?php endforeach; ?>
@@ -191,9 +235,14 @@
                                         </div>
                                     </div>
                                     <?php if (!empty($d->sales_confirm_note)) : ?>
-                                        <div class="alert alert-info py-2 mb-3">
-                                            <strong><i class="fas fa-sticky-note mr-1"></i> Catatan Sales:</strong>
-                                            <?= nl2br(htmlspecialchars($d->sales_confirm_note, ENT_QUOTES, 'UTF-8')) ?>
+                                        <div class="sales-note-box">
+                                            <i class="fas fa-sticky-note"></i>
+                                            <div>
+                                                <span class="sales-note-title">Catatan Sales</span>
+                                                <div class="sales-note-text">
+                                                    <?= nl2br(htmlspecialchars($d->sales_confirm_note, ENT_QUOTES, 'UTF-8')) ?>
+                                                </div>
+                                            </div>
                                         </div>
                                     <?php endif; ?>
                                 <?php elseif ($this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>

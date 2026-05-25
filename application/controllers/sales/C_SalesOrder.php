@@ -1030,19 +1030,28 @@ class C_SalesOrder extends CI_Controller
 
         $query1 = $this->db->query("
             SELECT b.id, b.kd_do, b.regional, b.nolambung, b.driver, b.status,
-                   b.sales_confirm_status, b.sales_confirm_by,
-                   b.sales_confirm_at, b.sales_confirm_note,
+                   lcs.action AS sales_confirm_status,
+                   lcs.confirm_by AS sales_confirm_by,
+                   lcs.confirm_at AS sales_confirm_at,
+                   lcs.note AS sales_confirm_note,
                    COUNT(DISTINCT a.kd_barang) AS total_barang,
                    ROUND(SUM(a.qty * m.berat)/1000000, 2) AS total_tonase_faktur,
                    ROUND(SUM(a.qty * m.kubikasi), 2) AS total_kubikasi,
                    COUNT(DISTINCT a.kd_customer) AS totalfaktur
             FROM tb_detail_do a
             JOIN tb_do b ON b.kd_do = a.kd_do
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = b.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
             JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
             WHERE b.kd_do = ?
             GROUP BY b.id, b.kd_do, b.regional, b.nolambung, b.driver, b.status,
-                     b.sales_confirm_status, b.sales_confirm_by,
-                     b.sales_confirm_at, b.sales_confirm_note
+                     lcs.action, lcs.confirm_by, lcs.confirm_at, lcs.note
         ", [$kd_do]);
 
         $query2      = $this->db->where('kd_do', $kd_do)->get('tb_do');

@@ -1075,7 +1075,7 @@ class C_Logistik extends CI_Controller
         }
 
         $query = $this->db->query("SELECT
-            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), NULLIF(bd.sales_confirm_note, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
+            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), NULLIF(lcs.note, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
             x.no_lot,x.nominal_p,x.jtempo,x.tgl_exp,x.satuan,x.status,x.kd_do,x.qty,(c.p * c.l * c.t)      AS dimensi,FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
             (x.qty % (c.p * c.l * c.t)) AS qty_pcs
         FROM (
@@ -1119,6 +1119,14 @@ class C_Logistik extends CI_Controller
         JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
         JOIN tb_customer d ON d.kd_customer = x.kd_customer
         JOIN tb_do bd ON bd.kd_do = x.kd_do
+        LEFT JOIN tb_log_confirm_sales lcs
+            ON lcs.id = (
+                SELECT l2.id
+                FROM tb_log_confirm_sales l2
+                WHERE l2.kd_do = bd.kd_do
+                ORDER BY l2.confirm_at DESC, l2.id DESC
+                LIMIT 1
+            )
         LEFT JOIN tbso_faktur_penjualan fp ON fp.no_faktur = x.kd_faktur
         ORDER BY
             x.norut ASC,
@@ -1157,7 +1165,24 @@ class C_Logistik extends CI_Controller
             WHERE b.kd_do = '$kd_do'
             GROUP BY b.id,b.kd_do,b.regional,b.nolambung,b.driver;
         ");
-        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $query2 = $this->db->query("
+            SELECT
+                a.*,
+                lcs.action AS sales_confirm_status,
+                lcs.confirm_by AS sales_confirm_by,
+                lcs.confirm_at AS sales_confirm_at,
+                lcs.note AS sales_confirm_note
+            FROM tb_do a
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = a.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
+            WHERE a.kd_do = ?
+        ", [$kd_do]);
         $query3 = $this->db->where('kd_do', $kd_do)->get('tb_detail_do');
 
         $data['page_title']     = 'KARISMA - LOGISTIK';
