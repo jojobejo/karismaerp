@@ -13,26 +13,18 @@
             <span class="status-badge status-done">Aktif</span>
         </div>
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card stat-card-wide">
                 <span class="stat-icon"><i class="fas fa-paper-plane"></i></span>
                 <small>Dikirim</small>
-                <strong>32</strong>
-            </div>
-            <div class="stat-card">
-                <span class="stat-icon"><i class="fas fa-star"></i></span>
-                <small>Skor</small>
-                <strong>96</strong>
+                <strong><?= intval($profile_stats['reports'] ?? 0) ?></strong>
             </div>
         </div>
     </div>
 
     <div class="mobile-card">
         <div class="d-grid gap-2">
-            <button class="btn btn-light mobile-btn js-demo-submit" type="button">
-                <i class="fas fa-gear me-2"></i>Preferensi Aplikasi
-            </button>
             <a href="<?= site_url('logout') ?>" class="btn btn-outline-danger mobile-btn">
-                <i class="fas fa-right-from-bracket me-2"></i>Keluar
+                <i class="fas fa-right-from-bracket me-2"></i>Logout
             </a>
         </div>
     </div>

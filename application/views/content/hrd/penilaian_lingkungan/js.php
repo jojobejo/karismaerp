@@ -25,6 +25,7 @@
     .env-progress { background: #e5e7eb; border-radius: 99px; height: 6px; margin-top: 6px; overflow: hidden; width: 100%; }
     .env-progress span { background: #111827; display: block; height: 100%; }
     .env-chart-wrap { min-height: 240px; position: relative; }
+    .env-chart-empty { align-items: center; bottom: 0; color: #64748b; display: flex; font-weight: 700; justify-content: center; left: 0; position: absolute; right: 0; text-align: center; top: 0; }
     .env-breakdown-stat { background: #f8fafc; border: 1px solid #e8edf2; border-radius: 8px; height: 100%; padding: 12px; }
     .env-breakdown-stat small { color: #64748b; display: block; font-weight: 800; text-transform: uppercase; }
     .env-breakdown-stat strong { color: #111827; display: block; font-size: 1.45rem; line-height: 1.2; margin-top: 4px; }
@@ -91,6 +92,7 @@
             location: null,
             rating: null
         };
+        var defaultOpenStatusId = '<?= isset($default_status_id) ? intval($default_status_id) : 1 ?>';
 
         function escapeHtml(value) {
             return String(value == null ? '' : value).replace(/[&<>"'`=\/]/g, function(s) {
@@ -203,13 +205,18 @@
         function renderPieChart(chartKey, canvasId, rows, labelKey, idKey, valueKey) {
             var canvas = document.getElementById(canvasId);
             if (!canvas || typeof Chart === 'undefined') return;
+            var $canvas = $('#' + canvasId);
+            var $wrap = $canvas.closest('.env-chart-wrap');
+            $wrap.find('.env-chart-empty').remove();
 
             var labels = [];
             var values = [];
             var ids = [];
             $.each(rows || [], function(_, item) {
+                var total = parseInt(item[valueKey], 10) || 0;
+                if (total <= 0) return;
                 labels.push(item[labelKey] || '-');
-                values.push(parseInt(item[valueKey], 10) || 0);
+                values.push(total);
                 ids.push(item[idKey] || 0);
             });
 
@@ -218,13 +225,20 @@
                 dashboardCharts[chartKey] = null;
             }
 
+            if (!values.length) {
+                $canvas.hide();
+                $wrap.append('<div class="env-chart-empty">Tidak ada data tersimpan.</div>');
+                return;
+            }
+
+            $canvas.show();
             dashboardCharts[chartKey] = new Chart(canvas, {
                 type: 'pie',
                 data: {
-                    labels: labels.length ? labels : ['Belum ada data'],
+                    labels: labels,
                     datasets: [{
-                        data: values.length ? values : [1],
-                        backgroundColor: values.length ? buildChartColors(values.length) : ['#cbd5e1'],
+                        data: values,
+                        backgroundColor: buildChartColors(values.length),
                         borderColor: '#ffffff',
                         borderWidth: 2,
                         metaIds: ids
@@ -286,7 +300,7 @@
         function openBreakdownModal(type, id, label) {
             if (!$('#issueBreakdownModal').length) return;
             $('#issueBreakdownTitle').text('Memuat detail ' + (label || 'issue') + '...');
-            $('#breakdownTotalIssues, #breakdownPendingIssues, #breakdownProgressIssues, #breakdownResolvedIssues').text('0');
+            $('#breakdownTotalIssues, #breakdownOpenIssues, #breakdownPendingIssues, #breakdownProgressIssues, #breakdownResolvedIssues').text('0');
             renderBreakdownTable([]);
             $('#issueBreakdownModal').modal('show');
 
@@ -301,6 +315,7 @@
 
                 $('#issueBreakdownTitle').text(response.title || 'Detail Analisa Issue');
                 $('#breakdownTotalIssues').text((response.summary && response.summary.total_issues) || 0);
+                $('#breakdownOpenIssues').text((response.summary && response.summary.total_open) || 0);
                 $('#breakdownPendingIssues').text((response.summary && response.summary.total_pending) || 0);
                 $('#breakdownProgressIssues').text((response.summary && response.summary.total_progress) || 0);
                 $('#breakdownResolvedIssues').text((response.summary && response.summary.total_resolved) || 0);
@@ -339,6 +354,7 @@
                     locationMini = '<div class="text-muted">Tidak ada data.</div>';
                 }
                 $('#locationMiniList').html(locationMini);
+                $('#locationCountsTable tbody').html(locationRows);
                 renderPieChart('location', 'locationPieChart', response.by_location || [], 'location_name', 'location_id', 'total');
 
                 var ratingRows = '';
@@ -353,6 +369,7 @@
                     ratingMini = '<div class="text-muted">Tidak ada data.</div>';
                 }
                 $('#ratingMiniList').html(ratingMini);
+                $('#ratingCountsTable tbody').html(ratingRows);
                 renderPieChart('rating', 'ratingPieChart', response.by_rating || [], 'rating_name', 'rating_id', 'total');
             });
         }
@@ -390,7 +407,7 @@
 
         function loadPendingIssuesTable() {
             if (!$('#pendingIssuesTable').length) return;
-            $.getJSON(urls.list, { status_id: 1 }, function(response) {
+            $.getJSON(urls.list, { status_id: defaultOpenStatusId }, function(response) {
                 var tbody = '';
                 if (response.data && response.data.length) {
                     $.each(response.data, function(_, item) {

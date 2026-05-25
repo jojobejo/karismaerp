@@ -25,6 +25,20 @@ class C_Hrd extends CI_Controller
         return $this->session->userdata('id') ?: $this->session->userdata('kode') ?: null;
     }
 
+    private function _is_karyawan_session()
+    {
+        return strtoupper(trim((string) $this->session->userdata('jobdesk'))) === 'KARYAWAN';
+    }
+
+    private function _apply_karyawan_issue_scope(array $filters = array())
+    {
+        if ($this->_is_karyawan_session()) {
+            $filters['created_by'] = $this->_get_current_user_id() ?: 0;
+        }
+
+        return $filters;
+    }
+
     private function _get_default_issue_status_id()
     {
         $status = $this->M_Hrd->get_statuses()->row();
@@ -936,6 +950,7 @@ class C_Hrd extends CI_Controller
         $data['lokasi'] = $this->M_Hrd->get_locations()->result();
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['rating'] = $this->M_Hrd->get_ratings()->result();
+        $data['default_status_id'] = $this->_get_default_issue_status_id();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/admin_dashboard.php', $data);
@@ -964,17 +979,9 @@ class C_Hrd extends CI_Controller
         $data['page_heading'] = 'Dashboard';
         $data['module_label'] = 'Karisma ERP';
         $data['mobile_active'] = 'home';
-        $data['stats'] = array(
-            'reports' => 24,
-            'pending' => 7,
-            'areas' => count($this->M_Hrd->get_locations()->result()),
-            'done' => 18,
-        );
-        $data['priority_items'] = array(
-            array('title' => 'Gudang B - Jalur Loading', 'time' => '10 menit lalu', 'status' => 'Open', 'class' => 'status-open'),
-            array('title' => 'Office Lantai 2', 'time' => '35 menit lalu', 'status' => 'Proses', 'class' => 'status-progress'),
-            array('title' => 'Area Parkir Timur', 'time' => 'Hari ini', 'status' => 'Selesai', 'class' => 'status-done'),
-        );
+
+        $filters = $this->_apply_karyawan_issue_scope();
+        $data['stats'] = $this->M_Hrd->get_issue_operational_summary($filters);
 
         $this->_render_mobile('content/mobile_erp/dashboard.php', $data);
     }
@@ -1006,6 +1013,7 @@ class C_Hrd extends CI_Controller
         $data['page_heading'] = 'Profile';
         $data['module_label'] = 'Karisma ERP';
         $data['mobile_active'] = 'profile';
+        $data['profile_stats'] = $this->M_Hrd->get_issue_operational_summary($this->_apply_karyawan_issue_scope());
 
         $this->_render_mobile('content/mobile_erp/profile.php', $data);
     }
@@ -1018,6 +1026,7 @@ class C_Hrd extends CI_Controller
         $data['lokasi'] = $this->M_Hrd->get_locations()->result();
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['rating'] = $this->M_Hrd->get_ratings()->result();
+        $data['default_status_id'] = $this->_get_default_issue_status_id();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/admin_dashboard.php', $data);
@@ -1032,6 +1041,7 @@ class C_Hrd extends CI_Controller
         $data['page_title'] = 'Monitoring Direksi - Penilaian Lingkungan';
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['ratings'] = $this->M_Hrd->get_ratings()->result();
+        $data['default_status_id'] = $this->_get_default_issue_status_id();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/monitoring.php', $data);
@@ -1107,6 +1117,7 @@ class C_Hrd extends CI_Controller
             'date_from' => $this->input->get_post('date_from'),
             'date_to' => $this->input->get_post('date_to'),
         );
+        $filters = $this->_apply_karyawan_issue_scope($filters);
         $issues = $this->M_Hrd->get_issue_list($filters)->result();
         echo json_encode(array('data' => $issues));
     }
@@ -1119,6 +1130,10 @@ class C_Hrd extends CI_Controller
         $issue = $this->M_Hrd->get_issue_by_id($id);
         if (!$issue) {
             echo json_encode(array('status' => false, 'message' => 'Issue tidak ditemukan.'));
+            return;
+        }
+        if ($this->_is_karyawan_session() && intval($issue->created_by) !== intval($this->_get_current_user_id())) {
+            echo json_encode(array('status' => false, 'message' => 'Laporan tidak tersedia untuk user ini.'));
             return;
         }
         $evidence = $this->M_Hrd->get_issue_evidences($id);
@@ -1198,20 +1213,18 @@ class C_Hrd extends CI_Controller
         $inProgressCount = 0;
         foreach ($statusRows as $statusRow) {
             $name = strtolower($statusRow->status_name ?: 'belum diproses');
-            if (intval($statusRow->status_id) === 0) {
-                $pendingCount += $statusRow->total;
-            }
-            if (strpos($name, 'selesai') !== false || strpos($name, 'done') !== false || strpos($name, 'closed') !== false) {
+            $isResolved = strpos($name, 'selesai') !== false || strpos($name, 'done') !== false || strpos($name, 'closed') !== false || strpos($name, 'resolved') !== false;
+            $isProgress = strpos($name, 'progress') !== false || strpos($name, 'proses') !== false || strpos($name, 'sedang') !== false;
+            $isPending = strpos($name, 'pending') !== false || strpos($name, 'menunggu') !== false;
+
+            if ($isResolved) {
                 $resolvedCount += $statusRow->total;
+            } elseif ($isProgress) {
+                $inProgressCount += $statusRow->total;
+            } elseif ($isPending) {
+                $pendingCount += $statusRow->total;
             } else {
                 $openCount += $statusRow->total;
-            }
-
-            if (strpos($name, 'pending') !== false || strpos($name, 'menunggu') !== false) {
-                $pendingCount += $statusRow->total;
-            }
-            if (strpos($name, 'progress') !== false || strpos($name, 'proses') !== false || strpos($name, 'on progress') !== false || strpos($name, 'sedang') !== false) {
-                $inProgressCount += $statusRow->total;
             }
         }
 

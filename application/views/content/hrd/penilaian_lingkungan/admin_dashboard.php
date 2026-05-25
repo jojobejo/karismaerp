@@ -249,25 +249,31 @@
                                 </div>
                                 <div class="modal-body">
                                     <div class="row mb-3" id="issueBreakdownSummary">
-                                        <div class="col-md-3 col-6 mb-2">
+                                        <div class="col-md col-6 mb-2">
                                             <div class="env-breakdown-stat">
                                                 <small>Total Issue</small>
                                                 <strong id="breakdownTotalIssues">0</strong>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-2">
+                                        <div class="col-md col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Open</small>
+                                                <strong id="breakdownOpenIssues">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md col-6 mb-2">
                                             <div class="env-breakdown-stat">
                                                 <small>Pending</small>
                                                 <strong id="breakdownPendingIssues">0</strong>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-2">
+                                        <div class="col-md col-6 mb-2">
                                             <div class="env-breakdown-stat">
                                                 <small>Proses</small>
                                                 <strong id="breakdownProgressIssues">0</strong>
                                             </div>
                                         </div>
-                                        <div class="col-md-3 col-6 mb-2">
+                                        <div class="col-md col-6 mb-2">
                                             <div class="env-breakdown-stat">
                                                 <small>Selesai</small>
                                                 <strong id="breakdownResolvedIssues">0</strong>

@@ -2,8 +2,8 @@
     <div class="mobile-card">
         <div class="card-title-row">
             <div>
-                <span class="app-eyebrow">Data card</span>
-                <h2>List Laporan</h2>
+                <span class="app-eyebrow">Data laporan</span>
+                <h2><?= strtoupper(trim((string) $this->session->userdata('jobdesk'))) === 'KARYAWAN' ? 'Laporan Saya' : 'List Laporan' ?></h2>
             </div>
             <button class="btn btn-light btn-sm rounded-pill" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSearchCanvas">
                 <i class="fas fa-sliders"></i>

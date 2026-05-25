@@ -43,6 +43,45 @@
         return '<span class="status-badge ' + cls + '">' + escapeHtml(label) + '</span>';
     }
 
+    function timelineIcon(status) {
+        const label = (status || '').toLowerCase();
+        if (label.indexOf('selesai') >= 0 || label.indexOf('done') >= 0 || label.indexOf('closed') >= 0) {
+            return '<i class="fas fa-circle-check text-success"></i>';
+        }
+        if (label.indexOf('progress') >= 0 || label.indexOf('proses') >= 0 || label.indexOf('sedang') >= 0) {
+            return '<i class="fas fa-spinner text-primary"></i>';
+        }
+        return '<i class="far fa-clock text-warning"></i>';
+    }
+
+    function renderTimeline(issue, logs) {
+        let rows = logs || [];
+        if (!rows.length && issue) {
+            rows = [{
+                status_name: issue.status_name || 'Laporan dibuat',
+                note: 'Laporan dikirim dari form mobile.',
+                changed_at: issue.created_at || issue.report_datetime || '-'
+            }];
+        }
+
+        return '<div class="mobile-card">' +
+            '<div class="card-title-row"><h2>Timeline</h2><span class="status-badge status-muted">' + rows.length + ' aktivitas</span></div>' +
+            rows.map(function (log, index) {
+                const title = log.status_name || (index === 0 ? 'Laporan dibuat' : 'Aktivitas laporan');
+                const note = log.note || 'Status laporan diperbarui.';
+                const time = log.changed_at || '-';
+                const actor = log.changed_by_name ? '<span><i class="far fa-user me-1"></i>' + escapeHtml(log.changed_by_name) + '</span>' : '';
+                const borderClass = index < rows.length - 1 ? ' border-bottom pb-3 mb-3' : '';
+
+                return '<div class="data-card' + borderClass + '">' +
+                    '<div class="data-card-head"><div><h3>' + escapeHtml(title) + '</h3>' +
+                    '<div class="meta-row"><span><i class="far fa-clock me-1"></i>' + escapeHtml(time) + '</span>' + actor + '</div>' +
+                    '<p class="mb-0 text-muted-soft">' + escapeHtml(note) + '</p></div>' +
+                    timelineIcon(title) + '</div></div>';
+            }).join('') +
+            '</div>';
+    }
+
     function setLoading($button, loading, label) {
         if (!$button.length) return;
         if (loading) {
@@ -180,6 +219,7 @@
             }
             const issue = response.issue || {};
             const evidence = response.evidence || [];
+            const logs = response.logs || [];
             $detail.html(
                 '<div class="mobile-card data-card">' +
                 '<div class="data-card-head"><div><h3>' + escapeHtml(issue.location_name || '-') + '</h3><div class="meta-row"><span>' + escapeHtml(issue.report_datetime || '-') + '</span></div></div>' + statusBadge(issue.status_name) + '</div>' +
@@ -188,7 +228,8 @@
                 '<div class="mobile-card"><div class="card-title-row"><h2>Bukti Foto</h2><span class="status-badge status-muted">' + evidence.length + ' file</span></div>' +
                 '<div class="preview-grid">' + evidence.map(function (file) {
                     return '<a href="' + app.baseUrl + escapeHtml(file.file_path) + '" target="_blank"><img src="' + app.baseUrl + escapeHtml(file.file_path) + '" alt="' + escapeHtml(file.file_name || 'Bukti') + '"></a>';
-                }).join('') + '</div></div>'
+                }).join('') + '</div></div>' +
+                renderTimeline(issue, logs)
             );
         });
     }
@@ -203,8 +244,5 @@
             toast($(this).data('mobile-toast'), 'info');
         });
 
-        $('.js-demo-submit').on('click', function () {
-            toast('Contoh aksi berhasil diproses.', 'success');
-        });
     });
 })(jQuery);

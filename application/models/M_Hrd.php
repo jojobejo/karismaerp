@@ -300,6 +300,9 @@ class M_Hrd extends CI_Model
         if (array_key_exists('rating_id', $filters) && $filters['rating_id'] !== '' && $filters['rating_id'] !== null) {
             $this->db->where($alias . '.rating_id', $filters['rating_id']);
         }
+        if (array_key_exists('created_by', $filters) && $filters['created_by'] !== '' && $filters['created_by'] !== null) {
+            $this->db->where($alias . '.created_by', $filters['created_by']);
+        }
         if (!empty($filters['date_from'])) {
             $this->db->where('DATE(' . $alias . '.report_datetime) >=', $filters['date_from']);
         }
@@ -310,11 +313,13 @@ class M_Hrd extends CI_Model
 
     public function get_issue_list($filters = array())
     {
-        $this->db->select('e.*, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name, u.username AS created_by')
+        $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
             ->join('tb_user u', 'e.created_by = u.id', 'left');
 
         $this->apply_issue_filters($filters, 'e');
@@ -324,11 +329,14 @@ class M_Hrd extends CI_Model
 
     public function get_issue_by_id($id)
     {
-        return $this->db->select('e.*, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+        return $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by_name", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
             ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left')
+            ->join('tb_karyawan k', 'e.created_by = k.id', 'left')
+            ->join('tb_user u', 'e.created_by = u.id', 'left')
             ->where('e.id', $id)
             ->get()
             ->row();
@@ -346,9 +354,11 @@ class M_Hrd extends CI_Model
 
     public function get_issue_logs($issue_id)
     {
-        return $this->db->select('l.*, s.name AS status_name, u.username AS changed_by_name')
+        return $this->db->select('l.*, s.name AS status_name')
+            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', l.changed_by)) AS changed_by_name", false)
             ->from('tbhrd_issue_logs l')
             ->join('tbhrd_issue_status s', 'l.status_id = s.id', 'left')
+            ->join('tb_karyawan k', 'l.changed_by = k.id', 'left')
             ->join('tb_user u', 'l.changed_by = u.id', 'left')
             ->where('l.issue_id', $issue_id)
             ->order_by('l.changed_at', 'DESC')
@@ -386,6 +396,25 @@ class M_Hrd extends CI_Model
             ->get();
     }
 
+    public function get_issue_operational_summary($filters = array())
+    {
+        $resolvedExpression = "LOWER(COALESCE(s.name, '')) LIKE '%selesai%' OR LOWER(COALESCE(s.name, '')) LIKE '%done%' OR LOWER(COALESCE(s.name, '')) LIKE '%closed%' OR LOWER(COALESCE(s.name, '')) LIKE '%resolved%'";
+
+        $this->db->select('COUNT(e.id) AS reports')
+            ->select("SUM(CASE WHEN {$resolvedExpression} THEN 0 ELSE 1 END) AS pending", false)
+            ->select("SUM(CASE WHEN {$resolvedExpression} THEN 1 ELSE 0 END) AS done", false)
+            ->from('tbhrd_environment_issues e')
+            ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left');
+        $this->apply_issue_filters($filters, 'e');
+
+        $row = $this->db->get()->row();
+        return array(
+            'reports' => $row ? intval($row->reports) : 0,
+            'pending' => $row ? intval($row->pending) : 0,
+            'done' => $row ? intval($row->done) : 0,
+        );
+    }
+
     public function get_issue_counts_by_rating($filters = array())
     {
         $this->db->select('e.rating_id, r.name AS rating_name, r.score, COUNT(e.id) AS total')
@@ -402,9 +431,10 @@ class M_Hrd extends CI_Model
     public function get_issue_breakdown_summary($filters = array())
     {
         $this->db->select('COUNT(e.id) AS total_issues')
-            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%selesai%' OR LOWER(COALESCE(s.name, '')) LIKE '%done%' OR LOWER(COALESCE(s.name, '')) LIKE '%closed%' THEN 1 ELSE 0 END) AS total_resolved", false)
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%selesai%' OR LOWER(COALESCE(s.name, '')) LIKE '%done%' OR LOWER(COALESCE(s.name, '')) LIKE '%closed%' OR LOWER(COALESCE(s.name, '')) LIKE '%resolved%' THEN 1 ELSE 0 END) AS total_resolved", false)
             ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%progress%' OR LOWER(COALESCE(s.name, '')) LIKE '%proses%' OR LOWER(COALESCE(s.name, '')) LIKE '%sedang%' THEN 1 ELSE 0 END) AS total_progress", false)
-            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%pending%' OR LOWER(COALESCE(s.name, '')) LIKE '%menunggu%' OR LOWER(COALESCE(s.name, '')) LIKE '%belum%' OR e.status_id = 0 THEN 1 ELSE 0 END) AS total_pending", false)
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%open%' OR LOWER(COALESCE(s.name, '')) LIKE '%belum%' OR e.status_id = 0 THEN 1 ELSE 0 END) AS total_open", false)
+            ->select("SUM(CASE WHEN LOWER(COALESCE(s.name, '')) LIKE '%pending%' OR LOWER(COALESCE(s.name, '')) LIKE '%menunggu%' THEN 1 ELSE 0 END) AS total_pending", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_issue_status s', 'e.status_id = s.id', 'left');
         $this->apply_issue_filters($filters, 'e');

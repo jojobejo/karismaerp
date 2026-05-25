@@ -102,7 +102,9 @@ class Auth extends CI_Controller
                     } else if ($key->jobdesk == 'SC') {
                         redirect('sales_order');
                     } else if ($key->jobdesk == 'SUPERADMIN') {
-                        redirect('penilaian_lingkungan');
+                        redirect('hrd/penilaian_lingkungan/admin');
+                    } else if ($key->jobdesk == 'KARYAWAN') {
+                        redirect('mobile-erp');
                     } else {
                         redirect('dashboard');
                     }
