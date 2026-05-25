@@ -59,6 +59,25 @@ class C_SalesOrder extends CI_Controller
 
     private function _getUsername()  { return $this->_getCurrentUser()['nm_karyawan']; }
 
+    private function _isRestrictedSalesUser()
+    {
+        return strtoupper((string)$this->session->userdata('jobdesk')) === 'SC';
+    }
+
+    private function _canAccessSo($so)
+    {
+        if (!$this->_isRestrictedSalesUser()) return true;
+        if (empty($so)) return false;
+
+        return (string)($so['create_by'] ?? '') === (string)$this->_getUsername();
+    }
+
+    private function _denySoAccess()
+    {
+        $this->session->set_flashdata('error', 'Anda tidak memiliki akses untuk membuka Sales Order milik SC lain.');
+        redirect('sales_order');
+    }
+
     private function _getFakturUserPrefix()
     {
         $current_id = $this->session->userdata('id_karyawan')
@@ -144,6 +163,9 @@ class C_SalesOrder extends CI_Controller
             'status'      => $this->input->post('status'),
             'customer_id' => $this->input->post('customer_id'),
         ];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
 
         $data['page_title'] = 'KARISMA - Sales Order';
         $data['so_list']    = $this->M_SalesOrder->get_all_so($filter);
@@ -279,6 +301,10 @@ class C_SalesOrder extends CI_Controller
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
 
         $details  = $this->M_SalesOrder->get_so_detail($id_so);
         $fakturs  = $this->M_SalesOrder->get_faktur_by_so($id_so);
@@ -312,6 +338,10 @@ class C_SalesOrder extends CI_Controller
     public function edit($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
+        if ($so && !$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
         if (!$so || $so['status'] !== 'draft') {
             $this->session->set_flashdata('error', 'SO tidak dapat diedit. Hanya SO berstatus Draft yang dapat diedit.');
             redirect('sales_order');
@@ -342,6 +372,10 @@ class C_SalesOrder extends CI_Controller
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
 
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
@@ -425,6 +459,10 @@ class C_SalesOrder extends CI_Controller
     public function rekam($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
+        if ($so && !$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
         if (!$so || $so['status'] !== 'draft') {
             $this->session->set_flashdata('error', 'SO tidak dapat direkam. Hanya SO berstatus Draft yang dapat direkam.');
             redirect('sales_order/detail/' . $id_so);
@@ -456,6 +494,10 @@ class C_SalesOrder extends CI_Controller
     {
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
 
         if (in_array($so['status'], ['completed', 'cancelled'])) {
             $this->session->set_flashdata('error', 'SO tidak dapat dibatalkan.');
@@ -491,6 +533,10 @@ class C_SalesOrder extends CI_Controller
     public function form_faktur($id_so)
     {
         $so = $this->M_SalesOrder->get_so($id_so);
+        if ($so && !$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
         if (!$so || $so['status'] !== 'open') {
             $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang berstatus Open.');
             redirect('sales_order/detail/' . $id_so);
@@ -555,6 +601,10 @@ class C_SalesOrder extends CI_Controller
         if (!$so || $so['status'] !== 'open') {
             $this->session->set_flashdata('error', 'SO tidak valid atau tidak berstatus Open.');
             redirect('sales_order/detail/' . $id_so);
+            return;
+        }
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
             return;
         }
 
@@ -666,6 +716,10 @@ class C_SalesOrder extends CI_Controller
 
         $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
         $so      = $this->M_SalesOrder->get_so($faktur['id_so']);
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
 
         $data['page_title'] = 'KARISMA - Faktur ' . $faktur['no_faktur'];
         $data['faktur']     = $faktur;
@@ -745,6 +799,12 @@ class C_SalesOrder extends CI_Controller
     public function activity_log_so($id_so)
     {
         $so   = $this->M_SalesOrder->get_so($id_so);
+        if (!$this->_canAccessSo($so)) {
+            if (ob_get_level()) ob_end_clean();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['status' => 'error', 'message' => 'Akses ditolak'], JSON_UNESCAPED_UNICODE);
+            return;
+        }
         $logs = $this->M_ActivityLog->get_by_no_so($so['no_so'] ?? '');
 
         if (ob_get_level()) ob_end_clean();

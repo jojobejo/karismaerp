@@ -355,8 +355,8 @@ class M_SalesOrder extends CI_Model
 
         $this->db->having('available_stock >', 0);
         $this->db->order_by('sb.kd_barang', 'ASC');
-        $this->db->order_by('sb.no_lot', 'ASC');
         $this->db->order_by('sb.expired_date', 'ASC');
+        $this->db->order_by('sb.no_lot', 'ASC');
         $this->db->order_by('sb.id', 'ASC');
 
         $stocks = $this->db->get()->result_array();
@@ -462,6 +462,7 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('so.kd_customer', $filter['customer_id']);
+        if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
 
         $this->db->group_by('so.id_so');
         $this->db->order_by('so.create_at', 'DESC');
