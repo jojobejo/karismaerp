@@ -28,6 +28,11 @@ class Auth extends CI_Controller
 
             foreach ($check_password as $key) {
                 if ($key->username == $username && password_verify($password, $key->password)) {
+                    $akses_lv = (int)($key->akses_lv ?? 0);
+                    $jobdesk = strtoupper(trim((string)($key->jobdesk ?? '')));
+                    $username_login = strtolower(trim((string)($key->username ?? '')));
+                    $is_admin_dashboard = ($username_login === 'admin' || ($akses_lv === 1 && $jobdesk === 'ADMIN'));
+
                     if (isset($key->status) && (int)$key->status !== 1) {
                         $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
                         $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
@@ -41,69 +46,69 @@ class Auth extends CI_Controller
                         'nik'           => $key->nik,
                         'username'      => $key->username,
                         'departemen'    => $key->departemen,
-                        'lv'            => $key->akses_lv,
-                        'akses_lv'      => $key->akses_lv,
-                        'akses_lv_id'   => $key->akses_lv_id ?? $key->akses_lv,
-                        'jobdesk'       => $key->jobdesk,
+                        'lv'            => $akses_lv,
+                        'akses_lv'      => $akses_lv,
+                        'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
+                        'jobdesk'       => $jobdesk,
                         'jobdesk_id'    => $key->jobdesk_id ?? null,
                         'nama'          => $key->nm_karyawan,
                         'tim'           => $key->tim,
                         'wilayah'       => $key->wilayah,
+                        'is_admin_dashboard' => $is_admin_dashboard,
                         'logged_in'     => true
                     );
+
                     $this->session->set_userdata($data_session);
                     $this->M_Auth->update_last_login($key->id);
                     $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-                    if ($key->username === 'admin') {
-                        redirect('dashboard_penilaian');
-                    } else if ($key->jobdesk == 'LOGISTIK') {
-                        redirect('logistik');
-                    } else if ($key->jobdesk == 'ADMINICS') {
-                        redirect('ics/ics_diffrent');
-                    } else if ($key->jobdesk == 'ADMINKEU') {
-                        redirect('keuangan');
-                    } else if ($key->jobdesk == 'ADMINPURCHASING') {
-                        redirect('keuangan');
-                    } else if ($key->jobdesk == 'DIREKTUR') {
+                    if ($is_admin_dashboard) {
                         redirect('dashboard');
-                    } else if ($key->jobdesk == 'ADMINGA') {
-                        redirect('schedule_direktur');
-                    } else if ($key->jobdesk == 'ADMINKEUTC') {
+                    } else if ($jobdesk == 'LOGISTIK') {
+                        redirect('logistik');
+                    } else if ($jobdesk == 'ADMINICS') {
+                        redirect('ics/ics_diffrent');
+                    } else if ($jobdesk == 'ADMINKEU') {
                         redirect('keuangan');
-                    } else if ($key->jobdesk == 'STOCKOPNAME') {
+                    } else if ($jobdesk == 'ADMINPURCHASING') {
+                        redirect('keuangan');
+                    } else if ($jobdesk == 'DIREKTUR') {
+                        redirect('dashboard');
+                    } else if ($jobdesk == 'ADMINGA') {
+                        redirect('schedule_direktur');
+                    } else if ($jobdesk == 'ADMINKEUTC') {
+                        redirect('keuangan');
+                    } else if ($jobdesk == 'STOCKOPNAME') {
                         redirect('stockopname');
-                    } else if ($key->jobdesk == 'ADMIN') {
-                        redirect('penilaian_lingkungan');
-                    } else if ($key->jobdesk == 'SALESONLINE') {
+                    } else if ($jobdesk == 'SALESONLINE') {
                         redirect('stock');
-                    } else if ($key->jobdesk == 'SALESCOUNTER') {
+                    } else if ($jobdesk == 'SALESCOUNTER') {
                         redirect('sales_report');
-                    } else if ($key->jobdesk == 'SALES') {
+                    } else if ($jobdesk == 'SALES') {
                         redirect('kiu_katalog');
-                    } else if ($key->jobdesk == 'DISTRIBUSI') {
+                    } else if ($jobdesk == 'DISTRIBUSI') {
                         redirect('logistik/distibusi');
-                    } else if ($key->jobdesk == 'ADMINLOGLPB') {
+                    } else if ($jobdesk == 'ADMINLOGLPB') {
                         redirect('ics/icspo');
-                    } else if ($key->jobdesk == 'ADMIN PO') {
+                    } else if ($jobdesk == 'ADMIN PO') {
                         redirect('ics/icspo');
-                    } else if ($key->jobdesk == 'ADMLOG') {
+                    } else if ($jobdesk == 'ADMLOG') {
                         redirect('checker');
-                    } else if ($key->jobdesk == 'CHECKER') {
+                    } else if ($jobdesk == 'CHECKER') {
                         redirect('checker');
-                    } else if ($key->jobdesk == 'MANAGERWH') {
+                    } else if ($jobdesk == 'MANAGERWH') {
                         redirect('checker');
-                    } else if ($key->jobdesk == 'SALESCK') {
+                    } else if ($jobdesk == 'SALESCK') {
                         redirect('checker');
-                    } else if ($key->jobdesk == 'DIREKTURCK') {
+                    } else if ($jobdesk == 'DIREKTURCK') {
                         redirect('checker/dashboard');
-                    } else if ($key->jobdesk == 'MANAGERCK') {
+                    } else if ($jobdesk == 'MANAGERCK') {
                         redirect('checker');
-                    } else if ($key->jobdesk == 'SC') {
+                    } else if ($jobdesk == 'SC') {
                         redirect('sales_order');
-                    } else if ($key->jobdesk == 'SUPERADMIN') {
+                    } else if ($jobdesk == 'SUPERADMIN') {
                         redirect('hrd/penilaian_lingkungan/admin');
-                    } else if ($key->jobdesk == 'KARYAWAN') {
+                    } else if ($jobdesk == 'KARYAWAN') {
                         redirect('mobile-erp');
                     } else {
                         redirect('dashboard');

@@ -58,7 +58,20 @@ $route['translate_uri_dashes'] = FALSE;
 //Auth Login
 $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
-$route['dashboard']                                 = 'Dashboard';
+$route['dashboard']                                 = 'Dashboard/index';
+$route['admin/stockopname']                        = 'admin/C_Stockopname/index';
+$route['admin/stockopname/widgets']                = 'admin/C_Stockopname/widgets';
+$route['admin/stockopname/list']                   = 'admin/C_Stockopname/list';
+$route['admin/stockopname/demo-preview']           = 'admin/C_Stockopname/demo_preview';
+$route['admin/stockopname/master-barang']          = 'admin/C_Stockopname/master_barang';
+$route['admin/stockopname/master-barang/widgets']  = 'admin/C_Stockopname/master_barang_widgets';
+$route['admin/stockopname/master-barang/list']     = 'admin/C_Stockopname/ajax_master_barang_list';
+$route['admin/stockopname/master-barang/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_list';
+$route['admin/stockopname/master-barang/detail']   = 'admin/C_Stockopname/ajax_master_barang_detail';
+$route['admin/stockopname/master-barang/update']   = 'admin/C_Stockopname/ajax_update_master_barang';
+$route['admin/stockopname/master-barang/generate-qrcode'] = 'admin/C_Stockopname/ajax_generate_qrcode';
+$route['admin/stockopname/master-barang/generate-barcode'] = 'admin/C_Stockopname/ajax_generate_barcode';
+$route['admin/stockopname/master-barang/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset';
 
 // Penilaian Lingkungan Kantor alias route
 $route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingkungan';
