@@ -348,12 +348,7 @@ class C_SalesOrder extends CI_Controller
 
         if ($id_so) {
             // Activity log
-            $detail_str = array_map(function($d) {
-                return $d['nama_barang']
-                    . ' | Box: ' . $d['qty_box']
-                    . ' | Ecer: ' . $d['qty_satuan'] . ' pcs'
-                    . ' | Total: ' . $d['qty'] . ' pcs';
-            }, $details);
+            $detail_str = $this->_format_detail_produk_log($details);
 
             $this->M_ActivityLog->log(
                 $no_so, '', 'CREATE_SO',
@@ -515,12 +510,7 @@ class C_SalesOrder extends CI_Controller
 
         if ($result) {
             $so_fresh = $this->M_SalesOrder->get_so($id_so);
-            $detail_str = array_map(function($d) {
-                return $d['nama_barang']
-                    . ' | Box: ' . $d['qty_box']
-                    . ' | Ecer: ' . $d['qty_satuan'] . ' pcs'
-                    . ' | Total: ' . $d['qty'] . ' pcs';
-            }, $details);
+            $detail_str = $this->_format_detail_produk_log($details);
 
             $this->M_ActivityLog->log(
                 $so_fresh['no_so'] ?? '', '', 'UPDATE_SO',
@@ -567,13 +557,17 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $details = $this->M_SalesOrder->get_so_detail($id_so);
+        $detail_str = $this->_format_detail_produk_log($details);
+
         $result = $this->M_SalesOrder->rekam_so($id_so, $this->_getUsername());
 
         if ($result) {
             $this->M_ActivityLog->log(
                 $so['no_so'] ?? '', '', 'REKAM_SO',
                 'SO direkam. Status berubah dari Draft menjadi Open. SO siap dibuatkan Faktur Penjualan.',
-                $this->_getUsername()
+                $this->_getUsername(),
+                implode("\n", $detail_str)
             );
             $this->session->set_flashdata('success',
                 'SO <b>' . htmlspecialchars($so['no_so']) . '</b> berhasil direkam. Status: <b>Open</b>. '
@@ -883,7 +877,9 @@ class C_SalesOrder extends CI_Controller
         ];
 
         $data['page_title'] = 'KARISMA - Activity Log SO';
-        $data['logs']       = $this->M_ActivityLog->get_filtered($filter, $per_page, $offset);
+        $data['logs']       = $this->_hydrate_missing_log_detail_produk(
+            $this->M_ActivityLog->get_filtered($filter, $per_page, $offset)
+        );
         $data['total']      = $this->M_ActivityLog->count_filtered($filter);
         $data['filter']     = $filter;
         $data['per_page']   = $per_page;
@@ -903,7 +899,9 @@ class C_SalesOrder extends CI_Controller
             echo json_encode(['status' => 'error', 'message' => 'Akses ditolak'], JSON_UNESCAPED_UNICODE);
             return;
         }
-        $logs = $this->M_ActivityLog->get_by_no_so($so['no_so'] ?? '');
+        $logs = $this->_hydrate_missing_log_detail_produk(
+            $this->M_ActivityLog->get_by_no_so($so['no_so'] ?? '')
+        );
 
         if (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
@@ -1024,6 +1022,57 @@ class C_SalesOrder extends CI_Controller
             ];
         }
         return $details;
+    }
+
+    private function _format_detail_produk_log(array $details)
+    {
+        return array_map(function($d) {
+            $nama = $d['nama_barang'] ?? '-';
+            $box = $d['qty_box'] ?? 0;
+            $ecer = $d['qty_satuan'] ?? 0;
+            $total = $d['qty'] ?? 0;
+
+            return $nama
+                . ' | Box: ' . $box
+                . ' | Ecer: ' . $ecer . ' pcs'
+                . ' | Total: ' . $total . ' pcs';
+        }, $details);
+    }
+
+    private function _hydrate_missing_log_detail_produk(array $logs)
+    {
+        $cache = [];
+        foreach ($logs as &$log) {
+            if (!empty($log['detail_produk']) || empty($log['no_so'])) {
+                continue;
+            }
+
+            $aksi = strtoupper((string)($log['aksi'] ?? ''));
+            if (!in_array($aksi, ['CREATE_SO', 'UPDATE_SO', 'REKAM_SO'], true)) {
+                continue;
+            }
+
+            $no_so = (string)$log['no_so'];
+            if (!array_key_exists($no_so, $cache)) {
+                $so = $this->db
+                    ->select('id_so')
+                    ->get_where('tbso_sales_order', ['no_so' => $no_so])
+                    ->row_array();
+
+                $cache[$no_so] = '';
+                if ($so) {
+                    $detail_str = $this->_format_detail_produk_log(
+                        $this->M_SalesOrder->get_so_detail($so['id_so'])
+                    );
+                    $cache[$no_so] = implode("\n", $detail_str);
+                }
+            }
+
+            $log['detail_produk'] = $cache[$no_so];
+        }
+        unset($log);
+
+        return $logs;
     }
 
     // ================================================================

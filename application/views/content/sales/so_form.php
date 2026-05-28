@@ -15,28 +15,7 @@
         return str_replace(['\\','\'',"\r","\n","\t"], ['\\\\',"\\'", '','',''], (string)$v);
     }
 ?>
-<style>
-    #tbl-stock-pick {
-        table-layout: fixed;
-        min-width: 980px;
-    }
-    #tbl-stock-pick .col-stock-name { width: 210px; }
-    #tbl-stock-pick .col-stock-exp { width: 88px; }
-    #tbl-stock-pick .col-stock-lot { width: 82px; }
-    #tbl-stock-pick .stock-lot-cell {
-        max-width: 82px;
-        white-space: normal;
-        overflow-wrap: anywhere;
-        line-height: 1.15;
-    }
-    #tbl-stock-pick .col-stock-hidden,
-    #tbl-stock-pick tbody td:nth-child(9),
-    #tbl-stock-pick tbody td:nth-child(10),
-    #tbl-stock-pick tbody td:nth-child(11) {
-        display: none;
-    }
-</style>
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -86,34 +65,38 @@
 
                 <form action="<?= $action ?>" method="post" id="form-so">
 
-                    <div class="row">
+                    <div class="row so-modern-grid">
                         <!-- INFORMASI SO -->
                         <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white py-2">
-                                    <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informasi SO</h3>
+                            <div class="card so-panel so-info-panel">
+                                <div class="card-header so-panel-header">
+                                    <span class="so-panel-icon so-panel-icon-primary"><i class="fas fa-file-invoice"></i></span>
+                                    <div>
+                                        <h3 class="so-panel-title">Informasi SO</h3>
+                                        <div class="so-panel-subtitle">Data dasar sales order dan lokasi stok.</div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">No SO <span class="text-danger">*</span></label>
-                                        <div class="col-sm-8">
+                                    <div class="form-group so-form-row">
+                                        <label class="so-form-label">No SO <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
                                             <input type="text" class="form-control" name="no_so"
                                                 value="<?= escAttr($id_so_val) ?>" required>
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">Tanggal <span class="text-danger">*</span></label>
-                                        <div class="col-sm-8">
+                                    <div class="form-group so-form-row">
+                                        <label class="so-form-label">Tanggal <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
                                             <input type="date" class="form-control" name="tanggal" required
                                                 value="<?= $is_edit ? escAttr($so['tanggal_transaksi']) : date('Y-m-d') ?>">
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">Customer <span class="text-danger">*</span></label>
-                                        <div class="col-sm-8">
+                                    <div class="form-group so-form-row">
+                                        <label class="so-form-label">Customer <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
                                             <div class="input-group">
                                                 <!-- BARU — hapus button, fokus ke input langsung buka modal -->
                                                 <input type="text" id="customer_display" class="form-control"
@@ -132,9 +115,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">Gudang <span class="text-danger">*</span></label>
-                                        <div class="col-sm-8">
+                                    <div class="form-group so-form-row">
+                                        <label class="so-form-label">Gudang <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
                                             <select name="gudang_id" id="gudang_id_input" class="form-control" required>
                                                 <option value="">-- Pilih Gudang --</option>
                                                 <?php foreach ($gudang_list as $g): ?>
@@ -150,9 +133,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-2">
-                                        <label class="col-sm-4 col-form-label">Catatan</label>
-                                        <div class="col-sm-8">
+                                    <div class="form-group so-form-row mb-0">
+                                        <label class="so-form-label">Catatan</label>
+                                        <div class="so-form-control">
                                             <textarea name="catatan" class="form-control" rows="2"><?= $is_edit ? htmlspecialchars($so['catatan'] ?? '') : '' ?></textarea>
                                         </div>
                                     </div>
@@ -163,69 +146,53 @@
 
                         <!-- TONASE & KUBIKASI -->
                         <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-info text-white py-2">
-                                    <h3 class="card-title"><i class="fas fa-weight mr-1"></i> Tonase &amp; Kubikasi</h3>
+                            <div class="card so-panel so-metric-panel">
+                                <div class="card-header so-panel-header">
+                                    <span class="so-panel-icon so-panel-icon-info"><i class="fas fa-chart-line"></i></span>
+                                    <div>
+                                        <h3 class="so-panel-title">Tonase &amp; Kubikasi</h3>
+                                        <div class="so-panel-subtitle">Pantau batas muatan sebelum SO disimpan.</div>
+                                    </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row mb-3">
-                                        <div class="col-6">
-                                            <div class="info-box mb-0">
-                                                <span class="info-box-icon bg-success" style="min-height:50px"><i class="fas fa-truck"></i></span>
-                                                <div class="info-box-content">
-                                                    <span class="info-box-text">Batas Tonase</span>
-                                                    <span class="info-box-number"><?= $batas_ton ?> ton</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="info-box mb-0">
-                                                <span class="info-box-icon bg-info" style="min-height:50px"><i class="fas fa-cube"></i></span>
-                                                <div class="info-box-content">
-                                                    <span class="info-box-text">Batas Kubikasi</span>
-                                                    <span class="info-box-number"><?= $batas_kub ?> m³</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span><strong><i class="fas fa-weight mr-1"></i>Tonase</strong></span>
-                                            <span>
+                                    <div class="so-progress-block">
+                                        <div class="so-progress-head">
+                                            <span><i class="fas fa-weight mr-1"></i>Tonase</span>
+                                            <span class="so-progress-value">
                                                 <strong><span id="lbl-tonase">0,000</span></strong> / <?= $batas_ton ?> ton
                                                 <span id="lbl-tonase-warn" class="badge badge-danger ml-1 d-none">PENUH</span>
                                             </span>
                                         </div>
-                                        <div class="progress" style="height:20px;border-radius:4px;">
+                                        <div class="progress so-progress">
                                             <div class="progress-bar bg-success progress-bar-striped" id="tonase-bar"
-                                                role="progressbar" style="width:0%;font-size:12px;line-height:20px;">0%</div>
+                                                role="progressbar" style="width:0%;">0%</div>
                                         </div>
-                                        <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                        <div class="so-progress-foot">
                                             <span>Terpakai: <span id="lbl-tonase-used">0,000</span> ton</span>
                                             <span>Sisa: <strong id="lbl-tonase-sisa" class="text-success"><?= $batas_ton ?> ton</strong></span>
                                         </div>
                                     </div>
-                                    <div class="mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span><strong><i class="fas fa-cube mr-1"></i>Kubikasi</strong></span>
-                                            <span>
+                                    <div class="so-progress-block mb-2">
+                                        <div class="so-progress-head">
+                                            <span><i class="fas fa-cube mr-1"></i>Kubikasi</span>
+                                            <span class="so-progress-value">
                                                 <strong><span id="lbl-kubikasi">0,00000</span></strong> / <?= $batas_kub ?> m3
                                                 <span id="lbl-kubikasi-warn" class="badge badge-danger ml-1 d-none">PENUH</span>
                                             </span>
                                         </div>
-                                        <div class="progress" style="height:20px;border-radius:4px;">
+                                        <div class="progress so-progress">
                                             <div class="progress-bar bg-info progress-bar-striped" id="kubikasi-bar"
-                                                role="progressbar" style="width:0%;font-size:12px;line-height:20px;">0%</div>
+                                                role="progressbar" style="width:0%;">0%</div>
                                         </div>
-                                        <div class="d-flex justify-content-between mt-1" style="font-size:12px;color:#6c757d;">
+                                        <div class="so-progress-foot">
                                             <span>Terpakai: <span id="lbl-kubikasi-used">0,00000</span> m3</span>
                                             <span>Sisa: <strong id="lbl-kubikasi-sisa" class="text-success"><?= $batas_kub ?> m3</strong></span>
                                         </div>
                                     </div>
-                                    <div class="mt-3 p-2 bg-light rounded border small">
-                                        Total pcs: <b id="lbl-total-kecil">0</b>
-                                        &nbsp;|&nbsp; Box: <b id="lbl-total-box">0</b>
-                                        &nbsp;+&nbsp; Eceran: <b id="lbl-total-ecer">0</b> pcs
+                                    <div class="so-total-strip">
+                                        <span>Total pcs <b id="lbl-total-kecil">0</b></span>
+                                        <span>Box <b id="lbl-total-box">0</b></span>
+                                        <span>Eceran <b id="lbl-total-ecer">0</b> pcs</span>
                                     </div>
                                 </div>
                             </div>
@@ -233,14 +200,18 @@
                     </div>
 
                     <!-- TABEL ITEM BARANG -->
-                    <div class="card">
-                        <div class="card-header bg-success text-white py-2">
-                            <h3 class="card-title mb-0"><i class="fas fa-boxes mr-1"></i> Item Barang</h3>
+                    <div class="card so-panel so-items-panel">
+                        <div class="card-header so-panel-header">
+                            <span class="so-panel-icon so-panel-icon-success"><i class="fas fa-boxes"></i></span>
+                            <div>
+                                <h3 class="so-panel-title">Item Barang</h3>
+                                <div class="so-panel-subtitle">Daftar barang, batch, qty, harga, dan subtotal SO.</div>
+                            </div>
                         </div>
                         <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-sm mb-0" id="tbl-item">
-                                    <thead class="thead-dark">
+                            <div class="table-responsive so-item-table-shell">
+                                <table class="table table-sm mb-0 so-item-table" id="tbl-item">
+                                    <thead>
                                         <tr>
                                             <th style="min-width:220px">Barang</th>
                                             <th style="min-width:155px">Expired / Lot</th>
@@ -257,7 +228,7 @@
                                     </thead>
                                     <tbody id="item-body"></tbody>
                                     <tfoot>
-                                        <tr class="bg-light font-weight-bold">
+                                        <tr>
                                             <td colspan="9" class="text-right">GRAND TOTAL</td>
                                             <td class="text-right" id="total-grand">0</td>
                                             <td></td>
@@ -268,19 +239,19 @@
                         </div>
                     </div>
                     <!-- TOMBOL AKSI di pojok kanan bawah & kiri bawah -->
-                    <div class="row mt-3">
+                    <div class="row mt-3 so-action-row">
                         <div class="col-6">
                             <!-- Tombol Tambah Baris di pojok kiri bawah -->
-                            <button type="button" class="btn btn-success" id="btn-add-row">
+                            <button type="button" class="btn btn-success so-action-btn" id="btn-add-row">
                                 <i class="fas fa-plus"></i> Tambah Baris
                             </button>
                         </div>
                         <div class="col-6 text-right">
                             <!-- Tombol Batal & Simpan di pojok kanan bawah -->
-                             <button type="submit" class="btn btn-primary" id="btn-submit">
+                             <button type="submit" class="btn btn-primary so-action-btn" id="btn-submit">
                                 <i class="fas fa-save"></i> Simpan SO
                             </button>
-                            <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary mr-2">
+                            <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary so-action-btn mr-2">
                                 <i class="fas fa-times"></i> Batal
                             </a>
                         </div>
@@ -302,15 +273,24 @@
 <div class="modal fade" id="modal-stock" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white py-2">
-                <h5 class="modal-title"><i class="fas fa-search mr-1"></i> Pilih Barang</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            <div class="modal-header stock-modal-header">
+                <div class="d-flex align-items-center">
+                    <span class="stock-modal-icon"><i class="fas fa-box-open"></i></span>
+                    <div>
+                        <h5 class="stock-modal-title">Pilih Barang</h5>
+                        <div class="stock-modal-subtitle">Stok tersedia per batch, expired date, dan lot.</div>
+                    </div>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="stock-search" class="form-control mb-2" placeholder="Cari kode atau nama barang...">
-                <div style="max-height:420px;overflow-y:auto">
-                    <table class="table table-bordered table-sm table-hover mb-0" id="tbl-stock-pick">
-                        <thead class="thead-dark sticky-top">
+                <div class="stock-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="stock-search" class="form-control" placeholder="Cari kode atau nama barang...">
+                </div>
+                <div class="stock-table-shell">
+                    <table class="table table-sm mb-0" id="tbl-stock-pick">
+                        <thead>
                             <tr>
                                 <th class="col-stock-name">Nama Barang</th><th class="col-stock-exp">Exp Date</th><th class="col-stock-lot">No Lot</th>
                                 <th class="text-right">Avail Box</th><th class="text-right">Sisa Ecer</th>
@@ -323,7 +303,7 @@
                             </tr>
                         </thead>
                         <tbody id="stock-body">
-                            <tr><td colspan="9" class="text-center text-muted py-3">
+                            <tr><td colspan="12" class="text-center text-muted py-4">
                                 <i class="fas fa-spinner fa-spin mr-1"></i> Memuat...
                             </td></tr>
                         </tbody>
@@ -338,17 +318,26 @@
 <div class="modal fade" id="modal-customer" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white py-2">
-                <h5 class="modal-title"><i class="fas fa-users mr-1"></i> Pilih Customer</h5>
-                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            <div class="modal-header customer-modal-header">
+                <div class="d-flex align-items-center">
+                    <span class="customer-modal-icon"><i class="fas fa-store"></i></span>
+                    <div>
+                        <h5 class="customer-modal-title">Pilih Customer</h5>
+                        <div class="customer-modal-subtitle">Pilih customer berdasarkan nama, kios, atau rute.</div>
+                    </div>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="customer-search" class="form-control mb-2" placeholder="Cari nama customer / kode rute...">
-                <div style="max-height:450px;overflow-y:auto">
-                    <table class="table table-bordered table-sm table-hover mb-0">
-                        <thead class="thead-dark sticky-top">
+                <div class="customer-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="customer-search" class="form-control" placeholder="Cari nama customer, kios, atau kode rute...">
+                </div>
+                <div class="customer-table-shell">
+                    <table class="table table-sm mb-0" id="tbl-customer-pick">
+                        <thead>
                             <tr>
-                                <th>Nama Customer</th><th>Nama Kios</th><th>KD Rute</th>
+                                <th style="width:50%">Customer</th><th style="width:32%">Nama Kios</th><th style="width:18%">KD Rute</th>
                             </tr>
                         </thead>
                         <tbody id="customer-body"></tbody>
@@ -866,25 +855,28 @@ function renderStock(data) {
         var gdgObj=GUDANG_LIST.filter(function(g){return String(g.id_gudang)===gdgId;})[0];
         var gdgNm=gdgObj?gdgObj.nama_gudang:(gdgId||'-');
 
-        html+='<tr class="'+(isNew?'table-light':'')+' tr-pick-stock-row" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
-        html+='<td><small class="text-muted d-block">'+esc(kd)+'</small>'+(isNew?'<b>'+esc(d.nama_barang||'')+'</b>':'<span class="text-muted">&#x21B3;</span> '+esc(d.nama_barang||''))+'</td>';
-        html+='<td>'+(exp?'<span class="badge '+(isExpiringSoon(exp)?'badge-warning':'badge-success')+'">'+esc(formatTgl(exp))+'</span>':'-')+'</td>';
-        html+='<td class="stock-lot-cell">'+esc(d.no_lot||'-')+'</td>';
-        html+='<td class="text-right"><b class="text-success">'+fmtNum(avB,0)+' box</b></td>';
-        html+='<td class="text-right"><span class="text-info">'+fmtNum(avE,0)+' pcs</span></td>';
-        html+='<td class="text-right text-muted"><small>'+fmtNum(avT,0)+' pcs</small></td>';
-        html+='<td class="text-center"><span class="badge badge-secondary">'+isi+'</span></td>';
-        html+='<td>'+esc(d.satuan||'')+'</td>';
+        html+='<tr class="tr-pick-stock-row" tabindex="0" data-stock-key="'+esc(stockKey)+'">';
+        html+='<td><span class="stock-code-badge">'+esc(kd)+'</span>'
+            +'<span class="stock-name-main">'+esc(d.nama_barang||'')+'</span>'
+            +(!isNew?'<span class="stock-name-sub">Lot lain untuk barang yang sama</span>':'')
+            +'</td>';
+        html+='<td>'+(exp?'<span class="stock-exp-badge '+(isExpiringSoon(exp)?'warn':'ok')+'">'+esc(formatTgl(exp))+'</span>':'<span class="text-muted">-</span>')+'</td>';
+        html+='<td class="stock-lot-cell"><span class="stock-lot-pill">'+esc(d.no_lot||'-')+'</span></td>';
+        html+='<td class="text-right"><span class="stock-metric text-success">'+fmtNum(avB,0)+'</span><span class="stock-metric-label">box</span></td>';
+        html+='<td class="text-right"><span class="stock-metric text-info">'+fmtNum(avE,0)+'</span><span class="stock-metric-label">pcs</span></td>';
+        html+='<td class="text-right"><span class="stock-metric">'+fmtNum(avT,0)+'</span><span class="stock-metric-label">pcs total</span></td>';
+        html+='<td class="text-center"><span class="stock-isi-pill">'+isi+'</span></td>';
+        html+='<td><span class="font-weight-bold text-secondary">'+esc(d.satuan||'-')+'</span></td>';
         html+='<td class="text-right"><small>'+(parseFloat(d.berat_gram||0)/1000).toFixed(3)+' kg</small></td>';
         html+='<td class="text-right"><small>'+parseFloat(d.kubikasi_m3||0).toFixed(6)+' m³</small></td>';
         html+='<td><small class="text-muted">'+esc(gdgNm)+'</small></td>';
-        html+='<td class="text-center"><button type="button" class="btn btn-xs btn-primary btn-pick-stock"'
+        html+='<td class="text-center"><button type="button" class="btn btn-sm btn-primary btn-pick-stock"'
             +' data-kd="'+esc(kd)+'" data-nm="'+esc(d.nama_barang||'')+'" data-exp="'+esc(exp)+'"'
             +' data-lot="'+esc(d.no_lot||'')+'" data-sat="'+esc(d.satuan||'')+'" data-av="'+avT+'"'
             +' data-ton="'+parseFloat(d.berat_gram||0)+'" data-kub="'+parseFloat(d.kubikasi_m3||0)+'"'
             +' data-isi="'+isi+'" data-gudang="'+esc(gdgId)+'" data-pk="'+parseFloat(d.hpp||0)+'"'
             +' data-stock-key="'+esc(stockKey)+'">'
-            +'<i class="fas fa-check"></i> Pilih</button></td>';
+            +'<i class="fas fa-check mr-1"></i>Pilih</button></td>';
         html+='</tr>';
     });
     document.getElementById('stock-body').innerHTML = html;
@@ -959,16 +951,24 @@ function renderCustomers(q) {
     }) : CUSTOMERS;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
-            '<tr><td colspan="3" class="text-center text-muted">Tidak ada.</td></tr>';
+            '<tr><td colspan="3" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
         return;
     }
     var html = '';
     list.forEach(function(c){
+        var nama = c.nama_customer || '';
+        var initials = String(nama || '?').trim().split(/\s+/).slice(0, 2).map(function(part){
+            return part.charAt(0);
+        }).join('').toUpperCase() || '?';
         html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'"'
-              + ' style="cursor:pointer" title="Klik untuk memilih">'
-              + '<td><b>'+esc(c.nama_customer||'')+'</b></td>'
-              + '<td><small>'+esc(c.nama_kios||'-')+'</small></td>'
-              + '<td><span class="badge badge-primary">'+esc(c.kd_rute||'-')+'</span></td>'
+              + ' title="Klik untuk memilih">'
+              + '<td><div class="d-flex align-items-center">'
+              + '<span class="customer-avatar">'+esc(initials)+'</span>'
+              + '<div><span class="customer-name-main">'+esc(nama)+'</span>'
+              + '<span class="customer-code-sub">'+esc(c.kd_customer||'-')+'</span></div>'
+              + '</div></td>'
+              + '<td><span class="customer-kios-pill">'+esc(c.nama_kios||'-')+'</span></td>'
+              + '<td><span class="customer-route-pill">'+esc(c.kd_rute||'-')+'</span></td>'
               + '</tr>';
     });
     document.getElementById('customer-body').innerHTML = html;

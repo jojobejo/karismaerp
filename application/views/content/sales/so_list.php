@@ -1,21 +1,38 @@
 <!-- views/content/sales/so_list.php -->
 <style>
     #tabelSO_wrapper {
-        padding: 4px 6px;
+        padding: 0 6px 6px;
+    }
+
+    #tabelSO_wrapper .row:first-child,
+    #tabelSO_wrapper .row:last-child {
+        margin-left: 0;
+        margin-right: 0;
+        padding: 4px 8px;
     }
 
     #tabelSO_wrapper .dataTables_length,
-    #tabelSO_wrapper .dataTables_filter {
-        margin-bottom: 4px;
-    }
-
+    #tabelSO_wrapper .dataTables_filter,
     #tabelSO_wrapper .dataTables_info,
     #tabelSO_wrapper .dataTables_paginate {
-        margin-top: 6px;
+        margin: 0;
+        padding-top: 0;
+    }
+
+    #tabelSO_wrapper .dataTables_length label,
+    #tabelSO_wrapper .dataTables_filter label {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+        margin-bottom: 0;
+    }
+
+    #tabelSO_wrapper .dataTables_filter label {
+        justify-content: flex-end;
     }
 
     #tabelSO_wrapper .dataTables_filter input {
-        margin-left: 6px;
+        margin-left: 0;
         height: 30px;
         padding: 3px 8px;
         max-width: 180px;
@@ -31,7 +48,7 @@
         margin-bottom: 4px;
     }
 </style>
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">

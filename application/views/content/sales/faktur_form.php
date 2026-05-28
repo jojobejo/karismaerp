@@ -1,5 +1,5 @@
 <!-- views/content/sales/faktur_form.php -->
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">

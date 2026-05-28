@@ -128,7 +128,7 @@
         }
     }
 </style>
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -200,7 +200,7 @@
             <div class="row">
                 <!-- Info Faktur -->
                 <div class="col-md-5">
-                    <div class="card card-outline card-success">
+                    <div class="card card-outline card-success faktur-info-card">
                         <div class="card-header">
                             <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informasi Faktur</h3>
                         </div>

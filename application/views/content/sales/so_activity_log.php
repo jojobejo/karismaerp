@@ -2,12 +2,17 @@
 <?php
 function aksi_badge($aksi) {
     $map = [
-        'CREATE'      => ['success', 'fa-plus-circle',  'Buat SO'],
-        'CREATE_NEGO' => ['warning', 'fa-tag',           'Buat SO (Nego)'],
-        'UPDATE'      => ['primary', 'fa-edit',          'Update SO'],
-        'CANCEL'      => ['danger',  'fa-times-circle',  'Batalkan SO'],
-        'APPROVE'     => ['success', 'fa-check-circle',  'Approve Nego'],
-        'REJECT'      => ['danger',  'fa-ban',           'Reject Nego'],
+        'CREATE'      => ['success',   'fa-plus-circle',        'Buat SO'],
+        'CREATE_SO'   => ['success',   'fa-plus-circle',        'Buat SO'],
+        'CREATE_NEGO' => ['warning',   'fa-tag',                'Buat SO (Nego)'],
+        'UPDATE'      => ['primary',   'fa-edit',               'Update SO'],
+        'UPDATE_SO'   => ['primary',   'fa-edit',               'Update SO'],
+        'REKAM_SO'    => ['info',      'fa-clipboard-check',    'Rekam SO'],
+        'CANCEL'      => ['danger',    'fa-times-circle',       'Batalkan SO'],
+        'CANCEL_SO'   => ['danger',    'fa-times-circle',       'Batalkan SO'],
+        'BUAT_FAKTUR' => ['dark',      'fa-file-invoice-dollar','Buat Faktur'],
+        'APPROVE'     => ['success',   'fa-check-circle',       'Approve Nego'],
+        'REJECT'      => ['danger',    'fa-ban',                'Reject Nego'],
     ];
     $a   = strtoupper($aksi);
     $cfg = $map[$a] ?? ['secondary', 'fa-circle', $aksi];
@@ -17,7 +22,7 @@ function aksi_badge($aksi) {
          . '</span>';
 }
 ?>
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -95,7 +100,7 @@ function aksi_badge($aksi) {
                                     <select name="aksi" class="form-control form-control-sm">
                                         <option value="">-- Semua --</option>
                                         <?php
-                                        $aksi_list = ['CREATE','CREATE_NEGO','UPDATE','CANCEL','APPROVE','REJECT'];
+                                        $aksi_list = ['CREATE_SO','CREATE','UPDATE_SO','UPDATE','REKAM_SO','BUAT_FAKTUR','CANCEL_SO','CANCEL','CREATE_NEGO','APPROVE','REJECT'];
                                         foreach ($aksi_list as $a):
                                         ?>
                                         <option value="<?= $a ?>" <?= $filter['aksi'] === $a ? 'selected' : '' ?>>

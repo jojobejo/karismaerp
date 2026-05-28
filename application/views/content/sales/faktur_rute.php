@@ -107,7 +107,7 @@
     }
 </style>
 
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
         <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>"
