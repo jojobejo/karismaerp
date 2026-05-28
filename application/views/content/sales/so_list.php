@@ -225,7 +225,7 @@
                                     </td>
                                     <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tanggal_transaksi'])) ?></td>
                                     <td><?= htmlspecialchars($row['customer_name']) ?></td>
-                                    <td><?= !empty($row['regional']) ? htmlspecialchars($row['regional']) : '<span class="text-muted">-</span>' ?></td>
+                                    <td><?= !empty($row['customer_kd_rute']) ? htmlspecialchars($row['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></td>
                                     <td class="text-center"><?= number_format($item_diorder) ?></td>
                                     <td class="text-center text-success font-weight-bold">
                                         <?= number_format($item_diterima) ?>

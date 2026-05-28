@@ -52,7 +52,7 @@
                 Membuat Faktur Penjualan dari SO <strong><?= htmlspecialchars($so['no_so']) ?></strong>
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
                 Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11%' : 'Non Pajak' ?></strong>.
-                Rute / Regional: <strong><?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?></strong>
+                Rute / Regional: <strong><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></strong>
             </div>
 
             <form action="<?= base_url('sales_order/simpan_faktur/' . $so['id_so']) ?>" method="post"

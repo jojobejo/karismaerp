@@ -447,6 +447,7 @@ class M_SalesOrder extends CI_Model
             so.*,
             c.nama_customer,
             c.regional,
+            c.kd_rute AS customer_kd_rute,
             COUNT(sd.id)                                                        AS jumlah_item,
             SUM(CASE WHEN (sd.qty - COALESCE(sd.qty_faktur, 0)) <= 0
                     THEN 1 ELSE 0 END)                                         AS jumlah_item_diterima,
@@ -472,7 +473,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so($id_so)
     {
-        $this->db->select('so.*, c.nama_customer, c.regional');
+        $this->db->select('so.*, c.nama_customer, c.regional, c.kd_rute AS customer_kd_rute');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->where('so.id_so', $id_so);
@@ -741,7 +742,7 @@ class M_SalesOrder extends CI_Model
      */
     public function get_faktur($id_faktur)
     {
-        $this->db->select('f.*, c.nama_customer');
+        $this->db->select('f.*, c.nama_customer, c.kd_rute AS customer_kd_rute');
         $this->db->from('tbso_faktur_penjualan f');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
         $this->db->where('f.id_faktur', $id_faktur);

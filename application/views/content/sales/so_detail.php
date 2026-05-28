@@ -189,7 +189,7 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted pl-3">Rute / Regional</td>
-                                    <td><?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?></td>
+                                    <td><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted pl-3">Gudang</td>

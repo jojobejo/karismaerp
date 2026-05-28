@@ -167,6 +167,7 @@
 
     <section class="content">
         <div class="container-fluid">
+            <?php $customer_kd_rute = $faktur['customer_kd_rute'] ?? $so['customer_kd_rute'] ?? ''; ?>
 
             <div class="invoice-print-header">
                 <div>
@@ -181,6 +182,7 @@
                         <div>Jatuh Tempo: <?= date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) ?></div>
                     <?php endif; ?>
                     <div>Customer: <strong><?= htmlspecialchars($faktur['customer_name']) ?></strong></div>
+                    <div>Rute / Regional: <strong><?= !empty($customer_kd_rute) ? htmlspecialchars($customer_kd_rute) : '-' ?></strong></div>
                 </div>
             </div>
 
@@ -229,6 +231,10 @@
                                 <tr>
                                     <td class="text-muted">Customer</td>
                                     <td><strong><?= htmlspecialchars($faktur['customer_name']) ?></strong></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Rute / Regional</td>
+                                    <td><strong><?= !empty($customer_kd_rute) ? htmlspecialchars($customer_kd_rute) : '<span class="text-muted">-</span>' ?></strong></td>
                                 </tr>
                                 <?php if (!empty($faktur['salesman'])): ?>
                                 <tr>
