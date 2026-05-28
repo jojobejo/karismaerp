@@ -80,6 +80,8 @@ class C_SalesOrder extends CI_Controller
 
     private function _getFakturUserPrefix()
     {
+        $this->_ensureFakturPrefixColumn();
+
         $current_id = $this->session->userdata('id_karyawan')
             ?? $this->session->userdata('id')
             ?? $this->session->userdata('user_id')
@@ -94,24 +96,120 @@ class C_SalesOrder extends CI_Controller
             ?? null;
 
         $users = $this->db
-            ->select('id, username, nm_karyawan')
+            ->select('id, username, nm_karyawan, faktur_prefix')
             ->where_in('jobdesk', ['SC', 'SALES', 'SALESCOUNTER', 'SALESONLINE'])
             ->order_by('id', 'ASC')
             ->get('tb_karyawan')
             ->result_array();
+        $users = $this->_seedMissingFakturPrefixes($users);
 
         $index = $this->_findUserPrefixIndex($users, $current_id, $current_username, $current_name);
+        $current_user = $index === null ? null : $users[$index];
 
         if ($index === null) {
             $users = $this->db
-                ->select('id, username, nm_karyawan')
+                ->select('id, username, nm_karyawan, faktur_prefix')
                 ->order_by('id', 'ASC')
                 ->get('tb_karyawan')
                 ->result_array();
+            $users = $this->_seedMissingFakturPrefixes($users);
             $index = $this->_findUserPrefixIndex($users, $current_id, $current_username, $current_name);
+            $current_user = $index === null ? null : $users[$index];
         }
 
-        return $index === null ? 'X' : $this->_numberToFakturPrefix($index + 1);
+        if (!$current_user) {
+            return 'X';
+        }
+
+        $saved_prefix = $this->_normalizeFakturPrefix($current_user['faktur_prefix'] ?? '');
+        if ($saved_prefix !== '') {
+            return $saved_prefix;
+        }
+
+        $legacy_prefix = $this->_numberToFakturPrefix($index + 1);
+        $prefix = $this->_getAvailableFakturPrefix($legacy_prefix, $current_user['id']);
+
+        $this->db
+            ->where('id', $current_user['id'])
+            ->update('tb_karyawan', ['faktur_prefix' => $prefix]);
+
+        return $prefix;
+    }
+
+    private function _seedMissingFakturPrefixes(array $users)
+    {
+        foreach ($users as $index => &$user) {
+            $saved_prefix = $this->_normalizeFakturPrefix($user['faktur_prefix'] ?? '');
+            if ($saved_prefix !== '') {
+                $user['faktur_prefix'] = $saved_prefix;
+                continue;
+            }
+
+            $legacy_prefix = $this->_numberToFakturPrefix($index + 1);
+            $prefix = $this->_getAvailableFakturPrefix($legacy_prefix, $user['id']);
+            $this->db
+                ->where('id', $user['id'])
+                ->update('tb_karyawan', ['faktur_prefix' => $prefix]);
+
+            $user['faktur_prefix'] = $prefix;
+        }
+        unset($user);
+
+        return $users;
+    }
+
+    private function _ensureFakturPrefixColumn()
+    {
+        if ($this->db->field_exists('faktur_prefix', 'tb_karyawan')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tb_karyawan', [
+            'faktur_prefix' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 4,
+                'null'       => true,
+                'after'      => 'username',
+            ],
+        ]);
+    }
+
+    private function _normalizeFakturPrefix($prefix)
+    {
+        return preg_replace('/[^A-Z]/', '', strtoupper((string)$prefix));
+    }
+
+    private function _getAvailableFakturPrefix($preferred_prefix, $current_user_id)
+    {
+        $preferred_prefix = $this->_normalizeFakturPrefix($preferred_prefix);
+        if ($preferred_prefix === '') {
+            $preferred_prefix = 'X';
+        }
+
+        if (!$this->_isFakturPrefixUsedByOtherUser($preferred_prefix, $current_user_id)) {
+            return $preferred_prefix;
+        }
+
+        $number = 1;
+        do {
+            $candidate = $this->_numberToFakturPrefix($number++);
+        } while ($this->_isFakturPrefixUsedByOtherUser($candidate, $current_user_id));
+
+        return $candidate;
+    }
+
+    private function _isFakturPrefixUsedByOtherUser($prefix, $current_user_id)
+    {
+        $prefix = $this->_normalizeFakturPrefix($prefix);
+        if ($prefix === '') {
+            return false;
+        }
+
+        return $this->db
+            ->where('faktur_prefix', $prefix)
+            ->where('id !=', $current_user_id)
+            ->count_all_results('tb_karyawan') > 0;
     }
 
     private function _findUserPrefixIndex(array $users, $current_id, $current_username, $current_name)
