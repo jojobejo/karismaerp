@@ -471,6 +471,124 @@ class M_SalesOrder extends CI_Model
         return $this->db->get()->result_array();
     }
 
+    public function get_so_rute_summary($filter = [])
+    {
+        $where = "WHERE COALESCE(c.kd_rute, '') <> '' AND so.status <> 'cancelled'";
+        $params = [];
+
+        if (!empty($filter['create_by'])) {
+            $where .= " AND so.create_by = ?";
+            $params[] = $filter['create_by'];
+        }
+
+        $sql = "
+            SELECT
+                r.kd_rute,
+                COALESCE(NULLIF(r.keterangan, ''), r.kd_rute) AS nama_rute,
+                COALESCE(p.total_so, 0) AS total_so,
+                COALESCE(p.total_tonase, 0) AS total_tonase,
+                COALESCE(p.total_kubikasi, 0) AS total_kubikasi,
+                COALESCE(p.total_qty_order, 0) AS total_qty_order,
+                COALESCE(p.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(p.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tb_rutecs r
+            LEFT JOIN (
+                SELECT
+                    x.kd_rute,
+                    COUNT(*) AS total_so,
+                    ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                    ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi,
+                    ROUND(COALESCE(SUM(x.total_qty_order), 0), 2) AS total_qty_order,
+                    ROUND(COALESCE(SUM(x.total_qty_faktur), 0), 2) AS total_qty_faktur,
+                    ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding
+                FROM (
+                    SELECT
+                        c.kd_rute,
+                        so.id_so,
+                        COALESCE(so.total_tonase, 0) AS total_tonase,
+                        COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
+                        COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                        COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                        COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                    FROM tbso_sales_order so
+                    LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+                    LEFT JOIN (
+                        SELECT
+                            id_so,
+                            SUM(qty) AS total_qty_order,
+                            SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                            SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                        FROM tbso_sales_order_detail
+                        GROUP BY id_so
+                    ) d ON d.id_so = so.id_so
+                    {$where}
+                ) x
+                GROUP BY x.kd_rute
+            ) p ON p.kd_rute = r.kd_rute
+            ORDER BY
+                COALESCE(p.total_so, 0) DESC,
+                COALESCE(p.total_tonase, 0) DESC,
+                COALESCE(p.total_kubikasi, 0) DESC,
+                r.kd_rute ASC
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function get_so_by_rute($kd_rute = '', $filter = [])
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return [];
+        }
+
+        $params = [$kd_rute];
+        $where = "WHERE c.kd_rute = ? AND so.status <> 'cancelled'";
+
+        if (!empty($filter['create_by'])) {
+            $where .= " AND so.create_by = ?";
+            $params[] = $filter['create_by'];
+        }
+
+        $sql = "
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.status,
+                so.customer_name,
+                so.create_by,
+                so.total_tonase,
+                so.total_kubikasi,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                c.kd_rute AS customer_kd_rute,
+                COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
+                COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN (
+                SELECT
+                    id_so,
+                    COUNT(id) AS jumlah_item,
+                    SUM(CASE WHEN (qty - COALESCE(qty_faktur, 0)) <= 0 THEN 1 ELSE 0 END) AS jumlah_item_diterima,
+                    SUM(qty) AS total_qty_order,
+                    SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            {$where}
+            ORDER BY so.tanggal_transaksi DESC, so.no_so DESC
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function get_so($id_so)
     {
         $this->db->select('so.*, c.nama_customer, c.regional, c.kd_rute AS customer_kd_rute');
@@ -546,6 +664,9 @@ class M_SalesOrder extends CI_Model
             'create_by'         => $header['create_by'],
             'create_at'         => date('Y-m-d H:i:s'),
         ];
+        if ($this->db->field_exists('is_faktur_z', 'tbso_sales_order')) {
+            $so_data['is_faktur_z'] = !empty($header['is_faktur_z']) ? 1 : 0;
+        }
 
         $this->db->insert('tbso_sales_order', $so_data);
         $id_so    = $this->db->insert_id();
@@ -657,8 +778,7 @@ class M_SalesOrder extends CI_Model
         $gudang_id = $header['gudang_id'];
 
         // Update header
-        $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order', [
+        $so_update = [
             'tanggal_transaksi' => $header['tanggal_transaksi'],
             'kd_customer'       => $header['kd_customer'],
             'customer_name'     => $header['customer_name'],
@@ -670,7 +790,12 @@ class M_SalesOrder extends CI_Model
             'catatan'           => $header['catatan'] ?? null,
             'update_by'         => $header['update_by'],
             'update_at'         => date('Y-m-d H:i:s'),
-        ]);
+        ];
+        if ($this->db->field_exists('is_faktur_z', 'tbso_sales_order')) {
+            $so_update['is_faktur_z'] = !empty($header['is_faktur_z']) ? 1 : 0;
+        }
+        $this->db->where('id_so', $id_so);
+        $this->db->update('tbso_sales_order', $so_update);
 
         // Lepas reservasi draft lama sebelum mengganti detail SO.
         $old_details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();

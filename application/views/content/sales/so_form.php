@@ -140,6 +140,27 @@
                                         </div>
                                     </div>
 
+                                    <div class="form-group so-form-row mb-0 mt-2">
+                                        <label class="so-form-label">Faktur</label>
+                                        <div class="so-form-control">
+                                            <input type="hidden" name="is_faktur_z" value="0">
+                                            <div class="custom-control custom-checkbox">
+                                                <input type="checkbox"
+                                                       class="custom-control-input"
+                                                       id="is_faktur_z"
+                                                       name="is_faktur_z"
+                                                       value="1"
+                                                       <?= !empty($so['is_faktur_z']) ? 'checked' : '' ?>>
+                                                <label class="custom-control-label" for="is_faktur_z">
+                                                    Faktur Z
+                                                </label>
+                                            </div>
+                                            <small class="text-muted">
+                                                Jika dicentang, nomor faktur dari SO ini otomatis memakai awalan Z.
+                                            </small>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>

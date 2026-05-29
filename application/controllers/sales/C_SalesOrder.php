@@ -175,6 +175,24 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    private function _ensureSoFakturZColumn()
+    {
+        if ($this->db->field_exists('is_faktur_z', 'tbso_sales_order')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order', [
+            'is_faktur_z' => [
+                'type'       => 'TINYINT',
+                'constraint' => 1,
+                'default'    => 0,
+                'null'       => false,
+                'after'      => 'catatan',
+            ],
+        ]);
+    }
+
     private function _normalizeFakturPrefix($prefix)
     {
         return preg_replace('/[^A-Z]/', '', strtoupper((string)$prefix));
@@ -303,6 +321,7 @@ class C_SalesOrder extends CI_Controller
     public function store()
     {
         if ($this->input->method() !== 'post') show_404();
+        $this->_ensureSoFakturZColumn();
 
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
@@ -341,6 +360,7 @@ class C_SalesOrder extends CI_Controller
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'catatan'           => $post['catatan'] ?? null,
+            'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
             'create_by'         => $this->_getUsername(),
         ];
 
@@ -463,6 +483,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function update($id_so)
     {
+        $this->_ensureSoFakturZColumn();
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
         if (!$this->_canAccessSo($so)) {
@@ -503,6 +525,7 @@ class C_SalesOrder extends CI_Controller
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'catatan'           => $post['catatan'] ?? null,
+            'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
             'update_by'         => $this->_getUsername(),
         ];
 
@@ -624,6 +647,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function form_faktur($id_so)
     {
+        $this->_ensureSoFakturZColumn();
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
             $this->_denySoAccess();
@@ -670,7 +695,8 @@ class C_SalesOrder extends CI_Controller
             $item['pajak'] = $tax_rate;
             return $item;
         }, array_values($items_outstanding));
-        $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($this->_getFakturUserPrefix());
+        $faktur_prefix             = !empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix();
+        $data['no_faktur']         = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         $data['tax_list']          = $this->M_SalesOrder->get_tax_list();
         $data['tax_mode']          = $tax_rate > 0 ? 'pajak' : 'non_pajak';
         $data['tax_rate']          = $tax_rate;
@@ -688,6 +714,7 @@ class C_SalesOrder extends CI_Controller
     public function simpan_faktur($id_so)
     {
         if ($this->input->method() !== 'post') show_404();
+        $this->_ensureSoFakturZColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so || $so['status'] !== 'open') {
@@ -730,7 +757,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $faktur_prefix = $this->_getFakturUserPrefix();
+        $faktur_prefix = !empty($so['is_faktur_z']) ? 'Z' : $this->_getFakturUserPrefix();
         $expected_prefix = $faktur_prefix . 'INV' . date('dmy');
         $posted_no_faktur = trim((string)($post['no_faktur'] ?? ''));
         $no_faktur = $posted_no_faktur;
@@ -857,6 +884,56 @@ class C_SalesOrder extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_rute.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    // ================================================================
+    // SO PER RUTE - hanya menampilkan daftar Sales Order berdasarkan rute
+    // ================================================================
+    public function so_rute()
+    {
+        $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
+        $filter = [];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $routes = $this->M_SalesOrder->get_so_rute_summary($filter);
+        if ($selected_rute === '' && !empty($routes)) {
+            $selected_rute = $routes[0]['kd_rute'];
+        }
+
+        $sales_orders = $this->M_SalesOrder->get_so_by_rute($selected_rute, $filter);
+
+        $total_tonase = 0;
+        $total_kubikasi = 0;
+        $total_qty_order = 0;
+        $total_qty_faktur = 0;
+        $total_qty_outstanding = 0;
+        foreach ($sales_orders as $so) {
+            $total_tonase += (float)($so['total_tonase'] ?? 0);
+            $total_kubikasi += (float)($so['total_kubikasi'] ?? 0);
+            $total_qty_order += (float)($so['total_qty_order'] ?? 0);
+            $total_qty_faktur += (float)($so['total_qty_faktur'] ?? 0);
+            $total_qty_outstanding += (float)($so['total_qty_outstanding'] ?? 0);
+        }
+
+        $data['page_title']            = 'KARISMA - SO per Rute';
+        $data['routes']                = $routes;
+        $data['selected_rute']         = $selected_rute;
+        $data['sales_orders']          = $sales_orders;
+        $data['batas_tonase']          = M_SalesOrder::BATAS_TONASE;
+        $data['batas_kubikasi']        = M_SalesOrder::BATAS_KUBIKASI;
+        $data['total_tonase']          = round($total_tonase, 3);
+        $data['total_kubikasi']        = round($total_kubikasi, 4);
+        $data['sisa_tonase']           = round(M_SalesOrder::BATAS_TONASE - $total_tonase, 3);
+        $data['sisa_kubikasi']         = round(M_SalesOrder::BATAS_KUBIKASI - $total_kubikasi, 4);
+        $data['total_qty_order']       = round($total_qty_order, 2);
+        $data['total_qty_faktur']      = round($total_qty_faktur, 2);
+        $data['total_qty_outstanding'] = round($total_qty_outstanding, 2);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/so_rute.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 

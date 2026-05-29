@@ -70,6 +70,11 @@
                                     <label>No. Faktur <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" name="no_faktur"
                                            value="<?= htmlspecialchars($no_faktur) ?>" readonly>
+                                    <?php if (!empty($so['is_faktur_z'])): ?>
+                                        <small class="text-info">
+                                            <i class="fas fa-check-circle mr-1"></i>Mode Faktur Z dari Sales Order.
+                                        </small>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="form-group">
                                     <label>Tanggal Faktur <span class="text-danger">*</span></label>
