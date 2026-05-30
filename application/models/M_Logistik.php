@@ -1201,6 +1201,170 @@ class M_Logistik extends CI_Model
         ")->result();
     }
 
+    public function get_so_siap_loading()
+    {
+        return $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.status,
+                so.customer_name,
+                so.create_by,
+                so.update_by,
+                so.update_at,
+                so.total_tonase,
+                so.total_kubikasi,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                c.kd_rute AS customer_kd_rute,
+                so.kd_rute AS so_kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN (
+                SELECT
+                    id_so,
+                    COUNT(id) AS jumlah_item,
+                    SUM(qty) AS total_qty_order,
+                    SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            WHERE so.status = 'sedang_verifikasi'
+            ORDER BY kd_rute ASC, so.update_at DESC, so.no_so DESC
+        ")->result();
+    }
+
+    public function get_so_siap_loading_rute_summary()
+    {
+        return $this->db->query("
+            SELECT
+                x.kd_rute,
+                MAX(x.nama_rute) AS nama_rute,
+                COUNT(*) AS total_so,
+                ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi,
+                ROUND(COALESCE(SUM(x.total_qty_order), 0), 2) AS total_qty_order,
+                ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding
+            FROM (
+                SELECT
+                    so.id_so,
+                    COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                    COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                    COALESCE(so.total_tonase, 0) AS total_tonase,
+                    COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
+                    COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                    COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                FROM tbso_sales_order so
+                LEFT JOIN tb_customer c
+                    ON c.kd_customer = so.kd_customer
+                LEFT JOIN tb_rutecs r
+                    ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+                LEFT JOIN (
+                    SELECT
+                        id_so,
+                        SUM(qty) AS total_qty_order,
+                        SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                    FROM tbso_sales_order_detail
+                    GROUP BY id_so
+                ) d ON d.id_so = so.id_so
+                WHERE so.status = 'sedang_verifikasi'
+            ) x
+            GROUP BY x.kd_rute
+            ORDER BY total_tonase DESC, total_so DESC, x.kd_rute ASC
+        ")->result();
+    }
+
+    public function get_so_siap_loading_by_rute($kd_rute)
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return [];
+        }
+
+        return $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.status,
+                so.customer_name,
+                so.create_by,
+                so.update_by,
+                so.update_at,
+                so.total_tonase,
+                so.total_kubikasi,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                c.kd_rute AS customer_kd_rute,
+                so.kd_rute AS so_kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN (
+                SELECT
+                    id_so,
+                    COUNT(id) AS jumlah_item,
+                    SUM(qty) AS total_qty_order,
+                    SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            WHERE so.status = 'sedang_verifikasi'
+            AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            ORDER BY so.update_at DESC, so.no_so DESC
+        ", [$kd_rute])->result();
+    }
+
+    public function count_so_siap_loading()
+    {
+        return (int)$this->db
+            ->where('status', 'sedang_verifikasi')
+            ->count_all_results('tbso_sales_order');
+    }
+
+    public function get_so_siap_loading_by_id($id_so)
+    {
+        return $this->db
+            ->where('id_so', $id_so)
+            ->where('status', 'sedang_verifikasi')
+            ->limit(1)
+            ->get('tbso_sales_order')
+            ->row_array();
+    }
+
+    public function kembalikan_so_siap_loading($id_so, $update_by)
+    {
+        $this->db->where('id_so', $id_so);
+        $this->db->where('status', 'sedang_verifikasi');
+        return $this->db->update('tbso_sales_order', [
+            'status'    => 'open',
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
     /**
      * Ambil log konfirmasi sales untuk satu DO
      */

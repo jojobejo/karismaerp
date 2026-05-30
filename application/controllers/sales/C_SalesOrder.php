@@ -210,6 +210,21 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    private function _ensureSoSedangVerifikasiStatus()
+    {
+        $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
+        $type = strtolower((string)($column['Type'] ?? ''));
+        if (strpos($type, "'sedang_verifikasi'") !== false) {
+            return;
+        }
+
+        $this->db->query("
+            ALTER TABLE tbso_sales_order
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','completed','cancelled')
+            NOT NULL DEFAULT 'draft'
+        ");
+    }
+
     private function _normalizeFakturPrefix($prefix)
     {
         return preg_replace('/[^A-Z]/', '', strtoupper((string)$prefix));
@@ -912,6 +927,7 @@ class C_SalesOrder extends CI_Controller
     public function so_rute()
     {
         $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
         $filter = [];
@@ -1017,6 +1033,66 @@ class C_SalesOrder extends CI_Controller
         }
 
         redirect('sales_order/so_rute?rute=' . rawurlencode($target_rute));
+    }
+
+    public function confirm_so_rute_loading()
+    {
+        if ($this->input->method() !== 'post') show_404();
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+
+        $kd_rute = trim((string)$this->input->post('kd_rute', true));
+        $note = trim((string)$this->input->post('note', true));
+        if ($kd_rute === '' || !$this->M_SalesOrder->rute_exists($kd_rute)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid.']);
+            exit;
+        }
+
+        $filter = [];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $sales_orders = $this->M_SalesOrder->get_so_by_rute($kd_rute, $filter);
+        if (empty($sales_orders)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Tidak ada SO Open pada rute ini.']);
+            exit;
+        }
+
+        $confirm_by = $this->_getUsername();
+        $updated = 0;
+        foreach ($sales_orders as $so) {
+            if (($so['status'] ?? '') !== 'open') {
+                continue;
+            }
+
+            if ($this->M_SalesOrder->update_status($so['id_so'], 'sedang_verifikasi', $confirm_by)) {
+                $updated++;
+                $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Sedang Verifikasi untuk rute ' . $kd_rute . '.';
+                if ($note !== '') {
+                    $description .= ' Catatan: ' . $note;
+                }
+                $this->M_ActivityLog->log(
+                    $so['no_so'] ?? '', '', 'SO_SIAP_LOADING',
+                    $description,
+                    $confirm_by
+                );
+            }
+        }
+
+        if ($updated <= 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'Tidak ada SO yang berhasil dikonfirmasi.']);
+            exit;
+        }
+
+        echo json_encode([
+            'msg'     => 'success',
+            'message' => $updated . ' SO rute ' . $kd_rute . ' berubah menjadi Sedang Verifikasi.'
+        ]);
+        exit;
     }
 
     // ================================================================

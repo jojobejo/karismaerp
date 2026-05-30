@@ -18,6 +18,38 @@ class C_Logistik extends CI_Controller
         is_logged_in();
     }
 
+    private function _ensureSoRouteColumn()
+    {
+        if ($this->db->field_exists('kd_rute', 'tbso_sales_order')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order', [
+            'kd_rute' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
+                'null'       => true,
+                'after'      => 'kd_customer',
+            ],
+        ]);
+    }
+
+    private function _ensureSoSedangVerifikasiStatus()
+    {
+        $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
+        $type = strtolower((string)($column['Type'] ?? ''));
+        if (strpos($type, "'sedang_verifikasi'") !== false) {
+            return;
+        }
+
+        $this->db->query("
+            ALTER TABLE tbso_sales_order
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','completed','cancelled')
+            NOT NULL DEFAULT 'draft'
+        ");
+    }
+
     public function index()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
@@ -945,15 +977,70 @@ class C_Logistik extends CI_Controller
 
     public function delivery_order()
     {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdgenerate']     = $this->M_Keuangan->generate_update();
         $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
         $data['updated']        = $this->M_Logistik->get_updated_data_preparation();
         $data['listdo']         = $this->M_Logistik->getdo();
+        $data['total_so_siap_loading'] = $this->M_Logistik->count_so_siap_loading();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function so_siap_loading()
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+
+        $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
+        $routes = $this->M_Logistik->get_so_siap_loading_rute_summary();
+        if ($selected_rute === '' && !empty($routes)) {
+            $selected_rute = $routes[0]->kd_rute;
+        }
+
+        $data['page_title']    = 'KARISMA - LOGISTIK - SO Siap Loading';
+        $data['routes']        = $routes;
+        $data['selected_rute'] = $selected_rute;
+        $data['so_list']       = $this->M_Logistik->get_so_siap_loading_by_rute($selected_rute);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_siap_loading.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function kembalikan_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $current_rute = trim((string)$this->input->post('current_rute', true));
+        $redirect_url = 'logistik/so_siap_loading' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : '');
+
+        $so = $this->M_Logistik->get_so_siap_loading_by_id($id_so);
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau statusnya sudah bukan Sedang Verifikasi.');
+            redirect($redirect_url);
+            return;
+        }
+
+        $user = $this->session->userdata('nama')
+            ?? $this->session->userdata('nm_karyawan')
+            ?? $this->session->userdata('username')
+            ?? 'system';
+
+        $updated = $this->M_Logistik->kembalikan_so_siap_loading($id_so, $user);
+        if ($updated) {
+            $this->session->set_flashdata('msg', 'SO <b>' . htmlspecialchars($so['no_so']) . '</b> dikembalikan ke status Open.');
+        } else {
+            $this->session->set_flashdata('msg', 'Gagal mengembalikan SO ke status Open.');
+        }
+
+        redirect($redirect_url);
     }
 
     public function create_do()

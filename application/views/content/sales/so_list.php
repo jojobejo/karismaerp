@@ -155,6 +155,7 @@
                                     <option value="">-- Semua Status --</option>
                                     <option value="draft"     <?= ($filter['status'] ?? '') === 'draft'     ? 'selected' : '' ?>>Draft</option>
                                     <option value="open"      <?= ($filter['status'] ?? '') === 'open'      ? 'selected' : '' ?>>Open</option>
+                                    <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Sedang Verifikasi</option>
                                     <option value="completed" <?= ($filter['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Completed</option>
                                     <option value="cancelled" <?= ($filter['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                                 </select>
@@ -209,16 +210,18 @@
                             <?php else: ?>
                                 <?php
                                 $badge_map = [
-                                    'draft'     => 'secondary',
-                                    'open'      => 'primary',
-                                    'completed' => 'success',
-                                    'cancelled' => 'danger',
+                                    'draft'              => 'secondary',
+                                    'open'               => 'primary',
+                                    'sedang_verifikasi'  => 'warning',
+                                    'completed'          => 'success',
+                                    'cancelled'          => 'danger',
                                 ];
                                 $label_map = [
-                                    'draft'     => 'Draft',
-                                    'open'      => 'Open',
-                                    'completed' => 'Completed',
-                                    'cancelled' => 'Cancelled',
+                                    'draft'              => 'Draft',
+                                    'open'               => 'Open',
+                                    'sedang_verifikasi'  => 'Sedang Verifikasi',
+                                    'completed'          => 'Completed',
+                                    'cancelled'          => 'Cancelled',
                                 ];
                                 foreach ($so_list as $row):
                                     $badge      = $badge_map[$row['status']] ?? 'secondary';

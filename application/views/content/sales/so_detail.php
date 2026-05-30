@@ -71,16 +71,18 @@
 
             <?php
             $badge_map = [
-                'draft'     => 'secondary',
-                'open'      => 'primary',
-                'completed' => 'success',
-                'cancelled' => 'danger',
+                'draft'              => 'secondary',
+                'open'               => 'primary',
+                'sedang_verifikasi'  => 'warning',
+                'completed'          => 'success',
+                'cancelled'          => 'danger',
             ];
             $label_map = [
-                'draft'     => 'Draft',
-                'open'      => 'Open',
-                'completed' => 'Completed',
-                'cancelled' => 'Cancelled',
+                'draft'              => 'Draft',
+                'open'               => 'Open',
+                'sedang_verifikasi'  => 'Sedang Verifikasi',
+                'completed'          => 'Completed',
+                'cancelled'          => 'Cancelled',
             ];
             $badge = $badge_map[$so['status']] ?? 'secondary';
             $label = $label_map[$so['status']] ?? $so['status'];

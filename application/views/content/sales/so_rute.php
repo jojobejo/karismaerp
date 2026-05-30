@@ -170,16 +170,18 @@
         $ton_bar = $total_tonase > $batas_tonase ? 'danger' : ($pct_ton >= 80 ? 'warning' : 'success');
         $kub_bar = $total_kubikasi > $batas_kubikasi ? 'danger' : ($pct_kub >= 80 ? 'warning' : 'info');
         $badge_map = [
-            'draft'     => 'secondary',
-            'open'      => 'primary',
-            'completed' => 'success',
-            'cancelled' => 'danger',
+            'draft'              => 'secondary',
+            'open'               => 'primary',
+            'sedang_verifikasi'  => 'warning',
+            'completed'          => 'success',
+            'cancelled'          => 'danger',
         ];
         $label_map = [
-            'draft'     => 'Draft',
-            'open'      => 'Open',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled',
+            'draft'              => 'Draft',
+            'open'               => 'Open',
+            'sedang_verifikasi'  => 'Sedang Verifikasi',
+            'completed'          => 'Completed',
+            'cancelled'          => 'Cancelled',
         ];
         ?>
 
@@ -201,6 +203,14 @@
                     <a href="<?= base_url('sales_order/faktur_rute') ?>" class="btn btn-success btn-sm ml-1">
                         <i class="fas fa-route mr-1"></i> Faktur per Rute
                     </a>
+                    <?php if (!empty($selected_rute) && !empty($sales_orders)): ?>
+                    <button type="button"
+                            class="btn btn-success btn-sm ml-1"
+                            id="btnConfirmSoRuteLoading"
+                            data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                        <i class="fas fa-check-circle mr-1"></i> Konfirmasi Siap Loading
+                    </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row">
@@ -454,6 +464,25 @@
 
 <script>
 $(document).ready(function () {
+    function salesToast(type, message) {
+        if (window.Swal) {
+            Swal.fire({ toast:true, position:'top-end', icon:type || 'info', title:message || '', timer:2600, showConfirmButton:false });
+        } else {
+            alert(message || '');
+        }
+    }
+
+    function setButtonLoading(button, loading, text) {
+        if (!button) return;
+        var $btn = $(button);
+        if (loading) {
+            if (!$btn.data('original-html')) $btn.data('original-html', $btn.html());
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>' + (text || 'Memproses'));
+        } else {
+            $btn.prop('disabled', false).html($btn.data('original-html'));
+        }
+    }
+
     var tableSoRute = $('#tabelSORute').DataTable({
         responsive: true,
         autoWidth: false,
@@ -494,6 +523,59 @@ $(document).ready(function () {
             e.preventDefault();
             alert('Pilih minimal satu SO yang akan dipindahkan.');
         }
+    });
+
+    $('#btnConfirmSoRuteLoading').on('click', function () {
+        var rute = $(this).data('rute');
+        if (!rute) return;
+
+        var btn = this;
+        var askNote;
+        if (window.Swal) {
+            askNote = Swal.fire({
+                title: 'Siap Loading Rute ' + rute + '?',
+                text: 'Semua SO Open pada rute ini akan berubah menjadi Sedang Verifikasi.',
+                input: 'textarea',
+                inputLabel: 'Catatan Sales',
+                inputPlaceholder: 'Catatan untuk verifikasi (opsional)',
+                inputAttributes: { rows: 3 },
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, siap loading',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#16a34a'
+            }).then(function(result) {
+                return result.isConfirmed ? { ok: true, note: result.value || '' } : { ok: false };
+            });
+        } else {
+            askNote = Promise.resolve(confirm('Konfirmasi Siap Loading rute ' + rute + '?'))
+                .then(function(ok) {
+                    return { ok: ok, note: ok ? (prompt('Catatan Sales untuk verifikasi (opsional):', '') || '') : '' };
+                });
+        }
+
+        askNote.then(function(result) {
+            if (!result.ok) return;
+            setButtonLoading(btn, true, 'Konfirmasi');
+            $.ajax({
+                url: '<?= base_url("sales_order/confirm_so_rute_loading") ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: { kd_rute: rute, note: result.note || '' },
+                success: function (res) {
+                    salesToast(res.msg === 'success' ? 'success' : 'error', res.message || 'Selesai');
+                    if (res.msg === 'success') {
+                        setTimeout(function(){ window.location.reload(); }, 800);
+                    }
+                },
+                error: function () {
+                    salesToast('error', 'Terjadi kesalahan koneksi.');
+                },
+                complete: function () {
+                    setButtonLoading(btn, false);
+                }
+            });
+        });
     });
 });
 </script>

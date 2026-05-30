@@ -43,6 +43,14 @@
                                     <i class="fas fa-warehouse mr-1"></i>Activity Warehouse
                                 </a>
                             </div>
+                            <div class="col-auto">
+                                <a href="<?= base_url('logistik/so_siap_loading') ?>" class="btn btn-primary mb-2">
+                                    <i class="fas fa-clipboard-check mr-1"></i>SO Siap Loading
+                                    <?php if (!empty($total_so_siap_loading)): ?>
+                                        <span class="badge badge-light ml-1"><?= (int)$total_so_siap_loading ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </div>
                         </div>
 
                     </div>
