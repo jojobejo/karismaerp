@@ -25,36 +25,79 @@
         border-color: #007bff;
         border-left-color: #007bff;
     }
-    .route-code {
+    .route-card .route-code {
         font-size: 13px;
         font-weight: 700;
-        min-width: 54px;
+        line-height: 1.15;
+        min-width: 42px;
     }
-    .route-meta {
+    .route-card .route-meta {
         color: #6c757d;
         flex: 1 1 auto;
         font-size: 10.5px;
+        line-height: 1.2;
         min-width: 0;
     }
-    .route-tonase {
+    .route-card .route-summary {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        gap: 7px;
+    }
+    .route-card .route-tonase {
         color: #15803d;
         font-size: 11px;
         font-weight: 700;
+        line-height: 1.15;
+    }
+    .route-card .route-metric {
+        align-items: center;
+        display: flex;
+        gap: 3px;
+    }
+    .route-card .route-ring {
+        --ring-pct: 0%;
+        --ring-color: #198754;
+        background: conic-gradient(var(--ring-color) var(--ring-pct), #e5e7eb 0);
+        border-radius: 50%;
+        display: grid;
+        flex: 0 0 18px;
+        height: 18px;
+        place-items: center;
+        position: relative;
+        width: 18px;
+    }
+    .route-card .route-ring::before {
+        background: #fff;
+        border-radius: 50%;
+        content: "";
+        inset: 3px;
+        position: absolute;
+    }
+    .route-card.active .route-ring::before {
+        background: #eaf4ff;
+    }
+    .route-card .badge {
+        font-size: 10px;
+        line-height: 1.1;
+        padding: 2px 5px;
+    }
+    .route-card .route-summary .badge {
         white-space: nowrap;
     }
     #tabelSoSiapLoading_wrapper {
         padding: 12px;
     }
-    .summary-box .info-box {
-        min-height: 78px;
+    .quota-card .progress {
+        height: 14px;
+        border-radius: 7px;
     }
-    .summary-box .info-box-icon {
-        align-items: center;
-        display: flex;
-        height: 58px;
-        justify-content: center;
-        margin-left: 8px;
-        width: 58px;
+    .quota-card .progress-bar {
+        font-size: 11px;
+        line-height: 14px;
+    }
+    .quota-card .quota-info {
+        white-space: normal;
     }
 </style>
 
@@ -87,6 +130,15 @@
         $total_qty += (float)($so->total_qty_order ?? 0);
         $total_outstanding += (float)($so->total_qty_outstanding ?? 0);
     }
+
+    $batas_ton = 6;
+    $batas_kub = 9;
+    $pct_ton = $batas_ton > 0 ? min(($total_tonase / $batas_ton) * 100, 100) : 0;
+    $pct_kub = $batas_kub > 0 ? min(($total_kubikasi / $batas_kub) * 100, 100) : 0;
+    $color_ton = $total_tonase > $batas_ton ? 'danger' : 'success';
+    $color_kub = $total_kubikasi > $batas_kub ? 'danger' : 'info';
+    $sisa_ton = max(0, $batas_ton - $total_tonase);
+    $sisa_kub = max(0, $batas_kub - $total_kubikasi);
     ?>
 
     <div class="content-wrapper">
@@ -141,15 +193,25 @@
                                     <?php foreach ($routes as $route):
                                         $active = (string)$route->kd_rute === (string)$selected_rute;
                                         $route_url = base_url('logistik/so_siap_loading?rute=' . rawurlencode($route->kd_rute));
+                                        $route_tonase = (float)($route->total_tonase ?? 0);
+                                        $route_pct_ton = $batas_ton > 0 ? min(100, round(($route_tonase / $batas_ton) * 100, 1)) : 0;
+                                        $route_ton_color = $route_tonase > $batas_ton ? '#dc3545' : ($route_pct_ton >= 80 ? '#f59e0b' : '#198754');
                                     ?>
                                         <a href="<?= $route_url ?>" class="route-card <?= $active ? 'active' : '' ?>">
                                             <div class="route-code"><?= htmlspecialchars($route->kd_rute) ?></div>
                                             <div class="route-meta text-truncate" title="<?= htmlspecialchars($route->nama_rute) ?>">
                                                 <?= htmlspecialchars($route->nama_rute) ?>
                                             </div>
-                                            <div class="text-right">
-                                                <div class="route-tonase"><?= number_format((float)$route->total_tonase, 3) ?> ton</div>
-                                                <span class="badge badge-primary"><?= (int)$route->total_so ?> SO</span>
+                                            <div class="route-summary">
+                                                <span class="route-metric">
+                                                    <span class="route-tonase">
+                                                        <?= number_format($route_tonase, 3) ?> ton
+                                                    </span>
+                                                    <span title="Tonase <?= number_format($route_tonase, 3) ?> / <?= number_format($batas_ton, 0) ?> ton (<?= number_format($route_pct_ton, 1) ?>%)">
+                                                        <span class="route-ring" style="--ring-pct:<?= $route_pct_ton ?>%;--ring-color:<?= $route_ton_color ?>;"></span>
+                                                    </span>
+                                                </span>
+                                                <span class="badge badge-primary"><?= (int)$route->total_so ?></span>
                                             </div>
                                         </a>
                                     <?php endforeach; ?>
@@ -159,31 +221,98 @@
                     </div>
 
                     <div class="col-lg-9">
-                        <div class="row summary-box">
-                            <div class="col-md-4">
-                                <div class="info-box shadow-sm">
-                                    <span class="info-box-icon bg-primary"><i class="fas fa-file-invoice"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">SO Rute <?= htmlspecialchars($selected_rute ?: '-') ?></span>
-                                        <span class="info-box-number"><?= number_format($total_so) ?> SO</span>
+                        <div class="row mt-0 mb-3">
+                            <div class="col-md-6">
+                                <div class="card card-outline card-<?= $color_ton ?> quota-card mb-0">
+                                    <div class="card-header py-2">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-weight mr-1"></i> Tonase
+                                            <?php if ($total_tonase > $batas_ton): ?>
+                                                <span class="badge badge-danger ml-1">Melebihi!</span>
+                                            <?php endif; ?>
+                                        </h6>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-<?= $color_ton ?> progress-bar-striped"
+                                                 role="progressbar"
+                                                 style="width: <?= number_format($pct_ton, 2) ?>%"
+                                                 title="<?= number_format($pct_ton, 1) ?>%">
+                                                <?php if ($pct_ton >= 20): ?>
+                                                    <?= number_format($pct_ton, 1) ?>%
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="row text-center small quota-info">
+                                            <div class="col-4">
+                                                <div class="text-muted">Terpakai</div>
+                                                <div class="font-weight-bold text-<?= $color_ton ?>">
+                                                    <?= number_format($total_tonase, 3) ?> ton
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Batas</div>
+                                                <div class="font-weight-bold">
+                                                    <?= number_format($batas_ton, 1) ?> ton
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Sisa</div>
+                                                <div class="font-weight-bold text-<?= $sisa_ton > 0 ? 'success' : 'danger' ?>">
+                                                    <?= $sisa_ton > 0
+                                                        ? number_format($sisa_ton, 3) . ' ton'
+                                                        : '<i class="fas fa-exclamation-triangle"></i> Penuh' ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="info-box shadow-sm">
-                                    <span class="info-box-icon bg-success"><i class="fas fa-weight-hanging"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Tonase Rute</span>
-                                        <span class="info-box-number"><?= number_format($total_tonase, 3) ?> ton</span>
+                            <div class="col-md-6">
+                                <div class="card card-outline card-<?= $color_kub ?> quota-card mb-0">
+                                    <div class="card-header py-2">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-cube mr-1"></i> Kubikasi
+                                            <?php if ($total_kubikasi > $batas_kub): ?>
+                                                <span class="badge badge-danger ml-1">Melebihi!</span>
+                                            <?php endif; ?>
+                                        </h6>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box shadow-sm">
-                                    <span class="info-box-icon bg-info"><i class="fas fa-cubes"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Kubikasi Rute</span>
-                                        <span class="info-box-number"><?= number_format($total_kubikasi, 4) ?> m3</span>
+                                    <div class="card-body py-2">
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-<?= $color_kub ?> progress-bar-striped"
+                                                 role="progressbar"
+                                                 style="width: <?= number_format($pct_kub, 2) ?>%"
+                                                 title="<?= number_format($pct_kub, 1) ?>%">
+                                                <?php if ($pct_kub >= 20): ?>
+                                                    <?= number_format($pct_kub, 1) ?>%
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="row text-center small quota-info">
+                                            <div class="col-4">
+                                                <div class="text-muted">Terpakai</div>
+                                                <div class="font-weight-bold text-<?= $color_kub ?>">
+                                                    <?= number_format($total_kubikasi, 4) ?> m3
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Batas</div>
+                                                <div class="font-weight-bold">
+                                                    <?= number_format($batas_kub, 1) ?> m3
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="text-muted">Sisa</div>
+                                                <div class="font-weight-bold text-<?= $sisa_kub > 0 ? 'success' : 'danger' ?>">
+                                                    <?= $sisa_kub > 0
+                                                        ? number_format($sisa_kub, 4) . ' m3'
+                                                        : '<i class="fas fa-exclamation-triangle"></i> Penuh' ?>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -195,6 +324,7 @@
                                     <i class="fas fa-list mr-2"></i>SO Sedang Verifikasi - <?= htmlspecialchars($selected_route_name) ?>
                                 </h3>
                                 <div class="card-tools">
+                                    <span class="badge badge-light"><?= number_format($total_so) ?> SO</span>
                                     <span class="badge badge-light"><?= number_format($total_qty, 2) ?> qty</span>
                                     <span class="badge badge-warning ml-1"><?= number_format($total_outstanding, 2) ?> outstanding</span>
                                 </div>
@@ -207,12 +337,12 @@
                                             <th>No SO</th>
                                             <th>Tanggal SO</th>
                                             <th>Customer</th>
+                                            <th>Regional</th>
                                             <th class="text-center">Item</th>
                                             <th class="text-right">Qty</th>
                                             <th class="text-right">Outstanding</th>
                                             <th class="text-right">Tonase</th>
                                             <th class="text-right">Kubikasi</th>
-                                            <th>Konfirmasi Sales</th>
                                             <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
@@ -241,17 +371,14 @@
                                                             <br><small class="text-muted"><?= htmlspecialchars($so->nama_kios) ?></small>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <td>
+                                                        <?= !empty($so->regional) ? htmlspecialchars($so->regional) : '<span class="text-muted">-</span>' ?>
+                                                    </td>
                                                     <td class="text-center"><?= number_format((int)$so->jumlah_item) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_order, 2) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_outstanding, 2) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_tonase, 3) ?> ton</td>
                                                     <td class="text-right"><?= number_format((float)$so->total_kubikasi, 4) ?> m3</td>
-                                                    <td>
-                                                        <?= !empty($so->update_by) ? htmlspecialchars($so->update_by) : '-' ?>
-                                                        <?php if (!empty($so->update_at)): ?>
-                                                            <br><small class="text-muted"><?= date('d/m/Y H:i', strtotime($so->update_at)) ?></small>
-                                                        <?php endif; ?>
-                                                    </td>
                                                     <td class="text-center">
                                                         <form method="post"
                                                               action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
@@ -294,7 +421,7 @@ $(document).ready(function () {
         },
         columnDefs: [
             { orderable: false, targets: [0, 10] },
-            { className: 'text-center', targets: [0, 4, 10] }
+            { className: 'text-center', targets: [0, 5, 10] }
         ],
         order: [[2, 'desc']],
         drawCallback: function () {
