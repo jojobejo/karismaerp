@@ -473,7 +473,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so_rute_summary($filter = [])
     {
-        $where = "WHERE COALESCE(c.kd_rute, '') <> '' AND so.status = 'open'";
+        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, '') <> '' AND so.status = 'open'";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -503,7 +503,7 @@ class M_SalesOrder extends CI_Model
                     ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding
                 FROM (
                     SELECT
-                        c.kd_rute,
+                        COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) AS kd_rute,
                         so.id_so,
                         COALESCE(so.total_tonase, 0) AS total_tonase,
                         COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
@@ -543,7 +543,7 @@ class M_SalesOrder extends CI_Model
         }
 
         $params = [$kd_rute];
-        $where = "WHERE c.kd_rute = ? AND so.status = 'open'";
+        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = ? AND so.status = 'open'";
 
         if (!empty($filter['create_by'])) {
             $where .= " AND so.create_by = ?";
@@ -563,6 +563,8 @@ class M_SalesOrder extends CI_Model
                 c.nama_customer,
                 c.nama_kios,
                 c.regional,
+                so.kd_rute AS so_kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) AS kd_rute,
                 c.kd_rute AS customer_kd_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
                 COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
@@ -587,6 +589,25 @@ class M_SalesOrder extends CI_Model
         ";
 
         return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function update_so_rute($id_so, $kd_rute, $update_by)
+    {
+        $this->db->where('id_so', $id_so);
+        return $this->db->update('tbso_sales_order', [
+            'kd_rute'   => $kd_rute,
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function rute_exists($kd_rute)
+    {
+        return $this->db
+            ->where('kd_rute', $kd_rute)
+            ->limit(1)
+            ->get('tb_rutecs')
+            ->num_rows() > 0;
     }
 
     public function get_so($id_so)
@@ -886,7 +907,7 @@ class M_SalesOrder extends CI_Model
 
     private function _pending_faktur_rute_sql($routeFilter = false)
     {
-        $whereRoute = $routeFilter ? " AND COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ? " : "";
+        $whereRoute = $routeFilter ? " AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ? " : "";
 
         return "
             SELECT
@@ -902,8 +923,8 @@ class M_SalesOrder extends CI_Model
                 c.alamat_kios,
                 c.regional,
                 c.kd_rute AS kd_rute_customer,
-                COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
-                COALESCE(r.keterangan, NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COUNT(DISTINCT fd.kd_barang) AS total_barang,
                 SUM(fd.qty) AS total_qty,
                 COALESCE(
@@ -918,7 +939,7 @@ class M_SalesOrder extends CI_Model
             JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
             LEFT JOIN tbso_sales_order so ON so.id_so = f.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
-            LEFT JOIN tb_rutecs r ON r.kd_rute = c.kd_rute
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
             LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
             WHERE f.status = 'confirmed'
             AND NOT EXISTS (
@@ -937,7 +958,7 @@ class M_SalesOrder extends CI_Model
                 f.customer_name, f.tanggal_faktur, f.status,
                 f.total_tonase, f.total_kubikasi, so.id_so,
                 c.nama_customer, c.nama_kios, c.alamat_kios,
-                c.regional, c.kd_rute, r.keterangan
+                c.regional, c.kd_rute, so.kd_rute, r.keterangan
         ";
     }
 

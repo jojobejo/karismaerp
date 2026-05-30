@@ -111,6 +111,19 @@
     #tabelSORute_wrapper {
         padding: 12px;
     }
+    .route-bulk-bar {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+    }
+    .route-bulk-bar select {
+        max-width: 120px;
+    }
+    .route-select-cell {
+        width: 34px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
@@ -172,6 +185,15 @@
 
         <section class="content">
             <div class="container-fluid">
+                <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning'] as $key => $cls): ?>
+                    <?php if ($msg = $this->session->flashdata($key)): ?>
+                        <div class="alert alert-<?= $cls ?> alert-dismissible fade show">
+                            <?= $msg ?>
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+
                 <div class="mb-3">
                     <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke SO
@@ -296,9 +318,31 @@
                                     </div>
                                 </div>
 
+                                <form id="bulkMoveForm"
+                                      method="post"
+                                      action="<?= base_url('sales_order/bulk_update_so_rute') ?>"
+                                      class="route-bulk-bar mb-2">
+                                    <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
+                                    <span class="small text-muted">Pindahkan yang dicentang ke</span>
+                                    <select name="kd_rute" class="form-control form-control-sm" required>
+                                        <?php foreach ($routes as $route_option): ?>
+                                            <option value="<?= htmlspecialchars($route_option['kd_rute']) ?>"
+                                                <?= ($route_option['kd_rute'] === $selected_rute) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($route_option['kd_rute']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm" id="btnBulkMove" disabled>
+                                        <i class="fas fa-exchange-alt mr-1"></i> Pindahkan
+                                    </button>
+                                </form>
+
                                 <table class="table table-bordered table-hover table-sm" id="tabelSORute">
                                     <thead class="thead-dark">
                                         <tr>
+                                            <th class="text-center route-select-cell">
+                                                <input type="checkbox" id="checkAllSo">
+                                            </th>
                                             <th>No SO</th>
                                             <th>Tanggal</th>
                                             <th>Customer</th>
@@ -316,7 +360,7 @@
                                     <tbody>
                                         <?php if (empty($sales_orders)): ?>
                                             <tr>
-                                                <td colspan="12" class="text-center text-muted py-4">
+                                                <td colspan="13" class="text-center text-muted py-4">
                                                     Tidak ada Sales Order untuk rute ini
                                                 </td>
                                             </tr>
@@ -328,12 +372,21 @@
                                                 $qty_order = (float)($so['total_qty_order'] ?? 0);
                                                 $qty_faktur = (float)($so['total_qty_faktur'] ?? 0);
                                                 $qty_outstanding = (float)($so['total_qty_outstanding'] ?? 0);
+                                                $effective_rute = $so['kd_rute'] ?? $selected_rute;
+                                                $customer_rute = $so['customer_kd_rute'] ?? '';
                                                 $pct = $qty_order > 0 ? min(100, round(($qty_faktur / $qty_order) * 100, 1)) : 0;
                                                 $bar_color = $status === 'completed' || $pct >= 100
                                                     ? 'success'
                                                     : ($status === 'cancelled' ? 'danger' : ($pct > 0 ? 'warning' : 'secondary'));
                                             ?>
                                                 <tr>
+                                                    <td class="text-center route-select-cell">
+                                                        <input type="checkbox"
+                                                               class="check-so-route"
+                                                               name="id_so[]"
+                                                               value="<?= (int)$so['id_so'] ?>"
+                                                               form="bulkMoveForm">
+                                                    </td>
                                                     <td class="font-weight-bold">
                                                         <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
                                                             <?= htmlspecialchars($so['no_so']) ?>
@@ -350,6 +403,9 @@
                                                     </td>
                                                     <td>
                                                         <?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?>
+                                                        <?php if ($customer_rute !== '' && $customer_rute !== $effective_rute): ?>
+                                                            <br><small class="text-muted">Master: <?= htmlspecialchars($customer_rute) ?></small>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge badge-<?= $badge ?> px-2 py-1"><?= htmlspecialchars($label) ?></span>
@@ -398,11 +454,14 @@
 
 <script>
 $(document).ready(function () {
-    $('#tabelSORute').DataTable({
+    var tableSoRute = $('#tabelSORute').DataTable({
         responsive: true,
         autoWidth: false,
         pageLength: 25,
-        order: [[1, 'desc']],
+        order: [[2, 'desc']],
+        columnDefs: [
+            { orderable: false, targets: [0] }
+        ],
         language: {
             search: "Cari:",
             lengthMenu: "Tampilkan _MENU_ data",
@@ -410,6 +469,30 @@ $(document).ready(function () {
             zeroRecords: "Tidak ada data ditemukan",
             emptyTable: "Tidak ada Sales Order",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
+        }
+    });
+
+    function updateBulkMoveState() {
+        var checkedCount = $('.check-so-route:checked').length;
+        $('#btnBulkMove').prop('disabled', checkedCount === 0);
+
+        var visibleBoxes = $('.check-so-route:visible');
+        var visibleChecked = $('.check-so-route:visible:checked');
+        $('#checkAllSo').prop('checked', visibleBoxes.length > 0 && visibleBoxes.length === visibleChecked.length);
+    }
+
+    $('#checkAllSo').on('change', function () {
+        $('.check-so-route:visible').prop('checked', this.checked);
+        updateBulkMoveState();
+    });
+
+    $(document).on('change', '.check-so-route', updateBulkMoveState);
+    tableSoRute.on('draw', updateBulkMoveState);
+
+    $('#bulkMoveForm').on('submit', function (e) {
+        if ($('.check-so-route:checked').length === 0) {
+            e.preventDefault();
+            alert('Pilih minimal satu SO yang akan dipindahkan.');
         }
     });
 });

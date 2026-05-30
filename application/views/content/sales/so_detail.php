@@ -189,7 +189,17 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted pl-3">Rute / Regional</td>
-                                    <td><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></td>
+                                    <td>
+                                        <?php
+                                        $so_route = $so['kd_rute'] ?? '';
+                                        $customer_route = $so['customer_kd_rute'] ?? '';
+                                        $effective_route = $so_route !== '' ? $so_route : $customer_route;
+                                        ?>
+                                        <?= $effective_route !== '' ? htmlspecialchars($effective_route) : '<span class="text-muted">-</span>' ?>
+                                        <?php if ($so_route !== '' && $customer_route !== '' && $so_route !== $customer_route): ?>
+                                            <br><small class="text-muted">Master: <?= htmlspecialchars($customer_route) ?></small>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted pl-3">Gudang</td>

@@ -193,6 +193,23 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    private function _ensureSoRouteColumn()
+    {
+        if ($this->db->field_exists('kd_rute', 'tbso_sales_order')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order', [
+            'kd_rute' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
+                'null'       => true,
+                'after'      => 'kd_customer',
+            ],
+        ]);
+    }
+
     private function _normalizeFakturPrefix($prefix)
     {
         return preg_replace('/[^A-Z]/', '', strtoupper((string)$prefix));
@@ -855,6 +872,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function faktur_rute()
     {
+        $this->_ensureSoRouteColumn();
+
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
 
         $routes = $this->M_SalesOrder->get_pending_faktur_rute_summary();
@@ -892,6 +911,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function so_rute()
     {
+        $this->_ensureSoRouteColumn();
+
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
         $filter = [];
         if ($this->_isRestrictedSalesUser()) {
@@ -935,6 +956,67 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_rute.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function bulk_update_so_rute()
+    {
+        if ($this->input->method() !== 'post') show_404();
+        $this->_ensureSoRouteColumn();
+
+        $target_rute = trim((string)$this->input->post('kd_rute', true));
+        $current_rute = trim((string)$this->input->post('current_rute', true));
+        $ids = $this->input->post('id_so', true);
+        $ids = is_array($ids) ? array_values(array_unique(array_filter(array_map('intval', $ids)))) : [];
+        $redirect_rute = $target_rute !== '' ? $target_rute : $current_rute;
+
+        if (empty($ids)) {
+            $this->session->set_flashdata('error', 'Pilih minimal satu SO yang akan dipindahkan.');
+            redirect('sales_order/so_rute' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+            return;
+        }
+        if ($target_rute === '' || !$this->M_SalesOrder->rute_exists($target_rute)) {
+            $this->session->set_flashdata('error', 'Rute tujuan tidak valid.');
+            redirect('sales_order/so_rute' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : ''));
+            return;
+        }
+
+        $moved = 0;
+        $skipped = 0;
+        foreach ($ids as $id_so) {
+            $so = $this->M_SalesOrder->get_so($id_so);
+            if (!$so || ($so['status'] ?? '') !== 'open') {
+                $skipped++;
+                continue;
+            }
+            if (!$this->_canAccessSo($so)) {
+                $this->_denySoAccess();
+                return;
+            }
+
+            $old_rute = $so['kd_rute'] ?? $so['customer_kd_rute'] ?? '';
+            if ($this->M_SalesOrder->update_so_rute($id_so, $target_rute, $this->_getUsername())) {
+                $moved++;
+                $this->M_ActivityLog->log(
+                    $so['no_so'] ?? '', '', 'UPDATE_SO_RUTE',
+                    'Rute SO diubah dari ' . ($old_rute ?: '-') . ' ke ' . $target_rute . ' melalui bulk update.',
+                    $this->_getUsername()
+                );
+            } else {
+                $skipped++;
+            }
+        }
+
+        if ($moved > 0) {
+            $message = '<b>' . $moved . ' SO</b> berhasil dipindahkan ke rute <b>' . htmlspecialchars($target_rute) . '</b>.';
+            if ($skipped > 0) {
+                $message .= ' <b>' . $skipped . ' SO</b> dilewati karena tidak valid atau tidak berstatus Open.';
+            }
+            $this->session->set_flashdata('success', $message);
+        } else {
+            $this->session->set_flashdata('error', 'Tidak ada SO yang berhasil dipindahkan.');
+        }
+
+        redirect('sales_order/so_rute?rute=' . rawurlencode($target_rute));
     }
 
     // ================================================================
@@ -1336,6 +1418,8 @@ class C_SalesOrder extends CI_Controller
 
     public function confirm_rute_loading()
     {
+        $this->_ensureSoRouteColumn();
+
         while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
 

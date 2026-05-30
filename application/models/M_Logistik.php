@@ -693,7 +693,7 @@ class M_Logistik extends CI_Model
                 f.no_faktur,
                 f.tanggal_faktur,
                 f.kd_customer,
-                COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
                 fd.id AS id_faktur_detail,
                 fd.kd_barang,
                 COALESCE(NULLIF(fd.nama_barang, ''), mb.nama_barang, '') AS nama_barang,
@@ -708,10 +708,12 @@ class M_Logistik extends CI_Model
                 ON fd.id_faktur = f.id_faktur
             JOIN tb_customer c
                 ON c.kd_customer = f.kd_customer
+            LEFT JOIN tbso_sales_order so
+                ON so.id_so = f.id_so
             LEFT JOIN tb_master_barang_all mb
                 ON mb.kd_barang COLLATE utf8mb4_general_ci = fd.kd_barang
             WHERE f.status = 'confirmed'
-            AND COALESCE(NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
+            AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur

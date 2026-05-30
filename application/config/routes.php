@@ -393,6 +393,7 @@ $route['sales_order/simpan_faktur/(:any)']          = 'sales/C_SalesOrder/simpan
 $route['sales_order/detail_faktur/(:any)']          = 'sales/C_SalesOrder/detail_faktur/$1';     // tambahan
 $route['sales_order/faktur_rute']                   = 'sales/C_SalesOrder/faktur_rute';
 $route['sales_order/so_rute']                       = 'sales/C_SalesOrder/so_rute';
+$route['sales_order/bulk_update_so_rute']           = 'sales/C_SalesOrder/bulk_update_so_rute';
 $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
