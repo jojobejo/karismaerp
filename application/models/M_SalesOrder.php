@@ -473,7 +473,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so_rute_summary($filter = [])
     {
-        $where = "WHERE COALESCE(c.kd_rute, '') <> '' AND so.status <> 'cancelled'";
+        $where = "WHERE COALESCE(c.kd_rute, '') <> '' AND so.status = 'open'";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -543,7 +543,7 @@ class M_SalesOrder extends CI_Model
         }
 
         $params = [$kd_rute];
-        $where = "WHERE c.kd_rute = ? AND so.status <> 'cancelled'";
+        $where = "WHERE c.kd_rute = ? AND so.status = 'open'";
 
         if (!empty($filter['create_by'])) {
             $where .= " AND so.create_by = ?";
