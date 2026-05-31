@@ -64,6 +64,17 @@ class C_SalesOrder extends CI_Controller
         return strtoupper((string)$this->session->userdata('jobdesk')) === 'SC';
     }
 
+    private function _canAccessAdminSc()
+    {
+        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC', 'SC', 'SALESCOUNTER', 'ADMIN'], true);
+    }
+
+    private function _denyAdminScAccess()
+    {
+        $this->session->set_flashdata('error', 'Anda tidak memiliki akses ke halaman Admin SC.');
+        redirect('sales_order');
+    }
+
     private function _canAccessSo($so)
     {
         if (!$this->_isRestrictedSalesUser()) return true;
@@ -97,7 +108,7 @@ class C_SalesOrder extends CI_Controller
 
         $users = $this->db
             ->select('id, username, nm_karyawan, faktur_prefix')
-            ->where_in('jobdesk', ['SC', 'SALES', 'SALESCOUNTER', 'SALESONLINE'])
+            ->where_in('jobdesk', ['ADMINSC', 'SC', 'SALES', 'SALESCOUNTER', 'SALESONLINE'])
             ->order_by('id', 'ASC')
             ->get('tb_karyawan')
             ->result_array();
@@ -363,6 +374,87 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_list.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function admin_sc()
+    {
+        if (!$this->_canAccessAdminSc()) {
+            $this->_denyAdminScAccess();
+            return;
+        }
+
+        $this->_ensureSoFakturZColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $filter = [
+            'date1'       => $this->input->post('date1'),
+            'date2'       => $this->input->post('date2'),
+            'customer_id' => $this->input->post('customer_id'),
+        ];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $data['page_title'] = 'KARISMA - Admin SC - SO Siap Faktur';
+        $data['so_list']    = $this->M_SalesOrder->get_admin_sc_ready_so($filter);
+        $data['customers']  = $this->M_SalesOrder->get_customers();
+        $data['filter']     = $filter;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/admin_sc_so_list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function admin_sc_pilih_barang($id_so)
+    {
+        if (!$this->_canAccessAdminSc()) {
+            $this->_denyAdminScAccess();
+            return;
+        }
+
+        $this->_ensureSoFakturZColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'SO belum siap difakturkan atau sudah selesai.');
+            redirect('sales_order/admin_sc');
+            return;
+        }
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
+
+        $details = array_values(array_filter($this->M_SalesOrder->get_so_detail($id_so), function($item) {
+            return (float)($item['qty_available_faktur'] ?? 0) > 0;
+        }));
+
+        if (empty($details)) {
+            $this->session->set_flashdata('warning', 'Tidak ada barang terverifikasi yang masih bisa difakturkan.');
+            redirect('sales_order/admin_sc');
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - Pilih Barang Faktur ' . $so['no_so'];
+        $data['so']         = $so;
+        $data['details']    = $details;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/admin_sc_pilih_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function admin_sc_form_faktur($id_so)
+    {
+        if (!$this->_canAccessAdminSc()) {
+            $this->_denyAdminScAccess();
+            return;
+        }
+
+        return $this->form_faktur($id_so);
     }
 
     // ================================================================
@@ -736,7 +828,7 @@ class C_SalesOrder extends CI_Controller
         }
         if (!$so || $so['status'] !== 'siap_faktur') {
             $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati Siap Loading dan Verifikasi Barang.');
-            redirect('sales_order/detail/' . $id_so);
+            redirect('sales_order/admin_sc');
             return;
         }
 
@@ -765,7 +857,7 @@ class C_SalesOrder extends CI_Controller
                 ? 'Item yang dipilih tidak valid atau sudah difakturkan seluruhnya.'
                 : 'Semua item pada SO ini sudah difakturkan seluruhnya.';
             $this->session->set_flashdata('error', $message);
-            redirect('sales_order/detail/' . $id_so);
+            redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
             return;
         }
 
@@ -814,7 +906,7 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($faktur_items)) {
             $this->session->set_flashdata('error', 'Minimal 1 item harus dimasukkan ke faktur.');
-            redirect('sales_order/form_faktur/' . $id_so);
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
             return;
         }
 
@@ -835,7 +927,7 @@ class C_SalesOrder extends CI_Controller
         }
         if (!empty($stock_errors)) {
             $this->session->set_flashdata('error', implode('<br>', $stock_errors));
-            redirect('sales_order/form_faktur/' . $id_so);
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
             return;
         }
 
@@ -872,7 +964,7 @@ class C_SalesOrder extends CI_Controller
 
         if (is_array($result) && isset($result['errors'])) {
             $this->session->set_flashdata('error', implode('<br>', $result['errors']));
-            redirect('sales_order/form_faktur/' . $id_so);
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
             return;
         }
 
@@ -903,7 +995,7 @@ class C_SalesOrder extends CI_Controller
             redirect('sales_order/detail/' . $id_so);
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan Faktur Penjualan.');
-            redirect('sales_order/form_faktur/' . $id_so);
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
         }
     }
 

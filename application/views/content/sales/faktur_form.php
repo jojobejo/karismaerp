@@ -267,7 +267,7 @@
                 <!-- Tombol -->
                 <div class="row mt-2">
                     <div class="col-12 text-right">
-                        <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>"
+                        <a href="<?= base_url(($this->session->userdata('jobdesk') === 'ADMINSC' ? 'sales_order/admin_sc/pilih_barang/' : 'sales_order/detail/') . $so['id_so']) ?>"
                            class="btn btn-secondary mr-2">
                             <i class="fas fa-times"></i> Batal
                         </a>

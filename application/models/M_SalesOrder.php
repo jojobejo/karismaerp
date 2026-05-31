@@ -462,11 +462,45 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['status']))      $this->db->where('so.status', $filter['status']);
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
-        if (!empty($filter['customer_id'])) $this->db->where('so.kd_customer', $filter['customer_id']);
+        if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
         if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
 
         $this->db->group_by('so.id_so');
         $this->db->order_by('so.create_at', 'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_admin_sc_ready_so($filter = [])
+    {
+        $this->db->select('
+            so.*,
+            c.nama_customer,
+            c.nama_kios,
+            c.regional,
+            c.kd_rute AS customer_kd_rute,
+            COUNT(sd.id) AS jumlah_item,
+            SUM(CASE WHEN GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0) > 0
+                THEN 1 ELSE 0 END) AS jumlah_item_siap_faktur,
+            COALESCE(SUM(sd.qty), 0) AS total_qty_order,
+            COALESCE(SUM(sd.qty_faktur), 0) AS total_qty_faktur,
+            COALESCE(SUM(GREATEST(sd.qty - COALESCE(sd.qty_faktur, 0), 0)), 0) AS total_qty_outstanding,
+            COALESCE(SUM(GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0)), 0) AS total_qty_siap_faktur,
+            COALESCE(SUM(COALESCE(sd.qty_tidak_terkirim, 0)), 0) AS total_qty_tidak_terkirim
+        ');
+        $this->db->from('tbso_sales_order so');
+        $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
+        $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
+        $this->db->where('so.status', 'siap_faktur');
+
+        if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
+        if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
+        if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
+
+        $this->db->group_by('so.id_so');
+        $this->db->order_by('so.update_at', 'DESC');
+        $this->db->order_by('so.tanggal_transaksi', 'DESC');
 
         return $this->db->get()->result_array();
     }

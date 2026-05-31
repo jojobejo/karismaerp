@@ -1,4 +1,11 @@
 <!-- views/content/sales/so_detail.php -->
+<?php
+$jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+$from_page = strtolower((string)$this->input->get('from', true));
+$is_admin_sc_detail = $jobdesk === 'ADMINSC' || $from_page === 'admin_sc';
+$back_url = $is_admin_sc_detail ? base_url('sales_order/admin_sc') : base_url('sales_order');
+$back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
+?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -23,7 +30,9 @@
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
                         <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                        <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
+                        <li class="breadcrumb-item">
+                            <a href="<?= $back_url ?>"><?= $is_admin_sc_detail ? 'Admin SC' : 'Sales Order' ?></a>
+                        </li>
                         <li class="breadcrumb-item active"><?= htmlspecialchars($so['no_so']) ?></li>
                     </ol>
                 </div>
@@ -46,10 +55,10 @@
 
             <!-- TOMBOL AKSI -->
             <div class="sales-action-bar">
-                <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-left"></i> Kembali
+                <a href="<?= $back_url ?>" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> <?= $back_label ?>
                 </a>
-                <?php if ($so['status'] === 'draft'): ?>
+                <?php if (!$is_admin_sc_detail && $so['status'] === 'draft'): ?>
                     <a href="<?= base_url('sales_order/edit/' . $so['id_so']) ?>"
                        class="btn btn-warning btn-sm">
                         <i class="fas fa-pencil-alt"></i> Edit SO
@@ -91,6 +100,7 @@
             $pct   = $total_order > 0 ? round(($total_faktur / $total_order) * 100, 1) : 0;
             ?>
 
+            <?php if (!$is_admin_sc_detail): ?>
             <!-- SUMMARY CARDS -->
             <div class="row">
                 <div class="col-6 col-md-3">
@@ -138,9 +148,10 @@
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- PROGRESS BAR -->
-            <?php if ($total_order > 0): ?>
+            <?php if (!$is_admin_sc_detail && $total_order > 0): ?>
             <div class="card card-outline card-<?= $pct >= 100 ? 'success' : 'warning' ?> mb-3">
                 <div class="card-body py-2 px-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -169,11 +180,6 @@
             <div class="card card-outline card-primary mb-3">
                 <div class="card-header py-2">
                     <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informasi Sales Order</h3>
-                    <div class="card-tools">
-                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="row no-gutters">
@@ -244,36 +250,11 @@
                         <i class="fas fa-list-ul mr-1"></i> Item Sales Order
                         <span class="badge badge-info ml-1"><?= count($details) ?> item</span>
                     </h3>
-                    <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
-                        <div class="card-tools">
-                            <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-xs btn-buat-faktur-pilih">
-                                <i class="fas fa-file-invoice-dollar"></i> Fakturkan Item Dipilih
-                            </button>
-                        </div>
-                    <?php endif; ?>
                 </div>
                 <div class="card-body p-0">
-                    <form id="form-pilih-faktur" action="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>" method="get">
-                        <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
-                            <div class="px-3 py-2 border-bottom bg-light">
-                                <div class="form-inline">
-                                    <label class="mr-2 mb-1 mb-sm-0 font-weight-bold">Jenis Faktur</label>
-                                    <select name="tax_mode" id="tax-mode-faktur" class="form-control form-control-sm">
-                                        <option value="non_pajak" selected>Non Pajak (0%)</option>
-                                        <option value="pajak">Pajak (11%)</option>
-                                    </select>
-                                    <small class="text-muted ml-sm-2 mt-1 mt-sm-0">Berlaku untuk item SO yang dipilih.</small>
-                                </div>
-                            </div>
-                        <?php endif; ?>
                         <table class="table table-sm table-bordered table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
-                                    <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
-                                        <th class="text-center" style="width:42px">
-                                            <input type="checkbox" id="check-all-faktur" title="Pilih semua item outstanding">
-                                        </th>
-                                    <?php endif; ?>
                                     <th>#</th>
                                     <th>Barang</th>
                                     <th>Lot / Exp</th>
@@ -285,11 +266,10 @@
                             </thead>
                             <tbody>
                                 <?php if (empty($details)): ?>
-                                    <tr><td colspan="<?= ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0) ? 8 : 7 ?>" class="text-center text-muted py-3">Tidak ada item</td></tr>
+                                    <tr><td colspan="7" class="text-center text-muted py-3">Tidak ada item</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($details as $i => $d):
                                         $outstanding_item = (float)$d['qty'] - (float)$d['qty_faktur'];
-                                        $available_faktur = (float)($d['qty_available_faktur'] ?? $outstanding_item);
                                         $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
                                         $ord_box = floor($d['qty'] / $isi);
                                         $ord_pcs = fmod($d['qty'], $isi);
@@ -299,15 +279,6 @@
                                         $out_pcs = fmod($outstanding_item, $isi);
                                     ?>
                                     <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
-                                        <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
-                                            <td class="text-center align-middle">
-                                                <?php if ($available_faktur > 0): ?>
-                                                    <input type="checkbox" class="check-item-faktur" name="item[]" value="<?= (int)$d['id_so_detail'] ?>">
-                                                <?php else: ?>
-                                                    <i class="fas fa-minus text-muted"></i>
-                                                <?php endif; ?>
-                                            </td>
-                                        <?php endif; ?>
                                         <td><?= $i + 1 ?></td>
                                         <td>
                                             <strong><?= htmlspecialchars($d['nama_barang']) ?></strong>
@@ -350,7 +321,6 @@
                                 <?php endif; ?>
                             </tbody>
                         </table>
-                    </form>
                 </div>
             </div>
 
@@ -434,6 +404,7 @@
                 </div>
             </div>
 
+            <?php if (!$is_admin_sc_detail): ?>
             <!-- ACTIVITY LOG -->
             <div class="card card-outline card-secondary">
                 <div class="card-header py-2">
@@ -450,6 +421,7 @@
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
         </div>
     </section>
@@ -512,23 +484,7 @@ $(document).ready(function () {
         });
     });
 
-    $('#check-all-faktur').on('change', function() {
-        $('.check-item-faktur').prop('checked', this.checked);
-    });
-
-    $(document).on('change', '.check-item-faktur', function() {
-        const total = $('.check-item-faktur').length;
-        const checked = $('.check-item-faktur:checked').length;
-        $('#check-all-faktur').prop('checked', total > 0 && checked === total);
-    });
-
-    $('#form-pilih-faktur').on('submit', function(e) {
-        if ($('.check-item-faktur:checked').length < 1) {
-            e.preventDefault();
-            salesToast('warning', 'Pilih minimal 1 item SO yang akan difakturkan.');
-        }
-    });
-
+    <?php if (!$is_admin_sc_detail): ?>
     $.getJSON('<?= base_url('sales_order/activity_log_so/' . $so['id_so']) ?>', function(resp) {
         if (!resp.data || !resp.data.length) {
             $('#logContainer').html('<div class="text-center text-muted py-3">Belum ada aktivitas.</div>');
@@ -552,5 +508,6 @@ $(document).ready(function () {
     }).fail(function() {
         $('#logContainer').html('<div class="text-center text-muted py-2">Gagal memuat log.</div>');
     });
+    <?php endif; ?>
 });
 </script>

@@ -31,6 +31,7 @@ class Auth extends CI_Controller
                     $data_session = array(
                         'id'            => $key->id,
                         'nik'           => $key->nik,
+                        'username'      => $key->username,
                         'departemen'    => $key->departemen,
                         'lv'            => $key->akses_lv,
                         'jobdesk'       => $key->jobdesk,
@@ -80,6 +81,8 @@ class Auth extends CI_Controller
                         redirect('checker/dashboard'); 
                     } else if ($key->jobdesk == 'MANAGERCK') {
                         redirect('checker');
+                    } else if ($key->jobdesk == 'ADMINSC') {
+                        redirect('sales_order/admin_sc');
                     } else if ($key->jobdesk == 'SC') {
                         redirect('sales_order');
                     }
