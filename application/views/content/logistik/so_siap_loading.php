@@ -124,11 +124,15 @@
     $total_kubikasi = 0;
     $total_qty = 0;
     $total_outstanding = 0;
+    $total_so_verified = 0;
     foreach ($so_list as $so) {
         $total_tonase += (float)($so->total_tonase ?? 0);
         $total_kubikasi += (float)($so->total_kubikasi ?? 0);
         $total_qty += (float)($so->total_qty_order ?? 0);
         $total_outstanding += (float)($so->total_qty_outstanding ?? 0);
+        if ((int)($so->jumlah_item ?? 0) > 0 && (int)($so->jumlah_item_terverifikasi ?? 0) >= (int)$so->jumlah_item) {
+            $total_so_verified++;
+        }
     }
 
     $batas_ton = 6;
@@ -325,11 +329,31 @@
                                 </h3>
                                 <div class="card-tools">
                                     <span class="badge badge-light"><?= number_format($total_so) ?> SO</span>
+                                    <span class="badge badge-success ml-1"><?= number_format($total_so_verified) ?> terverifikasi</span>
                                     <span class="badge badge-light"><?= number_format($total_qty, 2) ?> qty</span>
                                     <span class="badge badge-warning ml-1"><?= number_format($total_outstanding, 2) ?> outstanding</span>
                                 </div>
                             </div>
                             <div class="card-body">
+                                <?php if (!empty($selected_rute) && !empty($so_list)): ?>
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                                        <div class="small text-muted">
+                                            Verifikasi barang selesai:
+                                            <strong><?= number_format($total_so_verified) ?></strong> dari
+                                            <strong><?= number_format($total_so) ?></strong> SO.
+                                        </div>
+                                        <form method="post"
+                                              action="<?= base_url('logistik/so_siap_loading/siap_faktur') ?>"
+                                              onsubmit="return confirm('Ubah semua SO rute <?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?> menjadi siap difakturkan?');">
+                                            <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-success"
+                                                    <?= ($total_so === 0 || $total_so_verified < $total_so) ? 'disabled' : '' ?>>
+                                                <i class="fas fa-file-invoice-dollar mr-1"></i> Jadikan Siap Faktur
+                                            </button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
                                 <table id="tabelSoSiapLoading" class="table table-bordered table-striped table-hover table-sm">
                                     <thead class="thead-dark">
                                         <tr>
@@ -341,6 +365,7 @@
                                             <th class="text-center">Item</th>
                                             <th class="text-right">Qty</th>
                                             <th class="text-right">Outstanding</th>
+                                            <th class="text-center">Verifikasi</th>
                                             <th class="text-right">Tonase</th>
                                             <th class="text-right">Kubikasi</th>
                                             <th class="text-center">Aksi</th>
@@ -349,7 +374,7 @@
                                     <tbody>
                                         <?php if (empty($so_list)): ?>
                                             <tr>
-                                                <td colspan="11" class="text-center text-muted py-4">
+                                                <td colspan="12" class="text-center text-muted py-4">
                                                     Tidak ada Sales Order siap loading untuk rute ini.
                                                 </td>
                                             </tr>
@@ -377,17 +402,35 @@
                                                     <td class="text-center"><?= number_format((int)$so->jumlah_item) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_order, 2) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_outstanding, 2) ?></td>
+                                                    <td class="text-center">
+                                                        <?php
+                                                        $is_verified = (int)$so->jumlah_item > 0 && (int)$so->jumlah_item_terverifikasi >= (int)$so->jumlah_item;
+                                                        ?>
+                                                        <span class="badge badge-<?= $is_verified ? 'success' : 'warning' ?>">
+                                                            <?= number_format((int)$so->jumlah_item_terverifikasi) ?>/<?= number_format((int)$so->jumlah_item) ?>
+                                                        </span>
+                                                        <?php if ((float)($so->total_qty_tidak_terkirim ?? 0) > 0): ?>
+                                                            <br><small class="text-danger"><?= number_format((float)$so->total_qty_tidak_terkirim, 2) ?> tidak terkirim</small>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="text-right"><?= number_format((float)$so->total_tonase, 3) ?> ton</td>
                                                     <td class="text-right"><?= number_format((float)$so->total_kubikasi, 4) ?> m3</td>
                                                     <td class="text-center">
-                                                        <form method="post"
-                                                              action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
-                                                              onsubmit="return confirm('Kembalikan SO <?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?> ke status Open?');">
-                                                            <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
-                                                            <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open">
-                                                                <i class="fas fa-times"></i>
-                                                            </button>
-                                                        </form>
+                                                        <div class="btn-group btn-group-sm" role="group">
+                                                            <a href="<?= base_url('logistik/so_siap_loading/verifikasi/' . $so->id_so) ?>"
+                                                               class="btn btn-info"
+                                                               title="Detail dan Verifikasi Barang">
+                                                                <i class="fas fa-clipboard-list"></i>
+                                                            </a>
+                                                            <form method="post"
+                                                                  action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
+                                                                  onsubmit="return confirm('Kembalikan SO <?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?> ke status Open?');">
+                                                                <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
+                                                                <button type="submit" class="btn btn-danger" title="Kembalikan ke Open">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -420,8 +463,8 @@ $(document).ready(function () {
             url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { orderable: false, targets: [0, 10] },
-            { className: 'text-center', targets: [0, 5, 10] }
+            { orderable: false, targets: [0, 11] },
+            { className: 'text-center', targets: [0, 5, 8, 11] }
         ],
         order: [[2, 'desc']],
         drawCallback: function () {

@@ -453,7 +453,7 @@ class M_SalesOrder extends CI_Model
                     THEN 1 ELSE 0 END)                                         AS jumlah_item_diterima,
             COALESCE(SUM(sd.qty), 0)                                            AS total_qty_order,
             COALESCE(SUM(sd.qty_faktur), 0)                                     AS total_qty_faktur,
-            COALESCE(SUM(sd.qty_outstanding), 0)                                AS total_qty_outstanding
+            COALESCE(SUM(GREATEST(sd.qty - COALESCE(sd.qty_faktur, 0), 0)), 0)   AS total_qty_outstanding
         ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
@@ -517,7 +517,7 @@ class M_SalesOrder extends CI_Model
                             id_so,
                             SUM(qty) AS total_qty_order,
                             SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                            SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                            SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
                         FROM tbso_sales_order_detail
                         GROUP BY id_so
                     ) d ON d.id_so = so.id_so
@@ -580,7 +580,7 @@ class M_SalesOrder extends CI_Model
                     SUM(CASE WHEN (qty - COALESCE(qty_faktur, 0)) <= 0 THEN 1 ELSE 0 END) AS jumlah_item_diterima,
                     SUM(qty) AS total_qty_order,
                     SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
                 FROM tbso_sales_order_detail
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so
@@ -640,9 +640,16 @@ class M_SalesOrder extends CI_Model
             $row['hrg_pokok']       = (float)($row['hrg_pokok']        ?? 0);
             $row['disc']            = (float)($row['disc']             ?? 0);
             $row['qty_faktur']      = (float)($row['qty_faktur']       ?? 0);
-            // qty_outstanding adalah GENERATED COLUMN; fallback manual jika null
-            $row['qty_outstanding'] = (float)($row['qty_outstanding']
-                ?? ($row['qty'] - $row['qty_faktur']));
+            $row['qty_outstanding'] = max(0, (float)$row['qty'] - (float)$row['qty_faktur']);
+            $row['qty_siap_faktur'] = array_key_exists('qty_siap_faktur', $row) && $row['qty_siap_faktur'] !== null
+                ? (float)$row['qty_siap_faktur']
+                : (float)$row['qty'];
+            $row['qty_tidak_terkirim'] = (float)($row['qty_tidak_terkirim']
+                ?? max(0, $row['qty_outstanding'] - $row['qty_siap_faktur']));
+            $row['qty_available_faktur'] = max(0, min(
+                $row['qty_outstanding'],
+                $row['qty_siap_faktur'] - $row['qty_faktur']
+            ));
 
             if (!isset($row['qty_box']) || $row['qty_box'] === null) {
                 $isi               = max(1, (int)($row['isi_per_box'] ?? 1));
@@ -1008,7 +1015,7 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Buat Faktur Penjualan dari SO yang sudah berstatus 'open'.
+     * Buat Faktur Penjualan dari SO yang sudah berstatus 'siap_faktur'.
      *
      * $faktur_header: array berisi no_faktur, tanggal_faktur, catatan, create_by, dsb.
      * $faktur_items : array baris item. Setiap item WAJIB punya:
@@ -1023,7 +1030,7 @@ class M_SalesOrder extends CI_Model
     public function buat_faktur($id_so, $faktur_header, $faktur_items)
     {
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
-        if (!$so || $so['status'] !== 'open') return false;
+        if (!$so || $so['status'] !== 'siap_faktur') return false;
 
         // Validasi: qty faktur tidak boleh melebihi outstanding
         $errors = $this->_validasi_qty_faktur($id_so, $faktur_items);
@@ -1174,14 +1181,18 @@ class M_SalesOrder extends CI_Model
                 continue;
             }
 
-            $outstanding = (float)$sd['qty'] - (float)$sd['qty_faktur'];
+            $outstanding = max(0, (float)$sd['qty'] - (float)$sd['qty_faktur']);
+            $qty_siap = array_key_exists('qty_siap_faktur', $sd) && $sd['qty_siap_faktur'] !== null
+                ? (float)$sd['qty_siap_faktur']
+                : (float)$sd['qty'];
+            $available_faktur = max(0, min($outstanding, $qty_siap - (float)$sd['qty_faktur']));
             $diminta     = (float)$item['qty'];
 
             if ($diminta <= 0) {
                 $errors[] = "Qty faktur untuk <b>{$sd['nama_barang']}</b> harus lebih dari 0.";
-            } elseif ($diminta > $outstanding) {
-                $errors[] = "Qty faktur untuk <b>{$sd['nama_barang']}</b> melebihi outstanding. "
-                    . "Outstanding: {$outstanding} pcs, Diminta: {$diminta} pcs.";
+            } elseif ($diminta > $available_faktur + 0.001) {
+                $errors[] = "Qty faktur untuk <b>{$sd['nama_barang']}</b> melebihi qty yang lolos verifikasi. "
+                    . "Siap faktur: {$available_faktur} pcs, Diminta: {$diminta} pcs.";
             }
         }
         return $errors;

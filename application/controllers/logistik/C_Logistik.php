@@ -39,15 +39,81 @@ class C_Logistik extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "'sedang_verifikasi'") !== false) {
+        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false) {
             return;
         }
 
         $this->db->query("
             ALTER TABLE tbso_sales_order
-            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','completed','cancelled')
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','completed','cancelled')
             NOT NULL DEFAULT 'draft'
         ");
+    }
+
+    private function _ensureSoLoadingVerificationColumns()
+    {
+        $this->load->dbforge();
+
+        if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_siap_faktur' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'null'       => true,
+                    'after'      => 'qty_faktur',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('qty_tidak_terkirim', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_tidak_terkirim' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'qty_siap_faktur',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_status', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_status' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 20,
+                    'default'    => 'pending',
+                    'null'       => false,
+                    'after'      => 'qty_tidak_terkirim',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_note', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_note' => [
+                    'type' => 'TEXT',
+                    'null' => true,
+                    'after' => 'verifikasi_loading_status',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_by', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'verifikasi_loading_note',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_at', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_at' => [
+                    'type' => 'DATETIME',
+                    'null' => true,
+                    'after' => 'verifikasi_loading_by',
+                ],
+            ]);
+        }
     }
 
     public function index()
@@ -996,6 +1062,7 @@ class C_Logistik extends CI_Controller
     {
         $this->_ensureSoRouteColumn();
         $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
         $routes = $this->M_Logistik->get_so_siap_loading_rute_summary();
@@ -1013,11 +1080,100 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function verifikasi_barang_so_siap_loading($id_so)
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $so = $this->M_Logistik->get_so_siap_loading_verification($id_so);
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau sudah tidak berstatus Sedang Verifikasi.');
+            redirect('logistik/so_siap_loading');
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - Verifikasi Barang SO ' . $so->no_so;
+        $data['so'] = $so;
+        $data['details'] = $this->M_Logistik->get_so_siap_loading_verification_detail($id_so);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_verifikasi_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_verifikasi_barang_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $so = $this->M_Logistik->get_so_siap_loading_verification($id_so);
+        $redirect_rute = trim((string)$this->input->post('current_rute', true));
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau sudah tidak berstatus Sedang Verifikasi.');
+            redirect('logistik/so_siap_loading' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+            return;
+        }
+
+        $post = $this->input->post(null, true);
+        $items = [];
+        $ids = $post['id_so_detail'] ?? [];
+        foreach ((array)$ids as $idx => $id_detail) {
+            $items[] = [
+                'id_so_detail' => (int)$id_detail,
+                'qty_siap'     => (float)($post['qty_siap_faktur'][$idx] ?? 0),
+                'note'         => trim((string)($post['verifikasi_loading_note'][$idx] ?? '')),
+            ];
+        }
+
+        $result = $this->M_Logistik->save_so_siap_loading_verification($id_so, $items, $this->session->userdata('username') ?? '');
+        if (isset($result['errors']) && !empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading/verifikasi/' . $id_so);
+            return;
+        }
+
+        $this->session->set_flashdata('msg', 'Verifikasi barang SO <b>' . htmlspecialchars($so->no_so) . '</b> berhasil disimpan.');
+        redirect('logistik/so_siap_loading' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+    }
+
+    public function siap_faktur_so_siap_loading()
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $kd_rute = trim((string)$this->input->post('current_rute', true));
+        if ($kd_rute === '') {
+            $this->session->set_flashdata('msg', 'Pilih rute terlebih dahulu.');
+            redirect('logistik/so_siap_loading');
+            return;
+        }
+
+        $result = $this->M_Logistik->mark_so_siap_loading_route_ready_for_faktur(
+            $kd_rute,
+            $this->session->userdata('username') ?? ''
+        );
+
+        if (!empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));
+            return;
+        }
+
+        $this->session->set_flashdata('msg', '<b>' . (int)$result['updated'] . ' SO</b> rute <b>' . htmlspecialchars($kd_rute) . '</b> sudah siap difakturkan oleh Admin Sales.');
+        redirect('logistik/so_siap_loading');
+    }
+
     public function kembalikan_so_siap_loading($id_so)
     {
         if ($this->input->method() !== 'post') show_404();
 
         $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
         $current_rute = trim((string)$this->input->post('current_rute', true));
         $redirect_url = 'logistik/so_siap_loading' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : '');
 

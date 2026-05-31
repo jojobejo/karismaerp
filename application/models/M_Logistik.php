@@ -1223,9 +1223,12 @@ class M_Logistik extends CI_Model
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.jumlah_item_terverifikasi, 0) AS jumlah_item_terverifikasi,
                 COALESCE(d.total_qty_order, 0) AS total_qty_order,
                 COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
-                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                COALESCE(d.total_qty_siap_faktur, 0) AS total_qty_siap_faktur,
+                COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c
                 ON c.kd_customer = so.kd_customer
@@ -1235,9 +1238,12 @@ class M_Logistik extends CI_Model
                 SELECT
                     id_so,
                     COUNT(id) AS jumlah_item,
+                    SUM(CASE WHEN verifikasi_loading_status = 'verified' THEN 1 ELSE 0 END) AS jumlah_item_terverifikasi,
                     SUM(qty) AS total_qty_order,
                     SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                    SUM(COALESCE(qty_siap_faktur, 0)) AS total_qty_siap_faktur,
+                    SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
                 FROM tbso_sales_order_detail
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so
@@ -1256,7 +1262,10 @@ class M_Logistik extends CI_Model
                 ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
                 ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi,
                 ROUND(COALESCE(SUM(x.total_qty_order), 0), 2) AS total_qty_order,
-                ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding
+                ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding,
+                ROUND(COALESCE(SUM(x.total_qty_siap_faktur), 0), 2) AS total_qty_siap_faktur,
+                ROUND(COALESCE(SUM(x.total_qty_tidak_terkirim), 0), 2) AS total_qty_tidak_terkirim,
+                SUM(CASE WHEN x.jumlah_item > 0 AND x.jumlah_item_terverifikasi >= x.jumlah_item THEN 1 ELSE 0 END) AS total_so_terverifikasi
             FROM (
                 SELECT
                     so.id_so,
@@ -1264,8 +1273,12 @@ class M_Logistik extends CI_Model
                     COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                     COALESCE(so.total_tonase, 0) AS total_tonase,
                     COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
+                    COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                    COALESCE(d.jumlah_item_terverifikasi, 0) AS jumlah_item_terverifikasi,
                     COALESCE(d.total_qty_order, 0) AS total_qty_order,
-                    COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                    COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                    COALESCE(d.total_qty_siap_faktur, 0) AS total_qty_siap_faktur,
+                    COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
                 FROM tbso_sales_order so
                 LEFT JOIN tb_customer c
                     ON c.kd_customer = so.kd_customer
@@ -1274,8 +1287,12 @@ class M_Logistik extends CI_Model
                 LEFT JOIN (
                     SELECT
                         id_so,
+                        COUNT(id) AS jumlah_item,
+                        SUM(CASE WHEN verifikasi_loading_status = 'verified' THEN 1 ELSE 0 END) AS jumlah_item_terverifikasi,
                         SUM(qty) AS total_qty_order,
-                        SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                        SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                        SUM(COALESCE(qty_siap_faktur, 0)) AS total_qty_siap_faktur,
+                        SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
                     FROM tbso_sales_order_detail
                     GROUP BY id_so
                 ) d ON d.id_so = so.id_so
@@ -1313,9 +1330,12 @@ class M_Logistik extends CI_Model
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.jumlah_item_terverifikasi, 0) AS jumlah_item_terverifikasi,
                 COALESCE(d.total_qty_order, 0) AS total_qty_order,
                 COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
-                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                COALESCE(d.total_qty_siap_faktur, 0) AS total_qty_siap_faktur,
+                COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c
                 ON c.kd_customer = so.kd_customer
@@ -1325,9 +1345,12 @@ class M_Logistik extends CI_Model
                 SELECT
                     id_so,
                     COUNT(id) AS jumlah_item,
+                    SUM(CASE WHEN verifikasi_loading_status = 'verified' THEN 1 ELSE 0 END) AS jumlah_item_terverifikasi,
                     SUM(qty) AS total_qty_order,
                     SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                    SUM(COALESCE(qty_outstanding, qty - COALESCE(qty_faktur, 0))) AS total_qty_outstanding
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                    SUM(COALESCE(qty_siap_faktur, 0)) AS total_qty_siap_faktur,
+                    SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
                 FROM tbso_sales_order_detail
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so
@@ -1335,6 +1358,151 @@ class M_Logistik extends CI_Model
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             ORDER BY so.update_at DESC, so.no_so DESC
         ", [$kd_rute])->result();
+    }
+
+    public function get_so_siap_loading_verification($id_so)
+    {
+        return $this->db->query("
+            SELECT
+                so.*,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                c.kd_rute AS customer_kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            WHERE so.id_so = ?
+            AND so.status = 'sedang_verifikasi'
+            LIMIT 1
+        ", [(int)$id_so])->row();
+    }
+
+    public function get_so_siap_loading_verification_detail($id_so)
+    {
+        $rows = $this->db
+            ->select('d.id AS id_so_detail, d.*')
+            ->from('tbso_sales_order_detail d')
+            ->where('d.id_so', (int)$id_so)
+            ->order_by('d.id', 'ASC')
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $row->qty = (float)($row->qty ?? 0);
+            $row->qty_faktur = (float)($row->qty_faktur ?? 0);
+            $row->qty_outstanding = max(0, $row->qty - $row->qty_faktur);
+            $qty_siap_total = $row->qty_siap_faktur === null
+                ? $row->qty
+                : (float)$row->qty_siap_faktur;
+            $row->qty_siap_faktur_total = $qty_siap_total;
+            $row->qty_siap_faktur = max(0, min($row->qty_outstanding, $qty_siap_total - $row->qty_faktur));
+            $row->qty_tidak_terkirim = (float)($row->qty_tidak_terkirim ?? max(0, $row->qty_outstanding - $row->qty_siap_faktur));
+            $row->verifikasi_loading_status = $row->verifikasi_loading_status ?: 'pending';
+        }
+
+        return $rows;
+    }
+
+    public function save_so_siap_loading_verification($id_so, array $items, $verified_by)
+    {
+        $details = $this->get_so_siap_loading_verification_detail($id_so);
+        $detail_map = [];
+        foreach ($details as $detail) {
+            $detail_map[(int)$detail->id_so_detail] = $detail;
+        }
+
+        $errors = [];
+        $updates = [];
+        foreach ($items as $item) {
+            $id_detail = (int)($item['id_so_detail'] ?? 0);
+            if (!isset($detail_map[$id_detail])) {
+                $errors[] = 'Item SO tidak valid.';
+                continue;
+            }
+
+            $detail = $detail_map[$id_detail];
+            $outstanding = max(0, (float)$detail->qty_outstanding);
+            $qty_siap = (float)($item['qty_siap'] ?? 0);
+            if ($qty_siap < 0) {
+                $errors[] = 'Qty siap faktur untuk ' . htmlspecialchars($detail->nama_barang) . ' tidak boleh minus.';
+                continue;
+            }
+            if ($qty_siap > $outstanding + 0.001) {
+                $errors[] = 'Qty siap faktur untuk ' . htmlspecialchars($detail->nama_barang) . ' melebihi outstanding.';
+                continue;
+            }
+
+            $updates[] = [
+                'id_detail' => $id_detail,
+                'qty_siap' => (float)$detail->qty_faktur + $qty_siap,
+                'qty_tidak_terkirim' => max(0, $outstanding - $qty_siap),
+                'note' => (string)($item['note'] ?? ''),
+            ];
+        }
+
+        if (!empty($errors)) {
+            return ['errors' => $errors];
+        }
+        if (count($updates) !== count($detail_map)) {
+            return ['errors' => ['Semua item SO harus diverifikasi.']];
+        }
+
+        $this->db->trans_start();
+        foreach ($updates as $update) {
+            $this->db->where('id', $update['id_detail']);
+            $this->db->where('id_so', (int)$id_so);
+            $this->db->update('tbso_sales_order_detail', [
+                'qty_siap_faktur' => $update['qty_siap'],
+                'qty_tidak_terkirim' => $update['qty_tidak_terkirim'],
+                'verifikasi_loading_status' => 'verified',
+                'verifikasi_loading_note' => $update['note'],
+                'verifikasi_loading_by' => $verified_by,
+                'verifikasi_loading_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+        $this->db->where('id_so', (int)$id_so);
+        $this->db->update('tbso_sales_order', [
+            'update_by' => $verified_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+        $this->db->trans_complete();
+
+        return $this->db->trans_status() ? ['success' => true] : ['errors' => ['Gagal menyimpan verifikasi barang.']];
+    }
+
+    public function mark_so_siap_loading_route_ready_for_faktur($kd_rute, $update_by)
+    {
+        $so_list = $this->get_so_siap_loading_by_rute($kd_rute);
+        if (empty($so_list)) {
+            return ['errors' => ['Tidak ada SO Sedang Verifikasi pada rute ini.']];
+        }
+
+        $not_verified = [];
+        foreach ($so_list as $so) {
+            if ((int)$so->jumlah_item <= 0 || (int)$so->jumlah_item_terverifikasi < (int)$so->jumlah_item) {
+                $not_verified[] = $so->no_so;
+            }
+        }
+        if (!empty($not_verified)) {
+            return ['errors' => ['Masih ada SO yang belum selesai verifikasi barang: ' . implode(', ', $not_verified)]];
+        }
+
+        $ids = array_map(function($so) {
+            return (int)$so->id_so;
+        }, $so_list);
+
+        $this->db->where_in('id_so', $ids);
+        $this->db->where('status', 'sedang_verifikasi');
+        $this->db->update('tbso_sales_order', [
+            'status' => 'siap_faktur',
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return ['updated' => $this->db->affected_rows()];
     }
 
     public function count_so_siap_loading()
@@ -1356,6 +1524,16 @@ class M_Logistik extends CI_Model
 
     public function kembalikan_so_siap_loading($id_so, $update_by)
     {
+        $this->db->where('id_so', (int)$id_so);
+        $this->db->update('tbso_sales_order_detail', [
+            'qty_siap_faktur' => null,
+            'qty_tidak_terkirim' => 0,
+            'verifikasi_loading_status' => 'pending',
+            'verifikasi_loading_note' => null,
+            'verifikasi_loading_by' => null,
+            'verifikasi_loading_at' => null,
+        ]);
+
         $this->db->where('id_so', $id_so);
         $this->db->where('status', 'sedang_verifikasi');
         return $this->db->update('tbso_sales_order', [

@@ -214,15 +214,52 @@ class C_SalesOrder extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "'sedang_verifikasi'") !== false) {
+        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false) {
             return;
         }
 
         $this->db->query("
             ALTER TABLE tbso_sales_order
-            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','completed','cancelled')
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','completed','cancelled')
             NOT NULL DEFAULT 'draft'
         ");
+    }
+
+    private function _ensureSoLoadingVerificationColumns()
+    {
+        $this->load->dbforge();
+
+        if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_siap_faktur' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'null'       => true,
+                    'after'      => 'qty_faktur',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('qty_tidak_terkirim', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_tidak_terkirim' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'qty_siap_faktur',
+                ],
+            ]);
+        }
+        foreach ([
+            'verifikasi_loading_status' => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'pending', 'null' => false],
+            'verifikasi_loading_note' => ['type' => 'TEXT', 'null' => true],
+            'verifikasi_loading_by' => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => true],
+            'verifikasi_loading_at' => ['type' => 'DATETIME', 'null' => true],
+        ] as $field => $definition) {
+            if (!$this->db->field_exists($field, 'tbso_sales_order_detail')) {
+                $this->dbforge->add_column('tbso_sales_order_detail', [$field => $definition]);
+            }
+        }
     }
 
     private function _normalizeFakturPrefix($prefix)
@@ -305,6 +342,9 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function index()
     {
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
         $filter = [
             'date1'       => $this->input->post('date1'),
             'date2'       => $this->input->post('date2'),
@@ -444,6 +484,9 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function detail($id_so)
     {
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
         if (!$this->_canAccessSo($so)) {
@@ -458,10 +501,12 @@ class C_SalesOrder extends CI_Controller
         $total_order       = 0;
         $total_faktur      = 0;
         $total_outstanding = 0;
+        $total_available_faktur = 0;
         foreach ($details as $d) {
             $total_order       += (float)$d['qty'];
             $total_faktur      += (float)$d['qty_faktur'];
             $total_outstanding += (float)($d['qty'] - $d['qty_faktur']);
+            $total_available_faktur += (float)($d['qty_available_faktur'] ?? 0);
         }
 
         $data['page_title']        = 'KARISMA - Detail SO ' . ($so['no_so'] ?? $id_so);
@@ -471,6 +516,7 @@ class C_SalesOrder extends CI_Controller
         $data['total_order']       = $total_order;
         $data['total_faktur']      = $total_faktur;
         $data['total_outstanding'] = $total_outstanding;
+        $data['total_available_faktur'] = $total_available_faktur;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_detail.php', $data);
@@ -680,14 +726,16 @@ class C_SalesOrder extends CI_Controller
     public function form_faktur($id_so)
     {
         $this->_ensureSoFakturZColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
             $this->_denySoAccess();
             return;
         }
-        if (!$so || $so['status'] !== 'open') {
-            $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang berstatus Open.');
+        if (!$so || $so['status'] !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati Siap Loading dan Verifikasi Barang.');
             redirect('sales_order/detail/' . $id_so);
             return;
         }
@@ -701,9 +749,9 @@ class C_SalesOrder extends CI_Controller
         $tax_mode = strtolower(trim($this->input->get('tax_mode', true) ?? 'non_pajak'));
         $tax_rate = $tax_mode === 'pajak' ? 11 : 0;
 
-        // Filter hanya item yang masih ada outstanding
+        // Filter hanya item yang sudah lolos verifikasi barang dan belum difakturkan.
         $items_outstanding = array_filter($details, function($d) {
-            return ((float)$d['qty'] - (float)$d['qty_faktur']) > 0;
+            return (float)($d['qty_available_faktur'] ?? 0) > 0;
         });
 
         if (!empty($selected_items)) {
@@ -747,10 +795,12 @@ class C_SalesOrder extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
         $this->_ensureSoFakturZColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || $so['status'] !== 'open') {
-            $this->session->set_flashdata('error', 'SO tidak valid atau tidak berstatus Open.');
+        if (!$so || $so['status'] !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'SO tidak valid atau belum siap difakturkan.');
             redirect('sales_order/detail/' . $id_so);
             return;
         }
@@ -847,7 +897,7 @@ class C_SalesOrder extends CI_Controller
                     . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.');
             } else {
                 $this->session->set_flashdata('success',
-                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih berstatus <b>Open</b> — masih ada outstanding.');
+                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih memiliki barang yang belum terkirim.');
             }
 
             redirect('sales_order/detail/' . $id_so);

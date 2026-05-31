@@ -74,6 +74,7 @@
                 'draft'              => 'secondary',
                 'open'               => 'primary',
                 'sedang_verifikasi'  => 'warning',
+                'siap_faktur'        => 'info',
                 'completed'          => 'success',
                 'cancelled'          => 'danger',
             ];
@@ -81,6 +82,7 @@
                 'draft'              => 'Draft',
                 'open'               => 'Open',
                 'sedang_verifikasi'  => 'Sedang Verifikasi',
+                'siap_faktur'        => 'Siap Faktur',
                 'completed'          => 'Completed',
                 'cancelled'          => 'Cancelled',
             ];
@@ -242,7 +244,7 @@
                         <i class="fas fa-list-ul mr-1"></i> Item Sales Order
                         <span class="badge badge-info ml-1"><?= count($details) ?> item</span>
                     </h3>
-                    <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                    <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
                         <div class="card-tools">
                             <button type="submit" form="form-pilih-faktur" class="btn btn-success btn-xs btn-buat-faktur-pilih">
                                 <i class="fas fa-file-invoice-dollar"></i> Fakturkan Item Dipilih
@@ -252,7 +254,7 @@
                 </div>
                 <div class="card-body p-0">
                     <form id="form-pilih-faktur" action="<?= base_url('sales_order/form_faktur/' . $so['id_so']) ?>" method="get">
-                        <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                        <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
                             <div class="px-3 py-2 border-bottom bg-light">
                                 <div class="form-inline">
                                     <label class="mr-2 mb-1 mb-sm-0 font-weight-bold">Jenis Faktur</label>
@@ -267,7 +269,7 @@
                         <table class="table table-sm table-bordered table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
-                                    <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                                    <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
                                         <th class="text-center" style="width:42px">
                                             <input type="checkbox" id="check-all-faktur" title="Pilih semua item outstanding">
                                         </th>
@@ -283,10 +285,11 @@
                             </thead>
                             <tbody>
                                 <?php if (empty($details)): ?>
-                                    <tr><td colspan="<?= ($so['status'] === 'open' && $total_outstanding > 0) ? 8 : 7 ?>" class="text-center text-muted py-3">Tidak ada item</td></tr>
+                                    <tr><td colspan="<?= ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0) ? 8 : 7 ?>" class="text-center text-muted py-3">Tidak ada item</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($details as $i => $d):
                                         $outstanding_item = (float)$d['qty'] - (float)$d['qty_faktur'];
+                                        $available_faktur = (float)($d['qty_available_faktur'] ?? $outstanding_item);
                                         $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
                                         $ord_box = floor($d['qty'] / $isi);
                                         $ord_pcs = fmod($d['qty'], $isi);
@@ -296,12 +299,12 @@
                                         $out_pcs = fmod($outstanding_item, $isi);
                                     ?>
                                     <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
-                                        <?php if ($so['status'] === 'open' && $total_outstanding > 0): ?>
+                                        <?php if ($so['status'] === 'siap_faktur' && ($total_available_faktur ?? 0) > 0): ?>
                                             <td class="text-center align-middle">
-                                                <?php if ($outstanding_item > 0): ?>
+                                                <?php if ($available_faktur > 0): ?>
                                                     <input type="checkbox" class="check-item-faktur" name="item[]" value="<?= (int)$d['id_so_detail'] ?>">
                                                 <?php else: ?>
-                                                    <i class="fas fa-check text-success"></i>
+                                                    <i class="fas fa-minus text-muted"></i>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>

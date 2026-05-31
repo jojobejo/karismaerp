@@ -136,10 +136,10 @@
                                         <tr>
                                             <th width="35%">Barang</th>
                                             <th>Lot / Exp</th>
-                                            <th class="text-right">Outstanding</th>
+                                            <th class="text-right">Siap Faktur</th>
                                             <th class="text-right">
                                                 Qty Faktur
-                                                <br><small class="text-muted">(maks = outstanding)</small>
+                                                <br><small class="text-muted">(maks = siap faktur)</small>
                                             </th>
                                             <th class="text-right">Harga Satuan</th>
                                             <th class="text-right">Subtotal</th>
@@ -147,7 +147,7 @@
                                     </thead>
                                     <tbody>
                                         <?php foreach ($details as $i => $d):
-                                            $outstanding = (float)$d['qty'] - (float)$d['qty_faktur'];
+                                            $outstanding = (float)($d['qty_available_faktur'] ?? ((float)$d['qty'] - (float)$d['qty_faktur']));
                                             $isi         = max(1, (int)($d['isi_per_box'] ?? 1));
                                             $out_box     = floor($outstanding / $isi);
                                             $out_pcs     = fmod($outstanding, $isi);
@@ -198,7 +198,7 @@
                                                 </strong>
                                                 <br>
                                                 <small class="text-muted">= <?= number_format($outstanding) ?> pcs</small>
-                                                <!-- Simpan nilai max outstanding sebagai data attr -->
+                                                <!-- Simpan nilai max siap faktur sebagai data attr -->
                                                 <input type="hidden" class="max-outstanding" value="<?= $outstanding ?>">
                                             </td>
                                             <td class="text-right" style="min-width:180px;">
