@@ -39,13 +39,13 @@ class C_Logistik extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false) {
+        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false && strpos($type, "'partial'") !== false) {
             return;
         }
 
         $this->db->query("
             ALTER TABLE tbso_sales_order
-            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','completed','cancelled')
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','partial','completed','cancelled')
             NOT NULL DEFAULT 'draft'
         ");
     }
@@ -1078,6 +1078,46 @@ class C_Logistik extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/so_siap_loading.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function tambah_so_siap_loading()
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $data['page_title'] = 'KARISMA - Tambah SO Siap Loading';
+        $data['so_list'] = $this->M_Logistik->get_so_siap_loading_candidates();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_siap_loading_tambah.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_tambah_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+
+        $user = $this->session->userdata('username')
+            ?? $this->session->userdata('nama')
+            ?? $this->session->userdata('nm_karyawan')
+            ?? 'system';
+
+        $result = $this->M_Logistik->move_so_to_siap_loading($id_so, $user);
+        if (!empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading/tambah');
+            return;
+        }
+
+        $no_so = htmlspecialchars($result['no_so'] ?? 'SO');
+        $kd_rute = (string)($result['kd_rute'] ?? '');
+        $this->session->set_flashdata('msg', '<b>' . $no_so . '</b> berhasil ditambahkan ke SO Siap Loading untuk diverifikasi.');
+        redirect('logistik/so_siap_loading' . ($kd_rute !== '' ? '?rute=' . rawurlencode($kd_rute) : ''));
     }
 
     public function verifikasi_barang_so_siap_loading($id_so)

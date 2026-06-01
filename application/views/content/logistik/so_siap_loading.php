@@ -99,6 +99,24 @@
     .quota-card .quota-info {
         white-space: normal;
     }
+    .so-action-group {
+        display: inline-flex;
+        gap: 4px;
+        justify-content: center;
+        white-space: nowrap;
+    }
+    .so-action-group form {
+        display: inline-block;
+        margin: 0;
+    }
+    .so-action-group .btn {
+        align-items: center;
+        display: inline-flex;
+        height: 30px;
+        justify-content: center;
+        padding: 0;
+        width: 30px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -165,6 +183,9 @@
                 <div class="mb-2">
                     <a href="<?= base_url('logistik') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i>Kembali ke Delivery Order
+                    </a>
+                    <a href="<?= base_url('logistik/so_siap_loading/tambah') ?>" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus mr-1"></i>Tambah SO
                     </a>
                 </div>
             </div>
@@ -383,9 +404,7 @@
                                                 <tr>
                                                     <td class="text-center rownum"></td>
                                                     <td class="font-weight-bold">
-                                                        <a href="<?= base_url('sales_order/detail/' . $so->id_so) ?>">
-                                                            <?= htmlspecialchars($so->no_so) ?>
-                                                        </a>
+                                                        <?= htmlspecialchars($so->no_so) ?>
                                                     </td>
                                                     <td class="text-nowrap">
                                                         <?= !empty($so->tanggal_transaksi) ? date('d/m/Y', strtotime($so->tanggal_transaksi)) : '-' ?>
@@ -416,9 +435,9 @@
                                                     <td class="text-right"><?= number_format((float)$so->total_tonase, 3) ?> ton</td>
                                                     <td class="text-right"><?= number_format((float)$so->total_kubikasi, 4) ?> m3</td>
                                                     <td class="text-center">
-                                                        <div class="btn-group btn-group-sm" role="group">
+                                                        <div class="so-action-group" role="group">
                                                             <a href="<?= base_url('logistik/so_siap_loading/verifikasi/' . $so->id_so) ?>"
-                                                               class="btn btn-info"
+                                                               class="btn btn-sm btn-info"
                                                                title="Detail dan Verifikasi Barang">
                                                                 <i class="fas fa-clipboard-list"></i>
                                                             </a>
@@ -426,7 +445,7 @@
                                                                   action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
                                                                   onsubmit="return confirm('Kembalikan SO <?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?> ke status Open?');">
                                                                 <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
-                                                                <button type="submit" class="btn btn-danger" title="Kembalikan ke Open">
+                                                                <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open">
                                                                     <i class="fas fa-times"></i>
                                                                 </button>
                                                             </form>

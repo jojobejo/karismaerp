@@ -3,6 +3,7 @@
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
 $from_page = strtolower((string)$this->input->get('from', true));
 $is_admin_sc_detail = $jobdesk === 'ADMINSC' || $from_page === 'admin_sc';
+$hide_activity_log = $is_admin_sc_detail || $jobdesk === 'SC';
 $back_url = $is_admin_sc_detail ? base_url('sales_order/admin_sc') : base_url('sales_order');
 $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
 ?>
@@ -84,6 +85,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                 'open'               => 'primary',
                 'sedang_verifikasi'  => 'warning',
                 'siap_faktur'        => 'info',
+                'partial'            => 'warning',
                 'completed'          => 'success',
                 'cancelled'          => 'danger',
             ];
@@ -92,6 +94,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                 'open'               => 'Open',
                 'sedang_verifikasi'  => 'Sedang Verifikasi',
                 'siap_faktur'        => 'Siap Faktur',
+                'partial'            => 'Partial',
                 'completed'          => 'Completed',
                 'cancelled'          => 'Cancelled',
             ];
@@ -176,10 +179,18 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
             </div>
             <?php endif; ?>
 
-            <!-- INFORMASI SO -->
-            <div class="card card-outline card-primary mb-3">
+            <!-- INFORMASI & ITEM SO -->
+            <div class="card card-outline card-primary mb-3 collapsed-card">
                 <div class="card-header py-2">
-                    <h3 class="card-title"><i class="fas fa-info-circle mr-1"></i> Informasi Sales Order</h3>
+                    <h3 class="card-title">
+                        <i class="fas fa-info-circle mr-1"></i> Informasi & Item Sales Order
+                        <span class="badge badge-info ml-1"><?= count($details) ?> item</span>
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="row no-gutters">
@@ -240,18 +251,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- ITEM SO -->
-            <div class="card card-outline card-info mb-3">
-                <div class="card-header py-2">
-                    <h3 class="card-title">
-                        <i class="fas fa-list-ul mr-1"></i> Item Sales Order
-                        <span class="badge badge-info ml-1"><?= count($details) ?> item</span>
-                    </h3>
-                </div>
-                <div class="card-body p-0">
+                    <div class="border-top">
                         <table class="table table-sm table-bordered table-hover mb-0">
                             <thead class="thead-light">
                                 <tr>
@@ -321,6 +321,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                 <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
                 </div>
             </div>
 
@@ -351,17 +352,18 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                     <th>Tanggal</th>
                                     <th class="text-right">Tonase</th>
                                     <th class="text-center">Status</th>
-                                    <th class="text-center">Aksi</th>
+                                    <th class="text-center">Detail</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($fakturs as $n => $f): ?>
+                                <?php foreach ($fakturs as $n => $f):
+                                    $collapse_id = 'detailFaktur' . (int)$f['id_faktur'];
+                                    $items_faktur = $faktur_details[(int)$f['id_faktur']] ?? [];
+                                ?>
                                 <tr>
                                     <td><?= $n + 1 ?></td>
                                     <td>
-                                        <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>">
-                                            <strong><?= htmlspecialchars($f['no_faktur']) ?></strong>
-                                        </a>
+                                        <strong><?= htmlspecialchars($f['no_faktur']) ?></strong>
                                     </td>
                                     <td><?= date('d/m/Y', strtotime($f['tanggal_faktur'])) ?></td>
                                     <td class="text-right"><?= number_format($f['total_tonase'], 3) ?> ton</td>
@@ -391,10 +393,57 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>"
-                                           class="btn btn-xs btn-info" title="Detail Faktur">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
+                                        <button type="button"
+                                                class="btn btn-xs btn-info"
+                                                data-toggle="collapse"
+                                                data-target="#<?= $collapse_id ?>"
+                                                aria-expanded="false"
+                                                aria-controls="<?= $collapse_id ?>"
+                                                title="Tampilkan barang faktur">
+                                            <i class="fas fa-chevron-down"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="collapse bg-light" id="<?= $collapse_id ?>">
+                                    <td colspan="6" class="p-2">
+                                        <?php if (empty($items_faktur)): ?>
+                                            <div class="text-center text-muted py-2">Detail barang faktur tidak tersedia.</div>
+                                        <?php else: ?>
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width:40px">No</th>
+                                                        <th>Barang</th>
+                                                        <th>Lot / Exp</th>
+                                                        <th class="text-right">Qty</th>
+                                                        <th class="text-right">Harga</th>
+                                                        <th class="text-right">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($items_faktur as $idx => $item): ?>
+                                                        <tr>
+                                                            <td class="text-center"><?= $idx + 1 ?></td>
+                                                            <td>
+                                                                <strong><?= htmlspecialchars($item['nama_barang'] ?? '-') ?></strong>
+                                                                <br><small class="text-muted"><?= htmlspecialchars($item['kd_barang'] ?? '-') ?></small>
+                                                            </td>
+                                                            <td>
+                                                                <small>
+                                                                    <?php if (!empty($item['no_lot'])): ?>
+                                                                        Lot: <code><?= htmlspecialchars($item['no_lot']) ?></code><br>
+                                                                    <?php endif; ?>
+                                                                    Exp: <?= !empty($item['expired_date']) ? date('d/m/Y', strtotime($item['expired_date'])) : '-' ?>
+                                                                </small>
+                                                            </td>
+                                                            <td class="text-right"><?= number_format((float)($item['qty'] ?? 0), 2) ?></td>
+                                                            <td class="text-right">Rp <?= number_format((float)($item['hrg_satuan'] ?? 0), 0, ',', '.') ?></td>
+                                                            <td class="text-right font-weight-bold">Rp <?= number_format((float)($item['total_harga'] ?? 0), 0, ',', '.') ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -404,7 +453,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                 </div>
             </div>
 
-            <?php if (!$is_admin_sc_detail): ?>
+            <?php if (!$hide_activity_log): ?>
             <!-- ACTIVITY LOG -->
             <div class="card card-outline card-secondary">
                 <div class="card-header py-2">
@@ -484,7 +533,7 @@ $(document).ready(function () {
         });
     });
 
-    <?php if (!$is_admin_sc_detail): ?>
+    <?php if (!$hide_activity_log): ?>
     $.getJSON('<?= base_url('sales_order/activity_log_so/' . $so['id_so']) ?>', function(resp) {
         if (!resp.data || !resp.data.length) {
             $('#logContainer').html('<div class="text-center text-muted py-3">Belum ada aktivitas.</div>');

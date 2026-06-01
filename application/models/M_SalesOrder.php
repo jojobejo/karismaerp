@@ -491,7 +491,7 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
-        $this->db->where('so.status', 'siap_faktur');
+        $this->db->where_in('so.status', ['siap_faktur', 'partial']);
 
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
@@ -1049,7 +1049,7 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Buat Faktur Penjualan dari SO yang sudah berstatus 'siap_faktur'.
+     * Buat Faktur Penjualan dari SO yang sudah berstatus 'siap_faktur' atau 'partial'.
      *
      * $faktur_header: array berisi no_faktur, tanggal_faktur, catatan, create_by, dsb.
      * $faktur_items : array baris item. Setiap item WAJIB punya:
@@ -1064,7 +1064,7 @@ class M_SalesOrder extends CI_Model
     public function buat_faktur($id_so, $faktur_header, $faktur_items)
     {
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
-        if (!$so || $so['status'] !== 'siap_faktur') return false;
+        if (!$so || !in_array($so['status'], ['siap_faktur', 'partial'], true)) return false;
 
         // Validasi: qty faktur tidak boleh melebihi outstanding
         $errors = $this->_validasi_qty_faktur($id_so, $faktur_items);
@@ -1233,24 +1233,27 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Periksa apakah semua baris SO sudah terpenuh (outstanding = 0).
-     * Jika ya, ubah status SO menjadi 'completed'.
+     * Periksa status pemenuhan SO setelah faktur dibuat.
+     * Completed jika semua outstanding habis, partial jika sudah ada faktur namun masih ada sisa.
      */
     private function _cek_dan_complete_so($id_so)
     {
         $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
         $all_done = true;
+        $has_faktur = false;
         foreach ($rows as $r) {
+            if ((float)$r['qty_faktur'] > 0.001) {
+                $has_faktur = true;
+            }
             $outstanding = (float)$r['qty'] - (float)$r['qty_faktur'];
             if ($outstanding > 0.001) {
                 $all_done = false;
-                break;
             }
         }
-        if ($all_done) {
+        if ($all_done || $has_faktur) {
             $this->db->where('id_so', $id_so);
             $this->db->update('tbso_sales_order', [
-                'status'    => 'completed',
+                'status'    => $all_done ? 'completed' : 'partial',
                 'update_at' => date('Y-m-d H:i:s'),
             ]);
         }

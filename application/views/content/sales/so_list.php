@@ -157,6 +157,7 @@
                                     <option value="open"      <?= ($filter['status'] ?? '') === 'open'      ? 'selected' : '' ?>>Open</option>
                                     <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Sedang Verifikasi</option>
                                     <option value="siap_faktur" <?= ($filter['status'] ?? '') === 'siap_faktur' ? 'selected' : '' ?>>Siap Faktur</option>
+                                    <option value="partial" <?= ($filter['status'] ?? '') === 'partial' ? 'selected' : '' ?>>Partial</option>
                                     <option value="completed" <?= ($filter['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Completed</option>
                                     <option value="cancelled" <?= ($filter['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                                 </select>
@@ -215,6 +216,7 @@
                                     'open'               => 'primary',
                                     'sedang_verifikasi'  => 'warning',
                                     'siap_faktur'        => 'info',
+                                    'partial'            => 'warning',
                                     'completed'          => 'success',
                                     'cancelled'          => 'danger',
                                 ];
@@ -223,6 +225,7 @@
                                     'open'               => 'Open',
                                     'sedang_verifikasi'  => 'Sedang Verifikasi',
                                     'siap_faktur'        => 'Siap Faktur',
+                                    'partial'            => 'Partial',
                                     'completed'          => 'Completed',
                                     'cancelled'          => 'Cancelled',
                                 ];

@@ -225,13 +225,13 @@ class C_SalesOrder extends CI_Controller
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
         $type = strtolower((string)($column['Type'] ?? ''));
-        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false) {
+        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false && strpos($type, "'partial'") !== false) {
             return;
         }
 
         $this->db->query("
             ALTER TABLE tbso_sales_order
-            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','completed','cancelled')
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','partial','completed','cancelled')
             NOT NULL DEFAULT 'draft'
         ");
     }
@@ -418,7 +418,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'SO belum siap difakturkan atau sudah selesai.');
             redirect('sales_order/admin_sc');
             return;
@@ -588,6 +588,10 @@ class C_SalesOrder extends CI_Controller
 
         $details  = $this->M_SalesOrder->get_so_detail($id_so);
         $fakturs  = $this->M_SalesOrder->get_faktur_by_so($id_so);
+        $faktur_details = [];
+        foreach ($fakturs as $faktur) {
+            $faktur_details[(int)$faktur['id_faktur']] = $this->M_SalesOrder->get_faktur_detail($faktur['id_faktur']);
+        }
 
         // Hitung ringkasan qty per baris
         $total_order       = 0;
@@ -605,6 +609,7 @@ class C_SalesOrder extends CI_Controller
         $data['so']                = $so;
         $data['details']           = $details;
         $data['fakturs']           = $fakturs;
+        $data['faktur_details']    = $faktur_details;
         $data['total_order']       = $total_order;
         $data['total_faktur']      = $total_faktur;
         $data['total_outstanding'] = $total_outstanding;
@@ -826,7 +831,7 @@ class C_SalesOrder extends CI_Controller
             $this->_denySoAccess();
             return;
         }
-        if (!$so || $so['status'] !== 'siap_faktur') {
+        if (!$so || !in_array($so['status'], ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati Siap Loading dan Verifikasi Barang.');
             redirect('sales_order/admin_sc');
             return;
@@ -891,7 +896,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || $so['status'] !== 'siap_faktur') {
+        if (!$so || !in_array($so['status'], ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'SO tidak valid atau belum siap difakturkan.');
             redirect('sales_order/detail/' . $id_so);
             return;

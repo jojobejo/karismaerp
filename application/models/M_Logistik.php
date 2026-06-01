@@ -1360,6 +1360,127 @@ class M_Logistik extends CI_Model
         ", [$kd_rute])->result();
     }
 
+    public function get_so_siap_loading_candidates()
+    {
+        return $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.status,
+                so.customer_name,
+                so.create_by,
+                so.total_tonase,
+                so.total_kubikasi,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                c.kd_rute AS customer_kd_rute,
+                so.kd_rute AS so_kd_rute,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r
+                ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN (
+                SELECT
+                    id_so,
+                    COUNT(id) AS jumlah_item,
+                    SUM(qty) AS total_qty_order,
+                    SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                    SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            WHERE so.status IN ('open', 'partial')
+            AND COALESCE(d.total_qty_outstanding, 0) > 0
+            ORDER BY
+                FIELD(so.status, 'partial', 'open'),
+                so.update_at DESC,
+                so.tanggal_transaksi DESC,
+                so.no_so DESC
+        ")->result();
+    }
+
+    public function move_so_to_siap_loading($id_so, $update_by)
+    {
+        $so = $this->db->query("
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.status,
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN (
+                SELECT id_so, SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            WHERE so.id_so = ?
+            AND so.status IN ('open', 'partial')
+            LIMIT 1
+        ", [(int)$id_so])->row_array();
+
+        if (!$so) {
+            return ['errors' => ['SO tidak ditemukan atau statusnya bukan Open/Partial.']];
+        }
+        if ((float)$so['total_qty_outstanding'] <= 0.001) {
+            return ['errors' => ['SO ini tidak memiliki sisa qty outstanding untuk diverifikasi.']];
+        }
+
+        $this->db->trans_start();
+
+        $this->db->where('id_so', (int)$id_so);
+        $this->db->where('GREATEST(qty - COALESCE(qty_faktur, 0), 0) >', 0, false);
+        $this->db->update('tbso_sales_order_detail', [
+            'qty_siap_faktur' => null,
+            'qty_tidak_terkirim' => 0,
+            'verifikasi_loading_status' => 'pending',
+            'verifikasi_loading_note' => null,
+            'verifikasi_loading_by' => null,
+            'verifikasi_loading_at' => null,
+        ]);
+
+        $this->db->where('id_so', (int)$id_so);
+        $this->db->where('GREATEST(qty - COALESCE(qty_faktur, 0), 0) <=', 0, false);
+        $this->db->update('tbso_sales_order_detail', [
+            'qty_tidak_terkirim' => 0,
+            'verifikasi_loading_status' => 'verified',
+            'verifikasi_loading_by' => $update_by,
+            'verifikasi_loading_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->db->where('id_so', (int)$id_so);
+        $this->db->where_in('status', ['open', 'partial']);
+        $this->db->update('tbso_sales_order', [
+            'status' => 'sedang_verifikasi',
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['errors' => ['Gagal menambahkan SO ke Siap Loading.']];
+        }
+
+        return [
+            'success' => true,
+            'no_so' => $so['no_so'],
+            'kd_rute' => $so['kd_rute'],
+        ];
+    }
+
     public function get_so_siap_loading_verification($id_so)
     {
         return $this->db->query("

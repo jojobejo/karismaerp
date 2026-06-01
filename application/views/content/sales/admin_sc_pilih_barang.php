@@ -49,7 +49,11 @@
                             <i class="fas fa-file-invoice mr-2"></i><?= htmlspecialchars($so['no_so']) ?>
                         </h3>
                         <div class="card-tools">
-                            <span class="badge badge-light">Siap Faktur</span>
+                            <?php if (($so['status'] ?? '') === 'partial'): ?>
+                                <span class="badge badge-warning">Partial</span>
+                            <?php else: ?>
+                                <span class="badge badge-light">Siap Faktur</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="card-body">

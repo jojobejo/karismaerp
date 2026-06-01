@@ -173,6 +173,7 @@
             'draft'              => 'secondary',
             'open'               => 'primary',
             'sedang_verifikasi'  => 'warning',
+            'partial'            => 'warning',
             'completed'          => 'success',
             'cancelled'          => 'danger',
         ];
@@ -180,6 +181,7 @@
             'draft'              => 'Draft',
             'open'               => 'Open',
             'sedang_verifikasi'  => 'Sedang Verifikasi',
+            'partial'            => 'Partial',
             'completed'          => 'Completed',
             'cancelled'          => 'Cancelled',
         ];

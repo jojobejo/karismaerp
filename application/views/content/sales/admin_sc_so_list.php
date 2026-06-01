@@ -32,7 +32,7 @@
                 <div class="row mb-2">
                     <div class="col-sm-6">
                         <h1 class="m-0">
-                            <i class="fas fa-file-invoice-dollar mr-2"></i> Admin SC - SO Siap Faktur
+                            <i class="fas fa-file-invoice-dollar mr-2"></i> Admin SC - SO Siap/Partial Faktur
                         </h1>
                     </div>
                     <div class="col-sm-6">
@@ -102,7 +102,7 @@
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title">
-                            <i class="fas fa-list mr-2"></i> Daftar Sales Order Siap Faktur
+                            <i class="fas fa-list mr-2"></i> Daftar Sales Order Siap/Partial Faktur
                         </h3>
                         <div class="card-tools">
                             <span class="badge badge-light"><?= count($so_list) ?> SO</span>
@@ -129,7 +129,7 @@
                                     <tr>
                                         <td colspan="10" class="text-center text-muted py-4">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                            Tidak ada Sales Order siap faktur.
+                                            Tidak ada Sales Order siap/partial faktur.
                                         </td>
                                     </tr>
                                 <?php else: ?>
@@ -162,7 +162,11 @@
                                                 <?= number_format((float)($row['total_qty_tidak_terkirim'] ?? 0), 2) ?>
                                             </td>
                                             <td class="text-center">
-                                                <span class="badge badge-info px-2 py-1">Siap Faktur</span>
+                                                <?php if (($row['status'] ?? '') === 'partial'): ?>
+                                                    <span class="badge badge-warning px-2 py-1">Partial</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-info px-2 py-1">Siap Faktur</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-center text-nowrap">
                                                 <a href="<?= base_url('sales_order/admin_sc/pilih_barang/' . $row['id_so']) ?>"
@@ -208,7 +212,7 @@ $(document).ready(function () {
             lengthMenu: "Tampilkan _MENU_ data",
             info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
             zeroRecords: "Tidak ada data ditemukan",
-            emptyTable: "Tidak ada Sales Order siap faktur",
+            emptyTable: "Tidak ada Sales Order siap/partial faktur",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
     });
