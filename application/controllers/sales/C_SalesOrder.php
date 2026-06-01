@@ -506,6 +506,16 @@ class C_SalesOrder extends CI_Controller
         }
 
         $tk      = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
+        if ((float)$tk['total_tonase'] > (float)$tk['batas_tonase']) {
+            $this->session->set_flashdata(
+                'error',
+                'Tonase melebihi batas maksimal ' . $tk['batas_tonase'] . ' ton. '
+                . 'Total tonase: ' . round($tk['total_tonase'], 3) . ' ton.'
+            );
+            redirect('sales_order/create');
+            return;
+        }
+
         $is_nego = 0;
         foreach ($details as $d) {
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
@@ -639,7 +649,52 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']     = 'KARISMA - Edit SO ' . $so['no_so'];
         $data['no_so']          = $so['no_so'] ?? '';
         $data['so']             = $so;
-        $data['details']        = $this->M_SalesOrder->get_so_detail($id_so);
+        $details                = $this->M_SalesOrder->get_so_detail($id_so);
+        $stock_rows             = [];
+        $kd_list                = array_values(array_unique(array_filter(array_column($details, 'kd_barang'))));
+        foreach ($kd_list as $kd_barang) {
+            $stock_rows = array_merge(
+                $stock_rows,
+                $this->M_SalesOrder->get_available_stock_with_dimensi($so['gudang_id'], $kd_barang, $id_so)
+            );
+        }
+        $stock_map              = [];
+        foreach ($stock_rows as $stock) {
+            $stock_map[implode('|', [
+                (string)($stock['kd_barang'] ?? ''),
+                (string)($stock['exp_date'] ?? $stock['expired_date'] ?? ''),
+                (string)($stock['no_lot'] ?? ''),
+            ])] = $stock;
+        }
+        foreach ($details as &$detail) {
+            $key = implode('|', [
+                (string)($detail['kd_barang'] ?? ''),
+                (string)($detail['expired_date'] ?? ''),
+                (string)($detail['no_lot'] ?? ''),
+            ]);
+            if (!isset($stock_map[$key])) {
+                $detail['available_stock'] = (float)($detail['qty'] ?? 0);
+                continue;
+            }
+
+            $stock = $stock_map[$key];
+            $detail['available_stock'] = (float)($stock['available_stock'] ?? 0);
+            foreach (['nama_barang', 'satuan'] as $field) {
+                if (empty($detail[$field]) && isset($stock[$field])) {
+                    $detail[$field] = $stock[$field];
+                }
+            }
+            foreach (['berat_gram', 'kubikasi_m3', 'isi_per_box'] as $field) {
+                if ((float)($detail[$field] ?? 0) <= 0 && isset($stock[$field])) {
+                    $detail[$field] = $stock[$field];
+                }
+            }
+            if ((float)($detail['hrg_pokok'] ?? 0) <= 0 && isset($stock['hpp'])) {
+                $detail['hrg_pokok'] = $stock['hpp'];
+            }
+        }
+        unset($detail);
+        $data['details']        = $details;
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
@@ -685,6 +740,16 @@ class C_SalesOrder extends CI_Controller
         }
 
         $tk      = $this->M_SalesOrder->validasi_tonase_kubikasi($details);
+        if ((float)$tk['total_tonase'] > (float)$tk['batas_tonase']) {
+            $this->session->set_flashdata(
+                'error',
+                'Tonase melebihi batas maksimal ' . $tk['batas_tonase'] . ' ton. '
+                . 'Total tonase: ' . round($tk['total_tonase'], 3) . ' ton.'
+            );
+            redirect('sales_order/edit/' . $id_so);
+            return;
+        }
+
         $is_nego = 0;
         foreach ($details as $d) {
             if (!empty($d['is_nego'])) { $is_nego = 1; break; }
@@ -1209,6 +1274,21 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
+        $total_tonase_open = 0;
+        foreach ($sales_orders as $so) {
+            if (($so['status'] ?? '') === 'open') {
+                $total_tonase_open += (float)($so['total_tonase'] ?? 0);
+            }
+        }
+        if ($total_tonase_open > M_SalesOrder::BATAS_TONASE) {
+            echo json_encode([
+                'msg' => 'error',
+                'message' => 'Tonase rute melebihi batas maksimal ' . M_SalesOrder::BATAS_TONASE
+                    . ' ton. Total: ' . round($total_tonase_open, 3) . ' ton.'
+            ]);
+            exit;
+        }
+
         $confirm_by = $this->_getUsername();
         $updated = 0;
         foreach ($sales_orders as $so) {
@@ -1218,7 +1298,7 @@ class C_SalesOrder extends CI_Controller
 
             if ($this->M_SalesOrder->update_status($so['id_so'], 'sedang_verifikasi', $confirm_by)) {
                 $updated++;
-                $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Sedang Verifikasi untuk rute ' . $kd_rute . '.';
+                $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute ' . $kd_rute . '.';
                 if ($note !== '') {
                     $description .= ' Catatan: ' . $note;
                 }
@@ -1237,7 +1317,7 @@ class C_SalesOrder extends CI_Controller
 
         echo json_encode([
             'msg'     => 'success',
-            'message' => $updated . ' SO rute ' . $kd_rute . ' berubah menjadi Sedang Verifikasi.'
+            'message' => $updated . ' SO rute ' . $kd_rute . ' berubah menjadi Verifikasi.'
         ]);
         exit;
     }
@@ -1300,8 +1380,19 @@ class C_SalesOrder extends CI_Controller
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
             $gudang_id = $this->input->get('gudang_id', true);
             $gudang_id = ($gudang_id !== null && $gudang_id !== '') ? (string)$gudang_id : null;
+            $exclude_id_so = (int)($this->input->get('exclude_id_so', true) ?: 0);
+            if ($exclude_id_so > 0) {
+                $exclude_so = $this->M_SalesOrder->get_so($exclude_id_so);
+                if (!$exclude_so || !$this->_canAccessSo($exclude_so)) {
+                    $exclude_id_so = 0;
+                }
+            }
 
-            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi($gudang_id, $kd_barang);
+            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi(
+                $gudang_id,
+                $kd_barang,
+                $exclude_id_so ?: null
+            );
 
             foreach ($stock as &$row) {
                 $row['available_stock'] = (float)($row['available_stock'] ?? 0);

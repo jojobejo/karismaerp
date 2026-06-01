@@ -180,7 +180,7 @@
         $label_map = [
             'draft'              => 'Draft',
             'open'               => 'Open',
-            'sedang_verifikasi'  => 'Sedang Verifikasi',
+            'sedang_verifikasi'  => 'Verifikasi',
             'partial'            => 'Partial',
             'completed'          => 'Completed',
             'cancelled'          => 'Cancelled',
@@ -209,7 +209,8 @@
                     <button type="button"
                             class="btn btn-success btn-sm ml-1"
                             id="btnConfirmSoRuteLoading"
-                            data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                            data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>"
+                            <?= $total_tonase > $batas_tonase ? 'disabled title="Tonase melebihi batas maksimal"' : '' ?>>
                         <i class="fas fa-check-circle mr-1"></i> Konfirmasi Siap Loading
                     </button>
                     <?php endif; ?>
@@ -536,7 +537,7 @@ $(document).ready(function () {
         if (window.Swal) {
             askNote = Swal.fire({
                 title: 'Siap Loading Rute ' + rute + '?',
-                text: 'Semua SO Open pada rute ini akan berubah menjadi Sedang Verifikasi.',
+                text: 'Semua SO Open pada rute ini akan berubah menjadi Verifikasi.',
                 input: 'textarea',
                 inputLabel: 'Catatan Sales',
                 inputPlaceholder: 'Catatan untuk verifikasi (opsional)',

@@ -90,7 +90,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class M_SalesOrder extends CI_Model
 {
-    const BATAS_TONASE   = 6;
+    const BATAS_TONASE   = 7;
     const BATAS_KUBIKASI = 9;
 
     // ================================================================
@@ -333,10 +333,13 @@ class M_SalesOrder extends CI_Model
     // STOK
     // ================================================================
 
-    public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null)
+    public function get_available_stock_with_dimensi($gudang_id = null, $kd_barang = null, $exclude_id_so = null)
     {
         $gudang_id_str = !empty($gudang_id) ? (string)$gudang_id : null;
         $qty_col = $this->_stockQtyColumn();
+        $exclude_so = $exclude_id_so
+            ? $this->db->get_where('tbso_sales_order', ['id_so' => $exclude_id_so])->row_array()
+            : null;
 
         $this->db->select('sb.id AS stock_batch_id, sb.kd_barang, sb.gudang_id, sb.no_lot, sb.expired_date,
                            sb.' . $qty_col . ' AS qty_on_hand,
@@ -353,7 +356,6 @@ class M_SalesOrder extends CI_Model
             );
         }
 
-        $this->db->having('available_stock >', 0);
         $this->db->order_by('sb.kd_barang', 'ASC');
         $this->db->order_by('sb.expired_date', 'ASC');
         $this->db->order_by('sb.no_lot', 'ASC');
@@ -392,7 +394,24 @@ class M_SalesOrder extends CI_Model
 
             $row['gudang_id'] = (string)($row['gudang_id'] ?? $row['gudang'] ?? '');
 
-            $av  = (float)($row['available_stock'] ?? 0);
+            $own_reserved = 0;
+            if ($exclude_so && (string)($exclude_so['gudang_id'] ?? '') === (string)($row['gudang_id'] ?? '')) {
+                $own_reserved = $this->_reserved_qty_for_so_batch(
+                    $exclude_id_so,
+                    $row['kd_barang'],
+                    $row['exp_date'] ?? $row['expired_date'] ?? '',
+                    $row['no_lot'] ?? null
+                );
+            }
+
+            $av  = (float)($row['available_stock'] ?? 0) + $own_reserved;
+            if ($av <= 0) {
+                $row = null;
+                continue;
+            }
+
+            $row['own_reserved_stock'] = $own_reserved;
+            $row['available_stock']    = $av;
             $isi = max(1, (int)$row['isi_per_box']);
 
             $row['available_box']  = (int)floor($av / $isi);
@@ -400,7 +419,7 @@ class M_SalesOrder extends CI_Model
         }
         unset($row);
 
-        return $stocks;
+        return array_values(array_filter($stocks));
     }
 
     /**

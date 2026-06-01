@@ -6,7 +6,7 @@
         ? base_url('sales_order/update/' . $so['id_so'])
         : base_url('sales_order/store');
 
-    $batas_ton = isset($batas_tonase)   ? $batas_tonase   : 6;
+    $batas_ton = isset($batas_tonase)   ? $batas_tonase   : 7;
     $batas_kub = isset($batas_kubikasi) ? $batas_kubikasi : 9;
     $gid_aktif = $is_edit ? ($so['gudang_id'] ?? '') : ($gudang_id ?? '');
 
@@ -458,6 +458,7 @@ foreach(($gudang_list ?? []) as $g) {
 ?>
 var GUDANG_LIST = <?= json_encode($gudang_safe, JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
 var GUDANG_AWAL = '<?= escJs((string)$gid_aktif) ?>';
+var SO_ID       = <?= $is_edit ? (int)$so['id_so'] : 0 ?>;
 
 /* ── State ── */
 var currentRowIdx = null;   // baris yang sedang aktif untuk modal
@@ -489,6 +490,11 @@ function getIsi(idx) {
     var el = document.getElementById('isi_'+idx);
     var v  = el ? parseInt(el.value) : 1;
     return (v > 0) ? v : 1;
+}
+function stockUrl(gid) {
+    var url = BASE_URL + 'sales_order/get_stock?gudang_id=' + encodeURIComponent(gid || '');
+    if (SO_ID) url += '&exclude_id_so=' + encodeURIComponent(SO_ID);
+    return url;
 }
 
 /* ================================================================
@@ -833,7 +839,7 @@ function loadStock(callback) {
         '<tr><td colspan="12" class="text-center py-3"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat stok...</td></tr>';
 
     salesLoading(true, 'Memuat stok barang...');
-    fetch(BASE_URL + 'sales_order/get_stock?gudang_id=' + encodeURIComponent(gid))
+    fetch(stockUrl(gid))
         .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
         .then(function(res){
             if (res.status !== 'ok') throw new Error(res.message||'Error server');
@@ -1220,6 +1226,20 @@ document.getElementById('form-so').addEventListener('submit', function(e){
     });
     if(errs.length){ e.preventDefault(); salesToast('error', errs.join('<br>')); return; }
 
+    var totalTonase = 0;
+    rows.forEach(function(tr){
+        var i=tr.dataset.idx;
+        var qB=parseFloat((document.getElementById('qtybox_'+i)||{value:0}).value)||0;
+        var qE=parseFloat((document.getElementById('qtyecer_'+i)||{value:0}).value)||0;
+        var bg=parseFloat((document.getElementById('bg_'+i)||{value:0}).value)||0;
+        totalTonase += ((qB*getIsi(i))+qE) * bg / 1000000;
+    });
+    if(totalTonase > BATAS_TONASE){
+        e.preventDefault();
+        salesToast('error', 'Tonase melebihi batas maksimal '+fmtNum(BATAS_TONASE,0)+' ton. Total: '+fmtNum(totalTonase,3)+' ton.');
+        return;
+    }
+
     if (!soSubmitConfirmed) {
         e.preventDefault();
         var form = this;
@@ -1249,64 +1269,8 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         EDIT_DETAILS.forEach(function(d){ tambahBaris(d); });
         hitungGrand(); hitungTK();
 
-        if (GUDANG_AWAL) {
-            salesLoading(true, 'Memuat stok awal...');
-            fetch(BASE_URL+'sales_order/get_stock?gudang_id='+encodeURIComponent(GUDANG_AWAL))
-                .then(function(r){ return r.json(); })
-                .then(function(res){
-                    if(res.status!=='ok') return;
-                    stockCache=res.data||[]; stockLoaded=true;
-
-                    document.querySelectorAll('#item-body tr').forEach(function(tr){
-                        var i=tr.dataset.idx;
-                        var kd=(document.getElementById('kd_'+i)||{value:''}).value;
-                        var ev=(document.getElementById('exp_'+i)||{value:''}).value||'';
-                        if(!kd) return;
-
-                        /* Rebuild dropdown */
-                        var rows=stockCache.filter(function(s){return(s.kd_barang||'')===kd;});
-                        var sel=document.getElementById('exp_'+i);
-                        if(sel&&rows.length){
-                            sel.innerHTML='<option value="">-- Pilih Expired Date --</option>';
-                            rows.forEach(function(s){
-                                var opt=document.createElement('option');
-                                var ed=s.exp_date||s.expired_date||'';
-                                opt.value=ed;
-                                var iS=parseInt(s.isi_per_box||1);
-                                var aB=Math.floor(parseFloat(s.available_stock||0)/iS);
-                                var aE=Math.floor(parseFloat(s.available_stock||0)%iS);
-                                opt.textContent=formatTgl(ed)+(s.no_lot?' | Lot: '+s.no_lot:'')+' ['+fmtNum(aB,0)+' box + '+fmtNum(aE,0)+' pcs]';
-                                opt.dataset.ton=parseFloat(s.berat_gram||0);
-                                opt.dataset.kub=parseFloat(s.kubikasi_m3||0);
-                                opt.dataset.av =parseFloat(s.available_stock||0);
-                                opt.dataset.lot=s.no_lot||'';
-                                opt.dataset.isi=parseInt(s.isi_per_box||1);
-                                opt.dataset.gudang=s.gudang_id||'';
-                                if(ed===ev) opt.selected=true;
-                                sel.appendChild(opt);
-                            });
-                        }
-                        /* Update avail display */
-                        var cocok=stockCache.filter(function(s){return(s.kd_barang||'')===kd&&(s.exp_date||s.expired_date||'')===ev;});
-                        if(cocok.length){
-                            var st=cocok[0],iS=parseInt(st.isi_per_box||1),aS=parseFloat(st.available_stock||0);
-                            var aBS=Math.floor(aS/iS),aES=Math.floor(aS%iS);
-                            var elB=document.getElementById('avail-box_'+i),elE=document.getElementById('avail-ecer_'+i);
-                            if(elB){elB.textContent=fmtNum(aBS,0);elB.dataset.availBox=aBS;}
-                            if(elE){elE.textContent=fmtNum(aES,0);elE.dataset.availEcer=aES;elE.dataset.availTotal=aS;}
-                            var mB=document.getElementById('maxbox_'+i),mE=document.getElementById('maxecer_'+i);
-                            if(mB) mB.textContent=fmtNum(aBS,0);
-                            if(mE) mE.textContent=fmtNum(aES,0)+' pcs';
-                            document.getElementById('isi_'+i).value=iS;
-                            document.getElementById('bg_' +i).value=st.berat_gram||0;
-                            document.getElementById('km_' +i).value=st.kubikasi_m3||0;
-                        }
-                        hitungBaris(i);
-                    });
-                })
-                .catch(function(e){ console.warn('Gagal load stok edit:',e); })
-                .finally(function(){ salesLoading(false); });
-        }
+        stockLoaded = false;
+        stockCache = [];
     } else {
         if (elG) elG.dataset.prevVal='';
         tambahBaris({});

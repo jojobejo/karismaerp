@@ -47,7 +47,7 @@
                                 <?php
                                 $tonase   = (float)$k->total_tonase_faktur;
                                 $kubikasi = (float)$k->total_kubikasi;
-                                $max_ton  = 6;
+                                $max_ton  = 7;
                                 $max_kub  = 9;
 
                                 $pct_ton = min(100, round(($tonase   / $max_ton) * 100, 1));

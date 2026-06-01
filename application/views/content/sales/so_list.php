@@ -47,6 +47,12 @@
         align-items: center;
         margin-bottom: 4px;
     }
+
+    .so-status-badge {
+        display: inline-flex;
+        justify-content: center;
+        min-width: 92px;
+    }
 </style>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
@@ -155,7 +161,7 @@
                                     <option value="">-- Semua Status --</option>
                                     <option value="draft"     <?= ($filter['status'] ?? '') === 'draft'     ? 'selected' : '' ?>>Draft</option>
                                     <option value="open"      <?= ($filter['status'] ?? '') === 'open'      ? 'selected' : '' ?>>Open</option>
-                                    <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Sedang Verifikasi</option>
+                                    <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Verifikasi</option>
                                     <option value="siap_faktur" <?= ($filter['status'] ?? '') === 'siap_faktur' ? 'selected' : '' ?>>Siap Faktur</option>
                                     <option value="partial" <?= ($filter['status'] ?? '') === 'partial' ? 'selected' : '' ?>>Partial</option>
                                     <option value="completed" <?= ($filter['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Completed</option>
@@ -223,7 +229,7 @@
                                 $label_map = [
                                     'draft'              => 'Draft',
                                     'open'               => 'Open',
-                                    'sedang_verifikasi'  => 'Sedang Verifikasi',
+                                    'sedang_verifikasi'  => 'Verifikasi',
                                     'siap_faktur'        => 'Siap Faktur',
                                     'partial'            => 'Partial',
                                     'completed'          => 'Completed',
@@ -282,7 +288,7 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge badge-<?= $badge ?> px-2 py-1"><?= $label ?></span>
+                                        <span class="badge badge-<?= $badge ?> so-status-badge px-2 py-1"><?= $label ?></span>
                                     </td>
 
                                     <!-- TOMBOL AKSI — diperbesar -->
