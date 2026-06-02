@@ -399,6 +399,7 @@ $route['sales_order/form_faktur/(:any)']            = 'sales/C_SalesOrder/admin_
 $route['sales_order/simpan_faktur/(:any)']          = 'sales/C_SalesOrder/simpan_faktur/$1';     // tambahan
 $route['sales_order/detail_faktur/(:any)']          = 'sales/C_SalesOrder/detail_faktur/$1';     // tambahan
 $route['sales_order/admin_sc']                      = 'sales/C_SalesOrder/admin_sc';
+$route['sales_order/admin_sc/faktur']               = 'sales/C_SalesOrder/admin_sc_faktur';
 $route['sales_order/admin_sc/pilih_barang/(:any)']  = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';
 $route['sales_order/admin_sc/form_faktur/(:any)']   = 'sales/C_SalesOrder/admin_sc_form_faktur/$1';
 $route['admin_sc']                                  = 'sales/C_SalesOrder/admin_sc';

@@ -1,4 +1,11 @@
 <!-- views/content/sales/faktur_form.php -->
+<?php
+$jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true);
+$faktur_back_url = $is_admin_sc_context
+    ? base_url('sales_order/admin_sc/pilih_barang/' . $so['id_so'])
+    : base_url('sales_order/detail/' . $so['id_so']);
+?>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
 
@@ -22,12 +29,24 @@
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
                         <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                        <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                        <li class="breadcrumb-item">
-                            <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
-                                <?= htmlspecialchars($so['no_so']) ?>
-                            </a>
-                        </li>
+                        <?php if ($is_admin_sc_context): ?>
+                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order/admin_sc') ?>">Admin SC</a></li>
+                            <li class="breadcrumb-item">
+                                <a href="<?= base_url('sales_order/admin_sc/pilih_barang/' . $so['id_so']) ?>">
+                                    Pilih Barang
+                                </a>
+                            </li>
+                        <?php else: ?>
+                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
+                            <li class="breadcrumb-item">
+                                <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
+                                    <?= htmlspecialchars($so['no_so']) ?>
+                                </a>
+                            </li>
+                        <?php endif; ?>
+                        <?php if ($is_admin_sc_context): ?>
+                            <li class="breadcrumb-item"><?= htmlspecialchars($so['no_so']) ?></li>
+                        <?php endif; ?>
                         <li class="breadcrumb-item active">Buat Faktur</li>
                     </ol>
                 </div>
@@ -51,7 +70,7 @@
                 <i class="fas fa-info-circle mr-1"></i>
                 Membuat Faktur Penjualan dari SO <strong><?= htmlspecialchars($so['no_so']) ?></strong>
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
-                Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11%' : 'Non Pajak' ?></strong>.
+                Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?></strong>.
                 Rute / Regional: <strong><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></strong>
             </div>
 
@@ -267,7 +286,7 @@
                 <!-- Tombol -->
                 <div class="row mt-2">
                     <div class="col-12 text-right">
-                        <a href="<?= base_url(($this->session->userdata('jobdesk') === 'ADMINSC' ? 'sales_order/admin_sc/pilih_barang/' : 'sales_order/detail/') . $so['id_so']) ?>"
+                        <a href="<?= $faktur_back_url ?>"
                            class="btn btn-secondary mr-2">
                             <i class="fas fa-times"></i> Batal
                         </a>

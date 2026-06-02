@@ -1,4 +1,49 @@
 <!-- views/content/sales/admin_sc_pilih_barang.php -->
+<style>
+    .tax-choice-group {
+        display: inline-flex;
+        gap: 4px;
+    }
+    .tax-choice-btn {
+        border: 1px solid #ced4da;
+        background: #fff;
+        color: #495057;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        cursor: pointer;
+    }
+    .tax-choice-btn.active {
+        border-color: #007bff;
+        background: #007bff;
+        color: #fff;
+    }
+    .tax-choice-btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+    .tax-badge {
+        display: inline-block;
+        margin-top: 3px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10.5px;
+        font-weight: 700;
+    }
+    .tax-badge-pajak {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .tax-badge-non {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    tr.tax-hidden {
+        display: none;
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -87,10 +132,15 @@
                             <div class="card-tools">
                                 <div class="form-inline">
                                     <label class="mr-2 mb-0 small font-weight-bold">Jenis Faktur</label>
-                                    <select name="tax_mode" class="form-control form-control-sm" required>
-                                        <option value="non_pajak">Non Pajak (0%)</option>
-                                        <option value="pajak">Pajak (11%)</option>
-                                    </select>
+                                    <input type="hidden" name="tax_mode" id="taxMode" value="non_pajak">
+                                    <div class="tax-choice-group" role="group" aria-label="Jenis Faktur">
+                                        <button type="button" class="tax-choice-btn active" data-tax-mode="non_pajak">
+                                            Non Pajak
+                                        </button>
+                                        <button type="button" class="tax-choice-btn" data-tax-mode="pajak">
+                                            Pajak
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -98,9 +148,6 @@
                             <table class="table table-bordered table-hover table-sm mb-0">
                                 <thead class="thead-light">
                                     <tr>
-                                        <th class="text-center" style="width:42px">
-                                            <input type="checkbox" id="checkAllItem" title="Pilih semua">
-                                        </th>
                                         <th>Barang</th>
                                         <th>Lot / Exp</th>
                                         <th class="text-right">Qty Siap Faktur</th>
@@ -112,17 +159,17 @@
                                     <?php foreach ($details as $detail):
                                         $available = (float)($detail['qty_available_faktur'] ?? 0);
                                         $tidak = (float)($detail['qty_tidak_terkirim'] ?? 0);
+                                        $kd_barang = trim((string)($detail['kd_barang'] ?? ''));
+                                        $is_pajak_item = strtoupper(substr($kd_barang, 0, 1)) === 'Q';
+                                        $item_tax_mode = $is_pajak_item ? 'pajak' : 'non_pajak';
                                     ?>
-                                        <tr>
-                                            <td class="text-center align-middle">
-                                                <input type="checkbox"
-                                                       class="check-item-faktur"
-                                                       name="item[]"
-                                                       value="<?= (int)$detail['id_so_detail'] ?>">
-                                            </td>
+                                        <tr data-tax-mode="<?= $item_tax_mode ?>">
                                             <td>
                                                 <strong><?= htmlspecialchars($detail['nama_barang']) ?></strong>
-                                                <br><small class="text-muted"><?= htmlspecialchars($detail['kd_barang']) ?></small>
+                                                <br><small class="text-muted"><?= htmlspecialchars($kd_barang) ?></small>
+                                                <br><span class="tax-badge <?= $is_pajak_item ? 'tax-badge-pajak' : 'tax-badge-non' ?>">
+                                                    <?= $is_pajak_item ? 'Pajak 11%' : 'Non Pajak' ?>
+                                                </span>
                                             </td>
                                             <td>
                                                 <small>
@@ -152,7 +199,7 @@
 
                     <div class="text-right mt-2">
                         <button type="submit" class="btn btn-success" id="btnLanjutFaktur" disabled>
-                            <i class="fas fa-file-invoice-dollar mr-1"></i> Fakturkan Barang Dipilih
+                            <i class="fas fa-file-invoice-dollar mr-1"></i> Fakturkan Barang Sesuai Jenis
                         </button>
                     </div>
                 </form>
@@ -170,24 +217,44 @@
 
 <script>
 $(document).ready(function () {
-    function updateButton() {
-        var checked = $('.check-item-faktur:checked').length;
-        $('#btnLanjutFaktur').prop('disabled', checked < 1);
-
-        var total = $('.check-item-faktur').length;
-        $('#checkAllItem').prop('checked', total > 0 && checked === total);
+    function activeTaxMode() {
+        return $('#taxMode').val() || 'non_pajak';
     }
 
-    $('#checkAllItem').on('change', function () {
-        $('.check-item-faktur').prop('checked', this.checked);
+    function applyTaxMode(mode) {
+        mode = mode === 'pajak' ? 'pajak' : 'non_pajak';
+        $('#taxMode').val(mode);
+        $('.tax-choice-btn')
+            .removeClass('active')
+            .filter('[data-tax-mode="' + mode + '"]')
+            .addClass('active');
+
+        $('tbody tr[data-tax-mode]').each(function () {
+            var match = $(this).data('tax-mode') === mode;
+            $(this).toggleClass('tax-hidden', !match);
+        });
+
         updateButton();
+    }
+
+    function updateButton() {
+        var mode = activeTaxMode();
+        var total = $('tbody tr[data-tax-mode="' + mode + '"]').length;
+        $('#btnLanjutFaktur').prop('disabled', total < 1);
+    }
+
+    $('.tax-choice-btn').on('click', function () {
+        applyTaxMode($(this).data('tax-mode'));
     });
-    $(document).on('change', '.check-item-faktur', updateButton);
+
     $('#formPilihFaktur').on('submit', function (e) {
-        if ($('.check-item-faktur:checked').length < 1) {
+        var mode = activeTaxMode();
+        if ($('tbody tr[data-tax-mode="' + mode + '"]').length < 1) {
             e.preventDefault();
-            alert('Pilih minimal satu barang yang akan difakturkan.');
+            alert('Tidak ada barang untuk jenis faktur yang dipilih.');
         }
     });
+
+    applyTaxMode($('#taxMode').val());
 });
 </script>

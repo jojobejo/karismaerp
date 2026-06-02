@@ -505,7 +505,21 @@ class M_SalesOrder extends CI_Model
             COALESCE(SUM(sd.qty_faktur), 0) AS total_qty_faktur,
             COALESCE(SUM(GREATEST(sd.qty - COALESCE(sd.qty_faktur, 0), 0)), 0) AS total_qty_outstanding,
             COALESCE(SUM(GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0)), 0) AS total_qty_siap_faktur,
-            COALESCE(SUM(COALESCE(sd.qty_tidak_terkirim, 0)), 0) AS total_qty_tidak_terkirim
+            COALESCE(SUM(COALESCE(sd.qty_tidak_terkirim, 0)), 0) AS total_qty_tidak_terkirim,
+            (
+                SELECT COUNT(*)
+                FROM tbso_faktur_penjualan fp
+                WHERE fp.id_so = so.id_so
+                AND fp.status <> \'cancelled\'
+            ) AS jumlah_faktur,
+            (
+                SELECT fp.id_faktur
+                FROM tbso_faktur_penjualan fp
+                WHERE fp.id_so = so.id_so
+                AND fp.status <> \'cancelled\'
+                ORDER BY fp.create_at DESC, fp.id_faktur DESC
+                LIMIT 1
+            ) AS latest_id_faktur
         ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
@@ -520,6 +534,57 @@ class M_SalesOrder extends CI_Model
         $this->db->group_by('so.id_so');
         $this->db->order_by('so.update_at', 'DESC');
         $this->db->order_by('so.tanggal_transaksi', 'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_admin_sc_faktur_selesai($filter = [])
+    {
+        $detail_summary = "
+            SELECT
+                id_faktur,
+                COUNT(*) AS total_barang,
+                COALESCE(SUM(qty), 0) AS total_qty,
+                COALESCE(SUM(subtotal_after_disc), 0) AS total_nilai_faktur,
+                COALESCE(SUM(
+                    CASE
+                        WHEN subtotal_after_disc > 0 THEN subtotal_after_disc * (COALESCE(pajak, 0) / 100)
+                        ELSE (qty * hrg_satuan * (1 - (COALESCE(disc, 0) / 100))) * (COALESCE(pajak, 0) / 100)
+                    END
+                ), 0) AS total_pajak,
+                COALESCE(SUM(total_harga), 0) AS grand_total
+            FROM tbso_faktur_detail
+            GROUP BY id_faktur
+        ";
+
+        $this->db->select('
+            f.*,
+            so.id_so,
+            so.kd_rute AS so_kd_rute,
+            c.nama_customer,
+            c.nama_kios,
+            c.regional,
+            c.kd_rute AS customer_kd_rute,
+            COALESCE(fs.total_barang, 0) AS total_barang,
+            COALESCE(fs.total_qty, 0) AS total_qty,
+            COALESCE(fs.total_nilai_faktur, 0) AS total_nilai_faktur,
+            COALESCE(fs.total_pajak, 0) AS total_pajak,
+            COALESCE(fs.grand_total, 0) AS grand_total
+        ');
+        $this->db->from('tbso_faktur_penjualan f');
+        $this->db->join('tbso_sales_order so', 'so.id_so = f.id_so', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        $this->db->join('(' . $detail_summary . ') fs', 'fs.id_faktur = f.id_faktur', 'left');
+        $this->db->where_not_in('f.status', ['draft', 'cancelled']);
+
+        if (!empty($filter['date1']))       $this->db->where('f.tanggal_faktur >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('f.tanggal_faktur <=', $filter['date2']);
+        if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
+        if (!empty($filter['create_by']))   $this->db->where('f.create_by', $filter['create_by']);
+
+        $this->db->order_by('f.tanggal_faktur', 'DESC');
+        $this->db->order_by('f.create_at', 'DESC');
+        $this->db->order_by('f.id_faktur', 'DESC');
 
         return $this->db->get()->result_array();
     }

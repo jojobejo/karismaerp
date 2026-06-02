@@ -1,12 +1,92 @@
 <!-- views/content/sales/so_detail.php -->
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
-$from_page = strtolower((string)$this->input->get('from', true));
-$is_admin_sc_detail = $jobdesk === 'ADMINSC' || $from_page === 'admin_sc';
-$hide_activity_log = $is_admin_sc_detail || $jobdesk === 'SC';
-$back_url = $is_admin_sc_detail ? base_url('sales_order/admin_sc') : base_url('sales_order');
-$back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
+$hide_activity_log = $jobdesk === 'SC';
+$back_url = base_url('sales_order');
+$back_label = 'Kembali';
+$format_date = function($date) {
+    return !empty($date) ? date('d/m/Y', strtotime($date)) : '-';
+};
+$format_payment = function($value) {
+    $value = strtolower(trim((string)$value));
+    $labels = [
+        'cash'     => 'Cash',
+        'transfer' => 'Transfer',
+        'tempo'    => 'Tempo',
+        'bg'       => 'BG',
+        'bonus'    => 'Bonus',
+    ];
+    return $labels[$value] ?? ($value !== '' ? strtoupper($value) : '-');
+};
 ?>
+<style>
+    .faktur-detail-panel {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+    }
+    .faktur-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .faktur-summary-item {
+        min-height: 58px;
+        border: 1px solid #e5e7eb;
+        border-left: 3px solid #17a2b8;
+        border-radius: 4px;
+        background: #f8fafc;
+        padding: 7px 9px;
+    }
+    .faktur-summary-item.total {
+        border-left-color: #28a745;
+    }
+    .faktur-summary-label {
+        display: block;
+        color: #6c757d;
+        font-size: 11px;
+        line-height: 1.15;
+        margin-bottom: 3px;
+    }
+    .faktur-summary-value {
+        display: block;
+        color: #1f2937;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+    .faktur-summary-note {
+        display: block;
+        color: #6c757d;
+        font-size: 11px;
+        line-height: 1.2;
+        margin-top: 2px;
+    }
+    .faktur-detail-table-wrap {
+        overflow-x: auto;
+    }
+    .faktur-detail-table {
+        min-width: 760px;
+        background: #fff;
+    }
+    .faktur-detail-table th,
+    .faktur-detail-table td {
+        vertical-align: middle;
+    }
+    @media (max-width: 991.98px) {
+        .faktur-summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 575.98px) {
+        .faktur-summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
 
@@ -32,7 +112,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                     <ol class="breadcrumb float-sm-right">
                         <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                         <li class="breadcrumb-item">
-                            <a href="<?= $back_url ?>"><?= $is_admin_sc_detail ? 'Admin SC' : 'Sales Order' ?></a>
+                            <a href="<?= $back_url ?>">Sales Order</a>
                         </li>
                         <li class="breadcrumb-item active"><?= htmlspecialchars($so['no_so']) ?></li>
                     </ol>
@@ -59,7 +139,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                 <a href="<?= $back_url ?>" class="btn btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> <?= $back_label ?>
                 </a>
-                <?php if (!$is_admin_sc_detail && $so['status'] === 'draft'): ?>
+                <?php if ($so['status'] === 'draft'): ?>
                     <a href="<?= base_url('sales_order/edit/' . $so['id_so']) ?>"
                        class="btn btn-warning btn-sm">
                         <i class="fas fa-pencil-alt"></i> Edit SO
@@ -103,7 +183,6 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
             $pct   = $total_order > 0 ? round(($total_faktur / $total_order) * 100, 1) : 0;
             ?>
 
-            <?php if (!$is_admin_sc_detail): ?>
             <!-- SUMMARY CARDS -->
             <div class="row">
                 <div class="col-6 col-md-3">
@@ -151,10 +230,9 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                     </div>
                 </div>
             </div>
-            <?php endif; ?>
 
             <!-- PROGRESS BAR -->
-            <?php if (!$is_admin_sc_detail && $total_order > 0): ?>
+            <?php if ($total_order > 0): ?>
             <div class="card card-outline card-<?= $pct >= 100 ? 'success' : 'warning' ?> mb-3">
                 <div class="card-body py-2 px-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -359,6 +437,36 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                 <?php foreach ($fakturs as $n => $f):
                                     $collapse_id = 'detailFaktur' . (int)$f['id_faktur'];
                                     $items_faktur = $faktur_details[(int)$f['id_faktur']] ?? [];
+                                    $tempo_hari = $f['jtempo'] ?? $f['tempo'] ?? null;
+                                    $jatuh_tempo = $f['tanggal_jatuh_tempo'] ?? null;
+                                    if (empty($jatuh_tempo) && $tempo_hari !== null && $tempo_hari !== '' && !empty($f['tanggal_faktur'])) {
+                                        $jatuh_tempo = date('Y-m-d', strtotime($f['tanggal_faktur'] . ' +' . (int)$tempo_hari . ' days'));
+                                    }
+                                    $total_nilai_faktur = 0;
+                                    $total_pajak = 0;
+                                    $grand_total = 0;
+                                    $tax_rates = [];
+                                    foreach ($items_faktur as $item_summary) {
+                                        $nilai_faktur = (float)($item_summary['subtotal_after_disc'] ?? 0);
+                                        if ($nilai_faktur <= 0) {
+                                            $nilai_faktur = (float)($item_summary['qty'] ?? 0) * (float)($item_summary['hrg_satuan'] ?? 0);
+                                            $nilai_faktur *= (1 - ((float)($item_summary['disc'] ?? 0) / 100));
+                                        }
+                                        $tax_rate = (float)($item_summary['pajak'] ?? 0);
+                                        $tax_value = $nilai_faktur * ($tax_rate / 100);
+                                        $total_harga = (float)($item_summary['total_harga'] ?? 0);
+
+                                        $total_nilai_faktur += $nilai_faktur;
+                                        $total_pajak += $tax_value;
+                                        $grand_total += $total_harga > 0 ? $total_harga : ($nilai_faktur + $tax_value);
+                                        if ($tax_rate > 0) {
+                                            $tax_rates[(string)$tax_rate] = $tax_rate;
+                                        }
+                                    }
+                                    $tax_label = !empty($tax_rates)
+                                        ? implode(', ', array_map(function($rate) { return number_format($rate, 0) . '%'; }, $tax_rates))
+                                        : '0%';
+                                    $salesman_label = trim((string)($f['salesman'] ?? ''));
                                 ?>
                                 <tr>
                                     <td><?= $n + 1 ?></td>
@@ -394,8 +502,7 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                     </td>
                                     <td class="text-center">
                                         <button type="button"
-                                                class="btn btn-xs btn-info"
-                                                data-toggle="collapse"
+                                                class="btn btn-xs btn-info btn-faktur-detail"
                                                 data-target="#<?= $collapse_id ?>"
                                                 aria-expanded="false"
                                                 aria-controls="<?= $collapse_id ?>"
@@ -404,46 +511,72 @@ $back_label = $is_admin_sc_detail ? 'Kembali ke Admin SC' : 'Kembali';
                                         </button>
                                     </td>
                                 </tr>
-                                <tr class="collapse bg-light" id="<?= $collapse_id ?>">
+                                <tr class="faktur-detail-row bg-light d-none" id="<?= $collapse_id ?>">
                                     <td colspan="6" class="p-2">
-                                        <?php if (empty($items_faktur)): ?>
-                                            <div class="text-center text-muted py-2">Detail barang faktur tidak tersedia.</div>
-                                        <?php else: ?>
-                                            <table class="table table-sm table-bordered mb-0">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="width:40px">No</th>
-                                                        <th>Barang</th>
-                                                        <th>Lot / Exp</th>
-                                                        <th class="text-right">Qty</th>
-                                                        <th class="text-right">Harga</th>
-                                                        <th class="text-right">Total</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($items_faktur as $idx => $item): ?>
-                                                        <tr>
-                                                            <td class="text-center"><?= $idx + 1 ?></td>
-                                                            <td>
-                                                                <strong><?= htmlspecialchars($item['nama_barang'] ?? '-') ?></strong>
-                                                                <br><small class="text-muted"><?= htmlspecialchars($item['kd_barang'] ?? '-') ?></small>
-                                                            </td>
-                                                            <td>
-                                                                <small>
-                                                                    <?php if (!empty($item['no_lot'])): ?>
-                                                                        Lot: <code><?= htmlspecialchars($item['no_lot']) ?></code><br>
-                                                                    <?php endif; ?>
-                                                                    Exp: <?= !empty($item['expired_date']) ? date('d/m/Y', strtotime($item['expired_date'])) : '-' ?>
-                                                                </small>
-                                                            </td>
-                                                            <td class="text-right"><?= number_format((float)($item['qty'] ?? 0), 2) ?></td>
-                                                            <td class="text-right">Rp <?= number_format((float)($item['hrg_satuan'] ?? 0), 0, ',', '.') ?></td>
-                                                            <td class="text-right font-weight-bold">Rp <?= number_format((float)($item['total_harga'] ?? 0), 0, ',', '.') ?></td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        <?php endif; ?>
+                                        <div class="faktur-detail-panel">
+                                            <div class="faktur-summary-grid">
+                                                <div class="faktur-summary-item">
+                                                    <span class="faktur-summary-label">Pajak</span>
+                                                    <span class="faktur-summary-value"><?= htmlspecialchars($tax_label) ?></span>
+                                                    <span class="faktur-summary-note">Rp <?= number_format($total_pajak, 0, ',', '.') ?></span>
+                                                </div>
+                                                <div class="faktur-summary-item">
+                                                    <span class="faktur-summary-label">Tempo</span>
+                                                    <span class="faktur-summary-value"><?= ($tempo_hari !== null && $tempo_hari !== '') ? (int)$tempo_hari . ' Hari' : '-' ?></span>
+                                                    <span class="faktur-summary-note">Jatuh tempo: <?= $format_date($jatuh_tempo) ?></span>
+                                                </div>
+                                                <div class="faktur-summary-item">
+                                                    <span class="faktur-summary-label">Cara Pembayaran</span>
+                                                    <span class="faktur-summary-value"><?= htmlspecialchars($format_payment($f['cara_pembayaran'] ?? '')) ?></span>
+                                                    <span class="faktur-summary-note"><?= $salesman_label !== '' ? 'Sales: ' . htmlspecialchars($salesman_label) : '&nbsp;' ?></span>
+                                                </div>
+                                                <div class="faktur-summary-item total">
+                                                    <span class="faktur-summary-label">Grand Total</span>
+                                                    <span class="faktur-summary-value">Rp <?= number_format($grand_total, 0, ',', '.') ?></span>
+                                                    <span class="faktur-summary-note">Sebelum pajak: Rp <?= number_format($total_nilai_faktur, 0, ',', '.') ?></span>
+                                                </div>
+                                            </div>
+                                            <?php if (empty($items_faktur)): ?>
+                                                <div class="text-center text-muted py-2">Detail barang faktur tidak tersedia.</div>
+                                            <?php else: ?>
+                                                <div class="faktur-detail-table-wrap">
+                                                    <table class="table table-sm table-bordered table-hover mb-0 faktur-detail-table">
+                                                        <thead class="thead-light">
+                                                            <tr>
+                                                                <th style="width:40px">No</th>
+                                                                <th>Barang</th>
+                                                                <th style="width:150px">Lot / Exp</th>
+                                                                <th class="text-right" style="width:110px">Qty</th>
+                                                                <th class="text-right" style="width:130px">Harga</th>
+                                                                <th class="text-right" style="width:140px">Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach ($items_faktur as $idx => $item): ?>
+                                                                <tr>
+                                                                    <td class="text-center"><?= $idx + 1 ?></td>
+                                                                    <td>
+                                                                        <strong><?= htmlspecialchars($item['nama_barang'] ?? '-') ?></strong>
+                                                                        <br><small class="text-muted"><?= htmlspecialchars($item['kd_barang'] ?? '-') ?></small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <small>
+                                                                            <?php if (!empty($item['no_lot'])): ?>
+                                                                                Lot: <code><?= htmlspecialchars($item['no_lot']) ?></code><br>
+                                                                            <?php endif; ?>
+                                                                            Exp: <?= !empty($item['expired_date']) ? date('d/m/Y', strtotime($item['expired_date'])) : '-' ?>
+                                                                        </small>
+                                                                    </td>
+                                                                    <td class="text-right"><?= number_format((float)($item['qty'] ?? 0), 2) ?></td>
+                                                                    <td class="text-right">Rp <?= number_format((float)($item['hrg_satuan'] ?? 0), 0, ',', '.') ?></td>
+                                                                    <td class="text-right font-weight-bold">Rp <?= number_format((float)($item['total_harga'] ?? 0), 0, ',', '.') ?></td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -531,6 +664,18 @@ $(document).ready(function () {
             salesLoading(true, 'Memproses SO...');
             window.location.href = href;
         });
+    });
+
+    $(document).on('click', '.btn-faktur-detail', function() {
+        const $btn = $(this);
+        const $target = $($btn.data('target'));
+        const isOpen = !$target.hasClass('d-none');
+
+        $target.toggleClass('d-none', isOpen);
+        $btn.attr('aria-expanded', isOpen ? 'false' : 'true');
+        $btn.find('i')
+            .toggleClass('fa-chevron-down', isOpen)
+            .toggleClass('fa-chevron-up', !isOpen);
     });
 
     <?php if (!$hide_activity_log): ?>

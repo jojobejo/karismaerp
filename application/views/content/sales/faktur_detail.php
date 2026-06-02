@@ -1,4 +1,14 @@
 <!-- views/content/sales/faktur_detail.php -->
+<?php
+$jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+$from_page = strtolower((string)$this->input->get('from', true));
+$is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true) || $from_page === 'admin_sc';
+$faktur_list_url = $is_admin_sc_context ? base_url('sales_order/admin_sc/faktur') : base_url('sales_order');
+$faktur_list_label = $is_admin_sc_context ? 'Faktur Selesai' : 'Sales Order';
+$so_detail_url = base_url('sales_order/detail/' . $so['id_so']);
+$back_url = $is_admin_sc_context ? $faktur_list_url : $so_detail_url;
+$back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke SO';
+?>
 <style>
     .invoice-print-header {
         display: none;
@@ -152,12 +162,17 @@
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
                         <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                        <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                        <li class="breadcrumb-item">
-                            <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
-                                <?= htmlspecialchars($so['no_so']) ?>
-                            </a>
-                        </li>
+                        <?php if ($is_admin_sc_context): ?>
+                            <li class="breadcrumb-item"><a href="<?= base_url('sales_order/admin_sc') ?>">Admin SC</a></li>
+                        <?php endif; ?>
+                        <li class="breadcrumb-item"><a href="<?= $faktur_list_url ?>"><?= $faktur_list_label ?></a></li>
+                        <?php if (!$is_admin_sc_context): ?>
+                            <li class="breadcrumb-item">
+                                <a href="<?= $so_detail_url ?>">
+                                    <?= htmlspecialchars($so['no_so']) ?>
+                                </a>
+                            </li>
+                        <?php endif; ?>
                         <li class="breadcrumb-item active"><?= htmlspecialchars($faktur['no_faktur']) ?></li>
                     </ol>
                 </div>
@@ -188,9 +203,9 @@
 
             <!-- Tombol Aksi -->
             <div class="mb-3 no-print">
-                <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>"
+                <a href="<?= $back_url ?>"
                    class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-left"></i> Kembali ke SO
+                    <i class="fas fa-arrow-left"></i> <?= $back_label ?>
                 </a>
                 <button class="btn btn-info btn-sm" onclick="window.print()">
                     <i class="fas fa-print"></i> Cetak Faktur
@@ -213,9 +228,13 @@
                                 <tr>
                                     <td class="text-muted">Dari SO</td>
                                     <td>
-                                        <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
+                                        <?php if ($is_admin_sc_context): ?>
                                             <?= htmlspecialchars($so['no_so']) ?>
-                                        </a>
+                                        <?php else: ?>
+                                            <a href="<?= $so_detail_url ?>">
+                                                <?= htmlspecialchars($so['no_so']) ?>
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <tr>
@@ -406,6 +425,14 @@
         </div>
     </section>
 </div>
+
+<?php if ($this->input->get('print', true) === '1'): ?>
+<script>
+$(window).on('load', function() {
+    window.print();
+});
+</script>
+<?php endif; ?>
 <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.

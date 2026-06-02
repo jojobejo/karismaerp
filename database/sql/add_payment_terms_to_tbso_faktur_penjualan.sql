@@ -1,0 +1,6 @@
+ALTER TABLE tbso_faktur_penjualan
+ADD COLUMN IF NOT EXISTS tanggal_jatuh_tempo DATE NULL AFTER tanggal_faktur,
+ADD COLUMN IF NOT EXISTS salesman VARCHAR(100) NULL AFTER tanggal_jatuh_tempo,
+ADD COLUMN IF NOT EXISTS cara_pembayaran VARCHAR(20) NULL AFTER salesman,
+ADD COLUMN IF NOT EXISTS jtempo INT NOT NULL DEFAULT 0 AFTER cara_pembayaran,
+ADD COLUMN IF NOT EXISTS tempo INT NOT NULL DEFAULT 0 AFTER jtempo;

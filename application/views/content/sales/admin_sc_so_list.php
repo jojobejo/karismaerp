@@ -105,6 +105,9 @@
                             <i class="fas fa-list mr-2"></i> Daftar Sales Order Siap/Partial Faktur
                         </h3>
                         <div class="card-tools">
+                            <a href="<?= base_url('sales_order/admin_sc/faktur') ?>" class="btn btn-light btn-xs mr-1">
+                                <i class="fas fa-file-invoice mr-1"></i> Faktur Selesai
+                            </a>
                             <span class="badge badge-light"><?= count($so_list) ?> SO</span>
                         </div>
                     </div>
@@ -121,7 +124,7 @@
                                     <th class="text-right">Qty Siap Faktur</th>
                                     <th class="text-right">Tidak Terkirim</th>
                                     <th class="text-center">Status</th>
-                                    <th class="text-center no-sort" style="min-width:120px;">Aksi</th>
+                                    <th class="text-center no-sort" style="min-width:56px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -136,9 +139,7 @@
                                     <?php foreach ($so_list as $row): ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('sales_order/detail/' . $row['id_so'] . '?from=admin_sc') ?>" class="font-weight-bold">
-                                                    <?= htmlspecialchars($row['no_so']) ?>
-                                                </a>
+                                                <span class="font-weight-bold"><?= htmlspecialchars($row['no_so']) ?></span>
                                             </td>
                                             <td class="text-nowrap">
                                                 <?= !empty($row['tanggal_transaksi']) ? date('d/m/Y', strtotime($row['tanggal_transaksi'])) : '-' ?>
@@ -172,10 +173,6 @@
                                                 <a href="<?= base_url('sales_order/admin_sc/pilih_barang/' . $row['id_so']) ?>"
                                                    class="btn btn-sm btn-success" title="Pilih barang untuk faktur">
                                                     <i class="fas fa-file-invoice-dollar"></i>
-                                                </a>
-                                                <a href="<?= base_url('sales_order/detail/' . $row['id_so'] . '?from=admin_sc') ?>"
-                                                   class="btn btn-sm btn-info" title="Detail SO">
-                                                    <i class="fas fa-eye"></i>
                                                 </a>
                                             </td>
                                         </tr>
