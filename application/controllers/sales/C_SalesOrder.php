@@ -288,6 +288,16 @@ class C_SalesOrder extends CI_Controller
     {
         $this->load->dbforge();
 
+        if (!$this->db->field_exists('siap_loading_note', 'tbso_sales_order')) {
+            $this->dbforge->add_column('tbso_sales_order', [
+                'siap_loading_note' => [
+                    'type' => 'TEXT',
+                    'null' => true,
+                    'after' => 'catatan',
+                ],
+            ]);
+        }
+
         if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
             $this->dbforge->add_column('tbso_sales_order_detail', [
                 'qty_siap_faktur' => [
@@ -1018,7 +1028,7 @@ class C_SalesOrder extends CI_Controller
         if (!in_array($tax_mode, ['pajak', 'non_pajak'], true)) {
             $tax_mode = 'non_pajak';
         }
-        $tax_rate = $tax_mode === 'pajak' ? 11 : 0;
+        $tax_rate = ($tax_mode === 'pajak' && empty($so['is_faktur_z'])) ? 11 : 0;
 
         // Filter hanya item yang sudah lolos verifikasi barang dan belum difakturkan.
         $items_outstanding = array_filter($details, function($d) {
@@ -1133,11 +1143,19 @@ class C_SalesOrder extends CI_Controller
             $jtempo = 0;
         }
 
+        $salesman = trim((string)($so['customer_salesman'] ?? ''));
+        if ($salesman === '') {
+            $salesman = trim((string)($so['salesman'] ?? ''));
+        }
+        if ($salesman === '') {
+            $salesman = trim((string)($so['create_by'] ?? ''));
+        }
+
         $faktur_header = [
             'no_faktur'             => $no_faktur,
             'tanggal_faktur'        => $post['tanggal_faktur'],
             'tanggal_jatuh_tempo'   => $post['tanggal_jatuh_tempo'] ?? null,
-            'salesman'              => trim($post['salesman'] ?? ''),
+            'salesman'              => $salesman,
             'cara_pembayaran'       => $cara_pembayaran,
             'jtempo'                => $jtempo,
             'tempo'                 => $jtempo,
@@ -1372,6 +1390,7 @@ class C_SalesOrder extends CI_Controller
 
         $this->_ensureSoRouteColumn();
         $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
 
         $kd_rute = trim((string)$this->input->post('kd_rute', true));
         $note = trim((string)$this->input->post('note', true));
@@ -1414,6 +1433,11 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($this->M_SalesOrder->update_status($so['id_so'], 'sedang_verifikasi', $confirm_by)) {
+                $this->db->where('id_so', (int)$so['id_so']);
+                $this->db->update('tbso_sales_order', [
+                    'siap_loading_note' => $note !== '' ? $note : null,
+                ]);
+
                 $updated++;
                 $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute ' . $kd_rute . '.';
                 if ($note !== '') {

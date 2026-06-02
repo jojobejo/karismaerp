@@ -1210,9 +1210,11 @@ class M_Logistik extends CI_Model
                 so.tanggal_transaksi,
                 so.status,
                 so.customer_name,
+                so.catatan,
                 so.create_by,
                 so.update_by,
                 so.update_at,
+                so.siap_loading_note,
                 so.total_tonase,
                 so.total_kubikasi,
                 c.nama_customer,
@@ -1265,10 +1267,12 @@ class M_Logistik extends CI_Model
                 ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding,
                 ROUND(COALESCE(SUM(x.total_qty_siap_faktur), 0), 2) AS total_qty_siap_faktur,
                 ROUND(COALESCE(SUM(x.total_qty_tidak_terkirim), 0), 2) AS total_qty_tidak_terkirim,
+                MAX(NULLIF(x.siap_loading_note, '')) AS siap_loading_note,
                 SUM(CASE WHEN x.jumlah_item > 0 AND x.jumlah_item_terverifikasi >= x.jumlah_item THEN 1 ELSE 0 END) AS total_so_terverifikasi
             FROM (
                 SELECT
                     so.id_so,
+                    so.siap_loading_note,
                     COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                     COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                     COALESCE(so.total_tonase, 0) AS total_tonase,
@@ -1317,9 +1321,11 @@ class M_Logistik extends CI_Model
                 so.tanggal_transaksi,
                 so.status,
                 so.customer_name,
+                so.catatan,
                 so.create_by,
                 so.update_by,
                 so.update_at,
+                so.siap_loading_note,
                 so.total_tonase,
                 so.total_kubikasi,
                 c.nama_customer,
@@ -1464,6 +1470,7 @@ class M_Logistik extends CI_Model
         $this->db->where_in('status', ['open', 'partial']);
         $this->db->update('tbso_sales_order', [
             'status' => 'sedang_verifikasi',
+            'siap_loading_note' => null,
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);

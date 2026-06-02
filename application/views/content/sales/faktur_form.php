@@ -70,7 +70,14 @@ $faktur_back_url = $is_admin_sc_context
                 <i class="fas fa-info-circle mr-1"></i>
                 Membuat Faktur Penjualan dari SO <strong><?= htmlspecialchars($so['no_so']) ?></strong>
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
-                Jenis faktur: <strong><?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?></strong>.
+                Jenis faktur:
+                <strong>
+                    <?php if (!empty($so['is_faktur_z'])): ?>
+                        Faktur Z - Pajak tidak dihitung
+                    <?php else: ?>
+                        <?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?>
+                    <?php endif; ?>
+                </strong>.
                 Rute / Regional: <strong><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></strong>
             </div>
 
@@ -118,9 +125,19 @@ $faktur_back_url = $is_admin_sc_context
                                 </div>
                                 <div class="form-group">
                                     <label>Salesman</label>
+                                    <?php
+                                    $salesman_value = trim((string)($so['customer_salesman'] ?? ''));
+                                    if ($salesman_value === '') {
+                                        $salesman_value = trim((string)($so['salesman'] ?? ''));
+                                    }
+                                    if ($salesman_value === '') {
+                                        $salesman_value = trim((string)($so['create_by'] ?? ''));
+                                    }
+                                    ?>
                                     <input type="text" class="form-control" name="salesman"
-                                           value="<?= htmlspecialchars($this->session->userdata('nama') ?? $this->session->userdata('username') ?? '') ?>"
-                                           placeholder="Nama salesman">
+                                           value="<?= htmlspecialchars($salesman_value, ENT_QUOTES, 'UTF-8') ?>"
+                                           placeholder="Nama salesman" readonly>
+                                    <small class="text-muted">Mengikuti salesman pada Sales Order.</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Cara Pembayaran <span class="text-danger">*</span></label>
@@ -269,7 +286,12 @@ $faktur_back_url = $is_admin_sc_context
                                             <th class="text-right" id="totalNilaiFaktur">Rp 0</th>
                                         </tr>
                                         <tr>
-                                            <th colspan="5" class="text-right">Tax: <?= number_format((float)($tax_rate ?? 0), 0) ?>(%)</th>
+                                            <th colspan="5" class="text-right">
+                                                Tax: <?= number_format((float)($tax_rate ?? 0), 0) ?>(%)
+                                                <?php if (!empty($so['is_faktur_z'])): ?>
+                                                    <br><small class="text-muted">Faktur Z</small>
+                                                <?php endif; ?>
+                                            </th>
                                             <th class="text-right" id="totalTax">Rp 0</th>
                                         </tr>
                                         <tr>

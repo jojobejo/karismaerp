@@ -132,13 +132,13 @@
                             <div class="card-tools">
                                 <div class="form-inline">
                                     <label class="mr-2 mb-0 small font-weight-bold">Jenis Faktur</label>
-                                    <input type="hidden" name="tax_mode" id="taxMode" value="non_pajak">
+                                    <input type="hidden" name="tax_mode" id="taxMode" value="pajak">
                                     <div class="tax-choice-group" role="group" aria-label="Jenis Faktur">
-                                        <button type="button" class="tax-choice-btn active" data-tax-mode="non_pajak">
-                                            Non Pajak
-                                        </button>
-                                        <button type="button" class="tax-choice-btn" data-tax-mode="pajak">
+                                        <button type="button" class="tax-choice-btn active" data-tax-mode="pajak">
                                             Pajak
+                                        </button>
+                                        <button type="button" class="tax-choice-btn" data-tax-mode="non_pajak">
+                                            Non Pajak
                                         </button>
                                     </div>
                                 </div>
@@ -218,7 +218,7 @@
 <script>
 $(document).ready(function () {
     function activeTaxMode() {
-        return $('#taxMode').val() || 'non_pajak';
+        return $('#taxMode').val() || 'pajak';
     }
 
     function applyTaxMode(mode) {

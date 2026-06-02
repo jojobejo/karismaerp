@@ -730,7 +730,13 @@ class M_SalesOrder extends CI_Model
 
     public function get_so($id_so)
     {
-        $this->db->select('so.*, c.nama_customer, c.regional, c.kd_rute AS customer_kd_rute');
+        $this->db->select('
+            so.*,
+            c.nama_customer,
+            c.regional,
+            c.kd_rute AS customer_kd_rute,
+            c.salesman AS customer_salesman
+        ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->where('so.id_so', $id_so);

@@ -54,6 +54,16 @@ class C_Logistik extends CI_Controller
     {
         $this->load->dbforge();
 
+        if (!$this->db->field_exists('siap_loading_note', 'tbso_sales_order')) {
+            $this->dbforge->add_column('tbso_sales_order', [
+                'siap_loading_note' => [
+                    'type' => 'TEXT',
+                    'null' => true,
+                    'after' => 'catatan',
+                ],
+            ]);
+        }
+
         if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
             $this->dbforge->add_column('tbso_sales_order_detail', [
                 'qty_siap_faktur' => [

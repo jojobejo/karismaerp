@@ -1,7 +1,7 @@
 <!-- views/content/logistik/so_siap_loading.php -->
 <style>
     .route-card {
-        align-items: center;
+        align-items: flex-start;
         background: #fff;
         border: 1px solid #dee2e6;
         border-left: 3px solid #ced4da;
@@ -37,6 +37,18 @@
         font-size: 10.5px;
         line-height: 1.2;
         min-width: 0;
+    }
+    .route-card .route-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .route-card .route-note {
+        color: #6b7280;
+        display: block;
+        font-size: 10.5px;
+        line-height: 1.25;
+        margin-top: 2px;
+        max-width: 100%;
     }
     .route-card .route-summary {
         align-items: center;
@@ -117,6 +129,15 @@
         padding: 0;
         width: 30px;
     }
+    .route-confirm-note {
+        background: #fff8e1;
+        border: 1px solid #ffe08a;
+        border-radius: 4px;
+        color: #4b3b00;
+        font-size: 12px;
+        line-height: 1.4;
+        padding: 8px 10px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -130,9 +151,11 @@
 
     <?php
     $selected_route_name = '-';
+    $selected_route_note = '';
     foreach ($routes as $route) {
         if ((string)$route->kd_rute === (string)$selected_rute) {
             $selected_route_name = $route->nama_rute ?: $route->kd_rute;
+            $selected_route_note = trim((string)($route->siap_loading_note ?? ''));
             break;
         }
     }
@@ -201,7 +224,7 @@
                 <?php endif; ?>
 
                 <div class="row">
-                    <div class="col-lg-3">
+                    <div class="col-lg-2">
                         <div class="card card-outline card-primary">
                             <div class="card-header py-2">
                                 <h3 class="card-title">
@@ -221,11 +244,19 @@
                                         $route_tonase = (float)($route->total_tonase ?? 0);
                                         $route_pct_ton = $batas_ton > 0 ? min(100, round(($route_tonase / $batas_ton) * 100, 1)) : 0;
                                         $route_ton_color = $route_tonase > $batas_ton ? '#dc3545' : ($route_pct_ton >= 80 ? '#f59e0b' : '#198754');
+                                        $route_note = trim((string)($route->siap_loading_note ?? ''));
                                     ?>
                                         <a href="<?= $route_url ?>" class="route-card <?= $active ? 'active' : '' ?>">
                                             <div class="route-code"><?= htmlspecialchars($route->kd_rute) ?></div>
-                                            <div class="route-meta text-truncate" title="<?= htmlspecialchars($route->nama_rute) ?>">
-                                                <?= htmlspecialchars($route->nama_rute) ?>
+                                            <div class="route-main">
+                                                <div class="route-meta text-truncate" title="<?= htmlspecialchars($route->nama_rute) ?>">
+                                                    <?= htmlspecialchars($route->nama_rute) ?>
+                                                </div>
+                                                <?php if ($route_note !== ''): ?>
+                                                    <span class="route-note text-truncate" title="<?= htmlspecialchars($route_note, ENT_QUOTES, 'UTF-8') ?>">
+                                                        <i class="fas fa-sticky-note text-warning mr-1"></i><?= htmlspecialchars($route_note, ENT_QUOTES, 'UTF-8') ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                             <div class="route-summary">
                                                 <span class="route-metric">
@@ -245,7 +276,7 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-9">
+                    <div class="col-lg-10">
                         <div class="row mt-0 mb-3">
                             <div class="col-md-6">
                                 <div class="card card-outline card-<?= $color_ton ?> quota-card mb-0">
@@ -356,6 +387,13 @@
                                 </div>
                             </div>
                             <div class="card-body">
+                                <?php if ($selected_route_note !== ''): ?>
+                                    <div class="route-confirm-note mb-2">
+                                        <i class="fas fa-sticky-note mr-1"></i>
+                                        <strong>Catatan Konfirmasi Rute:</strong>
+                                        <?= nl2br(htmlspecialchars($selected_route_note, ENT_QUOTES, 'UTF-8')) ?>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if (!empty($selected_rute) && !empty($so_list)): ?>
                                     <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
                                         <div class="small text-muted">
@@ -389,13 +427,14 @@
                                             <th class="text-center">Verifikasi</th>
                                             <th class="text-right">Tonase</th>
                                             <th class="text-right">Kubikasi</th>
+                                            <th>Catatan SO</th>
                                             <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($so_list)): ?>
                                             <tr>
-                                                <td colspan="12" class="text-center text-muted py-4">
+                                                <td colspan="13" class="text-center text-muted py-4">
                                                     Tidak ada Sales Order siap loading untuk rute ini.
                                                 </td>
                                             </tr>
@@ -434,6 +473,16 @@
                                                     </td>
                                                     <td class="text-right"><?= number_format((float)$so->total_tonase, 3) ?> ton</td>
                                                     <td class="text-right"><?= number_format((float)$so->total_kubikasi, 4) ?> m3</td>
+                                                    <td style="min-width:180px">
+                                                        <?php if (!empty($so->catatan)): ?>
+                                                            <div class="small text-dark">
+                                                                <i class="fas fa-sticky-note text-warning mr-1"></i>
+                                                                <?= nl2br(htmlspecialchars($so->catatan, ENT_QUOTES, 'UTF-8')) ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="text-center">
                                                         <div class="so-action-group" role="group">
                                                             <a href="<?= base_url('logistik/so_siap_loading/verifikasi/' . $so->id_so) ?>"
@@ -482,8 +531,8 @@ $(document).ready(function () {
             url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
         },
         columnDefs: [
-            { orderable: false, targets: [0, 11] },
-            { className: 'text-center', targets: [0, 5, 8, 11] }
+            { orderable: false, targets: [0, 12] },
+            { className: 'text-center', targets: [0, 5, 8, 12] }
         ],
         order: [[2, 'desc']],
         drawCallback: function () {
