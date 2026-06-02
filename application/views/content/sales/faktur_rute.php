@@ -285,7 +285,7 @@
                                             <th>No SO</th>
                                             <th>Tanggal</th>
                                             <th>Customer</th>
-                                            <th>Regional</th>
+                                            <th>Rute SO</th>
                                             <th class="text-center">Barang</th>
                                             <th class="text-right">Qty</th>
                                             <th class="text-right">Tonase</th>
@@ -325,7 +325,10 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <?= !empty($f['regional']) ? htmlspecialchars($f['regional']) : '<span class="text-muted">-</span>' ?>
+                                                        <?= !empty($f['kd_rute']) ? htmlspecialchars($f['kd_rute']) : '<span class="text-muted">-</span>' ?>
+                                                        <?php if (!empty($f['nama_rute']) && $f['nama_rute'] !== $f['kd_rute']): ?>
+                                                            <br><small class="text-muted"><?= htmlspecialchars($f['nama_rute']) ?></small>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td class="text-center"><?= number_format((int)$f['total_barang']) ?></td>
                                                     <td class="text-right"><?= number_format((float)$f['total_qty'], 2) ?></td>

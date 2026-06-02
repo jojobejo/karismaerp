@@ -1114,6 +1114,7 @@ class M_SalesOrder extends CI_Model
                 ) x
                 GROUP BY x.kd_rute
             ) p ON p.kd_rute = r.kd_rute
+            WHERE COALESCE(p.total_faktur, 0) > 0
             ORDER BY
                 COALESCE(p.total_tonase, 0) DESC,
                 COALESCE(p.total_kubikasi, 0) DESC,
