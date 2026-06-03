@@ -118,7 +118,40 @@ class M_SalesOrder extends CI_Model
 
     private function _stockQtyColumn()
     {
-        return $this->db->field_exists('qty', 'tberp_stock_batch') ? 'qty' : 'qty_on_hand';
+        return $this->db->field_exists('qty_on_hand', 'tberp_stock_batch') ? 'qty_on_hand' : 'qty';
+    }
+
+    private function _stockBatchIdForMovement($kd_barang, $exp_date, $no_lot, $gudang_id, $qty, $mode)
+    {
+        $qty_col = $this->_stockQtyColumn();
+        $exp_normalized = $this->_normalizeDate($exp_date);
+
+        $this->db->select('id');
+        $this->db->from('tberp_stock_batch');
+        $this->db->where('kd_barang', $kd_barang);
+        $this->db->where('gudang_id', $gudang_id);
+        if (!empty($no_lot)) {
+            $this->db->where('no_lot', $no_lot);
+        }
+        if (!empty($exp_normalized)) {
+            $this->db->where('expired_date', $exp_normalized);
+        }
+
+        if ($mode === 'reserve') {
+            $this->db->where('(' . $qty_col . ' - COALESCE(qty_reserved, 0)) >=', (float)$qty, false);
+        } elseif ($mode === 'invoice') {
+            $this->db->where($qty_col . ' >=', (float)$qty);
+            $this->db->where('qty_reserved >=', (float)$qty);
+        } elseif ($mode === 'release') {
+            $this->db->where('qty_reserved >', 0);
+        }
+
+        $this->db->order_by('expired_date', 'ASC');
+        $this->db->order_by('id', 'ASC');
+        $this->db->limit(1);
+
+        $row = $this->db->get()->row_array();
+        return $row ? (int)$row['id'] : 0;
     }
 
     // ================================================================
@@ -1243,12 +1276,20 @@ class M_SalesOrder extends CI_Model
             // 1. Update tberp_stock_batch: kurangi qty fisik & qty_reserved
             try {
                 $qty_col = $this->_stockQtyColumn();
-                $this->db->where('kd_barang', $item['kd_barang']);
-                $this->db->where('gudang_id', $gudang_id);
-                if (!empty($item['no_lot']))  $this->db->where('no_lot', $item['no_lot']);
-                if (!empty($exp_normalized))  $this->db->where('expired_date', $exp_normalized);
-                $this->db->where($qty_col . ' >=', $qty_item);
-                $this->db->where('qty_reserved >=', $qty_item);
+                $stock_batch_id = $this->_stockBatchIdForMovement(
+                    $item['kd_barang'],
+                    $exp_normalized,
+                    $item['no_lot'] ?? null,
+                    $gudang_id,
+                    $qty_item,
+                    'invoice'
+                );
+                if ($stock_batch_id <= 0) {
+                    $this->db->trans_rollback();
+                    return false;
+                }
+
+                $this->db->where('id', $stock_batch_id);
                 $this->db->set($qty_col, $qty_col . ' - ' . $qty_item, false);
                 $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
                 $this->db->set('update_at', date('Y-m-d H:i:s'));
@@ -1365,12 +1406,17 @@ class M_SalesOrder extends CI_Model
         $exp_normalized = $this->_normalizeDate($exp_date);
 
         try {
-            $qty_col = $this->_stockQtyColumn();
-            $this->db->where('kd_barang', $kd_barang);
-            $this->db->where('gudang_id', $gudang_id);
-            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
-            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
-            $this->db->where('(' . $qty_col . ' - COALESCE(qty_reserved, 0)) >=', (float)$qty, false);
+            $stock_batch_id = $this->_stockBatchIdForMovement(
+                $kd_barang,
+                $exp_normalized,
+                $no_lot,
+                $gudang_id,
+                $qty,
+                'reserve'
+            );
+            if ($stock_batch_id <= 0) return false;
+
+            $this->db->where('id', $stock_batch_id);
             $this->db->set('qty_reserved', 'qty_reserved + ' . (float)$qty, false);
             $this->db->set('update_at', date('Y-m-d H:i:s'));
             $this->db->update('tberp_stock_batch');
@@ -1403,10 +1449,22 @@ class M_SalesOrder extends CI_Model
 
         // tberp_stock_batch — JANGAN kurangi qty_on_hand di sini
         try {
-            $this->db->where('kd_barang', $kd_barang);
-            $this->db->where('gudang_id', $gudang_id);
-            if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
-            if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
+            $stock_batch_id = $this->_stockBatchIdForMovement(
+                $kd_barang,
+                $exp_normalized,
+                $no_lot,
+                $gudang_id,
+                $qty,
+                'release'
+            );
+            if ($stock_batch_id > 0) {
+                $this->db->where('id', $stock_batch_id);
+            } else {
+                $this->db->where('kd_barang', $kd_barang);
+                $this->db->where('gudang_id', $gudang_id);
+                if (!empty($no_lot))         $this->db->where('no_lot', $no_lot);
+                if (!empty($exp_normalized)) $this->db->where('expired_date', $exp_normalized);
+            }
             $this->db->set('qty_reserved', 'GREATEST(0, qty_reserved - ' . (float)$qty . ')', false);
             $this->db->set('update_at', date('Y-m-d H:i:s'));
             $this->db->update('tberp_stock_batch');
