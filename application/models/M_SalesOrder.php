@@ -734,8 +734,7 @@ class M_SalesOrder extends CI_Model
             so.*,
             c.nama_customer,
             c.regional,
-            c.kd_rute AS customer_kd_rute,
-            c.salesman AS customer_salesman
+            c.kd_rute AS customer_kd_rute
         ');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');

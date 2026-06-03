@@ -126,18 +126,12 @@ $faktur_back_url = $is_admin_sc_context
                                 <div class="form-group">
                                     <label>Salesman</label>
                                     <?php
-                                    $salesman_value = trim((string)($so['customer_salesman'] ?? ''));
-                                    if ($salesman_value === '') {
-                                        $salesman_value = trim((string)($so['salesman'] ?? ''));
-                                    }
-                                    if ($salesman_value === '') {
-                                        $salesman_value = trim((string)($so['create_by'] ?? ''));
-                                    }
+                                    $salesman_value = trim((string)($so['create_by'] ?? ''));
                                     ?>
                                     <input type="text" class="form-control" name="salesman"
                                            value="<?= htmlspecialchars($salesman_value, ENT_QUOTES, 'UTF-8') ?>"
                                            placeholder="Nama salesman" readonly>
-                                    <small class="text-muted">Mengikuti salesman pada Sales Order.</small>
+                                    <small class="text-muted">Mengikuti pembuat Sales Order.</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Cara Pembayaran <span class="text-danger">*</span></label>

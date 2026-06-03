@@ -197,7 +197,7 @@
                                         $status_meta = [
                                             '1' => ['label' => 'Draft', 'icon' => 'fas fa-file-alt', 'class' => 'is-warning'],
                                             '2' => ['label' => 'Menunggu Konfirmasi Sales', 'icon' => 'fas fa-clock', 'class' => 'is-info'],
-                                            '3' => ['label' => 'Siap Loading', 'icon' => 'fas fa-check-circle', 'class' => 'is-success'],
+                                            '3' => ['label' => 'Proses DO', 'icon' => 'fas fa-clipboard-check', 'class' => 'is-success'],
                                             '4' => ['label' => 'Is Loading', 'icon' => 'fas fa-truck-loading', 'class' => 'is-muted'],
                                             '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-muted'],
                                         ];
@@ -606,7 +606,7 @@
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_faktur ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->tgl_transaksi ?></td>
-                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->note_faktur != '' ? $row->note_faktur : '-' ?></td>
+                                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->note_faktur != '' ? htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') : '' ?></td>
 
                                                     <?php endif; ?>
                                                     <!-- <td><?= $norut_counter++ ?></td> -->
@@ -670,7 +670,7 @@
                                                 <div class="col">
                                                     <div class="alert alert-info mt-3 mb-0">
                                                         <i class="fas fa-clock mr-1"></i>
-                                                        Menunggu konfirmasi Sales. Tombol print akan tersedia setelah Sales mengkonfirmasi Siap Loading.
+                                                        Menunggu proses DO. Tombol print akan tersedia setelah DO direkam oleh Logistik.
                                                     </div>
                                                 </div>
 

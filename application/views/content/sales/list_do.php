@@ -50,7 +50,7 @@
                             <i class="fas fa-check-circle"></i>
                         </span>
                         <div class="info-box-content">
-                            <span class="info-box-text">Siap Loading</span>
+                            <span class="info-box-text">Proses DO</span>
                             <span class="info-box-number"><?= $total_siap ?></span>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
                             <div class="col-auto">
                                 <select id="filterKonfirmasi" class="form-control form-control-sm" style="min-width:180px;">
                                     <option value="">— Semua Status —</option>
-                                    <option value="Siap Loading">Siap Loading</option>
+                                    <option value="Proses DO">Proses DO</option>
                                     <option value="On Delivery">On Delivery</option>
                                 </select>
                             </div>
@@ -110,7 +110,7 @@
                                                 </span>';
                                     } else {
                                         $badge = '<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#0a3d1f;background:#c3e6cb;padding:3px 10px;border-radius:20px;border:1px solid #82c99a;">
-                                                    <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Siap Loading
+                                                    <span style="width:7px;height:7px;border-radius:50%;background:#1e7e34;display:inline-block;margin-right:5px;flex-shrink:0;"></span>Proses DO
                                                 </span>';
                                     }
 

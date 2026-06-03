@@ -1368,7 +1368,7 @@ class C_Logistik extends CI_Controller
         }
 
         $query = $this->db->query("SELECT
-            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), NULLIF(lcs.note, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
+            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
             x.no_lot,x.nominal_p,x.jtempo,x.tgl_exp,x.satuan,x.status,x.kd_do,x.qty,(c.p * c.l * c.t)      AS dimensi,FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
             (x.qty % (c.p * c.l * c.t)) AS qty_pcs
         FROM (

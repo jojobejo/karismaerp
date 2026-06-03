@@ -1,4 +1,51 @@
 <!-- views/content/sales/detail_do_sales.php -->
+<style>
+    .sales-do-line-table {
+        border-collapse: collapse;
+        border-spacing: 0;
+        color: #111;
+        font-size: 13px;
+        box-shadow: none !important;
+        margin-bottom: 0;
+        width: 100%;
+    }
+    .sales-do-line-table,
+    .sales-do-line-table * {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    .sales-do-line-table th,
+    .sales-do-line-table td {
+        background: transparent;
+        border: 1px solid #111;
+        color: #111;
+        padding: 5px 7px;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .sales-do-line-table thead th {
+        background: transparent;
+        color: #111;
+        font-weight: 700;
+    }
+    .sales-do-plain-info {
+        color: #111;
+        font-size: 14px;
+        margin-bottom: 18px;
+    }
+    .sales-do-plain-row {
+        display: flex;
+        line-height: 1.6;
+    }
+    .sales-do-plain-label {
+        flex: 0 0 110px;
+        font-weight: 400;
+    }
+    .sales-do-plain-value {
+        flex: 1 1 auto;
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
     <?php $this->load->view('partial/main/navbar') ?>
@@ -35,14 +82,25 @@
 
                         <!-- Info DO -->
                         <div class="row mb-4">
-                            <!-- Kiri: Info + Progress -->
-                            <div class="col-md-6">
-                                <table class="table table-sm table-borderless">
-                                    <tr><td><strong>Kode DO</strong></td><td>: <?= $k->kd_do ?></td></tr>
-                                    <tr><td><strong>Regional</strong></td><td>: <?= $k->regional ?></td></tr>
-                                    <tr><td><strong>Total Faktur</strong></td><td>: <?= $k->totalfaktur ?></td></tr>
-                                    <tr><td><strong>Total Barang</strong></td><td>: <?= $k->total_barang ?></td></tr>
-                                </table>
+                            <div class="col-md-12">
+                                <div class="sales-do-plain-info">
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Kode DO</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->kd_do, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Regional</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->regional, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Total Faktur</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->totalfaktur, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Total Barang</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->total_barang, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                </div>
 
                                 <?php
                                 $tonase   = (float)$k->total_tonase_faktur;
@@ -114,33 +172,11 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- ✅ Kanan: Status konfirmasi + Tombol -->
-                            <div class="col-md-6">
-                                <?php
-                                $do_status = (string)($k->status ?? '');
-                                if ($do_status === '5') {
-                                    echo '<div class="alert alert-dark">
-                                            <i class="fas fa-truck mr-1"></i>
-                                            <strong>On Delivery</strong><br>
-                                            <small>DO sudah direkam oleh Logistik.</small>
-                                        </div>';
-                                } else {
-                                    echo '<div class="alert alert-success">
-                                            <i class="fas fa-check-circle mr-1"></i>
-                                            <strong>Siap Loading</strong><br>
-                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small><br>
-                                            <small>Waktu: ' . ($k->sales_confirm_at ?? '-') . '</small>
-                                        </div>';
-                                }
-                                ?>
-
-                            </div>
                         </div>
 
                         <!-- Tabel Detail Barang — VIEW ONLY -->
-                        <table class="table table-bordered table-striped table-sm">
-                            <thead style="background-color:#212529;color:white;">
+                        <table class="sales-do-line-table">
+                            <thead>
                                 <tr>
                                     <th>Nama Kios</th>
                                     <th>Regional</th>
@@ -188,32 +224,6 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-
-                        <!-- Log Konfirmasi -->
-                        <?php if (!empty($log_confirm)) : ?>
-                        <div class="mt-3">
-                            <h5>Riwayat Konfirmasi</h5>
-                            <table class="table table-sm table-bordered">
-                                <thead><tr><th>Waktu</th><th>Action</th><th>Oleh</th><th>Catatan</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($log_confirm as $log) : ?>
-                                    <tr>
-                                        <td><?= $log->confirm_at ?></td>
-                                        <td>
-                                            <?php if ($log->action === 'siap') : ?>
-                                                <span class="badge badge-success">Siap Loading</span>
-                                            <?php else : ?>
-                                                <span class="badge badge-danger">Belum Siap Loading</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($log->confirm_by ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($log->note ?? '-') ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <?php endif; ?>
 
                     </div>
                 </div>

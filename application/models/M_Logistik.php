@@ -682,7 +682,7 @@ class M_Logistik extends CI_Model
     }
 
     /**
-     * Buat DO Siap Loading langsung dari faktur confirmed pada satu rute.
+     * Buat DO berstatus Proses DO langsung dari faktur confirmed pada satu rute.
      * Faktur yang sudah masuk detail/tmp DO tidak ikut diproses lagi.
      */
     public function create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by)
@@ -693,6 +693,7 @@ class M_Logistik extends CI_Model
                 f.no_faktur,
                 f.tanggal_faktur,
                 f.kd_customer,
+                COALESCE(f.catatan, '') AS note_faktur,
                 COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
                 fd.id AS id_faktur_detail,
                 fd.kd_barang,
@@ -759,7 +760,7 @@ class M_Logistik extends CI_Model
                 'norut'         => 0,
                 'nominal_p'     => $row->nominal_p,
                 'jtempo'        => $row->jtempo,
-                'note_faktur'   => $note,
+                'note_faktur'   => $row->note_faktur,
                 'dt_status'     => 1,
                 'status'        => 1,
                 'input_at'      => $today_view,
@@ -811,6 +812,53 @@ class M_Logistik extends CI_Model
             'total_faktur' => count($faktur_numbers),
             'total_detail' => count($detail_rows),
         ];
+    }
+
+    public function has_remaining_so_ready_faktur_by_rute($kd_rute)
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return false;
+        }
+
+        $row = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM (
+                SELECT
+                    so.id_so,
+                    SUM(GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0)) AS qty_ready_remaining
+                FROM tbso_sales_order so
+                JOIN tbso_sales_order_detail sd
+                    ON sd.id_so = so.id_so
+                LEFT JOIN tb_customer c
+                    ON c.kd_customer = so.kd_customer
+                WHERE so.status IN ('siap_faktur', 'partial')
+                AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
+                GROUP BY so.id_so
+                HAVING qty_ready_remaining > 0.001
+            ) x
+        ", [$kd_rute])->row_array();
+
+        return (int)($row['total'] ?? 0) > 0;
+    }
+
+    public function has_so_loading_verification_by_rute($kd_rute)
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return false;
+        }
+
+        $row = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c
+                ON c.kd_customer = so.kd_customer
+            WHERE so.status = 'sedang_verifikasi'
+            AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
+        ", [$kd_rute])->row_array();
+
+        return (int)($row['total'] ?? 0) > 0;
     }
 
     public function insert_tmp_detdo_batch($data)
@@ -1088,14 +1136,14 @@ class M_Logistik extends CI_Model
     /**
      * Update status konfirmasi sales pada tb_do
      */
-    // SESUDAH - status 3 = Siap Loading (bukan On Delivery)
+    // SESUDAH - status 3 = Proses DO (bukan On Delivery)
     public function update_sales_confirm($kd_do, $action, $confirm_by, $note = '')
     {
         $now = date('Y-m-d H:i:s');
 
         $this->db->where('kd_do', $kd_do);
         $this->db->update('tb_do', [
-            'status' => ($action === 'siap') ? 3 : 2  // 3 = Siap Loading
+            'status' => ($action === 'siap') ? 3 : 2  // 3 = Proses DO
         ]);
 
         $this->db->insert('tb_log_confirm_sales', [

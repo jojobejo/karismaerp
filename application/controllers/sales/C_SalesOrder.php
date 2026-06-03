@@ -269,6 +269,42 @@ class C_SalesOrder extends CI_Controller
         }
     }
 
+    private function _autoCreateDoFromFinishedFakturRoute(array $so, $create_by)
+    {
+        $kd_rute = trim((string)($so['kd_rute'] ?? ''));
+        if ($kd_rute === '') {
+            $kd_rute = trim((string)($so['customer_kd_rute'] ?? ''));
+        }
+        if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
+            return false;
+        }
+        if (!$this->M_Logistik->get_rute_do($kd_rute)) {
+            return false;
+        }
+        if ($this->M_Logistik->has_so_loading_verification_by_rute($kd_rute)) {
+            return false;
+        }
+        if ($this->M_Logistik->has_remaining_so_ready_faktur_by_rute($kd_rute)) {
+            return false;
+        }
+
+        $note = 'DO otomatis dibuat setelah seluruh barang siap faktur pada rute ' . $kd_rute . ' selesai difakturkan.';
+        $created = $this->M_Logistik->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by);
+        if (!$created) {
+            return false;
+        }
+
+        $this->M_Logistik->insertlog_do([
+            'kd_do'      => $created['kd_do'],
+            'tgl_input'  => date('d/m/Y'),
+            'keterangan' => 'AUTO DO RUTE ' . $kd_rute . ' dari faktur Admin SC oleh ' . $create_by,
+            'inputer'    => $create_by,
+        ]);
+        $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $create_by);
+
+        return $created;
+    }
+
     private function _ensureSoSedangVerifikasiStatus()
     {
         $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
@@ -1143,13 +1179,7 @@ class C_SalesOrder extends CI_Controller
             $jtempo = 0;
         }
 
-        $salesman = trim((string)($so['customer_salesman'] ?? ''));
-        if ($salesman === '') {
-            $salesman = trim((string)($so['salesman'] ?? ''));
-        }
-        if ($salesman === '') {
-            $salesman = trim((string)($so['create_by'] ?? ''));
-        }
+        $salesman = trim((string)($so['create_by'] ?? ''));
 
         $faktur_header = [
             'no_faktur'             => $no_faktur,
@@ -1173,6 +1203,7 @@ class C_SalesOrder extends CI_Controller
 
         if ($result) {
             $so_fresh = $this->M_SalesOrder->get_so($id_so);
+            $auto_do = $this->_autoCreateDoFromFinishedFakturRoute($so_fresh ?: $so, $this->_getUsername());
 
             $detail_str = array_map(function($item) {
                 return $item['nama_barang'] . ' | Qty: ' . $item['qty'] . ' pcs';
@@ -1186,13 +1217,21 @@ class C_SalesOrder extends CI_Controller
             );
 
             // Cek apakah SO sudah completed
+            $auto_do_message = '';
+            if (!empty($auto_do['kd_do'])) {
+                $auto_do_message = ' DO <b>' . htmlspecialchars($auto_do['kd_do']) . '</b> otomatis dibuat berisi <b>'
+                    . (int)$auto_do['total_faktur'] . '</b> faktur rute terkait.';
+            }
+
             if (($so_fresh['status'] ?? '') === 'completed') {
                 $this->session->set_flashdata('success',
                     'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. '
-                    . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.');
+                    . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.'
+                    . $auto_do_message);
             } else {
                 $this->session->set_flashdata('success',
-                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih memiliki barang yang belum terkirim.');
+                    'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih memiliki barang yang belum terkirim.'
+                    . $auto_do_message);
             }
 
             redirect($this->_isAdminScOnlyUser() ? 'sales_order/admin_sc/faktur' : 'sales_order/detail/' . $id_so);
@@ -1915,7 +1954,7 @@ class C_SalesOrder extends CI_Controller
 
         echo json_encode([
             'msg'     => 'success',
-            'message' => 'DO ' . $created['kd_do'] . ' dibuat Siap Loading dari '
+            'message' => 'DO ' . $created['kd_do'] . ' dibuat sebagai Proses DO dari '
                 . $created['total_faktur'] . ' faktur rute ' . $kd_rute . '.'
         ]);
         exit;

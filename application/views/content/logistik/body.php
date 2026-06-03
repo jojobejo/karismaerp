@@ -80,7 +80,7 @@
                                         <label class="text-muted" style="font-size:12px; font-weight:600;">Filter Status</label>
                                         <select id="filterStatus" class="form-control form-control-sm">
                                             <option value="">— Semua Status —</option>
-                                            <option value="3">Siap Loading</option>
+                                            <option value="3">Proses DO</option>
                                             <option value="4">Is Loading</option>
                                             <option value="5">On Delivery</option>
                                         </select>
@@ -144,7 +144,7 @@
                                                 $statusCode = '2';
                                                 $confirmCode = '';
                                             } elseif ($status == '3') {
-                                                $datasts    = '<span class="badge badge-success">Siap Loading</span>';
+                                                $datasts    = '<span class="badge badge-success">Proses DO</span>';
                                                 $statusCode = '3';
                                                 $confirmCode = '';
                                             } elseif ($status == '4') {
