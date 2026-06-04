@@ -600,7 +600,6 @@ class C_SalesOrder extends CI_Controller
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
-        $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
         $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $this->_getGudangId();
         $data['so']             = null;
@@ -650,11 +649,6 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $is_nego = 0;
-        foreach ($details as $d) {
-            if (!empty($d['is_nego'])) { $is_nego = 1; break; }
-        }
-
         $no_so = $post['no_so'] ?? $this->M_SalesOrder->generate_no_so();
 
         $header = [
@@ -685,22 +679,7 @@ class C_SalesOrder extends CI_Controller
                 implode("\n", $detail_str)
             );
 
-            if ($is_nego) {
-                $approve_by = '';
-                foreach ($details as $d) {
-                    if (!empty($d['is_nego']) && !empty($d['approve_by'])) {
-                        $approve_by = $d['approve_by']; break;
-                    }
-                }
-                $this->M_SalesOrder->simpan_request_approval(
-                    $no_so,
-                    'Harga item berbeda dari HPP. Dibuat oleh: ' . $this->_getUsername(),
-                    $this->_getUsername(),
-                    $approve_by
-                );
-                $this->session->set_flashdata('warning',
-                    'SO berhasil disimpan dengan status <b>Draft</b>. Menunggu approval dari <b>' . $approve_by . '</b>.');
-            } elseif (!empty($tk['warnings'])) {
+            if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning',
                     'SO berhasil disimpan. <b>Peringatan:</b> ' . implode('<br>', $tk['warnings']));
             } else {
@@ -838,7 +817,6 @@ class C_SalesOrder extends CI_Controller
         $data['details']        = $details;
         $data['customers']      = $this->M_SalesOrder->get_customers();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
-        $data['approver_list']  = $this->M_SalesOrder->get_approver_list();
         $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $so['gudang_id'];
         $data['batas_tonase']   = M_SalesOrder::BATAS_TONASE;
@@ -891,11 +869,6 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $is_nego = 0;
-        foreach ($details as $d) {
-            if (!empty($d['is_nego'])) { $is_nego = 1; break; }
-        }
-
         $header = [
             'tanggal_transaksi' => $post['tanggal'],
             'kd_customer'       => $post['customer_id'],
@@ -922,16 +895,6 @@ class C_SalesOrder extends CI_Controller
                 $this->_getUsername(),
                 implode("\n", $detail_str)
             );
-
-            if ($is_nego) {
-                $approve_by = $post['approve_by'] ?? '';
-                $this->M_SalesOrder->simpan_request_approval(
-                    $so_fresh['no_so'] ?? '',
-                    'Harga item berbeda dari HPP. Diupdate oleh: ' . $this->_getUsername(),
-                    $this->_getUsername(),
-                    $approve_by
-                );
-            }
 
             if (!empty($tk['warnings'])) {
                 $this->session->set_flashdata('warning', implode('<br>', $tk['warnings']));
@@ -1640,8 +1603,6 @@ class C_SalesOrder extends CI_Controller
             $subtotal_before_disc = $hrg * $qty_kecil;
             $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
             $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
-            $is_nego              = ($hrg > 0 && $hrg < $hrg_pk) ? 1 : 0;
-
             $details[] = [
                 'kd_barang'            => $kd,
                 'nama_barang'          => $post['nama_barang'][$i]  ?? '',
@@ -1652,7 +1613,6 @@ class C_SalesOrder extends CI_Controller
                 'satuan'               => $post['satuan'][$i]        ?? '',
                 'expired_date'         => $post['expired_date'][$i]  ?? '',
                 'no_lot'               => $post['no_lot'][$i]        ?? null,
-                'ref_no'               => null,
                 'pajak'                => $pajak,
                 'disc'                 => $disc,
                 'subtotal_before_disc' => $subtotal_before_disc,
@@ -1662,8 +1622,6 @@ class C_SalesOrder extends CI_Controller
                 'total_harga'          => $total_tax,
                 'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
                 'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
-                'is_nego'              => $is_nego,
-                'approve_by'           => trim($post['approve_by'][$i] ?? ''),
                 'create_by'            => $this->_getUsername(),
             ];
         }

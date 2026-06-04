@@ -437,17 +437,6 @@ foreach ($customers as $c) {
 var CUSTOMERS = <?= json_encode(array_values($customers_safe), JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
 
 <?php
-$approver_safe = [];
-foreach (($approver_list ?? []) as $a) {
-    $approver_safe[] = [
-        'nm'      => mb_convert_encoding($a['nm_karyawan'] ?? '', 'UTF-8', 'UTF-8'),
-        'jobdesk' => mb_convert_encoding($a['jobdesk']     ?? '', 'UTF-8', 'UTF-8'),
-    ];
-}
-?>
-var APPROVER_LIST = <?= json_encode($approver_safe, JSON_HEX_QUOT|JSON_HEX_APOS|JSON_UNESCAPED_UNICODE) ?>;
-
-<?php
 $gudang_safe = [];
 foreach(($gudang_list ?? []) as $g) {
     $gudang_safe[] = [
@@ -533,7 +522,6 @@ function buatBaris(idx, d) {
     var sub       = subDisc;
     var expSoon   = exp && isExpiringSoon(exp);
     var hargaClass = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) ? 'text-danger' : '';
-    var approveBy  = d.approve_by || '';
 
     var expOption = exp
         ? '<option value="'+esc(exp)+'" data-lot="'+esc(lot)+'" data-av="'+av
@@ -610,13 +598,7 @@ function buatBaris(idx, d) {
        + '<input type="number" step="0.01" min="0" name="hrg_satuan[]" id="hrg_'+idx+'"'
        + ' class="form-control form-control-sm '+hargaClass+'" value="'+(hrg||'')+'" required>'
        + '<div id="hrgwarn_'+idx+'" class="mt-1"></div>'
-       + '<div id="approver-wrap_'+idx+'" style="display:none" class="mt-1">'
-       + '<select name="approve_by[]" id="approve_by_'+idx+'" class="form-control form-control-sm">'
-       + '<option value="">-- Pilih Approver --</option>';
-    APPROVER_LIST.forEach(function(a) {
-        h += '<option value="'+esc(a.nm)+'"'+(a.nm===approveBy?' selected':'')+'>'+esc(a.nm+(a.jobdesk?' — '+a.jobdesk:''))+'</option>';
-    });
-    h += '</select></div></td>';
+       + '</td>';
 
     /* 7 Disc */
     h += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" id="disc_'+idx+'"'
@@ -749,10 +731,7 @@ function hitungBaris(idx) {
     if (elS)  elS.textContent  = fmtNum(tot);
 
     var wEl = document.getElementById('hrgwarn_'+idx);
-    var aW  = document.getElementById('approver-wrap_'+idx);
-    var aS  = document.getElementById('approve_by_'+idx);
-    if (wEl) wEl.innerHTML = isNego ? '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Perlu Persetujuan</span>' : '';
-    if (aW)  { aW.style.display = isNego?'':'none'; if(aS){ aS.required=isNego; if(!isNego) aS.value=''; } }
+    if (wEl) wEl.innerHTML = isNego ? '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Harga berbeda HPP</span>' : '';
 
     hitungGrand(); hitungTK();
 }

@@ -270,16 +270,6 @@ class M_SalesOrder extends CI_Model
             ->result_array();
     }
 
-    public function get_approver_list()
-    {
-        return $this->db
-            ->select('id, nm_karyawan, jobdesk, departemen')
-            ->where('nm_karyawan !=', '')
-            ->order_by('nm_karyawan', 'ASC')
-            ->get('tb_karyawan')
-            ->result_array();
-    }
-
     // ================================================================
     // MASTER BARANG
     // ================================================================
@@ -1626,65 +1616,6 @@ class M_SalesOrder extends CI_Model
 
         return true;
     }
-
-    // ================================================================
-    // APPROVAL
-    // ================================================================
-
-    // public function simpan_request_approval($no_so, $keterangan, $req_by, $approve_by)
-    // {
-    //     $ada = $this->db->get_where('tbso_so_approval', [
-    //         'no_so'  => $no_so,
-    //         'status' => 'pending',
-    //     ])->row_array();
-
-    //     if (!$ada) {
-    //         $this->db->insert('tbso_so_approval', [
-    //             'no_so'      => $no_so,
-    //             'tipe'       => 'harga',
-    //             'keterangan' => $keterangan,
-    //             'req_by'     => $req_by,
-    //             'approve_by' => $approve_by,
-    //             'status'     => 'pending',
-    //             'req_at'     => date('Y-m-d H:i:s'),
-    //         ]);
-    //     }
-
-    //     $this->db->where('no_so', $no_so);
-    //     $this->db->update('tbso_sales_order', [
-    //         'status'     => 'waiting_approval',
-    //         'approve_by' => $approve_by,
-    //     ]);
-    // }
-
-    // public function get_pending_approval($approve_by = null)
-    // {
-    //     $this->db->select('ap.*, so.customer_name, so.tanggal_transaksi, so.total_tonase, so.total_kubikasi');
-    //     $this->db->from('tbso_so_approval ap');
-    //     $this->db->join('tbso_sales_order so', 'so.no_so = ap.no_so', 'left');
-    //     $this->db->where('ap.status', 'pending');
-    //     if (!empty($approve_by)) $this->db->where('ap.approve_by', $approve_by);
-    //     $this->db->order_by('ap.req_at', 'DESC');
-    //     return $this->db->get()->result_array();
-    // }
-
-    // public function proses_approval($id, $status, $note, $act_by)
-    // {
-    //     $this->db->where('id', $id);
-    //     $this->db->update('tbso_so_approval', [
-    //         'status' => $status,
-    //         'note'   => $note,
-    //         'act_by' => $act_by,
-    //         'act_at' => date('Y-m-d H:i:s'),
-    //     ]);
-
-    //     $row = $this->db->get_where('tbso_so_approval', ['id' => $id])->row_array();
-    //     if ($row) {
-    //         $new_status = ($status === 'approved') ? 'draft' : 'draft'; // kembali ke draft, bukan langsung open
-    //         $this->db->where('no_so', $row['no_so']);
-    //         $this->db->update('tbso_sales_order', ['status' => $new_status]);
-    //     }
-    // }
 
     // ================================================================
     // LIST DO (tidak berubah — DO tetap dari luar modul SO)
