@@ -292,6 +292,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('stockopname/input') ?>" class="nav-link">
+                <i class="nav-icon fas fa-mobile-alt"></i>
+                <p>
+                  Input Opname
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>

@@ -79,7 +79,7 @@ class Auth extends CI_Controller
                     } else if ($jobdesk == 'ADMINKEUTC') {
                         redirect('keuangan');
                     } else if ($jobdesk == 'STOCKOPNAME') {
-                        redirect('stockopname');
+                        redirect('stockopname/input');
                     } else if ($jobdesk == 'SALESONLINE') {
                         redirect('stock');
                     } else if ($jobdesk == 'SALESCOUNTER') {
