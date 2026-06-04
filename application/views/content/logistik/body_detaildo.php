@@ -82,6 +82,12 @@
         border-color: #d8dde2;
     }
 
+    .status-pill.is-primary {
+        color: #084298;
+        background: #e7f1ff;
+        border-color: #b6d4fe;
+    }
+
     .sales-note-box {
         display: inline-flex;
         align-items: flex-start;
@@ -199,7 +205,7 @@
                                             '2' => ['label' => 'Menunggu Konfirmasi Sales', 'icon' => 'fas fa-clock', 'class' => 'is-info'],
                                             '3' => ['label' => 'Proses DO', 'icon' => 'fas fa-clipboard-check', 'class' => 'is-success'],
                                             '4' => ['label' => 'Is Loading', 'icon' => 'fas fa-truck-loading', 'class' => 'is-muted'],
-                                            '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-muted'],
+                                            '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-primary'],
                                         ];
                                         $current_status = $status_meta[$d->status] ?? ['label' => '-', 'icon' => 'fas fa-info-circle', 'class' => 'is-muted'];
                                         $can_add_faktur = in_array($d->status, ['1', '2', '3']);
@@ -227,18 +233,12 @@
                                                 <?php endforeach; ?>
                                             <?php endif; ?>
 
-                                            <?php if ($d->status == '3') : ?>
-                                                <small class="text-muted">
-                                                    Dikonfirmasi oleh: <strong><?= htmlspecialchars($d->sales_confirm_by ?? '-') ?></strong>
-                                                </small>
-                                            <?php endif; ?>
                                         </div>
                                     </div>
                                     <?php if (!empty($d->sales_confirm_note)) : ?>
                                         <div class="sales-note-box">
-                                            <i class="fas fa-sticky-note"></i>
+                                            <i class="fas fa-info-circle"></i>
                                             <div>
-                                                <span class="sales-note-title">Catatan Sales</span>
                                                 <div class="sales-note-text">
                                                     <?= nl2br(htmlspecialchars($d->sales_confirm_note, ENT_QUOTES, 'UTF-8')) ?>
                                                 </div>
@@ -647,21 +647,16 @@
                                                 </div>
                                             <?php elseif ($sudah_siap) : ?>
                                                 <div class="col">
-                                                    <div class="dropdown mt-3">
-                                                        <button type="button" class="btn btn-soft dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                            <i class="fas fa-print mr-1"></i> Print Dokumen
+                                                    <div class="d-flex flex-wrap mt-3" style="gap: 8px;">
+                                                        <button type="button" class="btn btn-primary" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
+                                                            <i class="fas fa-file-alt mr-1"></i> Print DO
                                                         </button>
-                                                        <div class="dropdown-menu">
-                                                            <button type="button" class="dropdown-item" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
-                                                                Print DO
-                                                            </button>
-                                                            <button type="button" class="dropdown-item" id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
-                                                                Print Register
-                                                            </button>
-                                                            <button type="button" class="dropdown-item" id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
-                                                                Print Checker
-                                                            </button>
-                                                        </div>
+                                                        <button type="button" class="btn btn-success" id="btnPrintRegis1" data-kd="<?= $k->kd_do ?>">
+                                                            <i class="fas fa-clipboard-list mr-1"></i> Print Register
+                                                        </button>
+                                                        <button type="button" class="btn btn-info" id="btnPrintChecker1" data-kd="<?= $k->kd_do ?>">
+                                                            <i class="fas fa-tasks mr-1"></i> Print Checker
+                                                        </button>
                                                     </div>
                                                 </div>
 

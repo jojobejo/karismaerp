@@ -2,9 +2,6 @@ ALTER TABLE tbso_sales_order
 MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','partial','completed','cancelled')
 NOT NULL DEFAULT 'draft';
 
-ALTER TABLE tbso_sales_order
-ADD COLUMN IF NOT EXISTS siap_loading_note TEXT NULL AFTER catatan;
-
 ALTER TABLE tbso_sales_order_detail
 ADD COLUMN IF NOT EXISTS qty_siap_faktur DECIMAL(12,3) NULL AFTER qty_faktur,
 ADD COLUMN IF NOT EXISTS qty_tidak_terkirim DECIMAL(12,3) NOT NULL DEFAULT 0 AFTER qty_siap_faktur,

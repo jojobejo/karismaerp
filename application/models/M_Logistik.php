@@ -1262,7 +1262,6 @@ class M_Logistik extends CI_Model
                 so.create_by,
                 so.update_by,
                 so.update_at,
-                so.siap_loading_note,
                 so.total_tonase,
                 so.total_kubikasi,
                 c.nama_customer,
@@ -1306,52 +1305,75 @@ class M_Logistik extends CI_Model
     {
         return $this->db->query("
             SELECT
-                x.kd_rute,
-                MAX(x.nama_rute) AS nama_rute,
-                COUNT(*) AS total_so,
-                ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
-                ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi,
-                ROUND(COALESCE(SUM(x.total_qty_order), 0), 2) AS total_qty_order,
-                ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding,
-                ROUND(COALESCE(SUM(x.total_qty_siap_faktur), 0), 2) AS total_qty_siap_faktur,
-                ROUND(COALESCE(SUM(x.total_qty_tidak_terkirim), 0), 2) AS total_qty_tidak_terkirim,
-                MAX(NULLIF(x.siap_loading_note, '')) AS siap_loading_note,
-                SUM(CASE WHEN x.jumlah_item > 0 AND x.jumlah_item_terverifikasi >= x.jumlah_item THEN 1 ELSE 0 END) AS total_so_terverifikasi
+                g.kd_rute,
+                g.nama_rute,
+                g.total_so,
+                g.total_tonase,
+                g.total_kubikasi,
+                g.total_qty_order,
+                g.total_qty_outstanding,
+                g.total_qty_siap_faktur,
+                g.total_qty_tidak_terkirim,
+                g.total_so_terverifikasi,
+                lcs.note AS siap_loading_note,
+                lcs.confirm_by AS siap_loading_confirm_by,
+                lcs.confirm_at AS siap_loading_confirm_at
             FROM (
                 SELECT
-                    so.id_so,
-                    so.siap_loading_note,
-                    COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
-                    COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
-                    COALESCE(so.total_tonase, 0) AS total_tonase,
-                    COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
-                    COALESCE(d.jumlah_item, 0) AS jumlah_item,
-                    COALESCE(d.jumlah_item_terverifikasi, 0) AS jumlah_item_terverifikasi,
-                    COALESCE(d.total_qty_order, 0) AS total_qty_order,
-                    COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
-                    COALESCE(d.total_qty_siap_faktur, 0) AS total_qty_siap_faktur,
-                    COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
-                FROM tbso_sales_order so
-                LEFT JOIN tb_customer c
-                    ON c.kd_customer = so.kd_customer
-                LEFT JOIN tb_rutecs r
-                    ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
-                LEFT JOIN (
+                    x.kd_rute,
+                    MAX(x.nama_rute) AS nama_rute,
+                    COUNT(*) AS total_so,
+                    ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                    ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi,
+                    ROUND(COALESCE(SUM(x.total_qty_order), 0), 2) AS total_qty_order,
+                    ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding,
+                    ROUND(COALESCE(SUM(x.total_qty_siap_faktur), 0), 2) AS total_qty_siap_faktur,
+                    ROUND(COALESCE(SUM(x.total_qty_tidak_terkirim), 0), 2) AS total_qty_tidak_terkirim,
+                    SUM(CASE WHEN x.jumlah_item > 0 AND x.jumlah_item_terverifikasi >= x.jumlah_item THEN 1 ELSE 0 END) AS total_so_terverifikasi
+                FROM (
                     SELECT
-                        id_so,
-                        COUNT(id) AS jumlah_item,
-                        SUM(CASE WHEN verifikasi_loading_status = 'verified' THEN 1 ELSE 0 END) AS jumlah_item_terverifikasi,
-                        SUM(qty) AS total_qty_order,
-                        SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
-                        SUM(COALESCE(qty_siap_faktur, 0)) AS total_qty_siap_faktur,
-                        SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
-                    FROM tbso_sales_order_detail
-                    GROUP BY id_so
-                ) d ON d.id_so = so.id_so
-                WHERE so.status = 'sedang_verifikasi'
-            ) x
-            GROUP BY x.kd_rute
-            ORDER BY total_tonase DESC, total_so DESC, x.kd_rute ASC
+                        so.id_so,
+                        COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                        COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                        COALESCE(so.total_tonase, 0) AS total_tonase,
+                        COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
+                        COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                        COALESCE(d.jumlah_item_terverifikasi, 0) AS jumlah_item_terverifikasi,
+                        COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                        COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                        COALESCE(d.total_qty_siap_faktur, 0) AS total_qty_siap_faktur,
+                        COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
+                    FROM tbso_sales_order so
+                    LEFT JOIN tb_customer c
+                        ON c.kd_customer = so.kd_customer
+                    LEFT JOIN tb_rutecs r
+                        ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+                    LEFT JOIN (
+                        SELECT
+                            id_so,
+                            COUNT(id) AS jumlah_item,
+                            SUM(CASE WHEN verifikasi_loading_status = 'verified' THEN 1 ELSE 0 END) AS jumlah_item_terverifikasi,
+                            SUM(qty) AS total_qty_order,
+                            SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                            SUM(COALESCE(qty_siap_faktur, 0)) AS total_qty_siap_faktur,
+                            SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
+                        FROM tbso_sales_order_detail
+                        GROUP BY id_so
+                    ) d ON d.id_so = so.id_so
+                    WHERE so.status = 'sedang_verifikasi'
+                ) x
+                GROUP BY x.kd_rute
+            ) g
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = g.kd_rute
+                    AND l2.action = 'siap'
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
+            ORDER BY g.total_tonase DESC, g.total_so DESC, g.kd_rute ASC
         ")->result();
     }
 
@@ -1373,7 +1395,6 @@ class M_Logistik extends CI_Model
                 so.create_by,
                 so.update_by,
                 so.update_at,
-                so.siap_loading_note,
                 so.total_tonase,
                 so.total_kubikasi,
                 c.nama_customer,
@@ -1518,7 +1539,6 @@ class M_Logistik extends CI_Model
         $this->db->where_in('status', ['open', 'partial']);
         $this->db->update('tbso_sales_order', [
             'status' => 'sedang_verifikasi',
-            'siap_loading_note' => null,
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);

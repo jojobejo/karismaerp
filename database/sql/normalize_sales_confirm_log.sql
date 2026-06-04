@@ -1,6 +1,10 @@
 -- Normalisasi log konfirmasi sales.
 -- Jalankan setelah kode aplikasi sudah memakai tb_log_confirm_sales sebagai sumber log.
 
+UPDATE tb_log_confirm_sales
+SET kd_do = SUBSTRING(kd_do, 6)
+WHERE kd_do LIKE 'RUTE:%';
+
 INSERT INTO tb_log_confirm_sales (kd_do, action, note, confirm_by, confirm_at)
 SELECT
     d.kd_do,

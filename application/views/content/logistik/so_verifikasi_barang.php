@@ -96,7 +96,7 @@
                             </div>
                         </div>
 
-                        <div class="row verify-summary">
+                        <!-- <div class="row verify-summary">
                             <div class="col-md-3 col-6">
                                 <div class="info-box shadow-sm">
                                     <span class="info-box-icon bg-info"><i class="fas fa-boxes"></i></span>
@@ -133,7 +133,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> -->
 
                         <form method="post"
                               action="<?= base_url('logistik/so_siap_loading/verifikasi/' . $so->id_so . '/simpan') ?>"

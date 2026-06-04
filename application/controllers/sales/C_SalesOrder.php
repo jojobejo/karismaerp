@@ -324,16 +324,6 @@ class C_SalesOrder extends CI_Controller
     {
         $this->load->dbforge();
 
-        if (!$this->db->field_exists('siap_loading_note', 'tbso_sales_order')) {
-            $this->dbforge->add_column('tbso_sales_order', [
-                'siap_loading_note' => [
-                    'type' => 'TEXT',
-                    'null' => true,
-                    'after' => 'catatan',
-                ],
-            ]);
-        }
-
         if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
             $this->dbforge->add_column('tbso_sales_order_detail', [
                 'qty_siap_faktur' => [
@@ -1472,11 +1462,6 @@ class C_SalesOrder extends CI_Controller
             }
 
             if ($this->M_SalesOrder->update_status($so['id_so'], 'sedang_verifikasi', $confirm_by)) {
-                $this->db->where('id_so', (int)$so['id_so']);
-                $this->db->update('tbso_sales_order', [
-                    'siap_loading_note' => $note !== '' ? $note : null,
-                ]);
-
                 $updated++;
                 $description = 'SO dikonfirmasi siap loading oleh Sales. Status berubah menjadi Verifikasi untuk rute ' . $kd_rute . '.';
                 if ($note !== '') {
@@ -1494,6 +1479,14 @@ class C_SalesOrder extends CI_Controller
             echo json_encode(['msg' => 'error', 'message' => 'Tidak ada SO yang berhasil dikonfirmasi.']);
             exit;
         }
+
+        $this->db->insert('tb_log_confirm_sales', [
+            'kd_do'      => $kd_rute,
+            'action'     => 'siap',
+            'note'       => $note,
+            'confirm_by' => $confirm_by,
+            'confirm_at' => date('Y-m-d H:i:s'),
+        ]);
 
         echo json_encode([
             'msg'     => 'success',

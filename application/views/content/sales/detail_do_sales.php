@@ -25,8 +25,8 @@
         vertical-align: middle;
     }
     .sales-do-line-table thead th {
-        background: transparent;
-        color: #111;
+        background: #343a40;
+        color: #fff;
         font-weight: 700;
     }
     .sales-do-plain-info {
@@ -178,6 +178,7 @@
                         <table class="sales-do-line-table">
                             <thead>
                                 <tr>
+                                    <th>No</th>
                                     <th>Nama Kios</th>
                                     <th>Regional</th>
                                     <th>Rute</th>
@@ -195,6 +196,7 @@
                                 $prev_faktur   = null;
                                 $rowspan_count = [];
                                 $printed       = [];
+                                $no            = 1;
 
                                 foreach ($data_list as $row) {
                                     if (!isset($rowspan_count[$row->kd_faktur])) {
@@ -209,6 +211,7 @@
                                 ?>
                                 <tr>
                                     <?php if ($show) : ?>
+                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $no++ ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>

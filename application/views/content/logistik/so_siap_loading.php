@@ -152,10 +152,14 @@
     <?php
     $selected_route_name = '-';
     $selected_route_note = '';
+    $selected_route_confirm_by = '';
+    $selected_route_confirm_at = '';
     foreach ($routes as $route) {
         if ((string)$route->kd_rute === (string)$selected_rute) {
             $selected_route_name = $route->nama_rute ?: $route->kd_rute;
             $selected_route_note = trim((string)($route->siap_loading_note ?? ''));
+            $selected_route_confirm_by = trim((string)($route->siap_loading_confirm_by ?? ''));
+            $selected_route_confirm_at = trim((string)($route->siap_loading_confirm_at ?? ''));
             break;
         }
     }
@@ -244,7 +248,6 @@
                                         $route_tonase = (float)($route->total_tonase ?? 0);
                                         $route_pct_ton = $batas_ton > 0 ? min(100, round(($route_tonase / $batas_ton) * 100, 1)) : 0;
                                         $route_ton_color = $route_tonase > $batas_ton ? '#dc3545' : ($route_pct_ton >= 80 ? '#f59e0b' : '#198754');
-                                        $route_note = trim((string)($route->siap_loading_note ?? ''));
                                     ?>
                                         <a href="<?= $route_url ?>" class="route-card <?= $active ? 'active' : '' ?>">
                                             <div class="route-code"><?= htmlspecialchars($route->kd_rute) ?></div>
@@ -252,11 +255,6 @@
                                                 <div class="route-meta text-truncate" title="<?= htmlspecialchars($route->nama_rute) ?>">
                                                     <?= htmlspecialchars($route->nama_rute) ?>
                                                 </div>
-                                                <?php if ($route_note !== ''): ?>
-                                                    <span class="route-note text-truncate" title="<?= htmlspecialchars($route_note, ENT_QUOTES, 'UTF-8') ?>">
-                                                        <i class="fas fa-sticky-note text-warning mr-1"></i><?= htmlspecialchars($route_note, ENT_QUOTES, 'UTF-8') ?>
-                                                    </span>
-                                                <?php endif; ?>
                                             </div>
                                             <div class="route-summary">
                                                 <span class="route-metric">
@@ -387,11 +385,21 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <?php if ($selected_route_note !== ''): ?>
+                                <?php if ($selected_route_note !== '' || $selected_route_confirm_by !== '' || $selected_route_confirm_at !== ''): ?>
                                     <div class="route-confirm-note mb-2">
-                                        <i class="fas fa-sticky-note mr-1"></i>
-                                        <strong>Catatan Konfirmasi Rute:</strong>
-                                        <?= nl2br(htmlspecialchars($selected_route_note, ENT_QUOTES, 'UTF-8')) ?>
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        <?php if ($selected_route_confirm_by !== '' || $selected_route_confirm_at !== ''): ?>
+                                            <div class="mb-1">
+                                                Dikonfirmasi oleh:
+                                                <strong><?= htmlspecialchars($selected_route_confirm_by !== '' ? $selected_route_confirm_by : '-', ENT_QUOTES, 'UTF-8') ?></strong>
+                                                <?php if ($selected_route_confirm_at !== ''): ?>
+                                                    <span class="text-muted ml-1"><?= htmlspecialchars($selected_route_confirm_at, ENT_QUOTES, 'UTF-8') ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($selected_route_note !== ''): ?>
+                                            <?= nl2br(htmlspecialchars($selected_route_note, ENT_QUOTES, 'UTF-8')) ?>
+                                        <?php endif; ?>
                                     </div>
                                 <?php endif; ?>
                                 <?php if (!empty($selected_rute) && !empty($so_list)): ?>
