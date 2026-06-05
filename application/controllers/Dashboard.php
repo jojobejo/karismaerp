@@ -28,6 +28,8 @@ class Dashboard extends CI_Controller
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/logistik/body.php', $data);
             $this->load->view('partial/main/footer.php');
+        } elseif ($lvuser == '1' && $jobdesk == 'KIUKEU') {
+            redirect('keuangan/pembayaran');
         } elseif ($lvuser == '1' && $jobdesk == 'ADMINKEU') {
             $data['page_title'] = 'KARISMA';
             $this->load->view('partial/main/header.php', $data);
