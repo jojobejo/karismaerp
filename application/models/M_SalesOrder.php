@@ -45,7 +45,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *   total_tonase    DECIMAL(12,6) DEFAULT 0,
  *   total_kubikasi  DECIMAL(12,6) DEFAULT 0,
  *   catatan         TEXT,
- *   status          ENUM('draft','confirmed','cancelled') DEFAULT 'draft',
+ *   status          ENUM('draft','confirmed','proses_do','selesai_do','cancelled') DEFAULT 'draft',
  *   create_by       VARCHAR(50),
  *   create_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
  *   update_by       VARCHAR(50),

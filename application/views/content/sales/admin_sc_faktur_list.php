@@ -199,18 +199,14 @@
                                         $status_badge = [
                                             'confirmed'   => 'success',
                                             'draft'       => 'warning',
-                                            'in_progress' => 'primary',
                                             'proses_do'   => 'info',
-                                            'selesai'     => 'success',
-                                            'completed'   => 'success',
+                                            'selesai_do'  => 'success',
                                         ];
                                         $status_label = [
                                             'confirmed'   => 'Confirmed',
                                             'draft'       => 'Draft',
-                                            'in_progress' => 'In Progress',
                                             'proses_do'   => 'Proses DO',
-                                            'selesai'     => 'Selesai',
-                                            'completed'   => 'Completed',
+                                            'selesai_do'  => 'Selesai DO',
                                         ];
                                         $payment = strtolower(trim((string)($f['cara_pembayaran'] ?? '')));
                                         $payment_label = [

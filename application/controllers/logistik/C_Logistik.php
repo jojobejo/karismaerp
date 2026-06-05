@@ -1663,9 +1663,7 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
-        foreach ($kd_faktur_list as $fk) {
-            $this->M_Logistik->sync_so_status_by_faktur($fk, 'in_progress');
-        }
+        $this->M_Logistik->sync_faktur_status_by_do($kd, 'selesai_do');
 
         if ($do_before_rekam && (string)$do_before_rekam->status === '3') {
             $this->M_Checker->sync_do_activity($kd, 'cetak_do', $this->session->userdata('nama'));
@@ -1719,17 +1717,8 @@ class C_Logistik extends CI_Controller
                 $this->M_Logistik->insertlog_do($datalog);
                 $this->M_Checker->sync_do_activity($kd_do, 'siap_loading', $confirm_by);
 
-                // ✅ Update status SO ke 'selesai'
-                $faktur_list = $this->db
-                    ->select('kd_faktur')
-                    ->distinct()
-                    ->where('kd_do', $kd_do)
-                    ->get('tb_detail_do')
-                    ->result_array();
-
-                foreach ($faktur_list as $fk) {
-                    $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'selesai');
-                }
+                // Update status faktur sesuai status DO.
+                $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'selesai_do');
             }
 
             echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
@@ -1768,16 +1757,7 @@ class C_Logistik extends CI_Controller
             $this->M_Logistik->insertlog_do($datalog);
             $this->M_Logistik->updated_repost_do($kd_do, $repostdo);
 
-            $faktur_list = $this->db
-                ->select('kd_faktur')
-                ->distinct()
-                ->where('kd_do', $kd_do)
-                ->get('tb_detail_do')
-                ->result_array();
-
-            foreach ($faktur_list as $fk) {
-                $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'draft');
-            }
+            $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'draft');
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Gagal update status']);
         }

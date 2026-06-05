@@ -282,8 +282,20 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                     <td class="text-muted">Status</td>
                                     <td>
                                         <?php
-                                        $fs_badge = ['confirmed' => 'success', 'draft' => 'secondary', 'cancelled' => 'danger'];
-                                        $fs_label = ['confirmed' => 'Confirmed', 'draft' => 'Draft', 'cancelled' => 'Cancelled'];
+                                        $fs_badge = [
+                                            'confirmed'   => 'success',
+                                            'draft'       => 'secondary',
+                                            'cancelled'   => 'danger',
+                                            'proses_do'   => 'info',
+                                            'selesai_do'  => 'success',
+                                        ];
+                                        $fs_label = [
+                                            'confirmed'   => 'Confirmed',
+                                            'draft'       => 'Draft',
+                                            'cancelled'   => 'Cancelled',
+                                            'proses_do'   => 'Proses DO',
+                                            'selesai_do'  => 'Selesai DO',
+                                        ];
                                         ?>
                                         <span class="badge badge-<?= $fs_badge[$faktur['status']] ?? 'secondary' ?>">
                                             <?= $fs_label[$faktur['status']] ?? $faktur['status'] ?>

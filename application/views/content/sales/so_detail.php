@@ -481,19 +481,15 @@ $format_payment = function($value) {
                                             'confirmed'   => 'success',
                                             'draft'       => 'warning',
                                             'cancelled'   => 'danger',
-                                            'in_progress' => 'primary',
                                             'proses_do'   => 'info',
-                                            'selesai'     => 'success',
-                                            'completed'   => 'success',
+                                            'selesai_do'  => 'success',
                                         ];
                                         $fs_label = [
                                             'confirmed'   => 'Confirmed',
                                             'draft'       => 'Draft',
                                             'cancelled'   => 'Cancelled',
-                                            'in_progress' => 'In Progress',
                                             'proses_do'   => 'Proses DO',
-                                            'selesai'     => 'Selesai',
-                                            'completed'   => 'Completed',
+                                            'selesai_do'  => 'Selesai DO',
                                         ];
                                         ?>
                                         <span class="badge badge-<?= $fs_badge[$f['status']] ?? 'secondary' ?>">

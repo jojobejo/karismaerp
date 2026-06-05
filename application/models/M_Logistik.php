@@ -675,10 +675,23 @@ class M_Logistik extends CI_Model
         ", [$kd_faktur])->result();
     }
 
-    public function sync_so_status_by_faktur($kd_faktur, $so_status)
+    public function sync_faktur_status_by_do($kd_do, $status)
     {
-        $this->db->where('no_faktur', $kd_faktur);
-        return $this->db->update('tbso_faktur_penjualan', ['status' => $so_status]);
+        $faktur_list = $this->db
+            ->select('kd_faktur')
+            ->distinct()
+            ->where('kd_do', $kd_do)
+            ->get('tb_detail_do')
+            ->result_array();
+
+        if (empty($faktur_list)) {
+            return false;
+        }
+
+        $kd_faktur_list = array_column($faktur_list, 'kd_faktur');
+
+        $this->db->where_in('no_faktur', $kd_faktur_list);
+        return $this->db->update('tbso_faktur_penjualan', ['status' => $status]);
     }
 
     /**
@@ -983,7 +996,7 @@ class M_Logistik extends CI_Model
         $status_map = [
             '1' => 'list_do',
             '2' => 'proses_do',     // masuk draft DO
-            '3' => 'selesai',       // on delivery
+            '3' => 'selesai_do',    // on delivery
             '4' => 'proses_do',
         ];
 
