@@ -13,7 +13,7 @@ class M_Stockopname extends CI_Model
             return false;
         }
 
-        $timestampField = $this->db->field_exists('created_at', $this->masterTable) ? 'created_at' : 'create_at';
+        $timestampField = $this->db->field_exists('created_at', $this->masterTable) ? 'created_at' : ($this->db->field_exists('create_at', $this->masterTable) ? 'create_at' : 'kode_barang');
         if (!$this->db->field_exists('qrcode', $this->masterTable)) {
             $this->db->query("ALTER TABLE {$this->masterTable} ADD `qrcode` VARCHAR(255) NULL DEFAULT NULL AFTER `{$timestampField}`");
         }
@@ -34,6 +34,60 @@ class M_Stockopname extends CI_Model
         }
 
         return true;
+    }
+
+    public function ensure_qrcode_columns()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [
+                'success' => false,
+                'message' => 'Tabel stockopname_master_item belum tersedia.',
+                'missing_table' => true,
+            ];
+        }
+
+        foreach (['id', 'kode_barang'] as $field) {
+            if (!$this->db->field_exists($field, $this->masterTable)) {
+                return [
+                    'success' => false,
+                    'message' => 'Kolom wajib ' . $field . ' tidak tersedia di stockopname_master_item.',
+                    'missing_column' => $field,
+                ];
+            }
+        }
+
+        $this->ensure_master_code_columns();
+
+        $columns = [
+            'qrcode_value' => "ALTER TABLE {$this->masterTable} ADD `qrcode_value` VARCHAR(255) NULL DEFAULT NULL AFTER `barcode`",
+            'qrcode_file' => "ALTER TABLE {$this->masterTable} ADD `qrcode_file` VARCHAR(255) NULL DEFAULT NULL AFTER `qrcode_value`",
+            'qrcode_status' => "ALTER TABLE {$this->masterTable} ADD `qrcode_status` ENUM('PENDING','PROCESS','DONE','FAILED') NOT NULL DEFAULT 'PENDING' AFTER `qrcode_file`",
+            'qrcode_retry_flag' => "ALTER TABLE {$this->masterTable} ADD `qrcode_retry_flag` TINYINT(1) NOT NULL DEFAULT 0 AFTER `qrcode_status`",
+            'qrcode_attempt_count' => "ALTER TABLE {$this->masterTable} ADD `qrcode_attempt_count` INT NOT NULL DEFAULT 0 AFTER `qrcode_retry_flag`",
+            'qrcode_error_message' => "ALTER TABLE {$this->masterTable} ADD `qrcode_error_message` TEXT NULL AFTER `qrcode_attempt_count`",
+            'qrcode_generated_at' => "ALTER TABLE {$this->masterTable} ADD `qrcode_generated_at` DATETIME NULL DEFAULT NULL AFTER `qrcode_error_message`",
+            'qrcode_updated_at' => "ALTER TABLE {$this->masterTable} ADD `qrcode_updated_at` DATETIME NULL DEFAULT NULL AFTER `qrcode_generated_at`",
+        ];
+
+        foreach ($columns as $field => $sql) {
+            if (!$this->db->field_exists($field, $this->masterTable)) {
+                $this->db->query($sql);
+            }
+        }
+
+        $indexes = $this->db->query("SHOW INDEX FROM {$this->masterTable}")->result_array();
+        $indexNames = array_column($indexes, 'Key_name');
+        if (!in_array('idx_stockopname_qrcode_status', $indexNames, true)) {
+            $this->db->query("ALTER TABLE {$this->masterTable} ADD KEY `idx_stockopname_qrcode_status` (`qrcode_status`)");
+        }
+        if (!in_array('idx_stockopname_qrcode_retry', $indexNames, true)) {
+            $this->db->query("ALTER TABLE {$this->masterTable} ADD KEY `idx_stockopname_qrcode_retry` (`qrcode_status`, `qrcode_retry_flag`)");
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Struktur QRCode stockopname siap.',
+        ];
     }
 
     private function ready()
@@ -356,10 +410,13 @@ class M_Stockopname extends CI_Model
 
     public function master_barang_summary()
     {
+        $qrSummary = $this->qrcode_summary();
+
         return [
             'total_item' => $this->count_all_master_barang(),
-            'qrcode_generated_item' => $this->count_master_barang_by_qrcode_status('generated'),
-            'qrcode_pending_item' => $this->count_master_barang_by_qrcode_status('pending'),
+            'qrcode_generated_item' => $qrSummary['done'],
+            'qrcode_pending_item' => $qrSummary['pending'],
+            'qrcode_failed_item' => $qrSummary['failed'],
             'source_table' => $this->masterTable,
             'mode' => 'database'
         ];
@@ -380,7 +437,25 @@ class M_Stockopname extends CI_Model
 
     public function count_master_barang_by_qrcode_status($status)
     {
-        if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode', $this->masterTable)) {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return 0;
+        }
+
+        if ($this->db->field_exists('qrcode_status', $this->masterTable)) {
+            if ($status === 'generated') {
+                return $this->qrcode_done_count();
+            }
+
+            if ($status === 'pending') {
+                return $this->qrcode_pending_count();
+            }
+
+            if ($status === 'failed') {
+                return $this->qrcode_failed_count();
+            }
+        }
+
+        if (!$this->db->field_exists('qrcode', $this->masterTable)) {
             return 0;
         }
 
@@ -391,8 +466,15 @@ class M_Stockopname extends CI_Model
 
     private function master_barang_select()
     {
-        $qrcode = $this->db->field_exists('qrcode', $this->masterTable) ? 'qrcode' : 'NULL AS qrcode';
+        $legacyQrcode = $this->db->field_exists('qrcode', $this->masterTable) ? 'qrcode' : "''";
+        $qrcode = $this->db->field_exists('qrcode_file', $this->masterTable)
+            ? "COALESCE(NULLIF(qrcode_file, ''), NULLIF({$legacyQrcode}, ''), '') AS qrcode"
+            : ($this->db->field_exists('qrcode', $this->masterTable) ? 'qrcode' : 'NULL AS qrcode');
         $barcode = $this->db->field_exists('barcode', $this->masterTable) ? 'barcode' : 'NULL AS barcode';
+        $qrcodeValue = $this->db->field_exists('qrcode_value', $this->masterTable) ? 'qrcode_value' : 'NULL AS qrcode_value';
+        $qrcodeFile = $this->db->field_exists('qrcode_file', $this->masterTable) ? 'qrcode_file' : 'NULL AS qrcode_file';
+        $qrcodeStatus = $this->db->field_exists('qrcode_status', $this->masterTable) ? 'qrcode_status' : 'NULL AS qrcode_status';
+        $qrcodeError = $this->db->field_exists('qrcode_error_message', $this->masterTable) ? 'qrcode_error_message' : 'NULL AS qrcode_error_message';
 
         $this->db->select('
             id,
@@ -404,7 +486,11 @@ class M_Stockopname extends CI_Model
             COALESCE(qty_pcs, 0) AS qty_pcs,
             COALESCE(qty_box, 0) AS qty_box,
             ' . $qrcode . ',
-            ' . $barcode . '
+            ' . $barcode . ',
+            ' . $qrcodeValue . ',
+            ' . $qrcodeFile . ',
+            ' . $qrcodeStatus . ',
+            ' . $qrcodeError . '
         ', false);
         $this->db->from($this->masterTable);
     }
@@ -423,6 +509,12 @@ class M_Stockopname extends CI_Model
         if ($this->db->field_exists('qrcode', $this->masterTable)) {
             $this->db->or_like('qrcode', $search);
         }
+        if ($this->db->field_exists('qrcode_file', $this->masterTable)) {
+            $this->db->or_like('qrcode_file', $search);
+        }
+        if ($this->db->field_exists('qrcode_value', $this->masterTable)) {
+            $this->db->or_like('qrcode_value', $search);
+        }
         if ($this->db->field_exists('barcode', $this->masterTable)) {
             $this->db->or_like('barcode', $search);
         }
@@ -431,6 +523,29 @@ class M_Stockopname extends CI_Model
 
     private function master_barang_qrcode_filter($status)
     {
+        if ($this->db->field_exists('qrcode_status', $this->masterTable)) {
+            if ($status === 'generated') {
+                $this->db->where('qrcode_status', 'DONE');
+                return;
+            }
+
+            if ($status === 'pending') {
+                $this->db->group_start();
+                $this->db->where('qrcode_status', 'PENDING');
+                $this->db->or_where('qrcode_status IS NULL', null, false);
+                $this->db->group_end();
+                return;
+            }
+
+            if ($status === 'failed') {
+                $this->db->group_start();
+                $this->db->where('qrcode_status', 'FAILED');
+                $this->db->or_where('qrcode_retry_flag', 1);
+                $this->db->group_end();
+                return;
+            }
+        }
+
         if (!$this->db->field_exists('qrcode', $this->masterTable)) {
             return;
         }
@@ -542,16 +657,27 @@ class M_Stockopname extends CI_Model
             return null;
         }
 
-        $this->master_barang_select();
-        $this->db->group_start();
+        $conditions = [];
+        if (preg_match('/^OP\|(.+)\|(\d+)$/', $scanValue, $matches)) {
+            $conditions[] = '(id = ' . (int)$matches[2] . ' AND kode_barang = ' . $this->db->escape($matches[1]) . ')';
+        }
+
         if (ctype_digit($scanValue)) {
-            $this->db->where('id', (int)$scanValue);
+            $conditions[] = 'id = ' . (int)$scanValue;
         }
-        $this->db->or_where('kode_barang', $scanValue);
+        $conditions[] = 'kode_barang = ' . $this->db->escape($scanValue);
         if ($this->db->field_exists('qrcode', $this->masterTable)) {
-            $this->db->or_where('qrcode', $scanValue);
+            $conditions[] = 'qrcode = ' . $this->db->escape($scanValue);
         }
-        $this->db->group_end();
+        if ($this->db->field_exists('qrcode_file', $this->masterTable)) {
+            $conditions[] = 'qrcode_file = ' . $this->db->escape($scanValue);
+        }
+        if ($this->db->field_exists('qrcode_value', $this->masterTable)) {
+            $conditions[] = 'qrcode_value = ' . $this->db->escape($scanValue);
+        }
+
+        $this->master_barang_select();
+        $this->db->where('(' . implode(' OR ', $conditions) . ')', null, false);
 
         return $this->db
             ->limit(1)
@@ -631,6 +757,207 @@ class M_Stockopname extends CI_Model
         return $this->db
             ->where('id', (int)$id)
             ->update($this->masterTable, $allowed);
+    }
+
+    public function qrcode_summary()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [
+                'total' => 0,
+                'done' => 0,
+                'pending' => 0,
+                'failed' => 0,
+            ];
+        }
+
+        if (!$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            $total = (int)$this->db->count_all($this->masterTable);
+            return [
+                'total' => $total,
+                'done' => 0,
+                'pending' => $total,
+                'failed' => 0,
+            ];
+        }
+
+        $sql = "
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN qrcode_status = 'DONE' THEN 1 ELSE 0 END) AS done,
+                SUM(CASE WHEN qrcode_status = 'FAILED' OR qrcode_retry_flag = 1 THEN 1 ELSE 0 END) AS failed,
+                SUM(CASE WHEN qrcode_status IS NULL OR qrcode_status IN ('PENDING','PROCESS') THEN 1 ELSE 0 END) AS pending
+            FROM {$this->masterTable}
+        ";
+        $row = $this->db->query($sql)->row_array();
+
+        return [
+            'total' => (int)($row['total'] ?? 0),
+            'done' => (int)($row['done'] ?? 0),
+            'pending' => (int)($row['pending'] ?? 0),
+            'failed' => (int)($row['failed'] ?? 0),
+        ];
+    }
+
+    public function qrcode_total_count()
+    {
+        return $this->db->table_exists($this->masterTable) ? (int)$this->db->count_all($this->masterTable) : 0;
+    }
+
+    public function qrcode_done_count()
+    {
+        if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            return 0;
+        }
+
+        return (int)$this->db
+            ->where('qrcode_status', 'DONE')
+            ->from($this->masterTable)
+            ->count_all_results();
+    }
+
+    public function qrcode_pending_count()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return 0;
+        }
+
+        if (!$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            return $this->qrcode_total_count();
+        }
+
+        $this->db->from($this->masterTable);
+        $this->db->group_start();
+        $this->db->where('qrcode_status', 'PENDING');
+        $this->db->or_where('qrcode_status', 'PROCESS');
+        $this->db->or_where('qrcode_status IS NULL', null, false);
+        $this->db->group_end();
+        return (int)$this->db->count_all_results();
+    }
+
+    public function qrcode_failed_count()
+    {
+        if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            return 0;
+        }
+
+        $this->db->from($this->masterTable);
+        $this->db->group_start();
+        $this->db->where('qrcode_status', 'FAILED');
+        $this->db->or_where('qrcode_retry_flag', 1);
+        $this->db->group_end();
+        return (int)$this->db->count_all_results();
+    }
+
+    public function get_qrcode_batch($limit = 100, $mode = 'normal')
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $this->master_barang_select();
+        if ($mode === 'retry') {
+            $this->db->where('qrcode_status', 'FAILED');
+            $this->db->where('qrcode_retry_flag', 1);
+        } else {
+            $this->db->group_start();
+            $this->db->where('qrcode_status', 'PENDING');
+            $this->db->or_where('qrcode_status IS NULL', null, false);
+            $this->db->group_end();
+        }
+
+        return $this->db
+            ->order_by('id', 'ASC')
+            ->limit(max(1, min(100, (int)$limit)))
+            ->get()
+            ->result_array();
+    }
+
+    public function reset_stale_qrcode_process($minutes = 2)
+    {
+        if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            return 0;
+        }
+
+        $minutes = (int)$minutes;
+        $threshold = date('Y-m-d H:i:s', time() - (max(1, $minutes) * 60));
+        $this->db
+            ->set('qrcode_status', 'PENDING')
+            ->set('qrcode_updated_at', date('Y-m-d H:i:s'))
+            ->where('qrcode_status', 'PROCESS');
+
+        if ($minutes > 0) {
+            $this->db
+                ->group_start()
+                ->where('qrcode_updated_at IS NULL', null, false)
+                ->or_where('qrcode_updated_at <', $threshold)
+                ->group_end();
+        }
+
+        $this->db->update($this->masterTable);
+
+        return (int)$this->db->affected_rows();
+    }
+
+    public function mark_qrcode_process($id)
+    {
+        return $this->db
+            ->where('id', (int)$id)
+            ->update($this->masterTable, [
+                'qrcode_status' => 'PROCESS',
+                'qrcode_updated_at' => date('Y-m-d H:i:s'),
+            ]);
+    }
+
+    public function mark_qrcode_success($id, $value, $file)
+    {
+        $data = [
+            'qrcode_value' => $value,
+            'qrcode_file' => $file,
+            'qrcode_status' => 'DONE',
+            'qrcode_retry_flag' => 0,
+            'qrcode_error_message' => null,
+            'qrcode_generated_at' => date('Y-m-d H:i:s'),
+            'qrcode_updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        if ($this->db->field_exists('qrcode', $this->masterTable)) {
+            $data['qrcode'] = $file;
+        }
+
+        return $this->db
+            ->where('id', (int)$id)
+            ->update($this->masterTable, $data);
+    }
+
+    public function mark_qrcode_failed($id, $message)
+    {
+        return $this->db
+            ->set('qrcode_status', 'FAILED')
+            ->set('qrcode_retry_flag', 1)
+            ->set('qrcode_attempt_count', 'COALESCE(qrcode_attempt_count, 0) + 1', false)
+            ->set('qrcode_error_message', substr((string)$message, 0, 1000))
+            ->set('qrcode_updated_at', date('Y-m-d H:i:s'))
+            ->where('id', (int)$id)
+            ->update($this->masterTable);
+    }
+
+    public function failed_qrcode_list($limit = 100)
+    {
+        if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id,kode_barang,qrcode_error_message,qrcode_attempt_count,qrcode_updated_at')
+            ->from($this->masterTable)
+            ->group_start()
+            ->where('qrcode_status', 'FAILED')
+            ->or_where('qrcode_retry_flag', 1)
+            ->group_end()
+            ->order_by('qrcode_updated_at', 'DESC')
+            ->limit(max(1, min(500, (int)$limit)))
+            ->get()
+            ->result_array();
     }
 
     public function is_asset_exists($id, $type)

@@ -14,9 +14,13 @@ class Karisma_code_generator
             }
         }
 
-        if (class_exists('QRcode')) {
+        if (class_exists('QRcode') && method_exists('QRcode', 'png')) {
             QRcode::png($value, $targetFile, 'M', 6, 2);
             return is_file($targetFile);
+        }
+
+        if ($this->simpleQrCode($value, $targetFile)) {
+            return true;
         }
 
         if ($this->commandExists('qrencode')) {
@@ -118,8 +122,44 @@ class Karisma_code_generator
 
     private function commandExists($command)
     {
-        $result = trim((string)@shell_exec('command -v ' . escapeshellarg($command)));
+        $lookup = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where ' : 'command -v ';
+        $result = trim((string)@shell_exec($lookup . escapeshellarg($command)));
         return $result !== '';
+    }
+
+    private function simpleQrCode($value, $targetFile)
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            return false;
+        }
+
+        if (!class_exists('QRCode')) {
+            $simpleQr = APPPATH . 'libraries/simpleqrcode/qrcode.php';
+            if (is_file($simpleQr)) {
+                require_once $simpleQr;
+            }
+        }
+
+        if (!class_exists('QRCode')) {
+            return false;
+        }
+
+        $generator = new QRCode($value, [
+            's' => 'qr-m',
+            'sf' => 8,
+            'p' => 2,
+            'bc' => 'FFFFFF',
+            'fc' => '111827',
+        ]);
+        $image = $generator->render_image();
+        $ok = imagepng($image, $targetFile);
+        imagedestroy($image);
+
+        if ($ok && is_file($targetFile)) {
+            @chmod($targetFile, 0644);
+        }
+
+        return $ok && is_file($targetFile);
     }
 
     private function remoteQrCode($value, $targetFile)
@@ -130,8 +170,8 @@ class Karisma_code_generator
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 4);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
             $content = curl_exec($ch);
             $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -140,8 +180,8 @@ class Karisma_code_generator
             if (($content === false || $httpCode !== 200) && stripos((string)$url, 'https://') === 0) {
                 $ch = curl_init($url);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 4);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 $content = curl_exec($ch);
                 $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);

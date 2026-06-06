@@ -74,6 +74,27 @@ class C_Stockopname extends CI_Controller
         return substr($value, 0, 80);
     }
 
+    private function qrcode_scan_value($row)
+    {
+        return 'OP|' . trim((string)($row['kode_barang'] ?? '')) . '|' . (int)($row['id'] ?? 0);
+    }
+
+    private function qrcode_relative_path($row)
+    {
+        $safeCode = $this->clean_asset_filename($row['kode_barang'] ?? '');
+        return 'assets/qrcode/stockopname/OP_' . $safeCode . '_' . (int)($row['id'] ?? 0) . '.png';
+    }
+
+    private function qrcode_percent($total, $remaining)
+    {
+        $total = (int)$total;
+        if ($total <= 0) {
+            return 100;
+        }
+
+        return max(0, min(100, (int)round((($total - (int)$remaining) / $total) * 100)));
+    }
+
     private function asset_payload($path)
     {
         $path = trim((string)$path);
@@ -282,7 +303,7 @@ class C_Stockopname extends CI_Controller
     public function master_barang()
     {
         $data['page_title'] = 'KARISMA ERP - Master Opname Stockopname';
-        $this->stockopname->ensure_master_code_columns();
+        $this->stockopname->ensure_qrcode_columns();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_master_barang.php', $data);
@@ -291,7 +312,7 @@ class C_Stockopname extends CI_Controller
 
     public function master_barang_widgets()
     {
-        $this->stockopname->ensure_master_code_columns();
+        $this->stockopname->ensure_qrcode_columns();
         $this->json(true, 'Data master opname berhasil dimuat.', [
             'summary' => $this->stockopname->master_barang_summary(),
         ]);
@@ -304,7 +325,7 @@ class C_Stockopname extends CI_Controller
 
     public function ajax_master_barang_list()
     {
-        $this->stockopname->ensure_master_code_columns();
+        $this->stockopname->ensure_qrcode_columns();
         $this->raw_json($this->stockopname->get_master_barang_datatable($this->post()));
     }
 
@@ -315,7 +336,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'ID barang tidak valid.');
         }
 
-        $this->stockopname->ensure_master_code_columns();
+        $this->stockopname->ensure_qrcode_columns();
         $row = $this->stockopname->get_master_barang_by_id((int)$id);
         if (!$row) {
             return $this->json(false, 'Data barang tidak ditemukan.');
@@ -376,6 +397,201 @@ class C_Stockopname extends CI_Controller
         ]);
     }
 
+    private function ensure_qrcode_ready()
+    {
+        $ready = $this->stockopname->ensure_qrcode_columns();
+        if (empty($ready['success'])) {
+            $this->raw_json([
+                'success' => false,
+                'message' => $ready['message'] ?? 'Struktur database QRCode belum siap.',
+                'total' => 0,
+                'done' => 0,
+                'pending' => 0,
+                'failed' => 0,
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    public function qrcode_summary()
+    {
+        if (!$this->ensure_qrcode_ready()) {
+            return;
+        }
+
+        $this->stockopname->reset_stale_qrcode_process(1);
+        $summary = $this->stockopname->qrcode_summary();
+        $this->raw_json([
+            'success' => true,
+            'total' => $summary['total'],
+            'done' => $summary['done'],
+            'pending' => $summary['pending'],
+            'failed' => $summary['failed'],
+        ]);
+    }
+
+    private function process_qrcode_row($row, $force = false)
+    {
+        $id = (int)($row['id'] ?? 0);
+        $kodeBarang = trim((string)($row['kode_barang'] ?? ''));
+
+        if ($id <= 0) {
+            return [
+                'success' => false,
+                'message' => 'ID barang tidak valid.',
+            ];
+        }
+
+        if ($kodeBarang === '') {
+            $message = 'Kode barang kosong.';
+            $this->stockopname->mark_qrcode_failed($id, $message);
+            return [
+                'success' => false,
+                'message' => $message,
+            ];
+        }
+
+        $value = $this->qrcode_scan_value($row);
+        $relativePath = $this->qrcode_relative_path($row);
+        $targetFile = FCPATH . $relativePath;
+
+        if (!$force && strtoupper((string)($row['qrcode_status'] ?? '')) === 'DONE' && is_file($targetFile)) {
+            return [
+                'success' => true,
+                'skipped' => true,
+                'value' => $value,
+                'path' => $relativePath,
+            ];
+        }
+
+        try {
+            $this->stockopname->mark_qrcode_process($id);
+            $created = $this->karisma_code_generator->qrcode($value, $targetFile);
+            if (!$created || !is_file($targetFile)) {
+                throw new Exception('Gagal membuat file QRCode.');
+            }
+
+            if (!$this->stockopname->mark_qrcode_success($id, $value, $relativePath)) {
+                throw new Exception('File dibuat, tetapi path QRCode gagal diupdate ke database.');
+            }
+
+            return [
+                'success' => true,
+                'value' => $value,
+                'path' => $relativePath,
+            ];
+        } catch (Throwable $e) {
+            $this->stockopname->mark_qrcode_failed($id, $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    private function run_qrcode_batch($mode = 'normal')
+    {
+        if (!$this->ensure_qrcode_ready()) {
+            return;
+        }
+
+        @set_time_limit(25);
+        $startedAt = microtime(true);
+        $maxRuntime = 20;
+
+        $batchSize = (int)$this->input->post('batch_size', true);
+        $batchSize = $batchSize > 0 ? min(100, $batchSize) : 100;
+        $force = (string)$this->input->post('force', true) === '1';
+        $mode = $mode === 'retry' ? 'retry' : 'normal';
+
+        $this->stockopname->reset_stale_qrcode_process(0);
+        $total = $this->stockopname->qrcode_total_count();
+        $failedBefore = $this->stockopname->qrcode_failed_count();
+        $rows = $this->stockopname->get_qrcode_batch($batchSize, $mode);
+        $processed = 0;
+        $successCount = 0;
+        $failedCount = 0;
+        $timeLimited = false;
+
+        foreach ($rows as $row) {
+            if ((microtime(true) - $startedAt) >= $maxRuntime) {
+                $timeLimited = true;
+                break;
+            }
+
+            $processed++;
+            $result = $this->process_qrcode_row($row, $force);
+            if (!empty($result['success'])) {
+                $successCount++;
+            } else {
+                $failedCount++;
+            }
+        }
+
+        $summary = $this->stockopname->qrcode_summary();
+        if ($mode === 'retry') {
+            $remainingFailed = $this->stockopname->qrcode_failed_count();
+            $retryTotal = max($failedBefore, $processed + $remainingFailed);
+            $this->raw_json([
+                'success' => true,
+                'mode' => 'retry',
+                'batch_size' => $batchSize,
+                'processed' => $processed,
+                'success_count' => $successCount,
+                'failed_count' => $failedCount,
+                'remaining_failed' => $remainingFailed,
+                'total_failed' => $retryTotal,
+                'percent' => $this->qrcode_percent($retryTotal, $remainingFailed),
+                'time_limited' => $timeLimited,
+                'is_completed' => $remainingFailed <= 0,
+            ]);
+            return;
+        }
+
+        $remaining = $this->stockopname->qrcode_pending_count();
+        $this->raw_json([
+            'success' => true,
+            'mode' => 'normal',
+            'batch_size' => $batchSize,
+            'processed' => $processed,
+            'success_count' => $successCount,
+            'failed_count' => $failedCount,
+            'remaining' => $remaining,
+            'total' => $total,
+            'done' => $summary['done'],
+            'failed' => $summary['failed'],
+            'percent' => $this->qrcode_percent($total, $remaining),
+            'time_limited' => $timeLimited,
+            'is_completed' => $remaining <= 0,
+        ]);
+    }
+
+    public function qrcode_generate_batch()
+    {
+        $this->run_qrcode_batch('normal');
+    }
+
+    public function qrcode_retry_failed()
+    {
+        $this->run_qrcode_batch('retry');
+    }
+
+    public function qrcode_failed_list()
+    {
+        if (!$this->ensure_qrcode_ready()) {
+            return;
+        }
+
+        $rows = $this->stockopname->failed_qrcode_list((int)$this->input->get('limit', true) ?: 100);
+        $this->raw_json([
+            'success' => true,
+            'total' => count($rows),
+            'data' => $rows,
+        ]);
+    }
+
     public function ajax_generate_qrcode()
     {
         $this->generate_asset('qrcode');
@@ -383,71 +599,7 @@ class C_Stockopname extends CI_Controller
 
     public function ajax_generate_all_qrcode()
     {
-        @set_time_limit(0);
-        $this->stockopname->ensure_master_code_columns();
-        $rows = $this->stockopname->get_all_master_barang_for_qrcode();
-
-        $total = count($rows);
-        $generated = 0;
-        $updated = 0;
-        $skipped = 0;
-        $failed = [];
-
-        foreach ($rows as $row) {
-            $id = (int)($row['id'] ?? 0);
-            $kodeBarang = trim((string)($row['kode_barang'] ?? ''));
-            if ($id <= 0 || $kodeBarang === '') {
-                $skipped++;
-                $failed[] = [
-                    'id' => $id,
-                    'message' => 'Kode barang kosong atau ID tidak valid.',
-                ];
-                continue;
-            }
-
-            $relativePath = $this->asset_relative_path($row, 'qrcode');
-            $targetFile = FCPATH . $relativePath;
-
-            try {
-                $created = $this->karisma_code_generator->qrcode((string)$id, $targetFile);
-            } catch (Exception $e) {
-                $skipped++;
-                $failed[] = [
-                    'id' => $id,
-                    'message' => $e->getMessage(),
-                ];
-                continue;
-            }
-
-            if (!$created || !is_file($targetFile)) {
-                $skipped++;
-                $failed[] = [
-                    'id' => $id,
-                    'message' => 'Gagal membuat file QRCode.',
-                ];
-                continue;
-            }
-
-            if (!$this->stockopname->update_asset_master_barang($id, ['qrcode' => $relativePath])) {
-                $skipped++;
-                $failed[] = [
-                    'id' => $id,
-                    'message' => 'File dibuat, tetapi path gagal diupdate.',
-                ];
-                continue;
-            }
-
-            $generated++;
-            $updated++;
-        }
-
-        $this->json($generated > 0 || $total === 0, 'Generate QRCode semua barang selesai.', [
-            'total' => $total,
-            'generated' => $generated,
-            'updated' => $updated,
-            'skipped' => $skipped,
-            'failed' => array_slice($failed, 0, 10),
-        ]);
+        $this->run_qrcode_batch('normal');
     }
 
     public function ajax_generate_barcode()
@@ -476,7 +628,14 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'ID barang tidak valid.');
         }
 
-        $this->stockopname->ensure_master_code_columns();
+        if ($type === 'qrcode') {
+            $ready = $this->stockopname->ensure_qrcode_columns();
+            if (empty($ready['success'])) {
+                return $this->json(false, $ready['message'] ?? 'Struktur database QRCode belum siap.');
+            }
+        } else {
+            $this->stockopname->ensure_master_code_columns();
+        }
         $row = $this->stockopname->get_master_barang_by_id((int)$id);
         if (!$row) {
             return $this->json(false, 'Data barang tidak ditemukan.');
@@ -488,12 +647,15 @@ class C_Stockopname extends CI_Controller
         }
 
         $field = $type === 'barcode' ? 'barcode' : 'qrcode';
-        if (!$regenerate && trim((string)($row[$field] ?? '')) !== '') {
+        if ($type === 'qrcode' && !$regenerate && strtoupper((string)($row['qrcode_status'] ?? '')) === 'DONE' && trim((string)($row['qrcode_file'] ?? $row['qrcode'] ?? '')) !== '') {
+            return $this->json(false, 'QRCode sudah ada. Gunakan mode regenerate jika perlu membuat ulang.');
+        }
+        if ($type !== 'qrcode' && !$regenerate && trim((string)($row[$field] ?? '')) !== '') {
             return $this->json(false, ucfirst($field) . ' sudah ada. Gunakan mode regenerate jika perlu membuat ulang.');
         }
 
-        $scanValue = (string)(int)$row['id'];
-        $relativePath = $this->asset_relative_path($row, $type);
+        $scanValue = $type === 'qrcode' ? $this->qrcode_scan_value($row) : (string)(int)$row['id'];
+        $relativePath = $type === 'qrcode' ? $this->qrcode_relative_path($row) : $this->asset_relative_path($row, $type);
         $targetFile = FCPATH . $relativePath;
 
         try {
@@ -510,7 +672,11 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Gagal membuat file asset.');
         }
 
-        if (!$this->stockopname->update_asset_master_barang((int)$id, [$field => $relativePath])) {
+        $updated = $type === 'qrcode'
+            ? $this->stockopname->mark_qrcode_success((int)$id, $scanValue, $relativePath)
+            : $this->stockopname->update_asset_master_barang((int)$id, [$field => $relativePath]);
+
+        if (!$updated) {
             return $this->json(false, 'Asset dibuat, tetapi gagal update path ke database.');
         }
 
@@ -544,7 +710,7 @@ class C_Stockopname extends CI_Controller
             'nama_barang' => $row['nama_barang'],
             'expired_date' => $row['expired_date'],
             'no_lot' => $row['no_lot'],
-            'value' => (string)(int)$row['id'],
+            'value' => $this->qrcode_scan_value($row),
             'qrcode' => $this->asset_payload($row['qrcode'] ?? ''),
         ]);
     }
@@ -565,7 +731,7 @@ class C_Stockopname extends CI_Controller
             'page_title' => 'Print QRCode - ' . $row['nama_barang'],
             'barang' => $row,
             'qrcode' => $this->asset_payload($row['qrcode'] ?? ''),
-            'scan_value' => (string)(int)$row['id'],
+            'scan_value' => $this->qrcode_scan_value($row),
         ];
 
         $this->load->view('content/admin/stockopname_print_qrcode.php', $data);
