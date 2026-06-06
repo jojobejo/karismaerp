@@ -65,6 +65,9 @@ class C_pembayaran extends CI_Controller
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN FAKTUR';
         $data['faktur'] = $faktur;
         $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
+        $data['pending_bg'] = strtolower((string)($faktur['cara_pembayaran'] ?? '')) === 'bg'
+            ? $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur'])
+            : null;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
@@ -85,8 +88,19 @@ class C_pembayaran extends CI_Controller
 
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
-        $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
+        $metode_pembayaran = strtolower(trim((string)($faktur['cara_pembayaran'] ?? '')));
+        $tanggal_bg_cair = $this->input->post('tanggal_bg_cair', true);
         $keterangan = trim((string)$this->input->post('keterangan', true));
+
+        if ($metode_pembayaran === 'bg' && $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur'])) {
+            $this->session->set_flashdata('warning', 'Masih ada pembayaran BG yang belum cair. Klik Bayar lalu tekan tombol BG Sudah Cair.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+        }
+
+        if ($metode_pembayaran === 'bg' && empty($tanggal_bg_cair)) {
+            $this->session->set_flashdata('error', 'Tanggal BG cair wajib diisi untuk pembayaran BG.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+        }
 
         if ($jumlah_pembayaran <= 0) {
             $this->session->set_flashdata('error', 'Jumlah pembayaran harus lebih dari 0.');
@@ -109,6 +123,8 @@ class C_pembayaran extends CI_Controller
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
+            'tanggal_bg_cair'     => $metode_pembayaran === 'bg' ? $tanggal_bg_cair : null,
+            'status_bg'           => $metode_pembayaran === 'bg' ? 'pending' : 'not_bg',
             'keterangan'          => $keterangan !== '' ? $keterangan : null,
             'create_by'           => $created_by,
             'create_at'           => date('Y-m-d H:i:s'),
@@ -121,6 +137,39 @@ class C_pembayaran extends CI_Controller
 
         $this->session->set_flashdata('error', 'Pembayaran gagal disimpan.');
         redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+    }
+
+    public function cair($id_pembayaran = null)
+    {
+        $payment = $this->M_pembayaran->get_payment((int)$id_pembayaran);
+
+        if (!$payment) {
+            $this->session->set_flashdata('error', 'Data pembayaran tidak ditemukan.');
+            redirect('keuangan/pembayaran');
+        }
+
+        if (strtolower((string)$payment['metode_pembayaran']) !== 'bg') {
+            $this->session->set_flashdata('error', 'Hanya pembayaran BG yang bisa ditandai cair.');
+            redirect('keuangan/pembayaran/bayar/' . $payment['id_faktur']);
+        }
+
+        if (($payment['status_bg'] ?? '') === 'cair') {
+            $this->session->set_flashdata('warning', 'Pembayaran BG tersebut sudah ditandai cair.');
+            redirect('keuangan/pembayaran/bayar/' . $payment['id_faktur']);
+        }
+
+        $user = $this->session->userdata('nm_karyawan')
+            ?: $this->session->userdata('nama')
+            ?: $this->session->userdata('username')
+            ?: 'system';
+
+        if ($this->M_pembayaran->mark_bg_cair($payment['id_pembayaran'], $user)) {
+            $this->session->set_flashdata('success', 'Pembayaran BG berhasil ditandai sudah cair dan masuk ke total pembayaran.');
+        } else {
+            $this->session->set_flashdata('error', 'Status BG gagal diperbarui.');
+        }
+
+        redirect('keuangan/pembayaran/bayar/' . $payment['id_faktur']);
     }
 
     private function _get_valid_faktur($id_faktur)

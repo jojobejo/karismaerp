@@ -72,6 +72,7 @@
                                     <th class="text-center">Total Faktur</th>
                                     <th class="text-right">Total Tagihan</th>
                                     <th class="text-right">Total Pembayaran</th>
+                                    <th class="text-right">BG Belum Cair</th>
                                     <th class="text-right">Sisa Tagihan</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
@@ -79,7 +80,7 @@
                             <tbody>
                                 <?php if (empty($customers)): ?>
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-4">Tidak ada customer dengan faktur selesai DO yang belum lunas.</td>
+                                        <td colspan="7" class="text-center text-muted py-4">Tidak ada customer dengan faktur selesai DO yang belum lunas.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($customers as $customer): ?>
@@ -93,6 +94,7 @@
                                             <td class="text-center"><?= number_format((float)$customer['total_faktur'], 0, ',', '.') ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$customer['total_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$customer['total_pembayaran'], 0, ',', '.') ?></td>
+                                            <td class="text-right text-warning">Rp <?= number_format((float)($customer['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$customer['sisa_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-center">
                                                 <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($customer['kd_customer'])) ?>"

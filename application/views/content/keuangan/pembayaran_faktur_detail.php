@@ -59,6 +59,7 @@
                                     <th>Customer</th>
                                     <th class="text-right">Total Tagihan</th>
                                     <th class="text-right">Total Pembayaran</th>
+                                    <th class="text-right">BG Belum Cair</th>
                                     <th class="text-right">Sisa Tagihan</th>
                                     <th class="text-center">Status Bayar</th>
                                     <th class="text-center">Overdue</th>
@@ -68,7 +69,7 @@
                             <tbody>
                                 <?php if (empty($fakturs)): ?>
                                     <tr>
-                                        <td colspan="10" class="text-center text-muted py-4">Tidak ada faktur belum lunas untuk customer ini.</td>
+                                        <td colspan="11" class="text-center text-muted py-4">Tidak ada faktur belum lunas untuk customer ini.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($fakturs as $faktur):
@@ -95,6 +96,7 @@
                                             <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$faktur['total_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$faktur['total_pembayaran'], 0, ',', '.') ?></td>
+                                            <td class="text-right text-warning">Rp <?= number_format((float)($faktur['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-center"><span class="badge badge-<?= $status_class ?>"><?= htmlspecialchars($status_label) ?></span></td>
                                             <td class="text-center"><span class="badge badge-<?= $overdue_class ?>"><?= htmlspecialchars($overdue) ?></span></td>

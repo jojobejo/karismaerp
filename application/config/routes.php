@@ -66,6 +66,7 @@ $route['keuangan/pembayaran']                       = 'keuangan/C_pembayaran';
 $route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/customer/$1';
 $route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
 $route['keuangan/pembayaran/simpan/(:num)']         = 'keuangan/C_pembayaran/simpan/$1';
+$route['keuangan/pembayaran/cair/(:num)']           = 'keuangan/C_pembayaran/cair/$1';
 $route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';
 $route['insertmodule']                              = 'keuangan/C_Keuangan/insertmodule';
 $route['insermodule_lot']                           = 'keuangan/C_Keuangan/insermodule_lot';

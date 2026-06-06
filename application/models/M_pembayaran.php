@@ -3,21 +3,63 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class M_pembayaran extends CI_Model
 {
-    private $payment_table = 'tbso_pembayaran_faktur';
+    private $payment_table = 'tbkeu_pembayaran_faktur';
 
     public function __construct()
     {
         parent::__construct();
+        $this->_rename_legacy_payment_table();
         $this->_ensure_payment_table();
+    }
+
+    private function _rename_legacy_payment_table()
+    {
+        if (!$this->db->table_exists('tbkeu_pembayaran_faktur') && $this->db->table_exists('tbso_pembayaran_faktur')) {
+            $this->db->query('RENAME TABLE tbso_pembayaran_faktur TO tbkeu_pembayaran_faktur');
+        }
     }
 
     private function _ensure_payment_table()
     {
+        $this->load->dbforge();
+
         if ($this->db->table_exists($this->payment_table)) {
+            foreach ([
+                'tanggal_bg_cair' => [
+                    'type'  => 'DATE',
+                    'null'  => true,
+                    'after' => 'metode_pembayaran',
+                ],
+                'status_bg' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 20,
+                    'default'    => 'not_bg',
+                    'null'       => false,
+                    'after'      => 'tanggal_bg_cair',
+                ],
+                'bg_cair_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => true,
+                    'after'      => 'status_bg',
+                ],
+                'bg_cair_at' => [
+                    'type' => 'DATETIME',
+                    'null' => true,
+                    'after' => 'bg_cair_by',
+                ],
+            ] as $field => $definition) {
+                if (!$this->db->field_exists($field, $this->payment_table)) {
+                    $this->dbforge->add_column($this->payment_table, [$field => $definition]);
+                }
+            }
+            $this->db
+                ->where("LOWER(COALESCE(metode_pembayaran, '')) = 'bg'", null, false)
+                ->where('status_bg', 'not_bg')
+                ->update($this->payment_table, ['status_bg' => 'pending']);
             return;
         }
 
-        $this->load->dbforge();
         $this->dbforge->add_field([
             'id_pembayaran' => [
                 'type'           => 'INT',
@@ -46,6 +88,24 @@ class M_pembayaran extends CI_Model
                 'type'       => 'VARCHAR',
                 'constraint' => 30,
                 'null'       => true,
+            ],
+            'tanggal_bg_cair' => [
+                'type' => 'DATE',
+                'null' => true,
+            ],
+            'status_bg' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'default'    => 'not_bg',
+            ],
+            'bg_cair_by' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'bg_cair_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
             ],
             'keterangan' => [
                 'type' => 'TEXT',
@@ -83,7 +143,20 @@ class M_pembayaran extends CI_Model
         return "
             SELECT
                 id_faktur,
-                COALESCE(SUM(jumlah_pembayaran), 0) AS total_pembayaran
+                COALESCE(SUM(
+                    CASE
+                        WHEN LOWER(COALESCE(metode_pembayaran, '')) = 'bg'
+                            AND COALESCE(status_bg, 'pending') <> 'cair' THEN 0
+                        ELSE jumlah_pembayaran
+                    END
+                ), 0) AS total_pembayaran,
+                COALESCE(SUM(
+                    CASE
+                        WHEN LOWER(COALESCE(metode_pembayaran, '')) = 'bg'
+                            AND COALESCE(status_bg, 'pending') <> 'cair' THEN jumlah_pembayaran
+                        ELSE 0
+                    END
+                ), 0) AS total_bg_pending
             FROM {$this->payment_table}
             GROUP BY id_faktur
         ";
@@ -106,6 +179,9 @@ class M_pembayaran extends CI_Model
     private function _select_invoice_summary()
     {
         $tanggal_selesai_do = $this->_tanggal_selesai_do_expr();
+        $cara_pembayaran_select = $this->db->field_exists('cara_pembayaran', 'tbso_faktur_penjualan')
+            ? "COALESCE(f.cara_pembayaran, '') AS cara_pembayaran"
+            : "'' AS cara_pembayaran";
 
         $this->db->select("
             f.id_faktur,
@@ -117,10 +193,12 @@ class M_pembayaran extends CI_Model
             c.regional,
             c.kd_rute,
             f.tanggal_faktur,
+            {$cara_pembayaran_select},
             {$tanggal_selesai_do} AS tanggal_selesai_do,
             f.status,
             COALESCE(ft.total_tagihan, 0) AS total_tagihan,
             COALESCE(fp.total_pembayaran, 0) AS total_pembayaran,
+            COALESCE(fp.total_bg_pending, 0) AS total_bg_pending,
             GREATEST(COALESCE(ft.total_tagihan, 0) - COALESCE(fp.total_pembayaran, 0), 0) AS sisa_tagihan,
             CASE
                 WHEN COALESCE(fp.total_pembayaran, 0) >= COALESCE(ft.total_tagihan, 0)
@@ -153,6 +231,7 @@ class M_pembayaran extends CI_Model
             COUNT(*) AS total_faktur,
             SUM(x.total_tagihan) AS total_tagihan,
             SUM(x.total_pembayaran) AS total_pembayaran,
+            SUM(x.total_bg_pending) AS total_bg_pending,
             SUM(x.sisa_tagihan) AS sisa_tagihan
         ", false);
         $this->db->from('(' . $invoice_summary_sql . ') x');
@@ -206,8 +285,39 @@ class M_pembayaran extends CI_Model
             ->result_array();
     }
 
+    public function get_pending_bg_payment($id_faktur)
+    {
+        return $this->db
+            ->where('id_faktur', (int)$id_faktur)
+            ->where("LOWER(COALESCE(metode_pembayaran, '')) = 'bg'", null, false)
+            ->where('status_bg <>', 'cair')
+            ->order_by('tanggal_pembayaran', 'ASC')
+            ->order_by('id_pembayaran', 'ASC')
+            ->limit(1)
+            ->get($this->payment_table)
+            ->row_array();
+    }
+
     public function insert_payment($data)
     {
         return $this->db->insert($this->payment_table, $data);
+    }
+
+    public function get_payment($id_pembayaran)
+    {
+        return $this->db
+            ->where('id_pembayaran', (int)$id_pembayaran)
+            ->get($this->payment_table)
+            ->row_array();
+    }
+
+    public function mark_bg_cair($id_pembayaran, $user)
+    {
+        $this->db->where('id_pembayaran', (int)$id_pembayaran);
+        return $this->db->update($this->payment_table, [
+            'status_bg'  => 'cair',
+            'bg_cair_by' => $user,
+            'bg_cair_at' => date('Y-m-d H:i:s'),
+        ]);
     }
 }

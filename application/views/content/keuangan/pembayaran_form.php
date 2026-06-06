@@ -1,4 +1,9 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
+<?php
+$is_bg_payment = strtolower((string)($faktur['cara_pembayaran'] ?? '')) === 'bg';
+$pending_bg = $pending_bg ?? null;
+$is_bg_cair_mode = $is_bg_payment && !empty($pending_bg);
+?>
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
         <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo" height="150" width="300">
@@ -63,6 +68,10 @@
                                         <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                     </tr>
                                     <tr>
+                                        <td class="text-muted">Cara Pembayaran</td>
+                                        <td><span class="badge badge-info"><?= htmlspecialchars(ucfirst($faktur['cara_pembayaran'] ?: '-')) ?></span></td>
+                                    </tr>
+                                    <tr>
                                         <td class="text-muted">Status Overdue</td>
                                         <td><span class="badge badge-<?= $faktur['status_overdue'] === 'Belum overdue' ? 'secondary' : 'danger' ?>"><?= htmlspecialchars($faktur['status_overdue']) ?></span></td>
                                     </tr>
@@ -74,6 +83,12 @@
                                         <td class="text-muted">Total Pembayaran</td>
                                         <td>Rp <?= number_format((float)$faktur['total_pembayaran'], 0, ',', '.') ?></td>
                                     </tr>
+                                    <?php if (!empty($faktur['total_bg_pending'])): ?>
+                                    <tr>
+                                        <td class="text-muted">BG Belum Cair</td>
+                                        <td><strong class="text-warning">Rp <?= number_format((float)$faktur['total_bg_pending'], 0, ',', '.') ?></strong></td>
+                                    </tr>
+                                    <?php endif; ?>
                                     <tr>
                                         <td class="text-muted">Sisa Tagihan</td>
                                         <td><strong class="text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></strong></td>
@@ -92,17 +107,38 @@
                                         <tr>
                                             <th>Tanggal</th>
                                             <th>Metode</th>
+                                            <th>Status</th>
+                                            <th>BG Cair</th>
                                             <th class="text-right">Jumlah</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($history)): ?>
-                                            <tr><td colspan="3" class="text-center text-muted py-3">Belum ada pembayaran.</td></tr>
+                                            <tr><td colspan="5" class="text-center text-muted py-3">Belum ada pembayaran.</td></tr>
                                         <?php else: ?>
                                             <?php foreach ($history as $row): ?>
+                                                <?php
+                                                $is_bg_row = strtolower((string)($row['metode_pembayaran'] ?? '')) === 'bg';
+                                                $is_bg_cair = ($row['status_bg'] ?? '') === 'cair';
+                                                ?>
                                                 <tr>
                                                     <td><?= date('d/m/Y', strtotime($row['tanggal_pembayaran'])) ?></td>
                                                     <td><?= htmlspecialchars($row['metode_pembayaran'] ?: '-') ?></td>
+                                                    <td>
+                                                        <?php if ($is_bg_row): ?>
+                                                            <span class="badge badge-<?= $is_bg_cair ? 'success' : 'warning' ?>">
+                                                                <?= $is_bg_cair ? 'Sudah Cair' : 'Belum Cair' ?>
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-success">Masuk Tagihan</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <?= !empty($row['tanggal_bg_cair']) ? date('d/m/Y', strtotime($row['tanggal_bg_cair'])) : '-' ?>
+                                                        <?php if ($is_bg_cair && !empty($row['bg_cair_at'])): ?>
+                                                            <br><small class="text-muted">Dikonfirmasi <?= date('d/m/Y H:i', strtotime($row['bg_cair_at'])) ?></small>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="text-right">Rp <?= number_format((float)$row['jumlah_pembayaran'], 0, ',', '.') ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -116,39 +152,55 @@
                     <div class="col-md-7">
                         <div class="card card-outline card-success">
                             <div class="card-header">
-                                <h3 class="card-title"><i class="fas fa-plus-circle mr-1"></i>Form Pembayaran</h3>
+                                <h3 class="card-title">
+                                    <i class="fas <?= $is_bg_cair_mode ? 'fa-check-circle' : 'fa-plus-circle' ?> mr-1"></i>
+                                    <?= $is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran' ?>
+                                </h3>
                             </div>
-                            <form action="<?= base_url('keuangan/pembayaran/simpan/' . $faktur['id_faktur']) ?>" method="post">
+                            <form action="<?= $is_bg_cair_mode ? base_url('keuangan/pembayaran/cair/' . $pending_bg['id_pembayaran']) : base_url('keuangan/pembayaran/simpan/' . $faktur['id_faktur']) ?>"
+                                  method="post"
+                                  <?= $is_bg_cair_mode ? "onsubmit=\"return confirm('Tandai BG ini sudah cair dan kurangi sisa tagihan?');\"" : '' ?>>
                                 <div class="card-body">
+                                    <?php if ($is_bg_cair_mode): ?>
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-info-circle mr-1"></i>
+                                            Pembayaran BG ini sudah dicatat tetapi belum mengurangi tagihan. Klik tombol <strong>BG Sudah Cair</strong> untuk memasukkannya ke total pembayaran.
+                                        </div>
+                                    <?php endif; ?>
                                     <div class="form-group">
                                         <label>Tanggal Pembayaran <span class="text-danger">*</span></label>
-                                        <input type="date" name="tanggal_pembayaran" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                                        <input type="date" name="tanggal_pembayaran" class="form-control"
+                                               value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d') ?>"
+                                               <?= $is_bg_cair_mode ? 'readonly' : 'required' ?>>
                                     </div>
                                     <div class="form-group">
                                         <label>Jumlah Pembayaran <span class="text-danger">*</span></label>
                                         <input type="number" name="jumlah_pembayaran" class="form-control" min="1"
                                                max="<?= (float)$faktur['sisa_tagihan'] ?>" step="0.01"
-                                               value="<?= (float)$faktur['sisa_tagihan'] ?>" required>
-                                        <small class="text-muted">Maksimal Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></small>
+                                               value="<?= $is_bg_cair_mode ? (float)$pending_bg['jumlah_pembayaran'] : (float)$faktur['sisa_tagihan'] ?>"
+                                               <?= $is_bg_cair_mode ? 'readonly' : 'required' ?>>
+                                        <?php if (!$is_bg_cair_mode): ?>
+                                            <small class="text-muted">Maksimal Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></small>
+                                        <?php endif; ?>
                                     </div>
+                                    <?php if ($is_bg_payment): ?>
                                     <div class="form-group">
-                                        <label>Metode Pembayaran</label>
-                                        <select name="metode_pembayaran" class="form-control">
-                                            <option value="transfer">Transfer</option>
-                                            <option value="cash">Cash</option>
-                                            <option value="giro">Giro</option>
-                                            <option value="bg">BG</option>
-                                            <option value="lainnya">Lainnya</option>
-                                        </select>
+                                        <label>Tanggal BG Cair <span class="text-danger">*</span></label>
+                                        <input type="date" name="tanggal_bg_cair" class="form-control"
+                                               value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_bg_cair']) : date('Y-m-d') ?>"
+                                               <?= $is_bg_cair_mode ? 'readonly' : 'required' ?>>
+                                        <small class="text-muted">Pembayaran BG belum mengurangi tagihan sampai tombol BG Sudah Cair diklik.</small>
                                     </div>
+                                    <?php endif; ?>
                                     <div class="form-group mb-0">
                                         <label>Keterangan</label>
-                                        <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran"></textarea>
+                                        <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran" <?= $is_bg_cair_mode ? 'readonly' : '' ?>><?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['keterangan'] ?? '') : '' ?></textarea>
                                     </div>
                                 </div>
                                 <div class="card-footer text-right">
                                     <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-save mr-1"></i>Simpan Pembayaran
+                                        <i class="fas <?= $is_bg_cair_mode ? 'fa-check' : 'fa-save' ?> mr-1"></i>
+                                        <?= $is_bg_cair_mode ? 'BG Sudah Cair' : 'Simpan Pembayaran' ?>
                                     </button>
                                 </div>
                             </form>
