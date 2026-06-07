@@ -14,7 +14,7 @@
                     .so-input-page{background:#eef3f8}.so-mobile-shell{max-width:460px;margin:0 auto}.so-panel{background:#fff;border:1px solid #dce5ee;border-radius:8px;box-shadow:0 8px 22px rgba(15,23,42,.07)}
                     .so-panel-header{padding:14px 16px;border-bottom:1px solid #e6edf4;display:flex;align-items:center;justify-content:space-between;gap:10px}.so-panel-title{font-size:16px;font-weight:800;color:#172033;margin:0}.so-scan-status{font-size:12px;color:#64748b}
                     .so-scan-box{background:#0f172a;border-radius:8px;overflow:hidden;min-height:260px;display:none}.so-scan-box video{object-fit:cover}.so-info-grid{display:grid;gap:10px}.so-readonly{background:#f8fafc;border:1px solid #dbe4ef;border-radius:8px;padding:10px 12px}.so-readonly label{display:block;margin:0 0 3px;color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase}.so-readonly div{font-size:14px;color:#111827;font-weight:700;word-break:break-word}
-                    .so-qty-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.so-action-bar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(238,243,248,0),#eef3f8 28%);padding:16px 0 4px}.so-action-bar .btn{height:46px;font-weight:800}.so-back-btn{width:36px;height:32px;display:inline-flex;align-items:center;justify-content:center}.so-back-btn i,.so-icon-btn i{margin-right:0}.so-icon-btn{height:44px;font-weight:800}.btn i{margin-right:6px}.form-control{border-radius:8px}.so-muted{font-size:12px;color:#64748b}
+                    .so-qty-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.so-qty-field label{font-size:12px;font-weight:800;color:#334155}.so-qty-field .input-group-text{border-radius:0 8px 8px 0;background:#f8fafc;font-size:12px;font-weight:800;color:#64748b}.so-qty-field .form-control{border-radius:8px 0 0 8px}.so-action-bar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(238,243,248,0),#eef3f8 28%);padding:16px 0 4px}.so-action-bar .btn{height:46px;font-weight:800}.so-back-btn{width:36px;height:32px;display:inline-flex;align-items:center;justify-content:center}.so-back-btn i,.so-icon-btn i{margin-right:0}.so-icon-btn{height:44px;font-weight:800}.btn i{margin-right:6px}.form-control{border-radius:8px}.so-muted{font-size:12px;color:#64748b}
                     @media(min-width:768px){.so-info-grid{grid-template-columns:1fr 1fr}.so-readonly.full{grid-column:1/-1}.so-scan-box{min-height:320px}}
                     @media(max-width:420px){.content-header h1{font-size:21px}.so-panel-header{padding:12px}.so-panel .p-3{padding:12px!important}.so-qty-grid{gap:8px}}
                 </style>
@@ -61,17 +61,27 @@
                         <div class="so-panel">
                             <div class="so-panel-header">
                                 <h2 class="so-panel-title">Qty Opname</h2>
-                                <span class="so-muted d-none" id="qtyTotalLabel">Total 0</span>
+                                <span class="so-muted" id="qtyTotalLabel">Total 0</span>
                             </div>
                             <div class="p-3">
                                 <div class="so-qty-grid">
-                                    <div class="form-group mb-0">
+                                    <div class="form-group so-qty-field mb-0">
                                         <label>Qty Pcs</label>
-                                        <input type="number" class="form-control form-control-lg" name="qty_pcs" id="qtyPcs" min="0" step="1" value="0" required>
+                                        <div class="input-group input-group-lg">
+                                            <input type="number" class="form-control" name="qty_pcs" id="qtyPcs" min="0" step="1" placeholder="0" inputmode="numeric">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text">PCS</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="form-group mb-0">
+                                    <div class="form-group so-qty-field mb-0">
                                         <label>Qty Box</label>
-                                        <input type="number" class="form-control form-control-lg" name="qty_box" id="qtyBox" min="0" step="1" value="0" required>
+                                        <div class="input-group input-group-lg">
+                                            <input type="number" class="form-control" name="qty_box" id="qtyBox" min="0" step="1" placeholder="0" inputmode="numeric">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text">BOX</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -102,6 +112,7 @@
 window.addEventListener('load', function () {
     var scanner = null;
     var scanning = false;
+    var selectedDimensi = 0;
 
     function toast(icon, title) {
         if (typeof Swal !== 'undefined') {
@@ -154,6 +165,8 @@ window.addEventListener('load', function () {
         $('#itemName').html(escapeHtml(row.nama_barang || '-'));
         $('#itemExpired').text(row.expired_date || '-');
         $('#itemLot').text(row.no_lot || '-');
+        selectedDimensi = parseInt(row.dimensi || 0, 10) || 0;
+        updateQtyTotal();
         $('#btnSaveOpname').prop('disabled', false);
     }
 
@@ -161,8 +174,16 @@ window.addEventListener('load', function () {
         $('#formInputOpname')[0].reset();
         $('#masterId').val('');
         $('#itemName,#itemExpired,#itemLot').text('-');
+        selectedDimensi = 0;
         $('#qtyTotalLabel').text('Total 0');
         $('#btnSaveOpname').prop('disabled', true);
+    }
+
+    function updateQtyTotal() {
+        var pcs = parseInt($('#qtyPcs').val() || 0, 10) || 0;
+        var box = parseInt($('#qtyBox').val() || 0, 10) || 0;
+        var total = (box * selectedDimensi) + pcs;
+        $('#qtyTotalLabel').text('Total ' + total.toLocaleString('id-ID'));
     }
 
     function lookupScan(value) {
@@ -240,9 +261,7 @@ window.addEventListener('load', function () {
     });
 
     $('#qtyPcs,#qtyBox').on('input', function () {
-        var pcs = parseInt($('#qtyPcs').val() || 0, 10);
-        var box = parseInt($('#qtyBox').val() || 0, 10);
-        $('#qtyTotalLabel').text('Total ' + (pcs + box).toLocaleString('id-ID'));
+        updateQtyTotal();
     });
 
     $('#formInputOpname').on('submit', function (event) {

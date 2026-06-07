@@ -107,6 +107,67 @@ class C_Stockopname extends CI_Controller
         ];
     }
 
+    private function tanggal_indo($date = null)
+    {
+        $months = [
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+
+        $timestamp = $date ? strtotime((string)$date) : time();
+        if (!$timestamp) {
+            $timestamp = time();
+        }
+
+        return date('d', $timestamp) . ' ' . $months[(int)date('n', $timestamp)] . ' ' . date('Y', $timestamp);
+    }
+
+    private function delete_qrcode_files($paths)
+    {
+        $root = realpath(FCPATH);
+        $deleted = 0;
+        $failed = 0;
+
+        foreach (array_unique($paths) as $path) {
+            $path = trim((string)$path);
+            if ($path === '' || preg_match('#^[a-z][a-z0-9+.-]*://#i', $path)) {
+                continue;
+            }
+
+            $candidate = $path[0] === DIRECTORY_SEPARATOR ? $path : FCPATH . $path;
+            $realFile = realpath($candidate);
+            if (!$root || !$realFile || !is_file($realFile)) {
+                continue;
+            }
+
+            if (strpos($realFile, $root . DIRECTORY_SEPARATOR) !== 0) {
+                $failed++;
+                continue;
+            }
+
+            if (@unlink($realFile)) {
+                $deleted++;
+            } else {
+                $failed++;
+            }
+        }
+
+        return [
+            'deleted' => $deleted,
+            'failed' => $failed,
+        ];
+    }
+
     public function index()
     {
         $data['page_title'] = 'KARISMA ERP - Admin Stockopname';
@@ -119,47 +180,32 @@ class C_Stockopname extends CI_Controller
     public function monitoring()
     {
         $data['page_title'] = 'KARISMA ERP - Opname Monitoring';
-        $data['summary'] = [
-            'session' => 'SO-DEMO-2026-06',
-            'warehouse' => 'Gudang Karisma Pusat',
-            'cutoff' => '2026-06-03 17:00',
-            'progress' => 68,
-            'scanned_item' => 456,
-            'target_item' => 670,
-            'variance_item' => 38,
-            'pending_approval' => 12,
-        ];
-        $data['modules'] = [
-            ['name' => 'Session Control', 'status' => 'Ready', 'owner' => 'Admin', 'metric' => '1 sesi aktif', 'icon' => 'fa-calendar-check', 'note' => 'Buka, kunci, dan arsip sesi opname.'],
-            ['name' => 'Team Assignment', 'status' => 'Demo', 'owner' => 'PIC Gudang', 'metric' => '4 tim', 'icon' => 'fa-users-cog', 'note' => 'Pembagian area, user input, dan target scan.'],
-            ['name' => 'Scan Queue', 'status' => 'Ready', 'owner' => 'Opname', 'metric' => '27 antrian', 'icon' => 'fa-qrcode', 'note' => 'Monitoring QR/barcode yang masuk dari mobile.'],
-            ['name' => 'Variance Review', 'status' => 'Needs Review', 'owner' => 'Supervisor', 'metric' => '38 selisih', 'icon' => 'fa-balance-scale', 'note' => 'Validasi selisih sebelum adjustment stok.'],
-            ['name' => 'FEFO Audit', 'status' => 'Demo', 'owner' => 'QC Gudang', 'metric' => '82% match', 'icon' => 'fa-sort-amount-down', 'note' => 'Cek expired terdekat dan urutan pengeluaran barang.'],
-            ['name' => 'Adjustment Approval', 'status' => 'Waiting', 'owner' => 'Manager', 'metric' => '12 approval', 'icon' => 'fa-user-check', 'note' => 'Alur persetujuan koreksi setelah rekonsiliasi.'],
-            ['name' => 'Import Export', 'status' => 'Ready', 'owner' => 'Admin', 'metric' => 'CSV/XLS', 'icon' => 'fa-file-import', 'note' => 'Template import master, hasil scan, dan export hasil final.'],
-            ['name' => 'Audit Trail', 'status' => 'Ready', 'owner' => 'System', 'metric' => '128 log', 'icon' => 'fa-history', 'note' => 'Jejak perubahan qty, lot, expired, user, dan waktu.'],
-        ];
-        $data['teams'] = [
-            ['team' => 'Tim A', 'area' => 'Rak Pestisida A-C', 'progress' => 82, 'inputer' => 'opname1', 'last_sync' => '10:42'],
-            ['team' => 'Tim B', 'area' => 'Rak Benih & Pupuk', 'progress' => 64, 'inputer' => 'opname2', 'last_sync' => '10:39'],
-            ['team' => 'Tim C', 'area' => 'Gudang Transit', 'progress' => 57, 'inputer' => 'opname3', 'last_sync' => '10:31'],
-            ['team' => 'Tim FEFO', 'area' => 'Expired Control', 'progress' => 73, 'inputer' => 'qcfefo', 'last_sync' => '10:28'],
-        ];
-        $data['exceptions'] = [
-            ['kode' => 'BRG-002', 'barang' => 'Abacel 18 EC 20 X 500 ml', 'exp' => '2027-01-18', 'lot' => 'AB-27A', 'issue' => 'Qty fisik lebih 6 pcs', 'status' => 'Review'],
-            ['kode' => 'BRG-014', 'barang' => 'Paclo 15 WP 16 X 5 X 100 gr', 'exp' => '2026-09-30', 'lot' => 'PC-0930', 'issue' => 'Lot ditemukan di area berbeda', 'status' => 'Investigasi'],
-            ['kode' => 'BRG-021', 'barang' => 'Karissnail 6 PL 20 X 500 gr', 'exp' => '2026-12-01', 'lot' => '-', 'issue' => 'Belum discan tim opname', 'status' => 'Pending'],
-        ];
-        $data['timeline'] = [
-            ['time' => '08:00', 'event' => 'Cutoff stok demo dibuka', 'type' => 'System'],
-            ['time' => '08:20', 'event' => 'Tim A mulai scan area Pestisida', 'type' => 'Input'],
-            ['time' => '09:15', 'event' => 'Variance pertama masuk ke review', 'type' => 'Review'],
-            ['time' => '10:42', 'event' => 'Sinkronisasi terakhir Tim A', 'type' => 'Sync'],
-        ];
+        $data['monitoring_summary'] = $this->stockopname->monitoring_summary();
+        $data['activity_logs'] = $this->stockopname->monitoring_activity(8);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_monitoring.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function monitoring_summary()
+    {
+        $this->json(true, 'Summary monitoring stockopname berhasil dimuat.', $this->stockopname->monitoring_summary());
+    }
+
+    public function monitoring_activity()
+    {
+        $this->json(true, 'Log aktifitas opname berhasil dimuat.', $this->stockopname->monitoring_activity(12));
+    }
+
+    public function monitoring_compare_all()
+    {
+        $this->raw_json($this->stockopname->monitoring_compare_all_datatable($this->post()));
+    }
+
+    public function monitoring_compare_lot()
+    {
+        $this->raw_json($this->stockopname->monitoring_compare_lot_datatable($this->post()));
     }
 
     public function widgets()
@@ -261,6 +307,8 @@ class C_Stockopname extends CI_Controller
 
         $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
         $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
+        $qtyPcs = $qtyPcs === '' ? '0' : $qtyPcs;
+        $qtyBox = $qtyBox === '' ? '0' : $qtyBox;
         if ($qtyPcs === '' || !ctype_digit((string)$qtyPcs)) {
             return $this->json(false, 'Qty pcs harus berupa angka bulat 0 atau lebih.');
         }
@@ -285,6 +333,7 @@ class C_Stockopname extends CI_Controller
             'qty_box' => $qtyBox,
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
+            'tim_opname' => $this->session->userdata('tim') ?: 0,
         ]);
 
         if (!$saved) {
@@ -592,6 +641,40 @@ class C_Stockopname extends CI_Controller
         ]);
     }
 
+    public function qrcode_reset()
+    {
+        if (strtoupper((string)$this->input->method(true)) !== 'POST') {
+            return $this->json(false, 'Request reset harus menggunakan POST.');
+        }
+
+        if (!$this->ensure_qrcode_ready()) {
+            return;
+        }
+
+        $paths = $this->stockopname->qrcode_file_paths_for_reset();
+        foreach (glob(FCPATH . 'assets/qrcode/stockopname/*') ?: [] as $file) {
+            if (is_file($file)) {
+                $paths[] = $file;
+            }
+        }
+
+        $reset = $this->stockopname->reset_qrcode_opname_data();
+        if (empty($reset['success'])) {
+            return $this->json(false, $reset['message'] ?? 'Gagal reset QRCode opname.');
+        }
+
+        $files = $this->delete_qrcode_files($paths);
+        $summary = $this->stockopname->qrcode_summary();
+
+        $this->json(true, 'Reset QRCode opname berhasil diproses.', [
+            'deleted_files' => $files['deleted'],
+            'failed_files' => $files['failed'],
+            'opname_rows_deleted' => (int)($reset['opname_rows_deleted'] ?? 0),
+            'master_rows_reset' => (int)($reset['master_rows_reset'] ?? 0),
+            'summary' => $summary,
+        ]);
+    }
+
     public function ajax_generate_qrcode()
     {
         $this->generate_asset('qrcode');
@@ -701,7 +784,7 @@ class C_Stockopname extends CI_Controller
         $this->stockopname->ensure_master_code_columns();
         $row = $this->stockopname->get_master_barang_by_id((int)$id);
         if (!$row) {
-            return $this->json(false, 'Data barang tidak ditemukan.');
+            return $this->json(false, 'Data tidak ditemukan');
         }
 
         $this->json(true, 'Preview asset berhasil dimuat.', [
@@ -710,8 +793,13 @@ class C_Stockopname extends CI_Controller
             'nama_barang' => $row['nama_barang'],
             'expired_date' => $row['expired_date'],
             'no_lot' => $row['no_lot'],
+            'qty' => $row['qty'],
+            'qty_pcs' => $row['qty_pcs'],
+            'qty_box' => $row['qty_box'],
+            'inventory_date' => $this->tanggal_indo(),
             'value' => $this->qrcode_scan_value($row),
             'qrcode' => $this->asset_payload($row['qrcode'] ?? ''),
+            'barcode' => $this->asset_payload($row['barcode'] ?? ''),
         ]);
     }
 
@@ -728,10 +816,11 @@ class C_Stockopname extends CI_Controller
         }
 
         $data = [
-            'page_title' => 'Print QRCode - ' . $row['nama_barang'],
+            'page_title' => 'Print Kartu Stock - ' . $row['nama_barang'],
             'barang' => $row,
             'qrcode' => $this->asset_payload($row['qrcode'] ?? ''),
             'scan_value' => $this->qrcode_scan_value($row),
+            'inventory_date' => $this->tanggal_indo(),
         ];
 
         $this->load->view('content/admin/stockopname_print_qrcode.php', $data);

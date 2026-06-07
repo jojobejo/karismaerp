@@ -38,7 +38,8 @@
                     .mb-stat.filter-card{width:100%;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.mb-stat.filter-card:hover{border-color:#94a3b8;box-shadow:0 10px 24px rgba(16,24,40,.1);transform:translateY(-1px)}.mb-stat.filter-card.active{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.14),0 8px 22px rgba(16,24,40,.08)}
                     .mb-bulk-action{min-height:96px;width:100%;border-radius:8px;border:1px solid #0f766e;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;transition:background .15s ease,box-shadow .15s ease,transform .15s ease}.mb-bulk-action:hover{background:#115e59;color:#fff;box-shadow:0 10px 24px rgba(15,118,110,.22);transform:translateY(-1px)}.mb-bulk-action:disabled{cursor:not-allowed;opacity:.7;transform:none}
                     .mb-filter{display:grid;grid-template-columns:minmax(240px,1fr) 96px;gap:10px}.mb-table-wrap{padding:16px}.mb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}.mb-badge.ready{background:#dcfce7;color:#166534}.mb-badge.pending{background:#ffedd5;color:#9a3412}
-                    .mb-preview-box{border:1px dashed #cbd5e1;border-radius:8px;min-height:176px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden}.mb-preview-box img{max-width:100%;max-height:220px;object-fit:contain}.mb-preview-placeholder{color:#64748b;font-size:13px}.mb-asset-path{font-size:11px;color:#64748b;word-break:break-all}.mb-print-qrcode{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;font-weight:800}.table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.mb-actions{display:flex;flex-wrap:wrap;gap:6px}.mb-actions .btn{white-space:nowrap}.mb-icon-btn{width:31px;height:31px;display:inline-flex;align-items:center;justify-content:center;padding:0}.mb-icon-btn i{margin-right:0}
+                    .mb-preview-box{border:1px dashed #cbd5e1;border-radius:8px;min-height:176px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden}.mb-preview-box img{max-width:100%;max-height:220px;object-fit:contain}.mb-preview-placeholder{color:#64748b;font-size:13px}.mb-asset-path{font-size:11px;color:#64748b;word-break:break-all}.mb-print-qrcode{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;font-weight:800}.table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.mb-actions{display:flex;flex-wrap:wrap;gap:6px}.mb-actions .btn{white-space:nowrap}.mb-icon-btn{width:31px;height:31px;display:inline-flex;align-items:center;justify-content:center;padding:0}.mb-icon-btn i{margin-right:0}.table-hover tbody tr.master-row-selected,.table-hover tbody tr.master-row-selected:hover{background:#dcfce7}
+                    .asset-card{width:100%;max-width:360px;margin:0 auto;background:#fff;border:1px solid #111827;color:#111827;font-family:Arial,Helvetica,sans-serif;text-align:center}.asset-card-header{border-bottom:1px solid #111827;padding:9px 10px}.asset-card-kicker{font-size:11px;font-weight:800;line-height:1.15}.asset-card-location{font-size:15px;font-weight:800;line-height:1.2;margin-top:3px}.asset-card-description{border-bottom:1px solid #111827;padding:9px 10px 11px}.asset-card-description-title{font-size:11px;font-weight:800;margin-bottom:4px}.asset-card-description-text{font-size:14px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.asset-card-meta{margin-top:6px;font-size:10px;font-weight:700;line-height:1.35;color:#6b7280}.asset-card-meta div{word-break:break-word}.asset-card-qr{display:flex;align-items:center;justify-content:center;min-height:178px;margin:11px 0 2px}.asset-card-qr img{width:172px;height:172px;object-fit:contain}.asset-card-qr-empty{width:172px;height:172px;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;padding:12px;color:#4b5563;font-size:12px;line-height:1.25}.asset-card-date{border-bottom:1px solid #111827;padding:8px 10px;font-size:12px;font-weight:800}.asset-card-signature-title{padding:7px 10px;border-bottom:1px solid #111827;font-size:12px;font-weight:800}.asset-card-signature{display:grid;grid-template-columns:1fr 1fr;min-height:82px}.asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:12px;font-weight:800}.asset-card-signature div+div{border-left:1px solid #111827}.asset-card-empty{min-height:300px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;padding:24px;font-weight:700}.no-print{print-color-adjust:exact;-webkit-print-color-adjust:exact}
                     .qr-progress-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.qr-progress-meta span{border:1px solid #e1e7ef;border-radius:6px;padding:6px 10px;background:#f8fafc;font-size:12px;color:#334155;font-weight:700}.qr-progress-meta span.is-running{border-color:#99f6e4;background:#ecfdf5;color:#0f766e}.qr-action-row{display:flex;flex-wrap:wrap;gap:8px}.qr-failed-list{max-height:220px;overflow:auto;border:1px solid #e8edf3;border-radius:8px}.qr-failed-list table{margin-bottom:0}.progress{height:18px;border-radius:8px;background:#e5e7eb;overflow:hidden;position:relative}.progress-bar{font-size:11px;font-weight:800;transition:width .35s ease;background-size:18px 18px}.qr-progress-track.is-running:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:qrTrackSweep 1.05s linear infinite}.qr-progress-bar.is-running{background-image:linear-gradient(45deg,rgba(255,255,255,.25) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.25) 50%,rgba(255,255,255,.25) 75%,transparent 75%,transparent);animation:qrStripeMove .75s linear infinite}.qr-pulse{display:inline-flex;align-items:center;gap:6px}.qr-pulse:before{content:"";width:7px;height:7px;border-radius:999px;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.45);animation:qrPulse 1.1s ease-out infinite}@keyframes qrStripeMove{from{background-position:0 0}to{background-position:18px 0}}@keyframes qrTrackSweep{to{transform:translateX(100%)}}@keyframes qrPulse{70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
                     @media(max-width:768px){.mb-filter{grid-template-columns:1fr}.mb-panel-header{align-items:flex-start;flex-direction:column}.content-header h1{font-size:22px}.mb-stat-value{font-size:24px}}
                 </style>
@@ -85,6 +86,9 @@
                                     </button>
                                     <button type="button" class="btn btn-warning btn-sm" id="btnRetryFailedQr">
                                         <i class="fas fa-redo"></i> Retry Data Gagal
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" id="btnResetQrOpname">
+                                        <i class="fas fa-trash-alt"></i> Reset QR &amp; Input
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRefreshQrStatus">
                                         <i class="fas fa-sync-alt"></i> Refresh Status
@@ -156,14 +160,12 @@
                                 <span class="text-muted small" id="previewItemLabel">Pilih barang</span>
                             </div>
                             <div class="p-3">
-                                <div class="font-weight-bold mb-2">QRCode</div>
-                                <div class="mb-preview-box mb-2" id="previewQrBox">
-                                    <span class="mb-preview-placeholder">Belum tergenerate</span>
+                                <div id="previewAssetCard">
+                                    <div class="asset-card-empty">Pilih item dari tabel untuk melihat kartu stock</div>
                                 </div>
-                                <div class="mb-asset-path mb-3" id="previewQrPath">-</div>
-                                <a href="#" target="_blank" rel="noopener" class="btn btn-success mb-print-qrcode disabled" id="previewPrintQr">
-                                    <i class="fas fa-print"></i> Print QRCode
-                                </a>
+                                <button type="button" class="btn btn-success mb-print-qrcode mt-3 no-print" id="previewPrintQr" disabled>
+                                    <i class="fas fa-print"></i> Print Kartu Stock
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -184,15 +186,18 @@
 <script>
 window.addEventListener('load', function () {
     var selectedId = null;
+    var currentPrintUrl = '';
     var qrcodeStatus = '';
     var isQrRunning = false;
     var qrRun = {processed: 0, success: 0, failed: 0, total: 0, mode: 'normal'};
     var qrButtonHtml = {
         normal: $('#btnGenerateQrBatch').html(),
-        retry: $('#btnRetryFailedQr').html()
+        retry: $('#btnRetryFailedQr').html(),
+        reset: $('#btnResetQrOpname').html()
     };
     $('[data-toggle="tooltip"]').tooltip();
-    var table = $('#tableMasterBarang').DataTable({
+    var table;
+    table = $('#tableMasterBarang').DataTable({
         processing: true,
         serverSide: true,
         responsive: true,
@@ -215,11 +220,18 @@ window.addEventListener('load', function () {
             {data: 'qty_box', render: function (value) { return formatNumber(value); }},
             {data: null, orderable: false, searchable: false, render: renderActions}
         ],
+        rowCallback: function (row, data) {
+            $(row).toggleClass('master-row-selected', !!selectedId && String(data.id) === String(selectedId));
+        },
         drawCallback: function () {
             var rows = this.api().rows({page: 'current'}).data();
             if (!selectedId && rows.length > 0) {
                 selectedId = rows[0].id;
                 loadPreview(selectedId);
+            } else if (!selectedId && rows.length === 0) {
+                resetPreviewCard('Pilih item dari tabel untuk melihat kartu stock');
+            } else {
+                highlightSelectedRow();
             }
             $('[data-toggle="tooltip"]').tooltip();
         }
@@ -286,27 +298,69 @@ window.addEventListener('load', function () {
     function renderActions(row) {
         var html = '<div class="mb-actions">';
         var status = String(row.qrcode_status || '').toUpperCase();
+        html += '<button type="button" class="btn btn-outline-success btn-xs mb-icon-btn btn-preview-asset" data-toggle="tooltip" title="Preview kartu stock" data-id="' + row.id + '"><i class="fas fa-qrcode"></i></button>';
         if (status !== 'DONE') {
-            html += '<button type="button" class="btn btn-outline-success btn-xs mb-icon-btn btn-generate-asset" data-toggle="tooltip" title="Generate QRCode" data-type="qrcode" data-regenerate="0" data-id="' + row.id + '"><i class="fas fa-qrcode"></i></button>';
+            html += '<button type="button" class="btn btn-outline-primary btn-xs mb-icon-btn btn-generate-asset" data-toggle="tooltip" title="Generate QRCode" data-type="qrcode" data-regenerate="0" data-id="' + row.id + '"><i class="fas fa-sync-alt"></i></button>';
         } else if (parseInt(row.qrcode_ready || 0, 10) !== 1) {
-            html += '<button type="button" class="btn btn-outline-warning btn-xs mb-icon-btn btn-generate-asset" data-toggle="tooltip" title="Generate ulang QRCode" data-type="qrcode" data-regenerate="1" data-id="' + row.id + '"><i class="fas fa-qrcode"></i></button>';
-        } else {
-            html += '<button type="button" class="btn btn-outline-secondary btn-xs mb-icon-btn btn-preview-asset" data-toggle="tooltip" title="QRCode sudah ada" data-id="' + row.id + '"><i class="fas fa-check"></i></button>';
+            html += '<button type="button" class="btn btn-outline-warning btn-xs mb-icon-btn btn-generate-asset" data-toggle="tooltip" title="Generate ulang QRCode" data-type="qrcode" data-regenerate="1" data-id="' + row.id + '"><i class="fas fa-sync-alt"></i></button>';
         }
         html += '</div>';
         return html;
     }
 
-    function renderPreview(boxSelector, pathSelector, asset, label) {
-        var path = asset && asset.path ? asset.path : '';
-        var url = asset && asset.url ? asset.url + '?t=' + new Date().getTime() : '';
-        if (asset && asset.exists && url) {
-            $(boxSelector).html('<img src="' + escapeHtml(url) + '" alt="' + escapeHtml(label) + '">');
-            $(pathSelector).text(path);
+    function displayValue(value) {
+        var text = String(value === null || value === undefined ? '' : value).trim();
+        return text === '' ? '-' : text;
+    }
+
+    function resetPreviewCard(message) {
+        $('#previewAssetCard').html('<div class="asset-card-empty">' + escapeHtml(message || 'Pilih item dari tabel untuk melihat kartu stock') + '</div>');
+        $('#previewItemLabel').text('Pilih barang');
+        $('#previewPrintQr').prop('disabled', true);
+        currentPrintUrl = '';
+        highlightSelectedRow();
+    }
+
+    function highlightSelectedRow() {
+        if (!table) {
             return;
         }
-        $(boxSelector).html('<span class="mb-preview-placeholder">Belum tergenerate</span>');
-        $(pathSelector).text(path || '-');
+        table.rows({page: 'current'}).every(function () {
+            var data = this.data();
+            $(this.node()).toggleClass('master-row-selected', !!selectedId && data && String(data.id) === String(selectedId));
+        });
+    }
+
+    function renderStockCard(item) {
+        var qrcode = item.qrcode || {};
+        var qrHtml = qrcode.exists && qrcode.url
+            ? '<img src="' + escapeHtml(qrcode.url + '?t=' + new Date().getTime()) + '" alt="QRCode ' + escapeHtml(item.id) + '">'
+            : '<div class="asset-card-qr-empty">QR Code belum tergenerate</div>';
+
+        var html = '' +
+            '<section class="asset-card">' +
+                '<div class="asset-card-header">' +
+                    '<div class="asset-card-kicker">LOCATION</div>' +
+                    '<div class="asset-card-location">GUDANG INDUK</div>' +
+                '</div>' +
+                '<div class="asset-card-description">' +
+                    '<div class="asset-card-description-title">DESCRIPTION</div>' +
+                    '<div class="asset-card-description-text">' + escapeHtml(displayValue(item.nama_barang)) + '</div>' +
+                    '<div class="asset-card-meta">' +
+                        '<div>' + escapeHtml(displayValue(item.kode_barang)) + '</div>' +
+                        '<div>' + escapeHtml(displayValue(item.expired_date)) + ' | ' + escapeHtml(displayValue(item.no_lot)) + '</div>' +
+                    '</div>' +
+                    '<div class="asset-card-qr">' + qrHtml + '</div>' +
+                '</div>' +
+                '<div class="asset-card-date">INVENTORY DATE : ' + escapeHtml(displayValue(item.inventory_date)) + '</div>' +
+                '<div class="asset-card-signature-title">LOCATION</div>' +
+                '<div class="asset-card-signature">' +
+                    '<div>Paraf 1</div>' +
+                    '<div>Paraf 2</div>' +
+                '</div>' +
+            '</section>';
+
+        $('#previewAssetCard').html(html);
     }
 
     function loadSummary(showToast) {
@@ -344,10 +398,10 @@ window.addEventListener('load', function () {
                 }
                 selectedId = res.data.id;
                 $('#previewItemLabel').text('#' + res.data.id + ' - ' + res.data.nama_barang);
-                renderPreview('#previewQrBox', '#previewQrPath', res.data.qrcode, 'QRCode ' + res.data.id);
-                $('#previewPrintQr')
-                    .attr('href', '<?= base_url('admin/stockopname/master_opname/print-qrcode') ?>/' + res.data.id)
-                    .removeClass('disabled');
+                renderStockCard(res.data);
+                currentPrintUrl = '<?= base_url('admin/stockopname/master_opname/print-qrcode') ?>/' + res.data.id;
+                $('#previewPrintQr').prop('disabled', false);
+                highlightSelectedRow();
             },
             error: function (xhr) {
                 toast('error', ajaxMessage(xhr, 'Gagal memuat preview asset'));
@@ -356,10 +410,11 @@ window.addEventListener('load', function () {
     }
 
     function setQrButtons(disabled) {
-        $('#btnGenerateQrBatch,#btnRetryFailedQr,#btnRefreshQrStatus,#btnRefreshMasterBarang').prop('disabled', disabled);
+        $('#btnGenerateQrBatch,#btnRetryFailedQr,#btnResetQrOpname,#btnRefreshQrStatus,#btnRefreshMasterBarang').prop('disabled', disabled);
         if (!disabled) {
             $('#btnGenerateQrBatch').html(qrButtonHtml.normal);
             $('#btnRetryFailedQr').html(qrButtonHtml.retry);
+            $('#btnResetQrOpname').html(qrButtonHtml.reset);
             loadSummary(false);
         }
     }
@@ -376,6 +431,7 @@ window.addEventListener('load', function () {
 
         $('#btnGenerateQrBatch').html(qrButtonHtml.normal);
         $('#btnRetryFailedQr').html(qrButtonHtml.retry);
+        $('#btnResetQrOpname').html(qrButtonHtml.reset);
     }
 
     function setQrProgress(percent, processedText, statusText) {
@@ -525,6 +581,75 @@ window.addEventListener('load', function () {
         });
     }
 
+    function resetQrOpnameData() {
+        if (isQrRunning) {
+            return;
+        }
+
+        function begin() {
+            isQrRunning = true;
+            setQrButtons(true);
+            $('#btnResetQrOpname').html('<i class="fas fa-spinner fa-spin"></i> Reset berjalan');
+            setQrProgress(0, 'Processed: 0 / 0', 'reset data');
+
+            $.ajax({
+                url: '<?= base_url('admin/stockopname/qrcode/reset') ?>',
+                type: 'POST',
+                dataType: 'json',
+                timeout: 30000,
+                data: {confirm_reset: 1},
+                success: function (res) {
+                    if (!res.status) {
+                        toast('error', res.message || 'Reset QR Code gagal');
+                        return;
+                    }
+
+                    var data = res.data || {};
+                    selectedId = null;
+                    qrcodeStatus = '';
+                    $('.filter-card').removeClass('active');
+                    $('#qrFailedListWrap').hide();
+                    $('#qrFailedListBody').empty();
+                    resetPreviewCard('Pilih item dari tabel untuk melihat kartu stock');
+                    qrRun = {processed: data.master_rows_reset || 0, success: 0, failed: 0, total: data.master_rows_reset || 0, mode: 'reset'};
+                    setQrProgress(100, 'Processed: ' + formatNumber(qrRun.processed) + ' / ' + formatNumber(qrRun.total), 'reset selesai');
+                    table.ajax.reload(null, false);
+                    loadSummary(false);
+                    toast('success', res.message || 'Reset QR Code selesai');
+                },
+                error: function (xhr) {
+                    toast('error', ajaxMessage(xhr, 'Server gagal reset QR Code opname'));
+                },
+                complete: function () {
+                    isQrRunning = false;
+                    setQrRunningState(false, 'normal');
+                    setQrButtons(false);
+                }
+            });
+        }
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Reset QR Code opname?',
+                text: 'Gambar QR akan dihapus, data input opname dikosongkan, index input direset, dan status QR master kembali PENDING.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Reset',
+                cancelButtonText: 'Batal'
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    begin();
+                }
+            });
+            return;
+        }
+
+        if (confirm('Reset QR Code opname?')) {
+            begin();
+        }
+    }
+
     $('#mbSearch').on('keyup', function () {
         selectedId = null;
         table.ajax.reload();
@@ -566,9 +691,20 @@ window.addEventListener('load', function () {
         startQrRun('retry');
     });
 
+    $('#btnResetQrOpname').on('click', function () {
+        resetQrOpnameData();
+    });
+
     $('#btnRefreshQrStatus').on('click', function () {
         loadSummary(true);
         loadFailedList();
+    });
+
+    $('#previewPrintQr').on('click', function () {
+        if (!currentPrintUrl) {
+            return;
+        }
+        window.open(currentPrintUrl, '_blank', 'noopener');
     });
 
     $('#tableMasterBarang tbody').on('click', 'tr', function (e) {
@@ -582,6 +718,7 @@ window.addEventListener('load', function () {
     });
 
     $('#tableMasterBarang').on('click', '.btn-preview-asset', function () {
+        $('[data-toggle="tooltip"]').tooltip('hide');
         loadPreview($(this).data('id'));
     });
 

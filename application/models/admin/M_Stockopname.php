@@ -327,6 +327,363 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
+    private function empty_datatable($post)
+    {
+        return [
+            'draw' => (int)($post['draw'] ?? 1),
+            'recordsTotal' => 0,
+            'recordsFiltered' => 0,
+            'data' => [],
+        ];
+    }
+
+    private function opname_created_column()
+    {
+        if ($this->db->field_exists('created_at', $this->opnameTable)) {
+            return 'created_at';
+        }
+
+        if ($this->db->field_exists('create_at', $this->opnameTable)) {
+            return 'create_at';
+        }
+
+        return 'input_at';
+    }
+
+    private function monitoring_master_all_subquery()
+    {
+        return "
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                SUM(COALESCE(qty, 0)) AS qty_buku,
+                SUM(COALESCE(qty_box, 0)) AS box_buku,
+                SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
+            FROM {$this->masterTable}
+            GROUP BY kode_barang
+        ";
+    }
+
+    private function monitoring_opname_all_subquery()
+    {
+        $createdColumn = $this->opname_created_column();
+
+        return "
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
+                GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
+                MAX({$createdColumn}) AS last_input
+            FROM {$this->opnameTable}
+            GROUP BY kode_barang
+        ";
+    }
+
+    private function monitoring_compare_all_base()
+    {
+        $master = $this->monitoring_master_all_subquery();
+        $opname = $this->monitoring_opname_all_subquery();
+
+        return "
+            SELECT
+                x.kode_barang,
+                x.nama_barang,
+                x.qty_buku,
+                x.qty_tim_1,
+                x.qty_tim_2,
+                x.inputers,
+                x.wilayah,
+                x.last_input,
+                CASE
+                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
+                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 <> x.qty_buku THEN 'tim_1'
+                    WHEN x.qty_tim_2 = x.qty_buku AND x.qty_tim_1 <> x.qty_buku THEN 'tim_2'
+                    ELSE 're_check'
+                END AS status_opname,
+                CASE WHEN x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
+                CASE WHEN x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
+            FROM (
+                SELECT
+                    m.kode_barang,
+                    m.nama_barang,
+                    COALESCE(m.qty_buku, 0) AS qty_buku,
+                    COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
+                    COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.inputers, '-') AS inputers,
+                    COALESCE(o.wilayah, '-') AS wilayah,
+                    o.last_input
+                FROM ({$master}) m
+                LEFT JOIN ({$opname}) o ON o.kode_barang = m.kode_barang
+                UNION ALL
+                SELECT
+                    o.kode_barang,
+                    o.nama_barang,
+                    0 AS qty_buku,
+                    COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
+                    COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.inputers, '-') AS inputers,
+                    COALESCE(o.wilayah, '-') AS wilayah,
+                    o.last_input
+                FROM ({$opname}) o
+                LEFT JOIN ({$master}) m ON m.kode_barang = o.kode_barang
+                WHERE m.kode_barang IS NULL
+            ) x
+        ";
+    }
+
+    private function monitoring_master_lot_subquery()
+    {
+        $expKey = $this->exp_key('expired_date');
+        $lotKey = $this->lot_key('no_lot');
+
+        return "
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                {$expKey} AS exp_key,
+                {$lotKey} AS lot_key,
+                MAX(expired_date) AS expired_date,
+                MAX(no_lot) AS no_lot,
+                SUM(COALESCE(qty, 0)) AS qty_buku,
+                SUM(COALESCE(qty_box, 0)) AS box_buku,
+                SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
+            FROM {$this->masterTable}
+            GROUP BY kode_barang, exp_key, lot_key
+        ";
+    }
+
+    private function monitoring_opname_lot_subquery()
+    {
+        $expKey = $this->exp_key('expired_date');
+        $lotKey = $this->lot_key('no_lot');
+        $createdColumn = $this->opname_created_column();
+
+        return "
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                {$expKey} AS exp_key,
+                {$lotKey} AS lot_key,
+                MAX(expired_date) AS expired_date,
+                MAX(no_lot) AS no_lot,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
+                GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
+                MAX({$createdColumn}) AS last_input
+            FROM {$this->opnameTable}
+            GROUP BY kode_barang, exp_key, lot_key
+        ";
+    }
+
+    private function monitoring_compare_lot_base()
+    {
+        $master = $this->monitoring_master_lot_subquery();
+        $opname = $this->monitoring_opname_lot_subquery();
+
+        return "
+            SELECT
+                x.kode_barang,
+                x.nama_barang,
+                x.expired_date,
+                x.no_lot,
+                x.qty_buku,
+                x.qty_tim_1,
+                x.qty_tim_2,
+                x.inputers,
+                x.wilayah,
+                x.last_input,
+                CASE
+                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
+                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 <> x.qty_buku THEN 'tim_1'
+                    WHEN x.qty_tim_2 = x.qty_buku AND x.qty_tim_1 <> x.qty_buku THEN 'tim_2'
+                    ELSE 're_check'
+                END AS status_opname,
+                CASE WHEN x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
+                CASE WHEN x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
+            FROM (
+                SELECT
+                    m.kode_barang,
+                    m.nama_barang,
+                    m.expired_date,
+                    m.no_lot,
+                    COALESCE(m.qty_buku, 0) AS qty_buku,
+                    COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
+                    COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.inputers, '-') AS inputers,
+                    COALESCE(o.wilayah, '-') AS wilayah,
+                    o.last_input
+                FROM ({$master}) m
+                LEFT JOIN ({$opname}) o
+                    ON o.kode_barang = m.kode_barang
+                    AND o.exp_key = m.exp_key
+                    AND o.lot_key = m.lot_key
+                UNION ALL
+                SELECT
+                    o.kode_barang,
+                    o.nama_barang,
+                    o.expired_date,
+                    o.no_lot,
+                    0 AS qty_buku,
+                    COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
+                    COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.inputers, '-') AS inputers,
+                    COALESCE(o.wilayah, '-') AS wilayah,
+                    o.last_input
+                FROM ({$opname}) o
+                LEFT JOIN ({$master}) m
+                    ON m.kode_barang = o.kode_barang
+                    AND m.exp_key = o.exp_key
+                    AND m.lot_key = o.lot_key
+                WHERE m.kode_barang IS NULL
+            ) x
+        ";
+    }
+
+    private function monitoring_filtered_where($post, $withLot = false)
+    {
+        $where = [];
+        $search = trim((string)($post['search']['value'] ?? $post['search'] ?? ''));
+        if ($search !== '') {
+            $like = $this->db->escape('%' . $this->db->escape_like_str($search) . '%');
+            $fields = ['kode_barang', 'nama_barang', 'inputers', 'wilayah'];
+            if ($withLot) {
+                $fields[] = 'expired_date';
+                $fields[] = 'no_lot';
+            }
+
+            $likes = [];
+            foreach ($fields as $field) {
+                $likes[] = "{$field} LIKE {$like}";
+            }
+            $where[] = '(' . implode(' OR ', $likes) . ')';
+        }
+
+        $status = trim((string)($post['status'] ?? ''));
+        if ($status !== '') {
+            $where[] = 'status_opname = ' . $this->db->escape($status);
+        }
+
+        return empty($where) ? '' : ' WHERE ' . implode(' AND ', $where);
+    }
+
+    private function monitoring_datatable($post, $base, $columns, $withLot = false)
+    {
+        $where = $this->monitoring_filtered_where($post, $withLot);
+        $length = (int)($post['length'] ?? 10);
+        $start = max(0, (int)($post['start'] ?? 0));
+        $total = (int)$this->db->query("SELECT COUNT(*) AS total FROM ({$base}) x")->row()->total;
+        $filtered = (int)$this->db->query("SELECT COUNT(*) AS total FROM ({$base}) x {$where}")->row()->total;
+        $orderIndex = (int)($post['order'][0]['column'] ?? 0);
+        $orderColumn = $columns[$orderIndex] ?? 'kode_barang';
+        $orderDir = strtolower((string)($post['order'][0]['dir'] ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
+        $limit = $length > 0 ? ' LIMIT ' . (int)$start . ', ' . (int)$length : '';
+        $rows = $this->db->query("SELECT * FROM ({$base}) x {$where} ORDER BY {$orderColumn} {$orderDir}{$limit}")->result_array();
+
+        return [
+            'draw' => (int)($post['draw'] ?? 1),
+            'recordsTotal' => $total,
+            'recordsFiltered' => $filtered,
+            'data' => $rows,
+        ];
+    }
+
+    public function monitoring_compare_all_datatable($post)
+    {
+        if (!$this->ready()) {
+            return $this->empty_datatable($post);
+        }
+
+        return $this->monitoring_datatable($post, $this->monitoring_compare_all_base(), [
+            'kode_barang',
+            'nama_barang',
+            'qty_buku',
+            'qty_tim_1',
+            'qty_tim_2',
+            'status_opname',
+            'kode_barang',
+        ]);
+    }
+
+    public function monitoring_compare_lot_datatable($post)
+    {
+        if (!$this->ready()) {
+            return $this->empty_datatable($post);
+        }
+
+        return $this->monitoring_datatable($post, $this->monitoring_compare_lot_base(), [
+            'kode_barang',
+            'nama_barang',
+            'expired_date',
+            'no_lot',
+            'qty_buku',
+            'qty_tim_1',
+            'qty_tim_2',
+            'status_opname',
+            'kode_barang',
+        ], true);
+    }
+
+    private function monitoring_result_from_base($base, $mode = 'overall')
+    {
+        $matchExpression = 'status_opname = ' . $this->db->escape('all_match');
+        if ($mode === 'team_1') {
+            $matchExpression = 'tim_1_match = 1';
+        } elseif ($mode === 'team_2') {
+            $matchExpression = 'tim_2_match = 1';
+        }
+
+        $row = $this->db->query("
+            SELECT
+                SUM(CASE WHEN {$matchExpression} THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN {$matchExpression} THEN 0 ELSE 1 END) AS not_match_item
+            FROM ({$base}) x
+        ")->row_array();
+
+        return $this->percentage_result(
+            $row['match_item'] ?? 0,
+            $row['not_match_item'] ?? 0
+        );
+    }
+
+    public function monitoring_summary()
+    {
+        if (!$this->ready()) {
+            return [
+                'overall' => $this->percentage_result(0, 0),
+                'team_1' => $this->percentage_result(0, 0),
+                'team_2' => $this->percentage_result(0, 0),
+                'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
+            ];
+        }
+
+        return [
+            'overall' => $this->monitoring_result_from_base($this->monitoring_compare_all_base()),
+            'team_1' => $this->monitoring_result_from_base($this->monitoring_compare_all_base(), 'team_1'),
+            'team_2' => $this->monitoring_result_from_base($this->monitoring_compare_all_base(), 'team_2'),
+            'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
+        ];
+    }
+
+    public function monitoring_activity($limit = 10)
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        return $this->db
+            ->select("kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,input_by,wilayah,tim_opname,input_at,{$createdColumn} AS created_at", false)
+            ->from($this->opnameTable)
+            ->order_by($createdColumn, 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
+    }
+
     private function percentage_result($match, $notMatch)
     {
         $match = (int)$match;
@@ -475,6 +832,9 @@ class M_Stockopname extends CI_Model
         $qrcodeFile = $this->db->field_exists('qrcode_file', $this->masterTable) ? 'qrcode_file' : 'NULL AS qrcode_file';
         $qrcodeStatus = $this->db->field_exists('qrcode_status', $this->masterTable) ? 'qrcode_status' : 'NULL AS qrcode_status';
         $qrcodeError = $this->db->field_exists('qrcode_error_message', $this->masterTable) ? 'qrcode_error_message' : 'NULL AS qrcode_error_message';
+        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'COALESCE(dimensi, 0) AS dimensi'
+            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
 
         $this->db->select('
             id,
@@ -485,6 +845,7 @@ class M_Stockopname extends CI_Model
             COALESCE(qty, 0) AS qty,
             COALESCE(qty_pcs, 0) AS qty_pcs,
             COALESCE(qty_box, 0) AS qty_box,
+            ' . $dimensi . ',
             ' . $qrcode . ',
             ' . $barcode . ',
             ' . $qrcodeValue . ',
@@ -693,12 +1054,20 @@ class M_Stockopname extends CI_Model
 
         $qtyPcs = (int)($input['qty_pcs'] ?? 0);
         $qtyBox = (int)($input['qty_box'] ?? 0);
+        $dimensi = (int)($masterRow['dimensi'] ?? 0);
+        if ($dimensi <= 0) {
+            $masterQtyBox = (int)($masterRow['qty_box'] ?? 0);
+            $masterQtyPcs = (int)($masterRow['qty_pcs'] ?? 0);
+            $masterQty = (int)($masterRow['qty'] ?? 0);
+            $dimensi = $masterQtyBox > 0 ? (int)floor(($masterQty - $masterQtyPcs) / $masterQtyBox) : 0;
+        }
+
         $data = [
             'source_id' => (int)($masterRow['id'] ?? 0),
             'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
             'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
             'expired_date' => (string)($masterRow['expired_date'] ?? ''),
-            'qty' => $qtyPcs + $qtyBox,
+            'qty' => ($qtyBox * $dimensi) + $qtyPcs,
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
             'no_lot' => (string)($masterRow['no_lot'] ?? '-'),
@@ -958,6 +1327,97 @@ class M_Stockopname extends CI_Model
             ->limit(max(1, min(500, (int)$limit)))
             ->get()
             ->result_array();
+    }
+
+    public function qrcode_file_paths_for_reset()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $fields = [];
+        if ($this->db->field_exists('qrcode', $this->masterTable)) {
+            $fields[] = 'qrcode';
+        }
+        if ($this->db->field_exists('qrcode_file', $this->masterTable)) {
+            $fields[] = 'qrcode_file';
+        }
+
+        if (empty($fields)) {
+            return [];
+        }
+
+        $this->db->select(implode(',', $fields));
+        $rows = $this->db->get($this->masterTable)->result_array();
+        $paths = [];
+
+        foreach ($rows as $row) {
+            foreach ($fields as $field) {
+                $path = trim((string)($row[$field] ?? ''));
+                if ($path !== '' && $path !== '-') {
+                    $paths[$path] = $path;
+                }
+            }
+        }
+
+        return array_values($paths);
+    }
+
+    public function reset_qrcode_opname_data()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [
+                'success' => false,
+                'message' => 'Tabel stockopname_master_item belum tersedia.',
+            ];
+        }
+
+        $opnameRows = $this->db->table_exists($this->opnameTable)
+            ? (int)$this->db->count_all($this->opnameTable)
+            : 0;
+
+        $data = [];
+        foreach (['qrcode', 'qrcode_value', 'qrcode_file', 'qrcode_error_message', 'qrcode_generated_at', 'qrcode_updated_at'] as $field) {
+            if ($this->db->field_exists($field, $this->masterTable)) {
+                $data[$field] = null;
+            }
+        }
+        if ($this->db->field_exists('qrcode_status', $this->masterTable)) {
+            $data['qrcode_status'] = 'PENDING';
+        }
+        if ($this->db->field_exists('qrcode_retry_flag', $this->masterTable)) {
+            $data['qrcode_retry_flag'] = 0;
+        }
+        if ($this->db->field_exists('qrcode_attempt_count', $this->masterTable)) {
+            $data['qrcode_attempt_count'] = 0;
+        }
+
+        $this->db->trans_begin();
+
+        if ($this->db->table_exists($this->opnameTable)) {
+            $this->db->empty_table($this->opnameTable);
+            $this->db->query("ALTER TABLE {$this->opnameTable} AUTO_INCREMENT = 1");
+        }
+
+        if (!empty($data)) {
+            $this->db->update($this->masterTable, $data);
+        }
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return [
+                'success' => false,
+                'message' => 'Gagal reset data QRCode opname.',
+            ];
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'success' => true,
+            'opname_rows_deleted' => $opnameRows,
+            'master_rows_reset' => $this->qrcode_total_count(),
+        ];
     }
 
     public function is_asset_exists($id, $type)
