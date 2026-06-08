@@ -825,4 +825,26 @@ class C_Stockopname extends CI_Controller
 
         $this->load->view('content/admin/stockopname_print_qrcode.php', $data);
     }
+
+    public function print_preview_asset()
+    {
+        $this->stockopname->ensure_qrcode_columns();
+        $rows = $this->stockopname->get_master_barang_print_assets();
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = [
+                'barang' => $row,
+                'qrcode' => $this->asset_payload($row['qrcode'] ?? ''),
+                'scan_value' => $this->qrcode_scan_value($row),
+            ];
+        }
+
+        $data = [
+            'page_title' => 'Print Preview Asset Stockopname',
+            'items' => $items,
+            'inventory_date' => $this->tanggal_indo(),
+        ];
+
+        $this->load->view('content/admin/stockopname_print_preview_asset.php', $data);
+    }
 }

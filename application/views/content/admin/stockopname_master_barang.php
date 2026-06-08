@@ -36,10 +36,10 @@
                     .mb-panel-header{padding:14px 16px;border-bottom:1px solid #e8edf3;display:flex;align-items:center;justify-content:space-between;gap:10px}.mb-panel-title{font-weight:700;color:#1f2937;margin:0;font-size:16px}
                     .mb-stat{min-height:96px;padding:16px;border-radius:8px;border:1px solid #e1e7ef;background:#fff;border-left:4px solid #0f766e}.mb-stat-label{font-size:12px;text-transform:uppercase;color:#64748b;font-weight:700}.mb-stat-value{font-size:28px;font-weight:800;color:#111827;line-height:1.1;margin-top:8px}.mb-stat-meta{font-size:12px;color:#6b7280;margin-top:6px}
                     .mb-stat.filter-card{width:100%;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.mb-stat.filter-card:hover{border-color:#94a3b8;box-shadow:0 10px 24px rgba(16,24,40,.1);transform:translateY(-1px)}.mb-stat.filter-card.active{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.14),0 8px 22px rgba(16,24,40,.08)}
-                    .mb-bulk-action{min-height:96px;width:100%;border-radius:8px;border:1px solid #0f766e;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;transition:background .15s ease,box-shadow .15s ease,transform .15s ease}.mb-bulk-action:hover{background:#115e59;color:#fff;box-shadow:0 10px 24px rgba(15,118,110,.22);transform:translateY(-1px)}.mb-bulk-action:disabled{cursor:not-allowed;opacity:.7;transform:none}
+                    .mb-bulk-action{min-height:96px;width:100%;border-radius:8px;border:1px solid #0f766e;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;transition:background .15s ease,box-shadow .15s ease,transform .15s ease}.mb-bulk-action:hover{background:#115e59;color:#fff;box-shadow:0 10px 24px rgba(15,118,110,.22);transform:translateY(-1px)}.mb-bulk-action:disabled{cursor:not-allowed;opacity:.7;transform:none}.mb-print-widget{align-items:flex-start;flex-direction:column;text-align:left;padding:16px;border-left:4px solid #111827}.mb-print-widget i{font-size:20px;margin-right:0}.mb-print-widget-title{font-size:15px;line-height:1.2}.mb-print-widget-meta{font-size:12px;opacity:.86;font-weight:700}
                     .mb-filter{display:grid;grid-template-columns:minmax(240px,1fr) 96px;gap:10px}.mb-table-wrap{padding:16px}.mb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}.mb-badge.ready{background:#dcfce7;color:#166534}.mb-badge.pending{background:#ffedd5;color:#9a3412}
                     .mb-preview-box{border:1px dashed #cbd5e1;border-radius:8px;min-height:176px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden}.mb-preview-box img{max-width:100%;max-height:220px;object-fit:contain}.mb-preview-placeholder{color:#64748b;font-size:13px}.mb-asset-path{font-size:11px;color:#64748b;word-break:break-all}.mb-print-qrcode{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;font-weight:800}.table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.mb-actions{display:flex;flex-wrap:wrap;gap:6px}.mb-actions .btn{white-space:nowrap}.mb-icon-btn{width:31px;height:31px;display:inline-flex;align-items:center;justify-content:center;padding:0}.mb-icon-btn i{margin-right:0}.table-hover tbody tr.master-row-selected,.table-hover tbody tr.master-row-selected:hover{background:#dcfce7}
-                    .asset-card{width:100%;max-width:360px;margin:0 auto;background:#fff;border:1px solid #111827;color:#111827;font-family:Arial,Helvetica,sans-serif;text-align:center}.asset-card-header{border-bottom:1px solid #111827;padding:9px 10px}.asset-card-kicker{font-size:11px;font-weight:800;line-height:1.15}.asset-card-location{font-size:15px;font-weight:800;line-height:1.2;margin-top:3px}.asset-card-description{border-bottom:1px solid #111827;padding:9px 10px 11px}.asset-card-description-title{font-size:11px;font-weight:800;margin-bottom:4px}.asset-card-description-text{font-size:14px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.asset-card-meta{margin-top:6px;font-size:10px;font-weight:700;line-height:1.35;color:#6b7280}.asset-card-meta div{word-break:break-word}.asset-card-qr{display:flex;align-items:center;justify-content:center;min-height:178px;margin:11px 0 2px}.asset-card-qr img{width:172px;height:172px;object-fit:contain}.asset-card-qr-empty{width:172px;height:172px;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;padding:12px;color:#4b5563;font-size:12px;line-height:1.25}.asset-card-date{border-bottom:1px solid #111827;padding:8px 10px;font-size:12px;font-weight:800}.asset-card-signature-title{padding:7px 10px;border-bottom:1px solid #111827;font-size:12px;font-weight:800}.asset-card-signature{display:grid;grid-template-columns:1fr 1fr;min-height:82px}.asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:12px;font-weight:800}.asset-card-signature div+div{border-left:1px solid #111827}.asset-card-empty{min-height:300px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;padding:24px;font-weight:700}.no-print{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+                    .asset-card{width:100%;max-width:360px;margin:0 auto;background:#fff;border:1px solid #111827;color:#111827;font-family:Arial,Helvetica,sans-serif;text-align:center}.asset-card-header{padding:9px 10px 0}.asset-card-kicker{font-size:12px;font-weight:800;line-height:1.15}.asset-card-location{font-size:15px;font-weight:800;line-height:1.2;margin-top:3px}.asset-card-location:after{content:"";display:block;border-top:1px solid #111827;margin:2px -10px 0}.asset-card-description{border-bottom:1px solid #111827;padding:9px 10px 11px}.asset-card-description-title{font-size:12px;font-weight:800;margin-bottom:4px}.asset-card-description-text{font-size:15px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.asset-card-meta{margin-top:6px;font-size:11px;font-weight:700;line-height:1.35;color:#6b7280}.asset-card-meta div{word-break:break-word}.asset-card-qr{display:flex;align-items:center;justify-content:center;min-height:178px;margin:11px 0 2px}.asset-card-qr img{width:172px;height:172px;object-fit:contain}.asset-card-qr-empty{width:172px;height:172px;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;padding:12px;color:#4b5563;font-size:12px;line-height:1.25}.asset-card-date{border-bottom:1px solid #111827;padding:8px 10px;font-size:13px;font-weight:800}.asset-card-signature{display:grid;grid-template-columns:1fr 1fr;min-height:82px}.asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:13px;font-weight:800}.asset-card-signature div+div{border-left:1px solid #111827}.asset-card-empty{min-height:300px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;padding:24px;font-weight:700}.no-print{print-color-adjust:exact;-webkit-print-color-adjust:exact}
                     .qr-progress-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.qr-progress-meta span{border:1px solid #e1e7ef;border-radius:6px;padding:6px 10px;background:#f8fafc;font-size:12px;color:#334155;font-weight:700}.qr-progress-meta span.is-running{border-color:#99f6e4;background:#ecfdf5;color:#0f766e}.qr-action-row{display:flex;flex-wrap:wrap;gap:8px}.qr-failed-list{max-height:220px;overflow:auto;border:1px solid #e8edf3;border-radius:8px}.qr-failed-list table{margin-bottom:0}.progress{height:18px;border-radius:8px;background:#e5e7eb;overflow:hidden;position:relative}.progress-bar{font-size:11px;font-weight:800;transition:width .35s ease;background-size:18px 18px}.qr-progress-track.is-running:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:qrTrackSweep 1.05s linear infinite}.qr-progress-bar.is-running{background-image:linear-gradient(45deg,rgba(255,255,255,.25) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.25) 50%,rgba(255,255,255,.25) 75%,transparent 75%,transparent);animation:qrStripeMove .75s linear infinite}.qr-pulse{display:inline-flex;align-items:center;gap:6px}.qr-pulse:before{content:"";width:7px;height:7px;border-radius:999px;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.45);animation:qrPulse 1.1s ease-out infinite}@keyframes qrStripeMove{from{background-position:0 0}to{background-position:18px 0}}@keyframes qrTrackSweep{to{transform:translateX(100%)}}@keyframes qrPulse{70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
                     @media(max-width:768px){.mb-filter{grid-template-columns:1fr}.mb-panel-header{align-items:flex-start;flex-direction:column}.content-header h1{font-size:22px}.mb-stat-value{font-size:24px}}
                 </style>
@@ -71,6 +71,13 @@
                             <div class="mb-stat-label">QR Code Gagal</div>
                             <div class="mb-stat-value" id="qrFailedItem">0</div>
                             <div class="mb-stat-meta">Klik untuk filter FAILED</div>
+                        </button>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3 mb-3">
+                        <button type="button" class="mb-bulk-action mb-print-widget" id="btnPrintAssetPreview" disabled>
+                            <i class="fas fa-print"></i>
+                            <span class="mb-print-widget-title">Print Preview Asset</span>
+                            <span class="mb-print-widget-meta">F4, 10 kartu per kertas</span>
                         </button>
                     </div>
                 </div>
@@ -353,7 +360,6 @@ window.addEventListener('load', function () {
                     '<div class="asset-card-qr">' + qrHtml + '</div>' +
                 '</div>' +
                 '<div class="asset-card-date">INVENTORY DATE : ' + escapeHtml(displayValue(item.inventory_date)) + '</div>' +
-                '<div class="asset-card-signature-title">LOCATION</div>' +
                 '<div class="asset-card-signature">' +
                     '<div>Paraf 1</div>' +
                     '<div>Paraf 2</div>' +
@@ -374,6 +380,7 @@ window.addEventListener('load', function () {
             $('#qrPendingItem').text(formatNumber(res.pending || 0));
             $('#qrFailedItem').text(formatNumber(res.failed || 0));
             $('#btnRetryFailedQr').prop('disabled', isQrRunning || parseInt(res.failed || 0, 10) <= 0);
+            $('#btnPrintAssetPreview').prop('disabled', isQrRunning || parseInt(res.done || 0, 10) <= 0);
             if (showToast) {
                 toast('success', 'Status QR Code diperbarui');
             }
@@ -410,7 +417,7 @@ window.addEventListener('load', function () {
     }
 
     function setQrButtons(disabled) {
-        $('#btnGenerateQrBatch,#btnRetryFailedQr,#btnResetQrOpname,#btnRefreshQrStatus,#btnRefreshMasterBarang').prop('disabled', disabled);
+        $('#btnGenerateQrBatch,#btnRetryFailedQr,#btnResetQrOpname,#btnRefreshQrStatus,#btnRefreshMasterBarang,#btnPrintAssetPreview').prop('disabled', disabled);
         if (!disabled) {
             $('#btnGenerateQrBatch').html(qrButtonHtml.normal);
             $('#btnRetryFailedQr').html(qrButtonHtml.retry);
@@ -698,6 +705,14 @@ window.addEventListener('load', function () {
     $('#btnRefreshQrStatus').on('click', function () {
         loadSummary(true);
         loadFailedList();
+    });
+
+    $('#btnPrintAssetPreview').on('click', function () {
+        if (parseDisplayNumber($('#qrDoneItem').text()) <= 0) {
+            toast('warning', 'Belum ada QR Code siap print');
+            return;
+        }
+        window.open('<?= base_url('admin/stockopname/master_opname/print-preview-asset') ?>', '_blank', 'noopener');
     });
 
     $('#previewPrintQr').on('click', function () {

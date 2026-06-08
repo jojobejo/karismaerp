@@ -89,6 +89,7 @@ $route['admin/stockopname/master_opname/generate-qrcode'] = 'admin/C_Stockopname
 $route['admin/stockopname/master_opname/generate-qrcode-all'] = 'admin/C_Stockopname/ajax_generate_all_qrcode';
 $route['admin/stockopname/master_opname/generate-barcode'] = 'admin/C_Stockopname/ajax_generate_barcode';
 $route['admin/stockopname/master_opname/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset';
+$route['admin/stockopname/master_opname/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset';
 $route['admin/stockopname/master_opname/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode/$1';
 
 // Penilaian Lingkungan Kantor alias route

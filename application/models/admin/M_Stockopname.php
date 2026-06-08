@@ -1011,6 +1011,32 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
+    public function get_master_barang_print_assets()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $this->master_barang_select();
+        $this->master_barang_qrcode_filter('generated');
+        $this->db
+            ->order_by('nama_barang', 'ASC')
+            ->order_by('expired_date', 'ASC')
+            ->order_by('no_lot', 'ASC')
+            ->order_by('id', 'ASC');
+
+        $rows = $this->db->get()->result_array();
+        $printable = [];
+        foreach ($rows as $row) {
+            $qrcode = trim((string)($row['qrcode'] ?? ''));
+            if ($qrcode !== '' && is_file(FCPATH . $qrcode)) {
+                $printable[] = $row;
+            }
+        }
+
+        return $printable;
+    }
+
     public function find_master_barang_for_opname($scanValue)
     {
         $scanValue = trim((string)$scanValue);

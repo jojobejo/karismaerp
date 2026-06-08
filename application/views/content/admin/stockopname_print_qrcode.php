@@ -22,21 +22,21 @@ function so_print_e($value)
         body{margin:0;background:#eef2f7;color:#111827;font-family:Arial,Helvetica,sans-serif}
         .page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
         .asset-card{width:96mm;background:#fff;border:1px solid #111827;color:#111827;text-align:center;print-color-adjust:exact;-webkit-print-color-adjust:exact}
-        .asset-card-header{border-bottom:1px solid #111827;padding:3mm}
-        .asset-card-kicker{font-size:10pt;font-weight:800;line-height:1.15}
+        .asset-card-header{padding:3mm 3mm 0}
+        .asset-card-kicker{font-size:11pt;font-weight:800;line-height:1.15}
         .asset-card-location{font-size:13pt;font-weight:800;line-height:1.2;margin-top:1mm}
+        .asset-card-location:after{content:"";display:block;border-top:1px solid #111827;margin:2mm -3mm 0}
         .asset-card-description{border-bottom:1px solid #111827;padding:3mm 3mm 4mm}
-        .asset-card-description-title{font-size:10pt;font-weight:800;margin-bottom:1.5mm}
-        .asset-card-description-text{font-size:12pt;font-weight:800;line-height:1.25;min-height:12mm;display:flex;align-items:center;justify-content:center;word-break:break-word}
-        .asset-card-meta{margin-top:2mm;font-size:8pt;font-weight:700;line-height:1.35;color:#6b7280}
+        .asset-card-description-title{font-size:11pt;font-weight:800;margin-bottom:1.5mm}
+        .asset-card-description-text{font-size:13pt;font-weight:800;line-height:1.25;min-height:12mm;display:flex;align-items:center;justify-content:center;word-break:break-word}
+        .asset-card-meta{margin-top:2mm;font-size:9pt;font-weight:700;line-height:1.35;color:#6b7280}
         .asset-card-meta div{word-break:break-word}
         .asset-card-qr{display:flex;align-items:center;justify-content:center;min-height:58mm;margin:3mm 0 1mm}
         .asset-card-qr img{width:56mm;height:56mm;object-fit:contain}
         .asset-card-qr-empty{width:56mm;height:56mm;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;padding:4mm;color:#4b5563;font-size:10pt;line-height:1.25}
-        .asset-card-date{border-bottom:1px solid #111827;padding:2.5mm 3mm;font-size:10pt;font-weight:800}
-        .asset-card-signature-title{padding:2.2mm 3mm;border-bottom:1px solid #111827;font-size:10pt;font-weight:800}
+        .asset-card-date{border-bottom:1px solid #111827;padding:2.5mm 3mm;font-size:11pt;font-weight:800}
         .asset-card-signature{display:grid;grid-template-columns:1fr 1fr;min-height:24mm}
-        .asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:3mm;font-size:10pt;font-weight:800}
+        .asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:3mm;font-size:11pt;font-weight:800}
         .asset-card-signature div+div{border-left:1px solid #111827}
         @media print{
             body{background:#fff}
@@ -71,7 +71,6 @@ function so_print_e($value)
             </div>
 
             <div class="asset-card-date">INVENTORY DATE : <?= so_print_e($inventoryDate) ?></div>
-            <div class="asset-card-signature-title">LOCATION</div>
             <div class="asset-card-signature">
                 <div>Paraf 1</div>
                 <div>Paraf 2</div>
