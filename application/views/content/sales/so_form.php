@@ -499,6 +499,7 @@ function buatBaris(idx, d) {
     var hrg    = parseFloat(d.hrg_satuan  || 0);
     var pk     = parseFloat(d.hrg_pokok   || 0);
     var disc   = parseFloat(d.disc        || 0);
+    var hargaApproval = d.harga_approval_by || '';
     var akun   = d.kode_akun    || '';
     var beratG = parseFloat(d.berat_gram  || 0);
     var kubikM = parseFloat(d.kubikasi_m3 || 0);
@@ -597,6 +598,14 @@ function buatBaris(idx, d) {
     h += '<td>'
        + '<input type="number" step="0.01" min="0" name="hrg_satuan[]" id="hrg_'+idx+'"'
        + ' class="form-control form-control-sm '+hargaClass+'" value="'+(hrg||'')+'" required>'
+       + '<div id="hargaapproval_wrap_'+idx+'" class="mt-1" style="'+(hargaClass ? '' : 'display:none')+'">'
+       +   '<select name="harga_approval_by[]" id="hargaapproval_'+idx+'" class="form-control form-control-sm"'+(hargaClass ? ' required' : '')+'>'
+       +     '<option value="">-- Approval harga --</option>'
+       +     '<option value="direksi"'+(hargaApproval === 'direksi' ? ' selected' : '')+'>Direksi</option>'
+       +     '<option value="koor sc"'+(hargaApproval === 'koor sc' ? ' selected' : '')+'>Koor SC</option>'
+       +     '<option value="kadep keu & sc"'+(hargaApproval === 'kadep keu & sc' ? ' selected' : '')+'>Kadep Keu &amp; SC</option>'
+       +   '</select>'
+       + '</div>'
        + '<div id="hrgwarn_'+idx+'" class="mt-1"></div>'
        + '</td>';
 
@@ -718,6 +727,13 @@ function hitungBaris(idx) {
     var isNego = hrg>0 && pk>0 && Math.abs(hrg-pk)>0.001;
     var elH = document.getElementById('hrg_'+idx);
     if (elH) isNego ? elH.classList.add('text-danger') : elH.classList.remove('text-danger');
+    var approvalWrap = document.getElementById('hargaapproval_wrap_'+idx);
+    var approvalEl = document.getElementById('hargaapproval_'+idx);
+    if (approvalWrap) approvalWrap.style.display = isNego ? '' : 'none';
+    if (approvalEl) {
+        approvalEl.required = isNego;
+        if (!isNego) approvalEl.value = '';
+    }
 
     var qK   = (qBox*isi)+qSat;
     var sD   = hrg*qK*(1-disc/100);

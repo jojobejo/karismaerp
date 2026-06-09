@@ -630,6 +630,13 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $approval_errors = $this->_validate_harga_approval($details);
+        if (!empty($approval_errors)) {
+            $this->session->set_flashdata('error', implode('<br>', $approval_errors));
+            redirect('sales_order/create');
+            return;
+        }
+
         // Validasi stok
         $stock_errors = $this->M_SalesOrder->validasi_stok($details, $gudang_id);
         if (!empty($stock_errors)) {
@@ -847,6 +854,13 @@ class C_SalesOrder extends CI_Controller
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
+            redirect('sales_order/edit/' . $id_so);
+            return;
+        }
+
+        $approval_errors = $this->_validate_harga_approval($details);
+        if (!empty($approval_errors)) {
+            $this->session->set_flashdata('error', implode('<br>', $approval_errors));
             redirect('sales_order/edit/' . $id_so);
             return;
         }
@@ -1222,7 +1236,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // FAKTUR PER RUTE - confirmed dan belum masuk Delivery Order
+    // FAKTUR PER RUTE - faktur selesai DO dalam pengiriman hari ini
     // ================================================================
     public function faktur_rute()
     {
@@ -1230,12 +1244,12 @@ class C_SalesOrder extends CI_Controller
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
 
-        $routes = $this->M_SalesOrder->get_pending_faktur_rute_summary();
+        $routes = $this->M_SalesOrder->get_today_delivery_faktur_rute_summary();
         if ($selected_rute === '' && !empty($routes)) {
             $selected_rute = $routes[0]['kd_rute'];
         }
 
-        $fakturs = $this->M_SalesOrder->get_pending_faktur_by_rute($selected_rute);
+        $fakturs = $this->M_SalesOrder->get_today_delivery_faktur_by_rute($selected_rute);
 
         $total_tonase = 0;
         $total_kubikasi = 0;
@@ -1245,6 +1259,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         $data['page_title']       = 'KARISMA - Faktur per Rute';
+        $data['today']            = date('Y-m-d');
         $data['routes']           = $routes;
         $data['selected_rute']    = $selected_rute;
         $data['fakturs']          = $fakturs;
@@ -1587,12 +1602,18 @@ class C_SalesOrder extends CI_Controller
     {
         $details = [];
         if (empty($post['kd_barang']) || !is_array($post['kd_barang'])) return $details;
+        $allowed_harga_approval = ['direksi', 'koor sc', 'kadep keu & sc'];
 
         foreach ($post['kd_barang'] as $i => $kd) {
             if (empty($kd)) continue;
 
             $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
             $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
+            $is_ubah_harga = $hrg > 0 && $hrg_pk > 0 && abs($hrg - $hrg_pk) > 0.001;
+            $harga_approval_by = strtolower(trim((string)($post['harga_approval_by'][$i] ?? '')));
+            if (!$is_ubah_harga || !in_array($harga_approval_by, $allowed_harga_approval, true)) {
+                $harga_approval_by = '';
+            }
             $qty_box     = (float)($post['qty_box'][$i]      ?? 0);
             $qty_satuan  = (float)($post['qty_satuan'][$i]   ?? 0);
             $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
@@ -1619,6 +1640,7 @@ class C_SalesOrder extends CI_Controller
                 'subtotal_after_disc'  => $subtotal_after_disc,
                 'hrg_satuan'           => $hrg,
                 'hrg_pokok'            => $hrg_pk,
+                'harga_approval_by'     => $harga_approval_by,
                 'total_harga'          => $total_tax,
                 'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
                 'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
@@ -1626,6 +1648,20 @@ class C_SalesOrder extends CI_Controller
             ];
         }
         return $details;
+    }
+
+    private function _validate_harga_approval(array $details)
+    {
+        $errors = [];
+        foreach ($details as $d) {
+            $hrg = (float)($d['hrg_satuan'] ?? 0);
+            $hpp = (float)($d['hrg_pokok'] ?? 0);
+            $is_ubah_harga = $hrg > 0 && $hpp > 0 && abs($hrg - $hpp) > 0.001;
+            if ($is_ubah_harga && empty($d['harga_approval_by'])) {
+                $errors[] = ($d['nama_barang'] ?? 'Barang') . ': pilih approval perubahan harga.';
+            }
+        }
+        return $errors;
     }
 
     private function _format_detail_produk_log(array $details)

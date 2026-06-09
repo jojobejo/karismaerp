@@ -121,6 +121,14 @@ class M_SalesOrder extends CI_Model
         return $this->db->field_exists('qty_on_hand', 'tberp_stock_batch') ? 'qty_on_hand' : 'qty';
     }
 
+    private function _prepareSalesOrderDetailData(array $detail)
+    {
+        if (!$this->db->field_exists('harga_approval_by', 'tbso_sales_order_detail')) {
+            unset($detail['harga_approval_by']);
+        }
+        return $detail;
+    }
+
     private function _stockBatchIdForMovement($kd_barang, $exp_date, $no_lot, $gudang_id, $qty, $mode)
     {
         $qty_col = $this->_stockQtyColumn();
@@ -851,6 +859,7 @@ class M_SalesOrder extends CI_Model
             $d['no_so']          = $no_so;
             $d['qty_faktur']     = 0;   // belum ada faktur
             // qty_outstanding = generated column di DB, tidak perlu diisi
+            $d = $this->_prepareSalesOrderDetailData($d);
             $this->db->insert('tbso_sales_order_detail', $d);
 
             $reserved = $this->_reservasi_stok(
@@ -995,6 +1004,7 @@ class M_SalesOrder extends CI_Model
             $d['id_so']      = $id_so;
             $d['no_so']      = $no_so;
             $d['qty_faktur'] = 0;
+            $d = $this->_prepareSalesOrderDetailData($d);
             $this->db->insert('tbso_sales_order_detail', $d);
 
             $reserved = $this->_reservasi_stok(
@@ -1158,6 +1168,107 @@ class M_SalesOrder extends CI_Model
         }
 
         $sql .= " ORDER BY tanggal_faktur DESC, no_faktur DESC";
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    private function _today_delivery_faktur_rute_sql($routeFilter = false)
+    {
+        $whereRoute = $routeFilter ? " AND COALESCE(NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ? " : "";
+
+        return "
+            SELECT
+                f.id_faktur,
+                f.no_faktur,
+                f.no_so,
+                f.kd_customer,
+                COALESCE(f.customer_name, c.nama_customer) AS customer_name,
+                f.tanggal_faktur,
+                f.status,
+                h.kd_do,
+                h.tgl_pengiriman,
+                od_log.create_at AS tanggal_on_delivery,
+                h.status AS status_do,
+                so.id_so,
+                c.nama_kios,
+                c.alamat_kios,
+                c.regional,
+                c.kd_rute AS kd_rute_customer,
+                COALESCE(NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COUNT(DISTINCT fd.kd_barang) AS total_barang,
+                SUM(fd.qty) AS total_qty,
+                COALESCE(
+                    NULLIF(f.total_tonase, 0),
+                    ROUND(SUM(fd.qty * COALESCE(NULLIF(fd.berat_gram, 0), mb.berat, 0)) / 1000000, 6)
+                ) AS total_tonase,
+                COALESCE(
+                    NULLIF(f.total_kubikasi, 0),
+                    ROUND(SUM(fd.qty * COALESCE(NULLIF(fd.kubikasi_m3, 0), mb.kubikasi, 0)), 6)
+                ) AS total_kubikasi
+            FROM tbso_faktur_penjualan f
+            JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
+            JOIN (
+                SELECT DISTINCT kd_do, kd_faktur, kd_rute, kd_customer
+                FROM tb_detail_do
+            ) d ON d.kd_faktur = f.no_faktur
+            JOIN tb_do h ON h.kd_do = d.kd_do
+            JOIN (
+                SELECT kd_do, MAX(create_at) AS create_at
+                FROM tb_log_do
+                WHERE keterangan = 'REKAM ORDER - ON DELIVERY'
+                GROUP BY kd_do
+            ) od_log ON od_log.kd_do = h.kd_do
+            LEFT JOIN tbso_sales_order so ON so.id_so = f.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), c.kd_rute)
+            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            WHERE f.status = 'selesai_do'
+            AND DATE(od_log.create_at) = CURDATE()
+            AND h.status = 5
+            {$whereRoute}
+            GROUP BY
+                f.id_faktur, f.no_faktur, f.no_so, f.kd_customer,
+                f.customer_name, f.tanggal_faktur, f.status,
+                h.kd_do, h.tgl_pengiriman, od_log.create_at, h.status, so.id_so,
+                c.nama_customer, c.nama_kios, c.alamat_kios,
+                c.regional, c.kd_rute, so.kd_rute, d.kd_rute, h.regional, r.keterangan
+        ";
+    }
+
+    public function get_today_delivery_faktur_rute_summary()
+    {
+        $sql = "
+            SELECT
+                x.kd_rute,
+                COALESCE(MAX(NULLIF(x.nama_rute, '')), x.kd_rute) AS nama_rute,
+                COUNT(DISTINCT x.id_faktur) AS total_faktur,
+                ROUND(COALESCE(SUM(x.total_tonase), 0), 3) AS total_tonase,
+                ROUND(COALESCE(SUM(x.total_kubikasi), 0), 4) AS total_kubikasi
+            FROM (
+                " . $this->_today_delivery_faktur_rute_sql(false) . "
+            ) x
+            GROUP BY x.kd_rute
+            ORDER BY
+                COALESCE(SUM(x.total_tonase), 0) DESC,
+                COALESCE(SUM(x.total_kubikasi), 0) DESC,
+                COUNT(DISTINCT x.id_faktur) DESC,
+                x.kd_rute ASC
+        ";
+
+        return $this->db->query($sql)->result_array();
+    }
+
+    public function get_today_delivery_faktur_by_rute($kd_rute = '')
+    {
+        $kd_rute = trim((string)$kd_rute);
+        $params = [];
+        $sql = $this->_today_delivery_faktur_rute_sql($kd_rute !== '');
+
+        if ($kd_rute !== '') {
+            $params[] = $kd_rute;
+        }
+
+        $sql .= " ORDER BY tanggal_on_delivery DESC, kd_do DESC, tanggal_faktur DESC, no_faktur DESC";
         return $this->db->query($sql, $params)->result_array();
     }
 

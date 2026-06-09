@@ -393,7 +393,23 @@ $format_payment = function($value) {
                                                 <i class="fas fa-check text-success"></i> Lunas
                                             <?php endif; ?>
                                         </td>
-                                        <td class="text-right">Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?></td>
+                                        <td class="text-right">
+                                            Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?>
+                                            <?php if (!empty($d['harga_approval_by'])): ?>
+                                                <?php
+                                                    $harga_approval_labels = [
+                                                        'direksi' => 'Direksi',
+                                                        'koor sc' => 'Koor SC',
+                                                        'kadep keu & sc' => 'Kadep Keu & SC',
+                                                    ];
+                                                    $harga_approval_label = $harga_approval_labels[strtolower((string)$d['harga_approval_by'])]
+                                                        ?? $d['harga_approval_by'];
+                                                ?>
+                                                <br><small class="badge badge-warning">
+                                                    Approval: <?= htmlspecialchars($harga_approval_label) ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>

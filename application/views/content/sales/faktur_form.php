@@ -139,7 +139,6 @@ $faktur_back_url = $is_admin_sc_context
                                         <option value="cash">Cash</option>
                                         <option value="transfer">Transfer</option>
                                         <option value="bg">BG</option>
-                                        <option value="bonus">Bonus</option>
                                     </select>
                                 </div>
                                 <div class="form-group">

@@ -123,14 +123,14 @@
                 <div class="row mb-2">
                     <div class="col-sm-7">
                         <h1 class="m-0">
-                            <i class="fas fa-route mr-2"></i> Faktur per Rute
+                            <i class="fas fa-route mr-2"></i> Faktur Pengiriman Hari Ini per Rute
                         </h1>
                     </div>
                     <div class="col-sm-5">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                            <li class="breadcrumb-item active">Faktur per Rute</li>
+                            <li class="breadcrumb-item active">Faktur Pengiriman Hari Ini</li>
                         </ol>
                     </div>
                 </div>
@@ -150,6 +150,7 @@
         $pct_kub = $batas_kubikasi > 0 ? min(100, round(($total_kubikasi / $batas_kubikasi) * 100, 1)) : 0;
         $ton_bar = $total_tonase > $batas_tonase ? 'danger' : ($pct_ton >= 80 ? 'warning' : 'success');
         $kub_bar = $total_kubikasi > $batas_kubikasi ? 'danger' : ($pct_kub >= 80 ? 'warning' : 'info');
+        $today_label = !empty($today) ? date('d/m/Y', strtotime($today)) : date('d/m/Y');
         ?>
 
         <section class="content">
@@ -158,14 +159,9 @@
                     <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke SO
                     </a>
-                    <?php if (!empty($selected_rute) && strtoupper($selected_rute) !== 'TANPA_RUTE' && !empty($fakturs)): ?>
-                    <button type="button"
-                            class="btn btn-success btn-sm ml-1"
-                            id="btnConfirmRuteLoading"
-                            data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
-                        <i class="fas fa-check-circle mr-1"></i> Konfirmasi Siap Loading
-                    </button>
-                    <?php endif; ?>
+                    <span class="badge badge-info ml-1">
+                        <i class="fas fa-calendar-day mr-1"></i><?= $today_label ?>
+                    </span>
                 </div>
 
                 <div class="row">
@@ -274,7 +270,7 @@
                             <div class="card-header bg-primary text-white">
                                 <h3 class="card-title">
                                     <i class="fas fa-list mr-2"></i>
-                                    Faktur Confirmed Belum DO - <?= htmlspecialchars($selected_route_name) ?>
+                                    Faktur Selesai DO Hari Ini - <?= htmlspecialchars($selected_route_name) ?>
                                 </h3>
                             </div>
                             <div class="card-body">
@@ -282,10 +278,13 @@
                                     <thead class="thead-dark">
                                         <tr>
                                             <th>No Faktur</th>
+                                            <th>No DO</th>
                                             <th>No SO</th>
-                                            <th>Tanggal</th>
+                                            <th>Tanggal Faktur</th>
+                                            <th>On Delivery</th>
                                             <th>Customer</th>
-                                            <th>Rute SO</th>
+                                            <th>Rute DO</th>
+                                            <th class="text-center">Status DO</th>
                                             <th class="text-center">Barang</th>
                                             <th class="text-right">Qty</th>
                                             <th class="text-right">Tonase</th>
@@ -296,15 +295,23 @@
                                     <tbody>
                                         <?php if (empty($fakturs)): ?>
                                             <tr>
-                                                <td colspan="10" class="text-center text-muted py-4">
-                                                    Tidak ada faktur untuk rute ini
+                                                <td colspan="13" class="text-center text-muted py-4">
+                                                    Tidak ada faktur selesai DO dalam pengiriman hari ini untuk rute ini
                                                 </td>
                                             </tr>
                                         <?php else: ?>
                                             <?php foreach ($fakturs as $f): ?>
+                                                <?php
+                                                $status_do = (string)($f['status_do'] ?? '');
+                                                $status_do_label = $status_do === '5' ? 'On Delivery' : ($status_do === '3' ? 'Proses DO' : $status_do);
+                                                $status_do_badge = $status_do === '5' ? 'success' : ($status_do === '3' ? 'info' : 'secondary');
+                                                ?>
                                                 <tr>
                                                     <td class="font-weight-bold">
                                                         <?= htmlspecialchars($f['no_faktur']) ?>
+                                                    </td>
+                                                    <td>
+                                                        <?= htmlspecialchars($f['kd_do'] ?? '-') ?>
                                                     </td>
                                                     <td>
                                                         <?php if (!empty($f['id_so'])): ?>
@@ -318,6 +325,12 @@
                                                     <td class="text-nowrap">
                                                         <?= !empty($f['tanggal_faktur']) ? date('d/m/Y', strtotime($f['tanggal_faktur'])) : '-' ?>
                                                     </td>
+                                                    <td class="text-nowrap">
+                                                        <?= !empty($f['tanggal_on_delivery']) ? date('d/m/Y H:i', strtotime($f['tanggal_on_delivery'])) : '-' ?>
+                                                        <?php if (!empty($f['tgl_pengiriman'])): ?>
+                                                            <br><small class="text-muted">Tgl kirim: <?= date('d/m/Y', strtotime($f['tgl_pengiriman'])) ?></small>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td>
                                                         <?= htmlspecialchars($f['customer_name'] ?: '-') ?>
                                                         <?php if (!empty($f['nama_kios'])): ?>
@@ -329,6 +342,9 @@
                                                         <?php if (!empty($f['nama_rute']) && $f['nama_rute'] !== $f['kd_rute']): ?>
                                                             <br><small class="text-muted"><?= htmlspecialchars($f['nama_rute']) ?></small>
                                                         <?php endif; ?>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge badge-<?= $status_do_badge ?>"><?= htmlspecialchars($status_do_label) ?></span>
                                                     </td>
                                                     <td class="text-center"><?= number_format((int)$f['total_barang']) ?></td>
                                                     <td class="text-right"><?= number_format((float)$f['total_qty'], 2) ?></td>
@@ -363,46 +379,11 @@
 
 <script>
 $(document).ready(function () {
-    function salesToast(type, message) {
-        if (window.Swal) {
-            Swal.fire({ toast:true, position:'top-end', icon:type || 'info', title:message || '', timer:2600, showConfirmButton:false });
-        } else {
-            alert(message || '');
-        }
-    }
-
-    function salesConfirm(options) {
-        options = options || {};
-        if (window.Swal) {
-            return Swal.fire({
-                title: options.title || 'Konfirmasi',
-                text: options.text || 'Lanjutkan proses ini?',
-                icon: options.icon || 'question',
-                showCancelButton: true,
-                confirmButtonText: options.confirmText || 'Ya',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: options.confirmColor || '#28a745'
-            }).then(function(result){ return result.isConfirmed; });
-        }
-        return Promise.resolve(confirm((options.title ? options.title + '\n' : '') + (options.text || 'Lanjutkan proses ini?')));
-    }
-
-    function setButtonLoading(button, loading, text) {
-        if (!button) return;
-        var $btn = $(button);
-        if (loading) {
-            if (!$btn.data('original-html')) $btn.data('original-html', $btn.html());
-            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>' + (text || 'Memproses'));
-        } else {
-            $btn.prop('disabled', false).html($btn.data('original-html'));
-        }
-    }
-
     $('#tabelFakturRute').DataTable({
         responsive: true,
         autoWidth: false,
         pageLength: 25,
-        order: [[2, 'desc']],
+        order: [[4, 'desc']],
         columnDefs: [
             { orderable: false, targets: -1 }
         ],
@@ -414,64 +395,6 @@ $(document).ready(function () {
             emptyTable: "Tidak ada faktur",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
-    });
-
-    $('#btnConfirmRuteLoading').on('click', function () {
-        var rute = $(this).data('rute');
-        if (!rute) return;
-
-        var btn = this;
-        var askNote;
-        if (window.Swal) {
-            askNote = Swal.fire({
-                title: 'Siap Loading Rute ' + rute + '?',
-                text: 'Delivery Order Siap Loading akan dibuat dan faktur pindah ke Proses DO.',
-                input: 'textarea',
-                inputLabel: 'Catatan Sales',
-                inputPlaceholder: 'Catatan untuk logistik (opsional)',
-                inputAttributes: { rows: 3 },
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, siap loading',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#16a34a'
-            }).then(function(result) {
-                return result.isConfirmed ? { ok: true, note: result.value || '' } : { ok: false };
-            });
-        } else {
-            askNote = salesConfirm({
-                title: 'Konfirmasi Siap Loading?',
-                text: 'Rute ' + rute + ' akan dibuatkan Delivery Order Siap Loading.',
-                icon: 'question',
-                confirmText: 'Ya, siap loading',
-                confirmColor: '#16a34a'
-            }).then(function(ok) {
-                return { ok: ok, note: ok ? (prompt('Catatan Sales untuk logistik (opsional):', '') || '') : '' };
-            });
-        }
-
-        askNote.then(function(result) {
-            if (!result.ok) return;
-            setButtonLoading(btn, true, 'Konfirmasi');
-            $.ajax({
-                url: '<?= base_url("sales_order/confirm_rute_loading") ?>',
-                type: 'POST',
-                dataType: 'json',
-                data: { kd_rute: rute, note: result.note || '' },
-                success: function (res) {
-                    salesToast(res.msg === 'success' ? 'success' : 'error', res.message || 'Selesai');
-                    if (res.msg === 'success') {
-                        setTimeout(function(){ window.location.reload(); }, 800);
-                    }
-                },
-                error: function () {
-                    salesToast('error', 'Terjadi kesalahan koneksi.');
-                },
-                complete: function () {
-                    setButtonLoading(btn, false);
-                }
-            });
-        });
     });
 });
 </script>
