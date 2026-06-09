@@ -1,8 +1,17 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <?php
-$is_bg_payment = strtolower((string)($faktur['cara_pembayaran'] ?? '')) === 'bg';
 $pending_bg = $pending_bg ?? null;
-$is_bg_cair_mode = $is_bg_payment && !empty($pending_bg);
+$is_bg_cair_mode = !empty($pending_bg);
+$metode_options = [
+    'cash' => 'Cash',
+    'transfer' => 'Transfer',
+    'bg' => 'BG',
+    'bonus' => 'Bonus',
+];
+$default_metode = strtolower((string)($faktur['cara_pembayaran'] ?? ''));
+if (!isset($metode_options[$default_metode])) {
+    $default_metode = 'cash';
+}
 ?>
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -168,6 +177,20 @@ $is_bg_cair_mode = $is_bg_payment && !empty($pending_bg);
                                         </div>
                                     <?php endif; ?>
                                     <div class="form-group">
+                                        <label>Metode Pembayaran <span class="text-danger">*</span></label>
+                                        <?php if ($is_bg_cair_mode): ?>
+                                            <input type="text" class="form-control" value="BG" readonly>
+                                        <?php else: ?>
+                                            <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required>
+                                                <?php foreach ($metode_options as $value => $label): ?>
+                                                    <option value="<?= htmlspecialchars($value) ?>" <?= $default_metode === $value ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($label) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="form-group">
                                         <label>Tanggal Pembayaran <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal_pembayaran" class="form-control"
                                                value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_pembayaran']) : date('Y-m-d') ?>"
@@ -183,15 +206,13 @@ $is_bg_cair_mode = $is_bg_payment && !empty($pending_bg);
                                             <small class="text-muted">Maksimal Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></small>
                                         <?php endif; ?>
                                     </div>
-                                    <?php if ($is_bg_payment): ?>
-                                    <div class="form-group">
+                                    <div class="form-group" id="tanggal_bg_cair_group" style="<?= (!$is_bg_cair_mode && $default_metode !== 'bg') ? 'display:none' : '' ?>">
                                         <label>Tanggal BG Cair <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal_bg_cair" class="form-control"
                                                value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_bg_cair']) : date('Y-m-d') ?>"
-                                               <?= $is_bg_cair_mode ? 'readonly' : 'required' ?>>
+                                               <?= $is_bg_cair_mode || $default_metode === 'bg' ? ($is_bg_cair_mode ? 'readonly' : 'required') : '' ?>>
                                         <small class="text-muted">Pembayaran BG belum mengurangi tagihan sampai tombol BG Sudah Cair diklik.</small>
                                     </div>
-                                    <?php endif; ?>
                                     <div class="form-group mb-0">
                                         <label>Keterangan</label>
                                         <textarea name="keterangan" class="form-control" rows="3" placeholder="Nomor referensi / catatan pembayaran" <?= $is_bg_cair_mode ? 'readonly' : '' ?>><?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['keterangan'] ?? '') : '' ?></textarea>
@@ -216,3 +237,20 @@ $is_bg_cair_mode = $is_bg_payment && !empty($pending_bg);
         All rights reserved.
     </footer>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var metode = document.getElementById('metode_pembayaran');
+    var bgGroup = document.getElementById('tanggal_bg_cair_group');
+    if (!metode || !bgGroup) return;
+
+    var bgDate = bgGroup.querySelector('input[name="tanggal_bg_cair"]');
+    function toggleBgDate() {
+        var isBg = metode.value === 'bg';
+        bgGroup.style.display = isBg ? '' : 'none';
+        if (bgDate) bgDate.required = isBg;
+    }
+
+    metode.addEventListener('change', toggleBgDate);
+    toggleBgDate();
+});
+</script>

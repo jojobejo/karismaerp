@@ -65,9 +65,7 @@ class C_pembayaran extends CI_Controller
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN FAKTUR';
         $data['faktur'] = $faktur;
         $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
-        $data['pending_bg'] = strtolower((string)($faktur['cara_pembayaran'] ?? '')) === 'bg'
-            ? $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur'])
-            : null;
+        $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
@@ -80,6 +78,7 @@ class C_pembayaran extends CI_Controller
 
         $this->form_validation->set_rules('tanggal_pembayaran', 'Tanggal Pembayaran', 'required');
         $this->form_validation->set_rules('jumlah_pembayaran', 'Jumlah Pembayaran', 'required');
+        $this->form_validation->set_rules('metode_pembayaran', 'Metode Pembayaran', 'required');
 
         if (!$this->form_validation->run()) {
             $this->session->set_flashdata('error', validation_errors('', '<br>'));
@@ -88,7 +87,11 @@ class C_pembayaran extends CI_Controller
 
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
-        $metode_pembayaran = strtolower(trim((string)($faktur['cara_pembayaran'] ?? '')));
+        $metode_pembayaran = strtolower(trim((string)$this->input->post('metode_pembayaran', true)));
+        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg', 'bonus'], true)) {
+            $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
+            redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+        }
         $tanggal_bg_cair = $this->input->post('tanggal_bg_cair', true);
         $keterangan = trim((string)$this->input->post('keterangan', true));
 
