@@ -77,6 +77,7 @@
                     .om-log-icon{width:34px;height:34px;border-radius:8px;background:#eef6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;flex:0 0 34px}
                     .om-log-title{font-weight:800;color:#1f2937;font-size:13px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.progress{height:8px;border-radius:99px}
+                    .om-action-btn{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}.om-action-btn i{margin-right:0}
                     @media(min-width:992px){.om-log{max-height:610px}}
                     @media(max-width:992px){.om-result-grid{grid-template-columns:1fr}}
                     @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
@@ -287,6 +288,14 @@ $(function () {
         return '<span class="om-code">' + escapeHtml(value) + '</span>';
     }
 
+    function detailInputButton(value) {
+        var kodeBarang = value || '';
+        var url = '<?= base_url('admin/stockopname/detail_input_opname') ?>?kode_barang=' + encodeURIComponent(kodeBarang);
+        return '<a href="' + url + '" class="btn btn-outline-primary btn-sm om-action-btn" title="Detail input opname">' +
+            '<i class="fas fa-eye"></i>' +
+        '</a>';
+    }
+
     var compareAll = $('#tableCompareAll').DataTable({
         processing: true,
         serverSide: true,
@@ -305,7 +314,7 @@ $(function () {
             {data: 'qty_tim_1', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
             {data: 'qty_tim_2', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
             {data: 'status_opname', orderable: false, render: statusBadge},
-            {data: 'kode_barang', orderable: false, render: codeBadge}
+            {data: 'kode_barang', className: 'text-center', orderable: false, searchable: false, render: detailInputButton}
         ]
     });
 

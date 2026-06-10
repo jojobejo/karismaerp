@@ -208,6 +208,66 @@ class C_Stockopname extends CI_Controller
         $this->raw_json($this->stockopname->monitoring_compare_lot_datatable($this->post()));
     }
 
+    public function detail_input_opname($kodeBarang = '')
+    {
+        $kodeBarang = $kodeBarang ?: $this->input->get('kode_barang', true);
+        $kodeBarang = rawurldecode(trim((string)$kodeBarang));
+        if ($kodeBarang === '') {
+            show_404();
+        }
+
+        $data['page_title'] = 'KARISMA ERP - Detail Input Opname';
+        $data['kode_barang'] = $kodeBarang;
+        $data['compare'] = $this->stockopname->monitoring_compare_all_detail($kodeBarang);
+        $data['master_items'] = $this->stockopname->lot_compare_by_kode_barang($kodeBarang);
+        $data['input_rows'] = $this->stockopname->input_opname_by_kode_barang($kodeBarang);
+        $data['edit_logs'] = $this->stockopname->opname_edit_logs_by_kode_barang($kodeBarang);
+
+        if (empty($data['compare']) && empty($data['master_items']) && empty($data['input_rows'])) {
+            show_error('Data input opname untuk kode barang ' . html_escape($kodeBarang) . ' tidak ditemukan.', 404, 'Data Tidak Ditemukan');
+        }
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_detail_input_opname.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_update_input_opname()
+    {
+        $input = $this->post();
+        $id = $input['id'] ?? '';
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+
+        if (!ctype_digit((string)$id) || (int)$id <= 0) {
+            return $this->json(false, 'ID input opname tidak valid.');
+        }
+
+        if ($kodeBarang === '') {
+            return $this->json(false, 'Kode barang tidak valid.');
+        }
+
+        $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
+        $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
+        foreach (['Qty box' => $qtyBox, 'Qty pcs' => $qtyPcs] as $label => $value) {
+            if ($value === '' || !ctype_digit((string)$value)) {
+                return $this->json(false, $label . ' harus berupa angka bulat 0 atau lebih.');
+            }
+        }
+
+        $payload = [
+            'qty_box' => (int)$qtyBox,
+            'qty_pcs' => (int)$qtyPcs,
+        ];
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $updated = $this->stockopname->update_input_opname((int)$id, $kodeBarang, $payload, $actor);
+        if (!$updated['status']) {
+            return $this->json(false, $updated['message'] ?? 'Gagal update data input opname.');
+        }
+
+        $this->json(true, 'Data input opname berhasil diperbarui.', $updated['data'] ?? []);
+    }
+
     public function widgets()
     {
         $summary = $this->stockopname->summary();
@@ -386,7 +446,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->stockopname->ensure_qrcode_columns();
-        $row = $this->stockopname->get_master_barang_by_id((int)$id);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
         if (!$row) {
             return $this->json(false, 'Data barang tidak ditemukan.');
         }
@@ -719,7 +779,7 @@ class C_Stockopname extends CI_Controller
         } else {
             $this->stockopname->ensure_master_code_columns();
         }
-        $row = $this->stockopname->get_master_barang_by_id((int)$id);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
         if (!$row) {
             return $this->json(false, 'Data barang tidak ditemukan.');
         }
@@ -782,7 +842,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->stockopname->ensure_master_code_columns();
-        $row = $this->stockopname->get_master_barang_by_id((int)$id);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
         if (!$row) {
             return $this->json(false, 'Data tidak ditemukan');
         }
@@ -810,7 +870,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->stockopname->ensure_master_code_columns();
-        $row = $this->stockopname->get_master_barang_by_id((int)$id);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
         if (!$row) {
             show_error('Data barang tidak ditemukan.', 404, 'Data Tidak Ditemukan');
         }

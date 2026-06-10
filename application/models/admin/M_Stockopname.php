@@ -749,6 +749,296 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
+    public function monitoring_compare_all_detail($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if (!$this->ready() || $kodeBarang === '') {
+            return null;
+        }
+
+        return $this->db
+            ->query(
+                "SELECT * FROM ({$this->monitoring_compare_all_base()}) x WHERE kode_barang = ? LIMIT 1",
+                [$kodeBarang]
+            )
+            ->row_array();
+    }
+
+    public function lot_compare_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if (!$this->ready() || $kodeBarang === '') {
+            return $this->master_items_by_kode_barang($kodeBarang);
+        }
+
+        return $this->db
+            ->query(
+                "
+                SELECT
+                    x.*,
+                    (COALESCE(x.qty_tim_1, 0) - COALESCE(x.qty_buku, 0)) AS selisih_tim_1,
+                    (COALESCE(x.qty_tim_2, 0) - COALESCE(x.qty_buku, 0)) AS selisih_tim_2
+                FROM ({$this->monitoring_compare_lot_base()}) x
+                WHERE x.kode_barang = ?
+                ORDER BY x.expired_date ASC, x.no_lot ASC
+                ",
+                [$kodeBarang]
+            )
+            ->result_array();
+    }
+
+    public function master_items_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if (!$this->db->table_exists($this->masterTable) || $kodeBarang === '') {
+            return [];
+        }
+
+        $noLotColumn = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
+
+        return $this->db
+            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn},qty,qty_pcs,qty_box", false)
+            ->from($this->masterTable)
+            ->where('kode_barang', $kodeBarang)
+            ->order_by('expired_date', 'ASC')
+            ->order_by('no_lot', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function input_opname_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if (!$this->db->table_exists($this->opnameTable) || $kodeBarang === '') {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $sourceId = $this->db->field_exists('source_id', $this->opnameTable) ? 'source_id' : 'NULL AS source_id';
+        $noLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
+        $timOpname = $this->db->field_exists('tim_opname', $this->opnameTable) ? 'tim_opname' : '0 AS tim_opname';
+        $scanCode = $this->db->field_exists('scan_code', $this->opnameTable) ? 'scan_code' : 'NULL AS scan_code';
+        $updatedAt = $this->db->field_exists('updated_at', $this->opnameTable) ? 'updated_at' : 'NULL AS updated_at';
+
+        $rows = $this->db
+            ->select("id,{$sourceId},kode_barang,nama_barang,expired_date,{$noLot},qty,qty_pcs,qty_box,input_by,input_at,wilayah,{$timOpname},{$scanCode},{$createdColumn} AS created_at,{$updatedAt}", false)
+            ->from($this->opnameTable)
+            ->where('kode_barang', $kodeBarang)
+            ->order_by($createdColumn, 'DESC')
+            ->order_by('id', 'DESC')
+            ->get()
+            ->result_array();
+
+        foreach ($rows as &$row) {
+            $row['dimensi'] = $this->opname_dimensi_from_row($row);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function input_opname_row_by_id($id)
+    {
+        if (!$this->db->table_exists($this->opnameTable)) {
+            return null;
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $sourceId = $this->db->field_exists('source_id', $this->opnameTable) ? 'source_id' : 'NULL AS source_id';
+        $noLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
+        $timOpname = $this->db->field_exists('tim_opname', $this->opnameTable) ? 'tim_opname' : '0 AS tim_opname';
+        $scanCode = $this->db->field_exists('scan_code', $this->opnameTable) ? 'scan_code' : 'NULL AS scan_code';
+        $updatedAt = $this->db->field_exists('updated_at', $this->opnameTable) ? 'updated_at' : 'NULL AS updated_at';
+
+        return $this->db
+            ->select("id,{$sourceId},kode_barang,nama_barang,expired_date,{$noLot},qty,qty_pcs,qty_box,input_by,input_at,wilayah,{$timOpname},{$scanCode},{$createdColumn} AS created_at,{$updatedAt}", false)
+            ->from($this->opnameTable)
+            ->where('id', (int)$id)
+            ->limit(1)
+            ->get()
+            ->row_array();
+    }
+
+    private function ensure_opname_log_table()
+    {
+        if ($this->db->table_exists('stockopname_opname_log')) {
+            return true;
+        }
+
+        return $this->db->query("
+            CREATE TABLE IF NOT EXISTS `stockopname_opname_log` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `opname_id` INT(11) NOT NULL,
+                `kode_barang` VARCHAR(50) NOT NULL,
+                `action` VARCHAR(30) NOT NULL DEFAULT 'UPDATE',
+                `changed_fields` TEXT NULL,
+                `old_data` LONGTEXT NULL,
+                `new_data` LONGTEXT NULL,
+                `changed_by` VARCHAR(100) NOT NULL,
+                `changed_at` DATETIME NOT NULL,
+                `ip_address` VARCHAR(45) NULL,
+                `user_agent` VARCHAR(255) NULL,
+                PRIMARY KEY (`id`),
+                KEY `idx_stockopname_opname_log_barang` (`kode_barang`),
+                KEY `idx_stockopname_opname_log_opname` (`opname_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    private function normalize_opname_snapshot($row)
+    {
+        return [
+            'expired_date' => (string)($row['expired_date'] ?? ''),
+            'no_lot' => (string)($row['no_lot'] ?? '-'),
+            'qty_box' => (int)($row['qty_box'] ?? 0),
+            'qty_pcs' => (int)($row['qty_pcs'] ?? 0),
+            'qty' => (int)($row['qty'] ?? 0),
+            'wilayah' => (string)($row['wilayah'] ?? ''),
+        ];
+    }
+
+    private function opname_dimensi_from_row($row)
+    {
+        $sourceId = (int)($row['source_id'] ?? 0);
+        if ($sourceId > 0 && $this->db->table_exists($this->masterTable)) {
+            $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
+                ? 'COALESCE(dimensi, 0) AS dimensi'
+                : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
+            $master = $this->db
+                ->select($dimensi, false)
+                ->from($this->masterTable)
+                ->where('id', $sourceId)
+                ->limit(1)
+                ->get()
+                ->row_array();
+            if ((int)($master['dimensi'] ?? 0) > 0) {
+                return (int)$master['dimensi'];
+            }
+        }
+
+        $qtyBox = (int)($row['qty_box'] ?? 0);
+        if ($qtyBox <= 0) {
+            return 0;
+        }
+
+        return max(0, (int)floor(((int)($row['qty'] ?? 0) - (int)($row['qty_pcs'] ?? 0)) / $qtyBox));
+    }
+
+    private function insert_opname_edit_log($oldRow, $newRow, $changedFields, $actor)
+    {
+        if (!$this->ensure_opname_log_table()) {
+            return false;
+        }
+
+        return $this->db->insert('stockopname_opname_log', [
+            'opname_id' => (int)($oldRow['id'] ?? 0),
+            'kode_barang' => (string)($oldRow['kode_barang'] ?? $newRow['kode_barang'] ?? ''),
+            'action' => 'UPDATE',
+            'changed_fields' => json_encode(array_values($changedFields), JSON_UNESCAPED_UNICODE),
+            'old_data' => json_encode($this->normalize_opname_snapshot($oldRow), JSON_UNESCAPED_UNICODE),
+            'new_data' => json_encode($this->normalize_opname_snapshot($newRow), JSON_UNESCAPED_UNICODE),
+            'changed_by' => (string)$actor,
+            'changed_at' => date('Y-m-d H:i:s'),
+            'ip_address' => $this->input->ip_address(),
+            'user_agent' => substr((string)$this->input->user_agent(), 0, 255),
+        ]);
+    }
+
+    public function update_input_opname($id, $kodeBarang, $payload, $actor)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        $oldRow = $this->input_opname_row_by_id($id);
+        if (!$oldRow || (string)($oldRow['kode_barang'] ?? '') !== $kodeBarang) {
+            return [
+                'status' => false,
+                'message' => 'Data input opname tidak ditemukan.',
+            ];
+        }
+
+        $before = $this->normalize_opname_snapshot($oldRow);
+        $dimensi = $this->opname_dimensi_from_row($oldRow);
+        $after = [
+            'expired_date' => $before['expired_date'],
+            'no_lot' => $before['no_lot'],
+            'qty_box' => (int)($payload['qty_box'] ?? $before['qty_box']),
+            'qty_pcs' => (int)($payload['qty_pcs'] ?? $before['qty_pcs']),
+            'qty' => ((int)($payload['qty_box'] ?? $before['qty_box']) * $dimensi) + (int)($payload['qty_pcs'] ?? $before['qty_pcs']),
+            'wilayah' => $before['wilayah'],
+        ];
+
+        $changedFields = [];
+        foreach ($after as $field => $value) {
+            if ((string)$before[$field] !== (string)$value) {
+                $changedFields[] = $field;
+            }
+        }
+
+        if (empty($changedFields)) {
+            return [
+                'status' => false,
+                'message' => 'Tidak ada perubahan data untuk disimpan.',
+            ];
+        }
+
+        if (!$this->ensure_opname_log_table()) {
+            return [
+                'status' => false,
+                'message' => 'Tabel log perubahan input opname tidak dapat disiapkan.',
+            ];
+        }
+
+        $update = [
+            'qty_box' => $after['qty_box'],
+            'qty_pcs' => $after['qty_pcs'],
+            'qty' => $after['qty'],
+        ];
+
+        if ($this->db->field_exists('updated_at', $this->opnameTable)) {
+            $update['updated_at'] = date('Y-m-d H:i:s');
+        }
+
+        $this->db->trans_start();
+        $this->db
+            ->where('id', (int)$id)
+            ->where('kode_barang', $kodeBarang)
+            ->update($this->opnameTable, $update);
+        $newRow = $this->input_opname_row_by_id($id);
+        $this->insert_opname_edit_log($oldRow, $newRow ?: array_merge($oldRow, $after), $changedFields, $actor);
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return [
+                'status' => false,
+                'message' => 'Gagal menyimpan perubahan input opname.',
+            ];
+        }
+
+        return [
+            'status' => true,
+            'data' => [
+                'row' => $newRow,
+                'changed_fields' => $changedFields,
+            ],
+        ];
+    }
+
+    public function opname_edit_logs_by_kode_barang($kodeBarang, $limit = 20)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->ensure_opname_log_table()) {
+            return [];
+        }
+
+        return $this->db
+            ->from('stockopname_opname_log')
+            ->where('kode_barang', $kodeBarang)
+            ->order_by('changed_at', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
+    }
+
     private function percentage_result($match, $notMatch)
     {
         $match = (int)$match;
@@ -851,7 +1141,7 @@ class M_Stockopname extends CI_Model
         }
 
         $row = $this->db
-            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} GROUP BY nama_barang, expired_date, no_lot) grouped_master")
+            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} WHERE COALESCE(qty, 0) > 0 GROUP BY nama_barang, expired_date, no_lot) grouped_master")
             ->row_array();
 
         return (int)($row['total'] ?? 0);
@@ -882,8 +1172,14 @@ class M_Stockopname extends CI_Model
         }
 
         $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
         $this->master_barang_qrcode_filter($status);
         return (int)$this->db->count_all_results();
+    }
+
+    private function master_barang_positive_qty_filter()
+    {
+        $this->db->where('COALESCE(qty, 0) > 0', null, false);
     }
 
     private function master_barang_select()
@@ -989,6 +1285,7 @@ class M_Stockopname extends CI_Model
     private function count_filtered_master_barang($search, $qrcodeStatus = '')
     {
         $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
         $this->master_barang_search($search);
         $this->master_barang_qrcode_filter($qrcodeStatus);
         return (int)$this->db->count_all_results();
@@ -1024,6 +1321,7 @@ class M_Stockopname extends CI_Model
         $orderDir = strtolower((string)($post['order'][0]['dir'] ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
 
         $this->master_barang_select();
+        $this->master_barang_positive_qty_filter();
         $this->master_barang_search($search);
         $this->master_barang_qrcode_filter($qrcodeStatus);
         $this->db->order_by($orderColumn, $orderDir, false);
@@ -1053,9 +1351,13 @@ class M_Stockopname extends CI_Model
         return $this->get_master_barang_datatable($post);
     }
 
-    public function get_master_barang_by_id($id)
+    public function get_master_barang_by_id($id, $positiveQtyOnly = false)
     {
         $this->master_barang_select();
+        if ($positiveQtyOnly) {
+            $this->master_barang_positive_qty_filter();
+        }
+
         return $this->db
             ->where('id', (int)$id)
             ->limit(1)
@@ -1070,6 +1372,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->master_barang_select();
+        $this->master_barang_positive_qty_filter();
         return $this->db
             ->order_by('id', 'ASC')
             ->get()
@@ -1083,6 +1386,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->master_barang_select();
+        $this->master_barang_positive_qty_filter();
         $this->master_barang_qrcode_filter('generated');
         $this->db
             ->order_by('nama_barang', 'ASC')
@@ -1231,7 +1535,7 @@ class M_Stockopname extends CI_Model
         }
 
         if (!$this->db->field_exists('qrcode_status', $this->masterTable)) {
-            $total = (int)$this->db->count_all($this->masterTable);
+            $total = $this->qrcode_total_count();
             return [
                 'total' => $total,
                 'done' => 0,
@@ -1247,6 +1551,7 @@ class M_Stockopname extends CI_Model
                 SUM(CASE WHEN qrcode_status = 'FAILED' OR qrcode_retry_flag = 1 THEN 1 ELSE 0 END) AS failed,
                 SUM(CASE WHEN qrcode_status IS NULL OR qrcode_status IN ('PENDING','PROCESS') THEN 1 ELSE 0 END) AS pending
             FROM {$this->masterTable}
+            WHERE COALESCE(qty, 0) > 0
         ";
         $row = $this->db->query($sql)->row_array();
 
@@ -1260,7 +1565,13 @@ class M_Stockopname extends CI_Model
 
     public function qrcode_total_count()
     {
-        return $this->db->table_exists($this->masterTable) ? (int)$this->db->count_all($this->masterTable) : 0;
+        if (!$this->db->table_exists($this->masterTable)) {
+            return 0;
+        }
+
+        $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
+        return (int)$this->db->count_all_results();
     }
 
     public function qrcode_done_count()
@@ -1269,10 +1580,10 @@ class M_Stockopname extends CI_Model
             return 0;
         }
 
-        return (int)$this->db
-            ->where('qrcode_status', 'DONE')
-            ->from($this->masterTable)
-            ->count_all_results();
+        $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
+        $this->db->where('qrcode_status', 'DONE');
+        return (int)$this->db->count_all_results();
     }
 
     public function qrcode_pending_count()
@@ -1286,6 +1597,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
         $this->db->group_start();
         $this->db->where('qrcode_status', 'PENDING');
         $this->db->or_where('qrcode_status', 'PROCESS');
@@ -1301,6 +1613,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->db->from($this->masterTable);
+        $this->master_barang_positive_qty_filter();
         $this->db->group_start();
         $this->db->where('qrcode_status', 'FAILED');
         $this->db->or_where('qrcode_retry_flag', 1);
@@ -1315,6 +1628,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->master_barang_select();
+        $this->master_barang_positive_qty_filter();
         if ($mode === 'retry') {
             $this->db->where('qrcode_status', 'FAILED');
             $this->db->where('qrcode_retry_flag', 1);
