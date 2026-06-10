@@ -374,6 +374,8 @@ class M_Stockopname extends CI_Model
                 MAX(nama_barang) AS nama_barang,
                 SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
                 SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
                 GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
                 GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
                 MAX({$createdColumn}) AS last_input
@@ -394,6 +396,8 @@ class M_Stockopname extends CI_Model
                 x.qty_buku,
                 x.qty_tim_1,
                 x.qty_tim_2,
+                x.input_tim_1,
+                x.input_tim_2,
                 x.inputers,
                 x.wilayah,
                 x.last_input,
@@ -412,6 +416,8 @@ class M_Stockopname extends CI_Model
                     COALESCE(m.qty_buku, 0) AS qty_buku,
                     COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
                     COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.input_tim_1, 0) AS input_tim_1,
+                    COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
                     o.last_input
@@ -424,6 +430,8 @@ class M_Stockopname extends CI_Model
                     0 AS qty_buku,
                     COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
                     COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.input_tim_1, 0) AS input_tim_1,
+                    COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
                     o.last_input
@@ -471,6 +479,8 @@ class M_Stockopname extends CI_Model
                 MAX(no_lot) AS no_lot,
                 SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
                 SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
                 GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
                 GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
                 MAX({$createdColumn}) AS last_input
@@ -493,6 +503,8 @@ class M_Stockopname extends CI_Model
                 x.qty_buku,
                 x.qty_tim_1,
                 x.qty_tim_2,
+                x.input_tim_1,
+                x.input_tim_2,
                 x.inputers,
                 x.wilayah,
                 x.last_input,
@@ -513,6 +525,8 @@ class M_Stockopname extends CI_Model
                     COALESCE(m.qty_buku, 0) AS qty_buku,
                     COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
                     COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.input_tim_1, 0) AS input_tim_1,
+                    COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
                     o.last_input
@@ -530,6 +544,8 @@ class M_Stockopname extends CI_Model
                     0 AS qty_buku,
                     COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
                     COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                    COALESCE(o.input_tim_1, 0) AS input_tim_1,
+                    COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
                     o.last_input
@@ -649,21 +665,70 @@ class M_Stockopname extends CI_Model
         );
     }
 
+    private function progress_result($input, $total)
+    {
+        $input = (int)$input;
+        $total = (int)$total;
+        $notInput = max(0, $total - $input);
+
+        return [
+            'total' => $total,
+            'input' => $input,
+            'not_input' => $notInput,
+            'persen_input' => $total > 0 ? round(($input / $total) * 100, 2) : 0,
+        ];
+    }
+
+    private function monitoring_team_result_summary($team)
+    {
+        $team = (int)$team === 2 ? 2 : 1;
+        $inputColumn = 'input_tim_' . $team;
+        $matchColumn = 'tim_' . $team . '_match';
+
+        $allRow = $this->db->query("
+            SELECT
+                COUNT(*) AS total_item,
+                SUM(CASE WHEN {$inputColumn} > 0 THEN 1 ELSE 0 END) AS input_item,
+                SUM(CASE WHEN {$matchColumn} = 1 THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN {$matchColumn} = 1 THEN 0 ELSE 1 END) AS not_match_item
+            FROM ({$this->monitoring_compare_all_base()}) x
+        ")->row_array();
+
+        $lotRow = $this->db->query("
+            SELECT
+                SUM(CASE WHEN {$matchColumn} = 1 THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN {$matchColumn} = 1 THEN 0 ELSE 1 END) AS not_match_item
+            FROM ({$this->monitoring_compare_lot_base()}) x
+        ")->row_array();
+
+        return [
+            'progress_input' => $this->progress_result($allRow['input_item'] ?? 0, $allRow['total_item'] ?? 0),
+            'compare_all' => $this->percentage_result($allRow['match_item'] ?? 0, $allRow['not_match_item'] ?? 0),
+            'compare_lot' => $this->percentage_result($lotRow['match_item'] ?? 0, $lotRow['not_match_item'] ?? 0),
+        ];
+    }
+
     public function monitoring_summary()
     {
         if (!$this->ready()) {
             return [
-                'overall' => $this->percentage_result(0, 0),
-                'team_1' => $this->percentage_result(0, 0),
-                'team_2' => $this->percentage_result(0, 0),
+                'team_1' => [
+                    'progress_input' => $this->progress_result(0, 0),
+                    'compare_all' => $this->percentage_result(0, 0),
+                    'compare_lot' => $this->percentage_result(0, 0),
+                ],
+                'team_2' => [
+                    'progress_input' => $this->progress_result(0, 0),
+                    'compare_all' => $this->percentage_result(0, 0),
+                    'compare_lot' => $this->percentage_result(0, 0),
+                ],
                 'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
             ];
         }
 
         return [
-            'overall' => $this->monitoring_result_from_base($this->monitoring_compare_all_base()),
-            'team_1' => $this->monitoring_result_from_base($this->monitoring_compare_all_base(), 'team_1'),
-            'team_2' => $this->monitoring_result_from_base($this->monitoring_compare_all_base(), 'team_2'),
+            'team_1' => $this->monitoring_team_result_summary(1),
+            'team_2' => $this->monitoring_team_result_summary(2),
             'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
         ];
     }

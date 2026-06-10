@@ -13,9 +13,11 @@
     };
     $monitoring_summary = $monitoring_summary ?? [];
     $activity_logs = $activity_logs ?? [];
-    $overall = $monitoring_summary['overall'] ?? [];
     $team1 = $monitoring_summary['team_1'] ?? [];
     $team2 = $monitoring_summary['team_2'] ?? [];
+    $so_metric = function ($team, $group, $key, $default = 0) {
+        return $team[$group][$key] ?? $default;
+    };
     ?>
 
     <div class="content-wrapper opname-monitoring">
@@ -53,6 +55,16 @@
                     .om-stat-value{font-size:30px;line-height:1.05;font-weight:850;color:#111827;margin-top:8px}
                     .om-stat-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;font-size:12px;color:#475569}
                     .om-stat.blue{border-left:4px solid #2563eb}.om-stat.green{border-left:4px solid #16a34a}.om-stat.orange{border-left:4px solid #f59e0b}.om-stat.red{border-left:4px solid #dc2626}
+                    .om-result-card{background:#fff;border:1px solid #e1e7ef;border-radius:8px;padding:16px;min-height:226px;box-shadow:0 8px 22px rgba(16,24,40,.05)}
+                    .om-result-card.team-1{border-left:4px solid #16a34a}.om-result-card.team-2{border-left:4px solid #f59e0b}
+                    .om-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+                    .om-result-title{font-size:16px;font-weight:850;color:#111827;margin:0}
+                    .om-result-grid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px}
+                    .om-result-item{border:1px solid #dbe5ef;border-radius:8px;background:#f8fafc;padding:12px;min-width:0}
+                    .om-result-item.primary{background:#f0fdf4;border-color:#bbf7d0}
+                    .team-2 .om-result-item.primary{background:#fffbeb;border-color:#fde68a}
+                    .om-result-value{font-size:28px;font-weight:850;color:#111827;line-height:1.05;margin:8px 0 10px}
+                    .om-mini-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
                     .om-match-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
                     .om-pill{border:1px solid #dbe5ef;border-radius:8px;padding:8px;background:#f8fafc}
                     .om-pill b{display:block;font-size:14px;color:#111827}.om-pill span{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:800}
@@ -65,44 +77,85 @@
                     .om-log-icon{width:34px;height:34px;border-radius:8px;background:#eef6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;flex:0 0 34px}
                     .om-log-title{font-weight:800;color:#1f2937;font-size:13px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.progress{height:8px;border-radius:99px}
-                    @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header{align-items:flex-start;flex-direction:column}.om-stat-value{font-size:25px}}
+                    @media(min-width:992px){.om-log{max-height:610px}}
+                    @media(max-width:992px){.om-result-grid{grid-template-columns:1fr}}
+                    @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
                 </style>
 
                 <div class="row">
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="om-stat blue" data-card="overall">
-                            <div class="om-stat-label">Persentase Match & Not Match</div>
-                            <div class="om-stat-value js-percent-match"><?= number_format((float)($overall['persen_match'] ?? 0), 2, ',', '.') ?>%</div>
-                            <div class="progress mt-2"><div class="progress-bar bg-primary js-progress-match" style="width:<?= (float)($overall['persen_match'] ?? 0) ?>%"></div></div>
-                            <div class="om-match-row">
-                                <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)($overall['match'] ?? 0), 0, ',', '.') ?></b></div>
-                                <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)($overall['not_match'] ?? 0), 0, ',', '.') ?></b></div>
+                    <div class="col-lg-8">
+                        <div class="mb-3">
+                            <div class="om-result-card team-1" data-card="team_1">
+                                <div class="om-result-head">
+                                    <h2 class="om-result-title">Result Tim 1</h2>
+                                    <span class="om-badge tim_1">Tim 1</span>
+                                </div>
+                                <div class="om-result-grid">
+                                    <div class="om-result-item primary" data-metric="progress_input">
+                                        <div class="om-stat-label">Progress Hasil Input Opname</div>
+                                        <div class="om-result-value js-percent-input"><?= number_format((float)$so_metric($team1, 'progress_input', 'persen_input'), 2, ',', '.') ?>%</div>
+                                        <div class="progress"><div class="progress-bar bg-success js-progress-input" style="width:<?= (float)$so_metric($team1, 'progress_input', 'persen_input') ?>%"></div></div>
+                                        <div class="om-match-row">
+                                            <div class="om-pill"><span>Input</span><b class="js-input-count"><?= number_format((int)$so_metric($team1, 'progress_input', 'input'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Total</span><b class="js-total-count"><?= number_format((int)$so_metric($team1, 'progress_input', 'total'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                    <div class="om-result-item" data-metric="compare_all">
+                                        <div class="om-stat-label">Compare All Barang</div>
+                                        <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team1, 'compare_all', 'persen_match'), 2, ',', '.') ?>%</div>
+                                        <div class="om-mini-row">
+                                            <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team1, 'compare_all', 'match'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)$so_metric($team1, 'compare_all', 'not_match'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                    <div class="om-result-item" data-metric="compare_lot">
+                                        <div class="om-stat-label">Compare By Expired Lot</div>
+                                        <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team1, 'compare_lot', 'persen_match'), 2, ',', '.') ?>%</div>
+                                        <div class="om-mini-row">
+                                            <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team1, 'compare_lot', 'match'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)$so_metric($team1, 'compare_lot', 'not_match'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="om-result-card team-2" data-card="team_2">
+                                <div class="om-result-head">
+                                    <h2 class="om-result-title">Result Tim 2</h2>
+                                    <span class="om-badge tim_2">Tim 2</span>
+                                </div>
+                                <div class="om-result-grid">
+                                    <div class="om-result-item primary" data-metric="progress_input">
+                                        <div class="om-stat-label">Progress Hasil Input Opname</div>
+                                        <div class="om-result-value js-percent-input"><?= number_format((float)$so_metric($team2, 'progress_input', 'persen_input'), 2, ',', '.') ?>%</div>
+                                        <div class="progress"><div class="progress-bar bg-warning js-progress-input" style="width:<?= (float)$so_metric($team2, 'progress_input', 'persen_input') ?>%"></div></div>
+                                        <div class="om-match-row">
+                                            <div class="om-pill"><span>Input</span><b class="js-input-count"><?= number_format((int)$so_metric($team2, 'progress_input', 'input'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Total</span><b class="js-total-count"><?= number_format((int)$so_metric($team2, 'progress_input', 'total'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                    <div class="om-result-item" data-metric="compare_all">
+                                        <div class="om-stat-label">Compare All Barang</div>
+                                        <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team2, 'compare_all', 'persen_match'), 2, ',', '.') ?>%</div>
+                                        <div class="om-mini-row">
+                                            <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team2, 'compare_all', 'match'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)$so_metric($team2, 'compare_all', 'not_match'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                    <div class="om-result-item" data-metric="compare_lot">
+                                        <div class="om-stat-label">Compare By Expired Lot</div>
+                                        <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team2, 'compare_lot', 'persen_match'), 2, ',', '.') ?>%</div>
+                                        <div class="om-mini-row">
+                                            <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team2, 'compare_lot', 'match'), 0, ',', '.') ?></b></div>
+                                            <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)$so_metric($team2, 'compare_lot', 'not_match'), 0, ',', '.') ?></b></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="om-stat green" data-card="team_1">
-                            <div class="om-stat-label">Persentase Tim 1</div>
-                            <div class="om-stat-value js-percent-match"><?= number_format((float)($team1['persen_match'] ?? 0), 2, ',', '.') ?>%</div>
-                            <div class="progress mt-2"><div class="progress-bar bg-success js-progress-match" style="width:<?= (float)($team1['persen_match'] ?? 0) ?>%"></div></div>
-                            <div class="om-match-row">
-                                <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)($team1['match'] ?? 0), 0, ',', '.') ?></b></div>
-                                <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)($team1['not_match'] ?? 0), 0, ',', '.') ?></b></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
-                        <div class="om-stat orange" data-card="team_2">
-                            <div class="om-stat-label">Persentase Tim 2</div>
-                            <div class="om-stat-value js-percent-match"><?= number_format((float)($team2['persen_match'] ?? 0), 2, ',', '.') ?>%</div>
-                            <div class="progress mt-2"><div class="progress-bar bg-warning js-progress-match" style="width:<?= (float)($team2['persen_match'] ?? 0) ?>%"></div></div>
-                            <div class="om-match-row">
-                                <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)($team2['match'] ?? 0), 0, ',', '.') ?></b></div>
-                                <div class="om-pill"><span>Not Match</span><b class="js-not-count"><?= number_format((int)($team2['not_match'] ?? 0), 0, ',', '.') ?></b></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="col-lg-4 mb-3">
                         <div class="om-panel h-100">
                             <div class="om-panel-header">
                                 <h2 class="om-title">Log Aktifitas Opname</h2>
@@ -281,13 +334,23 @@ $(function () {
     });
 
     function renderSummary(data) {
-        $.each(['overall', 'team_1', 'team_2'], function (_, key) {
+        $.each(['team_1', 'team_2'], function (_, key) {
             var item = data[key] || {};
             var card = $('[data-card="' + key + '"]');
-            card.find('.js-percent-match').text(percentId(item.persen_match));
-            card.find('.js-progress-match').css('width', parseFloat(item.persen_match || 0) + '%');
-            card.find('.js-match-count').text(numberId(item.match));
-            card.find('.js-not-count').text(numberId(item.not_match));
+            var progress = item.progress_input || {};
+
+            card.find('[data-metric="progress_input"] .js-percent-input').text(percentId(progress.persen_input));
+            card.find('[data-metric="progress_input"] .js-progress-input').css('width', parseFloat(progress.persen_input || 0) + '%');
+            card.find('[data-metric="progress_input"] .js-input-count').text(numberId(progress.input));
+            card.find('[data-metric="progress_input"] .js-total-count').text(numberId(progress.total));
+
+            $.each(['compare_all', 'compare_lot'], function (_, metric) {
+                var compare = item[metric] || {};
+                var metricCard = card.find('[data-metric="' + metric + '"]');
+                metricCard.find('.js-percent-match').text(percentId(compare.persen_match));
+                metricCard.find('.js-match-count').text(numberId(compare.match));
+                metricCard.find('.js-not-count').text(numberId(compare.not_match));
+            });
         });
     }
 

@@ -15,7 +15,7 @@ class Karisma_code_generator
         }
 
         if (class_exists('QRcode') && method_exists('QRcode', 'png')) {
-            QRcode::png($value, $targetFile, 'M', 6, 2);
+            call_user_func(['QRcode', 'png'], $value, $targetFile, 'M', 6, 2);
             return is_file($targetFile);
         }
 
