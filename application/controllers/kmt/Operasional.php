@@ -320,7 +320,7 @@ class Operasional extends CI_Controller {
         $sheet->setTitle('Operasional');
 
         $headers = [
-            'No','Tanggal','Wilayah','Nama','MDO',
+            'No','Tanggal','Tanggal Input','Wilayah','Nama','MDO',
             'Hotel','Per Diem','Entertainment','Communication','ATK','Gasoline',
             'Sparepart','Toll/Parkir','Transportasi','Pos/Paket',
             'Tambah Angin','Tambal Ban','Indekost','Sewa Kendaraan','Lain-lain',
@@ -329,7 +329,7 @@ class Operasional extends CI_Controller {
         foreach ($headers as $i => $h) {
             $sheet->setCellValueByColumnAndRow($i + 1, 1, $h);
         }
-        $sheet->getStyle('A1:V1')->applyFromArray([
+        $sheet->getStyle('A1:W1')->applyFromArray([
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill'      => ['fillType' => 'solid', 'startColor' => ['rgb' => '1F3864']],
             'alignment' => ['horizontal' => 'center'],
@@ -339,10 +339,11 @@ class Operasional extends CI_Controller {
             $r = $i + 2;
             $sheet->setCellValueByColumnAndRow(1, $r, $i + 1);
             $sheet->setCellValueByColumnAndRow(2, $r, date('d/m/Y', strtotime($row['tanggal'])));
-            $sheet->setCellValueByColumnAndRow(3, $r, $row['nama_wilayah'] ?? '-');
-            $sheet->setCellValueByColumnAndRow(4, $r, $row['nama']);
-            $sheet->setCellValueByColumnAndRow(5, $r, $row['nama_mdo'] ?? '-');
-            $col = 6;
+            $sheet->setCellValueByColumnAndRow(3, $r, !empty($row['created_at']) ? date('d/m/Y H:i', strtotime($row['created_at'])) : '-');
+            $sheet->setCellValueByColumnAndRow(4, $r, $row['nama_wilayah'] ?? '-');
+            $sheet->setCellValueByColumnAndRow(5, $r, $row['nama']);
+            $sheet->setCellValueByColumnAndRow(6, $r, $row['nama_mdo'] ?? '-');
+            $col = 7;
             foreach ($this->fields as $f) {
                 $sheet->setCellValueByColumnAndRow($col++, $r, $row[$f] ?? 0);
             }
@@ -354,7 +355,7 @@ class Operasional extends CI_Controller {
             );
         }
 
-        foreach (range('A', 'V') as $col) {
+        foreach (range('A', 'W') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 

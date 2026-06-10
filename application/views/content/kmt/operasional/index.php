@@ -142,6 +142,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Tanggal</th>
+                                        <th>Waktu Input</th>
                                         <th>Wilayah</th>
                                         <th>Nama ABM</th>
                                         <th>MDO</th>
@@ -167,6 +168,9 @@
                                     <td class="align-middle"><?= $i + 1 ?></td>
                                     <td class="align-middle text-nowrap">
                                         <?= date('d/m/Y', strtotime($row['tanggal'])) ?>
+                                    </td>
+                                    <td class="align-middle text-nowrap">
+                                        <?= !empty($row['created_at']) ? date('d/m/Y H:i', strtotime($row['created_at'])) : '-' ?>
                                     </td>
                                     <td class="align-middle">
                                         <span class="badge badge-secondary">
@@ -279,7 +283,7 @@
                                 </tbody>
                                 <tfoot style="background:#f4f4f4;font-weight:bold;">
                                     <tr>
-                                        <td colspan="11" class="text-right">TOTAL:</td>
+                                        <td colspan="12" class="text-right">TOTAL:</td>
                                         <td class="text-right">
                                             <?= number_format($total_biaya, 0, ',', '.') ?>
                                         </td>
@@ -385,8 +389,8 @@ $(function () {
         pageLength  : 25,
         order       : [[1, 'desc']],
         columnDefs  : [
-            { targets: [5,6,7,8,9,10,11], className: 'dt-right' },
-            { targets: [12,13], orderable: false }
+            { targets: [6,7,8,9,10,11,12], className: 'dt-right' },
+            { targets: [13,14], orderable: false }
         ],
         language: { url: '<?= base_url('assets/plugins/datatables/id.json') ?>' }
     });

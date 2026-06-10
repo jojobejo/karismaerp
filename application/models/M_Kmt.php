@@ -489,7 +489,7 @@ class M_Kmt extends CI_Model {
         $this->db->select('
             d.id, d.tanggal_dca, d.bulan, d.tahun,
             d.abm, d.nama_mdo, d.uraian,
-            d.um, d.refund, d.real_biaya, d.total_biaya,
+            d.um, d.refund, d.real_biaya, d.total_biaya, d.created_at,
             d.status_verifikasi, d.verified_at, d.verified_notes,
             w.nama_wilayah,
             k.nm_karyawan AS nama_verifikator
