@@ -15,6 +15,9 @@
     $activity_logs = $activity_logs ?? [];
     $team1 = $monitoring_summary['team_1'] ?? [];
     $team2 = $monitoring_summary['team_2'] ?? [];
+    $input_source = $monitoring_summary['input_source'] ?? [];
+    $manual_input = $input_source['manual'] ?? [];
+    $request_input = $input_source['request'] ?? [];
     $so_metric = function ($team, $group, $key, $default = 0) {
         return $team[$group][$key] ?? $default;
     };
@@ -73,15 +76,24 @@
                     .om-log-item:last-child{border-bottom:0}
                     .om-log-icon{width:34px;height:34px;border-radius:8px;background:#eef6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;flex:0 0 34px}
                     .om-log-title{font-weight:800;color:#1f2937;font-size:13px}
+                    .om-source-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:14px}
+                    .om-source-item{border:1px solid #dbe5ef;border-radius:8px;background:#f8fafc;padding:12px}
+                    .om-source-item.request{background:#fffbeb;border-color:#fde68a}.om-source-item.manual{background:#f0fdf4;border-color:#bbf7d0}
+                    .om-source-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+                    .om-source-label{font-size:12px;text-transform:uppercase;font-weight:850;color:#475569}
+                    .om-source-open{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:850}
+                    .om-source-open i{margin-right:0}
+                    .om-source-value{font-size:28px;font-weight:850;color:#111827;line-height:1.05;margin-top:8px}
+                    .om-source-last{font-size:12px;color:#64748b;margin-top:10px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.progress{height:8px;border-radius:99px}
                     .om-action-btn{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}.om-action-btn i{margin-right:0}
-                    @media(min-width:992px){.om-log{max-height:610px}}
+                    @media(min-width:1200px){.om-log{max-height:610px}}
                     @media(max-width:992px){.om-result-grid{grid-template-columns:1fr}}
                     @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
                 </style>
 
                 <div class="row">
-                    <div class="col-lg-8">
+                    <div class="col-xl-6 col-lg-12">
                         <div class="mb-3">
                             <div class="om-result-card team-1" data-card="team_1">
                                 <div class="om-result-head">
@@ -153,7 +165,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-4 mb-3">
+                    <div class="col-xl-3 col-lg-6 mb-3">
                         <div class="om-panel h-100">
                             <div class="om-panel-header">
                                 <h2 class="om-title">Log Aktifitas Opname</h2>
@@ -175,6 +187,36 @@
                                         </div>
                                     </div>
                                 <?php endforeach ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-lg-6 mb-3">
+                        <div class="om-panel h-100">
+                            <div class="om-panel-header">
+                                <h2 class="om-title">Input User Opname</h2>
+                                <span class="om-muted">Request & Manual</span>
+                            </div>
+                            <div class="om-source-grid" id="inputSourceSummary">
+                                <div class="om-source-item request" data-source="request">
+                                    <div class="om-source-head">
+                                        <a href="<?= base_url('admin/stockopname/monitoring/request-opname') ?>" class="btn btn-outline-warning om-source-open">
+                                            <i class="fas fa-clipboard-list"></i> Request Opname
+                                        </a>
+                                        <span class="om-badge re_check">Master</span>
+                                    </div>
+                                    <div class="om-source-value js-total-input"><?= number_format((int)($request_input['total_input'] ?? 0), 0, ',', '.') ?></div>
+                                    <div class="om-source-last">Terakhir: <span class="js-last-input"><?= $so_e($request_input['last_input'] ?? '-') ?></span></div>
+                                </div>
+                                <div class="om-source-item manual" data-source="manual">
+                                    <div class="om-source-head">
+                                        <a href="<?= base_url('admin/stockopname/monitoring/manual-opname') ?>" class="btn btn-outline-success om-source-open">
+                                            <i class="fas fa-keyboard"></i> Manual Opname
+                                        </a>
+                                        <span class="om-badge all_match">Input</span>
+                                    </div>
+                                    <div class="om-source-value js-total-input"><?= number_format((int)($manual_input['total_input'] ?? 0), 0, ',', '.') ?></div>
+                                    <div class="om-source-last">Terakhir: <span class="js-last-input"><?= $so_e($manual_input['last_input'] ?? '-') ?></span></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -359,6 +401,18 @@ $(function () {
                 metricCard.find('.js-match-count').text(numberId(compare.match));
                 metricCard.find('.js-not-count').text(numberId(compare.not_match));
             });
+        });
+
+        renderInputSourceSummary(data.input_source || {});
+    }
+
+    function renderInputSourceSummary(data) {
+        $.each(['request', 'manual'], function (_, key) {
+            var item = data[key] || {};
+            var card = $('[data-source="' + key + '"]');
+
+            card.find('.js-total-input').text(numberId(item.total_input));
+            card.find('.js-last-input').text(item.last_input || '-');
         });
     }
 

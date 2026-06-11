@@ -5,6 +5,8 @@ class M_Stockopname extends CI_Model
 {
     private $masterTable = 'stockopname_master_item';
     private $opnameTable = 'stockopname_opname';
+    private $manualOpnameTable = 'stockopname_opname_manual';
+    private $manualMasterTable = 'stockopname_master_manual_item';
     private $masterBarangAllTable = 'tb_master_barang_all';
 
     public function ensure_master_code_columns()
@@ -90,6 +92,70 @@ class M_Stockopname extends CI_Model
         ];
     }
 
+    public function ensure_manual_tables()
+    {
+        if (!$this->db->table_exists($this->manualMasterTable)) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `{$this->manualMasterTable}` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `source_id` INT(11) NOT NULL,
+                    `kode_barang` VARCHAR(50) NOT NULL,
+                    `nama_barang` TEXT NOT NULL,
+                    `expired_date` DATE NOT NULL,
+                    `no_lot` VARCHAR(100) NOT NULL,
+                    `dimensi` INT(12) NOT NULL DEFAULT 0,
+                    `status` ENUM('PENDING','APPROVED','REJECTED','ADDED') NOT NULL DEFAULT 'PENDING',
+                    `requested_by` VARCHAR(100) NOT NULL,
+                    `requested_at` DATETIME NOT NULL,
+                    `reviewed_by` VARCHAR(100) NULL DEFAULT NULL,
+                    `reviewed_at` DATETIME NULL DEFAULT NULL,
+                    `review_note` TEXT NULL,
+                    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_manual_master_source` (`source_id`),
+                    KEY `idx_manual_master_barang` (`kode_barang`),
+                    KEY `idx_manual_master_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        if (!$this->db->table_exists($this->manualOpnameTable)) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `{$this->manualOpnameTable}` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `manual_master_id` INT(11) NOT NULL,
+                    `source_id` INT(11) NOT NULL,
+                    `kode_barang` VARCHAR(50) NOT NULL,
+                    `nama_barang` TEXT NOT NULL,
+                    `expired_date` DATE NOT NULL,
+                    `no_lot` VARCHAR(100) NOT NULL,
+                    `qty` INT(12) NOT NULL DEFAULT 0,
+                    `qty_pcs` INT(12) NOT NULL DEFAULT 0,
+                    `qty_box` INT(12) NOT NULL DEFAULT 0,
+                    `input_by` VARCHAR(100) NOT NULL,
+                    `input_at` DATETIME NOT NULL,
+                    `wilayah` INT(2) NOT NULL DEFAULT 0,
+                    `tim_opname` INT(2) NOT NULL DEFAULT 0,
+                    `input_source` ENUM('manual','request') NOT NULL DEFAULT 'manual',
+                    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_manual_opname_master` (`manual_master_id`),
+                    KEY `idx_manual_opname_source` (`source_id`),
+                    KEY `idx_manual_opname_barang` (`kode_barang`),
+                    KEY `idx_manual_opname_source_type` (`input_source`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        if ($this->db->table_exists($this->manualOpnameTable) && !$this->db->field_exists('input_source', $this->manualOpnameTable)) {
+            $this->db->query("ALTER TABLE {$this->manualOpnameTable} ADD `input_source` ENUM('manual','request') NOT NULL DEFAULT 'manual' AFTER `tim_opname`");
+        }
+
+        return $this->db->table_exists($this->manualMasterTable) && $this->db->table_exists($this->manualOpnameTable);
+    }
+
     private function ready()
     {
         return $this->db->table_exists($this->masterTable) && $this->db->table_exists($this->opnameTable);
@@ -103,6 +169,12 @@ class M_Stockopname extends CI_Model
     private function lot_key($field)
     {
         return "CASE WHEN TRIM(COALESCE({$field}, '')) IN ('', '-', '0') THEN '-' ELSE TRIM({$field}) END";
+    }
+
+    private function master_positive_sql($alias = '')
+    {
+        $prefix = $alias !== '' ? $alias . '.' : '';
+        return "COALESCE({$prefix}qty, 0) > 0";
     }
 
     private function opname_subquery()
@@ -130,6 +202,7 @@ class M_Stockopname extends CI_Model
     {
         $masterExpKey = $this->exp_key('m.expired_date');
         $masterLotKey = $this->lot_key('m.no_lot');
+        $masterPositiveWhere = $this->master_positive_sql('m');
         $opname = $this->opname_subquery();
 
         return "
@@ -159,6 +232,7 @@ class M_Stockopname extends CI_Model
                 ON o.kode_barang = m.kode_barang
                 AND o.exp_key = {$masterExpKey}
                 AND o.lot_key = {$masterLotKey}
+            WHERE {$masterPositiveWhere}
         ";
     }
 
@@ -352,6 +426,8 @@ class M_Stockopname extends CI_Model
 
     private function monitoring_master_all_subquery()
     {
+        $masterPositiveWhere = $this->master_positive_sql();
+
         return "
             SELECT
                 kode_barang,
@@ -360,6 +436,7 @@ class M_Stockopname extends CI_Model
                 SUM(COALESCE(qty_box, 0)) AS box_buku,
                 SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
             FROM {$this->masterTable}
+            WHERE {$masterPositiveWhere}
             GROUP BY kode_barang
         ";
     }
@@ -438,6 +515,11 @@ class M_Stockopname extends CI_Model
                 FROM ({$opname}) o
                 LEFT JOIN ({$master}) m ON m.kode_barang = o.kode_barang
                 WHERE m.kode_barang IS NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM {$this->masterTable} mz
+                        WHERE mz.kode_barang = o.kode_barang
+                    )
             ) x
         ";
     }
@@ -446,6 +528,7 @@ class M_Stockopname extends CI_Model
     {
         $expKey = $this->exp_key('expired_date');
         $lotKey = $this->lot_key('no_lot');
+        $masterPositiveWhere = $this->master_positive_sql();
 
         return "
             SELECT
@@ -459,6 +542,7 @@ class M_Stockopname extends CI_Model
                 SUM(COALESCE(qty_box, 0)) AS box_buku,
                 SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
             FROM {$this->masterTable}
+            WHERE {$masterPositiveWhere}
             GROUP BY kode_barang, exp_key, lot_key
         ";
     }
@@ -493,6 +577,8 @@ class M_Stockopname extends CI_Model
     {
         $master = $this->monitoring_master_lot_subquery();
         $opname = $this->monitoring_opname_lot_subquery();
+        $masterZeroExpKey = $this->exp_key('mz.expired_date');
+        $masterZeroLotKey = $this->lot_key('mz.no_lot');
 
         return "
             SELECT
@@ -555,6 +641,13 @@ class M_Stockopname extends CI_Model
                     AND m.exp_key = o.exp_key
                     AND m.lot_key = o.lot_key
                 WHERE m.kode_barang IS NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM {$this->masterTable} mz
+                        WHERE mz.kode_barang = o.kode_barang
+                            AND {$masterZeroExpKey} = o.exp_key
+                            AND {$masterZeroLotKey} = o.lot_key
+                    )
             ) x
         ";
     }
@@ -722,6 +815,7 @@ class M_Stockopname extends CI_Model
                     'compare_all' => $this->percentage_result(0, 0),
                     'compare_lot' => $this->percentage_result(0, 0),
                 ],
+                'input_source' => $this->monitoring_input_source_summary(),
                 'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
             ];
         }
@@ -729,8 +823,85 @@ class M_Stockopname extends CI_Model
         return [
             'team_1' => $this->monitoring_team_result_summary(1),
             'team_2' => $this->monitoring_team_result_summary(2),
+            'input_source' => $this->monitoring_input_source_summary(),
             'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
         ];
+    }
+
+    public function monitoring_input_source_summary()
+    {
+        $summary = [
+            'manual' => ['total_input' => 0, 'total_user' => 0, 'total_qty' => 0, 'last_input' => '-'],
+            'request' => ['total_input' => 0, 'total_user' => 0, 'total_qty' => 0, 'last_input' => '-'],
+        ];
+
+        if (!$this->ensure_manual_tables()) {
+            return $summary;
+        }
+
+        $requestRow = $this->db->query("
+            SELECT
+                COUNT(*) AS total_input,
+                COUNT(DISTINCT NULLIF(TRIM(requested_by), '')) AS total_user,
+                MAX(requested_at) AS last_input
+            FROM {$this->manualMasterTable}
+        ")->row_array();
+
+        $manualRow = $this->db->query("
+            SELECT
+                COUNT(*) AS total_input,
+                COUNT(DISTINCT NULLIF(TRIM(input_by), '')) AS total_user,
+                COALESCE(SUM(qty), 0) AS total_qty,
+                MAX(input_at) AS last_input
+            FROM {$this->manualOpnameTable}
+        ")->row_array();
+
+        $summary['request'] = [
+            'total_input' => (int)($requestRow['total_input'] ?? 0),
+            'total_user' => (int)($requestRow['total_user'] ?? 0),
+            'total_qty' => (int)($requestRow['total_input'] ?? 0),
+            'last_input' => $requestRow['last_input'] ?: '-',
+        ];
+        $summary['manual'] = [
+            'total_input' => (int)($manualRow['total_input'] ?? 0),
+            'total_user' => (int)($manualRow['total_user'] ?? 0),
+            'total_qty' => (int)($manualRow['total_qty'] ?? 0),
+            'last_input' => $manualRow['last_input'] ?: '-',
+        ];
+
+        return $summary;
+    }
+
+    public function monitoring_request_opname_rows($limit = 500)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,status,requested_by,requested_at,reviewed_by,reviewed_at,review_note,created_at,updated_at')
+            ->from($this->manualMasterTable)
+            ->order_by('requested_at', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
+    }
+
+    public function monitoring_manual_opname_rows($limit = 500)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id,manual_master_id,source_id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,input_by,input_at,wilayah,tim_opname,created_at,updated_at')
+            ->from($this->manualOpnameTable)
+            ->order_by('input_at', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
     }
 
     public function monitoring_activity($limit = 10)
@@ -1112,6 +1283,7 @@ class M_Stockopname extends CI_Model
             return $this->percentage_result(1, 2);
         }
 
+        $masterPositiveWhere = $this->master_positive_sql();
         $sql = "
             SELECT
                 SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 1 ELSE 0 END) AS match_item,
@@ -1121,7 +1293,7 @@ class M_Stockopname extends CI_Model
                     kode_barang,
                     SUM(COALESCE(qty, 0)) AS qty_buku
                 FROM {$this->masterTable}
-                WHERE COALESCE(qty, 0) <> 0
+                WHERE {$masterPositiveWhere}
                 GROUP BY kode_barang
             ) m
             LEFT JOIN (
@@ -1148,6 +1320,7 @@ class M_Stockopname extends CI_Model
 
         $masterLot = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot' : "''");
         $opnameLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot' : "''");
+        $masterPositiveWhere = $this->master_positive_sql();
 
         $sql = "
             SELECT
@@ -1160,7 +1333,7 @@ class M_Stockopname extends CI_Model
                     {$this->lot_key($masterLot)} AS lot_key,
                     SUM(COALESCE(qty, 0)) AS qty_buku
                 FROM {$this->masterTable}
-                WHERE COALESCE(qty, 0) <> 0
+                WHERE {$masterPositiveWhere}
                 GROUP BY kode_barang, exp_key, lot_key
             ) m
             LEFT JOIN (
@@ -1548,6 +1721,153 @@ class M_Stockopname extends CI_Model
             ->row_array();
     }
 
+    public function get_first_master_barang_by_kode($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->db->table_exists($this->masterTable)) {
+            return null;
+        }
+
+        $this->master_barang_select();
+        return $this->db
+            ->where('kode_barang', $kodeBarang)
+            ->order_by('id', 'ASC')
+            ->limit(1)
+            ->get()
+            ->row_array();
+    }
+
+    public function manual_barang_options($term = '', $page = 1, $limit = 20)
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [
+                'results' => [],
+                'pagination' => ['more' => false],
+            ];
+        }
+
+        $term = trim((string)$term);
+        $page = max(1, (int)$page);
+        $limit = max(1, min(50, (int)$limit));
+        $offset = ($page - 1) * $limit;
+
+        $this->db
+            ->select('MIN(id) AS first_id, nama_barang, COUNT(*) AS total_lot', false)
+            ->from($this->masterTable);
+        if ($term !== '') {
+            $this->db->group_start();
+            $this->db->like('nama_barang', $term);
+            $this->db->or_like('kode_barang', $term);
+            $this->db->group_end();
+        }
+        $this->db
+            ->group_by('nama_barang')
+            ->order_by('nama_barang', 'ASC')
+            ->limit($limit + 1, $offset);
+
+        $rows = $this->db->get()->result_array();
+        $more = count($rows) > $limit;
+        if ($more) {
+            array_pop($rows);
+        }
+
+        $results = [];
+        foreach ($rows as $row) {
+            $firstId = (int)($row['first_id'] ?? 0);
+            $firstRow = $firstId > 0 ? $this->get_master_barang_by_id($firstId) : null;
+            $kodeBarang = (string)($firstRow['kode_barang'] ?? '');
+            $namaBarang = (string)($row['nama_barang'] ?? '');
+            $results[] = [
+                'id' => $kodeBarang,
+                'text' => $namaBarang,
+                'kode_barang' => $kodeBarang,
+                'nama_barang' => $namaBarang,
+                'dimensi' => (int)($firstRow['dimensi'] ?? 0),
+                'total_lot' => (int)($row['total_lot'] ?? 0),
+            ];
+        }
+
+        return [
+            'results' => $results,
+            'pagination' => ['more' => $more],
+        ];
+    }
+
+    public function manual_lot_options($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $rows = $this->db
+            ->select("CASE WHEN TRIM(COALESCE(no_lot, '')) = '' THEN '-' ELSE TRIM(no_lot) END AS no_lot", false)
+            ->from($this->masterTable)
+            ->where('kode_barang', $kodeBarang)
+            ->group_by("CASE WHEN TRIM(COALESCE(no_lot, '')) = '' THEN '-' ELSE TRIM(no_lot) END", false)
+            ->order_by('no_lot', 'ASC')
+            ->get()
+            ->result_array();
+
+        $options = [];
+        foreach ($rows as $row) {
+            $lot = (string)($row['no_lot'] ?? '-');
+            $options[] = [
+                'id' => $lot,
+                'text' => $lot,
+            ];
+        }
+
+        return $options;
+    }
+
+    public function manual_expired_options($kodeBarang, $noLot)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        $noLot = trim((string)$noLot);
+        if ($kodeBarang === '' || $noLot === '' || !$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $normalizedLot = $noLot === '-' ? ['', '-', '0'] : [$noLot];
+        $this->master_barang_select();
+        $this->db->where('kode_barang', $kodeBarang);
+        $this->db->group_start();
+        foreach ($normalizedLot as $index => $lot) {
+            $condition = "TRIM(COALESCE(no_lot, '')) = " . $this->db->escape($lot);
+            if ($index === 0) {
+                $this->db->where($condition, null, false);
+            } else {
+                $this->db->or_where($condition, null, false);
+            }
+        }
+        $this->db->group_end();
+        $this->db
+            ->order_by('expired_date', 'ASC')
+            ->order_by('id', 'ASC');
+
+        $rows = $this->db->get()->result_array();
+        $options = [];
+        $seen = [];
+        foreach ($rows as $row) {
+            $expired = (string)($row['expired_date'] ?? '');
+            $key = $expired . '|' . (string)($row['no_lot'] ?? '');
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $options[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'text' => $expired,
+                'expired_date' => $expired,
+                'no_lot' => (string)($row['no_lot'] ?? '-'),
+                'dimensi' => (int)($row['dimensi'] ?? 0),
+            ];
+        }
+
+        return $options;
+    }
+
     public function save_mobile_opname($masterRow, $input)
     {
         if (!$this->db->table_exists($this->opnameTable)) {
@@ -1585,6 +1905,127 @@ class M_Stockopname extends CI_Model
         }
 
         return (int)$this->db->insert_id();
+    }
+
+    private function manual_master_item_id($masterRow, $inputBy)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return 0;
+        }
+
+        $sourceId = (int)($masterRow['id'] ?? 0);
+        $existing = $this->db
+            ->select('id')
+            ->from($this->manualMasterTable)
+            ->where('source_id', $sourceId)
+            ->where('expired_date', (string)($masterRow['expired_date'] ?? ''))
+            ->where('no_lot', (string)($masterRow['no_lot'] ?? '-'))
+            ->where('status', 'PENDING')
+            ->limit(1)
+            ->get()
+            ->row_array();
+        if ($existing) {
+            return (int)$existing['id'];
+        }
+
+        $data = [
+            'source_id' => $sourceId,
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'expired_date' => (string)($masterRow['expired_date'] ?? ''),
+            'no_lot' => (string)($masterRow['no_lot'] ?? '-'),
+            'dimensi' => (int)($masterRow['dimensi'] ?? 0),
+            'status' => 'PENDING',
+            'requested_by' => (string)$inputBy,
+            'requested_at' => date('Y-m-d H:i:s'),
+        ];
+
+        if (!$this->db->insert($this->manualMasterTable, $data)) {
+            return 0;
+        }
+
+        return (int)$this->db->insert_id();
+    }
+
+    public function save_manual_opname($masterRow, $input)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return [
+                'status' => false,
+                'message' => 'Tabel opname manual belum siap.',
+            ];
+        }
+
+        $qtyPcs = (int)($input['qty_pcs'] ?? 0);
+        $qtyBox = (int)($input['qty_box'] ?? 0);
+        $dimensi = (int)($masterRow['dimensi'] ?? 0);
+        if ($dimensi <= 0) {
+            $masterQtyBox = (int)($masterRow['qty_box'] ?? 0);
+            $masterQtyPcs = (int)($masterRow['qty_pcs'] ?? 0);
+            $masterQty = (int)($masterRow['qty'] ?? 0);
+            $dimensi = $masterQtyBox > 0 ? (int)floor(($masterQty - $masterQtyPcs) / $masterQtyBox) : 0;
+        }
+
+        $inputBy = (string)($input['input_by'] ?? 'system');
+        $this->db->trans_start();
+        $manualMasterId = $this->manual_master_item_id($masterRow, $inputBy);
+        if ($manualMasterId <= 0) {
+            $this->db->trans_complete();
+            return [
+                'status' => false,
+                'message' => 'Gagal menyiapkan master item manual.',
+            ];
+        }
+
+        $data = [
+            'manual_master_id' => $manualMasterId,
+            'source_id' => (int)($masterRow['id'] ?? 0),
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'expired_date' => (string)($masterRow['expired_date'] ?? ''),
+            'no_lot' => (string)($masterRow['no_lot'] ?? '-'),
+            'qty' => ($qtyBox * $dimensi) + $qtyPcs,
+            'qty_pcs' => $qtyPcs,
+            'qty_box' => $qtyBox,
+            'input_by' => $inputBy,
+            'input_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($input['wilayah'] ?? 0),
+            'tim_opname' => (int)($input['tim_opname'] ?? 0),
+            'input_source' => ((string)($input['input_source'] ?? 'manual') === 'request') ? 'request' : 'manual',
+        ];
+
+        $this->db->insert($this->manualOpnameTable, $data);
+        $manualOpnameId = (int)$this->db->insert_id();
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status() || $manualOpnameId <= 0) {
+            return [
+                'status' => false,
+                'message' => 'Gagal menyimpan data opname manual.',
+            ];
+        }
+
+        return [
+            'status' => true,
+            'data' => [
+                'id' => $manualOpnameId,
+                'manual_master_id' => $manualMasterId,
+                'kode_barang' => $data['kode_barang'],
+                'nama_barang' => $data['nama_barang'],
+                'qty_pcs' => $qtyPcs,
+                'qty_box' => $qtyBox,
+                'input_source' => $data['input_source'],
+            ],
+        ];
+    }
+
+    public function save_request_opname($masterRow, $input)
+    {
+        $requestRow = $masterRow;
+        $requestRow['expired_date'] = (string)($input['expired_date'] ?? $masterRow['expired_date'] ?? '');
+        $requestRow['no_lot'] = (string)($input['no_lot'] ?? $masterRow['no_lot'] ?? '-');
+        $input['input_source'] = 'request';
+        return $this->save_manual_opname($requestRow, $input);
     }
 
     public function history_input_by($inputBy, $limit = 100)
