@@ -31,9 +31,6 @@
                         <a href="<?= base_url('admin/stockopname') ?>" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-arrow-left"></i> Stockopname
                         </a>
-                        <a href="<?= base_url('admin/stockopname/input') ?>" class="btn btn-success btn-sm">
-                            <i class="fas fa-mobile-alt"></i> Input Opname
-                        </a>
                         <button type="button" class="btn btn-primary btn-sm" id="btnRefreshMonitoring">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
@@ -160,7 +157,9 @@
                         <div class="om-panel h-100">
                             <div class="om-panel-header">
                                 <h2 class="om-title">Log Aktifitas Opname</h2>
-                                <span class="om-muted"><?= $so_e($monitoring_summary['source_table'] ?? '') ?></span>
+                                <a href="<?= base_url('admin/stockopname/monitoring/activity-log') ?>" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-list"></i> Lihat Log
+                                </a>
                             </div>
                             <div class="px-3 om-log" id="activityLog">
                                 <?php if (empty($activity_logs)) : ?>

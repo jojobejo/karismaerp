@@ -107,8 +107,8 @@
                                     </div>
                                 </div>
                                 <div class="so-chart-card">
-                                    <h3 class="so-chart-title">FEFO</h3>
-                                    <p class="so-chart-meta" id="soFefoMeta">0% match FEFO</p>
+                                    <h3 class="so-chart-title">By Expired Date + LOT</h3>
+                                    <p class="so-chart-meta" id="soFefoMeta">0% match by expired date dan lot</p>
                                     <div class="so-chart-canvas">
                                         <canvas id="soFefoChart"></canvas>
                                     </div>
@@ -256,13 +256,13 @@ window.addEventListener('load', function () {
 
     function renderCharts(data) {
         var allBarang = data.all_barang_result || {};
-        var fefo = data.fefo_result || {};
+        var fefo = data.expired_lot_result || data.fefo_result || {};
 
-        $('#soAllBarangMeta').text(formatPercent(allBarang.persen_match) + ' sudah input dari semua barang');
-        $('#soFefoMeta').text(formatPercent(fefo.persen_match) + ' match FEFO');
+        $('#soAllBarangMeta').text(formatPercent(allBarang.persen_match) + ' match dari semua barang');
+        $('#soFefoMeta').text(formatPercent(fefo.persen_match) + ' match by expired date dan lot');
 
-        renderPie('allBarang', 'soAllBarangChart', ['Sudah Input', 'Belum Input'], [allBarang.match, allBarang.not_match], ['#2563eb', '#94a3b8']);
-        renderPie('fefo', 'soFefoChart', ['Match FEFO', 'Not Match'], [fefo.match, fefo.not_match], ['#0f766e', '#f59e0b']);
+        renderPie('allBarang', 'soAllBarangChart', ['Match', 'Not Match'], [allBarang.match, allBarang.not_match], ['#2563eb', '#f59e0b']);
+        renderPie('fefo', 'soFefoChart', ['Match', 'Not Match'], [fefo.match, fefo.not_match], ['#0f766e', '#f59e0b']);
     }
 
     function renderPie(key, canvasId, labels, values, colors) {

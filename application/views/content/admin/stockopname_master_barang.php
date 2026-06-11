@@ -1,3 +1,12 @@
+<?php
+$pageHeading = $page_heading ?? 'Master Opname';
+$tableTitle = $table_title ?? 'Data Master Opname';
+$routeBase = $route_base ?? 'admin/stockopname/master_opname';
+$qrcodeRouteBase = $qrcode_route_base ?? 'admin/stockopname/qrcode';
+$showQtyZeroWidget = !empty($show_qty_zero_widget);
+$showResetQrcode = !isset($show_reset_qrcode) || !empty($show_reset_qrcode);
+$qtyZeroCount = (int)($qty_zero_count ?? 0);
+?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -12,7 +21,7 @@
             <div class="container-fluid">
                 <div class="row align-items-center">
                     <div class="col-sm-7">
-                        <h1 class="m-0">Master Opname</h1>
+                        <h1 class="m-0"><?= html_escape($pageHeading) ?></h1>
                     </div>
                     <div class="col-sm-5 text-sm-right mt-2 mt-sm-0">
                         <a href="<?= base_url('admin/stockopname') ?>" class="btn btn-outline-secondary btn-sm">
@@ -21,6 +30,11 @@
                         <a href="<?= base_url('admin/stockopname/input') ?>" class="btn btn-success btn-sm">
                             <i class="fas fa-mobile-alt"></i> Input Opname
                         </a>
+                        <?php if (!$showQtyZeroWidget) : ?>
+                            <a href="<?= base_url('admin/stockopname/master_opname') ?>" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-boxes"></i> Qty Aktif
+                            </a>
+                        <?php endif; ?>
                         <button type="button" class="btn btn-primary btn-sm" id="btnRefreshMasterBarang">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
@@ -52,6 +66,15 @@
                             <div class="mb-stat-meta">Sumber: stockopname_master_item</div>
                         </div>
                     </div>
+                    <?php if ($showQtyZeroWidget) : ?>
+                        <div class="col-12 col-md-6 col-xl-3 mb-3">
+                            <a href="<?= base_url('admin/stockopname/master_opname/qty-zero') ?>" class="mb-stat filter-card d-block text-decoration-none">
+                                <div class="mb-stat-label">Total Barang Qty 0</div>
+                                <div class="mb-stat-value" id="qtyZeroItem"><?= number_format($qtyZeroCount, 0, ',', '.') ?></div>
+                                <div class="mb-stat-meta">Klik untuk melihat data qty 0</div>
+                            </a>
+                        </div>
+                    <?php endif; ?>
                     <div class="col-12 col-md-6 col-xl-3 mb-3">
                         <button type="button" class="mb-stat filter-card" data-qrcode-status="generated">
                             <div class="mb-stat-label">QR Code Selesai</div>
@@ -94,9 +117,11 @@
                                     <button type="button" class="btn btn-warning btn-sm" id="btnRetryFailedQr">
                                         <i class="fas fa-redo"></i> Retry Data Gagal
                                     </button>
-                                    <button type="button" class="btn btn-danger btn-sm" id="btnResetQrOpname">
-                                        <i class="fas fa-trash-alt"></i> Reset QR &amp; Input
-                                    </button>
+                                    <?php if ($showResetQrcode) : ?>
+                                        <button type="button" class="btn btn-danger btn-sm" id="btnResetQrOpname">
+                                            <i class="fas fa-trash-alt"></i> Reset QR &amp; Input
+                                        </button>
+                                    <?php endif; ?>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRefreshQrStatus">
                                         <i class="fas fa-sync-alt"></i> Refresh Status
                                     </button>
@@ -136,7 +161,7 @@
                     <div class="col-xl-8 mb-3">
                         <div class="mb-panel h-100">
                             <div class="mb-panel-header">
-                                <h2 class="mb-panel-title">Data Master Opname</h2>
+                                <h2 class="mb-panel-title"><?= html_escape($tableTitle) ?></h2>
                                 <div class="mb-filter">
                                     <input type="search" class="form-control form-control-sm" id="mbSearch" placeholder="Cari nama, expired date, no lot">
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="mbReset"><i class="fas fa-undo"></i>Reset</button>
@@ -200,7 +225,7 @@ window.addEventListener('load', function () {
     var qrButtonHtml = {
         normal: $('#btnGenerateQrBatch').html(),
         retry: $('#btnRetryFailedQr').html(),
-        reset: $('#btnResetQrOpname').html()
+        reset: $('#btnResetQrOpname').length ? $('#btnResetQrOpname').html() : ''
     };
     $('[data-toggle="tooltip"]').tooltip();
     var table;
@@ -211,7 +236,7 @@ window.addEventListener('load', function () {
         searchDelay: 350,
         order: [[0, 'asc']],
         ajax: {
-            url: '<?= base_url('admin/stockopname/master_opname/ajax-list') ?>',
+            url: '<?= base_url($routeBase . '/ajax-list') ?>',
             type: 'POST',
             data: function (d) {
                 d.search = {value: $('#mbSearch').val()};
@@ -370,7 +395,7 @@ window.addEventListener('load', function () {
     }
 
     function loadSummary(showToast) {
-        $.getJSON('<?= base_url('admin/stockopname/qrcode/summary') ?>', function (res) {
+        $.getJSON('<?= base_url($qrcodeRouteBase . '/summary') ?>', function (res) {
             if (!res.success) {
                 toast('error', res.message || 'Gagal memuat summary');
                 return;
@@ -379,6 +404,8 @@ window.addEventListener('load', function () {
             $('#qrDoneItem').text(formatNumber(res.done || 0));
             $('#qrPendingItem').text(formatNumber(res.pending || 0));
             $('#qrFailedItem').text(formatNumber(res.failed || 0));
+            var qtyZeroTotal = res.qty_zero_total !== undefined ? res.qty_zero_total : <?= $qtyZeroCount ?>;
+            $('#qtyZeroItem').text(formatNumber(qtyZeroTotal));
             $('#btnRetryFailedQr').prop('disabled', isQrRunning || parseInt(res.failed || 0, 10) <= 0);
             $('#btnPrintAssetPreview').prop('disabled', isQrRunning || parseInt(res.done || 0, 10) <= 0);
             if (showToast) {
@@ -394,7 +421,7 @@ window.addEventListener('load', function () {
             return;
         }
         $.ajax({
-            url: '<?= base_url('admin/stockopname/master_opname/preview-asset') ?>',
+            url: '<?= base_url($routeBase . '/preview-asset') ?>',
             type: 'POST',
             dataType: 'json',
             data: {id: id},
@@ -406,7 +433,7 @@ window.addEventListener('load', function () {
                 selectedId = res.data.id;
                 $('#previewItemLabel').text('#' + res.data.id + ' - ' + res.data.nama_barang);
                 renderStockCard(res.data);
-                currentPrintUrl = '<?= base_url('admin/stockopname/master_opname/print-qrcode') ?>/' + res.data.id;
+                currentPrintUrl = '<?= base_url($routeBase . '/print-qrcode') ?>/' + res.data.id;
                 $('#previewPrintQr').prop('disabled', false);
                 highlightSelectedRow();
             },
@@ -421,7 +448,9 @@ window.addEventListener('load', function () {
         if (!disabled) {
             $('#btnGenerateQrBatch').html(qrButtonHtml.normal);
             $('#btnRetryFailedQr').html(qrButtonHtml.retry);
-            $('#btnResetQrOpname').html(qrButtonHtml.reset);
+            if ($('#btnResetQrOpname').length) {
+                $('#btnResetQrOpname').html(qrButtonHtml.reset);
+            }
             loadSummary(false);
         }
     }
@@ -438,7 +467,9 @@ window.addEventListener('load', function () {
 
         $('#btnGenerateQrBatch').html(qrButtonHtml.normal);
         $('#btnRetryFailedQr').html(qrButtonHtml.retry);
-        $('#btnResetQrOpname').html(qrButtonHtml.reset);
+        if ($('#btnResetQrOpname').length) {
+            $('#btnResetQrOpname').html(qrButtonHtml.reset);
+        }
     }
 
     function setQrProgress(percent, processedText, statusText) {
@@ -455,7 +486,7 @@ window.addEventListener('load', function () {
     }
 
     function loadFailedList() {
-        $.getJSON('<?= base_url('admin/stockopname/qrcode/failed_list') ?>', function (res) {
+        $.getJSON('<?= base_url($qrcodeRouteBase . '/failed_list') ?>', function (res) {
             if (!res.success || !res.data || !res.data.length) {
                 $('#qrFailedListWrap').hide();
                 $('#qrFailedListBody').empty();
@@ -527,8 +558,8 @@ window.addEventListener('load', function () {
 
     function runQrBatch(mode) {
         var url = mode === 'retry'
-            ? '<?= base_url('admin/stockopname/qrcode/retry_failed') ?>'
-            : '<?= base_url('admin/stockopname/qrcode/generate_batch') ?>';
+            ? '<?= base_url($qrcodeRouteBase . '/retry_failed') ?>'
+            : '<?= base_url($qrcodeRouteBase . '/generate_batch') ?>';
 
         $.ajax({
             url: url,
@@ -712,7 +743,7 @@ window.addEventListener('load', function () {
             toast('warning', 'Belum ada QR Code siap print');
             return;
         }
-        window.open('<?= base_url('admin/stockopname/master_opname/print-preview-asset') ?>', '_blank', 'noopener');
+        window.open('<?= base_url($routeBase . '/print-preview-asset') ?>', '_blank', 'noopener');
     });
 
     $('#previewPrintQr').on('click', function () {
@@ -742,7 +773,7 @@ window.addEventListener('load', function () {
         var id = $button.data('id');
         var regenerate = $button.data('regenerate') || 0;
         var original = $button.html();
-        var url = '<?= base_url('admin/stockopname/master_opname/generate-qrcode') ?>';
+        var url = '<?= base_url($routeBase . '/generate-qrcode') ?>';
 
         $('[data-toggle="tooltip"]').tooltip('hide');
         $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');

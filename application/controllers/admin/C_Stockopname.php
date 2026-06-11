@@ -181,10 +181,24 @@ class C_Stockopname extends CI_Controller
     {
         $data['page_title'] = 'KARISMA ERP - Opname Monitoring';
         $data['monitoring_summary'] = $this->stockopname->monitoring_summary();
-        $data['activity_logs'] = $this->stockopname->monitoring_activity(8);
+        $data['activity_logs'] = $this->stockopname->monitoring_activity(5);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_monitoring.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function monitoring_activity_log()
+    {
+        $wilayah = trim((string)$this->input->get('wilayah', true));
+
+        $data['page_title'] = 'KARISMA ERP - Log Aktifitas Stock Opname';
+        $data['selected_wilayah'] = $wilayah;
+        $data['wilayah_options'] = $this->stockopname->monitoring_activity_wilayah_options();
+        $data['activity_logs'] = $this->stockopname->monitoring_activity_log($wilayah, 300);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_activity_log.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -195,7 +209,7 @@ class C_Stockopname extends CI_Controller
 
     public function monitoring_activity()
     {
-        $this->json(true, 'Log aktifitas opname berhasil dimuat.', $this->stockopname->monitoring_activity(12));
+        $this->json(true, 'Log aktifitas opname berhasil dimuat.', $this->stockopname->monitoring_activity(5));
     }
 
     public function monitoring_compare_all()
@@ -271,11 +285,13 @@ class C_Stockopname extends CI_Controller
     public function widgets()
     {
         $summary = $this->stockopname->summary();
+        $expiredLotResult = $this->stockopname->expired_lot_result_summary();
         $this->json(true, 'Data dashboard stockopname berhasil dimuat.', [
             'summary' => $summary,
             'master_barang' => $this->stockopname->master_barang_summary(),
-            'all_barang_result' => $this->stockopname->all_barang_result_summary($summary),
-            'fefo_result' => $this->stockopname->fefo_result_summary(),
+            'all_barang_result' => $this->stockopname->all_barang_result_summary(),
+            'expired_lot_result' => $expiredLotResult,
+            'fefo_result' => $expiredLotResult,
         ]);
     }
 
@@ -412,6 +428,30 @@ class C_Stockopname extends CI_Controller
     public function master_barang()
     {
         $data['page_title'] = 'KARISMA ERP - Master Opname Stockopname';
+        $data['page_heading'] = 'Master Opname';
+        $data['table_title'] = 'Data Master Opname';
+        $data['route_base'] = 'admin/stockopname/master_opname';
+        $data['qrcode_route_base'] = 'admin/stockopname/qrcode';
+        $data['qty_zero_count'] = $this->stockopname->count_all_master_barang('zero');
+        $data['show_qty_zero_widget'] = true;
+        $data['show_reset_qrcode'] = true;
+        $this->stockopname->ensure_qrcode_columns();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_master_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function master_barang_qty_zero()
+    {
+        $data['page_title'] = 'KARISMA ERP - Master Opname Qty 0';
+        $data['page_heading'] = 'Master Opname Qty 0';
+        $data['table_title'] = 'Data Master Opname Qty 0';
+        $data['route_base'] = 'admin/stockopname/master_opname/qty-zero';
+        $data['qrcode_route_base'] = 'admin/stockopname/qrcode/qty-zero';
+        $data['qty_zero_count'] = $this->stockopname->count_all_master_barang('zero');
+        $data['show_qty_zero_widget'] = false;
+        $data['show_reset_qrcode'] = false;
         $this->stockopname->ensure_qrcode_columns();
 
         $this->load->view('partial/main/header.php', $data);
@@ -438,6 +478,12 @@ class C_Stockopname extends CI_Controller
         $this->raw_json($this->stockopname->get_master_barang_datatable($this->post()));
     }
 
+    public function ajax_master_barang_qty_zero_list()
+    {
+        $this->stockopname->ensure_qrcode_columns();
+        $this->raw_json($this->stockopname->get_master_barang_datatable($this->post(), 'zero'));
+    }
+
     public function ajax_master_barang_detail()
     {
         $id = $this->input->post('id', true);
@@ -452,6 +498,22 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->json(true, 'Detail barang berhasil dimuat.', $row);
+    }
+
+    public function ajax_master_barang_qty_zero_detail()
+    {
+        $id = $this->input->post('id', true);
+        if (!ctype_digit((string)$id)) {
+            return $this->json(false, 'ID barang tidak valid.');
+        }
+
+        $this->stockopname->ensure_qrcode_columns();
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, 'zero');
+        if (!$row) {
+            return $this->json(false, 'Data barang qty 0 tidak ditemukan.');
+        }
+
+        $this->json(true, 'Detail barang qty 0 berhasil dimuat.', $row);
     }
 
     public function ajax_update_master_barang()
@@ -524,21 +586,32 @@ class C_Stockopname extends CI_Controller
         return true;
     }
 
-    public function qrcode_summary()
+    private function qrcode_summary_response($qtyMode = 'positive')
     {
         if (!$this->ensure_qrcode_ready()) {
             return;
         }
 
         $this->stockopname->reset_stale_qrcode_process(1);
-        $summary = $this->stockopname->qrcode_summary();
+        $summary = $this->stockopname->qrcode_summary($qtyMode);
         $this->raw_json([
             'success' => true,
             'total' => $summary['total'],
             'done' => $summary['done'],
             'pending' => $summary['pending'],
             'failed' => $summary['failed'],
+            'qty_zero_total' => $this->stockopname->count_all_master_barang('zero'),
         ]);
+    }
+
+    public function qrcode_summary()
+    {
+        $this->qrcode_summary_response('positive');
+    }
+
+    public function qrcode_qty_zero_summary()
+    {
+        $this->qrcode_summary_response('zero');
     }
 
     private function process_qrcode_row($row, $force = false)
@@ -600,7 +673,7 @@ class C_Stockopname extends CI_Controller
         }
     }
 
-    private function run_qrcode_batch($mode = 'normal')
+    private function run_qrcode_batch($mode = 'normal', $qtyMode = 'positive')
     {
         if (!$this->ensure_qrcode_ready()) {
             return;
@@ -616,9 +689,9 @@ class C_Stockopname extends CI_Controller
         $mode = $mode === 'retry' ? 'retry' : 'normal';
 
         $this->stockopname->reset_stale_qrcode_process(0);
-        $total = $this->stockopname->qrcode_total_count();
-        $failedBefore = $this->stockopname->qrcode_failed_count();
-        $rows = $this->stockopname->get_qrcode_batch($batchSize, $mode);
+        $total = $this->stockopname->qrcode_total_count($qtyMode);
+        $failedBefore = $this->stockopname->qrcode_failed_count($qtyMode);
+        $rows = $this->stockopname->get_qrcode_batch($batchSize, $mode, $qtyMode);
         $processed = 0;
         $successCount = 0;
         $failedCount = 0;
@@ -639,9 +712,9 @@ class C_Stockopname extends CI_Controller
             }
         }
 
-        $summary = $this->stockopname->qrcode_summary();
+        $summary = $this->stockopname->qrcode_summary($qtyMode);
         if ($mode === 'retry') {
-            $remainingFailed = $this->stockopname->qrcode_failed_count();
+            $remainingFailed = $this->stockopname->qrcode_failed_count($qtyMode);
             $retryTotal = max($failedBefore, $processed + $remainingFailed);
             $this->raw_json([
                 'success' => true,
@@ -659,7 +732,7 @@ class C_Stockopname extends CI_Controller
             return;
         }
 
-        $remaining = $this->stockopname->qrcode_pending_count();
+        $remaining = $this->stockopname->qrcode_pending_count($qtyMode);
         $this->raw_json([
             'success' => true,
             'mode' => 'normal',
@@ -682,23 +755,43 @@ class C_Stockopname extends CI_Controller
         $this->run_qrcode_batch('normal');
     }
 
+    public function qrcode_qty_zero_generate_batch()
+    {
+        $this->run_qrcode_batch('normal', 'zero');
+    }
+
     public function qrcode_retry_failed()
     {
         $this->run_qrcode_batch('retry');
     }
 
-    public function qrcode_failed_list()
+    public function qrcode_qty_zero_retry_failed()
+    {
+        $this->run_qrcode_batch('retry', 'zero');
+    }
+
+    private function qrcode_failed_list_response($qtyMode = 'positive')
     {
         if (!$this->ensure_qrcode_ready()) {
             return;
         }
 
-        $rows = $this->stockopname->failed_qrcode_list((int)$this->input->get('limit', true) ?: 100);
+        $rows = $this->stockopname->failed_qrcode_list((int)$this->input->get('limit', true) ?: 100, $qtyMode);
         $this->raw_json([
             'success' => true,
             'total' => count($rows),
             'data' => $rows,
         ]);
+    }
+
+    public function qrcode_failed_list()
+    {
+        $this->qrcode_failed_list_response('positive');
+    }
+
+    public function qrcode_qty_zero_failed_list()
+    {
+        $this->qrcode_failed_list_response('zero');
     }
 
     public function qrcode_reset()
@@ -740,6 +833,11 @@ class C_Stockopname extends CI_Controller
         $this->generate_asset('qrcode');
     }
 
+    public function ajax_generate_qrcode_qty_zero()
+    {
+        $this->generate_asset('qrcode', 'zero');
+    }
+
     public function ajax_generate_all_qrcode()
     {
         $this->run_qrcode_batch('normal');
@@ -762,7 +860,7 @@ class C_Stockopname extends CI_Controller
         return 'assets/codegenerator/qrcode/qr_' . $safeCode . '_' . $id . '.png';
     }
 
-    private function generate_asset($type)
+    private function generate_asset($type, $qtyMode = 'positive')
     {
         $id = $this->input->post('id', true);
         $regenerate = (string)$this->input->post('regenerate', true) === '1';
@@ -779,7 +877,7 @@ class C_Stockopname extends CI_Controller
         } else {
             $this->stockopname->ensure_master_code_columns();
         }
-        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, $qtyMode);
         if (!$row) {
             return $this->json(false, 'Data barang tidak ditemukan.');
         }
@@ -834,7 +932,7 @@ class C_Stockopname extends CI_Controller
         ]);
     }
 
-    public function ajax_preview_asset()
+    private function preview_asset_response($qtyMode = 'positive')
     {
         $id = $this->input->post('id', true);
         if (!ctype_digit((string)$id)) {
@@ -842,7 +940,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->stockopname->ensure_master_code_columns();
-        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, $qtyMode);
         if (!$row) {
             return $this->json(false, 'Data tidak ditemukan');
         }
@@ -863,14 +961,24 @@ class C_Stockopname extends CI_Controller
         ]);
     }
 
-    public function print_qrcode($id = null)
+    public function ajax_preview_asset()
+    {
+        $this->preview_asset_response('positive');
+    }
+
+    public function ajax_preview_asset_qty_zero()
+    {
+        $this->preview_asset_response('zero');
+    }
+
+    private function print_qrcode_response($id = null, $qtyMode = 'positive')
     {
         if (!ctype_digit((string)$id)) {
             show_error('ID barang tidak valid.', 400, 'Data Tidak Valid');
         }
 
         $this->stockopname->ensure_master_code_columns();
-        $row = $this->stockopname->get_master_barang_by_id((int)$id, true);
+        $row = $this->stockopname->get_master_barang_by_id((int)$id, $qtyMode);
         if (!$row) {
             show_error('Data barang tidak ditemukan.', 404, 'Data Tidak Ditemukan');
         }
@@ -886,10 +994,20 @@ class C_Stockopname extends CI_Controller
         $this->load->view('content/admin/stockopname_print_qrcode.php', $data);
     }
 
-    public function print_preview_asset()
+    public function print_qrcode($id = null)
+    {
+        $this->print_qrcode_response($id, 'positive');
+    }
+
+    public function print_qrcode_qty_zero($id = null)
+    {
+        $this->print_qrcode_response($id, 'zero');
+    }
+
+    private function print_preview_asset_response($qtyMode = 'positive')
     {
         $this->stockopname->ensure_qrcode_columns();
-        $rows = $this->stockopname->get_master_barang_print_assets();
+        $rows = $this->stockopname->get_master_barang_print_assets($qtyMode);
         $items = [];
         foreach ($rows as $row) {
             $items[] = [
@@ -906,5 +1024,15 @@ class C_Stockopname extends CI_Controller
         ];
 
         $this->load->view('content/admin/stockopname_print_preview_asset.php', $data);
+    }
+
+    public function print_preview_asset()
+    {
+        $this->print_preview_asset_response('positive');
+    }
+
+    public function print_preview_asset_qty_zero()
+    {
+        $this->print_preview_asset_response('zero');
     }
 }

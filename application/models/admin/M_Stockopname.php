@@ -749,6 +749,48 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
+    public function monitoring_activity_wilayah_options()
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        return $this->db
+            ->select('wilayah')
+            ->from($this->opnameTable)
+            ->where("TRIM(COALESCE(wilayah, '')) <> ''", null, false)
+            ->group_by('wilayah')
+            ->order_by('wilayah', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function monitoring_activity_log($wilayah = '', $limit = 300)
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $noLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
+
+        $this->db
+            ->select("id,kode_barang,nama_barang,expired_date,{$noLot},qty,qty_pcs,qty_box,input_by,wilayah,tim_opname,input_at,{$createdColumn} AS created_at", false)
+            ->from($this->opnameTable);
+
+        $wilayah = trim((string)$wilayah);
+        if ($wilayah !== '') {
+            $this->db->where('wilayah', $wilayah);
+        }
+
+        return $this->db
+            ->order_by($createdColumn, 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
+    }
+
     public function monitoring_compare_all_detail($kodeBarang)
     {
         $kodeBarang = trim((string)$kodeBarang);
@@ -1066,34 +1108,29 @@ class M_Stockopname extends CI_Model
 
     public function all_barang_result_summary($summary = null)
     {
-        $summary = $summary ?: $this->summary();
-        $done = (int)($summary['match_item'] ?? 0) + (int)($summary['selisih_item'] ?? 0);
-
-        return $this->percentage_result(
-            $done,
-            $summary['belum_item'] ?? 0
-        );
-    }
-
-    public function fefo_result_summary()
-    {
         if (!$this->ready()) {
             return $this->percentage_result(1, 2);
         }
 
-        $base = $this->base_query();
         $sql = "
             SELECT
-                SUM(CASE WHEN status_opname = 'match' THEN 1 ELSE 0 END) AS match_item,
-                SUM(CASE WHEN status_opname <> 'match' THEN 1 ELSE 0 END) AS not_match_item
-            FROM ({$base}) x
-            INNER JOIN (
-                SELECT kode_barang, MIN({$this->exp_key('expired_date')}) AS min_exp_key
+                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 0 ELSE 1 END) AS not_match_item
+            FROM (
+                SELECT
+                    kode_barang,
+                    SUM(COALESCE(qty, 0)) AS qty_buku
                 FROM {$this->masterTable}
+                WHERE COALESCE(qty, 0) <> 0
                 GROUP BY kode_barang
-            ) fefo
-                ON fefo.kode_barang = x.kode_barang
-                AND fefo.min_exp_key = {$this->exp_key('x.expired_date')}
+            ) m
+            LEFT JOIN (
+                SELECT
+                    kode_barang,
+                    SUM(COALESCE(qty, 0)) AS qty_fisik
+                FROM {$this->opnameTable}
+                GROUP BY kode_barang
+            ) o ON o.kode_barang = m.kode_barang
         ";
         $row = $this->db->query($sql)->row_array();
 
@@ -1101,6 +1138,55 @@ class M_Stockopname extends CI_Model
             $row['match_item'] ?? 0,
             $row['not_match_item'] ?? 0
         );
+    }
+
+    public function expired_lot_result_summary()
+    {
+        if (!$this->ready()) {
+            return $this->percentage_result(1, 2);
+        }
+
+        $masterLot = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot' : "''");
+        $opnameLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot' : "''");
+
+        $sql = "
+            SELECT
+                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 0 ELSE 1 END) AS not_match_item
+            FROM (
+                SELECT
+                    kode_barang,
+                    {$this->exp_key('expired_date')} AS exp_key,
+                    {$this->lot_key($masterLot)} AS lot_key,
+                    SUM(COALESCE(qty, 0)) AS qty_buku
+                FROM {$this->masterTable}
+                WHERE COALESCE(qty, 0) <> 0
+                GROUP BY kode_barang, exp_key, lot_key
+            ) m
+            LEFT JOIN (
+                SELECT
+                    kode_barang,
+                    {$this->exp_key('expired_date')} AS exp_key,
+                    {$this->lot_key($opnameLot)} AS lot_key,
+                    SUM(COALESCE(qty, 0)) AS qty_fisik
+                FROM {$this->opnameTable}
+                GROUP BY kode_barang, exp_key, lot_key
+            ) o
+                ON o.kode_barang = m.kode_barang
+                AND o.exp_key = m.exp_key
+                AND o.lot_key = m.lot_key
+        ";
+        $row = $this->db->query($sql)->row_array();
+
+        return $this->percentage_result(
+            $row['match_item'] ?? 0,
+            $row['not_match_item'] ?? 0
+        );
+    }
+
+    public function fefo_result_summary()
+    {
+        return $this->expired_lot_result_summary();
     }
 
     public function demo_preview($input)
@@ -1126,6 +1212,7 @@ class M_Stockopname extends CI_Model
 
         return [
             'total_item' => $this->count_all_master_barang(),
+            'qty_zero_item' => $this->count_all_master_barang('zero'),
             'qrcode_generated_item' => $qrSummary['done'],
             'qrcode_pending_item' => $qrSummary['pending'],
             'qrcode_failed_item' => $qrSummary['failed'],
@@ -1134,14 +1221,15 @@ class M_Stockopname extends CI_Model
         ];
     }
 
-    public function count_all_master_barang()
+    public function count_all_master_barang($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return 0;
         }
 
+        $where = $qtyMode === 'zero' ? 'COALESCE(qty, 0) = 0' : 'COALESCE(qty, 0) > 0';
         $row = $this->db
-            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} WHERE COALESCE(qty, 0) > 0 GROUP BY nama_barang, expired_date, no_lot) grouped_master")
+            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} WHERE {$where} GROUP BY nama_barang, expired_date, no_lot) grouped_master")
             ->row_array();
 
         return (int)($row['total'] ?? 0);
@@ -1180,6 +1268,23 @@ class M_Stockopname extends CI_Model
     private function master_barang_positive_qty_filter()
     {
         $this->db->where('COALESCE(qty, 0) > 0', null, false);
+    }
+
+    private function master_barang_zero_qty_filter()
+    {
+        $this->db->where('COALESCE(qty, 0) = 0', null, false);
+    }
+
+    private function master_barang_qty_filter($qtyMode = 'positive')
+    {
+        if ($qtyMode === 'zero') {
+            $this->master_barang_zero_qty_filter();
+            return;
+        }
+
+        if ($qtyMode === 'positive') {
+            $this->master_barang_positive_qty_filter();
+        }
     }
 
     private function master_barang_select()
@@ -1282,16 +1387,16 @@ class M_Stockopname extends CI_Model
         }
     }
 
-    private function count_filtered_master_barang($search, $qrcodeStatus = '')
+    private function count_filtered_master_barang($search, $qrcodeStatus = '', $qtyMode = 'positive')
     {
         $this->db->from($this->masterTable);
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->master_barang_search($search);
         $this->master_barang_qrcode_filter($qrcodeStatus);
         return (int)$this->db->count_all_results();
     }
 
-    public function get_master_barang_datatable($post)
+    public function get_master_barang_datatable($post, $qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return [
@@ -1321,7 +1426,7 @@ class M_Stockopname extends CI_Model
         $orderDir = strtolower((string)($post['order'][0]['dir'] ?? 'asc')) === 'desc' ? 'DESC' : 'ASC';
 
         $this->master_barang_select();
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->master_barang_search($search);
         $this->master_barang_qrcode_filter($qrcodeStatus);
         $this->db->order_by($orderColumn, $orderDir, false);
@@ -1340,8 +1445,8 @@ class M_Stockopname extends CI_Model
 
         return [
             'draw' => (int)($post['draw'] ?? 1),
-            'recordsTotal' => $this->count_all_master_barang(),
-            'recordsFiltered' => $this->count_filtered_master_barang($search, $qrcodeStatus),
+            'recordsTotal' => $this->count_all_master_barang($qtyMode),
+            'recordsFiltered' => $this->count_filtered_master_barang($search, $qrcodeStatus, $qtyMode),
             'data' => $rows,
         ];
     }
@@ -1354,8 +1459,10 @@ class M_Stockopname extends CI_Model
     public function get_master_barang_by_id($id, $positiveQtyOnly = false)
     {
         $this->master_barang_select();
-        if ($positiveQtyOnly) {
-            $this->master_barang_positive_qty_filter();
+        if ($positiveQtyOnly === true) {
+            $this->master_barang_qty_filter('positive');
+        } elseif (is_string($positiveQtyOnly)) {
+            $this->master_barang_qty_filter($positiveQtyOnly);
         }
 
         return $this->db
@@ -1379,14 +1486,14 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
-    public function get_master_barang_print_assets()
+    public function get_master_barang_print_assets($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return [];
         }
 
         $this->master_barang_select();
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->master_barang_qrcode_filter('generated');
         $this->db
             ->order_by('nama_barang', 'ASC')
@@ -1523,7 +1630,7 @@ class M_Stockopname extends CI_Model
             ->update($this->masterTable, $allowed);
     }
 
-    public function qrcode_summary()
+    public function qrcode_summary($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return [
@@ -1535,7 +1642,7 @@ class M_Stockopname extends CI_Model
         }
 
         if (!$this->db->field_exists('qrcode_status', $this->masterTable)) {
-            $total = $this->qrcode_total_count();
+            $total = $this->qrcode_total_count($qtyMode);
             return [
                 'total' => $total,
                 'done' => 0,
@@ -1544,16 +1651,16 @@ class M_Stockopname extends CI_Model
             ];
         }
 
-        $sql = "
-            SELECT
+        $this->db
+            ->select("
                 COUNT(*) AS total,
                 SUM(CASE WHEN qrcode_status = 'DONE' THEN 1 ELSE 0 END) AS done,
                 SUM(CASE WHEN qrcode_status = 'FAILED' OR qrcode_retry_flag = 1 THEN 1 ELSE 0 END) AS failed,
                 SUM(CASE WHEN qrcode_status IS NULL OR qrcode_status IN ('PENDING','PROCESS') THEN 1 ELSE 0 END) AS pending
-            FROM {$this->masterTable}
-            WHERE COALESCE(qty, 0) > 0
-        ";
-        $row = $this->db->query($sql)->row_array();
+            ", false)
+            ->from($this->masterTable);
+        $this->master_barang_qty_filter($qtyMode);
+        $row = $this->db->get()->row_array();
 
         return [
             'total' => (int)($row['total'] ?? 0),
@@ -1563,41 +1670,41 @@ class M_Stockopname extends CI_Model
         ];
     }
 
-    public function qrcode_total_count()
+    public function qrcode_total_count($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return 0;
         }
 
         $this->db->from($this->masterTable);
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         return (int)$this->db->count_all_results();
     }
 
-    public function qrcode_done_count()
+    public function qrcode_done_count($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
             return 0;
         }
 
         $this->db->from($this->masterTable);
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->db->where('qrcode_status', 'DONE');
         return (int)$this->db->count_all_results();
     }
 
-    public function qrcode_pending_count()
+    public function qrcode_pending_count($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return 0;
         }
 
         if (!$this->db->field_exists('qrcode_status', $this->masterTable)) {
-            return $this->qrcode_total_count();
+            return $this->qrcode_total_count($qtyMode);
         }
 
         $this->db->from($this->masterTable);
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->db->group_start();
         $this->db->where('qrcode_status', 'PENDING');
         $this->db->or_where('qrcode_status', 'PROCESS');
@@ -1606,14 +1713,14 @@ class M_Stockopname extends CI_Model
         return (int)$this->db->count_all_results();
     }
 
-    public function qrcode_failed_count()
+    public function qrcode_failed_count($qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
             return 0;
         }
 
         $this->db->from($this->masterTable);
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         $this->db->group_start();
         $this->db->where('qrcode_status', 'FAILED');
         $this->db->or_where('qrcode_retry_flag', 1);
@@ -1621,14 +1728,14 @@ class M_Stockopname extends CI_Model
         return (int)$this->db->count_all_results();
     }
 
-    public function get_qrcode_batch($limit = 100, $mode = 'normal')
+    public function get_qrcode_batch($limit = 100, $mode = 'normal', $qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable)) {
             return [];
         }
 
         $this->master_barang_select();
-        $this->master_barang_positive_qty_filter();
+        $this->master_barang_qty_filter($qtyMode);
         if ($mode === 'retry') {
             $this->db->where('qrcode_status', 'FAILED');
             $this->db->where('qrcode_retry_flag', 1);
@@ -1715,15 +1822,17 @@ class M_Stockopname extends CI_Model
             ->update($this->masterTable);
     }
 
-    public function failed_qrcode_list($limit = 100)
+    public function failed_qrcode_list($limit = 100, $qtyMode = 'positive')
     {
         if (!$this->db->table_exists($this->masterTable) || !$this->db->field_exists('qrcode_status', $this->masterTable)) {
             return [];
         }
 
-        return $this->db
+        $this->db
             ->select('id,kode_barang,qrcode_error_message,qrcode_attempt_count,qrcode_updated_at')
-            ->from($this->masterTable)
+            ->from($this->masterTable);
+        $this->master_barang_qty_filter($qtyMode);
+        return $this->db
             ->group_start()
             ->where('qrcode_status', 'FAILED')
             ->or_where('qrcode_retry_flag', 1)
