@@ -119,7 +119,7 @@ class M_Api extends CI_Model
                 continue;
             }
 
-            $key = $this->build_composite_key($normalized['no_po'], $normalized['kd_barang']);
+            $key = $this->build_pre_po_key($normalized);
             $dedupedRows[$key] = $normalized;
         }
 
@@ -715,25 +715,25 @@ class M_Api extends CI_Model
 
     protected function get_existing_pre_po_map(array $dedupedRows)
     {
-        $noPoList = [];
+        $kdPoList = [];
         $kdBarangList = [];
 
         foreach ($dedupedRows as $row) {
-            $noPoList[] = $row['no_po'];
+            $kdPoList[] = $row['kd_po'];
             $kdBarangList[] = $row['kd_barang'];
         }
 
         $existingRows = $this->db
             ->select('id_pre_po, no_po, kd_po, tgl_transaksi, kd_suplier, kd_barang, satuan, qty, hrg_satuan, harga_total, status')
             ->from($this->prePoTable)
-            ->where_in('no_po', array_values(array_unique($noPoList)))
+            ->where_in('kd_po', array_values(array_unique($kdPoList)))
             ->where_in('kd_barang', array_values(array_unique($kdBarangList)))
             ->get()
             ->result_array();
 
         $map = [];
         foreach ($existingRows as $existing) {
-            $key = $this->build_composite_key($existing['no_po'], $existing['kd_barang']);
+            $key = $this->build_pre_po_key($existing);
             $map[$key] = $existing;
         }
 
@@ -788,6 +788,18 @@ class M_Api extends CI_Model
     protected function build_composite_key($noPo, $kdBarang)
     {
         return trim((string) $noPo) . '||' . trim((string) $kdBarang);
+    }
+
+    protected function build_pre_po_key(array $row)
+    {
+        return implode('||', [
+            trim((string) ($row['kd_po'] ?? '')),
+            trim((string) ($row['kd_barang'] ?? '')),
+            trim((string) ($row['satuan'] ?? '')),
+            (string) ((int) ($row['qty'] ?? 0)),
+            (string) ((int) ($row['hrg_satuan'] ?? 0)),
+            (string) ((int) ($row['harga_total'] ?? 0))
+        ]);
     }
 
     protected function build_invoice_adjustment_key($kdPo, $kdBarang)
