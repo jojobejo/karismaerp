@@ -249,11 +249,45 @@ class M_SalesOrder extends CI_Model
     // MASTER DATA
     // ================================================================
 
-    public function get_customers()
+    public function get_customers($nama_sales = null)
     {
-        return $this->db->order_by('nama_customer', 'ASC')
+        $nama_sales = trim((string)$nama_sales);
+
+        if ($nama_sales !== '' && $this->db->field_exists('nama_sales', 'tb_customer')) {
+            $this->db->where(
+                'LOWER(TRIM(nama_sales)) = ' . $this->db->escape(strtolower($nama_sales)),
+                null,
+                false
+            );
+        }
+
+        return $this->db
+            ->order_by('nama_customer', 'ASC')
             ->get('tb_customer')
             ->result_array();
+    }
+
+    public function is_customer_for_sales($kd_customer, $nama_sales)
+    {
+        $kd_customer = trim((string)$kd_customer);
+        $nama_sales  = trim((string)$nama_sales);
+
+        if ($kd_customer === '' || $nama_sales === '') {
+            return false;
+        }
+
+        if (!$this->db->field_exists('nama_sales', 'tb_customer')) {
+            return true;
+        }
+
+        return $this->db
+            ->where('kd_customer', $kd_customer)
+            ->where(
+                'LOWER(TRIM(nama_sales)) = ' . $this->db->escape(strtolower($nama_sales)),
+                null,
+                false
+            )
+            ->count_all_results('tb_customer') > 0;
     }
 
     public function get_customer($id)

@@ -59,6 +59,30 @@ class C_SalesOrder extends CI_Controller
 
     private function _getUsername()  { return $this->_getCurrentUser()['nm_karyawan']; }
 
+    private function _getCustomersForCurrentSales()
+    {
+        if (!$this->_isRestrictedSalesUser()) {
+            return $this->M_SalesOrder->get_customers();
+        }
+
+        return $this->M_SalesOrder->get_customers($this->_getUsername());
+    }
+
+    private function _validateCustomerForCurrentSales($kd_customer, $redirect_url)
+    {
+        if (!$this->_isRestrictedSalesUser()) {
+            return true;
+        }
+
+        if ($this->M_SalesOrder->is_customer_for_sales($kd_customer, $this->_getUsername())) {
+            return true;
+        }
+
+        $this->session->set_flashdata('error', 'Customer tidak sesuai dengan nama sales Anda.');
+        redirect($redirect_url);
+        return false;
+    }
+
     private function _isRestrictedSalesUser()
     {
         return strtoupper((string)$this->session->userdata('jobdesk')) === 'SC';
@@ -598,7 +622,7 @@ class C_SalesOrder extends CI_Controller
     {
         $data['page_title']     = 'KARISMA - Buat Sales Order';
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
-        $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['customers']      = $this->_getCustomersForCurrentSales();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $this->_getGudangId();
@@ -623,6 +647,10 @@ class C_SalesOrder extends CI_Controller
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
+
+        if (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/create')) {
+            return;
+        }
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
@@ -822,7 +850,7 @@ class C_SalesOrder extends CI_Controller
         }
         unset($detail);
         $data['details']        = $details;
-        $data['customers']      = $this->M_SalesOrder->get_customers();
+        $data['customers']      = $this->_getCustomersForCurrentSales();
         $data['tax_list']       = $this->M_SalesOrder->get_tax_list();
         $data['gudang_list']    = $this->M_SalesOrder->get_gudang_list();
         $data['gudang_id']      = $so['gudang_id'];
@@ -851,6 +879,10 @@ class C_SalesOrder extends CI_Controller
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
         $gudang_id = $this->_getGudangId($post);
+
+        if (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/edit/' . $id_so)) {
+            return;
+        }
 
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
