@@ -718,18 +718,19 @@ tr.row-pending { background:#fafafa !important; }
 
                                     <?php if ($can_ops_lk): ?>
                                     <?php if ($role === 'ADMLOG'): ?>
-                                        <?php if ($can_edit_row && $lk['status'] !== 'MENUNGGU'): ?>
+                                        <?php if ($can_edit_row): ?>
                                             <div style="display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;">
                                                 <?php if (in_array($lk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
                                                     <button class="btn btn-sm btn-info btn-simpan-lk" data-id="<?= $lk['id'] ?>">
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <!-- <button class="btn btn-sm btn-warning btn-edit-lk"
+                                                <button class="btn btn-sm btn-warning btn-edit-lk"
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
                                                 </button>
+                                                <!--
                                                 <button class="btn btn-sm btn-danger btn-hapus-lk"
                                                     data-id="<?= $lk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($lk['keterangan']) ?>">
@@ -1077,18 +1078,19 @@ tr.row-pending { background:#fafafa !important; }
 
                                     <?php if ($can_ops_kk): ?>
                                     <?php if ($role === 'ADMLOG'): ?>
-                                        <?php if ($can_edit_row && $kk['status'] !== 'MENUNGGU'): ?>
+                                        <?php if ($can_edit_row): ?>
                                             <div style="display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;">
                                                 <?php if (in_array($kk['status'], ['SIAP_LOADING','CETAK_DO','DO_SELESAI'])): ?>
                                                     <button class="btn btn-sm btn-info btn-simpan-kk" data-id="<?= $kk['id'] ?>">
                                                         <i class="fas fa-save"></i> Simpan
                                                     </button>
                                                 <?php endif; ?>
-                                                <!-- <button class="btn btn-sm btn-warning btn-edit-kk"
+                                                <button class="btn btn-sm btn-warning btn-edit-kk"
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
                                                     <i class="fas fa-pencil-alt"></i> Edit
                                                 </button>
+                                                <!--
                                                 <button class="btn btn-sm btn-danger btn-hapus-kk"
                                                     data-id="<?= $kk['id'] ?>"
                                                     data-ket="<?= htmlspecialchars($kk['keterangan']) ?>">
