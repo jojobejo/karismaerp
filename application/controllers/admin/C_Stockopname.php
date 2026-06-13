@@ -632,6 +632,7 @@ class C_Stockopname extends CI_Controller
         $data['qty_zero_count'] = $this->stockopname->count_all_master_barang('zero');
         $data['show_qty_zero_widget'] = true;
         $data['show_reset_qrcode'] = true;
+        $data['show_stock_card_range_print'] = true;
         $this->stockopname->ensure_qrcode_columns();
 
         $this->load->view('partial/main/header.php', $data);
@@ -649,6 +650,7 @@ class C_Stockopname extends CI_Controller
         $data['qty_zero_count'] = $this->stockopname->count_all_master_barang('zero');
         $data['show_qty_zero_widget'] = false;
         $data['show_reset_qrcode'] = false;
+        $data['show_stock_card_range_print'] = false;
         $this->stockopname->ensure_qrcode_columns();
 
         $this->load->view('partial/main/header.php', $data);
@@ -1231,5 +1233,121 @@ class C_Stockopname extends CI_Controller
     public function print_preview_asset_qty_zero()
     {
         $this->print_preview_asset_response('zero');
+    }
+
+    public function ajax_master_barang_positive_qty_pcs_ids()
+    {
+        $ids = $this->stockopname->get_master_barang_ids_with_positive_qty_pcs('positive');
+        $this->json(true, count($ids) . ' barang dengan Qty Pcs lebih dari 0 dipilih.', [
+            'ids' => $ids,
+            'total' => count($ids),
+        ]);
+    }
+
+    public function print_kartu_stock_sebagian()
+    {
+        if (strtoupper((string)$this->input->method(true)) !== 'POST') {
+            show_error('Request print sebagian harus menggunakan POST.', 405, 'Metode Tidak Diizinkan');
+        }
+
+        $rawIds = (string)$this->input->post('selected_ids', false);
+        $decodedIds = json_decode($rawIds, true);
+        if (!is_array($decodedIds)) {
+            show_error('Daftar barang yang dipilih tidak valid.', 400, 'Data Tidak Valid');
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $decodedIds), function ($id) {
+            return $id > 0;
+        })));
+        if (empty($ids)) {
+            show_error('Belum ada barang yang dipilih untuk print.', 400, 'Data Tidak Valid');
+        }
+        if (count($ids) > 5000) {
+            show_error('Maksimal 5.000 barang dalam satu proses print.', 400, 'Terlalu Banyak Data');
+        }
+
+        @set_time_limit(0);
+        $this->stockopname->ensure_qrcode_columns();
+        $rows = $this->stockopname->get_master_barang_by_ids($ids, 'positive');
+        $items = [];
+        $generated = 0;
+        $failed = 0;
+
+        foreach ($rows as $row) {
+            $qrcodePath = trim((string)($row['qrcode'] ?? ''));
+            if ($qrcodePath === '' || !is_file(FCPATH . $qrcodePath)) {
+                $result = $this->process_qrcode_row($row);
+                if (!empty($result['success'])) {
+                    $qrcodePath = (string)($result['path'] ?? '');
+                    $row['qrcode'] = $qrcodePath;
+                    if (empty($result['skipped'])) {
+                        $generated++;
+                    }
+                } else {
+                    $failed++;
+                }
+            }
+
+            $items[] = [
+                'barang' => $row,
+                'qrcode' => $this->asset_payload($qrcodePath),
+                'scan_value' => $this->qrcode_scan_value($row),
+            ];
+        }
+
+        $data = [
+            'page_title' => 'Print Sebagian Kartu Stock',
+            'print_heading' => 'Print Sebagian Kartu Stock',
+            'print_description' => count($items) . ' kartu terpilih, QR baru: ' . $generated . ', gagal: ' . $failed,
+            'items' => $items,
+            'inventory_date' => $this->tanggal_indo(),
+        ];
+
+        $this->load->view('content/admin/stockopname_print_preview_asset.php', $data);
+    }
+
+    public function print_kartu_stock_3075_3267()
+    {
+        $startId = 3075;
+        $endId = 3267;
+
+        @set_time_limit(0);
+        $this->stockopname->ensure_qrcode_columns();
+        $rows = $this->stockopname->get_master_barang_by_id_range($startId, $endId);
+        $items = [];
+        $generated = 0;
+        $failed = 0;
+
+        foreach ($rows as $row) {
+            $qrcodePath = trim((string)($row['qrcode'] ?? ''));
+            if ($qrcodePath === '' || !is_file(FCPATH . $qrcodePath)) {
+                $result = $this->process_qrcode_row($row);
+                if (!empty($result['success'])) {
+                    $qrcodePath = (string)($result['path'] ?? '');
+                    $row['qrcode'] = $qrcodePath;
+                    if (empty($result['skipped'])) {
+                        $generated++;
+                    }
+                } else {
+                    $failed++;
+                }
+            }
+
+            $items[] = [
+                'barang' => $row,
+                'qrcode' => $this->asset_payload($qrcodePath),
+                'scan_value' => $this->qrcode_scan_value($row),
+            ];
+        }
+
+        $data = [
+            'page_title' => 'Print Kartu Stock ID ' . $startId . '-' . $endId,
+            'print_heading' => 'Print Kartu Stock ID ' . $startId . '-' . $endId,
+            'print_description' => count($items) . ' kartu, QR baru: ' . $generated . ', gagal: ' . $failed,
+            'items' => $items,
+            'inventory_date' => $this->tanggal_indo(),
+        ];
+
+        $this->load->view('content/admin/stockopname_print_preview_asset.php', $data);
     }
 }

@@ -113,6 +113,9 @@ $route['admin/stockopname/master_opname/generate-qrcode-all'] = 'admin/C_Stockop
 $route['admin/stockopname/master_opname/generate-barcode'] = 'admin/C_Stockopname/ajax_generate_barcode';
 $route['admin/stockopname/master_opname/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset';
 $route['admin/stockopname/master_opname/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset';
+$route['admin/stockopname/master_opname/positive-qty-pcs-ids'] = 'admin/C_Stockopname/ajax_master_barang_positive_qty_pcs_ids';
+$route['admin/stockopname/master_opname/print-sebagian'] = 'admin/C_Stockopname/print_kartu_stock_sebagian';
+$route['admin/stockopname/master_opname/print-kartu-stock-3075-3267'] = 'admin/C_Stockopname/print_kartu_stock_3075_3267';
 $route['admin/stockopname/master_opname/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode/$1';
 
 // Penilaian Lingkungan Kantor alias route

@@ -5,6 +5,7 @@ $routeBase = $route_base ?? 'admin/stockopname/master_opname';
 $qrcodeRouteBase = $qrcode_route_base ?? 'admin/stockopname/qrcode';
 $showQtyZeroWidget = !empty($show_qty_zero_widget);
 $showResetQrcode = !isset($show_reset_qrcode) || !empty($show_reset_qrcode);
+$showStockCardRangePrint = !empty($show_stock_card_range_print);
 $qtyZeroCount = (int)($qty_zero_count ?? 0);
 ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -51,11 +52,11 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                     .mb-stat{min-height:96px;padding:16px;border-radius:8px;border:1px solid #e1e7ef;background:#fff;border-left:4px solid #0f766e}.mb-stat-label{font-size:12px;text-transform:uppercase;color:#64748b;font-weight:700}.mb-stat-value{font-size:28px;font-weight:800;color:#111827;line-height:1.1;margin-top:8px}.mb-stat-meta{font-size:12px;color:#6b7280;margin-top:6px}
                     .mb-stat.filter-card{width:100%;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}.mb-stat.filter-card:hover{border-color:#94a3b8;box-shadow:0 10px 24px rgba(16,24,40,.1);transform:translateY(-1px)}.mb-stat.filter-card.active{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.14),0 8px 22px rgba(16,24,40,.08)}
                     .mb-bulk-action{min-height:96px;width:100%;border-radius:8px;border:1px solid #0f766e;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800;transition:background .15s ease,box-shadow .15s ease,transform .15s ease}.mb-bulk-action:hover{background:#115e59;color:#fff;box-shadow:0 10px 24px rgba(15,118,110,.22);transform:translateY(-1px)}.mb-bulk-action:disabled{cursor:not-allowed;opacity:.7;transform:none}.mb-print-widget{align-items:flex-start;flex-direction:column;text-align:left;padding:16px;border-left:4px solid #111827}.mb-print-widget i{font-size:20px;margin-right:0}.mb-print-widget-title{font-size:15px;line-height:1.2}.mb-print-widget-meta{font-size:12px;opacity:.86;font-weight:700}
-                    .mb-filter{display:grid;grid-template-columns:minmax(240px,1fr) 96px;gap:10px}.mb-table-wrap{padding:16px}.mb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}.mb-badge.ready{background:#dcfce7;color:#166534}.mb-badge.pending{background:#ffedd5;color:#9a3412}
+                    .mb-filter{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px}.mb-filter #mbSearch{min-width:240px;flex:1 1 240px}.mb-select-filter{display:inline-flex;align-items:center;gap:6px;margin:0;padding:5px 9px;border:1px solid #cbd5e1;border-radius:4px;background:#f8fafc;color:#334155;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}.mb-select-filter input{margin:0}.mb-selected-count{font-weight:800}.mb-table-wrap{padding:16px}.mb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700;white-space:nowrap}.mb-badge.ready{background:#dcfce7;color:#166534}.mb-badge.pending{background:#ffedd5;color:#9a3412}
                     .mb-preview-box{border:1px dashed #cbd5e1;border-radius:8px;min-height:176px;display:flex;align-items:center;justify-content:center;background:#f8fafc;overflow:hidden}.mb-preview-box img{max-width:100%;max-height:220px;object-fit:contain}.mb-preview-placeholder{color:#64748b;font-size:13px}.mb-asset-path{font-size:11px;color:#64748b;word-break:break-all}.mb-print-qrcode{display:flex;align-items:center;justify-content:center;width:100%;min-height:42px;font-weight:800}.table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.mb-actions{display:flex;flex-wrap:wrap;gap:6px}.mb-actions .btn{white-space:nowrap}.mb-icon-btn{width:31px;height:31px;display:inline-flex;align-items:center;justify-content:center;padding:0}.mb-icon-btn i{margin-right:0}.table-hover tbody tr.master-row-selected,.table-hover tbody tr.master-row-selected:hover{background:#dcfce7}
                     .asset-card{width:100%;max-width:360px;margin:0 auto;background:#fff;border:1px solid #111827;color:#111827;font-family:Arial,Helvetica,sans-serif;text-align:center}.asset-card-header{padding:9px 10px 0}.asset-card-kicker{font-size:12px;font-weight:800;line-height:1.15}.asset-card-location{font-size:15px;font-weight:800;line-height:1.2;margin-top:3px}.asset-card-location:after{content:"";display:block;border-top:1px solid #111827;margin:2px -10px 0}.asset-card-description{border-bottom:1px solid #111827;padding:9px 10px 11px}.asset-card-description-title{font-size:12px;font-weight:800;margin-bottom:4px}.asset-card-description-text{font-size:15px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.asset-card-meta{margin-top:6px;font-size:11px;font-weight:700;line-height:1.35;color:#6b7280}.asset-card-meta div{word-break:break-word}.asset-card-qr{display:flex;align-items:center;justify-content:center;min-height:178px;margin:11px 0 2px}.asset-card-qr img{width:172px;height:172px;object-fit:contain}.asset-card-qr-empty{width:172px;height:172px;border:1px dashed #6b7280;display:flex;align-items:center;justify-content:center;padding:12px;color:#4b5563;font-size:12px;line-height:1.25}.asset-card-date{border-bottom:1px solid #111827;padding:8px 10px;font-size:13px;font-weight:800}.asset-card-signature{display:grid;grid-template-columns:1fr 1fr;min-height:82px}.asset-card-signature div{display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:13px;font-weight:800}.asset-card-signature div+div{border-left:1px solid #111827}.asset-card-empty{min-height:300px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;display:flex;align-items:center;justify-content:center;text-align:center;color:#64748b;padding:24px;font-weight:700}.no-print{print-color-adjust:exact;-webkit-print-color-adjust:exact}
                     .qr-progress-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.qr-progress-meta span{border:1px solid #e1e7ef;border-radius:6px;padding:6px 10px;background:#f8fafc;font-size:12px;color:#334155;font-weight:700}.qr-progress-meta span.is-running{border-color:#99f6e4;background:#ecfdf5;color:#0f766e}.qr-action-row{display:flex;flex-wrap:wrap;gap:8px}.qr-failed-list{max-height:220px;overflow:auto;border:1px solid #e8edf3;border-radius:8px}.qr-failed-list table{margin-bottom:0}.progress{height:18px;border-radius:8px;background:#e5e7eb;overflow:hidden;position:relative}.progress-bar{font-size:11px;font-weight:800;transition:width .35s ease;background-size:18px 18px}.qr-progress-track.is-running:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:qrTrackSweep 1.05s linear infinite}.qr-progress-bar.is-running{background-image:linear-gradient(45deg,rgba(255,255,255,.25) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.25) 50%,rgba(255,255,255,.25) 75%,transparent 75%,transparent);animation:qrStripeMove .75s linear infinite}.qr-pulse{display:inline-flex;align-items:center;gap:6px}.qr-pulse:before{content:"";width:7px;height:7px;border-radius:999px;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.45);animation:qrPulse 1.1s ease-out infinite}@keyframes qrStripeMove{from{background-position:0 0}to{background-position:18px 0}}@keyframes qrTrackSweep{to{transform:translateX(100%)}}@keyframes qrPulse{70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}
-                    @media(max-width:768px){.mb-filter{grid-template-columns:1fr}.mb-panel-header{align-items:flex-start;flex-direction:column}.content-header h1{font-size:22px}.mb-stat-value{font-size:24px}}
+                    @media(max-width:768px){.mb-filter{width:100%;justify-content:flex-start}.mb-filter #mbSearch{width:100%}.mb-panel-header{align-items:flex-start;flex-direction:column}.content-header h1{font-size:22px}.mb-stat-value{font-size:24px}}
                 </style>
 
                 <div class="row">
@@ -103,6 +104,15 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                             <span class="mb-print-widget-meta">F4, 10 kartu per kertas</span>
                         </button>
                     </div>
+                    <?php if ($showStockCardRangePrint) : ?>
+                        <div class="col-12 col-md-6 col-xl-3 mb-3">
+                            <button type="button" class="mb-bulk-action mb-print-widget bg-primary border-primary" id="btnPrintStockCardRange">
+                                <i class="fas fa-id-card"></i>
+                                <span class="mb-print-widget-title">Print Kartu Stock</span>
+                                <span class="mb-print-widget-meta">Khusus ID 3075-3267</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row">
@@ -165,6 +175,15 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                                 <div class="mb-filter">
                                     <input type="search" class="form-control form-control-sm" id="mbSearch" placeholder="Cari nama, expired date, no lot">
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="mbReset"><i class="fas fa-undo"></i>Reset</button>
+                                    <?php if ($showStockCardRangePrint) : ?>
+                                        <label class="mb-select-filter" title="Centang seluruh barang aktif yang memiliki Qty Pcs lebih dari 0">
+                                            <input type="checkbox" id="checkPositiveQtyPcs">
+                                            Centang semua Qty Pcs &gt; 0
+                                        </label>
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnPrintSelected" disabled>
+                                            <i class="fas fa-print"></i> Print Sebagian (<span class="mb-selected-count">0</span>)
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="mb-table-wrap">
@@ -178,6 +197,9 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                                             <th>Qty Pcs</th>
                                             <th>Qty Box</th>
                                             <th>#</th>
+                                            <?php if ($showStockCardRangePrint) : ?>
+                                                <th>Pilih</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                 </table>
@@ -218,6 +240,7 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
 <script>
 window.addEventListener('load', function () {
     var selectedId = null;
+    var selectedPrintIds = {};
     var currentPrintUrl = '';
     var qrcodeStatus = '';
     var isQrRunning = false;
@@ -251,6 +274,12 @@ window.addEventListener('load', function () {
             {data: 'qty_pcs', render: function (value) { return formatNumber(value); }},
             {data: 'qty_box', render: function (value) { return formatNumber(value); }},
             {data: null, orderable: false, searchable: false, render: renderActions}
+            <?php if ($showStockCardRangePrint) : ?>,
+            {data: null, orderable: false, searchable: false, className: 'text-center', render: function (_, type, row) {
+                var checked = selectedPrintIds[String(row.id)] ? ' checked' : '';
+                return '<input type="checkbox" class="print-item-check" data-id="' + escapeHtml(row.id) + '"' + checked + ' aria-label="Pilih ' + escapeHtml(row.nama_barang) + '">';
+            }}
+            <?php endif; ?>
         ],
         rowCallback: function (row, data) {
             $(row).toggleClass('master-row-selected', !!selectedId && String(data.id) === String(selectedId));
@@ -265,9 +294,29 @@ window.addEventListener('load', function () {
             } else {
                 highlightSelectedRow();
             }
+            syncPrintSelectionUi();
             $('[data-toggle="tooltip"]').tooltip();
         }
     });
+
+    function selectedPrintIdList() {
+        return Object.keys(selectedPrintIds).filter(function (id) {
+            return selectedPrintIds[id];
+        }).map(function (id) {
+            return parseInt(id, 10);
+        }).filter(function (id) {
+            return id > 0;
+        });
+    }
+
+    function syncPrintSelectionUi() {
+        var total = selectedPrintIdList().length;
+        $('.mb-selected-count').text(formatNumber(total));
+        $('#btnPrintSelected').prop('disabled', total === 0);
+        $('#tableMasterBarang .print-item-check').each(function () {
+            this.checked = !!selectedPrintIds[String($(this).data('id'))];
+        });
+    }
 
     function formatNumber(value) {
         var parsed = Number(value || 0);
@@ -697,8 +746,78 @@ window.addEventListener('load', function () {
         $('#mbSearch').val('');
         qrcodeStatus = '';
         $('.filter-card').removeClass('active');
+        selectedPrintIds = {};
+        $('#checkPositiveQtyPcs').prop('checked', false);
+        syncPrintSelectionUi();
         selectedId = null;
         table.ajax.reload();
+    });
+
+    $('#checkPositiveQtyPcs').on('change', function () {
+        var $checkbox = $(this);
+        if (!$checkbox.is(':checked')) {
+            selectedPrintIds = {};
+            syncPrintSelectionUi();
+            table.rows({page: 'current'}).invalidate('data').draw(false);
+            return;
+        }
+
+        $checkbox.prop('disabled', true);
+        $.getJSON('<?= base_url($routeBase . '/positive-qty-pcs-ids') ?>')
+            .done(function (res) {
+                if (!res.status || !res.data || !Array.isArray(res.data.ids)) {
+                    $checkbox.prop('checked', false);
+                    toast('error', res.message || 'Gagal memilih barang Qty Pcs lebih dari 0');
+                    return;
+                }
+
+                selectedPrintIds = {};
+                res.data.ids.forEach(function (id) {
+                    selectedPrintIds[String(id)] = true;
+                });
+                syncPrintSelectionUi();
+                table.rows({page: 'current'}).invalidate('data').draw(false);
+                toast('success', res.message || 'Barang Qty Pcs lebih dari 0 berhasil dipilih');
+            })
+            .fail(function (xhr) {
+                $checkbox.prop('checked', false);
+                toast('error', ajaxMessage(xhr, 'Server gagal mengambil pilihan Qty Pcs'));
+            })
+            .always(function () {
+                $checkbox.prop('disabled', false);
+            });
+    });
+
+    $('#tableMasterBarang').on('change', '.print-item-check', function () {
+        var id = String($(this).data('id'));
+        if (this.checked) {
+            selectedPrintIds[id] = true;
+        } else {
+            delete selectedPrintIds[id];
+            $('#checkPositiveQtyPcs').prop('checked', false);
+        }
+        syncPrintSelectionUi();
+    });
+
+    $('#btnPrintSelected').on('click', function () {
+        var ids = selectedPrintIdList();
+        if (!ids.length) {
+            toast('warning', 'Pilih minimal satu barang untuk print');
+            return;
+        }
+
+        var form = $('<form>', {
+            method: 'POST',
+            action: '<?= base_url($routeBase . '/print-sebagian') ?>',
+            target: '_blank'
+        }).append($('<input>', {
+            type: 'hidden',
+            name: 'selected_ids',
+            value: JSON.stringify(ids)
+        }));
+        $('body').append(form);
+        form.trigger('submit');
+        form.remove();
     });
 
     $('.filter-card').on('click', function () {
@@ -744,6 +863,10 @@ window.addEventListener('load', function () {
             return;
         }
         window.open('<?= base_url($routeBase . '/print-preview-asset') ?>', '_blank', 'noopener');
+    });
+
+    $('#btnPrintStockCardRange').on('click', function () {
+        window.open('<?= base_url('admin/stockopname/master_opname/print-kartu-stock-3075-3267') ?>', '_blank', 'noopener');
     });
 
     $('#previewPrintQr').on('click', function () {

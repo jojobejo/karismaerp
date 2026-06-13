@@ -1686,6 +1686,69 @@ class M_Stockopname extends CI_Model
         return $printable;
     }
 
+    public function get_master_barang_by_id_range($startId, $endId)
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $startId = max(1, (int)$startId);
+        $endId = max($startId, (int)$endId);
+
+        $this->master_barang_select();
+        return $this->db
+            ->where('id >=', $startId)
+            ->where('id <=', $endId)
+            ->order_by('id', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function get_master_barang_ids_with_positive_qty_pcs($qtyMode = 'positive')
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $this->db->select('id');
+        $this->master_barang_qty_filter($qtyMode);
+        $rows = $this->db
+            ->where('COALESCE(qty_pcs, 0) > 0', null, false)
+            ->order_by('id', 'ASC')
+            ->get($this->masterTable)
+            ->result_array();
+
+        return array_map('intval', array_column($rows, 'id'));
+    }
+
+    public function get_master_barang_by_ids(array $ids, $qtyMode = 'positive')
+    {
+        if (!$this->db->table_exists($this->masterTable) || empty($ids)) {
+            return [];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), function ($id) {
+            return $id > 0;
+        })));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $this->master_barang_select();
+        $this->master_barang_qty_filter($qtyMode);
+        $rows = $this->db
+            ->where_in('id', $ids)
+            ->get()
+            ->result_array();
+
+        $position = array_flip($ids);
+        usort($rows, function ($left, $right) use ($position) {
+            return ($position[(int)$left['id']] ?? PHP_INT_MAX) <=> ($position[(int)$right['id']] ?? PHP_INT_MAX);
+        });
+
+        return $rows;
+    }
+
     public function find_master_barang_for_opname($scanValue)
     {
         $scanValue = trim((string)$scanValue);

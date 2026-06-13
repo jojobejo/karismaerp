@@ -3,6 +3,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 $items = $items ?? [];
 $inventoryDate = $inventory_date ?? date('d/m/Y');
+$printHeading = $print_heading ?? 'Print Preview Asset Stockopname';
+$printDescription = $print_description ?? ('F4, 12 preview asset per kertas, total ' . count($items) . ' asset siap print');
 $itemsPerSheet = 12;
 $sheets = array_chunk($items, $itemsPerSheet);
 
@@ -73,8 +75,8 @@ function so_asset_print_date($value)
 <body>
     <div class="toolbar">
         <div>
-            <div class="toolbar-title">Print Preview Asset Stockopname</div>
-            <div class="toolbar-meta">F4, <?= so_asset_print_e($itemsPerSheet) ?> preview asset per kertas, total <?= so_asset_print_e(count($items)) ?> asset siap print</div>
+            <div class="toolbar-title"><?= so_asset_print_e($printHeading) ?></div>
+            <div class="toolbar-meta"><?= so_asset_print_e($printDescription) ?></div>
         </div>
         <button type="button" onclick="window.print()">Print</button>
     </div>
