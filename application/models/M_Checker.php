@@ -203,8 +203,9 @@ class M_Checker extends CI_Model
     public function start_kk($id, $nik, $nama, $pintu = null)
     {
         $data = [
-            'status'  => 'PROSES_LOADING',
-            'progres' => 0,
+            'status'       => 'PROSES_LOADING',
+            'progres'      => 0,
+            'waktu_mulai'  => date('Y-m-d H:i:s'),
         ];
         if ($pintu) $data['pintu'] = $pintu;
         return $this->db->where('id', $id)->update('tb_loading_kk', $data);
@@ -267,8 +268,9 @@ class M_Checker extends CI_Model
     public function start_lk($id, $nik, $nama, $pintu = null)
     {
         $data = [
-            'status'  => 'PROSES_LOADING',
-            'progres' => 0,
+            'status'       => 'PROSES_LOADING',
+            'progres'      => 0,
+            'waktu_mulai'  => date('Y-m-d H:i:s'),
         ];
         if ($pintu) $data['pintu'] = $pintu;
         return $this->db->where('id', $id)->update('tb_loading_lk', $data);

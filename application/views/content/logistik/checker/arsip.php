@@ -306,10 +306,25 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                             <?php
                             $no = 1;
 
+                            function waktuMulaiLoadingArsip($row) {
+                                $mulai = $row['waktu_mulai'] ?? '';
+                                $selesai_siapkan = $row['waktu_selesai_siapkan'] ?? '';
+
+                                if (!empty($mulai) && !empty($selesai_siapkan)) {
+                                    return strtotime($mulai) <= strtotime($selesai_siapkan)
+                                        ? $selesai_siapkan
+                                        : $mulai;
+                                }
+
+                                return !empty($mulai) ? $mulai : $selesai_siapkan;
+                            }
+
                             function barisLoadingArsip($row, &$no, $row_class) {
+                                $mulai_loading = waktuMulaiLoadingArsip($row);
                                 $durasi = '-';
-                                if (!empty($row['waktu_mulai']) && !empty($row['waktu_selesai'])) {
-                                    $sel = strtotime($row['waktu_selesai']) - strtotime($row['waktu_mulai']);
+                                if (!empty($mulai_loading) && !empty($row['waktu_selesai'])) {
+                                    $pause_secs = (int)($row['total_pause_secs'] ?? 0);
+                                    $sel = strtotime($row['waktu_selesai']) - strtotime($mulai_loading) - $pause_secs;
                                     if ($sel > 0) {
                                         $j = floor($sel/3600); $m = floor(($sel%3600)/60);
                                         $durasi = $j > 0 ? "{$j} jam {$m} menit" : "{$m} menit";
@@ -322,7 +337,7 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                                 <td><?= htmlspecialchars($row['keterangan']) ?></td>
                                 <td><small><?= $row['tgl'] ?></small></td>
                                 <td><?= htmlspecialchars($row['nm_checker'] ?? '-') ?></td>
-                                <td><small><?= !empty($row['waktu_mulai'])   ? date('d/m H:i', strtotime($row['waktu_mulai']))   : '-' ?></small></td>
+                                <td><small><?= !empty($mulai_loading) ? date('d/m H:i', strtotime($mulai_loading)) : '-' ?></small></td>
                                 <td><small><?= !empty($row['waktu_selesai']) ? date('d/m H:i', strtotime($row['waktu_selesai'])) : '-' ?></small></td>
                                 <td><small><?= $durasi ?></small></td>
                                 <td><span class="badge badge-success"><?= str_replace('_',' ',$row['status']) ?></span></td>
