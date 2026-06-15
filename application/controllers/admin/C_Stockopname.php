@@ -265,6 +265,8 @@ class C_Stockopname extends CI_Controller
         $data['compare'] = $this->stockopname->monitoring_compare_all_detail($kodeBarang);
         $data['master_items'] = $this->stockopname->lot_compare_by_kode_barang($kodeBarang);
         $data['input_rows'] = $this->stockopname->input_opname_by_kode_barang($kodeBarang);
+        $data['recycle_rows'] = $this->stockopname->recycle_input_by_kode_barang($kodeBarang);
+        $data['request_rows'] = $this->stockopname->request_item_by_kode_barang($kodeBarang);
         $data['edit_logs'] = $this->stockopname->opname_edit_logs_by_kode_barang($kodeBarang);
 
         if (empty($data['compare']) && empty($data['master_items']) && empty($data['input_rows'])) {
@@ -304,12 +306,80 @@ class C_Stockopname extends CI_Controller
         ];
 
         $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
-        $updated = $this->stockopname->update_input_opname((int)$id, $kodeBarang, $payload, $actor);
+        $actionType = strtoupper(trim((string)($input['action_type'] ?? 'EDIT_QTY')));
+        if (!in_array($actionType, ['EDIT_QTY', 'ADJUSTMENT'], true)) {
+            return $this->json(false, 'Jenis perubahan input opname tidak valid.');
+        }
+
+        $updated = $this->stockopname->update_input_opname((int)$id, $kodeBarang, $payload, $actor, $actionType);
         if (!$updated['status']) {
             return $this->json(false, $updated['message'] ?? 'Gagal update data input opname.');
         }
 
         $this->json(true, 'Data input opname berhasil diperbarui.', $updated['data'] ?? []);
+    }
+
+    public function ajax_delete_input_opname()
+    {
+        $input = $this->post();
+        $id = $input['id'] ?? '';
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        if (!ctype_digit((string)$id) || (int)$id <= 0 || $kodeBarang === '') {
+            return $this->json(false, 'Data input opname tidak valid.');
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->delete_input_opname((int)$id, $kodeBarang, $actor, trim((string)($input['delete_reason'] ?? '')));
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
+    public function ajax_repost_input_opname()
+    {
+        $input = $this->post();
+        $id = $input['id'] ?? '';
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        if (!ctype_digit((string)$id) || (int)$id <= 0 || $kodeBarang === '') {
+            return $this->json(false, 'Data recycle bin tidak valid.');
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->repost_input_opname((int)$id, $kodeBarang, $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
+    public function ajax_add_request_item()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
+        $noLot = trim((string)($input['no_lot'] ?? ''));
+        $timOpname = (int)($input['tim_opname'] ?? 0);
+        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '') {
+            return $this->json(false, 'Data request item tidak valid.');
+        }
+        if (!in_array($timOpname, [1, 2], true)) {
+            return $this->json(false, 'Tim opname harus Tim 1 atau Tim 2.');
+        }
+
+        $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
+        $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
+        foreach (['Qty box' => $qtyBox, 'Qty pcs' => $qtyPcs] as $label => $value) {
+            if ($value === '' || !ctype_digit((string)$value)) {
+                return $this->json(false, $label . ' harus berupa angka bulat 0 atau lebih.');
+            }
+        }
+        if (((int)$qtyBox + (int)$qtyPcs) <= 0) {
+            return $this->json(false, 'Isi Qty Box atau Qty PCS terlebih dahulu.');
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->add_request_item_to_opname($kodeBarang, $expiredDate, $noLot, [
+            'qty_box' => (int)$qtyBox,
+            'qty_pcs' => (int)$qtyPcs,
+            'tim_opname' => $timOpname,
+            'wilayah' => (int)($this->session->userdata('wilayah') ?: 0),
+        ], $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
     }
 
     public function widgets()

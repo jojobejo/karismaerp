@@ -35,10 +35,12 @@ CREATE TABLE IF NOT EXISTS `stockopname_opname_manual` (
   `input_at` DATETIME NOT NULL,
   `wilayah` INT(2) NOT NULL DEFAULT 0,
   `tim_opname` INT(2) NOT NULL DEFAULT 0,
+  `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_manual_opname_master` (`manual_master_id`),
   KEY `idx_manual_opname_source` (`source_id`),
-  KEY `idx_manual_opname_barang` (`kode_barang`)
+  KEY `idx_manual_opname_barang` (`kode_barang`),
+  KEY `idx_manual_opname_source_type` (`input_source`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

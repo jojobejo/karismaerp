@@ -137,7 +137,7 @@ class M_Stockopname extends CI_Model
                     `input_at` DATETIME NOT NULL,
                     `wilayah` INT(2) NOT NULL DEFAULT 0,
                     `tim_opname` INT(2) NOT NULL DEFAULT 0,
-                    `input_source` ENUM('manual','request') NOT NULL DEFAULT 'manual',
+                    `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual',
                     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                     PRIMARY KEY (`id`),
@@ -150,7 +150,14 @@ class M_Stockopname extends CI_Model
         }
 
         if ($this->db->table_exists($this->manualOpnameTable) && !$this->db->field_exists('input_source', $this->manualOpnameTable)) {
-            $this->db->query("ALTER TABLE {$this->manualOpnameTable} ADD `input_source` ENUM('manual','request') NOT NULL DEFAULT 'manual' AFTER `tim_opname`");
+            $this->db->query("ALTER TABLE {$this->manualOpnameTable} ADD `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual' AFTER `tim_opname`");
+        } elseif ($this->db->table_exists($this->manualOpnameTable)) {
+            foreach ($this->db->field_data($this->manualOpnameTable) as $field) {
+                if ($field->name === 'input_source' && stripos((string)$field->type, 'enum') !== false) {
+                    $this->db->query("ALTER TABLE {$this->manualOpnameTable} MODIFY `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual'");
+                    break;
+                }
+            }
         }
 
         return $this->db->table_exists($this->manualMasterTable) && $this->db->table_exists($this->manualOpnameTable);
@@ -1050,6 +1057,38 @@ class M_Stockopname extends CI_Model
         return $rows;
     }
 
+    public function recycle_input_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->ensure_opname_recycle_table()) {
+            return [];
+        }
+
+        return $this->db->from('stockopname_recyclebin_input')
+            ->where('kode_barang', $kodeBarang)
+            ->order_by('deleted_at', 'DESC')->order_by('id', 'DESC')
+            ->get()->result_array();
+    }
+
+    public function request_item_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->ensure_manual_tables()) {
+            return [];
+        }
+
+        $source = $this->db->field_exists('input_source', $this->manualOpnameTable)
+            ? "GROUP_CONCAT(DISTINCT input_source ORDER BY input_source SEPARATOR ', ') AS input_source"
+            : "'manual' AS input_source";
+
+        return $this->db
+            ->select("MAX(source_id) AS source_id,MAX(nama_barang) AS nama_barang,kode_barang,expired_date,no_lot,SUM(qty) AS qty,SUM(qty_pcs) AS qty_pcs,SUM(qty_box) AS qty_box,MAX(wilayah) AS wilayah,GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS input_by,{$source}", false)
+            ->from($this->manualOpnameTable)->where('kode_barang', $kodeBarang)
+            ->group_by(['kode_barang', 'expired_date', 'no_lot'])
+            ->order_by('expired_date', 'ASC')->order_by('no_lot', 'ASC')
+            ->get()->result_array();
+    }
+
     private function input_opname_row_by_id($id)
     {
         if (!$this->db->table_exists($this->opnameTable)) {
@@ -1072,30 +1111,99 @@ class M_Stockopname extends CI_Model
             ->row_array();
     }
 
-    private function ensure_opname_log_table()
+    private function ensure_opname_recycle_table()
     {
-        if ($this->db->table_exists('stockopname_opname_log')) {
+        if ($this->db->table_exists('stockopname_recyclebin_input')) {
             return true;
         }
 
         return $this->db->query("
-            CREATE TABLE IF NOT EXISTS `stockopname_opname_log` (
+            CREATE TABLE IF NOT EXISTS `stockopname_recyclebin_input` (
                 `id` INT(11) NOT NULL AUTO_INCREMENT,
-                `opname_id` INT(11) NOT NULL,
+                `source_id` INT(11) NOT NULL,
+                `original_source_id` INT(11) NULL,
                 `kode_barang` VARCHAR(50) NOT NULL,
-                `action` VARCHAR(30) NOT NULL DEFAULT 'UPDATE',
-                `changed_fields` TEXT NULL,
-                `old_data` LONGTEXT NULL,
-                `new_data` LONGTEXT NULL,
-                `changed_by` VARCHAR(100) NOT NULL,
-                `changed_at` DATETIME NOT NULL,
-                `ip_address` VARCHAR(45) NULL,
-                `user_agent` VARCHAR(255) NULL,
+                `nama_barang` TEXT NOT NULL,
+                `expired_date` DATE NOT NULL,
+                `no_lot` VARCHAR(100) NOT NULL,
+                `qty` INT(12) NOT NULL DEFAULT 0,
+                `qty_box` INT(12) NOT NULL DEFAULT 0,
+                `qty_pcs` INT(12) NOT NULL DEFAULT 0,
+                `input_by` VARCHAR(100) NOT NULL,
+                `input_at` DATETIME NULL,
+                `wilayah` INT(2) NOT NULL DEFAULT 0,
+                `tim_opname` INT(2) NOT NULL DEFAULT 0,
+                `scan_code` VARCHAR(255) NULL,
+                `original_created_at` DATETIME NULL,
+                `original_updated_at` DATETIME NULL,
+                `deleted_by` VARCHAR(100) NOT NULL,
+                `deleted_at` DATETIME NOT NULL,
+                `delete_reason` TEXT NULL,
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
-                KEY `idx_stockopname_opname_log_barang` (`kode_barang`),
-                KEY `idx_stockopname_opname_log_opname` (`opname_id`)
+                KEY `idx_recycle_source` (`source_id`),
+                KEY `idx_recycle_barang` (`kode_barang`),
+                KEY `idx_recycle_deleted_at` (`deleted_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
+    }
+
+    private function ensure_opname_log_table()
+    {
+        if (!$this->db->table_exists('stockopname_opname_log')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `stockopname_opname_log` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `opname_id` INT(11) NULL,
+                    `kode_barang` VARCHAR(50) NOT NULL,
+                    `nama_barang` TEXT NULL,
+                    `expired_date` DATE NULL,
+                    `no_lot` VARCHAR(100) NULL,
+                    `action_type` VARCHAR(30) NOT NULL,
+                    `action` VARCHAR(30) NULL,
+                    `changed_fields` TEXT NULL,
+                    `old_data` LONGTEXT NULL,
+                    `new_data` LONGTEXT NULL,
+                    `old_value` LONGTEXT NULL,
+                    `new_value` LONGTEXT NULL,
+                    `description` TEXT NULL,
+                    `created_by` VARCHAR(100) NOT NULL,
+                    `created_at` DATETIME NOT NULL,
+                    `changed_by` VARCHAR(100) NULL,
+                    `changed_at` DATETIME NULL,
+                    `ip_address` VARCHAR(45) NULL,
+                    `user_agent` VARCHAR(255) NULL,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_stockopname_opname_log_barang` (`kode_barang`),
+                    KEY `idx_stockopname_opname_log_opname` (`opname_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        $columns = [
+            'nama_barang' => 'TEXT NULL AFTER `kode_barang`',
+            'expired_date' => 'DATE NULL AFTER `nama_barang`',
+            'no_lot' => 'VARCHAR(100) NULL AFTER `expired_date`',
+            'action_type' => "VARCHAR(30) NOT NULL DEFAULT 'EDIT_QTY' AFTER `no_lot`",
+            'old_value' => 'LONGTEXT NULL AFTER `new_data`',
+            'new_value' => 'LONGTEXT NULL AFTER `old_value`',
+            'description' => 'TEXT NULL AFTER `new_value`',
+            'created_by' => "VARCHAR(100) NOT NULL DEFAULT 'system' AFTER `description`",
+            'created_at' => 'DATETIME NULL AFTER `created_by`',
+            'before_qty' => 'INT(12) NULL AFTER `created_at`',
+            'after_qty' => 'INT(12) NULL AFTER `before_qty`',
+            'before_qty_box' => 'INT(12) NULL AFTER `after_qty`',
+            'after_qty_box' => 'INT(12) NULL AFTER `before_qty_box`',
+            'before_qty_pcs' => 'INT(12) NULL AFTER `after_qty_box`',
+            'after_qty_pcs' => 'INT(12) NULL AFTER `before_qty_pcs`',
+        ];
+        foreach ($columns as $field => $definition) {
+            if (!$this->db->field_exists($field, 'stockopname_opname_log')) {
+                $this->db->query("ALTER TABLE stockopname_opname_log ADD `{$field}` {$definition}");
+            }
+        }
+
+        return $this->db->table_exists('stockopname_opname_log');
     }
 
     private function normalize_opname_snapshot($row)
@@ -1137,27 +1245,69 @@ class M_Stockopname extends CI_Model
         return max(0, (int)floor(((int)($row['qty'] ?? 0) - (int)($row['qty_pcs'] ?? 0)) / $qtyBox));
     }
 
-    private function insert_opname_edit_log($oldRow, $newRow, $changedFields, $actor)
+    private function insert_opname_edit_log($oldRow, $newRow, $changedFields, $actor, $actionType, $description = '')
     {
         if (!$this->ensure_opname_log_table()) {
             return false;
         }
 
+        $oldData = $this->normalize_opname_snapshot($oldRow);
+        $newData = $this->normalize_opname_snapshot($newRow);
+        $now = date('Y-m-d H:i:s');
         return $this->db->insert('stockopname_opname_log', [
-            'opname_id' => (int)($oldRow['id'] ?? 0),
+            'opname_id' => (int)($oldRow['id'] ?? $newRow['id'] ?? 0),
             'kode_barang' => (string)($oldRow['kode_barang'] ?? $newRow['kode_barang'] ?? ''),
-            'action' => 'UPDATE',
+            'nama_barang' => (string)($oldRow['nama_barang'] ?? $newRow['nama_barang'] ?? ''),
+            'expired_date' => ($oldRow['expired_date'] ?? $newRow['expired_date'] ?? null) ?: null,
+            'no_lot' => (string)($oldRow['no_lot'] ?? $newRow['no_lot'] ?? '-'),
+            'action_type' => (string)$actionType,
+            'action' => (string)$actionType,
             'changed_fields' => json_encode(array_values($changedFields), JSON_UNESCAPED_UNICODE),
-            'old_data' => json_encode($this->normalize_opname_snapshot($oldRow), JSON_UNESCAPED_UNICODE),
-            'new_data' => json_encode($this->normalize_opname_snapshot($newRow), JSON_UNESCAPED_UNICODE),
+            'old_data' => json_encode($oldData, JSON_UNESCAPED_UNICODE),
+            'new_data' => json_encode($newData, JSON_UNESCAPED_UNICODE),
+            'old_value' => json_encode($oldData, JSON_UNESCAPED_UNICODE),
+            'new_value' => json_encode($newData, JSON_UNESCAPED_UNICODE),
+            'description' => $description ?: $actionType . ' input opname',
+            'created_by' => (string)$actor,
+            'created_at' => $now,
+            'before_qty' => $oldData['qty'],
+            'after_qty' => $newData['qty'],
+            'before_qty_box' => $oldData['qty_box'],
+            'after_qty_box' => $newData['qty_box'],
+            'before_qty_pcs' => $oldData['qty_pcs'],
+            'after_qty_pcs' => $newData['qty_pcs'],
             'changed_by' => (string)$actor,
-            'changed_at' => date('Y-m-d H:i:s'),
+            'changed_at' => $now,
             'ip_address' => $this->input->ip_address(),
             'user_agent' => substr((string)$this->input->user_agent(), 0, 255),
         ]);
     }
 
-    public function update_input_opname($id, $kodeBarang, $payload, $actor)
+    private function insert_request_item_event($row, $actor, $inputSource)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return false;
+        }
+
+        return $this->db->insert($this->manualOpnameTable, [
+            'manual_master_id' => 0,
+            'source_id' => (int)($row['source_id'] ?? 0),
+            'kode_barang' => (string)($row['kode_barang'] ?? ''),
+            'nama_barang' => (string)($row['nama_barang'] ?? ''),
+            'expired_date' => (string)($row['expired_date'] ?? ''),
+            'no_lot' => (string)($row['no_lot'] ?? '-'),
+            'qty' => (int)($row['qty'] ?? 0),
+            'qty_pcs' => (int)($row['qty_pcs'] ?? 0),
+            'qty_box' => (int)($row['qty_box'] ?? 0),
+            'input_by' => (string)$actor,
+            'input_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($row['wilayah'] ?? 0),
+            'tim_opname' => (int)($row['tim_opname'] ?? 0),
+            'input_source' => strtolower((string)$inputSource),
+        ]);
+    }
+
+    public function update_input_opname($id, $kodeBarang, $payload, $actor, $actionType = 'EDIT_QTY')
     {
         $kodeBarang = trim((string)$kodeBarang);
         $oldRow = $this->input_opname_row_by_id($id);
@@ -1216,7 +1366,10 @@ class M_Stockopname extends CI_Model
             ->where('kode_barang', $kodeBarang)
             ->update($this->opnameTable, $update);
         $newRow = $this->input_opname_row_by_id($id);
-        $this->insert_opname_edit_log($oldRow, $newRow ?: array_merge($oldRow, $after), $changedFields, $actor);
+        $this->insert_opname_edit_log($oldRow, $newRow ?: array_merge($oldRow, $after), $changedFields, $actor, $actionType);
+        if ($actionType === 'ADJUSTMENT') {
+            $this->insert_request_item_event($newRow ?: array_merge($oldRow, $after), $actor, 'adjustment');
+        }
         $this->db->trans_complete();
 
         if (!$this->db->trans_status()) {
@@ -1235,6 +1388,140 @@ class M_Stockopname extends CI_Model
         ];
     }
 
+    public function delete_input_opname($id, $kodeBarang, $actor, $reason = '')
+    {
+        $oldRow = $this->input_opname_row_by_id($id);
+        if (!$oldRow || (string)$oldRow['kode_barang'] !== trim((string)$kodeBarang)) {
+            return ['status' => false, 'message' => 'Data input opname tidak ditemukan.'];
+        }
+        if (!$this->ensure_opname_recycle_table() || !$this->ensure_opname_log_table()) {
+            return ['status' => false, 'message' => 'Tabel recycle bin atau audit log belum siap.'];
+        }
+
+        $recycle = [
+            'source_id' => (int)$oldRow['id'],
+            'original_source_id' => (int)($oldRow['source_id'] ?? 0),
+            'kode_barang' => $oldRow['kode_barang'], 'nama_barang' => $oldRow['nama_barang'],
+            'expired_date' => $oldRow['expired_date'], 'no_lot' => $oldRow['no_lot'],
+            'qty' => (int)$oldRow['qty'], 'qty_box' => (int)$oldRow['qty_box'], 'qty_pcs' => (int)$oldRow['qty_pcs'],
+            'input_by' => $oldRow['input_by'], 'input_at' => $oldRow['input_at'],
+            'wilayah' => (int)$oldRow['wilayah'], 'tim_opname' => (int)$oldRow['tim_opname'],
+            'scan_code' => $oldRow['scan_code'], 'original_created_at' => $oldRow['created_at'],
+            'original_updated_at' => $oldRow['updated_at'], 'deleted_by' => $actor,
+            'deleted_at' => date('Y-m-d H:i:s'), 'delete_reason' => $reason ?: null,
+        ];
+
+        $this->db->trans_start();
+        $this->db->insert('stockopname_recyclebin_input', $recycle);
+        $this->db->where('id', (int)$id)->where('kode_barang', $kodeBarang)->delete($this->opnameTable);
+        $this->insert_opname_edit_log($oldRow, [], array_keys($this->normalize_opname_snapshot($oldRow)), $actor, 'DELETE', $reason ?: 'Input opname dipindahkan ke recycle bin.');
+        $this->db->trans_complete();
+
+        return $this->db->trans_status()
+            ? ['status' => true, 'message' => 'Input opname berhasil dipindahkan ke recycle bin.']
+            : ['status' => false, 'message' => 'Gagal menghapus input opname. Transaksi dibatalkan.'];
+    }
+
+    public function repost_input_opname($recycleId, $kodeBarang, $actor)
+    {
+        if (!$this->ensure_opname_recycle_table() || !$this->ensure_opname_log_table()) {
+            return ['status' => false, 'message' => 'Tabel recycle bin atau audit log belum siap.'];
+        }
+        $row = $this->db->from('stockopname_recyclebin_input')->where('id', (int)$recycleId)
+            ->where('kode_barang', $kodeBarang)->limit(1)->get()->row_array();
+        if (!$row) {
+            return ['status' => false, 'message' => 'Data recycle bin tidak ditemukan.'];
+        }
+
+        $insert = [
+            'source_id' => (int)($row['original_source_id'] ?? 0), 'kode_barang' => $row['kode_barang'],
+            'nama_barang' => $row['nama_barang'], 'expired_date' => $row['expired_date'],
+            'no_lot' => $row['no_lot'], 'qty' => (int)$row['qty'], 'qty_pcs' => (int)$row['qty_pcs'],
+            'qty_box' => (int)$row['qty_box'], 'input_by' => $row['input_by'],
+            'input_at' => $row['input_at'] ?: date('Y-m-d H:i:s'), 'wilayah' => (int)$row['wilayah'],
+            'tim_opname' => (int)$row['tim_opname'], 'scan_code' => $row['scan_code'],
+        ];
+        if ($this->db->field_exists('created_at', $this->opnameTable)) {
+            $insert['created_at'] = $row['original_created_at'] ?: date('Y-m-d H:i:s');
+        }
+
+        $this->db->trans_start();
+        $this->db->insert($this->opnameTable, $insert);
+        $newId = (int)$this->db->insert_id();
+        $newRow = $this->input_opname_row_by_id($newId) ?: array_merge($insert, ['id' => $newId]);
+        $logOld = array_merge($row, ['id' => (int)$row['source_id']]);
+        $this->insert_opname_edit_log($logOld, $newRow, array_keys($this->normalize_opname_snapshot($newRow)), $actor, 'REPOST', 'Input opname dikembalikan dari recycle bin.');
+        $this->insert_request_item_event($newRow, $actor, 'repost');
+        $this->db->where('id', (int)$recycleId)->delete('stockopname_recyclebin_input');
+        $this->db->trans_complete();
+
+        return $this->db->trans_status()
+            ? ['status' => true, 'message' => 'Input opname berhasil direpost.', 'data' => ['id' => $newId]]
+            : ['status' => false, 'message' => 'Gagal repost input opname. Transaksi dibatalkan.'];
+    }
+
+    public function add_request_item_to_opname($kodeBarang, $expiredDate, $noLot, $payload, $actor)
+    {
+        if (!$this->ready() || !$this->ensure_manual_tables() || !$this->ensure_opname_log_table()) {
+            return ['status' => false, 'message' => 'Tabel opname atau request item belum siap.'];
+        }
+
+        $request = $this->db->select('source_id,kode_barang,nama_barang,expired_date,no_lot,wilayah')
+            ->from($this->manualOpnameTable)
+            ->where('kode_barang', $kodeBarang)
+            ->where('expired_date', $expiredDate)
+            ->where('no_lot', $noLot)
+            ->order_by('id', 'DESC')->limit(1)->get()->row_array();
+        if (!$request) {
+            return ['status' => false, 'message' => 'Request item tidak ditemukan.'];
+        }
+
+        $sourceId = (int)($request['source_id'] ?? 0);
+        $dimensionRow = $sourceId > 0
+            ? $this->db->select('qty,qty_box,qty_pcs' . ($this->db->field_exists('dimensi', $this->masterTable) ? ',dimensi' : ''))
+                ->from($this->masterTable)->where('id', $sourceId)->limit(1)->get()->row_array()
+            : null;
+        $dimension = (int)($dimensionRow['dimensi'] ?? 0);
+        if ($dimension <= 0 && (int)($dimensionRow['qty_box'] ?? 0) > 0) {
+            $dimension = (int)floor(((int)$dimensionRow['qty'] - (int)$dimensionRow['qty_pcs']) / (int)$dimensionRow['qty_box']);
+        }
+        if ($dimension <= 0) {
+            $sample = $this->db->select('qty,qty_box,qty_pcs')->from($this->manualOpnameTable)
+                ->where('kode_barang', $kodeBarang)->where('expired_date', $expiredDate)->where('no_lot', $noLot)
+                ->where('qty_box >', 0)->order_by('id', 'DESC')->limit(1)->get()->row_array();
+            if ($sample) {
+                $dimension = max(0, (int)floor(((int)$sample['qty'] - (int)$sample['qty_pcs']) / (int)$sample['qty_box']));
+            }
+        }
+
+        $row = [
+            'source_id' => $sourceId,
+            'kode_barang' => $kodeBarang,
+            'nama_barang' => (string)$request['nama_barang'],
+            'expired_date' => $expiredDate,
+            'no_lot' => $noLot,
+            'qty_box' => (int)$payload['qty_box'],
+            'qty_pcs' => (int)$payload['qty_pcs'],
+            'qty' => ((int)$payload['qty_box'] * $dimension) + (int)$payload['qty_pcs'],
+            'input_by' => (string)$actor,
+            'input_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($payload['wilayah'] ?: $request['wilayah']),
+            'tim_opname' => (int)$payload['tim_opname'],
+            'scan_code' => null,
+        ];
+
+        $this->db->trans_start();
+        $this->db->insert($this->opnameTable, $row);
+        $newId = (int)$this->db->insert_id();
+        $newRow = $this->input_opname_row_by_id($newId) ?: array_merge($row, ['id' => $newId]);
+        $this->insert_opname_edit_log([], $newRow, ['qty', 'qty_box', 'qty_pcs'], $actor, 'ADJUSTMENT', 'Request item ditambahkan ke data hasil input opname.');
+        $this->db->trans_complete();
+
+        return $this->db->trans_status() && $newId > 0
+            ? ['status' => true, 'message' => 'Request item berhasil ditambahkan ke hasil input opname.', 'data' => ['id' => $newId]]
+            : ['status' => false, 'message' => 'Gagal menambahkan request item. Transaksi dibatalkan.'];
+    }
+
     public function opname_edit_logs_by_kode_barang($kodeBarang, $limit = 20)
     {
         $kodeBarang = trim((string)$kodeBarang);
@@ -1245,7 +1532,7 @@ class M_Stockopname extends CI_Model
         return $this->db
             ->from('stockopname_opname_log')
             ->where('kode_barang', $kodeBarang)
-            ->order_by('changed_at', 'DESC')
+            ->order_by('COALESCE(created_at, changed_at)', 'DESC', false)
             ->order_by('id', 'DESC')
             ->limit((int)$limit)
             ->get()
@@ -2054,7 +2341,9 @@ class M_Stockopname extends CI_Model
             'input_at' => date('Y-m-d H:i:s'),
             'wilayah' => (int)($input['wilayah'] ?? 0),
             'tim_opname' => (int)($input['tim_opname'] ?? 0),
-            'input_source' => ((string)($input['input_source'] ?? 'manual') === 'request') ? 'request' : 'manual',
+            'input_source' => in_array((string)($input['input_source'] ?? 'manual'), ['manual', 'request', 'adjustment', 'repost', 'system'], true)
+                ? (string)$input['input_source']
+                : 'manual',
         ];
 
         $this->db->insert($this->manualOpnameTable, $data);
