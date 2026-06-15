@@ -656,7 +656,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so_rute_summary($filter = [])
     {
-        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, '') <> '' AND so.status = 'open'";
+        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), '') <> '' AND so.status = 'open'";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -686,7 +686,7 @@ class M_SalesOrder extends CI_Model
                     ROUND(COALESCE(SUM(x.total_qty_outstanding), 0), 2) AS total_qty_outstanding
                 FROM (
                     SELECT
-                        COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) AS kd_rute,
+                        NULLIF(so.kd_rute, '') AS kd_rute,
                         so.id_so,
                         COALESCE(so.total_tonase, 0) AS total_tonase,
                         COALESCE(so.total_kubikasi, 0) AS total_kubikasi,
@@ -726,7 +726,7 @@ class M_SalesOrder extends CI_Model
         }
 
         $params = [$kd_rute];
-        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = ? AND so.status = 'open'";
+        $where = "WHERE so.kd_rute = ? AND so.status = 'open'";
 
         if (!empty($filter['create_by'])) {
             $where .= " AND so.create_by = ?";
@@ -747,8 +747,9 @@ class M_SalesOrder extends CI_Model
                 c.nama_kios,
                 c.regional,
                 so.kd_rute AS so_kd_rute,
-                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) AS kd_rute,
+                so.kd_rute AS kd_rute,
                 c.kd_rute AS customer_kd_rute,
+                COALESCE(r.keterangan, so.kd_rute) AS nama_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
                 COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
                 COALESCE(d.total_qty_order, 0) AS total_qty_order,
@@ -756,6 +757,7 @@ class M_SalesOrder extends CI_Model
                 COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = so.kd_rute
             LEFT JOIN (
                 SELECT
                     id_so,
@@ -774,11 +776,125 @@ class M_SalesOrder extends CI_Model
         return $this->db->query($sql, $params)->result_array();
     }
 
+    public function get_open_so_for_routing($filter = [])
+    {
+        $where = "WHERE so.status = 'open' AND COALESCE(so.kd_rute, '') = ''";
+        $params = [];
+
+        if (!empty($filter['create_by'])) {
+            $where .= " AND so.create_by = ?";
+            $params[] = $filter['create_by'];
+        }
+        if (!empty($filter['customer_kd_rute'])) {
+            $where .= " AND c.kd_rute = ?";
+            $params[] = $filter['customer_kd_rute'];
+        }
+
+        $sql = "
+            SELECT
+                so.id_so,
+                so.no_so,
+                so.tanggal_transaksi,
+                so.status,
+                so.customer_name,
+                so.create_by,
+                so.total_tonase,
+                so.total_kubikasi,
+                c.nama_customer,
+                c.nama_kios,
+                c.regional,
+                so.kd_rute AS so_kd_rute,
+                so.kd_rute AS kd_rute,
+                c.kd_rute AS customer_kd_rute,
+                COALESCE(r.keterangan, so.kd_rute) AS nama_rute,
+                COALESCE(d.jumlah_item, 0) AS jumlah_item,
+                COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
+                COALESCE(d.total_qty_order, 0) AS total_qty_order,
+                COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = so.kd_rute
+            LEFT JOIN (
+                SELECT
+                    id_so,
+                    COUNT(id) AS jumlah_item,
+                    SUM(CASE WHEN (qty - COALESCE(qty_faktur, 0)) <= 0 THEN 1 ELSE 0 END) AS jumlah_item_diterima,
+                    SUM(qty) AS total_qty_order,
+                    SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            {$where}
+            ORDER BY
+                so.tanggal_transaksi DESC,
+                so.no_so DESC
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
+    public function count_open_so_for_routing($filter = [])
+    {
+        $this->db->from('tbso_sales_order so');
+        $this->db->where('so.status', 'open');
+        $this->db->where("COALESCE(so.kd_rute, '') =", '');
+
+        if (!empty($filter['create_by'])) {
+            $this->db->where('so.create_by', $filter['create_by']);
+        }
+        if (!empty($filter['customer_kd_rute'])) {
+            $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
+            $this->db->where('c.kd_rute', $filter['customer_kd_rute']);
+        }
+
+        return (int)$this->db->count_all_results();
+    }
+
+    public function get_open_so_customer_route_options($filter = [])
+    {
+        $where = "WHERE so.status = 'open' AND COALESCE(so.kd_rute, '') = '' AND COALESCE(c.kd_rute, '') <> ''";
+        $params = [];
+
+        if (!empty($filter['create_by'])) {
+            $where .= " AND so.create_by = ?";
+            $params[] = $filter['create_by'];
+        }
+
+        $sql = "
+            SELECT
+                c.kd_rute,
+                COALESCE(NULLIF(r.keterangan, ''), c.kd_rute) AS nama_rute,
+                COUNT(*) AS total_so,
+                ROUND(COALESCE(SUM(so.total_tonase), 0), 3) AS total_tonase,
+                ROUND(COALESCE(SUM(so.total_kubikasi), 0), 4) AS total_kubikasi
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = c.kd_rute
+            {$where}
+            GROUP BY c.kd_rute, r.keterangan
+            ORDER BY c.kd_rute ASC
+        ";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function update_so_rute($id_so, $kd_rute, $update_by)
     {
         $this->db->where('id_so', $id_so);
         return $this->db->update('tbso_sales_order', [
             'kd_rute'   => $kd_rute,
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function clear_so_rute($id_so, $update_by)
+    {
+        $this->db->where('id_so', $id_so);
+        return $this->db->update('tbso_sales_order', [
+            'kd_rute'   => null,
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);

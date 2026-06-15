@@ -1308,7 +1308,7 @@ class C_SalesOrder extends CI_Controller
     }
 
     // ================================================================
-    // SO PER RUTE - hanya menampilkan daftar Sales Order berdasarkan rute
+    // SO RUTE - daftar semua SO open untuk penentuan rute, lalu detail per rute
     // ================================================================
     public function so_rute()
     {
@@ -1316,17 +1316,20 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoSedangVerifikasiStatus();
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
+        $selected_customer_rute = trim((string)($this->input->get('customer_rute', true) ?? ''));
         $filter = [];
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
         }
-
-        $routes = $this->M_SalesOrder->get_so_rute_summary($filter);
-        if ($selected_rute === '' && !empty($routes)) {
-            $selected_rute = $routes[0]['kd_rute'];
+        $base_filter = $filter;
+        if ($selected_rute === '' && $selected_customer_rute !== '') {
+            $filter['customer_kd_rute'] = $selected_customer_rute;
         }
 
-        $sales_orders = $this->M_SalesOrder->get_so_by_rute($selected_rute, $filter);
+        $routes = $this->M_SalesOrder->get_so_rute_summary($filter);
+        $sales_orders = $selected_rute !== ''
+            ? $this->M_SalesOrder->get_so_by_rute($selected_rute, $filter)
+            : $this->M_SalesOrder->get_open_so_for_routing($filter);
 
         $total_tonase = 0;
         $total_kubikasi = 0;
@@ -1344,6 +1347,10 @@ class C_SalesOrder extends CI_Controller
         $data['page_title']            = 'KARISMA - SO per Rute';
         $data['routes']                = $routes;
         $data['selected_rute']         = $selected_rute;
+        $data['selected_customer_rute'] = $selected_customer_rute;
+        $data['customer_route_options'] = $this->M_SalesOrder->get_open_so_customer_route_options($base_filter);
+        $data['is_all_so_mode']        = ($selected_rute === '');
+        $data['all_so_count']          = $this->M_SalesOrder->count_open_so_for_routing($base_filter);
         $data['sales_orders']          = $sales_orders;
         $data['batas_tonase']          = M_SalesOrder::BATAS_TONASE;
         $data['batas_kubikasi']        = M_SalesOrder::BATAS_KUBIKASI;
@@ -1421,6 +1428,53 @@ class C_SalesOrder extends CI_Controller
         redirect('sales_order/so_rute?rute=' . rawurlencode($target_rute));
     }
 
+    public function reset_so_rute()
+    {
+        if ($this->input->method() !== 'post') show_404();
+        $this->_ensureSoRouteColumn();
+
+        $id_so = (int)$this->input->post('id_so', true);
+        $current_rute = trim((string)$this->input->post('current_rute', true));
+        $redirect = 'sales_order/so_rute' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : '');
+
+        if ($id_so <= 0) {
+            $this->session->set_flashdata('error', 'SO tidak valid.');
+            redirect($redirect);
+            return;
+        }
+
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || ($so['status'] ?? '') !== 'open') {
+            $this->session->set_flashdata('error', 'SO tidak ditemukan atau tidak berstatus Open.');
+            redirect($redirect);
+            return;
+        }
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
+
+        $old_rute = trim((string)($so['kd_rute'] ?? ''));
+        if ($old_rute === '') {
+            $this->session->set_flashdata('warning', 'SO tersebut belum memiliki rute loading.');
+            redirect($redirect);
+            return;
+        }
+
+        if ($this->M_SalesOrder->clear_so_rute($id_so, $this->_getUsername())) {
+            $this->M_ActivityLog->log(
+                $so['no_so'] ?? '', '', 'RESET_SO_RUTE',
+                'Rute SO dikosongkan dari ' . $old_rute . ' agar kembali ke Semua SO Open.',
+                $this->_getUsername()
+            );
+            $this->session->set_flashdata('success', 'SO <b>' . htmlspecialchars($so['no_so'] ?? '') . '</b> dikembalikan ke Semua SO Open.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal mengembalikan SO ke Semua SO Open.');
+        }
+
+        redirect($redirect);
+    }
+
     public function confirm_so_rute_loading()
     {
         if ($this->input->method() !== 'post') show_404();
@@ -1450,9 +1504,11 @@ class C_SalesOrder extends CI_Controller
         }
 
         $total_tonase_open = 0;
+        $total_kubikasi_open = 0;
         foreach ($sales_orders as $so) {
             if (($so['status'] ?? '') === 'open') {
                 $total_tonase_open += (float)($so['total_tonase'] ?? 0);
+                $total_kubikasi_open += (float)($so['total_kubikasi'] ?? 0);
             }
         }
         if ($total_tonase_open > M_SalesOrder::BATAS_TONASE) {
@@ -1460,6 +1516,14 @@ class C_SalesOrder extends CI_Controller
                 'msg' => 'error',
                 'message' => 'Tonase rute melebihi batas maksimal ' . M_SalesOrder::BATAS_TONASE
                     . ' ton. Total: ' . round($total_tonase_open, 3) . ' ton.'
+            ]);
+            exit;
+        }
+        if ($total_kubikasi_open > M_SalesOrder::BATAS_KUBIKASI) {
+            echo json_encode([
+                'msg' => 'error',
+                'message' => 'Kubikasi rute melebihi batas maksimal ' . M_SalesOrder::BATAS_KUBIKASI
+                    . ' m3. Total: ' . round($total_kubikasi_open, 4) . ' m3.'
             ]);
             exit;
         }

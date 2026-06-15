@@ -82,6 +82,23 @@
         padding: 2px 5px;
         line-height: 1.1;
     }
+    .route-strip {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px;
+        white-space: nowrap;
+    }
+    .route-strip .route-card {
+        flex: 0 0 245px;
+        margin-bottom: 0;
+        min-height: 48px;
+    }
+    .route-strip-empty {
+        flex: 1 0 260px;
+        padding: 8px 12px;
+    }
     .quota-box .progress {
         height: 18px;
         border-radius: 4px;
@@ -121,8 +138,26 @@
     .route-bulk-bar select {
         max-width: 120px;
     }
+    .route-toolbar {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .route-filter-bar {
+        justify-content: flex-start;
+        margin-bottom: 0;
+    }
+    .route-filter-bar select {
+        max-width: 180px;
+    }
     .route-select-cell {
         width: 34px;
+    }
+    .route-action-cell {
+        width: 54px;
     }
 </style>
 
@@ -142,14 +177,14 @@
                 <div class="row mb-2">
                     <div class="col-sm-7">
                         <h1 class="m-0">
-                            <i class="fas fa-map-marked-alt mr-2"></i> Sales Order per Rute
+                            <i class="fas fa-map-marked-alt mr-2"></i> Penentuan Rute Sales Order
                         </h1>
                     </div>
                     <div class="col-sm-5">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('sales_order') ?>">Sales Order</a></li>
-                            <li class="breadcrumb-item active">SO per Rute</li>
+                            <li class="breadcrumb-item active">Penentuan Rute SO</li>
                         </ol>
                     </div>
                 </div>
@@ -158,13 +193,26 @@
 
         <?php
         $selected_route_name = '-';
+        $is_all_so_mode = !empty($is_all_so_mode) || empty($selected_rute);
         foreach ($routes as $r) {
             if (($r['kd_rute'] ?? '') === $selected_rute) {
                 $selected_route_name = $r['nama_rute'] ?: $r['kd_rute'];
                 break;
             }
         }
+        if ($is_all_so_mode) {
+            $selected_route_name = 'Semua SO Open';
+        }
+        $selected_customer_rute = trim((string)($selected_customer_rute ?? ''));
+        $customer_route_options = $customer_route_options ?? [];
+        if ($is_all_so_mode && $selected_customer_rute !== '') {
+            $selected_route_name .= ' - Rute Customer ' . $selected_customer_rute;
+        }
         $total_so = count($sales_orders);
+        $all_so_count = isset($all_so_count) ? (int)$all_so_count : $total_so;
+        $loading_routes = array_values(array_filter($routes, function ($route) {
+            return (int)($route['total_so'] ?? 0) > 0;
+        }));
         $pct_ton = $batas_tonase > 0 ? min(100, round(($total_tonase / $batas_tonase) * 100, 1)) : 0;
         $pct_kub = $batas_kubikasi > 0 ? min(100, round(($total_kubikasi / $batas_kubikasi) * 100, 1)) : 0;
         $ton_bar = $total_tonase > $batas_tonase ? 'danger' : ($pct_ton >= 80 ? 'warning' : 'success');
@@ -210,28 +258,38 @@
                             class="btn btn-success btn-sm ml-1"
                             id="btnConfirmSoRuteLoading"
                             data-rute="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>"
-                            <?= $total_tonase > $batas_tonase ? 'disabled title="Tonase melebihi batas maksimal"' : '' ?>>
+                            <?= ($total_tonase > $batas_tonase || $total_kubikasi > $batas_kubikasi) ? 'disabled title="Tonase atau kubikasi melebihi batas maksimal"' : '' ?>>
                         <i class="fas fa-check-circle mr-1"></i> Konfirmasi Siap Loading
                     </button>
                     <?php endif; ?>
                 </div>
 
                 <div class="row">
-                    <div class="col-lg-3">
+                    <div class="col-12">
                         <div class="card card-outline card-primary">
                             <div class="card-header py-2">
                                 <h3 class="card-title">
-                                    <i class="fas fa-map-marked-alt mr-1"></i> Pilih Rute
+                                    <i class="fas fa-map-marked-alt mr-1"></i> Rute Loading
                                 </h3>
                             </div>
-                            <div class="card-body p-1" style="max-height:620px; overflow:auto;">
-                                <?php if (empty($routes)): ?>
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                        Tidak ada master rute
+                            <div class="card-body p-0 route-strip">
+                                <a href="<?= base_url('sales_order/so_rute') ?>" class="route-card <?= $is_all_so_mode ? 'active' : '' ?>">
+                                    <div class="route-code"><i class="fas fa-list"></i></div>
+                                    <div class="route-meta text-truncate" title="Semua SO Open">
+                                        Semua SO Open
+                                    </div>
+                                    <div class="route-summary">
+                                        <span class="badge badge-dark"><?= (int)$all_so_count ?></span>
+                                    </div>
+                                </a>
+                                <?php if (empty($loading_routes)): ?>
+                                    <div class="route-strip-empty text-muted">
+                                        <i class="fas fa-route mr-1"></i>
+                                        Belum ada rute loading
+                                        <small class="ml-1">Pilih SO lalu tetapkan rutenya.</small>
                                     </div>
                                 <?php else: ?>
-                                    <?php foreach ($routes as $r):
+                                    <?php foreach ($loading_routes as $r):
                                         $active = ($r['kd_rute'] === $selected_rute);
                                         $route_url = base_url('sales_order/so_rute?rute=' . rawurlencode($r['kd_rute']));
                                         $route_tonase = (float)($r['total_tonase'] ?? 0);
@@ -261,16 +319,19 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-9">
+                    <div class="col-12">
                         <div class="row quota-box">
                             <div class="col-md-6">
                                 <div class="info-box shadow-sm">
                                     <span class="info-box-icon bg-<?= $ton_bar ?>"><i class="fas fa-weight-hanging"></i></span>
                                     <div class="info-box-content">
-                                        <span class="info-box-text">Tonase SO</span>
+                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Tonase Semua SO Open' : 'Tonase Rute' ?></span>
                                         <span class="info-box-number">
-                                            <?= number_format($total_tonase, 3) ?> / <?= number_format($batas_tonase, 0) ?> ton
+                                            <?= number_format($total_tonase, 3) ?><?= $is_all_so_mode ? '' : ' / ' . number_format($batas_tonase, 0) ?> ton
                                         </span>
+                                        <?php if ($is_all_so_mode): ?>
+                                            <small class="text-muted">Pilih SO lalu tetapkan rute untuk menghitung kapasitas loading.</small>
+                                        <?php else: ?>
                                         <div class="progress mt-1">
                                             <div class="progress-bar bg-<?= $ton_bar ?>" style="width:<?= $pct_ton ?>%">
                                                 <?= $pct_ton ?>%
@@ -279,6 +340,7 @@
                                         <small class="<?= $sisa_tonase < 0 ? 'text-danger' : 'text-muted' ?>">
                                             Sisa: <?= number_format($sisa_tonase, 3) ?> ton
                                         </small>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -286,10 +348,13 @@
                                 <div class="info-box shadow-sm">
                                     <span class="info-box-icon bg-<?= $kub_bar ?>"><i class="fas fa-cubes"></i></span>
                                     <div class="info-box-content">
-                                        <span class="info-box-text">Kubikasi SO</span>
+                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Kubikasi Semua SO Open' : 'Kubikasi Rute' ?></span>
                                         <span class="info-box-number">
-                                            <?= number_format($total_kubikasi, 4) ?> / <?= number_format($batas_kubikasi, 0) ?> m3
+                                            <?= number_format($total_kubikasi, 4) ?><?= $is_all_so_mode ? '' : ' / ' . number_format($batas_kubikasi, 0) ?> m3
                                         </span>
+                                        <?php if ($is_all_so_mode): ?>
+                                            <small class="text-muted">Buka rute untuk melihat sisa kubikasi.</small>
+                                        <?php else: ?>
                                         <div class="progress mt-1">
                                             <div class="progress-bar bg-<?= $kub_bar ?>" style="width:<?= $pct_kub ?>%">
                                                 <?= $pct_kub ?>%
@@ -298,6 +363,7 @@
                                         <small class="<?= $sisa_kubikasi < 0 ? 'text-danger' : 'text-muted' ?>">
                                             Sisa: <?= number_format($sisa_kubikasi, 4) ?> m3
                                         </small>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -314,41 +380,54 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div class="row mb-2">
-                                    <div class="col-md-4">
-                                        <div class="small text-muted">Total Qty Order</div>
-                                        <div class="font-weight-bold"><?= number_format($total_qty_order, 2) ?></div>
+                                <div class="route-toolbar">
+                                    <div>
+                                        <?php if ($is_all_so_mode): ?>
+                                        <form method="get" action="<?= base_url('sales_order/so_rute') ?>" class="route-bulk-bar route-filter-bar">
+                                            <select name="customer_rute" class="form-control form-control-sm">
+                                                <option value="">Semua rute customer</option>
+                                                <?php foreach ($customer_route_options as $route_option): ?>
+                                                    <option value="<?= htmlspecialchars($route_option['kd_rute']) ?>"
+                                                        <?= ($route_option['kd_rute'] === $selected_customer_rute) ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($route_option['kd_rute']) ?> (<?= (int)$route_option['total_so'] ?> SO)
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="btn btn-info btn-sm">
+                                                <i class="fas fa-filter mr-1"></i> Filter
+                                            </button>
+                                            <?php if ($selected_customer_rute !== ''): ?>
+                                                <a href="<?= base_url('sales_order/so_rute') ?>" class="btn btn-outline-secondary btn-sm">
+                                                    <i class="fas fa-times mr-1"></i> Reset
+                                                </a>
+                                            <?php endif; ?>
+                                            <span class="small text-muted">
+                                                Tonase: <b><?= number_format($total_tonase, 3) ?> ton</b>,
+                                                Kubikasi: <b><?= number_format($total_kubikasi, 4) ?> m3</b>
+                                            </span>
+                                        </form>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="small text-muted">Total Qty Faktur</div>
-                                        <div class="font-weight-bold text-success"><?= number_format($total_qty_faktur, 2) ?></div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="small text-muted">Outstanding</div>
-                                        <div class="font-weight-bold <?= $total_qty_outstanding > 0 ? 'text-danger' : 'text-muted' ?>">
-                                            <?= number_format($total_qty_outstanding, 2) ?>
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <form id="bulkMoveForm"
-                                      method="post"
-                                      action="<?= base_url('sales_order/bulk_update_so_rute') ?>"
-                                      class="route-bulk-bar mb-2">
-                                    <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
-                                    <span class="small text-muted">Pindahkan yang dicentang ke</span>
-                                    <select name="kd_rute" class="form-control form-control-sm" required>
-                                        <?php foreach ($routes as $route_option): ?>
-                                            <option value="<?= htmlspecialchars($route_option['kd_rute']) ?>"
-                                                <?= ($route_option['kd_rute'] === $selected_rute) ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($route_option['kd_rute']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <button type="submit" class="btn btn-primary btn-sm" id="btnBulkMove" disabled>
-                                        <i class="fas fa-exchange-alt mr-1"></i> Pindahkan
-                                    </button>
-                                </form>
+                                    <form id="bulkMoveForm"
+                                          method="post"
+                                          action="<?= base_url('sales_order/bulk_update_so_rute') ?>"
+                                          class="route-bulk-bar">
+                                        <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
+                                        <select name="kd_rute" class="form-control form-control-sm" required>
+                                            <option value="">Pilih rute</option>
+                                            <?php foreach ($routes as $route_option): ?>
+                                                <option value="<?= htmlspecialchars($route_option['kd_rute']) ?>"
+                                                    <?= ($route_option['kd_rute'] === $selected_rute) ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($route_option['kd_rute']) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary btn-sm" id="btnBulkMove" disabled>
+                                            <i class="fas fa-exchange-alt mr-1"></i> <?= $is_all_so_mode ? 'Tetapkan Rute' : 'Pindahkan' ?>
+                                        </button>
+                                    </form>
+                                </div>
 
                                 <table class="table table-bordered table-hover table-sm" id="tabelSORute">
                                     <thead class="thead-dark">
@@ -359,22 +438,22 @@
                                             <th>No SO</th>
                                             <th>Tanggal</th>
                                             <th>Customer</th>
+                                            <th>Rute SO</th>
                                             <th>Regional</th>
                                             <th class="text-center">Status</th>
                                             <th class="text-center">Item</th>
                                             <th class="text-right">Qty Order</th>
                                             <th class="text-right">Qty Faktur</th>
                                             <th class="text-right">Outstanding</th>
-                                            <th class="text-right">Tonase</th>
-                                            <th class="text-right">Kubikasi</th>
                                             <th class="text-center">Progress</th>
+                                            <th class="text-center route-action-cell">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($sales_orders)): ?>
                                             <tr>
                                                 <td colspan="13" class="text-center text-muted py-4">
-                                                    Tidak ada Sales Order untuk rute ini
+                                                    <?= $is_all_so_mode ? 'Tidak ada Sales Order Open' : 'Tidak ada Sales Order untuk rute ini' ?>
                                                 </td>
                                             </tr>
                                         <?php else: ?>
@@ -385,7 +464,7 @@
                                                 $qty_order = (float)($so['total_qty_order'] ?? 0);
                                                 $qty_faktur = (float)($so['total_qty_faktur'] ?? 0);
                                                 $qty_outstanding = (float)($so['total_qty_outstanding'] ?? 0);
-                                                $effective_rute = $so['kd_rute'] ?? $selected_rute;
+                                                $effective_rute = $so['kd_rute'] ?? '';
                                                 $customer_rute = $so['customer_kd_rute'] ?? '';
                                                 $pct = $qty_order > 0 ? min(100, round(($qty_faktur / $qty_order) * 100, 1)) : 0;
                                                 $bar_color = $status === 'completed' || $pct >= 100
@@ -415,8 +494,21 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
+                                                        <?php if (!empty($effective_rute)): ?>
+                                                            <span class="badge badge-info"><?= htmlspecialchars($effective_rute) ?></span>
+                                                            <?php if (!empty($so['nama_rute']) && $so['nama_rute'] !== $effective_rute): ?>
+                                                                <br><small class="text-muted"><?= htmlspecialchars($so['nama_rute']) ?></small>
+                                                            <?php endif; ?>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-secondary">Belum ditentukan</span>
+                                                            <?php if (!empty($customer_rute)): ?>
+                                                                <br><small class="text-muted">Rute Customer: <?= htmlspecialchars($customer_rute) ?></small>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
                                                         <?= !empty($so['regional']) ? htmlspecialchars($so['regional']) : '<span class="text-muted">-</span>' ?>
-                                                        <?php if ($customer_rute !== '' && $customer_rute !== $effective_rute): ?>
+                                                        <?php if (!$is_all_so_mode && $customer_rute !== '' && $customer_rute !== $effective_rute): ?>
                                                             <br><small class="text-muted">Master: <?= htmlspecialchars($customer_rute) ?></small>
                                                         <?php endif; ?>
                                                     </td>
@@ -429,8 +521,6 @@
                                                     <td class="text-right <?= $qty_outstanding > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
                                                         <?= number_format($qty_outstanding, 2) ?>
                                                     </td>
-                                                    <td class="text-right"><?= number_format((float)$so['total_tonase'], 3) ?> ton</td>
-                                                    <td class="text-right"><?= number_format((float)$so['total_kubikasi'], 4) ?> m3</td>
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <div class="progress flex-grow-1 mr-1" style="height:16px; border-radius:3px;">
@@ -443,6 +533,23 @@
                                                                 <?= $pct ?>%
                                                             </small>
                                                         </div>
+                                                    </td>
+                                                    <td class="text-center route-action-cell">
+                                                        <?php if (!empty($effective_rute)): ?>
+                                                            <form method="post"
+                                                                  action="<?= base_url('sales_order/reset_so_rute') ?>"
+                                                                  class="d-inline resetRouteForm">
+                                                                <input type="hidden" name="id_so" value="<?= (int)$so['id_so'] ?>">
+                                                                <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                                                                <button type="submit"
+                                                                        class="btn btn-outline-danger btn-xs"
+                                                                        title="Kembalikan ke Semua SO Open">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </form>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -492,7 +599,7 @@ $(document).ready(function () {
         pageLength: 25,
         order: [[2, 'desc']],
         columnDefs: [
-            { orderable: false, targets: [0] }
+            { orderable: false, targets: [0, 12] }
         ],
         language: {
             search: "Cari:",
@@ -526,6 +633,11 @@ $(document).ready(function () {
             e.preventDefault();
             alert('Pilih minimal satu SO yang akan dipindahkan.');
         }
+    });
+
+    $('.resetRouteForm').on('submit', function (e) {
+        var ok = confirm('Kembalikan SO ini ke Semua SO Open?');
+        if (!ok) e.preventDefault();
     });
 
     $('#btnConfirmSoRuteLoading').on('click', function () {
