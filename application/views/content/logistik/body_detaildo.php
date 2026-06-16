@@ -16,13 +16,6 @@
         color: #fff;
     }
 
-    .faktur-order-label {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
     .detail-do-heading {
         display: flex;
         align-items: center;
@@ -150,6 +143,55 @@
     .faktur-actions .dropdown-item:disabled {
         color: #adb5bd;
     }
+
+    .delivery-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 10px;
+        margin: 14px 0;
+    }
+
+    .delivery-info-item {
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: #fff;
+        white-space: normal;
+    }
+
+    .delivery-info-label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        color: #6c757d;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .delivery-info-value {
+        color: #212529;
+        font-weight: 600;
+    }
+
+    .print-action-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 16px;
+        width: 100%;
+    }
+
+    .print-action-bar .btn {
+        width: 100%;
+        min-height: 42px;
+    }
+
+    @media (max-width: 767.98px) {
+        .delivery-info-grid,
+        .print-action-bar {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -208,8 +250,6 @@
                                             '5' => ['label' => 'On Delivery', 'icon' => 'fas fa-truck', 'class' => 'is-primary'],
                                         ];
                                         $current_status = $status_meta[$d->status] ?? ['label' => '-', 'icon' => 'fas fa-info-circle', 'class' => 'is-muted'];
-                                        $can_add_faktur = in_array($d->status, ['1', '2', '3']);
-                                        $can_repost = in_array($d->status, ['2', '3']);
                                     ?>
                                     <div class="detail-do-heading">
                                         <h2>Detail Orders</h2>
@@ -218,21 +258,6 @@
                                                 <i class="<?= $current_status['icon'] ?>"></i>
                                                 <?= $current_status['label'] ?>
                                             </span>
-
-                                            <?php if ($can_repost) : ?>
-                                                <button type="button" class="btn btn-sm btn-warning" id="btnunpost" data-kd="<?= $d->kd_do ?>">
-                                                    <i class="fas fa-redo mr-1"></i> Repost
-                                                </button>
-                                            <?php endif; ?>
-
-                                            <?php if ($can_add_faktur) : ?>
-                                                <?php foreach ($kdo as $k) : ?>
-                                                    <a href="<?= base_url('list_faktur/') . $k->kd_do ?>" class="btn btn-sm btn-success">
-                                                        <i class="fas fa-plus mr-1"></i> Tambah Faktur
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            <?php endif; ?>
-
                                         </div>
                                     </div>
                                     <?php if (!empty($d->sales_confirm_note)) : ?>
@@ -254,7 +279,11 @@
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Kode Faktur</div>
                                         <div>: <?= $k->kd_do ?></div>
-                                        <?php foreach ($dostatus as $ds) : $date = date('d/m/Y') ?>
+                                        <?php foreach ($dostatus as $ds) :
+                                            $date = (!empty($ds->tgl_pengiriman) && $ds->tgl_pengiriman !== '0000-00-00')
+                                                ? date('d/m/Y', strtotime($ds->tgl_pengiriman))
+                                                : date('d/m/Y');
+                                        ?>
                                             <div class="col-auto" hidden>
                                                 <input type="text" class="form-control" value="<?= $ds->driver ?>" name="print_driver" id="print_driver">
                                                 <input type="text" class="form-control" value="<?= $date ?>" name="print_tgl" id="print_tgl">
@@ -267,12 +296,16 @@
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Regional Pengiriman</div>
                                         <div>: <?= $k->regional ?></div>
-                                        <div><a href="#" data-toggle="modal" data-target="#edited_rute" class="btn btn-sm btn-soft ml-2"><i class="fas fa-pencil-alt"></i></a></div>
                                     </div>
 
                                     <div class="mb-2 d-flex">
                                         <div class="me-3 fw-semibold" style="width: 180px;">Total Customer</div>
-                                        <div>: <?= $k->totalfaktur ?></div>
+                                        <div>: <?= $k->total_customer ?? $k->totalfaktur ?></div>
+                                    </div>
+
+                                    <div class="mb-2 d-flex">
+                                        <div class="me-3 fw-semibold" style="width: 180px;">Total Faktur</div>
+                                        <div>: <?= $k->total_faktur ?? '-' ?></div>
                                     </div>
 
                                     <div class="mb-2 d-flex">
@@ -280,12 +313,37 @@
                                         <div>: <?= $k->total_barang ?></div>
                                     </div>
 
+                                    <?php
+                                        $tgl_pengiriman_view = (!empty($k->tgl_pengiriman) && $k->tgl_pengiriman !== '0000-00-00')
+                                            ? date('d/m/Y', strtotime($k->tgl_pengiriman))
+                                            : '-';
+                                        $driver_view = !empty($k->nama_driver) ? $k->nama_driver : (!empty($k->driver) ? $k->driver : '-');
+                                        $kendaraan_view = !empty($k->noplat) ? $k->noplat : (!empty($k->nolambung) ? $k->nolambung : '-');
+                                        if (!empty($k->nm_truk)) {
+                                            $kendaraan_view .= ' - ' . $k->nm_truk;
+                                        }
+                                    ?>
+                                    <div class="delivery-info-grid">
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">Tgl Pengiriman</span>
+                                            <span class="delivery-info-value"><?= htmlspecialchars($tgl_pengiriman_view, ENT_QUOTES, 'UTF-8') ?></span>
+                                        </div>
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">Driver</span>
+                                            <span class="delivery-info-value"><?= htmlspecialchars($driver_view, ENT_QUOTES, 'UTF-8') ?></span>
+                                        </div>
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">Kendaraan</span>
+                                            <span class="delivery-info-value"><?= htmlspecialchars($kendaraan_view, ENT_QUOTES, 'UTF-8') ?></span>
+                                        </div>
+                                    </div>
+
                                     <!-- ============================================================
                                         TONASE & KUBIKASI — dengan progress bar & kuota
                                     ============================================================ -->
                                     <?php
                                         // Batas default (sesuai konstanta di M_SalesOrder)
-                                        $batas_ton = 6;    // ton
+                                        $batas_ton = 7;    // ton
                                         $batas_kub = 9;    // m³
 
                                         $total_ton = (float)($k->total_tonase_faktur ?? 0);
@@ -406,109 +464,12 @@
                                     </div>
                                     <!-- END TONASE KUBIKASI -->
 
-                                    <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK' && ($d->status == '1' || $d->status == '2' || $d->status == '3')) : ?>
-                                        <?php
-                                            $tgl_pengiriman = '';
-                                            if (!empty($d->tgl_pengiriman) && $d->tgl_pengiriman !== '0000-00-00') {
-                                                $tgl_pengiriman_ts = strtotime($d->tgl_pengiriman);
-                                                $tgl_pengiriman = $tgl_pengiriman_ts ? date('Y-m-d', $tgl_pengiriman_ts) : '';
-                                            }
-
-                                            $is_luar = false;
-                                            if (!empty($d->driver) && !empty($d->nolambung)) {
-                                                $driver_exists = false;
-                                                foreach ($driver as $drv_check) {
-                                                    if ((string)$drv_check->kd_driver === (string)$d->driver) {
-                                                        $driver_exists = true;
-                                                        break;
-                                                    }
-                                                }
-
-                                                $truck_exists = false;
-                                                foreach ($truck as $trk_check) {
-                                                    if ((string)$trk_check->id === (string)$d->nolambung) {
-                                                        $truck_exists = true;
-                                                        break;
-                                                    }
-                                                }
-
-                                                $is_luar = !$driver_exists || !$truck_exists;
-                                            }
-                                        ?>
-                                        <div class="border rounded p-3 mb-3">
-                                            <div class="row">
-                                                <div class="col-md-3">
-                                                    <div class="form-group mb-2">
-                                                        <label for="tgl_isi">Tanggal Pengiriman</label>
-                                                        <input type="date" class="form-control" name="tgl_isi" id="tgl_isi" value="<?= htmlspecialchars($tgl_pengiriman, ENT_QUOTES, 'UTF-8') ?>">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-group mb-2">
-                                                        <label>Jenis Pengiriman</label>
-                                                        <div class="d-flex flex-wrap">
-                                                            <div class="custom-control custom-radio mr-3">
-                                                                <input class="custom-control-input" type="radio" id="jenis_kantor" name="jenis_pengiriman" value="expedisi_kantor" <?= !$is_luar ? 'checked' : '' ?>>
-                                                                <label for="jenis_kantor" class="custom-control-label">Ekspedisi Kantor</label>
-                                                            </div>
-                                                            <div class="custom-control custom-radio">
-                                                                <input class="custom-control-input" type="radio" id="jenis_luar" name="jenis_pengiriman" value="expedisi_luar" <?= $is_luar ? 'checked' : '' ?>>
-                                                                <label for="jenis_luar" class="custom-control-label">Ekspedisi Luar</label>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3" id="select_driver_wrapper">
-                                                    <div class="form-group mb-2">
-                                                        <label for="driver_isi">Driver</label>
-                                                        <select class="form-control" name="driver_isi" id="driver_isi">
-                                                            <option value="">Pilih Driver</option>
-                                                            <?php foreach ($driver as $drv) : ?>
-                                                                <option value="<?= htmlspecialchars($drv->kd_driver, ENT_QUOTES, 'UTF-8') ?>" <?= (string)$d->driver === (string)$drv->kd_driver ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($drv->nama_driver, ENT_QUOTES, 'UTF-8') ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3 d-none" id="input_driver_luar_wrapper">
-                                                    <div class="form-group mb-2">
-                                                        <label for="driver_luar_isi">Driver Luar</label>
-                                                        <input type="text" class="form-control" name="driver_luar_isi" id="driver_luar_isi" value="<?= $is_luar ? htmlspecialchars($d->driver, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="Nama driver">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3" id="select_truck_wrapper">
-                                                    <div class="form-group mb-2">
-                                                        <label for="truck_isi">Kendaraan</label>
-                                                        <select class="form-control" name="truck_isi" id="truck_isi">
-                                                            <option value="">Pilih Kendaraan</option>
-                                                            <?php foreach ($truck as $trk) : ?>
-                                                                <option value="<?= htmlspecialchars($trk->id, ENT_QUOTES, 'UTF-8') ?>" <?= (string)$d->nolambung === (string)$trk->id ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($trk->noplat, ENT_QUOTES, 'UTF-8') ?><?= !empty($trk->nm_truk) ? ' - ' . htmlspecialchars($trk->nm_truk, ENT_QUOTES, 'UTF-8') : '' ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3 d-none" id="input_truck_luar_wrapper">
-                                                    <div class="form-group mb-2">
-                                                        <label for="truck_luar_isi">Kendaraan Luar</label>
-                                                        <input type="text" class="form-control" name="truck_luar_isi" id="truck_luar_isi" value="<?= $is_luar ? htmlspecialchars($d->nolambung, ENT_QUOTES, 'UTF-8') : '' ?>" placeholder="No. plat / kendaraan">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
                                 <?php endforeach; ?>
                                 <!-- END FORM -->
                                 <?php if ($this->session->userdata('jobdesk') == 'LOGISTIK') : ?>
                                     <table class="table table-bordered" id="tb_checker_do">
                                         <thead>
                                             <tr>
-                                               <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
-                                                    <th rowspan="2">Aksi</th>
-                                                <?php endif; ?>
-
                                                 <th colspan="2">Data Kios</th>
                                                 <th rowspan="2">Rute</th>
                                                 <th colspan="2">TTB</th>
@@ -569,38 +530,6 @@
                                                             $telp2 = $row->telp2;
                                                         }
                                                     ?>
-                                                        <?php if ($d->status == '1' || $d->status == '2' || $d->status == '3') : ?>
-                                                            <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>" class="faktur-actions">
-                                                                <span class="faktur-order-label">Urutan <?= $faktur_position + 1 ?></span>
-                                                                <div class="dropdown">
-                                                                    <button type="button" class="btn btn-sm btn-soft dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                                        Aksi
-                                                                    </button>
-                                                                    <div class="dropdown-menu">
-                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="up" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
-                                                                            <i class="fas fa-arrow-up mr-2"></i> Naikkan
-                                                                        </button>
-                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="down" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
-                                                                            <i class="fas fa-arrow-down mr-2"></i> Turunkan
-                                                                        </button>
-                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="top" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === 0 ? 'disabled' : '' ?>>
-                                                                            <i class="fas fa-angle-double-up mr-2"></i> Paling atas
-                                                                        </button>
-                                                                        <button type="button" class="dropdown-item btn-faktur-order" data-action="bottom" data-faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" <?= $faktur_position === count($faktur_order) - 1 ? 'disabled' : '' ?>>
-                                                                            <i class="fas fa-angle-double-down mr-2"></i> Paling bawah
-                                                                        </button>
-                                                                        <div class="dropdown-divider"></div>
-                                                                        <button type="button" class="dropdown-item btn-edit-note-faktur" data-toggle="modal" data-target="#modal_note_faktur" data-kd_faktur="<?= htmlspecialchars($row->kd_faktur, ENT_QUOTES, 'UTF-8') ?>" data-note_faktur="<?= htmlspecialchars($row->note_faktur, ENT_QUOTES, 'UTF-8') ?>">
-                                                                            <i class="fas fa-envelope mr-2"></i> Edit note
-                                                                        </button>
-                                                                        <a href="<?= base_url('cancel_fk/' . $row->kd_faktur . '/' . $row->kd_do) ?>" class="dropdown-item text-danger">
-                                                                            <i class="fas fa-times-circle mr-2"></i> Hapus faktur
-                                                                        </a>
-                                                                    </div>
-                                                                </div>
-                                                            </td>
-                                                        <?php elseif ($d->status == '2') : ?>
-                                                        <?php endif; ?>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?><br><?= "(" . $telp1 . "/" . $telp2 . ")" ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
@@ -636,18 +565,9 @@
                                             $sudah_siap = ($d->status == '4') || ($d->status == '5');
                                             ?>
 
-                                            <?php if ($bisa_edit) : ?>
-
-                                                <!-- Rekam / Simpan -->
+                                            <?php if ($sudah_siap || $bisa_edit) : ?>
                                                 <div class="col">
-                                                    <button type="button" class="btn btn-success w-100 mt-3" id="draftpost">
-                                                        <i class="fas fa-check-double"></i>
-                                                        <?= ($d->status == '3') ? 'Rekam Order' : (($d->status == '2') ? 'Perbarui & Kirim' : 'Rekam Draft Order') ?>
-                                                    </button>
-                                                </div>
-                                            <?php elseif ($sudah_siap) : ?>
-                                                <div class="col">
-                                                    <div class="d-flex flex-wrap mt-3" style="gap: 8px;">
+                                                    <div class="print-action-bar">
                                                         <button type="button" class="btn btn-primary" id="btnPrintOrder1" data-kd="<?= $k->kd_do ?>">
                                                             <i class="fas fa-file-alt mr-1"></i> Print DO
                                                         </button>
@@ -782,82 +702,7 @@
     </div>
 
     <script>
-        function getJenisPengiriman() {
-            return $("input[name='jenis_pengiriman']:checked").val() || "expedisi_kantor";
-        }
-
-        function isExpedisiLuar() {
-            return getJenisPengiriman() === "expedisi_luar";
-        }
-
-        function getDriverValue() {
-            if (isExpedisiLuar()) {
-                return ($("#driver_luar_isi").val() || "").trim();
-            }
-            return $("#driver_isi").val();
-        }
-
-        function getTruckValue() {
-            if (isExpedisiLuar()) {
-                return ($("#truck_luar_isi").val() || "").trim();
-            }
-            return $("#truck_isi").val();
-        }
-
-        function togglePengirimanFields() {
-            var luar = isExpedisiLuar();
-
-            if (luar) {
-                $("#select_driver_wrapper, #select_truck_wrapper").addClass("d-none");
-                $("#input_driver_luar_wrapper, #input_truck_luar_wrapper").removeClass("d-none");
-                $("#driver_isi, #truck_isi").prop("required", false);
-                $("#driver_luar_isi, #truck_luar_isi").prop("required", true);
-            } else {
-                $("#select_driver_wrapper, #select_truck_wrapper").removeClass("d-none");
-                $("#input_driver_luar_wrapper, #input_truck_luar_wrapper").addClass("d-none");
-                $("#driver_isi, #truck_isi").prop("required", true);
-                $("#driver_luar_isi, #truck_luar_isi").prop("required", false);
-            }
-        }
-
-        function resetFieldBorder() {
-            $(".form-control").css("border", "");
-        }
-
-        function validatePengirimanInput(tgl_krim, driver, platno) {
-            var valid = true;
-            var luar = isExpedisiLuar();
-
-            if (!tgl_krim) {
-                $("#tgl_isi").css("border", "2px solid red");
-                valid = false;
-            }
-
-            if (!driver) {
-                if (luar) {
-                    $("#driver_luar_isi").css("border", "2px solid red");
-                } else {
-                    $("#driver_isi").css("border", "2px solid red");
-                }
-                valid = false;
-            }
-
-            if (!platno) {
-                if (luar) {
-                    $("#truck_luar_isi").css("border", "2px solid red");
-                } else {
-                    $("#truck_isi").css("border", "2px solid red");
-                }
-                valid = false;
-            }
-
-            return valid;
-        }
-
         $(document).ready(function() {
-            togglePengirimanFields();
-            $("input[name='jenis_pengiriman']").on("change", togglePengirimanFields);
-
             $("#modal_note_faktur").on("show.bs.modal", function(event) {
                 var button = $(event.relatedTarget);
                 var kdFaktur = button.data("kd_faktur") || "";
@@ -865,160 +710,6 @@
 
                 $("#modal_kd_faktur").val(kdFaktur);
                 $("#modal_note_faktur_input").val(noteFaktur);
-            });
-
-            function getFakturOrder() {
-                return $(".faktur-row").map(function() {
-                    return $(this).data("faktur");
-                }).get();
-            }
-
-            function getFakturGroup(kdFaktur) {
-                var firstRow = $(".faktur-row").filter(function() {
-                    return $(this).data("faktur") === kdFaktur;
-                });
-                return firstRow.nextUntil(".faktur-row").addBack();
-            }
-
-            function updateFakturOrderControls() {
-                var order = getFakturOrder();
-
-                $(".faktur-row").each(function(index) {
-                    var kdFaktur = $(this).data("faktur");
-                    var group = getFakturGroup(kdFaktur);
-
-                    group.find(".faktur-order-label").text("Urutan " + (index + 1));
-                    group.find(".btn-faktur-order[data-action='up'], .btn-faktur-order[data-action='top']").prop("disabled", index === 0);
-                    group.find(".btn-faktur-order[data-action='down'], .btn-faktur-order[data-action='bottom']").prop("disabled", index === order.length - 1);
-                });
-            }
-
-            function moveFakturRows(kdFaktur, targetIndex) {
-                var order = getFakturOrder();
-                var currentIndex = order.indexOf(kdFaktur);
-
-                if (currentIndex < 0 || targetIndex < 0 || targetIndex >= order.length || currentIndex === targetIndex) {
-                    return false;
-                }
-
-                var group = getFakturGroup(kdFaktur);
-                var targetFaktur = order[targetIndex];
-                var targetGroup = getFakturGroup(targetFaktur);
-
-                if (targetIndex < currentIndex) {
-                    group.insertBefore(targetGroup.first());
-                } else {
-                    group.insertAfter(targetGroup.last());
-                }
-
-                updateFakturOrderControls();
-                return true;
-            }
-
-            function restoreFakturOrder(order) {
-                var tbody = $("#tb_checker_do tbody");
-
-                order.forEach(function(kdFaktur) {
-                    tbody.append(getFakturGroup(kdFaktur));
-                });
-
-                updateFakturOrderControls();
-            }
-
-            function saveFakturOrder(order, previousOrder) {
-                var kd_do = $("#do_isi").val().trim();
-                $(".btn-faktur-order").prop("disabled", true);
-
-                $.ajax({
-                    url: "<?= base_url('do/update_urutan_faktur') ?>",
-                    type: "POST",
-                    data: {
-                        kd_do: kd_do,
-                        urutan: order
-                    },
-                    dataType: "JSON",
-                    success: function(response) {
-                        if (response.msg !== "success") {
-                            restoreFakturOrder(previousOrder);
-                            alert(response.message || "Gagal menyimpan urutan faktur");
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        restoreFakturOrder(previousOrder);
-                        alert("Terjadi kesalahan: " + error);
-                    },
-                    complete: function() {
-                        updateFakturOrderControls();
-                    }
-                });
-            }
-
-            $(".btn-faktur-order").on("click", function() {
-                var kdFaktur = $(this).data("faktur");
-                var action = $(this).data("action");
-                var previousOrder = getFakturOrder();
-                var currentIndex = previousOrder.indexOf(kdFaktur);
-
-                if (currentIndex < 0) {
-                    return;
-                }
-
-                var targetIndex = currentIndex;
-                if (action === "up") {
-                    targetIndex = currentIndex - 1;
-                } else if (action === "down") {
-                    targetIndex = currentIndex + 1;
-                } else if (action === "top") {
-                    targetIndex = 0;
-                } else if (action === "bottom") {
-                    targetIndex = previousOrder.length - 1;
-                }
-
-                if (!moveFakturRows(kdFaktur, targetIndex)) {
-                    return;
-                }
-
-                saveFakturOrder(getFakturOrder(), previousOrder);
-            });
-
-            $("#draftpost").on('click', function() {
-                var kd_do = $("#do_isi").val().trim();
-                var tgl_krim = $("#tgl_isi").val();
-                var platno = getTruckValue();
-                var driver = getDriverValue();
-                var jenis_pengiriman = getJenisPengiriman();
-
-                resetFieldBorder();
-
-                if (!validatePengirimanInput(tgl_krim, driver, platno)) {
-                    alert("Lengkapi semua field terlebih dahulu.");
-                    return;
-                }
-
-                $.ajax({
-                    url: "<?= base_url('rekam_order_check') ?>",
-                    type: "POST",
-                    data: {
-                        kd_do: kd_do,
-                        tgl_krim: tgl_krim,
-                        platno: platno,
-                        driver: driver,
-                        jenis_pengiriman: jenis_pengiriman
-                    },
-                    dataType: "JSON",
-                    success: function(data) {
-                        console.log(data);
-                        if (data.msg === "success") {
-                            alert('Data berhasil direkam');
-                            window.location.href = "<?= base_url('detail_do/') ?>" + kd_do;
-                        } else {
-                            alert(data.message || 'Ada kesalahan data');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Terjadi kesalahan: ' + error);
-                    }
-                });
             });
         });
 
@@ -1078,46 +769,6 @@
             window.open(printUrl, "_blank");
         });
 
-        $("#btnPrintOrder").on('click', function() {
-            var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val();
-            var driver = getDriverValue();
-            var platno = getTruckValue();
-
-            resetFieldBorder();
-
-            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
-                alert("Lengkapi semua field terlebih dahulu sebelum print.");
-                return;
-            }
-
-            var printUrl = "<?= base_url('print_do/') ?>" + kd_do +
-                "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
-                "&driver=" + encodeURIComponent(driver) +
-                "&plat=" + encodeURIComponent(platno);
-
-            window.open(printUrl, "_blank");
-        });
-
-
-        $("#btnPrintRegis").on('click', function() {
-            var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val();
-            var driver = getDriverValue();
-            var platno = getTruckValue();
-
-            resetFieldBorder();
-            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
-                alert("Lengkapi semua field terlebih dahulu sebelum print.");
-                return;
-            }
-            var printUrl = "<?= base_url('print_regis/') ?>" + kd_do +
-                "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
-                "&driver=" + encodeURIComponent(driver) +
-                "&plat=" + encodeURIComponent(platno);
-            window.open(printUrl, "_blank");
-        });
-
         $("#btnPrintRegis1").on('click', function() {
             var kd_do = $(this).data('kd');
             var status = $("#print_status").val();
@@ -1129,24 +780,6 @@
                 "?tgl_kirim=" + encodeURIComponent(tgl) +
                 "&driver=" + encodeURIComponent(drive) +
                 "&plat=" + encodeURIComponent(plat);
-            window.open(printUrl, "_blank");
-        });
-
-        $("#btnPrintChecker").on('click', function() {
-            var kd_do = $(this).data('kd');
-            var tgl_krim = $("#tgl_isi").val();
-            var driver = getDriverValue();
-            var platno = getTruckValue();
-
-            resetFieldBorder();
-            if (!validatePengirimanInput(tgl_krim, driver, platno)) {
-                alert("Lengkapi semua field terlebih dahulu sebelum print.");
-                return;
-            }
-            var printUrl = "<?= base_url('print_checker/') ?>" + kd_do +
-                "?tgl_kirim=" + encodeURIComponent(tgl_krim) +
-                "&driver=" + encodeURIComponent(driver) +
-                "&plat=" + encodeURIComponent(platno);
             window.open(printUrl, "_blank");
         });
 

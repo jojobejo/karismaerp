@@ -29,16 +29,33 @@
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
+                <?php
+                    $breadcrumb_filter = array_filter([
+                        'date1'       => $filter['date1'] ?? '',
+                        'date2'       => $filter['date2'] ?? '',
+                        'customer_id' => $filter['customer_id'] ?? '',
+                    ], function($v) { return $v !== '' && $v !== null; });
+                    $admin_sc_route_url = base_url('sales_order/admin_sc'
+                        . (!empty($breadcrumb_filter) ? '?' . http_build_query($breadcrumb_filter) : ''));
+                ?>
                 <div class="row mb-2">
                     <div class="col-sm-6">
                         <h1 class="m-0">
-                            <i class="fas fa-file-invoice-dollar mr-2"></i> Admin SC - SO Siap/Partial Faktur
+                            <i class="fas fa-file-invoice-dollar mr-2"></i>
+                            <?= !empty($selected_rute)
+                                ? 'Admin SC - Rute ' . htmlspecialchars($selected_rute)
+                                : 'Admin SC - Rute Siap Faktur' ?>
                         </h1>
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
-                            <li class="breadcrumb-item active">Admin SC</li>
+                            <?php if (!empty($selected_rute)): ?>
+                                <li class="breadcrumb-item"><a href="<?= $admin_sc_route_url ?>">Admin SC</a></li>
+                                <li class="breadcrumb-item active">Rute <?= htmlspecialchars($selected_rute) ?></li>
+                            <?php else: ?>
+                                <li class="breadcrumb-item active">Admin SC</li>
+                            <?php endif; ?>
                         </ol>
                     </div>
                 </div>
@@ -63,6 +80,9 @@
                     </div>
                     <div class="card-body py-2">
                         <form action="<?= base_url('sales_order/admin_sc') ?>" method="post">
+                            <?php if (!empty($selected_rute)): ?>
+                                <input type="hidden" name="rute" value="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                            <?php endif; ?>
                             <div class="row">
                                 <div class="col-md-2">
                                     <label class="small mb-0">Dari Tanggal</label>
@@ -99,10 +119,97 @@
                     </div>
                 </div>
 
+                <?php
+                    $route_count = isset($route_summary) ? count($route_summary) : 0;
+                    $active_query = array_filter([
+                        'date1'       => $filter['date1'] ?? '',
+                        'date2'       => $filter['date2'] ?? '',
+                        'customer_id' => $filter['customer_id'] ?? '',
+                    ], function($v) { return $v !== '' && $v !== null; });
+                ?>
+
+                <?php if (empty($selected_rute)): ?>
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title">
-                            <i class="fas fa-list mr-2"></i> Daftar Sales Order Siap/Partial Faktur
+                            <i class="fas fa-route mr-2"></i> Rute Siap Faktur
+                        </h3>
+                        <div class="card-tools">
+                            <a href="<?= base_url('sales_order/admin_sc/faktur') ?>" class="btn btn-light btn-xs mr-1">
+                                <i class="fas fa-file-invoice mr-1"></i> Faktur Selesai
+                            </a>
+                            <span class="badge badge-light"><?= $route_count ?> rute</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-hover table-sm" id="tabelAdminScSO">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Rute</th>
+                                    <th class="text-center">Total SO</th>
+                                    <th class="text-center">Sudah Faktur</th>
+                                    <th class="text-center">Belum Faktur</th>
+                                    <th class="text-right">Qty Siap Faktur</th>
+                                    <th class="text-right">Tidak Terkirim</th>
+                                    <th class="text-center no-sort" style="min-width:86px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($route_summary)): ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            Tidak ada rute dengan Sales Order siap faktur.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($route_summary as $row):
+                                        $rute_query = array_merge($active_query, ['rute' => $row['kd_rute']]);
+                                    ?>
+                                        <tr>
+                                            <td class="font-weight-bold">
+                                                <?= htmlspecialchars($row['kd_rute']) ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge badge-primary px-2 py-1"><?= number_format((int)$row['total_so']) ?></span>
+                                            </td>
+                                            <td class="text-center text-success font-weight-bold">
+                                                <?= number_format((int)$row['total_sudah_faktur']) ?>
+                                            </td>
+                                            <td class="text-center <?= (int)$row['total_belum_faktur'] > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                                                <?= number_format((int)$row['total_belum_faktur']) ?>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-success">
+                                                <?= number_format((float)($row['total_qty_siap_faktur'] ?? 0), 2) ?>
+                                            </td>
+                                            <td class="text-right <?= (float)($row['total_qty_tidak_terkirim'] ?? 0) > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                                                <?= number_format((float)($row['total_qty_tidak_terkirim'] ?? 0), 2) ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <a href="<?= base_url('sales_order/admin_sc?' . http_build_query($rute_query)) ?>"
+                                                   class="btn btn-sm btn-success" title="Lihat SO rute">
+                                                    <i class="fas fa-arrow-right mr-1"></i> Fakturkan
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="mb-2">
+                    <a href="<?= base_url('sales_order/admin_sc?' . http_build_query($active_query)) ?>" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Rute
+                    </a>
+                    <span class="badge badge-primary ml-1 px-2 py-1">Rute <?= htmlspecialchars($selected_rute) ?></span>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title">
+                            <i class="fas fa-list mr-2"></i> SO Siap Faktur - Rute <?= htmlspecialchars($selected_rute) ?>
                         </h3>
                         <div class="card-tools">
                             <a href="<?= base_url('sales_order/admin_sc/faktur') ?>" class="btn btn-light btn-xs mr-1">
@@ -118,7 +225,6 @@
                                     <th>No SO</th>
                                     <th>Tanggal</th>
                                     <th>Customer</th>
-                                    <th>Rute</th>
                                     <th>Sales</th>
                                     <th class="text-center">Item</th>
                                     <th class="text-right">Qty Siap Faktur</th>
@@ -130,17 +236,15 @@
                             <tbody>
                                 <?php if (empty($so_list)): ?>
                                     <tr>
-                                        <td colspan="10" class="text-center text-muted py-4">
+                                        <td colspan="9" class="text-center text-muted py-4">
                                             <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                            Tidak ada Sales Order siap/partial faktur.
+                                            Tidak ada Sales Order siap faktur pada rute ini.
                                         </td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($so_list as $row): ?>
                                         <tr>
-                                            <td>
-                                                <span class="font-weight-bold"><?= htmlspecialchars($row['no_so']) ?></span>
-                                            </td>
+                                            <td><span class="font-weight-bold"><?= htmlspecialchars($row['no_so']) ?></span></td>
                                             <td class="text-nowrap">
                                                 <?= !empty($row['tanggal_transaksi']) ? date('d/m/Y', strtotime($row['tanggal_transaksi'])) : '-' ?>
                                             </td>
@@ -150,7 +254,6 @@
                                                     <br><small class="text-muted"><?= htmlspecialchars($row['nama_kios']) ?></small>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><?= !empty($row['kd_rute']) ? htmlspecialchars($row['kd_rute']) : htmlspecialchars($row['customer_kd_rute'] ?? '-') ?></td>
                                             <td><?= htmlspecialchars($row['create_by'] ?? '-') ?></td>
                                             <td class="text-center">
                                                 <?= number_format((int)($row['jumlah_item_siap_faktur'] ?? 0)) ?> /
@@ -163,10 +266,9 @@
                                                 <?= number_format((float)($row['total_qty_tidak_terkirim'] ?? 0), 2) ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if (($row['status'] ?? '') === 'partial'): ?>
-                                                    <span class="badge badge-warning px-2 py-1">Partial</span>
-                                                <?php else: ?>
-                                                    <span class="badge badge-info px-2 py-1">Siap Faktur</span>
+                                                <span class="badge badge-info px-2 py-1">Siap Faktur</span>
+                                                <?php if ((int)($row['jumlah_faktur'] ?? 0) > 0): ?>
+                                                    <br><small class="text-success"><?= (int)$row['jumlah_faktur'] ?> faktur</small>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center text-nowrap">
@@ -182,6 +284,7 @@
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -196,20 +299,21 @@
 
 <script>
 $(document).ready(function () {
+    var isRouteDetail = <?= !empty($selected_rute) ? 'true' : 'false' ?>;
     $('#tabelAdminScSO').DataTable({
         responsive: true,
         autoWidth: false,
         pageLength: 25,
-        order: [[1, 'desc']],
+        order: isRouteDetail ? [[1, 'desc']] : [[0, 'asc']],
         columnDefs: [
-            { orderable: false, targets: [9] }
+            { orderable: false, targets: [isRouteDetail ? 8 : 6] }
         ],
         language: {
             search: "Cari:",
             lengthMenu: "Tampilkan _MENU_ data",
             info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
             zeroRecords: "Tidak ada data ditemukan",
-            emptyTable: "Tidak ada Sales Order siap/partial faktur",
+            emptyTable: "Tidak ada Sales Order siap faktur",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
     });

@@ -106,10 +106,15 @@
                     $tgl_kirim = $this->input->get('tgl_kirim');
                     $driver = $this->input->get('driver');
                     $plat = $this->input->get('plat');
+                    $driver_view = !empty($print->nama_driver) ? $print->nama_driver : $driver;
+                    $plat_view = !empty($print->noplat) ? $print->noplat : $plat;
+                    if (!empty($print->nm_truk)) {
+                        $plat_view .= ' - ' . $print->nm_truk;
+                    }
                 ?>
                     <div>Tanggal Kirim : <?= htmlspecialchars($tgl_kirim) ?></div>
-                    <div>Driver : <?= htmlspecialchars($driver) ?></div>
-                    <div>No Lambung : <?= htmlspecialchars($plat) ?></div>
+                    <div>Driver : <?= htmlspecialchars($driver_view) ?></div>
+                    <div>No Lambung : <?= htmlspecialchars($plat_view) ?></div>
                 <?php endforeach; ?>
             </div>
 

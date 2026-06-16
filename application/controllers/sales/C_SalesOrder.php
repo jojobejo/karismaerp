@@ -500,17 +500,66 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
 
+        $selected_rute = trim((string)(
+            $this->input->get('rute', true)
+            ?: $this->input->post('rute', true)
+            ?: ''
+        ));
         $filter = [
-            'date1'       => $this->input->post('date1'),
-            'date2'       => $this->input->post('date2'),
-            'customer_id' => $this->input->post('customer_id'),
+            'date1'       => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'       => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'customer_id' => $this->input->post('customer_id') ?: $this->input->get('customer_id', true),
         ];
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
         }
 
+        $summary_filter = $filter;
+        $all_ready_so = $this->M_SalesOrder->get_admin_sc_ready_so($summary_filter);
+        $route_summary = [];
+        foreach ($all_ready_so as $row) {
+            $rute = trim((string)($row['kd_rute'] ?: ($row['customer_kd_rute'] ?? '')));
+            if ($rute === '') $rute = '-';
+            if (!isset($route_summary[$rute])) {
+                $route_summary[$rute] = [
+                    'kd_rute'                    => $rute,
+                    'total_so'                   => 0,
+                    'total_sudah_faktur'         => 0,
+                    'total_belum_faktur'         => 0,
+                    'total_qty_siap_faktur'      => 0,
+                    'total_qty_tidak_terkirim'   => 0,
+                    'latest_update_at'           => '',
+                ];
+            }
+
+            $route_summary[$rute]['total_so']++;
+            if ((int)($row['jumlah_faktur'] ?? 0) > 0) {
+                $route_summary[$rute]['total_sudah_faktur']++;
+            } else {
+                $route_summary[$rute]['total_belum_faktur']++;
+            }
+            $route_summary[$rute]['total_qty_siap_faktur'] += (float)($row['total_qty_siap_faktur'] ?? 0);
+            $route_summary[$rute]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
+            $updated_at = (string)($row['update_at'] ?? $row['create_at'] ?? '');
+            if ($updated_at > $route_summary[$rute]['latest_update_at']) {
+                $route_summary[$rute]['latest_update_at'] = $updated_at;
+            }
+        }
+        uasort($route_summary, function($a, $b) {
+            return strcmp((string)$b['latest_update_at'], (string)$a['latest_update_at']);
+        });
+
+        $so_filter = $filter;
+        if ($selected_rute !== '') {
+            $so_filter['kd_rute'] = $selected_rute;
+        }
+
         $data['page_title'] = 'KARISMA - Admin SC - SO Siap Faktur';
-        $data['so_list']    = $this->M_SalesOrder->get_admin_sc_ready_so($filter);
+        $data['so_list']    = $selected_rute !== ''
+            ? $this->M_SalesOrder->get_admin_sc_ready_so($so_filter)
+            : [];
+        $data['route_summary'] = array_values($route_summary);
+        $data['selected_rute'] = $selected_rute;
         $data['customers']  = $this->M_SalesOrder->get_customers();
         $data['filter']     = $filter;
 
@@ -528,16 +577,55 @@ class C_SalesOrder extends CI_Controller
 
         $this->_ensureFakturPaymentInfoColumns();
 
+        $selected_rute = trim((string)(
+            $this->input->get('rute', true)
+            ?: $this->input->post('rute', true)
+            ?: ''
+        ));
         $filter = [
-            'date1'       => $this->input->post('date1'),
-            'date2'       => $this->input->post('date2'),
-            'customer_id' => $this->input->post('customer_id'),
+            'date1'       => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'       => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'customer_id' => $this->input->post('customer_id') ?: $this->input->get('customer_id', true),
         ];
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
         }
 
-        $fakturs = $this->M_SalesOrder->get_admin_sc_faktur_selesai($filter);
+        $all_fakturs = $this->M_SalesOrder->get_admin_sc_faktur_selesai($filter);
+        $route_summary = [];
+        foreach ($all_fakturs as $faktur) {
+            $rute = trim((string)(($faktur['so_kd_rute'] ?? '') ?: ($faktur['customer_kd_rute'] ?? '')));
+            if ($rute === '') $rute = '-';
+            if (!isset($route_summary[$rute])) {
+                $route_summary[$rute] = [
+                    'kd_rute'          => $rute,
+                    'total_faktur'     => 0,
+                    'total_qty'        => 0,
+                    'total_pajak'      => 0,
+                    'grand_total'      => 0,
+                    'latest_faktur_at' => '',
+                ];
+            }
+            $route_summary[$rute]['total_faktur']++;
+            $route_summary[$rute]['total_qty'] += (float)($faktur['total_qty'] ?? 0);
+            $route_summary[$rute]['total_pajak'] += (float)($faktur['total_pajak'] ?? 0);
+            $route_summary[$rute]['grand_total'] += (float)($faktur['grand_total'] ?? 0);
+            $latest = (string)($faktur['tanggal_faktur'] ?? $faktur['create_at'] ?? '');
+            if ($latest > $route_summary[$rute]['latest_faktur_at']) {
+                $route_summary[$rute]['latest_faktur_at'] = $latest;
+            }
+        }
+        uasort($route_summary, function($a, $b) {
+            return strcmp((string)$b['latest_faktur_at'], (string)$a['latest_faktur_at']);
+        });
+
+        $faktur_filter = $filter;
+        if ($selected_rute !== '') {
+            $faktur_filter['kd_rute'] = $selected_rute;
+        }
+        $fakturs = $selected_rute !== ''
+            ? $this->M_SalesOrder->get_admin_sc_faktur_selesai($faktur_filter)
+            : [];
 
         $total_nilai = 0;
         $total_pajak = 0;
@@ -552,6 +640,8 @@ class C_SalesOrder extends CI_Controller
 
         $data['page_title']  = 'KARISMA - Admin SC - Faktur Selesai';
         $data['fakturs']     = $fakturs;
+        $data['route_summary'] = array_values($route_summary);
+        $data['selected_rute'] = $selected_rute;
         $data['customers']   = $this->M_SalesOrder->get_customers();
         $data['filter']      = $filter;
         $data['total_nilai'] = $total_nilai;
@@ -561,6 +651,67 @@ class C_SalesOrder extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/admin_sc_faktur_list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function admin_sc_print_faktur_rute()
+    {
+        if (!$this->_canAccessAdminSc()) {
+            $this->_denyAdminScAccess();
+            return;
+        }
+
+        $this->_ensureFakturPaymentInfoColumns();
+
+        $selected_rute = trim((string)$this->input->get('rute', true));
+        if ($selected_rute === '') {
+            $this->session->set_flashdata('error', 'Pilih rute terlebih dahulu untuk cetak semua faktur.');
+            redirect('sales_order/admin_sc/faktur');
+            return;
+        }
+
+        $filter = [
+            'date1'       => $this->input->get('date1', true),
+            'date2'       => $this->input->get('date2', true),
+            'customer_id' => $this->input->get('customer_id', true),
+            'kd_rute'     => $selected_rute,
+        ];
+        if ($this->_isRestrictedSalesUser()) {
+            $filter['create_by'] = $this->_getUsername();
+        }
+
+        $fakturs = $this->M_SalesOrder->get_admin_sc_faktur_selesai($filter);
+        if (empty($fakturs)) {
+            $this->session->set_flashdata('warning', 'Tidak ada faktur selesai pada rute ini.');
+            redirect('sales_order/admin_sc/faktur?rute=' . rawurlencode($selected_rute));
+            return;
+        }
+
+        $print_items = [];
+        foreach ($fakturs as $faktur) {
+            $so = $this->M_SalesOrder->get_so($faktur['id_so']);
+            if (!$this->_canAccessSo($so)) {
+                continue;
+            }
+            $print_items[] = [
+                'faktur'  => $faktur,
+                'so'      => $so,
+                'details' => $this->M_SalesOrder->get_faktur_detail($faktur['id_faktur']),
+            ];
+        }
+
+        if (empty($print_items)) {
+            $this->session->set_flashdata('error', 'Tidak ada faktur yang dapat dicetak.');
+            redirect('sales_order/admin_sc/faktur?rute=' . rawurlencode($selected_rute));
+            return;
+        }
+
+        $data['page_title']    = 'KARISMA - Cetak Faktur Rute ' . $selected_rute;
+        $data['selected_rute'] = $selected_rute;
+        $data['print_items']   = $print_items;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/admin_sc_faktur_print_all.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -576,8 +727,8 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
-            $this->session->set_flashdata('error', 'SO belum siap difakturkan atau sudah selesai.');
+        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'SO belum siap difakturkan atau harus diverifikasi ulang oleh logistik.');
             redirect('sales_order/admin_sc');
             return;
         }
@@ -613,6 +764,48 @@ class C_SalesOrder extends CI_Controller
         }
 
         return $this->form_faktur($id_so);
+    }
+
+    public function admin_sc_update_harga_faktur($id_so)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['msg' => 'error', 'message' => 'Method tidak valid.']);
+            exit;
+        }
+
+        if (!$this->_canAccessAdminSc()) {
+            echo json_encode(['msg' => 'error', 'message' => 'Anda tidak memiliki akses Admin SC.']);
+            exit;
+        }
+
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
+            echo json_encode(['msg' => 'error', 'message' => 'SO tidak valid atau belum siap difakturkan.']);
+            exit;
+        }
+        if (!$this->_canAccessSo($so)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Anda tidak memiliki akses untuk mengubah SO ini.']);
+            exit;
+        }
+
+        $id_so_detail = (int)$this->input->post('id_so_detail', true);
+        $harga = (float)$this->input->post('harga', true);
+
+        if ($id_so_detail <= 0 || $harga <= 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'Harga satuan tidak valid.']);
+            exit;
+        }
+
+        $updated = $this->M_SalesOrder->update_so_detail_harga($id_so, $id_so_detail, $harga, $this->_getUsername());
+        echo json_encode([
+            'msg' => $updated ? 'success' : 'error',
+            'message' => $updated ? 'Harga SO berhasil diperbarui.' : 'Gagal memperbarui harga SO.',
+            'harga' => $harga,
+        ]);
+        exit;
     }
 
     // ================================================================
@@ -1047,8 +1240,8 @@ class C_SalesOrder extends CI_Controller
             $this->_denySoAccess();
             return;
         }
-        if (!$so || !in_array($so['status'], ['siap_faktur', 'partial'], true)) {
-            $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati Siap Loading dan Verifikasi Barang.');
+        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati verifikasi logistik.');
             redirect('sales_order/admin_sc');
             return;
         }
@@ -1121,8 +1314,8 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureFakturPaymentInfoColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || !in_array($so['status'], ['siap_faktur', 'partial'], true)) {
-            $this->session->set_flashdata('error', 'SO tidak valid atau belum siap difakturkan.');
+        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+            $this->session->set_flashdata('error', 'SO tidak valid atau harus diverifikasi ulang oleh logistik sebelum difakturkan.');
             redirect($this->_isAdminScOnlyUser() ? 'sales_order/admin_sc' : 'sales_order/detail/' . $id_so);
             return;
         }
@@ -1233,7 +1426,11 @@ class C_SalesOrder extends CI_Controller
                     . $auto_do_message);
             }
 
-            redirect($this->_isAdminScOnlyUser() ? 'sales_order/admin_sc/faktur' : 'sales_order/detail/' . $id_so);
+            if ($this->_isAdminScOnlyUser()) {
+                $redirect_rute = trim((string)(($so_fresh['kd_rute'] ?? '') ?: ($so_fresh['customer_kd_rute'] ?? '') ?: ($so['kd_rute'] ?? '') ?: ($so['customer_kd_rute'] ?? '')));
+                redirect('sales_order/admin_sc' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+            }
+            redirect('sales_order/detail/' . $id_so);
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan Faktur Penjualan.');
             redirect('sales_order/admin_sc/form_faktur/' . $id_so);
@@ -1314,6 +1511,7 @@ class C_SalesOrder extends CI_Controller
     {
         $this->_ensureSoRouteColumn();
         $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
         $selected_customer_rute = trim((string)($this->input->get('customer_rute', true) ?? ''));
@@ -1694,6 +1892,22 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     // PRIVATE — parse POST detail SO
     // ================================================================
+    private function _parse_number_input($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') return 0;
+
+        $value = preg_replace('/[^\d,.\-]/', '', $value);
+        if (strpos($value, ',') !== false) {
+            $value = str_replace('.', '', $value);
+            $value = str_replace(',', '.', $value);
+        } else {
+            $value = str_replace('.', '', $value);
+        }
+
+        return (float)$value;
+    }
+
     private function _parse_detail_post($post)
     {
         $details = [];
@@ -1703,7 +1917,7 @@ class C_SalesOrder extends CI_Controller
         foreach ($post['kd_barang'] as $i => $kd) {
             if (empty($kd)) continue;
 
-            $hrg         = (float)($post['hrg_satuan'][$i]  ?? 0);
+            $hrg         = $this->_parse_number_input($post['hrg_satuan'][$i] ?? 0);
             $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
             $is_ubah_harga = $hrg > 0 && $hrg_pk > 0 && abs($hrg - $hrg_pk) > 0.001;
             $harga_approval_by = strtolower(trim((string)($post['harga_approval_by'][$i] ?? '')));

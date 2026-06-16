@@ -2,8 +2,9 @@
 <?php
 $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
 $is_admin_sc_context = in_array($jobdesk, ['ADMINSC', 'SALESCOUNTER'], true);
+$so_rute = trim((string)($so['kd_rute'] ?? ($so['customer_kd_rute'] ?? '')));
 $faktur_back_url = $is_admin_sc_context
-    ? base_url('sales_order/admin_sc/pilih_barang/' . $so['id_so'])
+    ? base_url('sales_order/admin_sc' . ($so_rute !== '' ? '?rute=' . rawurlencode($so_rute) : ''))
     : base_url('sales_order/detail/' . $so['id_so']);
 ?>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
@@ -31,6 +32,13 @@ $faktur_back_url = $is_admin_sc_context
                         <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                         <?php if ($is_admin_sc_context): ?>
                             <li class="breadcrumb-item"><a href="<?= base_url('sales_order/admin_sc') ?>">Admin SC</a></li>
+                            <?php if ($so_rute !== ''): ?>
+                                <li class="breadcrumb-item">
+                                    <a href="<?= base_url('sales_order/admin_sc?rute=' . rawurlencode($so_rute)) ?>">
+                                        Rute <?= htmlspecialchars($so_rute) ?>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
                             <li class="breadcrumb-item">
                                 <a href="<?= base_url('sales_order/admin_sc/pilih_barang/' . $so['id_so']) ?>">
                                     Pilih Barang
@@ -156,7 +164,7 @@ $faktur_back_url = $is_admin_sc_context
                             <div class="card-header">
                                 <h3 class="card-title">
                                     <i class="fas fa-boxes mr-1"></i>
-                                    Item — Isi Qty yang Akan Difakturkan
+                                    Item - Qty Faktur Otomatis
                                 </h3>
                             </div>
                             <div class="card-body p-0">
@@ -165,11 +173,7 @@ $faktur_back_url = $is_admin_sc_context
                                         <tr>
                                             <th width="35%">Barang</th>
                                             <th>Lot / Exp</th>
-                                            <th class="text-right">Siap Faktur</th>
-                                            <th class="text-right">
-                                                Qty Faktur
-                                                <br><small class="text-muted">(maks = siap faktur)</small>
-                                            </th>
+                                            <th class="text-right">Qty Faktur</th>
                                             <th class="text-right">Harga Satuan</th>
                                             <th class="text-right">Subtotal</th>
                                         </tr>
@@ -190,7 +194,6 @@ $faktur_back_url = $is_admin_sc_context
                                             <input type="hidden" name="expired_date[]"   value="<?= htmlspecialchars($d['expired_date'] ?? '') ?>">
                                             <input type="hidden" name="isi_per_box[]"    value="<?= $isi ?>">
                                             <input type="hidden" name="satuan[]"         value="<?= htmlspecialchars($d['satuan'] ?? '') ?>">
-                                            <input type="hidden" name="hrg_satuan[]"     value="<?= $d['hrg_satuan'] ?>">
                                             <input type="hidden" name="hrg_pokok[]"      value="<?= $d['hrg_pokok'] ?>">
                                             <input type="hidden" name="disc[]"           value="<?= $d['disc'] ?>">
                                             <input type="hidden" name="pajak[]"          value="<?= (float)($d['pajak'] ?? 0) ?>">
@@ -222,47 +225,31 @@ $faktur_back_url = $is_admin_sc_context
                                                     <?= $out_box > 0 ? $out_box . ' box' : '' ?>
                                                     <?= $out_pcs > 0 ? ($out_box > 0 ? '+ ' : '') . (int)$out_pcs . ' pcs' : '' ?>
                                                     <?php if ($out_box == 0 && $out_pcs == 0): ?>
-                                                        <span class="text-muted"><?= $outstanding ?></span>
+                                                        <span class="text-muted"><?= number_format($outstanding) ?> pcs</span>
                                                     <?php endif; ?>
                                                 </strong>
                                                 <br>
-                                                <small class="text-muted">= <?= number_format($outstanding) ?> pcs</small>
-                                                <!-- Simpan nilai max siap faktur sebagai data attr -->
+                                                <small class="text-muted"><?= number_format($outstanding) ?> pcs</small>
                                                 <input type="hidden" class="max-outstanding" value="<?= $outstanding ?>">
                                             </td>
-                                            <td class="text-right" style="min-width:180px;">
+                                            <td class="text-right" style="min-width:150px;">
+                                                <input type="hidden"
+                                                       class="harga-satuan-input"
+                                                       name="hrg_satuan[]"
+                                                       value="<?= (float)$d['hrg_satuan'] ?>"
+                                                       data-row="<?= $i ?>">
                                                 <div class="d-flex align-items-center justify-content-end">
-                                                    <div class="input-group input-group-sm mr-1" style="max-width:86px;">
-                                                        <input type="number"
-                                                               class="form-control text-right qty-box-input"
-                                                               name="qty_box_input[]"
-                                                               value="<?= $out_box ?>"
-                                                               min="0"
-                                                               step="1"
-                                                               data-row="<?= $i ?>">
-                                                        <div class="input-group-append">
-                                                            <span class="input-group-text">box</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="input-group input-group-sm" style="max-width:86px;">
-                                                        <input type="number"
-                                                               class="form-control text-right qty-pcs-input"
-                                                               name="qty_pcs_input[]"
-                                                               value="<?= (int)$out_pcs ?>"
-                                                               min="0"
-                                                               step="1"
-                                                               data-row="<?= $i ?>">
-                                                        <div class="input-group-append">
-                                                            <span class="input-group-text">pcs</span>
-                                                        </div>
-                                                    </div>
+                                                    <span class="harga-satuan-text mr-2" data-row="<?= $i ?>">
+                                                        Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?>
+                                                    </span>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary btn-edit-harga"
+                                                            data-row="<?= $i ?>"
+                                                            data-detail="<?= (int)$d['id_so_detail'] ?>"
+                                                            data-barang="<?= htmlspecialchars($d['nama_barang'], ENT_QUOTES, 'UTF-8') ?>">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
                                                 </div>
-                                                <small class="text-muted qty-helper" data-row="<?= $i ?>">
-                                                    maks <?= number_format($outstanding) ?> pcs
-                                                </small>
-                                            </td>
-                                            <td class="text-right">
-                                                Rp <?= number_format($d['hrg_satuan'], 0, ',', '.') ?>
                                                 <?php if ($d['disc'] > 0): ?>
                                                     <br><small class="text-danger">disc <?= $d['disc'] ?>%</small>
                                                 <?php endif; ?>
@@ -275,11 +262,11 @@ $faktur_back_url = $is_admin_sc_context
                                     </tbody>
                                     <tfoot class="thead-light">
                                         <tr>
-                                            <th colspan="5" class="text-right">Total Nilai Faktur:</th>
+                                            <th colspan="4" class="text-right">Total Nilai Faktur:</th>
                                             <th class="text-right" id="totalNilaiFaktur">Rp 0</th>
                                         </tr>
                                         <tr>
-                                            <th colspan="5" class="text-right">
+                                            <th colspan="4" class="text-right">
                                                 Tax: <?= number_format((float)($tax_rate ?? 0), 0) ?>(%)
                                                 <?php if (!empty($so['is_faktur_z'])): ?>
                                                     <br><small class="text-muted">Faktur Z</small>
@@ -288,7 +275,7 @@ $faktur_back_url = $is_admin_sc_context
                                             <th class="text-right" id="totalTax">Rp 0</th>
                                         </tr>
                                         <tr>
-                                            <th colspan="5" class="text-right">Grand Total Harga:</th>
+                                            <th colspan="4" class="text-right">Grand Total Harga:</th>
                                             <th class="text-right" id="grandTotalHarga">Rp 0</th>
                                         </tr>
                                     </tfoot>
@@ -314,6 +301,40 @@ $faktur_back_url = $is_admin_sc_context
             </form>
         </div>
     </section>
+    </div>
+
+    <div class="modal fade" id="modalEditHarga" tabindex="-1" role="dialog" aria-labelledby="modalEditHargaLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditHargaLabel">Edit Harga Satuan</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editHargaRow">
+                    <input type="hidden" id="editHargaDetail">
+                    <div class="form-group">
+                        <label>Barang</label>
+                        <input type="text" class="form-control" id="editHargaBarang" readonly>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Harga Satuan</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">Rp</span>
+                            </div>
+                            <input type="number" class="form-control text-right" id="editHargaValue" min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary" id="btnSimpanHarga">Simpan Harga</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <footer class="main-footer">
@@ -371,40 +392,6 @@ $(document).ready(function () {
         $('#tanggalJatuhTempo').val(date.toISOString().slice(0, 10));
     }
 
-    function syncQty(row) {
-        const $hidden = $('.qty-faktur[data-row="' + row + '"]');
-        const $boxInput = $('.qty-box-input[data-row="' + row + '"]');
-        const $pcsInput = $('.qty-pcs-input[data-row="' + row + '"]');
-        const $helper = $('.qty-helper[data-row="' + row + '"]');
-        const isi = parseFloat($hidden.data('isi')) || 1;
-        const outstanding = parseFloat($hidden.data('outstanding')) || 0;
-        let qtyBox = parseFloat($boxInput.val()) || 0;
-        let qtyPcsSisa = parseFloat($pcsInput.val()) || 0;
-        let qtyPcs = (qtyBox * isi) + qtyPcsSisa;
-
-        if (qtyPcs > outstanding) {
-            qtyPcs = outstanding;
-            qtyBox = Math.floor(outstanding / isi);
-            qtyPcsSisa = outstanding - (qtyBox * isi);
-            $boxInput.val(qtyBox);
-            $pcsInput.val(qtyPcsSisa);
-        }
-
-        $hidden.val(qtyPcs);
-
-        const isPartial = qtyPcs > 0 && qtyPcs < outstanding;
-        $boxInput.add($pcsInput).toggleClass('text-danger font-weight-bold', isPartial);
-        $helper
-            .toggleClass('text-danger font-weight-bold', isPartial)
-            .text('total ' + qtyPcs.toLocaleString('id-ID') + ' pcs, maks ' + outstanding.toLocaleString('id-ID') + ' pcs');
-    }
-
-    function syncAllQty() {
-        $('.qty-faktur').each(function() {
-            syncQty($(this).data('row'));
-        });
-    }
-
     function hitungSubtotal() {
         let totalNilaiFaktur = 0;
         let totalTax = 0;
@@ -413,7 +400,7 @@ $(document).ready(function () {
         $('.qty-faktur').each(function () {
             const row    = $(this).data('row');
             const qty    = parseFloat($(this).val()) || 0;
-            const harga  = parseFloat($(this).data('harga')) || 0;
+            const harga  = parseFloat($('.harga-satuan-input[data-row="' + row + '"]').val()) || 0;
             const disc   = parseFloat($(this).data('disc'))  || 0;
             const pajak  = parseFloat($(this).data('pajak')) || 0;
 
@@ -436,17 +423,81 @@ $(document).ready(function () {
         $('#grandTotalHarga').text('Rp ' + grandTotalHarga.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
     }
 
+    function formatRupiah(value) {
+        return 'Rp ' + (parseFloat(value) || 0).toLocaleString('id-ID', { minimumFractionDigits: 0 });
+    }
+
+    function setHargaButtonLoading(loading) {
+        var $btn = $('#btnSimpanHarga');
+        if (loading) {
+            if (!$btn.data('original-html')) $btn.data('original-html', $btn.html());
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Menyimpan');
+        } else {
+            $btn.prop('disabled', false).html($btn.data('original-html') || 'Simpan Harga');
+        }
+    }
+
     // Hitung saat pertama kali dan saat nilai berubah
     updateTanggalJatuhTempo();
     $('#tanggalFaktur, #jtempo').on('change', updateTanggalJatuhTempo);
 
-    syncAllQty();
     hitungSubtotal();
-    $(document).on('input change', '.qty-box-input, .qty-pcs-input', function() {
-        syncQty($(this).data('row'));
-        hitungSubtotal();
+    $(document).on('click', '.btn-edit-harga', function() {
+        const row = $(this).data('row');
+        const harga = $('.harga-satuan-input[data-row="' + row + '"]').val() || 0;
+        $('#editHargaRow').val(row);
+        $('#editHargaDetail').val($(this).data('detail') || '');
+        $('#editHargaBarang').val($(this).data('barang') || '');
+        $('#editHargaValue').val(harga);
+        $('#modalEditHarga').modal('show');
     });
-    $(document).on('focus', '.qty-box-input, .qty-pcs-input', function() {
+    $('#modalEditHarga').on('shown.bs.modal', function() {
+        $('#editHargaValue').trigger('focus').trigger('select');
+    });
+    $('#btnSimpanHarga').on('click', function() {
+        const row = $('#editHargaRow').val();
+        const idSoDetail = $('#editHargaDetail').val();
+        const harga = parseFloat($('#editHargaValue').val()) || 0;
+        if (harga <= 0) {
+            salesToast('error', 'Harga satuan harus lebih dari 0.');
+            return;
+        }
+        if (!idSoDetail) {
+            salesToast('error', 'Data item SO tidak valid.');
+            return;
+        }
+
+        setHargaButtonLoading(true);
+        $.ajax({
+            url: "<?= base_url('sales_order/admin_sc/update_harga_faktur/' . $so['id_so']) ?>",
+            type: "POST",
+            dataType: "JSON",
+            data: {
+                id_so_detail: idSoDetail,
+                harga: harga
+            },
+            success: function(response) {
+                if (!response || response.msg !== 'success') {
+                    salesToast('error', (response && response.message) || 'Gagal menyimpan harga.');
+                    return;
+                }
+
+                const savedHarga = parseFloat(response.harga) || harga;
+                $('.harga-satuan-input[data-row="' + row + '"]').val(savedHarga);
+                $('.harga-satuan-text[data-row="' + row + '"]').text(formatRupiah(savedHarga));
+                hitungSubtotal();
+                $('#modalEditHarga').modal('hide');
+                salesToast('success', response.message || 'Harga SO berhasil diperbarui.');
+            },
+            error: function(xhr, status, error) {
+                salesToast('error', 'Terjadi kesalahan: ' + error);
+            },
+            complete: function() {
+                setHargaButtonLoading(false);
+            }
+        });
+    });
+    $(document).on('focus', '#editHargaValue', function() {
         this.select();
     });
     $('#formFaktur').on('keydown', 'input, select, textarea', function(e) {
@@ -466,16 +517,21 @@ $(document).ready(function () {
 
     // Validasi sebelum submit
     $('#formFaktur').on('submit', function (e) {
-        syncAllQty();
         hitungSubtotal();
         let adaQty = false;
         let adaMelewati = false;
+        let hargaTidakValid = false;
 
         $('.qty-faktur').each(function () {
             const qty    = parseFloat($(this).val()) || 0;
             const maxQty = parseFloat($(this).data('outstanding')) || 0;
             if (qty > 0)      adaQty = true;
             if (qty > maxQty) adaMelewati = true;
+        });
+        $('.harga-satuan-input').each(function () {
+            if ((parseFloat($(this).val()) || 0) <= 0) {
+                hargaTidakValid = true;
+            }
         });
 
         if (!adaQty) {
@@ -488,12 +544,17 @@ $(document).ready(function () {
             salesToast('error', 'Qty faktur tidak boleh melebihi qty outstanding.');
             return;
         }
+        if (hargaTidakValid) {
+            e.preventDefault();
+            salesToast('error', 'Harga satuan harus lebih dari 0.');
+            return;
+        }
 
         if (!fakturSubmitConfirmed) {
             e.preventDefault();
             salesConfirm({
                 title: 'Simpan Faktur?',
-                text: 'Pastikan qty dan data faktur sudah benar.',
+                text: 'Pastikan data faktur sudah benar.',
                 icon: 'question',
                 confirmText: 'Ya, simpan faktur',
                 confirmColor: '#16a34a'

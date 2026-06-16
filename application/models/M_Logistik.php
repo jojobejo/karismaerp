@@ -8,6 +8,51 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class M_Logistik extends CI_Model
 {
+    private function _ensureSoLoadingPlanColumns()
+    {
+        $this->load->dbforge();
+
+        $columns = [
+            'loading_tgl_pengiriman' => [
+                'type' => 'DATE',
+                'null' => true,
+                'after' => 'kd_rute',
+            ],
+            'loading_jenis_pengiriman' => [
+                'type' => 'VARCHAR',
+                'constraint' => 30,
+                'default' => 'expedisi_kantor',
+                'null' => false,
+                'after' => 'loading_tgl_pengiriman',
+            ],
+            'loading_driver' => [
+                'type' => 'VARCHAR',
+                'constraint' => 100,
+                'null' => true,
+                'after' => 'loading_jenis_pengiriman',
+            ],
+            'loading_nolambung' => [
+                'type' => 'VARCHAR',
+                'constraint' => 100,
+                'null' => true,
+                'after' => 'loading_driver',
+            ],
+            'loading_urutan' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'default' => 0,
+                'null' => false,
+                'after' => 'loading_nolambung',
+            ],
+        ];
+
+        foreach ($columns as $field => $definition) {
+            if (!$this->db->field_exists($field, 'tbso_sales_order')) {
+                $this->dbforge->add_column('tbso_sales_order', [$field => $definition]);
+            }
+        }
+    }
+
     //Truck Plat Config
     public function getallplat()
     {
@@ -695,11 +740,13 @@ class M_Logistik extends CI_Model
     }
 
     /**
-     * Buat DO berstatus Proses DO langsung dari faktur confirmed pada satu rute.
+     * Buat DO berstatus On Delivery langsung dari faktur confirmed pada satu rute.
      * Faktur yang sudah masuk detail/tmp DO tidak ikut diproses lagi.
      */
     public function create_ready_do_from_faktur_rute($kd_rute, $note, $confirm_by)
     {
+        $this->_ensureSoLoadingPlanColumns();
+        $plan = $this->get_so_siap_loading_plan_by_rute($kd_rute);
         $rows = $this->db->query("
             SELECT
                 f.id_faktur,
@@ -738,7 +785,7 @@ class M_Logistik extends CI_Model
                 WHERE t.kd_faktur = f.no_faktur
                 AND t.kd_customer = f.kd_customer
             )
-            ORDER BY f.tanggal_faktur ASC, f.no_faktur ASC, fd.id ASC
+            ORDER BY COALESCE(NULLIF(so.loading_urutan, 0), 999999) ASC, f.tanggal_faktur ASC, f.no_faktur ASC, fd.id ASC
         ", [$kd_rute])->result();
 
         if (empty($rows)) return false;
@@ -752,10 +799,14 @@ class M_Logistik extends CI_Model
         $detail_rows = [];
         $faktur_ids = [];
         $faktur_numbers = [];
+        $faktur_order = [];
 
         foreach ($rows as $row) {
             $faktur_ids[(int)$row->id_faktur] = (int)$row->id_faktur;
             $faktur_numbers[$row->no_faktur] = $row->no_faktur;
+            if (!isset($faktur_order[$row->no_faktur])) {
+                $faktur_order[$row->no_faktur] = count($faktur_order) + 1;
+            }
 
             $detail_rows[] = [
                 'id_pre_do'     => (int)$row->id_faktur_detail,
@@ -770,7 +821,7 @@ class M_Logistik extends CI_Model
                 'satuan'        => $row->satuan,
                 'no_lot'        => $row->no_lot,
                 'tgl_exp'       => $row->expired_date,
-                'norut'         => 0,
+                'norut'         => $faktur_order[$row->no_faktur],
                 'nominal_p'     => $row->nominal_p,
                 'jtempo'        => $row->jtempo,
                 'note_faktur'   => $row->note_faktur,
@@ -785,12 +836,12 @@ class M_Logistik extends CI_Model
 
         $this->db->insert('tb_do', [
             'kd_do'                => $kd_do,
-            'nolambung'            => '',
+            'nolambung'            => $plan ? (string)$plan->loading_nolambung : '',
             'regional'             => $kd_rute,
-            'driver'               => '',
-            'tgl_pengiriman'       => $today,
+            'driver'               => $plan ? (string)$plan->loading_driver : '',
+            'tgl_pengiriman'       => ($plan && !empty($plan->loading_tgl_pengiriman)) ? $plan->loading_tgl_pengiriman : $today,
             'tgl_create'           => $now,
-            'status'               => 3,
+            'status'               => 5,
         ]);
 
         $this->db->insert('tb_log_confirm_sales', [
@@ -1264,6 +1315,7 @@ class M_Logistik extends CI_Model
 
     public function get_so_siap_loading()
     {
+        $this->_ensureSoLoadingPlanColumns();
         return $this->db->query("
             SELECT
                 so.id_so,
@@ -1282,6 +1334,11 @@ class M_Logistik extends CI_Model
                 c.regional,
                 c.kd_rute AS customer_kd_rute,
                 so.kd_rute AS so_kd_rute,
+                so.loading_tgl_pengiriman,
+                so.loading_jenis_pengiriman,
+                so.loading_driver,
+                so.loading_nolambung,
+                so.loading_urutan,
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
@@ -1310,12 +1367,13 @@ class M_Logistik extends CI_Model
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so
             WHERE so.status = 'sedang_verifikasi'
-            ORDER BY kd_rute ASC, so.update_at DESC, so.no_so DESC
+            ORDER BY kd_rute ASC, COALESCE(NULLIF(so.loading_urutan, 0), 999999) ASC, so.update_at DESC, so.no_so DESC
         ")->result();
     }
 
     public function get_so_siap_loading_rute_summary()
     {
+        $this->_ensureSoLoadingPlanColumns();
         return $this->db->query("
             SELECT
                 g.kd_rute,
@@ -1392,6 +1450,7 @@ class M_Logistik extends CI_Model
 
     public function get_so_siap_loading_by_rute($kd_rute)
     {
+        $this->_ensureSoLoadingPlanColumns();
         $kd_rute = trim((string)$kd_rute);
         if ($kd_rute === '') {
             return [];
@@ -1415,6 +1474,11 @@ class M_Logistik extends CI_Model
                 c.regional,
                 c.kd_rute AS customer_kd_rute,
                 so.kd_rute AS so_kd_rute,
+                so.loading_tgl_pengiriman,
+                so.loading_jenis_pengiriman,
+                so.loading_driver,
+                so.loading_nolambung,
+                so.loading_urutan,
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COALESCE(d.jumlah_item, 0) AS jumlah_item,
@@ -1444,8 +1508,96 @@ class M_Logistik extends CI_Model
             ) d ON d.id_so = so.id_so
             WHERE so.status = 'sedang_verifikasi'
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
-            ORDER BY so.update_at DESC, so.no_so DESC
+            ORDER BY COALESCE(NULLIF(so.loading_urutan, 0), 999999) ASC, so.update_at DESC, so.no_so DESC
         ", [$kd_rute])->result();
+    }
+
+    public function get_so_siap_loading_plan_by_rute($kd_rute)
+    {
+        $this->_ensureSoLoadingPlanColumns();
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return null;
+        }
+
+        return $this->db->query("
+            SELECT
+                so.loading_tgl_pengiriman,
+                COALESCE(NULLIF(so.loading_jenis_pengiriman, ''), 'expedisi_kantor') AS loading_jenis_pengiriman,
+                so.loading_driver,
+                so.loading_nolambung
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status IN ('sedang_verifikasi', 'siap_faktur', 'partial', 'completed')
+            AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            AND (
+                so.loading_tgl_pengiriman IS NOT NULL
+                OR NULLIF(so.loading_driver, '') IS NOT NULL
+                OR NULLIF(so.loading_nolambung, '') IS NOT NULL
+            )
+            ORDER BY so.loading_tgl_pengiriman IS NULL ASC, so.loading_urutan ASC, so.update_at DESC
+            LIMIT 1
+        ", [$kd_rute])->row();
+    }
+
+    public function save_so_siap_loading_plan_by_rute($kd_rute, array $plan)
+    {
+        $this->_ensureSoLoadingPlanColumns();
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return false;
+        }
+
+        $data = [
+            'loading_tgl_pengiriman' => $plan['tgl_pengiriman'] ?: null,
+            'loading_jenis_pengiriman' => $plan['jenis_pengiriman'] ?: 'expedisi_kantor',
+            'loading_driver' => $plan['driver'] ?: null,
+            'loading_nolambung' => $plan['nolambung'] ?: null,
+            'update_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $this->db->where('status', 'sedang_verifikasi');
+        $this->db->where("COALESCE(NULLIF(kd_rute, ''), (SELECT c.kd_rute FROM tb_customer c WHERE c.kd_customer = tbso_sales_order.kd_customer LIMIT 1), 'TANPA_RUTE') = " . $this->db->escape($kd_rute), null, false);
+        return $this->db->update('tbso_sales_order', $data);
+    }
+
+    public function update_urutan_so_siap_loading($kd_rute, array $urutan_so)
+    {
+        $this->_ensureSoLoadingPlanColumns();
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '' || empty($urutan_so)) {
+            return false;
+        }
+
+        $existing = $this->db->query("
+            SELECT so.id_so
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status = 'sedang_verifikasi'
+            AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+        ", [$kd_rute])->result_array();
+
+        $existing_ids = array_map('intval', array_column($existing, 'id_so'));
+        sort($existing_ids);
+        $posted_ids = array_map('intval', $urutan_so);
+        sort($posted_ids);
+
+        if ($existing_ids !== $posted_ids) {
+            return false;
+        }
+
+        $this->db->trans_start();
+        foreach ($urutan_so as $index => $id_so) {
+            $this->db->where('id_so', (int)$id_so);
+            $this->db->where('status', 'sedang_verifikasi');
+            $this->db->update('tbso_sales_order', [
+                'loading_urutan' => $index + 1,
+                'update_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+        $this->db->trans_complete();
+
+        return $this->db->trans_status();
     }
 
     public function get_so_siap_loading_candidates()

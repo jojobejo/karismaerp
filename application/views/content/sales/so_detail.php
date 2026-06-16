@@ -340,11 +340,12 @@ $format_payment = function($value) {
                                     <th class="text-right">Difakturkan</th>
                                     <th class="text-right">Outstanding</th>
                                     <th class="text-right">Harga</th>
+                                    <th class="text-right">Total Harga</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($details)): ?>
-                                    <tr><td colspan="7" class="text-center text-muted py-3">Tidak ada item</td></tr>
+                                    <tr><td colspan="8" class="text-center text-muted py-3">Tidak ada item</td></tr>
                                 <?php else: ?>
                                     <?php foreach ($details as $i => $d):
                                         $outstanding_item = (float)$d['qty'] - (float)$d['qty_faktur'];
@@ -355,6 +356,12 @@ $format_payment = function($value) {
                                         $fak_pcs = fmod($d['qty_faktur'], $isi);
                                         $out_box = floor($outstanding_item / $isi);
                                         $out_pcs = fmod($outstanding_item, $isi);
+                                        $row_total_harga = (float)($d['total_harga'] ?? 0);
+                                        if ($row_total_harga <= 0) {
+                                            $row_subtotal = (float)($d['qty'] ?? 0) * (float)($d['hrg_satuan'] ?? 0);
+                                            $row_after_disc = $row_subtotal * (1 - ((float)($d['disc'] ?? 0) / 100));
+                                            $row_total_harga = $row_after_disc * (1 + ((float)($d['pajak'] ?? 0) / 100));
+                                        }
                                     ?>
                                     <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
                                         <td><?= $i + 1 ?></td>
@@ -409,6 +416,9 @@ $format_payment = function($value) {
                                                     Approval: <?= htmlspecialchars($harga_approval_label) ?>
                                                 </small>
                                             <?php endif; ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold">
+                                            Rp <?= number_format($row_total_harga, 0, ',', '.') ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>

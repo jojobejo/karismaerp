@@ -47,14 +47,22 @@
                 <div class="row mb-2">
                     <div class="col-sm-6">
                         <h1 class="m-0">
-                            <i class="fas fa-file-invoice mr-2"></i> Admin SC - Faktur Selesai
+                            <i class="fas fa-file-invoice mr-2"></i>
+                            <?= !empty($selected_rute)
+                                ? 'Admin SC - Faktur Rute ' . htmlspecialchars($selected_rute)
+                                : 'Admin SC - Rute Faktur Selesai' ?>
                         </h1>
                     </div>
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('sales_order/admin_sc') ?>">Admin SC</a></li>
-                            <li class="breadcrumb-item active">Faktur Selesai</li>
+                            <?php if (!empty($selected_rute)): ?>
+                                <li class="breadcrumb-item"><a href="<?= base_url('sales_order/admin_sc/faktur') ?>">Faktur Selesai</a></li>
+                                <li class="breadcrumb-item active">Rute <?= htmlspecialchars($selected_rute) ?></li>
+                            <?php else: ?>
+                                <li class="breadcrumb-item active">Faktur Selesai</li>
+                            <?php endif; ?>
                         </ol>
                     </div>
                 </div>
@@ -79,12 +87,23 @@
                     </a>
                 </div>
 
+                <?php
+                    $active_query = array_filter([
+                        'date1'       => $filter['date1'] ?? '',
+                        'date2'       => $filter['date2'] ?? '',
+                        'customer_id' => $filter['customer_id'] ?? '',
+                    ], function($v) { return $v !== '' && $v !== null; });
+                ?>
+
                 <div class="card card-outline card-secondary">
                     <div class="card-header py-2">
                         <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter Faktur</h3>
                     </div>
                     <div class="card-body py-2">
                         <form action="<?= base_url('sales_order/admin_sc/faktur') ?>" method="post">
+                            <?php if (!empty($selected_rute)): ?>
+                                <input type="hidden" name="rute" value="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
+                            <?php endif; ?>
                             <div class="row">
                                 <div class="col-md-2">
                                     <label class="small mb-0">Dari Tanggal</label>
@@ -119,6 +138,69 @@
                             </div>
                         </form>
                     </div>
+                </div>
+
+                <?php if (empty($selected_rute)): ?>
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title">
+                            <i class="fas fa-route mr-2"></i> Rute Faktur Selesai
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-light"><?= count($route_summary ?? []) ?> rute</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-hover table-sm" id="tabelAdminScFaktur">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Rute</th>
+                                    <th class="text-center">Total Faktur</th>
+                                    <th class="text-right">Total Qty</th>
+                                    <th class="text-right">Total Pajak</th>
+                                    <th class="text-right">Grand Total</th>
+                                    <th class="text-center no-sort" style="min-width:86px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($route_summary)): ?>
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            Belum ada faktur selesai sesuai filter.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($route_summary as $row):
+                                        $rute_query = array_merge($active_query, ['rute' => $row['kd_rute']]);
+                                    ?>
+                                        <tr>
+                                            <td class="font-weight-bold"><?= htmlspecialchars($row['kd_rute']) ?></td>
+                                            <td class="text-center">
+                                                <span class="badge badge-primary px-2 py-1"><?= number_format((int)$row['total_faktur']) ?></span>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-success"><?= number_format((float)$row['total_qty'], 2) ?></td>
+                                            <td class="text-right">Rp <?= number_format((float)$row['total_pajak'], 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold">Rp <?= number_format((float)$row['grand_total'], 0, ',', '.') ?></td>
+                                            <td class="text-center">
+                                                <a href="<?= base_url('sales_order/admin_sc/faktur?' . http_build_query($rute_query)) ?>"
+                                                   class="btn btn-sm btn-info" title="Lihat faktur rute">
+                                                    <i class="fas fa-arrow-right mr-1"></i> Lihat
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="mb-2">
+                    <a href="<?= base_url('sales_order/admin_sc/faktur?' . http_build_query($active_query)) ?>" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Rute
+                    </a>
+                    <span class="badge badge-primary ml-1 px-2 py-1">Rute <?= htmlspecialchars($selected_rute) ?></span>
                 </div>
 
                 <div class="row admin-sc-summary">
@@ -166,6 +248,13 @@
                             <i class="fas fa-list mr-2"></i> Daftar Faktur yang Sudah Dibuat
                         </h3>
                         <div class="card-tools">
+                            <?php if (!empty($fakturs)): ?>
+                                <?php $print_query = array_merge($active_query, ['rute' => $selected_rute]); ?>
+                                <a href="<?= base_url('sales_order/admin_sc/faktur/print_rute?' . http_build_query($print_query)) ?>"
+                                   class="btn btn-light btn-xs mr-1" target="_blank">
+                                    <i class="fas fa-print mr-1"></i> Cetak Semua
+                                </a>
+                            <?php endif; ?>
                             <span class="badge badge-light"><?= count($fakturs) ?> faktur</span>
                         </div>
                     </div>
@@ -266,6 +355,7 @@
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </section>
     </div>
@@ -280,13 +370,14 @@
 
 <script>
 $(document).ready(function () {
+    var isRouteDetail = <?= !empty($selected_rute) ? 'true' : 'false' ?>;
     $('#tabelAdminScFaktur').DataTable({
         responsive: true,
         autoWidth: false,
         pageLength: 25,
-        order: [[2, 'desc']],
+        order: isRouteDetail ? [[2, 'desc']] : [[0, 'asc']],
         columnDefs: [
-            { orderable: false, targets: [9] }
+            { orderable: false, targets: [isRouteDetail ? 9 : 5] }
         ],
         language: {
             search: "Cari:",

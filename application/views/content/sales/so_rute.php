@@ -221,6 +221,7 @@
             'draft'              => 'secondary',
             'open'               => 'primary',
             'sedang_verifikasi'  => 'warning',
+            'siap_faktur'        => 'info',
             'partial'            => 'warning',
             'completed'          => 'success',
             'cancelled'          => 'danger',
@@ -229,6 +230,7 @@
             'draft'              => 'Draft',
             'open'               => 'Open',
             'sedang_verifikasi'  => 'Verifikasi',
+            'siap_faktur'        => 'Siap Faktur',
             'partial'            => 'Partial',
             'completed'          => 'Completed',
             'cancelled'          => 'Cancelled',
@@ -453,7 +455,7 @@
                                         <?php if (empty($sales_orders)): ?>
                                             <tr>
                                                 <td colspan="13" class="text-center text-muted py-4">
-                                                    <?= $is_all_so_mode ? 'Tidak ada Sales Order Open' : 'Tidak ada Sales Order untuk rute ini' ?>
+                                                    <?= $is_all_so_mode ? 'Tidak ada Sales Order Open atau sisa verifikasi' : 'Tidak ada Sales Order untuk rute ini' ?>
                                                 </td>
                                             </tr>
                                         <?php else: ?>
@@ -464,6 +466,8 @@
                                                 $qty_order = (float)($so['total_qty_order'] ?? 0);
                                                 $qty_faktur = (float)($so['total_qty_faktur'] ?? 0);
                                                 $qty_outstanding = (float)($so['total_qty_outstanding'] ?? 0);
+                                                $qty_tidak_terkirim = (float)($so['total_qty_tidak_terkirim'] ?? 0);
+                                                $logistik_note = trim((string)($so['verifikasi_loading_notes'] ?? ''));
                                                 $effective_rute = $so['kd_rute'] ?? '';
                                                 $customer_rute = $so['customer_kd_rute'] ?? '';
                                                 $pct = $qty_order > 0 ? min(100, round(($qty_faktur / $qty_order) * 100, 1)) : 0;
@@ -473,11 +477,15 @@
                                             ?>
                                                 <tr>
                                                     <td class="text-center route-select-cell">
-                                                        <input type="checkbox"
-                                                               class="check-so-route"
-                                                               name="id_so[]"
-                                                               value="<?= (int)$so['id_so'] ?>"
-                                                               form="bulkMoveForm">
+                                                        <?php if ($status === 'open'): ?>
+                                                            <input type="checkbox"
+                                                                   class="check-so-route"
+                                                                   name="id_so[]"
+                                                                   value="<?= (int)$so['id_so'] ?>"
+                                                                   form="bulkMoveForm">
+                                                        <?php else: ?>
+                                                            <span class="text-muted" title="SO ini hanya ditampilkan sebagai informasi sisa barang yang tidak ikut difakturkan.">-</span>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td class="font-weight-bold">
                                                         <a href="<?= base_url('sales_order/detail/' . $so['id_so']) ?>">
@@ -514,6 +522,17 @@
                                                     </td>
                                                     <td class="text-center">
                                                         <span class="badge badge-<?= $badge ?> px-2 py-1"><?= htmlspecialchars($label) ?></span>
+                                                        <?php if ($qty_tidak_terkirim > 0): ?>
+                                                            <br><small class="text-danger font-weight-bold">
+                                                                <?= number_format($qty_tidak_terkirim, 2) ?> tidak ikut faktur
+                                                            </small>
+                                                        <?php endif; ?>
+                                                        <?php if ($logistik_note !== ''): ?>
+                                                            <div class="small text-left mt-1 p-1 border rounded bg-light" style="white-space:normal; min-width:160px;">
+                                                                <i class="fas fa-sticky-note text-warning mr-1"></i>
+                                                                <?= nl2br(htmlspecialchars($logistik_note, ENT_QUOTES, 'UTF-8')) ?>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td class="text-center"><?= number_format((int)$so['jumlah_item']) ?></td>
                                                     <td class="text-right"><?= number_format($qty_order, 2) ?></td>
@@ -535,7 +554,7 @@
                                                         </div>
                                                     </td>
                                                     <td class="text-center route-action-cell">
-                                                        <?php if (!empty($effective_rute)): ?>
+                                                        <?php if ($status === 'open' && !empty($effective_rute)): ?>
                                                             <form method="post"
                                                                   action="<?= base_url('sales_order/reset_so_rute') ?>"
                                                                   class="d-inline resetRouteForm">

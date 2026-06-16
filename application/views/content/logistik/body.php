@@ -73,6 +73,7 @@
                                 </h3>
                             </div>
                             <div class="card-body">
+                                <?php $listdo = isset($listdo) && is_array($listdo) ? $listdo : []; ?>
 
                                 <!-- ✅ FILTER ROW -->
                                 <div class="row mb-3">

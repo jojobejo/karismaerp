@@ -25,6 +25,8 @@ class Dashboard extends CI_Controller
 
         if ($lvuser == '1' && $jobdesk == 'LOGISTIK') {
             $data['page_title'] = 'KARISMA';
+            $data['listdo'] = $this->M_Logistik->getdo();
+            $data['total_so_siap_loading'] = $this->M_Logistik->count_so_siap_loading();
             $this->load->view('partial/main/header.php', $data);
             $this->load->view('content/logistik/body.php', $data);
             $this->load->view('partial/main/footer.php');

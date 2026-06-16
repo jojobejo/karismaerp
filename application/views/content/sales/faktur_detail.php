@@ -25,6 +25,9 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
         text-align: right;
         font-size: 12px;
     }
+    .print-info-grid {
+        display: block;
+    }
 
     @media print {
         @page {
@@ -69,22 +72,8 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
             margin-bottom: 12px;
         }
 
-        .row {
-            display: block !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
-
-        .col-md-5,
-        .col-md-7 {
-            max-width: 100% !important;
-            flex: 0 0 100% !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-
         .card {
-            border: 0 !important;
+            border: 1px solid #000 !important;
             box-shadow: none !important;
             margin-bottom: 10px !important;
         }
@@ -92,7 +81,8 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
         .card-header {
             background: #f2f2f2 !important;
             color: #000 !important;
-            border: 1px solid #000 !important;
+            border: 0 !important;
+            border-bottom: 1px solid #000 !important;
             padding: 5px 8px !important;
         }
 
@@ -102,8 +92,7 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
         }
 
         .card-body {
-            border: 1px solid #000 !important;
-            border-top: 0 !important;
+            border: 0 !important;
         }
 
         .table {
@@ -111,13 +100,76 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
             font-size: 10.5px !important;
             color: #000 !important;
             margin-bottom: 0 !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border: 1px solid #000 !important;
         }
 
         .table th,
         .table td {
             padding: 4px 5px !important;
-            border-color: #333 !important;
+            border: 0 !important;
+            border-right: 1px solid #000 !important;
+            border-bottom: 1px solid #000 !important;
             vertical-align: top !important;
+        }
+
+        .table th:last-child,
+        .table td:last-child {
+            border-right: 0 !important;
+        }
+
+        .table tbody tr:last-child td,
+        .table tfoot tr:last-child th,
+        .table tfoot tr:last-child td {
+            border-bottom: 0 !important;
+        }
+
+        .table-borderless {
+            border: 0 !important;
+        }
+
+        .table-borderless th,
+        .table-borderless td {
+            border: 0 !important;
+        }
+
+        .print-info-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 14px;
+            align-items: start;
+        }
+
+        .print-info-grid table {
+            border: 0 !important;
+        }
+
+        .print-info-grid td {
+            border: 0 !important;
+            padding: 3px 0 !important;
+        }
+
+        .print-info-grid td:first-child {
+            width: 42%;
+        }
+
+        .faktur-info-card .table-borderless tbody {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 14px;
+            padding: 6px 8px !important;
+        }
+
+        .faktur-info-card .table-borderless tr {
+            display: grid !important;
+            grid-template-columns: 42% 58%;
+            break-inside: avoid;
+        }
+
+        .faktur-info-card .table-borderless td {
+            display: block !important;
+            padding: 3px 0 !important;
         }
 
         .thead-dark th,

@@ -589,14 +589,22 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
-        $this->db->where_in('so.status', ['siap_faktur', 'partial']);
+        $this->db->where('so.status', 'siap_faktur');
 
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
         if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
+        if (!empty($filter['kd_rute'])) {
+            $this->db->where(
+                "COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = " . $this->db->escape($filter['kd_rute']),
+                null,
+                false
+            );
+        }
 
         $this->db->group_by('so.id_so');
+        $this->db->having('total_qty_siap_faktur >', 0);
         $this->db->order_by('so.update_at', 'DESC');
         $this->db->order_by('so.tanggal_transaksi', 'DESC');
 
@@ -646,6 +654,13 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['date2']))       $this->db->where('f.tanggal_faktur <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
         if (!empty($filter['create_by']))   $this->db->where('f.create_by', $filter['create_by']);
+        if (!empty($filter['kd_rute'])) {
+            $this->db->where(
+                "COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute) = " . $this->db->escape($filter['kd_rute']),
+                null,
+                false
+            );
+        }
 
         $this->db->order_by('f.tanggal_faktur', 'DESC');
         $this->db->order_by('f.create_at', 'DESC');
@@ -778,7 +793,10 @@ class M_SalesOrder extends CI_Model
 
     public function get_open_so_for_routing($filter = [])
     {
-        $where = "WHERE so.status = 'open' AND COALESCE(so.kd_rute, '') = ''";
+        $where = "WHERE (
+            (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
+        )";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -811,7 +829,9 @@ class M_SalesOrder extends CI_Model
                 COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
                 COALESCE(d.total_qty_order, 0) AS total_qty_order,
                 COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
-                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim,
+                COALESCE(d.verifikasi_loading_notes, '') AS verifikasi_loading_notes
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = so.kd_rute
@@ -822,12 +842,19 @@ class M_SalesOrder extends CI_Model
                     SUM(CASE WHEN (qty - COALESCE(qty_faktur, 0)) <= 0 THEN 1 ELSE 0 END) AS jumlah_item_diterima,
                     SUM(qty) AS total_qty_order,
                     SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                    SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim,
+                    GROUP_CONCAT(
+                        DISTINCT NULLIF(TRIM(verifikasi_loading_note), '')
+                        ORDER BY id ASC
+                        SEPARATOR '\n'
+                    ) AS verifikasi_loading_notes
                 FROM tbso_sales_order_detail
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so
             {$where}
             ORDER BY
+                CASE WHEN so.status = 'open' THEN 0 ELSE 1 END ASC,
                 so.tanggal_transaksi DESC,
                 so.no_so DESC
         ";
@@ -837,24 +864,41 @@ class M_SalesOrder extends CI_Model
 
     public function count_open_so_for_routing($filter = [])
     {
-        $this->db->from('tbso_sales_order so');
-        $this->db->where('so.status', 'open');
-        $this->db->where("COALESCE(so.kd_rute, '') =", '');
-
+        $where = "WHERE (
+            (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
+        )";
+        $params = [];
         if (!empty($filter['create_by'])) {
-            $this->db->where('so.create_by', $filter['create_by']);
+            $where .= " AND so.create_by = ?";
+            $params[] = $filter['create_by'];
         }
         if (!empty($filter['customer_kd_rute'])) {
-            $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
-            $this->db->where('c.kd_rute', $filter['customer_kd_rute']);
+            $where .= " AND c.kd_rute = ?";
+            $params[] = $filter['customer_kd_rute'];
         }
 
-        return (int)$this->db->count_all_results();
+        $row = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN (
+                SELECT id_so, SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
+            {$where}
+        ", $params)->row_array();
+
+        return (int)($row['total'] ?? 0);
     }
 
     public function get_open_so_customer_route_options($filter = [])
     {
-        $where = "WHERE so.status = 'open' AND COALESCE(so.kd_rute, '') = '' AND COALESCE(c.kd_rute, '') <> ''";
+        $where = "WHERE (
+            (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
+        ) AND COALESCE(c.kd_rute, '') <> ''";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -872,6 +916,11 @@ class M_SalesOrder extends CI_Model
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.kd_rute
+            LEFT JOIN (
+                SELECT id_so, SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim
+                FROM tbso_sales_order_detail
+                GROUP BY id_so
+            ) d ON d.id_so = so.id_so
             {$where}
             GROUP BY c.kd_rute, r.keterangan
             ORDER BY c.kd_rute ASC
@@ -898,6 +947,45 @@ class M_SalesOrder extends CI_Model
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    public function update_so_detail_harga($id_so, $id_so_detail, $harga, $update_by = '')
+    {
+        $id_so = (int)$id_so;
+        $id_so_detail = (int)$id_so_detail;
+        $harga = (float)$harga;
+
+        if ($id_so <= 0 || $id_so_detail <= 0 || $harga <= 0) {
+            return false;
+        }
+
+        $detail = $this->db
+            ->where('id', $id_so_detail)
+            ->where('id_so', $id_so)
+            ->limit(1)
+            ->get('tbso_sales_order_detail')
+            ->row_array();
+
+        if (!$detail) {
+            return false;
+        }
+
+        $disc = (float)($detail['disc'] ?? 0);
+        $pajak = (float)($detail['pajak'] ?? 0);
+
+        $this->db->where('id', $id_so_detail);
+        $this->db->where('id_so', $id_so);
+        $this->db->set('hrg_satuan', $harga);
+        $this->db->set('subtotal_before_disc', 'qty * ' . $harga, false);
+        $this->db->set('subtotal_after_disc', '(qty * ' . $harga . ') * (1 - (' . $disc . ' / 100))', false);
+        $this->db->set('total_harga', '((qty * ' . $harga . ') * (1 - (' . $disc . ' / 100))) * (1 + (' . $pajak . ' / 100))', false);
+        if ($this->db->field_exists('update_by', 'tbso_sales_order_detail')) {
+            $this->db->set('update_by', $update_by);
+        }
+        if ($this->db->field_exists('update_at', 'tbso_sales_order_detail')) {
+            $this->db->set('update_at', date('Y-m-d H:i:s'));
+        }
+        return $this->db->update('tbso_sales_order_detail');
     }
 
     public function rute_exists($kd_rute)
@@ -1567,9 +1655,15 @@ class M_SalesOrder extends CI_Model
                 return false;
             }
 
-            // 3. Tambah qty_faktur di SO detail
+            // 3. Tambah qty_faktur dan sinkronkan harga yang dipakai faktur ke detail SO.
             $this->db->where('id', $item['id_so_detail']);
             $this->db->set('qty_faktur', 'qty_faktur + ' . $qty_item, false);
+            $this->db->set('hrg_satuan', (float)($item['hrg_satuan'] ?? 0));
+            $this->db->set('disc', (float)($item['disc'] ?? 0));
+            $this->db->set('pajak', (float)($item['pajak'] ?? 0));
+            $this->db->set('subtotal_before_disc', 'qty * ' . (float)($item['hrg_satuan'] ?? 0), false);
+            $this->db->set('subtotal_after_disc', '(qty * ' . (float)($item['hrg_satuan'] ?? 0) . ') * (1 - (' . (float)($item['disc'] ?? 0) . ' / 100))', false);
+            $this->db->set('total_harga', '((qty * ' . (float)($item['hrg_satuan'] ?? 0) . ') * (1 - (' . (float)($item['disc'] ?? 0) . ' / 100))) * (1 + (' . (float)($item['pajak'] ?? 0) . ' / 100))', false);
             $this->db->update('tbso_sales_order_detail');
         }
 

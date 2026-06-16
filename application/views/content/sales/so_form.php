@@ -462,6 +462,14 @@ function fmtNum(n, dec) {
     if (dec === undefined) dec = 2;
     return (parseFloat(n)||0).toLocaleString('id-ID', {minimumFractionDigits:dec, maximumFractionDigits:dec});
 }
+function parseHargaInput(value) {
+    var cleaned = String(value || '').replace(/[^\d]/g, '');
+    return cleaned === '' ? 0 : parseFloat(cleaned);
+}
+function formatHargaInput(value) {
+    var number = parseHargaInput(value);
+    return number > 0 ? number.toLocaleString('id-ID', {maximumFractionDigits:0}) : '';
+}
 function formatTgl(ymd) {
     if (!ymd) return '-';
     var p = String(ymd).split('-');
@@ -485,6 +493,30 @@ function stockUrl(gid) {
     if (SO_ID) url += '&exclude_id_so=' + encodeURIComponent(SO_ID);
     return url;
 }
+
+function isZeroDefaultNumberInput(el) {
+    if (!el || el.type !== 'number') return false;
+    return /^qtybox_|^qtyecer_|^disc_/.test(el.id || '');
+}
+
+document.addEventListener('focusin', function(e) {
+    var el = e.target;
+    if (!isZeroDefaultNumberInput(el)) return;
+    if (parseFloat(el.value || '0') === 0) {
+        el.value = '';
+    } else {
+        el.select();
+    }
+});
+
+document.addEventListener('focusout', function(e) {
+    var el = e.target;
+    if (!isZeroDefaultNumberInput(el)) return;
+    if (String(el.value || '').trim() === '') {
+        el.value = '0';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+});
 
 /* ================================================================
    BUILD ROW HTML
@@ -596,8 +628,8 @@ function buatBaris(idx, d) {
 
     /* 6 Harga */
     h += '<td>'
-       + '<input type="number" step="0.01" min="0" name="hrg_satuan[]" id="hrg_'+idx+'"'
-       + ' class="form-control form-control-sm '+hargaClass+'" value="'+(hrg||'')+'" required>'
+       + '<input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" id="hrg_'+idx+'"'
+       + ' class="form-control form-control-sm '+hargaClass+'" value="'+formatHargaInput(hrg)+'" required>'
        + '<div id="hargaapproval_wrap_'+idx+'" class="mt-1" style="'+(hargaClass ? '' : 'display:none')+'">'
        +   '<select name="harga_approval_by[]" id="hargaapproval_'+idx+'" class="form-control form-control-sm"'+(hargaClass ? ' required' : '')+'>'
        +     '<option value="">-- Approval harga --</option>'
@@ -636,7 +668,7 @@ function tambahBaris(d) {
 }
 
 function bindBaris(idx) {
-    ['hrg_','qtybox_','qtyecer_','disc_'].forEach(function(f) {
+    ['qtybox_','qtyecer_','disc_'].forEach(function(f) {
         var el = document.getElementById(f+idx);
         if (!el) return;
         el.addEventListener('input',  function(){ hitungBaris(idx); });
@@ -645,13 +677,27 @@ function bindBaris(idx) {
 
     var elHarga = document.getElementById('hrg_'+idx);
     if (elHarga) {
+        elHarga.addEventListener('input', function() {
+            this.value = formatHargaInput(this.value);
+            hitungBaris(idx);
+        });
+        elHarga.addEventListener('change', function() {
+            this.value = formatHargaInput(this.value);
+            hitungBaris(idx);
+        });
         elHarga.addEventListener('blur', function() {
-            if (String(this.value).trim() !== '') return;
+            if (String(this.value).trim() !== '') {
+                this.value = formatHargaInput(this.value);
+                return;
+            }
             var pk = parseFloat((document.getElementById('pk_'+idx) || {value: 0}).value) || 0;
             if (pk > 0) {
-                this.value = pk;
+                this.value = formatHargaInput(pk);
                 hitungBaris(idx);
             }
+        });
+        elHarga.addEventListener('focus', function() {
+            this.select();
         });
     }
 
@@ -720,7 +766,11 @@ function bindBaris(idx) {
    KALKULASI
 ================================================================ */
 function hitungBaris(idx) {
-    function v(id) { var e=document.getElementById(id); return e?parseFloat(e.value)||0:0; }
+    function v(id) {
+        var e=document.getElementById(id);
+        if (!e) return 0;
+        return id.indexOf('hrg_') === 0 ? parseHargaInput(e.value) : (parseFloat(e.value)||0);
+    }
     var hrg=v('hrg_'+idx), qBox=v('qtybox_'+idx), qSat=v('qtyecer_'+idx);
     var disc=v('disc_'+idx), pk=v('pk_'+idx);
     var isi=getIsi(idx);
@@ -756,7 +806,7 @@ function hitungGrand() {
     var g=0;
     document.querySelectorAll('#item-body tr').forEach(function(tr) {
         var i=tr.dataset.idx;
-        var hrg=parseFloat((document.getElementById('hrg_'+i)||{value:0}).value)||0;
+        var hrg=parseHargaInput((document.getElementById('hrg_'+i)||{value:0}).value);
         var qB =parseFloat((document.getElementById('qtybox_'+i)||{value:0}).value)||0;
         var qE =parseFloat((document.getElementById('qtyecer_'+i)||{value:0}).value)||0;
         var d  =parseFloat((document.getElementById('disc_'+i)||{value:0}).value)||0;
@@ -927,7 +977,7 @@ function applyBarangKeBaris(i, btn) {
     /* Auto-fill HPP ke harga jika harga belum diisi */
     var hpp = parseFloat(btn.dataset.pk||0);
     var elH = document.getElementById('hrg_'+i);
-    if (elH && hpp > 0 && !parseFloat(elH.value)) elH.value = hpp;
+    if (elH && hpp > 0 && !parseHargaInput(elH.value)) elH.value = formatHargaInput(hpp);
 
     /* Rebuild dropdown expired */
     var rows = stockCache.filter(function(s){ return (s.kd_barang||'')===kd; });
