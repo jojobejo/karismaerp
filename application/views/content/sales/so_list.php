@@ -70,7 +70,7 @@
         <div class="container-fluid">
             <div class="row mb-2">
                 <div class="col-sm-6">
-                    <h1 class="m-0"><i class="fas fa-file-invoice mr-2"></i> Sales Order</h1>
+                    <h1 class="m-0"><i class="fas fa-file-invoice mr-2"></i> <?= !empty($show_completed) ? 'Sales Order Selesai' : 'Sales Order' ?></h1>
                 </div>
                 <div class="col-sm-6">
                     <ol class="breadcrumb float-sm-right">
@@ -114,7 +114,7 @@
                     </a>
                 </div>
                 <div class="col-auto">
-                    <a href="<?= base_url('sales_order/so_rute') ?>" class="btn btn-outline-primary">
+                    <a href="<?= base_url('sales_order/so_rute') ?>" class="btn btn-primary">
                         <i class="fas fa-map-marked-alt"></i> SO per Rute
                     </a>
                 </div>
@@ -131,7 +131,10 @@
                     <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter</h3>
                 </div>
                 <div class="card-body py-2">
-                    <form action="<?= base_url('sales_order') ?>" method="post">
+                    <form action="<?= base_url('sales_order' . (!empty($show_completed) ? '?selesai=1' : '')) ?>" method="post">
+                        <?php if (!empty($show_completed)): ?>
+                            <input type="hidden" name="selesai" value="1">
+                        <?php endif; ?>
                         <div class="row">
                             <div class="col-md-2">
                                 <label class="small mb-0">Dari Tanggal</label>
@@ -158,21 +161,24 @@
                             <div class="col-md-2">
                                 <label class="small mb-0">Status</label>
                                 <select name="status" class="form-control form-control-sm">
-                                    <option value="">-- Semua Status --</option>
-                                    <option value="draft"     <?= ($filter['status'] ?? '') === 'draft'     ? 'selected' : '' ?>>Draft</option>
-                                    <option value="open"      <?= ($filter['status'] ?? '') === 'open'      ? 'selected' : '' ?>>Open</option>
-                                    <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Verifikasi</option>
-                                    <option value="siap_faktur" <?= ($filter['status'] ?? '') === 'siap_faktur' ? 'selected' : '' ?>>Siap Faktur</option>
-                                    <option value="partial" <?= ($filter['status'] ?? '') === 'partial' ? 'selected' : '' ?>>Partial</option>
-                                    <option value="completed" <?= ($filter['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Completed</option>
-                                    <option value="cancelled" <?= ($filter['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                                    <?php if (!empty($show_completed)): ?>
+                                        <option value="completed" selected>Completed</option>
+                                    <?php else: ?>
+                                        <option value="">-- Semua Status --</option>
+                                        <option value="draft"     <?= ($filter['status'] ?? '') === 'draft'     ? 'selected' : '' ?>>Draft</option>
+                                        <option value="open"      <?= ($filter['status'] ?? '') === 'open'      ? 'selected' : '' ?>>Open</option>
+                                        <option value="sedang_verifikasi" <?= ($filter['status'] ?? '') === 'sedang_verifikasi' ? 'selected' : '' ?>>Verifikasi</option>
+                                        <option value="siap_faktur" <?= ($filter['status'] ?? '') === 'siap_faktur' ? 'selected' : '' ?>>Siap Faktur</option>
+                                        <option value="partial" <?= ($filter['status'] ?? '') === 'partial' ? 'selected' : '' ?>>Partial</option>
+                                        <option value="cancelled" <?= ($filter['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                                    <?php endif; ?>
                                 </select>
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
                                 <button class="btn btn-success btn-sm mr-1">
                                     <i class="fas fa-search"></i> Tampil
                                 </button>
-                                <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
+                                <a href="<?= base_url('sales_order' . (!empty($show_completed) ? '?selesai=1' : '')) ?>" class="btn btn-secondary btn-sm">
                                     Reset
                                 </a>
                             </div>
@@ -185,10 +191,19 @@
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h3 class="card-title">
-                        <i class="fas fa-list mr-2"></i> Daftar Sales Order
+                            <i class="fas fa-list mr-2"></i> <?= !empty($show_completed) ? 'Daftar Sales Order Selesai' : 'Daftar Sales Order Aktif' ?>
                     </h3>
                     <div class="card-tools">
                         <span class="badge badge-light"><?= count($so_list) ?> SO</span>
+                        <?php if (!empty($show_completed)): ?>
+                            <a href="<?= base_url('sales_order') ?>" class="btn btn-sm btn-light ml-2">
+                                <i class="fas fa-list"></i> SO Aktif
+                            </a>
+                        <?php else: ?>
+                            <a href="<?= base_url('sales_order?selesai=1') ?>" class="btn btn-sm btn-success ml-2">
+                                <i class="fas fa-check-circle"></i> SO Selesai
+                            </a>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="card-body">

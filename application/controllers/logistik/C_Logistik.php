@@ -1330,7 +1330,14 @@ class C_Logistik extends CI_Controller
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
         $current_rute = trim((string)$this->input->post('current_rute', true));
+        $catatan_logistik = trim((string)$this->input->post('catatan_logistik', true));
         $redirect_url = 'logistik/so_siap_loading' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : '');
+
+        if ($catatan_logistik === '') {
+            $this->session->set_flashdata('msg', 'Catatan logistik wajib diisi saat mengembalikan SO ke status Open/Partial.');
+            redirect($redirect_url);
+            return;
+        }
 
         $so = $this->M_Logistik->get_so_siap_loading_by_id($id_so);
         if (!$so) {
@@ -1344,11 +1351,12 @@ class C_Logistik extends CI_Controller
             ?? $this->session->userdata('username')
             ?? 'system';
 
-        $updated = $this->M_Logistik->kembalikan_so_siap_loading($id_so, $user);
-        if ($updated) {
-            $this->session->set_flashdata('msg', 'SO <b>' . htmlspecialchars($so['no_so']) . '</b> dikembalikan ke status Open.');
+        $updated = $this->M_Logistik->kembalikan_so_siap_loading($id_so, $user, $catatan_logistik);
+        if (!empty($updated['success'])) {
+            $status_label = ($updated['status'] ?? 'open') === 'partial' ? 'Partial' : 'Open';
+            $this->session->set_flashdata('msg', 'SO <b>' . htmlspecialchars($so['no_so']) . '</b> dikembalikan ke status ' . $status_label . ' dengan catatan logistik.');
         } else {
-            $this->session->set_flashdata('msg', 'Gagal mengembalikan SO ke status Open.');
+            $this->session->set_flashdata('msg', 'Gagal mengembalikan SO ke status Open/Partial.');
         }
 
         redirect($redirect_url);

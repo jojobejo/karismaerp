@@ -159,6 +159,11 @@
     .route-action-cell {
         width: 54px;
     }
+    .route-status-badge {
+        display: inline-flex;
+        justify-content: center;
+        min-width: 104px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
@@ -201,7 +206,7 @@
             }
         }
         if ($is_all_so_mode) {
-            $selected_route_name = 'Semua SO Open';
+            $selected_route_name = 'Semua SO Open/Partial';
         }
         $selected_customer_rute = trim((string)($selected_customer_rute ?? ''));
         $customer_route_options = $customer_route_options ?? [];
@@ -277,8 +282,8 @@
                             <div class="card-body p-0 route-strip">
                                 <a href="<?= base_url('sales_order/so_rute') ?>" class="route-card <?= $is_all_so_mode ? 'active' : '' ?>">
                                     <div class="route-code"><i class="fas fa-list"></i></div>
-                                    <div class="route-meta text-truncate" title="Semua SO Open">
-                                        Semua SO Open
+                                    <div class="route-meta text-truncate" title="Semua SO Open/Partial">
+                                        Semua SO Open/Partial
                                     </div>
                                     <div class="route-summary">
                                         <span class="badge badge-dark"><?= (int)$all_so_count ?></span>
@@ -327,7 +332,7 @@
                                 <div class="info-box shadow-sm">
                                     <span class="info-box-icon bg-<?= $ton_bar ?>"><i class="fas fa-weight-hanging"></i></span>
                                     <div class="info-box-content">
-                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Tonase Semua SO Open' : 'Tonase Rute' ?></span>
+                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Tonase Semua SO Open/Partial' : 'Tonase Rute' ?></span>
                                         <span class="info-box-number">
                                             <?= number_format($total_tonase, 3) ?><?= $is_all_so_mode ? '' : ' / ' . number_format($batas_tonase, 0) ?> ton
                                         </span>
@@ -350,7 +355,7 @@
                                 <div class="info-box shadow-sm">
                                     <span class="info-box-icon bg-<?= $kub_bar ?>"><i class="fas fa-cubes"></i></span>
                                     <div class="info-box-content">
-                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Kubikasi Semua SO Open' : 'Kubikasi Rute' ?></span>
+                                        <span class="info-box-text"><?= $is_all_so_mode ? 'Kubikasi Semua SO Open/Partial' : 'Kubikasi Rute' ?></span>
                                         <span class="info-box-number">
                                             <?= number_format($total_kubikasi, 4) ?><?= $is_all_so_mode ? '' : ' / ' . number_format($batas_kubikasi, 0) ?> m3
                                         </span>
@@ -455,7 +460,7 @@
                                         <?php if (empty($sales_orders)): ?>
                                             <tr>
                                                 <td colspan="13" class="text-center text-muted py-4">
-                                                    <?= $is_all_so_mode ? 'Tidak ada Sales Order Open atau sisa verifikasi' : 'Tidak ada Sales Order untuk rute ini' ?>
+                                                    <?= $is_all_so_mode ? 'Tidak ada Sales Order Open/Partial atau sisa verifikasi' : 'Tidak ada Sales Order untuk rute ini' ?>
                                                 </td>
                                             </tr>
                                         <?php else: ?>
@@ -477,7 +482,7 @@
                                             ?>
                                                 <tr>
                                                     <td class="text-center route-select-cell">
-                                                        <?php if ($status === 'open'): ?>
+                                                        <?php if (in_array($status, ['open', 'partial'], true)): ?>
                                                             <input type="checkbox"
                                                                    class="check-so-route"
                                                                    name="id_so[]"
@@ -521,7 +526,7 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="text-center">
-                                                        <span class="badge badge-<?= $badge ?> px-2 py-1"><?= htmlspecialchars($label) ?></span>
+                                                        <span class="badge badge-<?= $badge ?> route-status-badge px-2 py-1"><?= htmlspecialchars($label) ?></span>
                                                         <?php if ($qty_tidak_terkirim > 0): ?>
                                                             <br><small class="text-danger font-weight-bold">
                                                                 <?= number_format($qty_tidak_terkirim, 2) ?> tidak ikut faktur
@@ -554,7 +559,7 @@
                                                         </div>
                                                     </td>
                                                     <td class="text-center route-action-cell">
-                                                        <?php if ($status === 'open' && !empty($effective_rute)): ?>
+                                                        <?php if (in_array($status, ['open', 'partial'], true) && !empty($effective_rute)): ?>
                                                             <form method="post"
                                                                   action="<?= base_url('sales_order/reset_so_rute') ?>"
                                                                   class="d-inline resetRouteForm">
@@ -562,7 +567,7 @@
                                                                 <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?>">
                                                                 <button type="submit"
                                                                         class="btn btn-outline-danger btn-xs"
-                                                                        title="Kembalikan ke Semua SO Open">
+                                                                        title="Kembalikan ke Semua SO Open/Partial">
                                                                     <i class="fas fa-times"></i>
                                                                 </button>
                                                             </form>
@@ -655,7 +660,7 @@ $(document).ready(function () {
     });
 
     $('.resetRouteForm').on('submit', function (e) {
-        var ok = confirm('Kembalikan SO ini ke Semua SO Open?');
+        var ok = confirm('Kembalikan SO ini ke Semua SO Open/Partial?');
         if (!ok) e.preventDefault();
     });
 

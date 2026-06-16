@@ -544,13 +544,18 @@ class M_SalesOrder extends CI_Model
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
 
         if (!empty($filter['status']))      $this->db->where('so.status', $filter['status']);
+        if (!empty($filter['exclude_status'])) {
+            $exclude_status = is_array($filter['exclude_status']) ? $filter['exclude_status'] : [$filter['exclude_status']];
+            $this->db->where_not_in('so.status', array_filter($exclude_status));
+        }
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
         if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
 
         $this->db->group_by('so.id_so');
-        $this->db->order_by('so.create_at', 'DESC');
+        $this->db->order_by('so.tanggal_transaksi', 'DESC');
+        $this->db->order_by('so.id_so', 'DESC');
 
         return $this->db->get()->result_array();
     }
@@ -741,7 +746,7 @@ class M_SalesOrder extends CI_Model
         }
 
         $params = [$kd_rute];
-        $where = "WHERE so.kd_rute = ? AND so.status = 'open'";
+        $where = "WHERE so.kd_rute = ? AND so.status IN ('open', 'partial')";
 
         if (!empty($filter['create_by'])) {
             $where .= " AND so.create_by = ?";
@@ -769,7 +774,9 @@ class M_SalesOrder extends CI_Model
                 COALESCE(d.jumlah_item_diterima, 0) AS jumlah_item_diterima,
                 COALESCE(d.total_qty_order, 0) AS total_qty_order,
                 COALESCE(d.total_qty_faktur, 0) AS total_qty_faktur,
-                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding
+                COALESCE(d.total_qty_outstanding, 0) AS total_qty_outstanding,
+                COALESCE(d.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim,
+                COALESCE(d.verifikasi_loading_notes, '') AS verifikasi_loading_notes
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = so.kd_rute
@@ -780,7 +787,13 @@ class M_SalesOrder extends CI_Model
                     SUM(CASE WHEN (qty - COALESCE(qty_faktur, 0)) <= 0 THEN 1 ELSE 0 END) AS jumlah_item_diterima,
                     SUM(qty) AS total_qty_order,
                     SUM(COALESCE(qty_faktur, 0)) AS total_qty_faktur,
-                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding
+                    SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS total_qty_outstanding,
+                    SUM(COALESCE(qty_tidak_terkirim, 0)) AS total_qty_tidak_terkirim,
+                    GROUP_CONCAT(
+                        DISTINCT NULLIF(TRIM(verifikasi_loading_note), '')
+                        ORDER BY id ASC
+                        SEPARATOR '\n'
+                    ) AS verifikasi_loading_notes
                 FROM tbso_sales_order_detail
                 GROUP BY id_so
             ) d ON d.id_so = so.id_so

@@ -859,7 +859,7 @@ class M_Logistik extends CI_Model
         if ($this->db->trans_status() && !empty($faktur_ids)) {
             $this->db->where_in('id_faktur', array_values($faktur_ids));
             $this->db->update('tbso_faktur_penjualan', [
-                'status'    => 'proses_do',
+                'status'    => 'selesai_do',
                 'update_by' => $confirm_by,
             ]);
         }
@@ -876,6 +876,24 @@ class M_Logistik extends CI_Model
             'total_faktur' => count($faktur_numbers),
             'total_detail' => count($detail_rows),
         ];
+    }
+
+    public function sync_faktur_selesai_do_for_on_delivery()
+    {
+        $this->db->query("
+            UPDATE tbso_faktur_penjualan f
+            JOIN (
+                SELECT DISTINCT d.kd_faktur
+                FROM tb_detail_do d
+                JOIN tb_do h ON h.kd_do = d.kd_do
+                WHERE h.status = 5
+            ) od ON od.kd_faktur = f.no_faktur
+            SET f.status = 'selesai_do',
+                f.update_by = COALESCE(f.update_by, 'system')
+            WHERE f.status = 'proses_do'
+        ");
+
+        return $this->db->affected_rows();
     }
 
     public function has_remaining_so_ready_faktur_by_rute($kd_rute)
@@ -1883,25 +1901,44 @@ class M_Logistik extends CI_Model
             ->row_array();
     }
 
-    public function kembalikan_so_siap_loading($id_so, $update_by)
+    public function kembalikan_so_siap_loading($id_so, $update_by, $catatan_logistik = '')
     {
+        $status_awal = $this->db->query("
+            SELECT
+                CASE
+                    WHEN SUM(COALESCE(qty_faktur, 0)) > 0 THEN 'partial'
+                    ELSE 'open'
+                END AS status_awal
+            FROM tbso_sales_order_detail
+            WHERE id_so = ?
+        ", [(int)$id_so])->row_array();
+        $target_status = $status_awal['status_awal'] ?? 'open';
+
+        $this->db->trans_start();
+
         $this->db->where('id_so', (int)$id_so);
         $this->db->update('tbso_sales_order_detail', [
             'qty_siap_faktur' => null,
             'qty_tidak_terkirim' => 0,
             'verifikasi_loading_status' => 'pending',
-            'verifikasi_loading_note' => null,
-            'verifikasi_loading_by' => null,
-            'verifikasi_loading_at' => null,
+            'verifikasi_loading_note' => trim((string)$catatan_logistik),
+            'verifikasi_loading_by' => $update_by,
+            'verifikasi_loading_at' => date('Y-m-d H:i:s'),
         ]);
 
         $this->db->where('id_so', $id_so);
         $this->db->where('status', 'sedang_verifikasi');
-        return $this->db->update('tbso_sales_order', [
-            'status'    => 'open',
+        $this->db->update('tbso_sales_order', [
+            'status'    => $target_status,
             'update_by' => $update_by,
             'update_at' => date('Y-m-d H:i:s'),
         ]);
+
+        $this->db->trans_complete();
+
+        return $this->db->trans_status()
+            ? ['success' => true, 'status' => $target_status]
+            : ['success' => false, 'status' => $target_status];
     }
 
     /**

@@ -100,7 +100,7 @@ function aksi_badge($aksi) {
                                     <select name="aksi" class="form-control form-control-sm">
                                         <option value="">-- Semua --</option>
                                         <?php
-                                        $aksi_list = ['CREATE_SO','CREATE','UPDATE_SO','UPDATE','REKAM_SO','BUAT_FAKTUR','CANCEL_SO','CANCEL','CREATE_NEGO','APPROVE','REJECT'];
+                                        $aksi_list = ['CREATE_SO','CREATE','UPDATE_SO','UPDATE','REKAM_SO','CANCEL_SO','CANCEL','CREATE_NEGO','APPROVE','REJECT'];
                                         foreach ($aksi_list as $a):
                                         ?>
                                         <option value="<?= $a ?>" <?= $filter['aksi'] === $a ? 'selected' : '' ?>>

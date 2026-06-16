@@ -1,12 +1,15 @@
 <!-- views/content/sales/faktur_rute.php -->
 <style>
     .route-card {
-        display: block;
+        align-items: center;
         color: #1f2937;
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
         border: 1px solid #dee2e6;
         border-left: 3px solid #ced4da;
         border-radius: 4px;
-        padding: 6px 8px;
+        padding: 7px 8px;
         margin-bottom: 4px;
         background: #fff;
         text-decoration: none;
@@ -26,11 +29,20 @@
         font-size: 13px;
         font-weight: 700;
         line-height: 1.15;
+        min-width: 42px;
     }
     .route-card .route-meta {
+        flex: 1 1 auto;
         font-size: 10.5px;
         color: #6c757d;
         line-height: 1.2;
+        min-width: 0;
+    }
+    .route-card .route-summary {
+        align-items: center;
+        display: flex;
+        flex: 0 0 auto;
+        gap: 7px;
     }
     .route-card .route-tonase {
         color: #15803d;
@@ -75,6 +87,23 @@
         font-size: 10px;
         padding: 2px 5px;
         line-height: 1.1;
+    }
+    .route-strip {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px;
+        white-space: nowrap;
+    }
+    .route-strip .route-card {
+        flex: 0 0 300px;
+        margin-bottom: 0;
+        min-height: 48px;
+    }
+    .route-strip-empty {
+        flex: 1 0 260px;
+        padding: 8px 12px;
     }
     .quota-box .progress {
         height: 18px;
@@ -165,18 +194,18 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-lg-3">
+                    <div class="col-12">
                         <div class="card card-outline card-primary">
                             <div class="card-header py-2">
                                 <h3 class="card-title">
-                                    <i class="fas fa-map-marked-alt mr-1"></i> Pilih Rute
+                                    <i class="fas fa-map-marked-alt mr-1"></i> Rute Pengiriman Hari Ini
                                 </h3>
                             </div>
-                            <div class="card-body p-1" style="max-height:620px; overflow:auto;">
+                            <div class="card-body p-0 route-strip">
                                 <?php if (empty($routes)): ?>
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                        Tidak ada master rute
+                                    <div class="route-strip-empty text-muted">
+                                        <i class="fas fa-inbox mr-1"></i>
+                                        Tidak ada rute pengiriman hari ini
                                     </div>
                                 <?php else: ?>
                                     <?php foreach ($routes as $r):
@@ -190,16 +219,11 @@
                                         $route_kub_color = $route_kubikasi > $batas_kubikasi ? '#dc3545' : ($route_pct_kub >= 80 ? '#f59e0b' : '#0ea5e9');
                                     ?>
                                         <a href="<?= $route_url ?>" class="route-card <?= $active ? 'active' : '' ?>">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <div class="route-code"><?= htmlspecialchars($r['kd_rute']) ?></div>
-                                                    <div class="route-meta text-truncate" title="<?= htmlspecialchars($r['nama_rute']) ?>">
-                                                        <?= htmlspecialchars($r['nama_rute']) ?>
-                                                    </div>
-                                                </div>
-                                                <span class="badge badge-primary"><?= (int)$r['total_faktur'] ?></span>
+                                            <div class="route-code"><?= htmlspecialchars($r['kd_rute']) ?></div>
+                                            <div class="route-meta text-truncate" title="<?= htmlspecialchars($r['nama_rute']) ?>">
+                                                <?= htmlspecialchars($r['nama_rute']) ?>
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                            <div class="route-summary">
                                                 <span class="route-metric">
                                                     <span class="route-tonase">
                                                         <?= number_format($route_tonase, 3) ?> ton
@@ -216,6 +240,7 @@
                                                         <span class="route-ring" style="--ring-pct:<?= $route_pct_kub ?>%;--ring-color:<?= $route_kub_color ?>;"></span>
                                                     </span>
                                                 </span>
+                                                <span class="badge badge-primary"><?= (int)$r['total_faktur'] ?></span>
                                             </div>
                                         </a>
                                     <?php endforeach; ?>
@@ -224,7 +249,7 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-9">
+                    <div class="col-12">
                         <div class="row quota-box">
                             <div class="col-md-6">
                                 <div class="info-box shadow-sm">

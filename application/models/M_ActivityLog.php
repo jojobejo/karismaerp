@@ -81,6 +81,14 @@ class M_ActivityLog extends CI_Model
 
     private function _applyFilter($filter)
     {
+        if (!empty($filter['exclude_aksi'])) {
+            $exclude = is_array($filter['exclude_aksi']) ? $filter['exclude_aksi'] : [$filter['exclude_aksi']];
+            $exclude = array_map('strtoupper', array_filter($exclude));
+            if (!empty($exclude)) {
+                $this->db->where_not_in('aksi', $exclude);
+            }
+        }
+
         if (!empty($filter['no_so']))   $this->db->like('no_so',   $filter['no_so']);
         if (!empty($filter['aksi']))    $this->db->where('aksi',   strtoupper($filter['aksi']));
         if (!empty($filter['tanggal'])) $this->db->where('DATE(created_at)', $filter['tanggal']);

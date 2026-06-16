@@ -109,6 +109,9 @@
                                                 value="<?= $is_edit ? escAttr($so['kd_customer'] ?? '') : '' ?>">
                                             <input type="hidden" name="customer_name" id="customer_name"
                                                 value="<?= $is_edit ? escAttr($so['customer_name']) : '' ?>">
+                                            <small id="customer_plafon_display" class="form-text text-muted">
+                                                Plafon: <strong>-</strong>
+                                            </small>
                                             <div id="customer_validation" class="text-danger small mt-1" style="display:none">
                                                 <i class="fas fa-exclamation-circle"></i> Pilih customer terlebih dahulu.
                                             </div>
@@ -358,7 +361,7 @@
                     <table class="table table-sm mb-0" id="tbl-customer-pick">
                         <thead>
                             <tr>
-                                <th style="width:50%">Customer</th><th style="width:32%">Nama Kios</th><th style="width:18%">KD Rute</th>
+                                <th style="width:40%">Customer</th><th style="width:25%">Nama Kios</th><th style="width:15%">KD Rute</th><th style="width:20%">Plafon</th>
                             </tr>
                         </thead>
                         <tbody id="customer-body"></tbody>
@@ -1019,11 +1022,12 @@ function renderCustomers(q) {
     var list = q ? CUSTOMERS.filter(function(c){
         return String(c.nama_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.nama_kios||'').toLowerCase().indexOf(q) >= 0 ||
+               String(c.kd_customer||'').toLowerCase().indexOf(q) >= 0 ||
                String(c.kd_rute||'').toLowerCase().indexOf(q) >= 0;
     }) : CUSTOMERS;
     if (!list.length) {
         document.getElementById('customer-body').innerHTML =
-            '<tr><td colspan="3" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
+            '<tr><td colspan="4" class="text-center text-muted py-4">Tidak ada customer.</td></tr>';
         return;
     }
     var html = '';
@@ -1032,7 +1036,7 @@ function renderCustomers(q) {
         var initials = String(nama || '?').trim().split(/\s+/).slice(0, 2).map(function(part){
             return part.charAt(0);
         }).join('').toUpperCase() || '?';
-        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'"'
+        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'" data-plafon="'+esc(c.plafon_aktif||'')+'"'
               + ' title="Klik untuk memilih">'
               + '<td><div class="d-flex align-items-center">'
               + '<span class="customer-avatar">'+esc(initials)+'</span>'
@@ -1041,9 +1045,42 @@ function renderCustomers(q) {
               + '</div></td>'
               + '<td><span class="customer-kios-pill">'+esc(c.nama_kios||'-')+'</span></td>'
               + '<td><span class="customer-route-pill">'+esc(c.kd_rute||'-')+'</span></td>'
+              + '<td><span class="customer-route-pill '+esc(plafonColorClass(c.plafon_aktif))+'">'+esc(formatRupiah(c.plafon_aktif))+'</span></td>'
               + '</tr>';
     });
     document.getElementById('customer-body').innerHTML = html;
+}
+
+function parsePlafonNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    var number = Number(String(value).replace(/,/g, ''));
+    return isFinite(number) ? number : null;
+}
+
+function plafonColorClass(value) {
+    var number = parsePlafonNumber(value);
+    if (number === null) return 'text-muted';
+    return number > 1000 ? 'text-success font-weight-bold' : 'text-danger font-weight-bold';
+}
+
+function formatRupiah(value) {
+    var number = parsePlafonNumber(value);
+    if (number === null) return '-';
+    return 'Rp ' + Math.round(number).toLocaleString('id-ID');
+}
+
+function updateSelectedCustomerPlafon(kdCustomer, plafonValue) {
+    var el = document.getElementById('customer_plafon_display');
+    if (!el) return;
+
+    if ((plafonValue === null || plafonValue === undefined || plafonValue === '') && kdCustomer) {
+        var found = CUSTOMERS.find(function(c){
+            return String(c.kd_customer || '') === String(kdCustomer || '');
+        });
+        plafonValue = found ? found.plafon_aktif : '';
+    }
+
+    el.innerHTML = 'Plafon: <strong class="' + esc(plafonColorClass(plafonValue)) + '">' + esc(formatRupiah(plafonValue)) + '</strong>';
 }
 
 function focusTableRow(selector, current, step) {
@@ -1060,6 +1097,7 @@ function chooseCustomerRow(tr) {
     document.getElementById('customer_id').value      = tr.dataset.kd;
     document.getElementById('customer_name').value    = tr.dataset.nama;
     document.getElementById('customer_display').value = tr.dataset.nama;
+    updateSelectedCustomerPlafon(tr.dataset.kd, tr.dataset.plafon);
     document.getElementById('customer_validation').style.display = 'none';
     $('#modal-customer').modal('hide');
 }
@@ -1188,6 +1226,7 @@ document.getElementById('customer-body').addEventListener('keydown', function(e)
     if (e.key === 'ArrowUp') { e.preventDefault(); focusTableRow('#customer-body .tr-pick-customer', tr, -1); }
     if (e.key === 'Enter') { e.preventDefault(); chooseCustomerRow(tr); }
 });
+updateSelectedCustomerPlafon(document.getElementById('customer_id').value, '');
 
 /* Cari barang */
 document.getElementById('stock-search').addEventListener('input', function(){ renderStock(stockCache); });

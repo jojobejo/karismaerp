@@ -12,6 +12,7 @@ class C_SalesOrder extends CI_Controller
         $this->load->model('M_Checker');
         $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
+        $this->config->load('plafon_api', false, true);
     }
 
     // ================================================================
@@ -62,10 +63,107 @@ class C_SalesOrder extends CI_Controller
     private function _getCustomersForCurrentSales()
     {
         if (!$this->_isRestrictedSalesUser()) {
-            return $this->M_SalesOrder->get_customers();
+            return $this->_attachPlafonToCustomers($this->M_SalesOrder->get_customers());
         }
 
-        return $this->M_SalesOrder->get_customers($this->_getUsername());
+        return $this->_attachPlafonToCustomers($this->M_SalesOrder->get_customers($this->_getUsername()));
+    }
+
+    private function _attachPlafonToCustomers(array $customers)
+    {
+        if (empty($customers)) {
+            return $customers;
+        }
+
+        $plafon_map = $this->_getPlafonCustomerMap();
+
+        foreach ($customers as &$customer) {
+            $kode = strtoupper(trim((string)($customer['kd_customer'] ?? '')));
+            $plafon = $plafon_map[$kode] ?? null;
+
+            $customer['plafon_aktif'] = $plafon['plafon_aktif'] ?? null;
+            $customer['piutang'] = $plafon['piutang'] ?? null;
+            $customer['plafon_status'] = $plafon['status'] ?? null;
+            $customer['plafon_updated_at'] = $plafon['updated_at'] ?? null;
+        }
+        unset($customer);
+
+        return $customers;
+    }
+
+    private function _getPlafonCustomerMap()
+    {
+        $cache_file = APPPATH . 'cache/plafon_customers.json';
+        $cache_ttl = (int)($this->config->item('plafon_api_cache_ttl') ?: 60);
+
+        if (is_file($cache_file) && (time() - filemtime($cache_file)) <= $cache_ttl) {
+            $cached = json_decode((string)file_get_contents($cache_file), true);
+            if (is_array($cached)) {
+                return $cached;
+            }
+        }
+
+        $base_url = rtrim((string)$this->config->item('plafon_api_base_url'), '/');
+        $api_key = (string)$this->config->item('plafon_api_key');
+
+        if ($base_url === '' || $api_key === '' || !function_exists('curl_init')) {
+            return [];
+        }
+
+        $map = [];
+        $page = 1;
+        $max_pages = max(1, (int)($this->config->item('plafon_api_max_pages') ?: 100));
+        $timeout = max(1, (int)($this->config->item('plafon_api_timeout') ?: 5));
+
+        do {
+            $url = $base_url . '/api/customers?status=active&per_page=100&page=' . $page;
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Authorization: Bearer ' . $api_key,
+                ],
+                CURLOPT_CONNECTTIMEOUT => $timeout,
+                CURLOPT_TIMEOUT => $timeout,
+            ]);
+
+            $body = curl_exec($ch);
+            $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($body === false || $http_code < 200 || $http_code >= 300) {
+                return $map;
+            }
+
+            $payload = json_decode($body, true);
+            if (!is_array($payload) || empty($payload['data']) || !is_array($payload['data'])) {
+                break;
+            }
+
+            foreach ($payload['data'] as $row) {
+                $kode = strtoupper(trim((string)($row['kode_customer'] ?? '')));
+                if ($kode === '') {
+                    continue;
+                }
+
+                $map[$kode] = [
+                    'plafon_aktif' => $row['plafon_aktif'] ?? null,
+                    'piutang' => $row['piutang'] ?? null,
+                    'status' => $row['status'] ?? null,
+                    'updated_at' => $row['updated_at'] ?? null,
+                ];
+            }
+
+            $last_page = (int)($payload['meta']['last_page'] ?? $page);
+            $page++;
+        } while ($page <= $last_page && $page <= $max_pages);
+
+        if (!empty($map)) {
+            @file_put_contents($cache_file, json_encode($map));
+        }
+
+        return $map;
     }
 
     private function _validateCustomerForCurrentSales($kd_customer, $redirect_url)
@@ -469,12 +567,17 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
 
+        $show_completed = (string)($this->input->get('selesai', true) ?? $this->input->post('selesai', true) ?? '') === '1';
+
         $filter = [
-            'date1'       => $this->input->post('date1'),
-            'date2'       => $this->input->post('date2'),
-            'status'      => $this->input->post('status'),
-            'customer_id' => $this->input->post('customer_id'),
+            'date1'       => $this->input->post('date1') ?: $this->input->get('date1', true),
+            'date2'       => $this->input->post('date2') ?: $this->input->get('date2', true),
+            'status'      => $show_completed ? 'completed' : ($this->input->post('status') ?: $this->input->get('status', true)),
+            'customer_id' => $this->input->post('customer_id') ?: $this->input->get('customer_id', true),
         ];
+        if (!$show_completed && empty($filter['status'])) {
+            $filter['exclude_status'] = ['completed'];
+        }
         if ($this->_isRestrictedSalesUser()) {
             $filter['create_by'] = $this->_getUsername();
         }
@@ -482,7 +585,8 @@ class C_SalesOrder extends CI_Controller
         $data['page_title'] = 'KARISMA - Sales Order';
         $data['so_list']    = $this->M_SalesOrder->get_all_so($filter);
         $data['customers']  = $this->M_SalesOrder->get_customers();
-        $data['filter']     = $filter;
+        $data['filter']     = array_diff_key($filter, ['exclude_status' => true]);
+        $data['show_completed'] = $show_completed;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/so_list.php', $data);
@@ -499,6 +603,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
+        $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 
         $selected_rute = trim((string)(
             $this->input->get('rute', true)
@@ -576,6 +681,7 @@ class C_SalesOrder extends CI_Controller
         }
 
         $this->_ensureFakturPaymentInfoColumns();
+        $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 
         $selected_rute = trim((string)(
             $this->input->get('rute', true)
@@ -1470,6 +1576,7 @@ class C_SalesOrder extends CI_Controller
     public function faktur_rute()
     {
         $this->_ensureSoRouteColumn();
+        $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 
         $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
 
@@ -1591,7 +1698,7 @@ class C_SalesOrder extends CI_Controller
         $skipped = 0;
         foreach ($ids as $id_so) {
             $so = $this->M_SalesOrder->get_so($id_so);
-            if (!$so || ($so['status'] ?? '') !== 'open') {
+            if (!$so || !in_array(($so['status'] ?? ''), ['open', 'partial'], true)) {
                 $skipped++;
                 continue;
             }
@@ -1616,7 +1723,7 @@ class C_SalesOrder extends CI_Controller
         if ($moved > 0) {
             $message = '<b>' . $moved . ' SO</b> berhasil dipindahkan ke rute <b>' . htmlspecialchars($target_rute) . '</b>.';
             if ($skipped > 0) {
-                $message .= ' <b>' . $skipped . ' SO</b> dilewati karena tidak valid atau tidak berstatus Open.';
+                $message .= ' <b>' . $skipped . ' SO</b> dilewati karena tidak valid atau bukan status Open/Partial.';
             }
             $this->session->set_flashdata('success', $message);
         } else {
@@ -1642,8 +1749,8 @@ class C_SalesOrder extends CI_Controller
         }
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || ($so['status'] ?? '') !== 'open') {
-            $this->session->set_flashdata('error', 'SO tidak ditemukan atau tidak berstatus Open.');
+        if (!$so || !in_array(($so['status'] ?? ''), ['open', 'partial'], true)) {
+            $this->session->set_flashdata('error', 'SO tidak ditemukan atau bukan status Open/Partial.');
             redirect($redirect);
             return;
         }
@@ -1662,12 +1769,12 @@ class C_SalesOrder extends CI_Controller
         if ($this->M_SalesOrder->clear_so_rute($id_so, $this->_getUsername())) {
             $this->M_ActivityLog->log(
                 $so['no_so'] ?? '', '', 'RESET_SO_RUTE',
-                'Rute SO dikosongkan dari ' . $old_rute . ' agar kembali ke Semua SO Open.',
+                'Rute SO dikosongkan dari ' . $old_rute . ' agar kembali ke Semua SO Open/Partial.',
                 $this->_getUsername()
             );
-            $this->session->set_flashdata('success', 'SO <b>' . htmlspecialchars($so['no_so'] ?? '') . '</b> dikembalikan ke Semua SO Open.');
+            $this->session->set_flashdata('success', 'SO <b>' . htmlspecialchars($so['no_so'] ?? '') . '</b> dikembalikan ke Semua SO Open/Partial.');
         } else {
-            $this->session->set_flashdata('error', 'Gagal mengembalikan SO ke Semua SO Open.');
+            $this->session->set_flashdata('error', 'Gagal mengembalikan SO ke Semua SO Open/Partial.');
         }
 
         redirect($redirect);
@@ -1777,10 +1884,11 @@ class C_SalesOrder extends CI_Controller
         $offset   = ($page - 1) * $per_page;
 
         $filter = [
-            'no_so'   => $this->input->get('no_so',   true) ?? '',
-            'aksi'    => $this->input->get('aksi',    true) ?? '',
-            'tanggal' => $this->input->get('tanggal', true) ?? '',
-            'keyword' => $this->input->get('keyword', true) ?? '',
+            'no_so'        => $this->input->get('no_so',   true) ?? '',
+            'aksi'         => $this->input->get('aksi',    true) ?? '',
+            'tanggal'      => $this->input->get('tanggal', true) ?? '',
+            'keyword'      => $this->input->get('keyword', true) ?? '',
+            'exclude_aksi' => ['BUAT_FAKTUR'],
         ];
 
         $data['page_title'] = 'KARISMA - Activity Log SO';
@@ -1788,7 +1896,7 @@ class C_SalesOrder extends CI_Controller
             $this->M_ActivityLog->get_filtered($filter, $per_page, $offset)
         );
         $data['total']      = $this->M_ActivityLog->count_filtered($filter);
-        $data['filter']     = $filter;
+        $data['filter']     = array_diff_key($filter, ['exclude_aksi' => true]);
         $data['per_page']   = $per_page;
         $data['page']       = $page;
 
@@ -1809,6 +1917,9 @@ class C_SalesOrder extends CI_Controller
         $logs = $this->_hydrate_missing_log_detail_produk(
             $this->M_ActivityLog->get_by_no_so($so['no_so'] ?? '')
         );
+        $logs = array_values(array_filter($logs, function($log) {
+            return strtoupper((string)($log['aksi'] ?? '')) !== 'BUAT_FAKTUR';
+        }));
 
         if (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');

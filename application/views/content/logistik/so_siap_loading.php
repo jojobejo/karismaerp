@@ -667,9 +667,11 @@
                                                             </a>
                                                             <form method="post"
                                                                   action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
-                                                                  onsubmit="return confirm('Kembalikan SO <?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?> ke status Open?');">
+                                                                  class="return-open-form"
+                                                                  data-no-so="<?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?>">
                                                                 <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
-                                                                <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open">
+                                                                <input type="hidden" name="catatan_logistik" class="return-open-note">
+                                                                <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open/Partial">
                                                                     <i class="fas fa-times"></i>
                                                                 </button>
                                                             </form>
@@ -705,8 +707,69 @@
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
 
+<div class="modal fade" id="modalReturnOpenNote" tabindex="-1" role="dialog" aria-labelledby="modalReturnOpenNoteLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title" id="modalReturnOpenNoteLabel">
+                    <i class="fas fa-times-circle mr-1"></i> Kembalikan SO
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Tambahkan catatan untuk <b id="returnOpenNoSo">SO</b>.</p>
+                <div class="form-group mb-0">
+                    <label for="returnOpenNote">Catatan Logistik</label>
+                    <textarea id="returnOpenNote"
+                              class="form-control"
+                              rows="4"
+                              maxlength="500"
+                              placeholder="Contoh: barang belum siap, stok kurang, atau alasan dikembalikan ke open"
+                              required></textarea>
+                    <small class="text-muted">Status akan kembali ke Open atau Partial sesuai kondisi SO, dan catatan ini akan tampil di halaman SO per rute.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmReturnOpen">
+                    <i class="fas fa-check mr-1"></i> Kembalikan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function () {
+    var pendingReturnOpenForm = null;
+
+    $(".return-open-form").on("submit", function (event) {
+        event.preventDefault();
+
+        pendingReturnOpenForm = this;
+        $("#returnOpenNoSo").text($(this).data("no-so") || "SO");
+        $("#returnOpenNote").val("").removeClass("is-invalid");
+        $("#modalReturnOpenNote").modal("show");
+    });
+
+    $("#btnConfirmReturnOpen").on("click", function () {
+        var note = ($("#returnOpenNote").val() || "").trim();
+
+        if (note === "") {
+            $("#returnOpenNote").addClass("is-invalid").focus();
+            return;
+        }
+
+        if (!pendingReturnOpenForm) {
+            return;
+        }
+
+        $(pendingReturnOpenForm).find(".return-open-note").val(note);
+        pendingReturnOpenForm.submit();
+    });
+
     function getJenisPengiriman() {
         return $("input[name='jenis_pengiriman']:checked").val() || "expedisi_kantor";
     }
