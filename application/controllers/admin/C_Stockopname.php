@@ -264,6 +264,7 @@ class C_Stockopname extends CI_Controller
         $data['kode_barang'] = $kodeBarang;
         $data['compare'] = $this->stockopname->monitoring_compare_all_detail($kodeBarang);
         $data['master_items'] = $this->stockopname->lot_compare_by_kode_barang($kodeBarang);
+        $data['master_item_options'] = $this->stockopname->master_item_options_by_kode_barang($kodeBarang);
         $data['input_rows'] = $this->stockopname->input_opname_by_kode_barang($kodeBarang);
         $data['recycle_rows'] = $this->stockopname->recycle_input_by_kode_barang($kodeBarang);
         $data['request_rows'] = $this->stockopname->request_item_by_kode_barang($kodeBarang);
@@ -329,7 +330,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
-        $result = $this->stockopname->delete_input_opname((int)$id, $kodeBarang, $actor, trim((string)($input['delete_reason'] ?? '')));
+        $result = $this->stockopname->delete_input_opname((int)$id, $kodeBarang, $actor);
         $this->json($result['status'], $result['message'], $result['data'] ?? []);
     }
 
@@ -378,7 +379,124 @@ class C_Stockopname extends CI_Controller
             'qty_pcs' => (int)$qtyPcs,
             'tim_opname' => $timOpname,
             'wilayah' => (int)($this->session->userdata('wilayah') ?: 0),
+            'manual_master_id' => (int)($input['manual_master_id'] ?? 0),
         ], $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
+    public function ajax_delete_request_item()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
+        $noLot = trim((string)($input['no_lot'] ?? ''));
+        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '') {
+            return $this->json(false, 'Data request item tidak valid.');
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->delete_request_item_group($kodeBarang, $expiredDate, $noLot, $actor, (int)($input['manual_master_id'] ?? 0));
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
+    public function ajax_add_input_opname_detail()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        $masterId = $input['master_id'] ?? '';
+        $timOpname = (int)($input['tim_opname'] ?? 0);
+
+        if ($kodeBarang === '') {
+            return $this->json(false, 'Kode barang tidak valid.');
+        }
+        if (!ctype_digit((string)$masterId) || (int)$masterId <= 0) {
+            return $this->json(false, 'Pilih expired date dan no lot terlebih dahulu.');
+        }
+        if (!in_array($timOpname, [1, 2], true)) {
+            return $this->json(false, 'Tim opname harus Tim 1 atau Tim 2.');
+        }
+
+        $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
+        $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
+        $qtyBox = $qtyBox === '' ? '0' : $qtyBox;
+        $qtyPcs = $qtyPcs === '' ? '0' : $qtyPcs;
+        foreach (['Qty box' => $qtyBox, 'Qty pcs' => $qtyPcs] as $label => $value) {
+            if ($value === '' || !ctype_digit((string)$value)) {
+                return $this->json(false, $label . ' harus berupa angka bulat 0 atau lebih.');
+            }
+        }
+        if (((int)$qtyBox + (int)$qtyPcs) <= 0) {
+            return $this->json(false, 'Isi Qty Box atau Qty PCS terlebih dahulu.');
+        }
+
+        $this->stockopname->ensure_master_code_columns();
+        $row = $this->stockopname->get_master_barang_by_id((int)$masterId);
+        if (!$row || (string)($row['kode_barang'] ?? '') !== $kodeBarang) {
+            return $this->json(false, 'Data master barang tidak ditemukan untuk kode barang ini.');
+        }
+
+        $saved = $this->stockopname->save_mobile_opname($row, [
+            'qty_pcs' => (int)$qtyPcs,
+            'qty_box' => (int)$qtyBox,
+            'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
+            'wilayah' => $this->session->userdata('wilayah') ?: 0,
+            'tim_opname' => $timOpname,
+        ]);
+
+        if (!$saved) {
+            return $this->json(false, 'Gagal menyimpan data input opname.');
+        }
+
+        $this->json(true, 'Input opname berhasil ditambahkan.', [
+            'id' => $saved,
+            'kode_barang' => $row['kode_barang'],
+            'nama_barang' => $row['nama_barang'],
+            'expired_date' => $row['expired_date'],
+            'no_lot' => $row['no_lot'],
+            'qty_box' => (int)$qtyBox,
+            'qty_pcs' => (int)$qtyPcs,
+        ]);
+    }
+
+    public function ajax_update_detail_dimensi()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        $dimensi = $this->numeric_value($input['dimensi'] ?? '');
+
+        if ($kodeBarang === '') {
+            return $this->json(false, 'Kode barang tidak valid.');
+        }
+        if ($dimensi === '' || !ctype_digit((string)$dimensi)) {
+            return $this->json(false, 'Dimensi harus berupa angka bulat 0 atau lebih.');
+        }
+
+        $updated = $this->stockopname->update_dimensi_by_kode_barang($kodeBarang, (int)$dimensi);
+        if (!$updated) {
+            return $this->json(false, 'Gagal memperbarui dimensi barang.');
+        }
+
+        $this->json(true, 'Dimensi barang berhasil diperbarui.', [
+            'kode_barang' => $kodeBarang,
+            'dimensi' => (int)$dimensi,
+        ]);
+    }
+
+    public function ajax_delete_master_item_detail()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
+        $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
+        $noLot = trim((string)($input['no_lot'] ?? ''));
+
+        if ($kodeBarang === '') {
+            return $this->json(false, 'Kode barang tidak valid.');
+        }
+        if ($expiredDate === '' || $noLot === '') {
+            return $this->json(false, 'Expired date dan no lot stock buku tidak valid.');
+        }
+
+        $result = $this->stockopname->delete_master_item_by_lot($kodeBarang, $expiredDate, $noLot);
         $this->json($result['status'], $result['message'], $result['data'] ?? []);
     }
 
@@ -619,19 +737,19 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Data master barang manual tidak ditemukan.');
         }
 
-        $saved = $this->stockopname->save_manual_opname($row, [
+        $saved = $this->stockopname->save_manual_master_item_queue($row, [
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
             'tim_opname' => $this->session->userdata('tim') ?: 0,
-        ]);
+        ], 'Manual Input');
 
         if (empty($saved['status'])) {
             return $this->json(false, $saved['message'] ?? 'Gagal menyimpan data opname manual.');
         }
 
-        $this->json(true, 'Data opname manual berhasil disimpan untuk review admin.', $saved['data'] ?? []);
+        $this->json(true, $saved['message'] ?? 'Data input manual berhasil disimpan.', $saved['data'] ?? []);
     }
 
     public function ajax_request_save()
@@ -675,7 +793,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Data master barang request tidak ditemukan.');
         }
 
-        $saved = $this->stockopname->save_request_opname($row, [
+        $saved = $this->stockopname->save_manual_master_item_queue($row, [
             'no_lot' => $noLot,
             'expired_date' => $expiredDate,
             'qty_pcs' => $qtyPcs,
@@ -683,13 +801,13 @@ class C_Stockopname extends CI_Controller
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
             'tim_opname' => $this->session->userdata('tim') ?: 0,
-        ]);
+        ], 'Request Master Item');
 
         if (empty($saved['status'])) {
             return $this->json(false, $saved['message'] ?? 'Gagal menyimpan opname request.');
         }
 
-        $this->json(true, 'Opname request berhasil disimpan untuk review admin.', $saved['data'] ?? []);
+        $this->json(true, $saved['message'] ?? 'Opname request berhasil disimpan.', $saved['data'] ?? []);
     }
 
     public function master_barang()

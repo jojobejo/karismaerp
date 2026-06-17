@@ -104,9 +104,14 @@ class M_Stockopname extends CI_Model
                     `expired_date` DATE NOT NULL,
                     `no_lot` VARCHAR(100) NOT NULL,
                     `dimensi` INT(12) NOT NULL DEFAULT 0,
-                    `status` ENUM('PENDING','APPROVED','REJECTED','ADDED') NOT NULL DEFAULT 'PENDING',
+                    `qty` INT(12) NOT NULL DEFAULT 0,
+                    `qty_pcs` INT(12) NOT NULL DEFAULT 0,
+                    `qty_box` INT(12) NOT NULL DEFAULT 0,
+                    `status` ENUM('PENDING','APPROVED','REJECTED','ADDED','DONE','Manual Input','Request Master Item') NOT NULL DEFAULT 'PENDING',
                     `requested_by` VARCHAR(100) NOT NULL,
                     `requested_at` DATETIME NOT NULL,
+                    `wilayah` INT(2) NOT NULL DEFAULT 0,
+                    `tim_opname` INT(2) NOT NULL DEFAULT 0,
                     `reviewed_by` VARCHAR(100) NULL DEFAULT NULL,
                     `reviewed_at` DATETIME NULL DEFAULT NULL,
                     `review_note` TEXT NULL,
@@ -159,8 +164,60 @@ class M_Stockopname extends CI_Model
                 }
             }
         }
+        if ($this->db->table_exists($this->manualMasterTable)) {
+            $manualMasterColumns = [
+                'qty' => "ALTER TABLE {$this->manualMasterTable} ADD `qty` INT(12) NOT NULL DEFAULT 0 AFTER `dimensi`",
+                'qty_pcs' => "ALTER TABLE {$this->manualMasterTable} ADD `qty_pcs` INT(12) NOT NULL DEFAULT 0 AFTER `qty`",
+                'qty_box' => "ALTER TABLE {$this->manualMasterTable} ADD `qty_box` INT(12) NOT NULL DEFAULT 0 AFTER `qty_pcs`",
+                'wilayah' => "ALTER TABLE {$this->manualMasterTable} ADD `wilayah` INT(2) NOT NULL DEFAULT 0 AFTER `requested_at`",
+                'tim_opname' => "ALTER TABLE {$this->manualMasterTable} ADD `tim_opname` INT(2) NOT NULL DEFAULT 0 AFTER `wilayah`",
+            ];
+            foreach ($manualMasterColumns as $column => $sql) {
+                if (!$this->db->field_exists($column, $this->manualMasterTable)) {
+                    $this->db->query($sql);
+                }
+            }
+            foreach ($this->db->field_data($this->manualMasterTable) as $field) {
+                if ($field->name === 'status' && stripos((string)$field->type, 'enum') !== false) {
+                    $this->db->query("ALTER TABLE {$this->manualMasterTable} MODIFY `status` ENUM('PENDING','APPROVED','REJECTED','ADDED','DONE','Manual Input','Request Master Item') NOT NULL DEFAULT 'PENDING'");
+                    break;
+                }
+            }
+        }
 
         return $this->db->table_exists($this->manualMasterTable) && $this->db->table_exists($this->manualOpnameTable);
+    }
+
+    private function ensure_opname_input_source_column()
+    {
+        if (!$this->db->table_exists($this->opnameTable)) {
+            return false;
+        }
+
+        if (!$this->db->field_exists('input_source', $this->opnameTable)) {
+            $after = $this->db->field_exists('scan_code', $this->opnameTable) ? 'scan_code' : 'tim_opname';
+            $this->db->query("ALTER TABLE {$this->opnameTable} ADD `input_source` VARCHAR(50) NULL DEFAULT NULL AFTER `{$after}`");
+        }
+
+        return true;
+    }
+
+    private function ensure_master_input_status_columns()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return false;
+        }
+
+        if (!$this->db->field_exists('input_source', $this->masterTable)) {
+            $after = $this->db->field_exists('barcode', $this->masterTable) ? 'barcode' : 'no_lot';
+            $this->db->query("ALTER TABLE {$this->masterTable} ADD `input_source` VARCHAR(50) NULL DEFAULT NULL AFTER `{$after}`");
+        }
+        if (!$this->db->field_exists('request_status', $this->masterTable)) {
+            $after = $this->db->field_exists('input_source', $this->masterTable) ? 'input_source' : 'no_lot';
+            $this->db->query("ALTER TABLE {$this->masterTable} ADD `request_status` VARCHAR(20) NULL DEFAULT NULL AFTER `{$after}`");
+        }
+
+        return true;
     }
 
     private function ready()
@@ -545,6 +602,7 @@ class M_Stockopname extends CI_Model
                 {$lotKey} AS lot_key,
                 MAX(expired_date) AS expired_date,
                 MAX(no_lot) AS no_lot,
+                MIN(id) AS master_id,
                 SUM(COALESCE(qty, 0)) AS qty_buku,
                 SUM(COALESCE(qty_box, 0)) AS box_buku,
                 SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
@@ -559,6 +617,9 @@ class M_Stockopname extends CI_Model
         $expKey = $this->exp_key('expired_date');
         $lotKey = $this->lot_key('no_lot');
         $createdColumn = $this->opname_created_column();
+        $inputSource = $this->db->field_exists('input_source', $this->opnameTable)
+            ? 'GROUP_CONCAT(DISTINCT input_source ORDER BY input_source SEPARATOR \',\') AS input_sources'
+            : "'' AS input_sources";
 
         return "
             SELECT
@@ -574,6 +635,7 @@ class M_Stockopname extends CI_Model
                 SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
                 GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
                 GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
+                {$inputSource},
                 MAX({$createdColumn}) AS last_input
             FROM {$this->opnameTable}
             GROUP BY kode_barang, exp_key, lot_key
@@ -589,6 +651,7 @@ class M_Stockopname extends CI_Model
 
         return "
             SELECT
+                x.master_id,
                 x.kode_barang,
                 x.nama_barang,
                 x.expired_date,
@@ -600,6 +663,7 @@ class M_Stockopname extends CI_Model
                 x.input_tim_2,
                 x.inputers,
                 x.wilayah,
+                x.input_sources,
                 x.last_input,
                 CASE
                     WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
@@ -611,6 +675,7 @@ class M_Stockopname extends CI_Model
                 CASE WHEN x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
             FROM (
                 SELECT
+                    m.master_id,
                     m.kode_barang,
                     m.nama_barang,
                     m.expired_date,
@@ -622,6 +687,7 @@ class M_Stockopname extends CI_Model
                     COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
+                    COALESCE(o.input_sources, '') AS input_sources,
                     o.last_input
                 FROM ({$master}) m
                 LEFT JOIN ({$opname}) o
@@ -630,6 +696,7 @@ class M_Stockopname extends CI_Model
                     AND o.lot_key = m.lot_key
                 UNION ALL
                 SELECT
+                    0 AS master_id,
                     o.kode_barang,
                     o.nama_barang,
                     o.expired_date,
@@ -641,6 +708,7 @@ class M_Stockopname extends CI_Model
                     COALESCE(o.input_tim_2, 0) AS input_tim_2,
                     COALESCE(o.inputers, '-') AS inputers,
                     COALESCE(o.wilayah, '-') AS wilayah,
+                    COALESCE(o.input_sources, '') AS input_sources,
                     o.last_input
                 FROM ({$opname}) o
                 LEFT JOIN ({$master}) m
@@ -648,12 +716,16 @@ class M_Stockopname extends CI_Model
                     AND m.exp_key = o.exp_key
                     AND m.lot_key = o.lot_key
                 WHERE m.kode_barang IS NULL
-                    AND NOT EXISTS (
+                    AND (
+                        FIND_IN_SET('manual opname request', COALESCE(o.input_sources, '')) > 0
+                        OR FIND_IN_SET('master data request opname', COALESCE(o.input_sources, '')) > 0
+                        OR NOT EXISTS (
                         SELECT 1
                         FROM {$this->masterTable} mz
                         WHERE mz.kode_barang = o.kode_barang
                             AND {$masterZeroExpKey} = o.exp_key
                             AND {$masterZeroLotKey} = o.lot_key
+                        )
                     )
             ) x
         ";
@@ -1015,13 +1087,33 @@ class M_Stockopname extends CI_Model
         }
 
         $noLotColumn = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
+        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'COALESCE(dimensi, 0) AS dimensi'
+            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
 
         return $this->db
-            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn},qty,qty_pcs,qty_box", false)
+            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn},qty,qty_pcs,qty_box,{$dimensi}", false)
             ->from($this->masterTable)
             ->where('kode_barang', $kodeBarang)
             ->order_by('expired_date', 'ASC')
             ->order_by('no_lot', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function master_item_options_by_kode_barang($kodeBarang)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $this->master_barang_select();
+        return $this->db
+            ->where('kode_barang', $kodeBarang)
+            ->order_by('expired_date', 'ASC')
+            ->order_by('no_lot', 'ASC')
+            ->order_by('id', 'ASC')
             ->get()
             ->result_array();
     }
@@ -1077,16 +1169,15 @@ class M_Stockopname extends CI_Model
             return [];
         }
 
-        $source = $this->db->field_exists('input_source', $this->manualOpnameTable)
-            ? "GROUP_CONCAT(DISTINCT input_source ORDER BY input_source SEPARATOR ', ') AS input_source"
-            : "'manual' AS input_source";
-
         return $this->db
-            ->select("MAX(source_id) AS source_id,MAX(nama_barang) AS nama_barang,kode_barang,expired_date,no_lot,SUM(qty) AS qty,SUM(qty_pcs) AS qty_pcs,SUM(qty_box) AS qty_box,MAX(wilayah) AS wilayah,GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS input_by,{$source}", false)
-            ->from($this->manualOpnameTable)->where('kode_barang', $kodeBarang)
-            ->group_by(['kode_barang', 'expired_date', 'no_lot'])
-            ->order_by('expired_date', 'ASC')->order_by('no_lot', 'ASC')
-            ->get()->result_array();
+            ->select("id AS manual_master_id,source_id,nama_barang,kode_barang,expired_date,no_lot,dimensi,qty,qty_pcs,qty_box,wilayah,tim_opname,requested_by AS input_by,status AS input_source,status,requested_at", false)
+            ->from($this->manualMasterTable)
+            ->where('kode_barang', $kodeBarang)
+            ->where_in('status', ['Manual Input', 'Request Master Item'])
+            ->order_by('requested_at', 'ASC')
+            ->order_by('id', 'ASC')
+            ->get()
+            ->result_array();
     }
 
     private function input_opname_row_by_id($id)
@@ -1218,23 +1309,80 @@ class M_Stockopname extends CI_Model
         ];
     }
 
+    private function master_dimensi_select_sql()
+    {
+        return $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'COALESCE(dimensi, 0) AS dimensi'
+            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
+    }
+
+    private function dimensi_from_master_row($row)
+    {
+        $dimensi = (int)($row['dimensi'] ?? 0);
+        if ($dimensi > 0) {
+            return $dimensi;
+        }
+
+        $qtyBox = (int)($row['qty_box'] ?? 0);
+        if ($qtyBox <= 0) {
+            return 0;
+        }
+
+        return max(0, (int)floor(((int)($row['qty'] ?? 0) - (int)($row['qty_pcs'] ?? 0)) / $qtyBox));
+    }
+
+    private function master_dimensi_for_opname_row($row)
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return 0;
+        }
+
+        $sourceId = (int)($row['source_id'] ?? 0);
+        $this->db
+            ->select('qty,qty_box,qty_pcs,' . $this->master_dimensi_select_sql(), false)
+            ->from($this->masterTable);
+
+        if ($sourceId > 0) {
+            $this->db->where('id', $sourceId);
+        } else {
+            $kodeBarang = trim((string)($row['kode_barang'] ?? ''));
+            if ($kodeBarang === '') {
+                return 0;
+            }
+
+            $this->db->where('kode_barang', $kodeBarang);
+            $expiredDate = trim((string)($row['expired_date'] ?? ''));
+            if ($expiredDate !== '') {
+                $this->db->where($this->exp_key('expired_date') . ' = ' . $this->db->escape($expiredDate), null, false);
+            }
+
+            $noLot = trim((string)($row['no_lot'] ?? '-'));
+            if ($noLot !== '') {
+                $normalizedLot = $noLot === '-' ? ['', '-', '0'] : [$noLot];
+                $this->db->group_start();
+                foreach ($normalizedLot as $index => $lot) {
+                    $condition = "TRIM(COALESCE(no_lot, '')) = " . $this->db->escape($lot);
+                    if ($index === 0) {
+                        $this->db->where($condition, null, false);
+                    } else {
+                        $this->db->or_where($condition, null, false);
+                    }
+                }
+                $this->db->group_end();
+            }
+
+            $this->db->order_by('id', 'ASC');
+        }
+
+        $master = $this->db->limit(1)->get()->row_array();
+        return $master ? $this->dimensi_from_master_row($master) : 0;
+    }
+
     private function opname_dimensi_from_row($row)
     {
-        $sourceId = (int)($row['source_id'] ?? 0);
-        if ($sourceId > 0 && $this->db->table_exists($this->masterTable)) {
-            $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
-                ? 'COALESCE(dimensi, 0) AS dimensi'
-                : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
-            $master = $this->db
-                ->select($dimensi, false)
-                ->from($this->masterTable)
-                ->where('id', $sourceId)
-                ->limit(1)
-                ->get()
-                ->row_array();
-            if ((int)($master['dimensi'] ?? 0) > 0) {
-                return (int)$master['dimensi'];
-            }
+        $masterDimensi = $this->master_dimensi_for_opname_row($row);
+        if ($masterDimensi > 0) {
+            return $masterDimensi;
         }
 
         $qtyBox = (int)($row['qty_box'] ?? 0);
@@ -1388,37 +1536,23 @@ class M_Stockopname extends CI_Model
         ];
     }
 
-    public function delete_input_opname($id, $kodeBarang, $actor, $reason = '')
+    public function delete_input_opname($id, $kodeBarang, $actor)
     {
         $oldRow = $this->input_opname_row_by_id($id);
         if (!$oldRow || (string)$oldRow['kode_barang'] !== trim((string)$kodeBarang)) {
             return ['status' => false, 'message' => 'Data input opname tidak ditemukan.'];
         }
-        if (!$this->ensure_opname_recycle_table() || !$this->ensure_opname_log_table()) {
-            return ['status' => false, 'message' => 'Tabel recycle bin atau audit log belum siap.'];
+        if (!$this->ensure_opname_log_table()) {
+            return ['status' => false, 'message' => 'Tabel audit log belum siap.'];
         }
 
-        $recycle = [
-            'source_id' => (int)$oldRow['id'],
-            'original_source_id' => (int)($oldRow['source_id'] ?? 0),
-            'kode_barang' => $oldRow['kode_barang'], 'nama_barang' => $oldRow['nama_barang'],
-            'expired_date' => $oldRow['expired_date'], 'no_lot' => $oldRow['no_lot'],
-            'qty' => (int)$oldRow['qty'], 'qty_box' => (int)$oldRow['qty_box'], 'qty_pcs' => (int)$oldRow['qty_pcs'],
-            'input_by' => $oldRow['input_by'], 'input_at' => $oldRow['input_at'],
-            'wilayah' => (int)$oldRow['wilayah'], 'tim_opname' => (int)$oldRow['tim_opname'],
-            'scan_code' => $oldRow['scan_code'], 'original_created_at' => $oldRow['created_at'],
-            'original_updated_at' => $oldRow['updated_at'], 'deleted_by' => $actor,
-            'deleted_at' => date('Y-m-d H:i:s'), 'delete_reason' => $reason ?: null,
-        ];
-
         $this->db->trans_start();
-        $this->db->insert('stockopname_recyclebin_input', $recycle);
+        $this->insert_opname_edit_log($oldRow, [], array_keys($this->normalize_opname_snapshot($oldRow)), $actor, 'DELETE', 'Input opname dihapus langsung dari database.');
         $this->db->where('id', (int)$id)->where('kode_barang', $kodeBarang)->delete($this->opnameTable);
-        $this->insert_opname_edit_log($oldRow, [], array_keys($this->normalize_opname_snapshot($oldRow)), $actor, 'DELETE', $reason ?: 'Input opname dipindahkan ke recycle bin.');
         $this->db->trans_complete();
 
         return $this->db->trans_status()
-            ? ['status' => true, 'message' => 'Input opname berhasil dipindahkan ke recycle bin.']
+            ? ['status' => true, 'message' => 'Input opname berhasil dihapus dari database.']
             : ['status' => false, 'message' => 'Gagal menghapus input opname. Transaksi dibatalkan.'];
     }
 
@@ -1462,44 +1596,42 @@ class M_Stockopname extends CI_Model
 
     public function add_request_item_to_opname($kodeBarang, $expiredDate, $noLot, $payload, $actor)
     {
-        if (!$this->ready() || !$this->ensure_manual_tables() || !$this->ensure_opname_log_table()) {
+        if (!$this->ready() || !$this->ensure_manual_tables() || !$this->ensure_opname_log_table() || !$this->ensure_opname_input_source_column() || !$this->ensure_master_input_status_columns()) {
             return ['status' => false, 'message' => 'Tabel opname atau request item belum siap.'];
         }
 
-        $request = $this->db->select('source_id,kode_barang,nama_barang,expired_date,no_lot,wilayah')
-            ->from($this->manualOpnameTable)
-            ->where('kode_barang', $kodeBarang)
-            ->where('expired_date', $expiredDate)
-            ->where('no_lot', $noLot)
-            ->order_by('id', 'DESC')->limit(1)->get()->row_array();
+        $manualMasterId = (int)($payload['manual_master_id'] ?? 0);
+        $this->db
+            ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,qty,qty_pcs,qty_box,status,wilayah,tim_opname')
+            ->from($this->manualMasterTable)
+            ->where_in('status', ['Manual Input', 'Request Master Item']);
+        if ($manualMasterId > 0) {
+            $this->db->where('id', $manualMasterId);
+        } else {
+            $this->db
+                ->where('kode_barang', $kodeBarang)
+                ->where('expired_date', $expiredDate)
+                ->where('no_lot', $noLot);
+        }
+        $request = $this->db->order_by('id', 'DESC')->limit(1)->get()->row_array();
         if (!$request) {
             return ['status' => false, 'message' => 'Request item tidak ditemukan.'];
         }
 
         $sourceId = (int)($request['source_id'] ?? 0);
-        $dimensionRow = $sourceId > 0
-            ? $this->db->select('qty,qty_box,qty_pcs' . ($this->db->field_exists('dimensi', $this->masterTable) ? ',dimensi' : ''))
-                ->from($this->masterTable)->where('id', $sourceId)->limit(1)->get()->row_array()
-            : null;
-        $dimension = (int)($dimensionRow['dimensi'] ?? 0);
-        if ($dimension <= 0 && (int)($dimensionRow['qty_box'] ?? 0) > 0) {
-            $dimension = (int)floor(((int)$dimensionRow['qty'] - (int)$dimensionRow['qty_pcs']) / (int)$dimensionRow['qty_box']);
-        }
+        $dimension = (int)($request['dimensi'] ?? 0);
         if ($dimension <= 0) {
-            $sample = $this->db->select('qty,qty_box,qty_pcs')->from($this->manualOpnameTable)
-                ->where('kode_barang', $kodeBarang)->where('expired_date', $expiredDate)->where('no_lot', $noLot)
-                ->where('qty_box >', 0)->order_by('id', 'DESC')->limit(1)->get()->row_array();
-            if ($sample) {
-                $dimension = max(0, (int)floor(((int)$sample['qty'] - (int)$sample['qty_pcs']) / (int)$sample['qty_box']));
-            }
+            $dimension = $this->master_dimensi_for_opname_row($request);
         }
 
+        $status = (string)($request['status'] ?? '');
+        $inputSource = $status === 'Request Master Item' ? 'master data request opname' : 'manual input';
         $row = [
             'source_id' => $sourceId,
-            'kode_barang' => $kodeBarang,
+            'kode_barang' => (string)$request['kode_barang'],
             'nama_barang' => (string)$request['nama_barang'],
-            'expired_date' => $expiredDate,
-            'no_lot' => $noLot,
+            'expired_date' => (string)$request['expired_date'],
+            'no_lot' => (string)$request['no_lot'],
             'qty_box' => (int)$payload['qty_box'],
             'qty_pcs' => (int)$payload['qty_pcs'],
             'qty' => ((int)$payload['qty_box'] * $dimension) + (int)$payload['qty_pcs'],
@@ -1509,17 +1641,41 @@ class M_Stockopname extends CI_Model
             'tim_opname' => (int)$payload['tim_opname'],
             'scan_code' => null,
         ];
+        if ($this->db->field_exists('input_source', $this->opnameTable)) {
+            $row['input_source'] = $inputSource;
+        }
 
-        $this->db->trans_start();
+        $this->db->trans_begin();
+        $masterRequestId = 0;
+        if ($status === 'Request Master Item') {
+            $masterRequestId = $this->insert_zero_master_request_item($request, [
+                'expired_date' => $row['expired_date'],
+                'no_lot' => $row['no_lot'],
+            ], $inputSource);
+            if ($masterRequestId <= 0) {
+                $this->db->trans_rollback();
+                return ['status' => false, 'message' => 'Gagal menyimpan Request Master Item ke stockopname_master_item.'];
+            }
+            $row['source_id'] = $masterRequestId;
+        }
         $this->db->insert($this->opnameTable, $row);
         $newId = (int)$this->db->insert_id();
         $newRow = $this->input_opname_row_by_id($newId) ?: array_merge($row, ['id' => $newId]);
-        $this->insert_opname_edit_log([], $newRow, ['qty', 'qty_box', 'qty_pcs'], $actor, 'ADJUSTMENT', 'Request item ditambahkan ke data hasil input opname.');
-        $this->db->trans_complete();
+        $description = $status === 'Request Master Item'
+            ? 'Request Master Item ditambahkan ke master item dan hasil input opname.'
+            : 'Manual Input ditambahkan ke data hasil input opname.';
+        $this->insert_opname_edit_log([], $newRow, ['qty', 'qty_box', 'qty_pcs'], $actor, 'ADJUSTMENT', $description);
+        $this->mark_manual_master_done((int)$request['id'], $actor);
+        if ($this->db->table_exists($this->manualOpnameTable) && $this->db->field_exists('manual_master_id', $this->manualOpnameTable)) {
+            $this->db->where('manual_master_id', (int)$request['id'])->delete($this->manualOpnameTable);
+        }
+        if ($this->db->trans_status() === false || $newId <= 0) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Gagal menambahkan request item. Transaksi dibatalkan.'];
+        }
+        $this->db->trans_commit();
 
-        return $this->db->trans_status() && $newId > 0
-            ? ['status' => true, 'message' => 'Request item berhasil ditambahkan ke hasil input opname.', 'data' => ['id' => $newId]]
-            : ['status' => false, 'message' => 'Gagal menambahkan request item. Transaksi dibatalkan.'];
+        return ['status' => true, 'message' => 'Request item berhasil diproses dan status menjadi DONE.', 'data' => ['id' => $newId, 'master_id' => $masterRequestId, 'source_status' => $status]];
     }
 
     public function opname_edit_logs_by_kode_barang($kodeBarang, $limit = 20)
@@ -2257,6 +2413,176 @@ class M_Stockopname extends CI_Model
         return (int)$this->db->insert_id();
     }
 
+    public function save_manual_master_item_queue($masterRow, $input, $status)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return [
+                'status' => false,
+                'message' => 'Tabel request item manual belum siap.',
+            ];
+        }
+
+        $status = (string)$status;
+        if (!in_array($status, ['Manual Input', 'Request Master Item'], true)) {
+            return [
+                'status' => false,
+                'message' => 'Status request item tidak valid.',
+            ];
+        }
+
+        $qtyPcs = (int)($input['qty_pcs'] ?? 0);
+        $qtyBox = (int)($input['qty_box'] ?? 0);
+        $dimensi = (int)($masterRow['dimensi'] ?? 0);
+        if ($dimensi <= 0) {
+            $masterQtyBox = (int)($masterRow['qty_box'] ?? 0);
+            $masterQtyPcs = (int)($masterRow['qty_pcs'] ?? 0);
+            $masterQty = (int)($masterRow['qty'] ?? 0);
+            $dimensi = $masterQtyBox > 0 ? (int)floor(($masterQty - $masterQtyPcs) / $masterQtyBox) : 0;
+        }
+
+        $data = [
+            'source_id' => (int)($masterRow['id'] ?? 0),
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'expired_date' => (string)($input['expired_date'] ?? $masterRow['expired_date'] ?? ''),
+            'no_lot' => (string)($input['no_lot'] ?? $masterRow['no_lot'] ?? '-'),
+            'dimensi' => $dimensi,
+            'qty' => ($qtyBox * $dimensi) + $qtyPcs,
+            'qty_pcs' => $qtyPcs,
+            'qty_box' => $qtyBox,
+            'status' => $status,
+            'requested_by' => (string)($input['input_by'] ?? 'system'),
+            'requested_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($input['wilayah'] ?? 0),
+            'tim_opname' => (int)($input['tim_opname'] ?? 0),
+        ];
+
+        if (!$this->db->insert($this->manualMasterTable, $data)) {
+            return [
+                'status' => false,
+                'message' => 'Gagal menyimpan data ke stockopname_master_manual_item.',
+            ];
+        }
+
+        return [
+            'status' => true,
+            'message' => $status === 'Manual Input'
+                ? 'Data input manual berhasil disimpan sebagai Manual Input.'
+                : 'Data opname request berhasil disimpan sebagai Request Master Item.',
+            'data' => [
+                'id' => (int)$this->db->insert_id(),
+                'kode_barang' => $data['kode_barang'],
+                'nama_barang' => $data['nama_barang'],
+                'expired_date' => $data['expired_date'],
+                'no_lot' => $data['no_lot'],
+                'qty' => $data['qty'],
+                'qty_pcs' => $qtyPcs,
+                'qty_box' => $qtyBox,
+                'status' => $status,
+            ],
+        ];
+    }
+
+    public function update_dimensi_by_kode_barang($kodeBarang, $dimensi)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        if ($kodeBarang === '' || !$this->db->table_exists($this->masterTable)) {
+            return false;
+        }
+
+        if (!$this->db->field_exists('dimensi', $this->masterTable)) {
+            $this->db->query("ALTER TABLE {$this->masterTable} ADD `dimensi` INT(12) NOT NULL DEFAULT 0 AFTER `qty_box`");
+        }
+
+        return $this->db
+            ->where('kode_barang', $kodeBarang)
+            ->update($this->masterTable, ['dimensi' => max(0, (int)$dimensi)]);
+    }
+
+    public function delete_master_item_by_lot($kodeBarang, $expiredDate, $noLot)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        $expiredDate = trim((string)$expiredDate);
+        $noLot = trim((string)$noLot);
+        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '' || !$this->db->table_exists($this->masterTable)) {
+            return ['status' => false, 'message' => 'Data stock buku tidak valid.'];
+        }
+
+        $noLotColumn = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot' : '');
+        if ($noLotColumn === '') {
+            return ['status' => false, 'message' => 'Kolom no lot master item tidak tersedia.'];
+        }
+
+        $rows = $this->db
+            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn} AS no_lot,qty", false)
+            ->from($this->masterTable)
+            ->where('kode_barang', $kodeBarang)
+            ->where('expired_date', $expiredDate)
+            ->where($noLotColumn, $noLot)
+            ->get()
+            ->result_array();
+        if (!$rows) {
+            return ['status' => false, 'message' => 'Data stock buku tidak ditemukan.'];
+        }
+
+        $ids = array_map('intval', array_column($rows, 'id'));
+        $deleted = [
+            $this->manualMasterTable => 0,
+            $this->masterTable => 0,
+            $this->opnameTable => 0,
+            $this->manualOpnameTable => 0,
+        ];
+
+        $this->db->trans_start();
+
+        $deleted[$this->manualOpnameTable] = $this->delete_rows_by_barang_expired_lot($this->manualOpnameTable, $kodeBarang, $expiredDate, $noLot);
+        $deleted[$this->opnameTable] = $this->delete_rows_by_barang_expired_lot($this->opnameTable, $kodeBarang, $expiredDate, $noLot);
+        $deleted[$this->manualMasterTable] = $this->delete_rows_by_barang_expired_lot($this->manualMasterTable, $kodeBarang, $expiredDate, $noLot);
+        $deleted[$this->masterTable] = $this->delete_rows_by_barang_expired_lot($this->masterTable, $kodeBarang, $expiredDate, $noLot);
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status() || (int)$deleted[$this->masterTable] <= 0) {
+            return ['status' => false, 'message' => 'Gagal menghapus data stock buku. Transaksi dibatalkan.'];
+        }
+
+        return [
+            'status' => true,
+            'message' => 'Data stock buku dan data opname lot terkait berhasil dihapus.',
+            'data' => [
+                'deleted' => (int)array_sum($deleted),
+                'deleted_by_table' => $deleted,
+                'ids' => $ids,
+                'kode_barang' => $kodeBarang,
+                'expired_date' => $expiredDate,
+                'no_lot' => $noLot,
+            ],
+        ];
+    }
+
+    private function delete_rows_by_barang_expired_lot($table, $kodeBarang, $expiredDate, $noLot)
+    {
+        if (!$this->db->table_exists($table)
+            || !$this->db->field_exists('kode_barang', $table)
+            || !$this->db->field_exists('expired_date', $table)
+        ) {
+            return 0;
+        }
+
+        $noLotColumn = $this->db->field_exists('no_lot', $table) ? 'no_lot' : ($this->db->field_exists('nolot', $table) ? 'nolot' : '');
+        if ($noLotColumn === '') {
+            return 0;
+        }
+
+        $this->db
+            ->where('kode_barang', $kodeBarang)
+            ->where('expired_date', $expiredDate)
+            ->where($noLotColumn, $noLot)
+            ->delete($table);
+
+        return max(0, (int)$this->db->affected_rows());
+    }
+
     private function manual_master_item_id($masterRow, $inputBy)
     {
         if (!$this->ensure_manual_tables()) {
@@ -2295,6 +2621,111 @@ class M_Stockopname extends CI_Model
         }
 
         return (int)$this->db->insert_id();
+    }
+
+    private function opname_payload_from_master($masterRow, $input, $inputSource)
+    {
+        $qtyPcs = (int)($input['qty_pcs'] ?? 0);
+        $qtyBox = (int)($input['qty_box'] ?? 0);
+        $dimensi = (int)($masterRow['dimensi'] ?? 0);
+        if ($dimensi <= 0) {
+            $masterQtyBox = (int)($masterRow['qty_box'] ?? 0);
+            $masterQtyPcs = (int)($masterRow['qty_pcs'] ?? 0);
+            $masterQty = (int)($masterRow['qty'] ?? 0);
+            $dimensi = $masterQtyBox > 0 ? (int)floor(($masterQty - $masterQtyPcs) / $masterQtyBox) : 0;
+        }
+
+        $data = [
+            'source_id' => (int)($masterRow['id'] ?? 0),
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'expired_date' => (string)($masterRow['expired_date'] ?? ''),
+            'no_lot' => (string)($masterRow['no_lot'] ?? '-'),
+            'qty' => ($qtyBox * $dimensi) + $qtyPcs,
+            'qty_pcs' => $qtyPcs,
+            'qty_box' => $qtyBox,
+            'input_by' => (string)($input['input_by'] ?? 'system'),
+            'input_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($input['wilayah'] ?? 0),
+            'tim_opname' => (int)($input['tim_opname'] ?? 0),
+            'scan_code' => (string)($masterRow['qrcode'] ?? $masterRow['barcode'] ?? $masterRow['kode_barang'] ?? ''),
+        ];
+
+        if ($this->db->field_exists('input_source', $this->opnameTable)) {
+            $data['input_source'] = $inputSource;
+        }
+
+        return $data;
+    }
+
+    private function mark_manual_master_done($manualMasterId, $actor)
+    {
+        if ((int)$manualMasterId <= 0 || !$this->db->table_exists($this->manualMasterTable)) {
+            return false;
+        }
+
+        $data = ['status' => 'DONE'];
+        if ($this->db->field_exists('reviewed_by', $this->manualMasterTable)) {
+            $data['reviewed_by'] = (string)$actor;
+        }
+        if ($this->db->field_exists('reviewed_at', $this->manualMasterTable)) {
+            $data['reviewed_at'] = date('Y-m-d H:i:s');
+        }
+        if ($this->db->field_exists('review_note', $this->manualMasterTable)) {
+            $data['review_note'] = 'Data request sudah tersimpan ke stockopname_opname.';
+        }
+
+        return $this->db->where('id', (int)$manualMasterId)->update($this->manualMasterTable, $data);
+    }
+
+    public function save_manual_request_to_opname($masterRow, $input)
+    {
+        if (!$this->ensure_manual_tables() || !$this->ensure_opname_input_source_column()) {
+            return ['status' => false, 'message' => 'Tabel input opname belum siap.'];
+        }
+
+        $inputBy = (string)($input['input_by'] ?? 'system');
+        $inputSource = 'manual opname request';
+        $this->db->trans_start();
+        $manualMasterId = $this->manual_master_item_id($masterRow, $inputBy);
+        if ($manualMasterId <= 0) {
+            $this->db->trans_complete();
+            return ['status' => false, 'message' => 'Gagal menyiapkan request manual.'];
+        }
+
+        $manualData = [
+            'manual_master_id' => $manualMasterId,
+            'source_id' => (int)($masterRow['id'] ?? 0),
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'expired_date' => (string)($masterRow['expired_date'] ?? ''),
+            'no_lot' => (string)($masterRow['no_lot'] ?? '-'),
+            'qty' => (int)$this->opname_payload_from_master($masterRow, $input, $inputSource)['qty'],
+            'qty_pcs' => (int)($input['qty_pcs'] ?? 0),
+            'qty_box' => (int)($input['qty_box'] ?? 0),
+            'input_by' => $inputBy,
+            'input_at' => date('Y-m-d H:i:s'),
+            'wilayah' => (int)($input['wilayah'] ?? 0),
+            'tim_opname' => (int)($input['tim_opname'] ?? 0),
+            'input_source' => $inputSource,
+        ];
+        $this->db->insert($this->manualOpnameTable, $manualData);
+
+        $opnameData = $this->opname_payload_from_master($masterRow, $input, $inputSource);
+        $this->db->insert($this->opnameTable, $opnameData);
+        $opnameId = (int)$this->db->insert_id();
+        $this->mark_manual_master_done($manualMasterId, $inputBy);
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status() || $opnameId <= 0) {
+            return ['status' => false, 'message' => 'Gagal menyimpan request manual ke hasil opname.'];
+        }
+
+        return [
+            'status' => true,
+            'message' => 'Data manual opname request berhasil disimpan dan status menjadi DONE.',
+            'data' => ['id' => $opnameId, 'input_source' => $inputSource],
+        ];
     }
 
     public function save_manual_opname($masterRow, $input)
@@ -2378,6 +2809,133 @@ class M_Stockopname extends CI_Model
         $requestRow['no_lot'] = (string)($input['no_lot'] ?? $masterRow['no_lot'] ?? '-');
         $input['input_source'] = 'request';
         return $this->save_manual_opname($requestRow, $input);
+    }
+
+    private function insert_zero_master_request_item($masterRow, $input, $inputSource)
+    {
+        if (!$this->ensure_master_input_status_columns()) {
+            return 0;
+        }
+
+        $available = array_map(function ($field) {
+            return $field->name;
+        }, $this->db->field_data($this->masterTable));
+        $allowed = array_flip($available);
+        $data = [
+            'kode_barang' => (string)($masterRow['kode_barang'] ?? ''),
+            'nama_barang' => (string)($masterRow['nama_barang'] ?? ''),
+            'qty' => 0,
+            'qty_box' => 0,
+            'qty_pcs' => 0,
+            'dimensi' => (int)($masterRow['dimensi'] ?? 0),
+            'expired_date' => (string)($input['expired_date'] ?? ''),
+            'no_lot' => (string)($input['no_lot'] ?? '-'),
+            'qrcode' => null,
+            'barcode' => null,
+            'input_source' => $inputSource,
+            'request_status' => 'DONE',
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $insert = [];
+        foreach ($data as $field => $value) {
+            if (isset($allowed[$field])) {
+                $insert[$field] = $value;
+            }
+        }
+
+        if (!$this->db->insert($this->masterTable, $insert)) {
+            return 0;
+        }
+
+        return (int)$this->db->insert_id();
+    }
+
+    public function save_master_request_to_opname($masterRow, $input)
+    {
+        if (!$this->ensure_opname_input_source_column() || !$this->ensure_master_input_status_columns()) {
+            return ['status' => false, 'message' => 'Tabel master atau opname belum siap.'];
+        }
+
+        $inputSource = 'master data request opname';
+        $requestRow = $masterRow;
+        $requestRow['expired_date'] = (string)($input['expired_date'] ?? $masterRow['expired_date'] ?? '');
+        $requestRow['no_lot'] = (string)($input['no_lot'] ?? $masterRow['no_lot'] ?? '-');
+
+        $this->db->trans_start();
+        $masterRequestId = $this->insert_zero_master_request_item($masterRow, [
+            'expired_date' => $requestRow['expired_date'],
+            'no_lot' => $requestRow['no_lot'],
+        ], $inputSource);
+        if ($masterRequestId > 0) {
+            $requestRow['id'] = $masterRequestId;
+        }
+
+        $opnameData = $this->opname_payload_from_master($requestRow, $input, $inputSource);
+        $this->db->insert($this->opnameTable, $opnameData);
+        $opnameId = (int)$this->db->insert_id();
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status() || $masterRequestId <= 0 || $opnameId <= 0) {
+            return ['status' => false, 'message' => 'Gagal menyimpan opname request ke master dan hasil opname.'];
+        }
+
+        return [
+            'status' => true,
+            'message' => 'Opname request berhasil disimpan dan status menjadi DONE.',
+            'data' => ['id' => $opnameId, 'master_id' => $masterRequestId, 'input_source' => $inputSource],
+        ];
+    }
+
+    public function delete_request_item_group($kodeBarang, $expiredDate, $noLot, $actor, $manualMasterId = 0)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        $expiredDate = trim((string)$expiredDate);
+        $noLot = trim((string)$noLot);
+        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '' || !$this->ensure_manual_tables()) {
+            return ['status' => false, 'message' => 'Data request item tidak valid.'];
+        }
+
+        $rows = $this->db
+            ->select('id')
+            ->from($this->manualMasterTable)
+            ->where_in('status', ['Manual Input', 'Request Master Item']);
+        if ((int)$manualMasterId > 0) {
+            $this->db->where('id', (int)$manualMasterId);
+        } else {
+            $this->db
+                ->where('kode_barang', $kodeBarang)
+                ->where('expired_date', $expiredDate)
+                ->where('no_lot', $noLot);
+        }
+        $rows = $this->db->get()->result_array();
+        if (!$rows) {
+            return ['status' => false, 'message' => 'Request item tidak ditemukan.'];
+        }
+
+        $ids = array_map('intval', array_column($rows, 'id'));
+
+        $this->db->trans_start();
+        $update = ['status' => 'REJECTED'];
+        if ($this->db->field_exists('reviewed_by', $this->manualMasterTable)) {
+            $update['reviewed_by'] = (string)$actor;
+        }
+        if ($this->db->field_exists('reviewed_at', $this->manualMasterTable)) {
+            $update['reviewed_at'] = date('Y-m-d H:i:s');
+        }
+        if ($this->db->field_exists('review_note', $this->manualMasterTable)) {
+            $update['review_note'] = 'Request item dihapus dari detail input opname.';
+        }
+        $this->db->where_in('id', $ids)->update($this->manualMasterTable, $update);
+        if ($this->db->table_exists($this->manualOpnameTable) && $this->db->field_exists('manual_master_id', $this->manualOpnameTable)) {
+            $this->db->where_in('manual_master_id', $ids)->delete($this->manualOpnameTable);
+        }
+        $this->db->trans_complete();
+
+        return $this->db->trans_status()
+            ? ['status' => true, 'message' => 'Request item berhasil dihapus.', 'data' => ['deleted' => count($ids)]]
+            : ['status' => false, 'message' => 'Gagal menghapus request item.'];
     }
 
     public function history_input_by($inputBy, $limit = 100)
