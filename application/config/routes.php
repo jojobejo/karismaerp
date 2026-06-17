@@ -399,6 +399,7 @@ $route['sales_order/approval']                      = 'sales/C_SalesOrder/approv
 $route['sales_order/approve']                       = 'sales/C_SalesOrder/approve';
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
+$route['sales_order/refresh_plafon_customers']      = 'sales/C_SalesOrder/refresh_plafon_customers';
 $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
 $route['sales_order/activity_log_so/(:any)']        = 'sales/C_SalesOrder/activity_log_so/$1';  // tambahan
 $route['sales_order/form_faktur/(:any)']            = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';       // faktur dibuat dari Admin SC

@@ -721,14 +721,12 @@
             <div class="modal-body">
                 <p class="mb-2">Tambahkan catatan untuk <b id="returnOpenNoSo">SO</b>.</p>
                 <div class="form-group mb-0">
-                    <label for="returnOpenNote">Catatan Logistik</label>
                     <textarea id="returnOpenNote"
                               class="form-control"
                               rows="4"
                               maxlength="500"
-                              placeholder="Contoh: barang belum siap, stok kurang, atau alasan dikembalikan ke open"
+                              placeholder="Tambah Catatan"
                               required></textarea>
-                    <small class="text-muted">Status akan kembali ke Open atau Partial sesuai kondisi SO, dan catatan ini akan tampil di halaman SO per rute.</small>
                 </div>
             </div>
             <div class="modal-footer">

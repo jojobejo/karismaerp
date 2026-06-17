@@ -109,9 +109,9 @@
                                                 value="<?= $is_edit ? escAttr($so['kd_customer'] ?? '') : '' ?>">
                                             <input type="hidden" name="customer_name" id="customer_name"
                                                 value="<?= $is_edit ? escAttr($so['customer_name']) : '' ?>">
-                                            <small id="customer_plafon_display" class="form-text text-muted">
-                                                Plafon: <strong>-</strong>
-                                            </small>
+                                            <button type="button" id="btn-refresh-plafon" class="btn btn-outline-info btn-sm mt-2">
+                                                <i class="fas fa-sync-alt mr-1"></i> Update Data Customer
+                                            </button>
                                             <div id="customer_validation" class="text-danger small mt-1" style="display:none">
                                                 <i class="fas fa-exclamation-circle"></i> Pilih customer terlebih dahulu.
                                             </div>
@@ -1175,6 +1175,7 @@ document.getElementById('btn-add-row').addEventListener('click', function() {
 
 /* Customer */
 var elCustDisp = document.getElementById('customer_display');
+var btnRefreshPlafon = document.getElementById('btn-refresh-plafon');
 function bukaMdlCustomer() {
     document.getElementById('customer-search').value = '';
     renderCustomers('');
@@ -1182,6 +1183,47 @@ function bukaMdlCustomer() {
 }
 elCustDisp.addEventListener('focus', bukaMdlCustomer);
 elCustDisp.addEventListener('click', bukaMdlCustomer);
+
+if (btnRefreshPlafon) {
+    btnRefreshPlafon.addEventListener('click', function() {
+        salesConfirm({
+            title: 'Update Data Customer?',
+            text: 'Sistem akan mengambil data plafon terbaru dari aplikasi plafon. Proses ini bisa memakan waktu beberapa saat.',
+            icon: 'question',
+            confirmText: 'Update'
+        }).then(function(ok) {
+            if (!ok) return;
+
+            var oldHtml = btnRefreshPlafon.innerHTML;
+            btnRefreshPlafon.disabled = true;
+            btnRefreshPlafon.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Mengambil data...';
+
+            $.ajax({
+                url: BASE_URL + 'sales_order/refresh_plafon_customers',
+                method: 'POST',
+                dataType: 'json',
+                timeout: 180000
+            }).done(function(res) {
+                if (res && res.status === 'ok') {
+                    salesToast('success', (res.message || 'Data customer berhasil diperbarui.') + ' Total: ' + (res.count || 0));
+                    setTimeout(function(){ window.location.reload(); }, 900);
+                    return;
+                }
+
+                salesToast('error', (res && res.message) ? res.message : 'Gagal update data customer.');
+            }).fail(function(xhr) {
+                var message = 'Gagal update data customer.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                salesToast('error', message);
+            }).always(function() {
+                btnRefreshPlafon.disabled = false;
+                btnRefreshPlafon.innerHTML = oldHtml;
+            });
+        });
+    });
+}
 
 function focusCustomerSearch() {
     [0, 80, 180, 350].forEach(function(delay) {

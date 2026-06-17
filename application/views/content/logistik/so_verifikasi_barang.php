@@ -213,9 +213,6 @@
                                 <a href="<?= base_url('logistik/so_siap_loading?rute=' . rawurlencode($so->kd_rute)) ?>" class="btn btn-secondary">
                                     <i class="fas fa-times mr-1"></i>Batal
                                 </a>
-                                <button type="button" class="btn btn-outline-primary" id="btnSetAllSiap">
-                                    <i class="fas fa-check-double mr-1"></i>Semua Siap
-                                </button>
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-save mr-1"></i>Simpan Verifikasi
                                 </button>
@@ -268,12 +265,6 @@ $(document).ready(function () {
     }
 
     $('.qty-siap').on('input change', recalc);
-    $('#btnSetAllSiap').on('click', function () {
-        $('.qty-siap').each(function () {
-            $(this).val($(this).data('outstanding'));
-        });
-        recalc();
-    });
     $('#formVerifikasiBarang').on('submit', function () {
         recalc();
     });

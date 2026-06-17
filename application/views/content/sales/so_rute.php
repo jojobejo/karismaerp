@@ -138,6 +138,16 @@
     .route-bulk-bar select {
         max-width: 120px;
     }
+    .route-move-bar {
+        flex-wrap: nowrap;
+    }
+    .route-move-bar select {
+        flex: 0 0 130px;
+        max-width: 130px;
+    }
+    .route-move-bar .btn {
+        white-space: nowrap;
+    }
     .route-toolbar {
         align-items: center;
         display: flex;
@@ -419,7 +429,7 @@
                                     <form id="bulkMoveForm"
                                           method="post"
                                           action="<?= base_url('sales_order/bulk_update_so_rute') ?>"
-                                          class="route-bulk-bar">
+                                          class="route-bulk-bar route-move-bar">
                                         <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
                                         <select name="kd_rute" class="form-control form-control-sm" required>
                                             <option value="">Pilih rute</option>

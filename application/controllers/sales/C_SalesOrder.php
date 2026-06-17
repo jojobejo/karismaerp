@@ -3,6 +3,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class C_SalesOrder extends CI_Controller
 {
+    private $plafon_fetch_completed = true;
+
     public function __construct()
     {
         parent::__construct();
@@ -91,12 +93,13 @@ class C_SalesOrder extends CI_Controller
         return $customers;
     }
 
-    private function _getPlafonCustomerMap()
+    private function _getPlafonCustomerMap($force_refresh = false)
     {
+        $this->plafon_fetch_completed = true;
         $cache_file = APPPATH . 'cache/plafon_customers.json';
         $cache_ttl = (int)($this->config->item('plafon_api_cache_ttl') ?: 60);
 
-        if (is_file($cache_file) && (time() - filemtime($cache_file)) <= $cache_ttl) {
+        if (!$force_refresh && is_file($cache_file) && (time() - filemtime($cache_file)) <= $cache_ttl) {
             $cached = json_decode((string)file_get_contents($cache_file), true);
             if (is_array($cached)) {
                 return $cached;
@@ -107,13 +110,16 @@ class C_SalesOrder extends CI_Controller
         $api_key = (string)$this->config->item('plafon_api_key');
 
         if ($base_url === '' || $api_key === '' || !function_exists('curl_init')) {
+            $this->plafon_fetch_completed = false;
             return [];
         }
 
         $map = [];
         $page = 1;
+        $last_page = 1;
         $max_pages = max(1, (int)($this->config->item('plafon_api_max_pages') ?: 100));
         $timeout = max(1, (int)($this->config->item('plafon_api_timeout') ?: 5));
+        $completed = true;
 
         do {
             $url = $base_url . '/api/customers?status=active&per_page=100&page=' . $page;
@@ -133,11 +139,13 @@ class C_SalesOrder extends CI_Controller
             curl_close($ch);
 
             if ($body === false || $http_code < 200 || $http_code >= 300) {
-                return $map;
+                $completed = false;
+                break;
             }
 
             $payload = json_decode($body, true);
             if (!is_array($payload) || empty($payload['data']) || !is_array($payload['data'])) {
+                $completed = false;
                 break;
             }
 
@@ -159,11 +167,44 @@ class C_SalesOrder extends CI_Controller
             $page++;
         } while ($page <= $last_page && $page <= $max_pages);
 
-        if (!empty($map)) {
-            @file_put_contents($cache_file, json_encode($map));
+        if ($page <= $last_page) {
+            $completed = false;
+        }
+
+        $this->plafon_fetch_completed = $completed;
+
+        if ($completed && !empty($map)) {
+            @file_put_contents($cache_file, json_encode($map), LOCK_EX);
         }
 
         return $map;
+    }
+
+    public function refresh_plafon_customers()
+    {
+        if (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(180);
+        }
+
+        $map = $this->_getPlafonCustomerMap(true);
+        if (empty($map) || !$this->plafon_fetch_completed) {
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Gagal mengambil data plafon customer dari API.',
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'ok',
+            'message' => 'Data plafon customer berhasil diperbarui.',
+            'count' => count($map),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     private function _validateCustomerForCurrentSales($kd_customer, $redirect_url)
