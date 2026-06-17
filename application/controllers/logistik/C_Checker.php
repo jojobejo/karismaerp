@@ -87,6 +87,46 @@ class C_Checker extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function analisa_loading()
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+
+        $tanggal_awal  = $this->input->get('tanggal_awal', true) ?: date('Y-m-01');
+        $tanggal_akhir = $this->input->get('tanggal_akhir', true) ?: date('Y-m-d');
+        $nik_checker   = $this->input->get('nik_checker', true) ?: '';
+        $rute          = $this->input->get('rute', true) ?: '';
+        $mode          = $this->input->get('mode', true) ?: 'rute';
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_awal)) {
+            $tanggal_awal = date('Y-m-01');
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_akhir)) {
+            $tanggal_akhir = date('Y-m-d');
+        }
+        if (strtotime($tanggal_awal) > strtotime($tanggal_akhir)) {
+            [$tanggal_awal, $tanggal_akhir] = [$tanggal_akhir, $tanggal_awal];
+        }
+        if (!in_array($mode, ['rute', 'checker'], true)) {
+            $mode = 'rute';
+        }
+
+        $data['page_title'] = 'KARISMA - Analisa Loading';
+        $data['role']       = $this->role();
+        $data['tanggal_awal'] = $tanggal_awal;
+        $data['tanggal_akhir'] = $tanggal_akhir;
+        $data['nik_checker'] = $nik_checker;
+        $data['rute'] = $rute;
+        $data['mode'] = $mode;
+        $data['list_checker'] = $this->M_Checker->get_list_checker();
+        $data['list_rute'] = $this->M_Checker->get_list_rute_loading();
+        $data['avg_loading_rute'] = $this->M_Checker->get_avg_loading_per_rute($tanggal_awal, $tanggal_akhir, $nik_checker, $rute);
+        $data['avg_loading_rute_checker'] = $this->M_Checker->get_avg_loading_per_rute_checker($tanggal_awal, $tanggal_akhir, $nik_checker, $rute);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/analisa_loading', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function arsip()
     {
         if (!$this->canView()) { show_error('Akses ditolak', 403); }

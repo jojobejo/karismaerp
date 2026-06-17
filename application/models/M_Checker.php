@@ -251,6 +251,133 @@ class M_Checker extends CI_Model
     }
 
     public function create_lk($data)      { return $this->db->insert('tb_loading_lk', $data); }
+
+    public function get_list_rute_loading()
+    {
+        return $this->db->query("
+            SELECT DISTINCT keterangan AS rute
+            FROM (
+                SELECT keterangan FROM tb_loading_kk WHERE keterangan IS NOT NULL AND keterangan != ''
+                UNION
+                SELECT keterangan FROM tb_loading_lk WHERE keterangan IS NOT NULL AND keterangan != ''
+            ) x
+            ORDER BY rute ASC
+        ")->result_array();
+    }
+
+    public function get_avg_loading_per_rute($tanggal_awal = null, $tanggal_akhir = null, $nik_checker = null, $rute = null)
+    {
+        $tanggal_awal  = $tanggal_awal ?: date('Y-m-01');
+        $tanggal_akhir = $tanggal_akhir ?: date('Y-m-d');
+        $nik_checker   = $nik_checker ?: '';
+        $rute          = $rute ?: '';
+
+        return $this->db->query("
+            SELECT
+                jenis,
+                rute,
+                COUNT(*) AS total_selesai,
+                ROUND(AVG(durasi_detik)) AS avg_detik,
+                MIN(durasi_detik) AS min_detik,
+                MAX(durasi_detik) AS max_detik
+            FROM (
+                SELECT
+                    'KK' AS jenis,
+                    keterangan AS rute,
+                    GREATEST(0, TIMESTAMPDIFF(SECOND, waktu_mulai, waktu_selesai) - IFNULL(total_pause_secs, 0)) AS durasi_detik
+                FROM tb_loading_kk
+                WHERE status = 'DONE'
+                  AND waktu_mulai IS NOT NULL
+                  AND waktu_selesai IS NOT NULL
+                  AND DATE(waktu_selesai) BETWEEN ? AND ?
+                  AND keterangan IS NOT NULL
+                  AND keterangan != ''
+                  AND (? = '' OR nik_checker = ?)
+                  AND (? = '' OR keterangan = ?)
+                UNION ALL
+                SELECT
+                    'LK' AS jenis,
+                    keterangan AS rute,
+                    GREATEST(0, TIMESTAMPDIFF(SECOND, waktu_mulai, waktu_selesai) - IFNULL(total_pause_secs, 0)) AS durasi_detik
+                FROM tb_loading_lk
+                WHERE status = 'DONE'
+                  AND waktu_mulai IS NOT NULL
+                  AND waktu_selesai IS NOT NULL
+                  AND DATE(waktu_selesai) BETWEEN ? AND ?
+                  AND keterangan IS NOT NULL
+                  AND keterangan != ''
+                  AND (? = '' OR nik_checker = ?)
+                  AND (? = '' OR keterangan = ?)
+            ) x
+            GROUP BY jenis, rute
+            ORDER BY jenis ASC, avg_detik ASC, rute ASC
+        ", [
+            $tanggal_awal, $tanggal_akhir, $nik_checker, $nik_checker, $rute, $rute,
+            $tanggal_awal, $tanggal_akhir, $nik_checker, $nik_checker, $rute, $rute,
+        ])->result_array();
+    }
+
+    public function get_avg_loading_per_rute_checker($tanggal_awal = null, $tanggal_akhir = null, $nik_checker = null, $rute = null)
+    {
+        $tanggal_awal  = $tanggal_awal ?: date('Y-m-01');
+        $tanggal_akhir = $tanggal_akhir ?: date('Y-m-d');
+        $nik_checker   = $nik_checker ?: '';
+        $rute          = $rute ?: '';
+
+        return $this->db->query("
+            SELECT
+                jenis,
+                rute,
+                nik_checker,
+                nm_checker,
+                COUNT(*) AS total_selesai,
+                ROUND(AVG(durasi_detik)) AS avg_detik,
+                MIN(durasi_detik) AS min_detik,
+                MAX(durasi_detik) AS max_detik
+            FROM (
+                SELECT
+                    'KK' AS jenis,
+                    keterangan AS rute,
+                    nik_checker,
+                    nm_checker,
+                    GREATEST(0, TIMESTAMPDIFF(SECOND, waktu_mulai, waktu_selesai) - IFNULL(total_pause_secs, 0)) AS durasi_detik
+                FROM tb_loading_kk
+                WHERE status = 'DONE'
+                  AND waktu_mulai IS NOT NULL
+                  AND waktu_selesai IS NOT NULL
+                  AND DATE(waktu_selesai) BETWEEN ? AND ?
+                  AND keterangan IS NOT NULL
+                  AND keterangan != ''
+                  AND nm_checker IS NOT NULL
+                  AND nm_checker != ''
+                  AND (? = '' OR nik_checker = ?)
+                  AND (? = '' OR keterangan = ?)
+                UNION ALL
+                SELECT
+                    'LK' AS jenis,
+                    keterangan AS rute,
+                    nik_checker,
+                    nm_checker,
+                    GREATEST(0, TIMESTAMPDIFF(SECOND, waktu_mulai, waktu_selesai) - IFNULL(total_pause_secs, 0)) AS durasi_detik
+                FROM tb_loading_lk
+                WHERE status = 'DONE'
+                  AND waktu_mulai IS NOT NULL
+                  AND waktu_selesai IS NOT NULL
+                  AND DATE(waktu_selesai) BETWEEN ? AND ?
+                  AND keterangan IS NOT NULL
+                  AND keterangan != ''
+                  AND nm_checker IS NOT NULL
+                  AND nm_checker != ''
+                  AND (? = '' OR nik_checker = ?)
+                  AND (? = '' OR keterangan = ?)
+            ) x
+            GROUP BY jenis, rute, nik_checker, nm_checker
+            ORDER BY jenis ASC, rute ASC, avg_detik ASC, nm_checker ASC
+        ", [
+            $tanggal_awal, $tanggal_akhir, $nik_checker, $nik_checker, $rute, $rute,
+            $tanggal_awal, $tanggal_akhir, $nik_checker, $nik_checker, $rute, $rute,
+        ])->result_array();
+    }
     
     public function update_lk($id, $data)
     {

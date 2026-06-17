@@ -90,6 +90,11 @@ tr.row-pending { background:#fafafa !important; }
                             <i class="fas fa-box-archive mr-1"></i> Archive Aktivitas Hari Ini
                         </button>
                     </div>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/analisa_loading') ?>" class="btn btn-dark">
+                            <i class="fas fa-stopwatch mr-1"></i> Analisa Loading
+                        </a>
+                    </div>
                     <?php endif; ?>
                     <?php if ($role === 'SALESCK') : ?>
                     <div class="col-auto">
@@ -344,7 +349,6 @@ tr.row-pending { background:#fafafa !important; }
                         </div>
                     </div>
                 </div>
-
 
                 <!-- ============================================================
                     TABEL BONGKARAN
