@@ -77,6 +77,12 @@ class C_Stockopname extends CI_Controller
         return str_replace(',', '.', trim((string)$value));
     }
 
+    private function valid_date($value)
+    {
+        $date = DateTime::createFromFormat('Y-m-d', (string)$value);
+        return $date && $date->format('Y-m-d') === $value;
+    }
+
     private function clean_asset_filename($value)
     {
         $value = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim((string)$value));
@@ -201,11 +207,14 @@ class C_Stockopname extends CI_Controller
     public function monitoring_activity_log()
     {
         $wilayah = trim((string)$this->input->get('wilayah', true));
+        $tim = (int)$this->input->get('tim', true);
+        $tim = in_array($tim, [1, 2], true) ? $tim : 0;
 
         $data['page_title'] = 'KARISMA ERP - Log Aktifitas Stock Opname';
         $data['selected_wilayah'] = $wilayah;
+        $data['selected_tim'] = $tim;
         $data['wilayah_options'] = $this->stockopname->monitoring_activity_wilayah_options();
-        $data['activity_logs'] = $this->stockopname->monitoring_activity_log($wilayah, 300);
+        $data['activity_logs'] = $this->stockopname->monitoring_activity_log($wilayah, $tim, 300);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_activity_log.php', $data);
@@ -828,6 +837,56 @@ class C_Stockopname extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function master_barang_catalog()
+    {
+        $data['page_title'] = 'KARISMA ERP - Master Barang';
+        $data['page_heading'] = 'Master Barang';
+        $data['next_kode_barang_system'] = $this->stockopname->next_master_barang_system_code();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_master_barang_catalog.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_master_barang_catalog_list()
+    {
+        $kodeBarang = trim((string)$this->input->get('kd_barang', true));
+        $this->json(true, 'Data master barang berhasil dimuat.', $this->stockopname->get_master_barang_catalog_list(100, $kodeBarang));
+    }
+
+    public function ajax_create_master_barang_catalog()
+    {
+        $input = $this->post();
+        $kodeBarang = trim((string)($input['kd_barang'] ?? ''));
+        $namaBarang = trim((string)($input['nama_barang'] ?? ''));
+        if ($kodeBarang === '' || strlen($kodeBarang) > 25) {
+            return $this->json(false, 'Kode barang wajib diisi, maksimal 25 karakter.');
+        }
+        if ($namaBarang === '') {
+            return $this->json(false, 'Nama barang wajib diisi.');
+        }
+
+        foreach (['p' => 'Panjang', 'l' => 'Lebar', 't' => 'Tinggi'] as $field => $label) {
+            $value = trim((string)($input[$field] ?? ''));
+            if ($value === '' || !ctype_digit($value) || (int)$value <= 0) {
+                return $this->json(false, $label . ' harus berupa bilangan bulat lebih dari 0.');
+            }
+        }
+
+        $saved = $this->stockopname->create_master_barang_catalog([
+            'kd_barang' => $kodeBarang,
+            'nama_barang' => $namaBarang,
+            'p' => (int)$input['p'],
+            'l' => (int)$input['l'],
+            't' => (int)$input['t'],
+        ]);
+        if (empty($saved['status'])) {
+            return $this->json(false, $saved['message'] ?? 'Gagal menyimpan master barang.');
+        }
+
+        $this->json(true, $saved['message'], $saved['data']);
+    }
+
     public function master_barang_qty_zero()
     {
         $data['page_title'] = 'KARISMA ERP - Master Opname Qty 0';
@@ -953,6 +1012,58 @@ class C_Stockopname extends CI_Controller
         $this->json(true, 'Master barang berhasil diperbarui.', [
             'id' => (int)$id,
         ]);
+    }
+
+    public function ajax_master_barang_source_search()
+    {
+        $keyword = trim((string)$this->input->get_post('keyword', true));
+        if (mb_strlen($keyword) < 2) {
+            return $this->json(true, 'Masukkan minimal 2 karakter untuk mencari barang.', []);
+        }
+
+        $this->json(true, 'Data barang berhasil ditemukan.', $this->stockopname->search_master_barang_source($keyword));
+    }
+
+    public function ajax_create_master_barang()
+    {
+        $input = $this->post();
+        $sourceId = $input['source_id'] ?? '';
+        if (!ctype_digit((string)$sourceId) || (int)$sourceId <= 0) {
+            return $this->json(false, 'Pilih barang dari hasil pencarian terlebih dahulu.');
+        }
+
+        $expiredDate = trim((string)($input['expired_date'] ?? ''));
+        $noLot = trim((string)($input['no_lot'] ?? ''));
+        if (!$this->valid_date($expiredDate)) {
+            return $this->json(false, 'Expired date wajib diisi dengan format tanggal yang valid.');
+        }
+        if ($noLot === '') {
+            return $this->json(false, 'No. lot wajib diisi.');
+        }
+
+        $qtyPcs = $input['qty_pcs'] ?? '';
+        $qtyBox = $input['qty_box'] ?? '';
+        foreach (['qty_pcs' => $qtyPcs, 'qty_box' => $qtyBox] as $field => $value) {
+            if ($value === '' || !ctype_digit((string)$value)) {
+                return $this->json(false, ($field === 'qty_pcs' ? 'Qty pcs' : 'Qty box') . ' harus berupa bilangan bulat 0 atau lebih.');
+            }
+        }
+        if ((int)$qtyPcs + (int)$qtyBox <= 0) {
+            return $this->json(false, 'Isi minimal Qty pcs atau Qty box.');
+        }
+
+        $this->stockopname->ensure_qrcode_columns();
+        $saved = $this->stockopname->create_master_barang_from_source((int)$sourceId, [
+            'expired_date' => $expiredDate,
+            'no_lot' => $noLot,
+            'qty_pcs' => (int)$qtyPcs,
+            'qty_box' => (int)$qtyBox,
+        ]);
+        if (empty($saved['status'])) {
+            return $this->json(false, $saved['message'] ?? 'Gagal menambahkan master opname.');
+        }
+
+        $this->json(true, $saved['message'], $saved['data']);
     }
 
     private function ensure_qrcode_ready()

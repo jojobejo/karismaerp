@@ -189,7 +189,7 @@ window.addEventListener('load', function () {
             {data: 'id', width: '50px'},
             {data: 'kode_barang'},
             {data: 'nama_barang'},
-            {data: 'expired_date'},
+            {data: 'expired_date', render: formatExpiredDate},
             {data: 'no_lot'},
             {data: 'qty_buku', className: 'text-right', render: formatNumber},
             {data: 'qty_fisik', className: 'text-right', render: formatNumber},
@@ -203,6 +203,12 @@ window.addEventListener('load', function () {
     function formatNumber(value) {
         value = parseInt(value || 0, 10);
         return value.toLocaleString('id-ID');
+    }
+
+    function formatExpiredDate(value) {
+        if (!value) return '-';
+        var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
     }
 
     function renderSelisih(value) {

@@ -31,11 +31,17 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                         <a href="<?= base_url('admin/stockopname/input') ?>" class="btn btn-success btn-sm">
                             <i class="fas fa-mobile-alt"></i> Input Opname
                         </a>
+                        <a href="<?= base_url('admin/stockopname/master_barang') ?>" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-cubes"></i> Master Barang
+                        </a>
                         <?php if (!$showQtyZeroWidget) : ?>
                             <a href="<?= base_url('admin/stockopname/master_opname') ?>" class="btn btn-outline-primary btn-sm">
                                 <i class="fas fa-boxes"></i> Qty Aktif
                             </a>
                         <?php endif; ?>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnTambahMaster" data-toggle="modal" data-target="#modalTambahMaster">
+                            <i class="fas fa-plus"></i> Tambah Master
+                        </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btnRefreshMasterBarang">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
@@ -228,6 +234,41 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
         </section>
     </div>
 
+    <div class="modal fade" id="modalTambahMaster" tabindex="-1" role="dialog" aria-labelledby="modalTambahMasterTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <form class="modal-content" id="formTambahMaster" autocomplete="off">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTambahMasterTitle"><i class="fas fa-plus-circle mr-1"></i> Tambah Master Opname</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group position-relative">
+                        <label for="masterSourceSearch">Cari barang</label>
+                        <input type="search" class="form-control" id="masterSourceSearch" placeholder="Ketik nama atau kode barang (minimal 2 karakter)">
+                        <div class="list-group master-source-result" id="masterSourceResult" style="display:none"></div>
+                        <small class="form-text text-muted">Sumber data: <code>tb_master_barang_all</code>.</small>
+                    </div>
+                    <input type="hidden" name="source_id" id="masterSourceId">
+                    <div class="alert alert-light border mb-3" id="masterSourceSelected">Pilih barang dari hasil pencarian untuk mengisi data dan dimensi.</div>
+                    <div class="row">
+                        <div class="col-md-6 form-group"><label>Kode barang</label><input type="text" class="form-control" id="masterKodeBarang" readonly></div>
+                        <div class="col-md-6 form-group"><label>Dimensi</label><input type="text" class="form-control" id="masterDimensi" readonly placeholder="P × L × T"></div>
+                        <div class="col-12 form-group"><label>Nama barang</label><input type="text" class="form-control" id="masterNamaBarang" readonly></div>
+                        <div class="col-md-4 form-group"><label for="masterExpiredDate">Expired date</label><input type="date" class="form-control" name="expired_date" id="masterExpiredDate" required></div>
+                        <div class="col-md-4 form-group"><label for="masterNoLot">No. lot</label><input type="text" class="form-control" name="no_lot" id="masterNoLot" maxlength="100" required></div>
+                        <div class="col-md-2 form-group"><label for="masterQtyPcs">Qty pcs</label><input type="number" class="form-control" name="qty_pcs" id="masterQtyPcs" min="0" step="1" value="0" required></div>
+                        <div class="col-md-2 form-group"><label for="masterQtyBox">Qty box</label><input type="number" class="form-control" name="qty_box" id="masterQtyBox" min="0" step="1" value="0" required></div>
+                    </div>
+                    <small class="text-muted">Qty buku dihitung otomatis: (Qty box × dimensi) + Qty pcs.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary" id="btnSimpanMaster"><i class="fas fa-save"></i> Simpan Master</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <footer class="main-footer">
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.
@@ -268,7 +309,7 @@ window.addEventListener('load', function () {
         },
         columns: [
             {data: 'nama_barang'},
-            {data: 'expired_date'},
+            {data: 'expired_date', render: function (value) { return formatExpiredDate(value); }},
             {data: 'no_lot'},
             {data: 'qty', render: function (value) { return formatNumber(value); }},
             {data: 'qty_pcs', render: function (value) { return formatNumber(value); }},
@@ -394,6 +435,14 @@ window.addEventListener('load', function () {
         return text === '' ? '-' : text;
     }
 
+    function formatExpiredDate(value) {
+        value = displayValue(value);
+        if (value === '-') { return value; }
+
+        var match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
+    }
+
     function resetPreviewCard(message) {
         $('#previewAssetCard').html('<div class="asset-card-empty">' + escapeHtml(message || 'Pilih item dari tabel untuk melihat kartu stock') + '</div>');
         $('#previewItemLabel').text('Pilih barang');
@@ -429,7 +478,7 @@ window.addEventListener('load', function () {
                     '<div class="asset-card-description-text">' + escapeHtml(displayValue(item.nama_barang)) + '</div>' +
                     '<div class="asset-card-meta">' +
                         '<div>' + escapeHtml(displayValue(item.kode_barang)) + '</div>' +
-                        '<div>' + escapeHtml(displayValue(item.expired_date)) + ' | ' + escapeHtml(displayValue(item.no_lot)) + '</div>' +
+                        '<div>' + escapeHtml(formatExpiredDate(item.expired_date)) + ' | ' + escapeHtml(displayValue(item.no_lot)) + '</div>' +
                     '</div>' +
                     '<div class="asset-card-qr">' + qrHtml + '</div>' +
                 '</div>' +
@@ -924,6 +973,118 @@ window.addEventListener('load', function () {
                 $button.prop('disabled', false).html(original);
             }
         });
+    });
+
+    var masterSearchTimer = null;
+    var masterSearchRequest = null;
+    var masterSearchItems = {};
+
+    function resetMasterSourceSelection() {
+        $('#masterSourceId,#masterKodeBarang,#masterNamaBarang,#masterDimensi').val('');
+        $('#masterSourceSelected').removeClass('alert-success').addClass('alert-light')
+            .text('Pilih barang dari hasil pencarian untuk mengisi data dan dimensi.');
+    }
+
+    function hideMasterSearchResults() {
+        $('#masterSourceResult').empty().hide();
+    }
+
+    function showMasterSearchResults(items) {
+        masterSearchItems = {};
+        if (!items || !items.length) {
+            $('#masterSourceResult').html('<div class="list-group-item text-muted">Barang tidak ditemukan.</div>').show();
+            return;
+        }
+        var html = '';
+        items.forEach(function (item) {
+            masterSearchItems[String(item.id)] = item;
+            html += '<button type="button" class="list-group-item list-group-item-action btn-select-master-source" data-id="' + escapeHtml(item.id) + '">' +
+                '<strong>' + escapeHtml(item.nama_barang) + '</strong><br><small>' + escapeHtml(item.kd_barang || item.kode_barang_system || '-') + ' &middot; P×L×T: ' + escapeHtml(item.p) + '×' + escapeHtml(item.l) + '×' + escapeHtml(item.t) + '</small></button>';
+        });
+        $('#masterSourceResult').html(html).show();
+    }
+
+    $('#masterSourceSearch').on('input', function () {
+        var keyword = $.trim($(this).val());
+        resetMasterSourceSelection();
+        window.clearTimeout(masterSearchTimer);
+        if (masterSearchRequest) {
+            masterSearchRequest.abort();
+        }
+        if (keyword.length < 2) {
+            hideMasterSearchResults();
+            return;
+        }
+        masterSearchTimer = window.setTimeout(function () {
+            masterSearchRequest = $.ajax({
+                url: '<?= base_url($routeBase . '/item-search') ?>',
+                type: 'GET',
+                dataType: 'json',
+                data: {keyword: keyword},
+                success: function (res) {
+                    if (!res.status) {
+                        hideMasterSearchResults();
+                        toast('error', res.message || 'Gagal mencari barang');
+                        return;
+                    }
+                    showMasterSearchResults(res.data || []);
+                },
+                error: function (xhr, status) {
+                    if (status !== 'abort') {
+                        toast('error', ajaxMessage(xhr, 'Server gagal mencari barang'));
+                    }
+                },
+                complete: function () { masterSearchRequest = null; }
+            });
+        }, 300);
+    });
+
+    $('#masterSourceResult').on('click', '.btn-select-master-source', function () {
+        var item = masterSearchItems[String($(this).data('id'))];
+        if (!item) { return; }
+        var dimension = (parseInt(item.p || 0, 10) * parseInt(item.l || 0, 10) * parseInt(item.t || 0, 10));
+        $('#masterSourceId').val(item.id);
+        $('#masterKodeBarang').val(item.kd_barang || item.kode_barang_system || '');
+        $('#masterNamaBarang').val(item.nama_barang || '');
+        $('#masterDimensi').val((item.p || 0) + ' × ' + (item.l || 0) + ' × ' + (item.t || 0) + ' = ' + dimension);
+        $('#masterSourceSelected').removeClass('alert-light').addClass('alert-success')
+            .text('Barang dipilih. Dimensi akan dihitung ulang oleh server saat disimpan.');
+        hideMasterSearchResults();
+    });
+
+    $('#formTambahMaster').on('submit', function (e) {
+        e.preventDefault();
+        if (!$('#masterSourceId').val()) {
+            toast('warning', 'Pilih barang dari hasil pencarian terlebih dahulu');
+            return;
+        }
+        var $button = $('#btnSimpanMaster');
+        var original = $button.html();
+        $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Menyimpan');
+        $.ajax({
+            url: '<?= base_url($routeBase . '/create') ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: $(this).serialize(),
+            success: function (res) {
+                if (!res.status) {
+                    toast('error', res.message || 'Gagal menyimpan master opname');
+                    return;
+                }
+                $('#modalTambahMaster').modal('hide');
+                table.ajax.reload(null, false);
+                loadSummary(false);
+                toast('success', res.message || 'Master opname berhasil ditambahkan');
+            },
+            error: function (xhr) { toast('error', ajaxMessage(xhr, 'Server gagal menyimpan master opname')); },
+            complete: function () { $button.prop('disabled', false).html(original); }
+        });
+    });
+
+    $('#modalTambahMaster').on('hidden.bs.modal', function () {
+        $('#formTambahMaster')[0].reset();
+        hideMasterSearchResults();
+        resetMasterSourceSelection();
     });
 
     loadSummary(false);

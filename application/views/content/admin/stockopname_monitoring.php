@@ -16,6 +16,7 @@
     $team1 = $monitoring_summary['team_1'] ?? [];
     $team2 = $monitoring_summary['team_2'] ?? [];
     $input_source = $monitoring_summary['input_source'] ?? [];
+    $wilayah_input = $monitoring_summary['wilayah_input'] ?? [];
     $manual_input = $input_source['manual'] ?? [];
     $request_input = $input_source['request'] ?? [];
     $so_metric = function ($team, $group, $key, $default = 0) {
@@ -87,6 +88,7 @@
                     .om-source-last{font-size:12px;color:#64748b;margin-top:10px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.progress{height:8px;border-radius:99px}
                     .om-action-btn{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}.om-action-btn i{margin-right:0}
+                    .om-wilayah-table th{white-space:nowrap;font-size:11px;text-transform:uppercase;color:#64748b}.om-wilayah-table td{white-space:nowrap}
                     @media(min-width:1200px){.om-log{max-height:610px}}
                     @media(max-width:992px){.om-result-grid{grid-template-columns:1fr}}
                     @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
@@ -226,6 +228,67 @@
                     <div class="col-12 mb-3">
                         <div class="om-panel">
                             <div class="om-panel-header">
+                                <div>
+                                    <h2 class="om-title">Monitoring Input Opname per Wilayah</h2>
+                                    <div class="om-muted">Rekap seluruh input dari Tim 1 dan Tim 2.</div>
+                                </div>
+                                <select id="wilayahTeamFilter" class="custom-select custom-select-sm" style="width:160px">
+                                    <option value="">Semua Tim</option>
+                                    <option value="1">Input Tim 1</option>
+                                    <option value="2">Input Tim 2</option>
+                                </select>
+                            </div>
+                            <div class="table-responsive p-3">
+                                <table class="table table-sm table-bordered table-hover mb-0 om-wilayah-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Wilayah</th>
+                                            <th class="text-right">Input Tim 1</th>
+                                            <th class="text-right">Input Tim 2</th>
+                                            <th class="text-right">Total Input</th>
+                                            <th class="text-right">Barang</th>
+                                            <th class="text-right">Qty Tim 1</th>
+                                            <th class="text-right">Qty Tim 2</th>
+                                            <th class="text-right">Total Qty</th>
+                                            <th class="text-right">User</th>
+                                            <th>Input Terakhir</th>
+                                            <th class="text-center">Detail</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wilayahInputSummary">
+                                        <?php if (empty($wilayah_input)) : ?>
+                                            <tr><td colspan="11" class="text-center om-muted py-3">Belum ada input opname per wilayah.</td></tr>
+                                        <?php endif ?>
+                                        <?php foreach ($wilayah_input as $row) : ?>
+                                            <tr>
+                                                <td><span class="om-badge tim_1">Wilayah <?= $so_e($row['wilayah'] ?? '-') ?></span></td>
+                                                <td class="text-right"><?= number_format((int)($row['input_tim_1'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format((int)($row['input_tim_2'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right font-weight-bold"><?= number_format((int)($row['total_input'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format((int)($row['total_barang'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format((int)($row['qty_tim_1'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format((int)($row['qty_tim_2'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right font-weight-bold"><?= number_format((int)($row['total_qty'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-right"><?= number_format((int)($row['total_user'] ?? 0), 0, ',', '.') ?></td>
+                                                <td><?= $so_e($row['last_input'] ?? '-') ?></td>
+                                                <td class="text-center">
+                                                    <a href="<?= base_url('admin/stockopname/monitoring/activity-log?wilayah=' . rawurlencode((string)($row['wilayah'] ?? ''))) ?>" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-list"></i> Detail
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="om-panel">
+                            <div class="om-panel-header">
                                 <h2 class="om-title">Compare Stock Buku vs Stock Opname - All Barang</h2>
                                 <div>
                                     <select class="custom-select custom-select-sm js-status-filter" data-target="#tableCompareAll" style="width:150px">
@@ -302,8 +365,15 @@
 
 <script>
 $(function () {
+    var wilayahInputRows = <?= json_encode(array_values($wilayah_input), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
     function numberId(value) {
         return new Intl.NumberFormat('id-ID').format(parseInt(value || 0, 10));
+    }
+
+    function formatExpiredDate(value) {
+        if (!value) { return '-'; }
+        var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
     }
 
     function percentId(value) {
@@ -373,7 +443,7 @@ $(function () {
         },
         columns: [
             {data: 'nama_barang'},
-            {data: 'expired_date', defaultContent: '-'},
+            {data: 'expired_date', defaultContent: '-', render: function (value) { return formatExpiredDate(value); }},
             {data: 'no_lot', defaultContent: '-'},
             {data: 'qty_buku', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
             {data: 'qty_tim_1', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
@@ -404,6 +474,36 @@ $(function () {
         });
 
         renderInputSourceSummary(data.input_source || {});
+        wilayahInputRows = data.wilayah_input || [];
+        renderWilayahInputSummary(wilayahInputRows);
+    }
+
+    function renderWilayahInputSummary(rows) {
+        var target = $('#wilayahInputSummary');
+        var selectedTeam = parseInt($('#wilayahTeamFilter').val() || '0', 10);
+        rows = (rows || []).filter(function (row) {
+            return selectedTeam === 0 || parseInt(row['input_tim_' + selectedTeam] || 0, 10) > 0;
+        });
+        if (!rows || rows.length === 0) {
+            target.html('<tr><td colspan="11" class="text-center om-muted py-3">Belum ada input untuk tim pada filter ini.</td></tr>');
+            return;
+        }
+
+        target.html(rows.map(function (row) {
+            return '<tr>' +
+                '<td><span class="om-badge tim_1">Wilayah ' + escapeHtml(row.wilayah || '-') + '</span></td>' +
+                '<td class="text-right">' + numberId(row.input_tim_1) + '</td>' +
+                '<td class="text-right">' + numberId(row.input_tim_2) + '</td>' +
+                '<td class="text-right font-weight-bold">' + numberId(row.total_input) + '</td>' +
+                '<td class="text-right">' + numberId(row.total_barang) + '</td>' +
+                '<td class="text-right">' + numberId(row.qty_tim_1) + '</td>' +
+                '<td class="text-right">' + numberId(row.qty_tim_2) + '</td>' +
+                '<td class="text-right font-weight-bold">' + numberId(row.total_qty) + '</td>' +
+                '<td class="text-right">' + numberId(row.total_user) + '</td>' +
+                '<td>' + escapeHtml(row.last_input || '-') + '</td>' +
+                '<td class="text-center"><a href="<?= base_url('admin/stockopname/monitoring/activity-log') ?>?wilayah=' + encodeURIComponent(row.wilayah || '-') + '" class="btn btn-outline-primary btn-sm"><i class="fas fa-list"></i> Detail</a></td>' +
+            '</tr>';
+        }).join(''));
     }
 
     function renderInputSourceSummary(data) {
@@ -454,6 +554,10 @@ $(function () {
 
     $('.js-status-filter').on('change', function () {
         $($(this).data('target')).DataTable().ajax.reload();
+    });
+
+    $('#wilayahTeamFilter').on('change', function () {
+        renderWilayahInputSummary(wilayahInputRows);
     });
 
     $('#btnRefreshMonitoring').on('click', refreshMonitoring);

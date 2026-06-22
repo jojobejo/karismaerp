@@ -8,6 +8,16 @@
 
     <?php
     $e = function ($value) { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); };
+    $format_expired_date = function ($value) {
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '-';
+        }
+
+        $source = substr($value, 0, 10);
+        $date = DateTime::createFromFormat('!Y-m-d', $source);
+        return $date && $date->format('Y-m-d') === $source ? $date->format('d/m/Y') : $value;
+    };
     $input_rows = $input_rows ?? [];
     $master_items = $master_items ?? [];
     $master_item_options = $master_item_options ?? [];
@@ -88,7 +98,7 @@
                                             else { $lot_status = 'Belum Input'; $lot_status_class = ''; }
                                             $filter_key = $lot_key($row['expired_date'] ?? '', $row['no_lot'] ?? '');
                                         ?>
-                                            <tr><td><?= $e($row['expired_date'] ?? '-') ?></td><td><?= $e($row['no_lot'] ?? '-') ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><div class="d-flex justify-content-center align-items-center" style="gap:5px"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input lot ini"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" data-lot="<?= $e($row['no_lot'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></div></td></tr>
+                                            <tr><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td><?= $e($row['no_lot'] ?? '-') ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><div class="d-flex justify-content-center align-items-center" style="gap:5px"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input lot ini"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" data-lot="<?= $e($row['no_lot'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></div></td></tr>
                                         <?php endforeach ?></tbody>
                                     </table><?php endif ?>
                                 </div>
@@ -102,7 +112,7 @@
                                         <thead><tr><th>Expired Date</th><th>No Lot</th><th>Qty</th><th>Qty PCS</th><th>Qty Box</th><th>Input By</th><th>Input Source</th><th>#</th></tr></thead>
                                         <tbody><?php foreach ($request_rows as $index => $row) : ?>
                                             <?php $request_json = htmlspecialchars(json_encode($row, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>
-                                            <tr class="js-request-row" data-index="<?= $index ?>"><td><?= $e($row['expired_date']) ?></td><td><?= $e($row['no_lot']) ?></td><td class="text-right"><?= number_format((int)$row['qty'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_pcs'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_box'], 0, ',', '.') ?></td><td><?= $e($row['input_by']) ?></td><td><?= $e($source_label($row['input_source'] ?? 'manual')) ?></td><td class="text-center"><div class="d-flex justify-content-center" style="gap:5px"><button type="button" class="btn btn-outline-success btn-sm so-action-btn js-add-request" data-row="<?= $request_json ?>" title="Tambah ke hasil opname"><i class="fas fa-plus"></i></button><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-request" data-row="<?= $request_json ?>" title="Hapus request item"><i class="fas fa-trash"></i></button></div></td></tr>
+                                            <tr class="js-request-row" data-index="<?= $index ?>"><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td><?= $e($row['no_lot']) ?></td><td class="text-right"><?= number_format((int)$row['qty'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_pcs'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_box'], 0, ',', '.') ?></td><td><?= $e($row['input_by']) ?></td><td><?= $e($source_label($row['input_source'] ?? 'manual')) ?></td><td class="text-center"><div class="d-flex justify-content-center" style="gap:5px"><button type="button" class="btn btn-outline-success btn-sm so-action-btn js-add-request" data-row="<?= $request_json ?>" title="Tambah ke hasil opname"><i class="fas fa-plus"></i></button><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-request" data-row="<?= $request_json ?>" title="Hapus request item"><i class="fas fa-trash"></i></button></div></td></tr>
                                         <?php endforeach ?></tbody>
                                     </table>
                                     <div class="p-2 text-center js-request-pagination"></div>
@@ -127,7 +137,7 @@
                                     ?>
                                         <tr class="so-input-row js-select-opname" data-row="<?= $row_json ?>" data-team="<?= (int)($row['tim_opname'] ?? 0) ?>" data-key="<?= $e($lot_key($row['expired_date'] ?? '', $row['no_lot'] ?? '')) ?>">
                                             <td><div class="so-cell-main"><?= $e($row['input_by'] ?? '-') ?></div><div class="so-cell-sub">Tim <?= $e($row['tim_opname'] ?? '-') ?> | <?= $e($row['created_at'] ?? $row['input_at'] ?? '-') ?></div></td>
-                                            <td><div class="so-cell-main"><?= $e($row['expired_date'] ?? '-') ?></div><div class="so-cell-sub">Lot <?= $e($row['no_lot'] ?? '-') ?></div></td>
+                                            <td><div class="so-cell-main"><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></div><div class="so-cell-sub">Lot <?= $e($row['no_lot'] ?? '-') ?></div></td>
                                             <td class="text-right"><?= number_format($book, 0, ',', '.') ?></td><td class="text-right font-weight-bold"><?= number_format((int)$row['qty'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_box'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_pcs'], 0, ',', '.') ?></td>
                                             <td class="text-center"><div class="d-flex justify-content-center" style="gap:5px"><button type="button" class="btn btn-outline-primary btn-sm so-action-btn js-edit-opname" title="Edit Qty"><i class="fas fa-edit"></i></button><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-opname" title="Delete"><i class="fas fa-trash"></i></button></div></td>
                                         </tr>
@@ -145,7 +155,7 @@
                                 <table class="table table-bordered table-hover so-table">
                                     <thead><tr><th>Input</th><th>Expired/Lot</th><th>Qty</th><th>Qty Box</th><th>Qty PCS</th><th>#</th></tr></thead>
                                     <tbody><?php foreach ($recycle_rows as $row) : ?>
-                                        <tr><td><div class="so-cell-main"><?= $e($row['input_by']) ?></div><div class="so-cell-sub">Dihapus <?= $e($row['deleted_by']) ?> | <?= $e($row['deleted_at']) ?></div></td><td><div class="so-cell-main"><?= $e($row['expired_date']) ?></div><div class="so-cell-sub">Lot <?= $e($row['no_lot']) ?></div></td><td class="text-right"><?= number_format((int)$row['qty'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_box'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_pcs'], 0, ',', '.') ?></td><td class="text-center"><button type="button" class="btn btn-outline-success btn-sm so-action-btn js-repost-opname" data-id="<?= (int)$row['id'] ?>" title="Repost"><i class="fas fa-undo"></i></button></td></tr>
+                                        <tr><td><div class="so-cell-main"><?= $e($row['input_by']) ?></div><div class="so-cell-sub">Dihapus <?= $e($row['deleted_by']) ?> | <?= $e($row['deleted_at']) ?></div></td><td><div class="so-cell-main"><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></div><div class="so-cell-sub">Lot <?= $e($row['no_lot']) ?></div></td><td class="text-right"><?= number_format((int)$row['qty'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_box'], 0, ',', '.') ?></td><td class="text-right"><?= number_format((int)$row['qty_pcs'], 0, ',', '.') ?></td><td class="text-center"><button type="button" class="btn btn-outline-success btn-sm so-action-btn js-repost-opname" data-id="<?= (int)$row['id'] ?>" title="Repost"><i class="fas fa-undo"></i></button></td></tr>
                                     <?php endforeach ?></tbody>
                                 </table><?php endif ?>
                             </div>
@@ -316,6 +326,11 @@ $(function () {
         $('.js-team-tab').removeClass('is-active').filter('[data-team="' + activeTeam + '"]').addClass('is-active');
         applyOpnameFilters();
     }
+    function formatExpiredDate(value) {
+        if (!value) return '-';
+        var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
+    }
     function openEditor(row, actionType) {
         var box = parseInt(row.qty_box || 0, 10) || 0, pcs = parseInt(row.qty_pcs || 0, 10) || 0, qty = parseInt(row.qty || 0, 10) || 0;
         currentDimensi = parseInt(row.dimensi || 0, 10) || 0;
@@ -324,13 +339,13 @@ $(function () {
         $('#edit_action_type').val(actionType);
         $('#editModalTitle').text(actionType === 'ADJUSTMENT' ? 'Adjustment Opname' : 'Edit Qty Input Opname');
         $('#edit_nama_barang').text(row.nama_barang || '-');
-        $('#edit_expired_text').text(row.expired_date || '-'); $('#edit_lot_text').text(row.no_lot || '-'); $('#edit_dimensi_text').text(currentDimensi);
+        $('#edit_expired_text').text(formatExpiredDate(row.expired_date)); $('#edit_lot_text').text(row.no_lot || '-'); $('#edit_dimensi_text').text(currentDimensi);
         $('#edit_qty_box').val(box); $('#edit_qty_pcs').val(pcs); $('#edit_qty').val(qty);
         $('#editOpnameAlert').addClass('d-none').text('');
         $('#modalEditOpname').modal('show');
     }
     function formatLotOption(row) {
-        return (row.expired_date || '-') + ' | Lot ' + (row.no_lot || '-') + ' | Dimensi ' + (parseInt(row.dimensi || 0, 10) || 0);
+        return formatExpiredDate(row.expired_date) + ' | Lot ' + (row.no_lot || '-') + ' | Dimensi ' + (parseInt(row.dimensi || 0, 10) || 0);
     }
     function selectedInputMaster() {
         var id = String($('#input_master_id').val() || '');
@@ -381,7 +396,7 @@ $(function () {
     });
     $(document).on('click', '.js-delete-master-item', function () {
         var expired = $(this).attr('data-expired') || '', lot = $(this).attr('data-lot') || '';
-        if (!window.confirm('Hapus stock buku lot ' + lot + ' expired ' + expired + ' beserta data opname terkait?')) return;
+        if (!window.confirm('Hapus stock buku lot ' + lot + ' expired ' + formatExpiredDate(expired) + ' beserta data opname terkait?')) return;
         $.post(urls.deleteMasterItem, {kode_barang: pageKodeBarang, expired_date: expired, no_lot: lot}, null, 'json').done(function (res) {
             if (!res || !res.status) { toast((res && res.message) || 'Hapus stock buku gagal.', false); return; }
             refreshWidgets(res.message || 'Data stock buku berhasil dihapus.');
@@ -462,7 +477,7 @@ $(function () {
         $('#request_expired_date').val(row.expired_date || '');
         $('#request_no_lot').val(row.no_lot || '-');
         $('#request_nama_barang').text(row.nama_barang || pageKodeBarang);
-        $('#request_expired_text').text(row.expired_date || '-'); $('#request_lot_text').text(row.no_lot || '-'); $('#request_dimensi_text').text(requestDimensi);
+        $('#request_expired_text').text(formatExpiredDate(row.expired_date)); $('#request_lot_text').text(row.no_lot || '-'); $('#request_dimensi_text').text(requestDimensi);
         $('#request_tim_opname').val(String(activeTeam)); $('#request_qty_box').val(box); $('#request_qty_pcs').val(pcs); $('#request_qty').val(qty);
         $('#addRequestAlert').addClass('d-none').text('');
         $('#modalAddRequest').modal('show');

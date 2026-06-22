@@ -895,6 +895,7 @@ class M_Stockopname extends CI_Model
                     'compare_lot' => $this->percentage_result(0, 0),
                 ],
                 'input_source' => $this->monitoring_input_source_summary(),
+                'wilayah_input' => [],
                 'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
             ];
         }
@@ -903,8 +904,36 @@ class M_Stockopname extends CI_Model
             'team_1' => $this->monitoring_team_result_summary(1),
             'team_2' => $this->monitoring_team_result_summary(2),
             'input_source' => $this->monitoring_input_source_summary(),
+            'wilayah_input' => $this->monitoring_wilayah_input_summary(),
             'source_table' => $this->masterTable . ' / ' . $this->opnameTable,
         ];
+    }
+
+    public function monitoring_wilayah_input_summary()
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $wilayahLabel = "COALESCE(NULLIF(TRIM(CAST(wilayah AS CHAR)), ''), '-')";
+
+        return $this->db->query("
+            SELECT
+                {$wilayahLabel} AS wilayah,
+                COUNT(*) AS total_input,
+                COUNT(DISTINCT kode_barang) AS total_barang,
+                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
+                COALESCE(SUM(CASE WHEN tim_opname = 1 THEN qty ELSE 0 END), 0) AS qty_tim_1,
+                COALESCE(SUM(CASE WHEN tim_opname = 2 THEN qty ELSE 0 END), 0) AS qty_tim_2,
+                COALESCE(SUM(qty), 0) AS total_qty,
+                COUNT(DISTINCT NULLIF(TRIM(input_by), '')) AS total_user,
+                MAX({$createdColumn}) AS last_input
+            FROM {$this->opnameTable}
+            GROUP BY {$wilayahLabel}
+            ORDER BY {$wilayahLabel} ASC
+        ")->result_array();
     }
 
     public function monitoring_input_source_summary()
@@ -1015,7 +1044,7 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
-    public function monitoring_activity_log($wilayah = '', $limit = 300)
+    public function monitoring_activity_log($wilayah = '', $tim = 0, $limit = 300)
     {
         if (!$this->ready()) {
             return [];
@@ -1031,6 +1060,11 @@ class M_Stockopname extends CI_Model
         $wilayah = trim((string)$wilayah);
         if ($wilayah !== '') {
             $this->db->where('wilayah', $wilayah);
+        }
+
+        $tim = (int)$tim;
+        if (in_array($tim, [1, 2], true)) {
+            $this->db->where('tim_opname', $tim);
         }
 
         return $this->db
@@ -2010,6 +2044,184 @@ class M_Stockopname extends CI_Model
         $this->master_barang_search($search);
         $this->master_barang_qrcode_filter($qrcodeStatus);
         return (int)$this->db->count_all_results();
+    }
+
+    public function search_master_barang_source($keyword, $limit = 15)
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable)) {
+            return [];
+        }
+
+        $keyword = trim((string)$keyword);
+        if ($keyword === '') {
+            return [];
+        }
+
+        return $this->db
+            ->select('id, kd_barang, kode_barang_system, nama_barang, satuan, p, l, t')
+            ->from($this->masterBarangAllTable)
+            ->group_start()
+            ->like('nama_barang', $keyword)
+            ->or_like('kd_barang', $keyword)
+            ->or_like('kode_barang_system', $keyword)
+            ->group_end()
+            ->order_by('nama_barang', 'ASC')
+            ->limit(max(1, min(30, (int)$limit)))
+            ->get()
+            ->result_array();
+    }
+
+    public function next_master_barang_system_code()
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable)) {
+            return 'KIUBR00001';
+        }
+
+        $row = $this->db
+            ->select('kode_barang_system')
+            ->from($this->masterBarangAllTable)
+            ->where("kode_barang_system REGEXP '^KIUBR[0-9]+$'", null, false)
+            ->order_by('CAST(SUBSTRING(kode_barang_system, 6) AS UNSIGNED)', 'DESC', false)
+            ->limit(1)
+            ->get()
+            ->row_array();
+        $lastNumber = $row ? (int)substr((string)$row['kode_barang_system'], 5) : 0;
+        return 'KIUBR' . str_pad((string)($lastNumber + 1), 5, '0', STR_PAD_LEFT);
+    }
+
+    public function get_master_barang_catalog_list($limit = 100, $kodeBarang = '')
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable)) {
+            return [];
+        }
+
+        $this->db
+            ->select('id, kd_barang, kode_barang_system, nama_barang, p, l, t')
+            ->from($this->masterBarangAllTable);
+        if (trim((string)$kodeBarang) !== '') {
+            $this->db->like('kd_barang', trim((string)$kodeBarang));
+        }
+
+        return $this->db->order_by('id', 'DESC')
+            ->limit(max(1, min(500, (int)$limit)))
+            ->get()->result_array();
+    }
+
+    public function create_master_barang_catalog(array $input)
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable)) {
+            return ['status' => false, 'message' => 'Tabel tb_master_barang_all belum tersedia.'];
+        }
+
+        $lockName = 'karisma_master_barang_system_code';
+        $lockRow = $this->db->query('SELECT GET_LOCK(?, 10) AS is_locked', [$lockName])->row_array();
+        if (empty($lockRow['is_locked'])) {
+            return ['status' => false, 'message' => 'Sistem sedang membuat kode barang lain. Silakan coba kembali.'];
+        }
+
+        try {
+            $kodeBarang = trim((string)($input['kd_barang'] ?? ''));
+            $exists = $this->db->where('kd_barang', $kodeBarang)->count_all_results($this->masterBarangAllTable) > 0;
+            if ($exists) {
+                return ['status' => false, 'message' => 'Kode barang sudah digunakan.'];
+            }
+
+            $kodeSystem = $this->next_master_barang_system_code();
+            $data = [
+                'kd_barang' => $kodeBarang,
+                'kode_barang_system' => $kodeSystem,
+                'nama_barang' => trim((string)($input['nama_barang'] ?? '')),
+                'p' => (int)($input['p'] ?? 0),
+                'l' => (int)($input['l'] ?? 0),
+                't' => (int)($input['t'] ?? 0),
+                // Kolom legacy yang NOT NULL tetap diberi nilai standar; input modul hanya enam kolom utama.
+                'kd_supplier' => '-',
+                'bhn_aktif' => '-',
+                'satuan' => '-',
+                'berat' => 0,
+                'kubikasi' => '0',
+                'qty_min' => 0,
+            ];
+            if (!$this->db->insert($this->masterBarangAllTable, $data)) {
+                return ['status' => false, 'message' => 'Gagal menyimpan master barang.'];
+            }
+
+            $data['id'] = (int)$this->db->insert_id();
+            $data['next_kode_barang_system'] = $this->next_master_barang_system_code();
+            return ['status' => true, 'message' => 'Master barang berhasil disimpan.', 'data' => $data];
+        } finally {
+            $this->db->query('SELECT RELEASE_LOCK(?)', [$lockName]);
+        }
+    }
+
+    public function create_master_barang_from_source($sourceId, array $input)
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable) || !$this->db->table_exists($this->masterTable)) {
+            return ['status' => false, 'message' => 'Tabel sumber atau tabel master opname belum tersedia.'];
+        }
+
+        $source = $this->db->select('id, kd_barang, kode_barang_system, nama_barang, p, l, t')
+            ->where('id', (int)$sourceId)
+            ->limit(1)
+            ->get($this->masterBarangAllTable)
+            ->row_array();
+        if (!$source) {
+            return ['status' => false, 'message' => 'Barang sumber tidak ditemukan. Silakan cari kembali.'];
+        }
+
+        $kodeBarang = trim((string)($source['kd_barang'] ?: $source['kode_barang_system']));
+        $namaBarang = trim((string)$source['nama_barang']);
+        $expiredDate = trim((string)($input['expired_date'] ?? ''));
+        $noLot = trim((string)($input['no_lot'] ?? ''));
+        $qtyPcs = max(0, (int)($input['qty_pcs'] ?? 0));
+        $qtyBox = max(0, (int)($input['qty_box'] ?? 0));
+        $p = max(0, (int)($source['p'] ?? 0));
+        $l = max(0, (int)($source['l'] ?? 0));
+        $t = max(0, (int)($source['t'] ?? 0));
+        $dimensi = $p * $l * $t;
+
+        if ($kodeBarang === '' || $namaBarang === '') {
+            return ['status' => false, 'message' => 'Kode atau nama barang sumber tidak lengkap.'];
+        }
+        if ($dimensi <= 0) {
+            return ['status' => false, 'message' => 'Dimensi barang tidak valid. Pastikan nilai P, L, dan T pada master barang lebih dari 0.'];
+        }
+
+        $this->db->trans_start();
+        $exists = $this->db->where('kode_barang', $kodeBarang)
+            ->where('expired_date', $expiredDate)
+            ->where('no_lot', $noLot)
+            ->count_all_results($this->masterTable) > 0;
+        if ($exists) {
+            $this->db->trans_complete();
+            return ['status' => false, 'message' => 'Master opname dengan kode barang, expired date, dan no. lot tersebut sudah ada.'];
+        }
+
+        $data = [
+            'kode_barang' => $kodeBarang,
+            'nama_barang' => $namaBarang,
+            'qty' => ($qtyBox * $dimensi) + $qtyPcs,
+            'qty_box' => $qtyBox,
+            'qty_pcs' => $qtyPcs,
+            'dimensi' => $dimensi,
+            'expired_date' => $expiredDate,
+            'no_lot' => $noLot,
+        ];
+        if ($this->db->field_exists('qrcode_status', $this->masterTable)) {
+            $data['qrcode_status'] = 'PENDING';
+        }
+        if ($this->db->field_exists('qrcode_retry_flag', $this->masterTable)) {
+            $data['qrcode_retry_flag'] = 0;
+        }
+        $this->db->insert($this->masterTable, $data);
+        $id = (int)$this->db->insert_id();
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['status' => false, 'message' => 'Gagal menyimpan data master opname.'];
+        }
+
+        return ['status' => true, 'message' => 'Master opname berhasil ditambahkan.', 'data' => array_merge($data, ['id' => $id, 'p' => $p, 'l' => $l, 't' => $t])];
     }
 
     public function get_master_barang_datatable($post, $qtyMode = 'positive')
