@@ -1,4 +1,3 @@
-<!-- models/M_logistik.php -->
 <?php
 
 use JetBrains\PhpStorm\Internal\ReturnTypeContract;
@@ -1859,19 +1858,20 @@ class M_Logistik extends CI_Model
             return ['errors' => ['Tidak ada SO Sedang Verifikasi pada rute ini.']];
         }
 
-        $not_verified = [];
-        foreach ($so_list as $so) {
-            if ((int)$so->jumlah_item <= 0 || (int)$so->jumlah_item_terverifikasi < (int)$so->jumlah_item) {
-                $not_verified[] = $so->no_so;
-            }
-        }
-        if (!empty($not_verified)) {
-            return ['errors' => ['Masih ada SO yang belum selesai verifikasi barang: ' . implode(', ', $not_verified)]];
-        }
-
         $ids = array_map(function($so) {
             return (int)$so->id_so;
         }, $so_list);
+
+        $this->db->trans_start();
+
+        // Mark all items as verified if they are still pending
+        $this->db->where_in('id_so', $ids);
+        $this->db->where('verifikasi_loading_status', 'pending');
+        $this->db->update('tbso_sales_order_detail', [
+            'verifikasi_loading_status' => 'verified',
+            'verifikasi_loading_by' => $update_by,
+            'verifikasi_loading_at' => date('Y-m-d H:i:s')
+        ]);
 
         $this->db->where_in('id_so', $ids);
         $this->db->where('status', 'sedang_verifikasi');
@@ -1881,7 +1881,9 @@ class M_Logistik extends CI_Model
             'update_at' => date('Y-m-d H:i:s'),
         ]);
 
-        return ['updated' => $this->db->affected_rows()];
+        $this->db->trans_complete();
+
+        return ['updated' => $this->db->trans_status() ? count($ids) : 0];
     }
 
     public function count_so_siap_loading()
@@ -4522,5 +4524,69 @@ FROM (
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
         return $this->db->query($sql, [$kd_po])->result_array();
+    }
+
+    public function has_remaining_so_loading_checker_by_rute($kd_rute)
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '') {
+            return false;
+        }
+
+        $row = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order_detail sd
+            JOIN tbso_sales_order so ON so.id_so = sd.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              AND so.status IN ('siap_faktur', 'partial', 'completed')
+              AND COALESCE(sd.qty_siap_faktur, sd.qty) > 0
+              AND sd.checker_loaded = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM tb_detail_do dd
+                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                  WHERE fp.id_so = so.id_so
+              )
+        ", [$kd_rute])->row_array();
+
+        return (int)($row['total'] ?? 0) > 0;
+    }
+
+    public function check_and_auto_create_do($kd_rute, $create_by)
+    {
+        $kd_rute = trim((string)$kd_rute);
+        if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
+            return false;
+        }
+        if (!$this->get_rute_do($kd_rute)) {
+            return false;
+        }
+        if ($this->has_so_loading_verification_by_rute($kd_rute)) {
+            return false;
+        }
+        if ($this->has_remaining_so_ready_faktur_by_rute($kd_rute)) {
+            return false;
+        }
+        if ($this->has_remaining_so_loading_checker_by_rute($kd_rute)) {
+            return false;
+        }
+
+        $note = 'DO otomatis dibuat setelah seluruh SO rute ' . $kd_rute . ' selesai difakturkan dan termuat semua.';
+        $created = $this->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by);
+        if (!$created) {
+            return false;
+        }
+
+        $this->insertlog_do([
+            'kd_do'      => $created['kd_do'],
+            'tgl_input'  => date('d/m/Y'),
+            'keterangan' => 'AUTO DO RUTE ' . $kd_rute . ' dari faktur Admin SC & Checker oleh ' . $create_by,
+            'inputer'    => $create_by,
+        ]);
+
+        $this->load->model('M_Checker');
+        $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $create_by);
+
+        return $created;
     }
 }

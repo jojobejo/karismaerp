@@ -114,6 +114,17 @@ class C_Logistik extends CI_Controller
                 ],
             ]);
         }
+        if (!$this->db->field_exists('checker_loaded', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'checker_loaded' => [
+                    'type'       => 'TINYINT',
+                    'constraint' => 1,
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'verifikasi_loading_at',
+                ],
+            ]);
+        }
     }
 
     private function _ensureSoLoadingPlanColumns()

@@ -126,6 +126,11 @@ tr.row-pending { background:#fafafa !important; }
                         </a>
                     </div>
                     <?php endif; ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('checker/so_loading') ?>" class="btn btn-info">
+                            <i class="fas fa-tasks mr-1"></i> Checker Loading SO
+                        </a>
+                    </div>
                 </div>
 
                 <!-- ============================================================

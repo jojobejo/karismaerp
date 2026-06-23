@@ -514,34 +514,7 @@ class C_SalesOrder extends CI_Controller
         if ($kd_rute === '') {
             $kd_rute = trim((string)($so['customer_kd_rute'] ?? ''));
         }
-        if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
-            return false;
-        }
-        if (!$this->M_Logistik->get_rute_do($kd_rute)) {
-            return false;
-        }
-        if ($this->M_Logistik->has_so_loading_verification_by_rute($kd_rute)) {
-            return false;
-        }
-        if ($this->M_Logistik->has_remaining_so_ready_faktur_by_rute($kd_rute)) {
-            return false;
-        }
-
-        $note = 'DO otomatis dibuat setelah seluruh barang siap faktur pada rute ' . $kd_rute . ' selesai difakturkan.';
-        $created = $this->M_Logistik->create_ready_do_from_faktur_rute($kd_rute, $note, $create_by);
-        if (!$created) {
-            return false;
-        }
-
-        $this->M_Logistik->insertlog_do([
-            'kd_do'      => $created['kd_do'],
-            'tgl_input'  => date('d/m/Y'),
-            'keterangan' => 'AUTO DO RUTE ' . $kd_rute . ' dari faktur Admin SC oleh ' . $create_by,
-            'inputer'    => $create_by,
-        ]);
-        $this->M_Checker->sync_route_activity($kd_rute, 'siap_loading', $create_by);
-
-        return $created;
+        return $this->M_Logistik->check_and_auto_create_do($kd_rute, $create_by);
     }
 
     private function _ensureSoSedangVerifikasiStatus()
@@ -589,6 +562,7 @@ class C_SalesOrder extends CI_Controller
             'verifikasi_loading_note' => ['type' => 'TEXT', 'null' => true],
             'verifikasi_loading_by' => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => true],
             'verifikasi_loading_at' => ['type' => 'DATETIME', 'null' => true],
+            'checker_loaded' => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0, 'null' => false],
         ] as $field => $definition) {
             if (!$this->db->field_exists($field, 'tbso_sales_order_detail')) {
                 $this->dbforge->add_column('tbso_sales_order_detail', [$field => $definition]);

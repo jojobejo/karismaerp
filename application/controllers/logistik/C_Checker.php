@@ -1019,4 +1019,109 @@ class C_Checker extends CI_Controller
         $ok = $this->M_Checker->mark_notif_read();
         echo json_encode(['status' => (bool)$ok]);
     }
+ //controller/c_checker.php
+    public function so_loading()
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+        $this->load->model('M_Logistik');
+        
+        $routes = $this->db->query("
+            SELECT DISTINCT COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                   COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                   COUNT(DISTINCT so.id_so) AS total_so
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            WHERE so.status IN ('siap_faktur', 'partial')
+              AND NOT EXISTS (
+                  SELECT 1 FROM tb_detail_do dd
+                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                  WHERE fp.id_so = so.id_so
+              )
+            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
+        ")->result_array();
+
+        $data['page_title'] = 'Checker Loading SO - Pilih Rute';
+        $data['routes'] = $routes;
+        $data['role'] = $this->role();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/so_loading.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function so_loading_detail($kd_rute)
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+        $this->load->model('M_Logistik');
+        $kd_rute = rawurldecode($kd_rute);
+
+        $items = $this->db->query("
+            SELECT sod.*, so.no_so, so.customer_name, c.nama_kios
+            FROM tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+              AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM tb_detail_do dd
+                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                  WHERE fp.id_so = so.id_so
+              )
+            ORDER BY so.no_so ASC, sod.id ASC
+        ", [$kd_rute])->result_array();
+
+        $data['page_title'] = 'Checker Loading SO - Detail Rute ' . $kd_rute;
+        $data['kd_rute'] = $kd_rute;
+        $data['items'] = $items;
+        $data['role'] = $this->role();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/checker/so_loading_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function toggle_so_item_loaded()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['status' => false, 'message' => 'Method tidak valid']);
+            exit;
+        }
+
+        $id_detail = (int)$this->input->post('id_detail');
+        $loaded = (int)$this->input->post('loaded') ? 1 : 0;
+
+        if ($id_detail <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID item tidak valid']);
+            exit;
+        }
+
+        $detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_detail])->row_array();
+        if (!$detail) {
+            echo json_encode(['status' => false, 'message' => 'Item tidak ditemukan']);
+            exit;
+        }
+
+        $this->db->where('id', $id_detail);
+        $this->db->update('tbso_sales_order_detail', ['checker_loaded' => $loaded]);
+
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $detail['id_so']])->row_array();
+        $c = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
+        $kd_rute = trim((string)(($so['kd_rute'] ?? '') ?: ($c['kd_rute'] ?? '')));
+
+        $this->load->model('M_Logistik');
+        $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
+        $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
+
+        echo json_encode([
+            'status' => true,
+            'message' => 'Status muat berhasil diperbarui',
+            'created_do' => $created_do ? $created_do['kd_do'] : null
+        ]);
+        exit;
+    }
 }

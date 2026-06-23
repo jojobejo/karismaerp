@@ -879,6 +879,7 @@ class M_SalesOrder extends CI_Model
     {
         $where = "WHERE (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
         )";
         $params = [];
@@ -910,8 +911,9 @@ class M_SalesOrder extends CI_Model
     {
         $where = "WHERE (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
-        ) AND COALESCE(c.kd_rute, '') <> ''";
+        )";
         $params = [];
 
         if (!empty($filter['create_by'])) {

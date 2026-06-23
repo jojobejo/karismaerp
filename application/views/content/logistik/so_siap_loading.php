@@ -357,7 +357,6 @@
                                 </h3>
                                 <div class="card-tools">
                                     <span class="badge badge-light"><?= number_format($total_so) ?> SO</span>
-                                    <span class="badge badge-success ml-1"><?= number_format($total_so_verified) ?> terverifikasi</span>
                                     <span class="badge badge-light"><?= number_format($total_qty, 2) ?> qty</span>
                                     <span class="badge badge-warning ml-1"><?= number_format($total_outstanding, 2) ?> outstanding</span>
                                 </div>
@@ -556,15 +555,7 @@
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($selected_rute) && !empty($so_list)): ?>
-                                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
-                                        <div class="small text-muted">
-                                            Verifikasi barang selesai:
-                                            <strong><?= number_format($total_so_verified) ?></strong> dari
-                                            <strong><?= number_format($total_so) ?></strong> SO.
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
+
                                 <table id="tabelSoSiapLoading" class="table table-bordered table-striped table-hover table-sm">
                                     <thead class="thead-dark">
                                         <tr>
@@ -577,7 +568,6 @@
                                             <th class="text-center">Item</th>
                                             <th class="text-right">Qty</th>
                                             <th class="text-right">Outstanding</th>
-                                            <th class="text-center">Verifikasi</th>
                                             <th class="text-right">Tonase</th>
                                             <th class="text-right">Kubikasi</th>
                                             <th>Catatan SO</th>
@@ -635,17 +625,7 @@
                                                     <td class="text-center"><?= number_format((int)$so->jumlah_item) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_order, 2) ?></td>
                                                     <td class="text-right"><?= number_format((float)$so->total_qty_outstanding, 2) ?></td>
-                                                    <td class="text-center">
-                                                        <?php
-                                                        $is_verified = (int)$so->jumlah_item > 0 && (int)$so->jumlah_item_terverifikasi >= (int)$so->jumlah_item;
-                                                        ?>
-                                                        <span class="badge badge-<?= $is_verified ? 'success' : 'warning' ?>">
-                                                            <?= number_format((int)$so->jumlah_item_terverifikasi) ?>/<?= number_format((int)$so->jumlah_item) ?>
-                                                        </span>
-                                                        <?php if ((float)($so->total_qty_tidak_terkirim ?? 0) > 0): ?>
-                                                            <br><small class="text-danger"><?= number_format((float)$so->total_qty_tidak_terkirim, 2) ?> tidak terkirim</small>
-                                                        <?php endif; ?>
-                                                    </td>
+
                                                     <td class="text-right"><?= number_format((float)$so->total_tonase, 3) ?> ton</td>
                                                     <td class="text-right"><?= number_format((float)$so->total_kubikasi, 4) ?> m3</td>
                                                     <td style="min-width:180px">
@@ -659,23 +639,16 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="text-center">
-                                                        <div class="so-action-group" role="group">
-                                                            <a href="<?= base_url('logistik/so_siap_loading/verifikasi/' . $so->id_so) ?>"
-                                                               class="btn btn-sm btn-info"
-                                                               title="Detail dan Verifikasi Barang">
-                                                                <i class="fas fa-clipboard-list"></i>
-                                                            </a>
-                                                            <form method="post"
-                                                                  action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
-                                                                  class="return-open-form"
-                                                                  data-no-so="<?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?>">
-                                                                <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
-                                                                <input type="hidden" name="catatan_logistik" class="return-open-note">
-                                                                <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open/Partial">
-                                                                    <i class="fas fa-times"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
+                                                        <form method="post"
+                                                              action="<?= base_url('logistik/so_siap_loading/kembalikan/' . $so->id_so) ?>"
+                                                              class="return-open-form"
+                                                              data-no-so="<?= htmlspecialchars($so->no_so, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <input type="hidden" name="current_rute" value="<?= htmlspecialchars($selected_rute) ?>">
+                                                            <input type="hidden" name="catatan_logistik" class="return-open-note">
+                                                            <button type="submit" class="btn btn-sm btn-danger" title="Kembalikan ke Open/Partial">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        </form>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -686,7 +659,7 @@
                                     <button type="submit"
                                             form="formLoadingPlan"
                                             class="btn btn-success btn-block mt-3"
-                                            <?= ($total_so === 0 || $total_so_verified < $total_so) ? 'disabled' : '' ?>
+                                            <?= ($total_so === 0) ? 'disabled' : '' ?>
                                             onclick="return confirm('Ubah semua SO rute <?= htmlspecialchars($selected_rute, ENT_QUOTES, 'UTF-8') ?> menjadi siap difakturkan?');">
                                         <i class="fas fa-file-invoice-dollar mr-1"></i> Jadikan Siap Faktur
                                     </button>
