@@ -70,7 +70,7 @@
                     .om-pill{border:1px solid #dbe5ef;border-radius:8px;padding:8px;background:#f8fafc}
                     .om-pill b{display:block;font-size:14px;color:#111827}.om-pill span{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:800}
                     .om-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#eef2ff;color:#3730a3}
-                    .om-badge.all_match{background:#dcfce7;color:#166534}.om-badge.tim_1{background:#dbeafe;color:#1d4ed8}.om-badge.tim_2{background:#ede9fe;color:#6d28d9}.om-badge.re_check{background:#fee2e2;color:#991b1b}
+                    .om-badge.all_match{background:#dcfce7;color:#166534}.om-badge.tim_1{background:#dbeafe;color:#1d4ed8}.om-badge.tim_2{background:#ede9fe;color:#6d28d9}.om-badge.not_match{background:#e5e7eb;color:#374151}.om-badge.re_check{background:#fee2e2;color:#991b1b}
                     .om-code{font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid #dbe5ef;border-radius:6px;padding:4px 7px;color:#334155}
                     .om-log{max-height:322px;overflow:auto}
                     .om-log-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #edf2f7}
@@ -389,6 +389,7 @@ $(function () {
             all_match: 'All Match',
             tim_1: 'Tim 1',
             tim_2: 'Tim 2',
+            not_match: 'Tidak Match',
             re_check: 'Re-Check'
         };
         var label = labels[status] || 'Re-Check';

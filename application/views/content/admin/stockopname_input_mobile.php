@@ -33,11 +33,11 @@
                                 <button type="button" class="btn btn-outline-primary so-icon-btn" id="btnManualMode">
                                     <i class="fas fa-keyboard"></i>Input Manual
                                 </button>
-                                <button type="button" class="btn btn-outline-warning so-icon-btn so-mode-wide" id="btnRequestMode">
+                                <button type="button" class="btn btn-outline-warning so-icon-btn so-mode-wide d-none" id="btnRequestMode">
                                     <i class="fas fa-clipboard-list"></i>Opname Request
                                 </button>
                             </div>
-                            <div class="so-muted mt-2" id="scanStatus">Siap</div>
+                            <div class="so-muted mt-2" id="scanStatus"></div>
                             <div class="so-scan-box mt-3" id="qrReader"></div>
                             <input type="hidden" id="manualScanValue">
                         </div>
@@ -109,20 +109,20 @@
                             <div class="p-3">
                                 <div class="so-qty-grid">
                                     <div class="form-group so-qty-field mb-0">
-                                        <label>Qty Pcs</label>
-                                        <div class="input-group input-group-lg">
-                                            <input type="number" class="form-control" name="qty_pcs" id="qtyPcs" min="0" step="1" placeholder="0" inputmode="numeric">
-                                            <div class="input-group-append">
-                                                <span class="input-group-text">PCS</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group so-qty-field mb-0">
                                         <label>Qty Box</label>
                                         <div class="input-group input-group-lg">
                                             <input type="number" class="form-control" name="qty_box" id="qtyBox" min="0" step="1" placeholder="0" inputmode="numeric">
                                             <div class="input-group-append">
                                                 <span class="input-group-text">BOX</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group so-qty-field mb-0">
+                                        <label>Qty Pcs</label>
+                                        <div class="input-group input-group-lg">
+                                            <input type="number" class="form-control" name="qty_pcs" id="qtyPcs" min="0" step="1" placeholder="0" inputmode="numeric">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text">PCS</span>
                                             </div>
                                         </div>
                                     </div>
@@ -196,7 +196,7 @@ window.addEventListener('load', function () {
             scanning = false;
             $('#qrReader').hide();
             $('#btnScan').prop('disabled', false).html('<i class="fas fa-qrcode"></i>Scan');
-            setScannerStatus('Siap');
+            setScannerStatus('');
         }).catch(function () {
             scanning = false;
             $('#qrReader').hide();
@@ -208,7 +208,7 @@ window.addEventListener('load', function () {
         $('#masterId').val(row.id || '');
         $('#manualSourceId').val('');
         $('#itemName').html(escapeHtml(row.nama_barang || '-'));
-        $('#itemExpired').text(row.expired_date || '-');
+        $('#itemExpired').text(formatExpiredDate(row.expired_date));
         $('#itemLot').text(row.no_lot || '-');
         selectedDimensi = parseInt(row.dimensi || 0, 10) || 0;
         updateQtyTotal();
@@ -314,11 +314,17 @@ window.addEventListener('load', function () {
         return digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
     }
 
+    function formatExpiredDate(value) {
+        value = $.trim(value || '');
+        var match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : (value || '-');
+    }
+
     function fillManualExpiredOptions(rows) {
         var $expired = $('#manualExpired');
         $expired.empty().append(new Option('Pilih expired date', '', true, true));
         $.each(rows || [], function (_, row) {
-            var option = new Option(row.text, row.id, false, false);
+            var option = new Option(formatExpiredDate(row.expired_date || row.text), row.id, false, false);
             $(option).attr('data-dimensi', row.dimensi || 0);
             $expired.append(option);
         });
@@ -340,7 +346,7 @@ window.addEventListener('load', function () {
             success: function (res) {
                 if (!res.status) {
                     toast('warning', res.message || 'Data tidak ditemukan');
-                    setScannerStatus('Siap');
+                    setScannerStatus('');
                     return;
                 }
                 fillItem(res.data || {});
@@ -350,7 +356,7 @@ window.addEventListener('load', function () {
             },
             error: function (xhr) {
                 toast('error', ajaxMessage(xhr, 'Server tidak merespons'));
-                setScannerStatus('Siap');
+                setScannerStatus('');
             }
         });
     }
@@ -384,7 +390,7 @@ window.addEventListener('load', function () {
         }).catch(function () {
             $('#qrReader').hide();
             $('#btnScan').prop('disabled', false).html('<i class="fas fa-qrcode"></i>Scan');
-            setScannerStatus('Siap');
+            setScannerStatus('');
             toast('error', 'Kamera tidak dapat dibuka');
         });
     });

@@ -50,7 +50,7 @@
                     .so-chart-canvas{height:220px;position:relative;flex:1}
                     .so-table-wrap{padding:16px}
                     .so-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700}
-                    .so-badge.match{background:#dcfce7;color:#166534}.so-badge.selisih{background:#ffedd5;color:#9a3412}.so-badge.belum{background:#e5e7eb;color:#374151}
+                    .so-badge.all_match{background:#dcfce7;color:#166534}.so-badge.tim_1{background:#dbeafe;color:#1d4ed8}.so-badge.tim_2{background:#ede9fe;color:#6d28d9}.so-badge.not_match{background:#e5e7eb;color:#374151}.so-badge.re_check{background:#fee2e2;color:#991b1b}
                     .so-number-plus{color:#15803d;font-weight:700}.so-number-minus{color:#b91c1c;font-weight:700}.so-number-zero{color:#374151;font-weight:700}
                     .progress{height:8px;border-radius:99px}.table td,.table th{vertical-align:middle}.btn i{margin-right:5px}
                     @media(max-width:992px){.so-chart-grid{grid-template-columns:1fr}}
@@ -101,14 +101,14 @@
                             <div class="so-chart-grid">
                                 <div class="so-chart-card">
                                     <h3 class="so-chart-title">All Barang</h3>
-                                    <p class="so-chart-meta" id="soAllBarangMeta">0% sudah input</p>
+                                    <p class="so-chart-meta" id="soAllBarangMeta">0% match; cukup salah satu tim</p>
                                     <div class="so-chart-canvas">
                                         <canvas id="soAllBarangChart"></canvas>
                                     </div>
                                 </div>
                                 <div class="so-chart-card">
                                     <h3 class="so-chart-title">By Expired Date + LOT</h3>
-                                    <p class="so-chart-meta" id="soFefoMeta">0% match by expired date dan lot</p>
+                                    <p class="so-chart-meta" id="soFefoMeta">0% match; cukup salah satu tim</p>
                                     <div class="so-chart-canvas">
                                         <canvas id="soFefoChart"></canvas>
                                     </div>
@@ -122,14 +122,16 @@
                     <div class="col-12 mb-3">
                         <div class="so-panel h-100">
                             <div class="so-panel-header">
-                                <h2 class="so-panel-title">Rekonsiliasi Stok</h2>
+                                <h2 class="so-panel-title">Rekonsiliasi Stok per Tim</h2>
                                 <div class="so-filter">
                                     <input type="search" class="form-control form-control-sm" id="soSearch" placeholder="Cari barang, kode, expired, lot">
                                     <select class="form-control form-control-sm" id="soStatus">
                                         <option value="">Semua status</option>
-                                        <option value="match">Match</option>
-                                        <option value="selisih">Selisih</option>
-                                        <option value="belum">Belum input</option>
+                                        <option value="all_match">All Match</option>
+                                        <option value="tim_1">Match Tim 1</option>
+                                        <option value="tim_2">Match Tim 2</option>
+                                        <option value="not_match">Tidak Match (Belum Input)</option>
+                                        <option value="re_check">Re-check</option>
                                     </select>
                                     <button type="button" class="btn btn-outline-secondary btn-sm" id="soReset"><i class="fas fa-undo"></i>Reset</button>
                                 </div>
@@ -144,8 +146,10 @@
                                             <th>Expired</th>
                                             <th>Lot</th>
                                             <th>Sistem</th>
-                                            <th>Fisik</th>
-                                            <th>Selisih</th>
+                                            <th>Tim 1</th>
+                                            <th>Selisih T1</th>
+                                            <th>Tim 2</th>
+                                            <th>Selisih T2</th>
                                             <th>Status</th>
                                             <th>Update</th>
                                         </tr>
@@ -192,12 +196,14 @@ window.addEventListener('load', function () {
             {data: 'expired_date', render: formatExpiredDate},
             {data: 'no_lot'},
             {data: 'qty_buku', className: 'text-right', render: formatNumber},
-            {data: 'qty_fisik', className: 'text-right', render: formatNumber},
-            {data: 'selisih', className: 'text-right', render: renderSelisih},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 1); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 1); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 2); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 2); }},
             {data: 'status_opname', render: renderStatus},
             {data: 'last_input', render: function (data) { return data || '-'; }}
         ],
-        order: [[9, 'desc']]
+        order: [[11, 'desc']]
     });
 
     function formatNumber(value) {
@@ -217,8 +223,25 @@ window.addEventListener('load', function () {
         return '<span class="' + cls + '">' + value.toLocaleString('id-ID') + '</span>';
     }
 
+    function renderTeamQty(row, team) {
+        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) return '<span class="text-muted">-</span>';
+        return formatNumber(row['qty_tim_' + team]);
+    }
+
+    function renderTeamDifference(row, team) {
+        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) return '<span class="text-muted">-</span>';
+        return renderSelisih(parseInt(row['qty_tim_' + team] || 0, 10) - parseInt(row.qty_buku || 0, 10));
+    }
+
     function renderStatus(value) {
-        var label = value === 'match' ? 'Match' : (value === 'belum' ? 'Belum Input' : 'Selisih');
+        var labels = {
+            all_match: 'All Match',
+            tim_1: 'Match Tim 1',
+            tim_2: 'Match Tim 2',
+            not_match: 'Tidak Match',
+            re_check: 'Re-check'
+        };
+        var label = labels[value] || 'Re-check';
         return '<span class="so-badge ' + value + '">' + label + '</span>';
     }
 
@@ -264,8 +287,8 @@ window.addEventListener('load', function () {
         var allBarang = data.all_barang_result || {};
         var fefo = data.expired_lot_result || data.fefo_result || {};
 
-        $('#soAllBarangMeta').text(formatPercent(allBarang.persen_match) + ' match dari semua barang');
-        $('#soFefoMeta').text(formatPercent(fefo.persen_match) + ' match by expired date dan lot');
+        $('#soAllBarangMeta').text(formatPercent(allBarang.persen_match) + ' match; Tim 1 atau Tim 2');
+        $('#soFefoMeta').text(formatPercent(fefo.persen_match) + ' match; Tim 1 atau Tim 2');
 
         renderPie('allBarang', 'soAllBarangChart', ['Match', 'Not Match'], [allBarang.match, allBarang.not_match], ['#2563eb', '#f59e0b']);
         renderPie('fefo', 'soFefoChart', ['Match', 'Not Match'], [fefo.match, fefo.not_match], ['#0f766e', '#f59e0b']);

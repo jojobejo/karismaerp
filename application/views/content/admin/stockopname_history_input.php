@@ -13,7 +13,7 @@
                 <style>
                     .so-history-page{background:#eef3f8}.so-history-shell{max-width:520px;margin:0 auto}.so-panel{background:#fff;border:1px solid #dce5ee;border-radius:8px;box-shadow:0 8px 22px rgba(15,23,42,.07)}
                     .so-panel-header{padding:14px 16px;border-bottom:1px solid #e6edf4;display:flex;align-items:center;justify-content:space-between;gap:10px}.so-panel-title{font-size:16px;font-weight:800;color:#172033;margin:0}.so-muted{font-size:12px;color:#64748b}
-                    .so-history-list{display:grid;gap:10px}.so-history-item{border:1px solid #dbe4ef;border-radius:8px;background:#f8fafc;padding:12px}.so-history-name{font-size:14px;font-weight:800;color:#111827;line-height:1.35}.so-history-meta{font-size:12px;color:#64748b;margin-top:4px}.so-history-qty{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}.so-qty-box{background:#fff;border:1px solid #e1e8f0;border-radius:8px;padding:8px;text-align:center}.so-qty-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase}.so-qty-value{font-size:17px;font-weight:900;color:#172033}.so-icon-btn{height:44px;font-weight:800}.btn i{margin-right:6px}
+                    .so-history-list{display:grid;gap:10px}.so-history-item{border:1px solid #dbe4ef;border-radius:8px;background:#f8fafc;padding:12px}.so-history-name{font-size:14px;font-weight:800;color:#111827;line-height:1.35}.so-history-meta{font-size:12px;color:#64748b;margin-top:4px}.so-history-qty{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}.so-qty-box{background:#fff;border:1px solid #e1e8f0;border-radius:8px;padding:8px;text-align:center}.so-qty-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase}.so-qty-value{font-size:17px;font-weight:900;color:#172033}.so-history-actions{display:flex;justify-content:flex-end;margin-top:10px}.so-delete-btn{font-weight:800}.so-icon-btn{height:44px;font-weight:800}.btn i{margin-right:6px}
                 </style>
 
                 <div class="so-history-shell">
@@ -45,17 +45,22 @@
                                             </div>
                                             <div class="so-history-qty">
                                                 <div class="so-qty-box">
-                                                    <div class="so-qty-label">Pcs</div>
-                                                    <div class="so-qty-value"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></div>
-                                                </div>
-                                                <div class="so-qty-box">
                                                     <div class="so-qty-label">Box</div>
                                                     <div class="so-qty-value"><?= number_format((int)($row['qty_box'] ?? 0), 0, ',', '.') ?></div>
+                                                </div>
+                                                <div class="so-qty-box">
+                                                    <div class="so-qty-label">Pcs</div>
+                                                    <div class="so-qty-value"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></div>
                                                 </div>
                                                 <div class="so-qty-box">
                                                     <div class="so-qty-label">Qty</div>
                                                     <div class="so-qty-value"><?= number_format((int)($row['qty'] ?? 0), 0, ',', '.') ?></div>
                                                 </div>
+                                            </div>
+                                            <div class="so-history-actions">
+                                                <button type="button" class="btn btn-outline-danger btn-sm so-delete-btn" data-id="<?= (int)($row['id'] ?? 0) ?>">
+                                                    <i class="fas fa-trash"></i>Hapus
+                                                </button>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
@@ -76,3 +81,50 @@
         </div>
     </footer>
 </div>
+
+<script>
+$(function () {
+    $('.so-delete-btn').on('click', function () {
+        var button = $(this);
+        var id = parseInt(button.data('id'), 10);
+        if (!id) return;
+
+        var remove = function () {
+            button.prop('disabled', true);
+            $.ajax({
+                url: '<?= base_url('stockopname/history-input/delete') ?>',
+                type: 'POST',
+                dataType: 'json',
+                data: {id: id}
+            }).done(function (response) {
+                if (response && response.status) {
+                    window.location.reload();
+                    return;
+                }
+                button.prop('disabled', false);
+                if (window.Swal) Swal.fire('Gagal', (response && response.message) || 'Gagal menghapus data opname.', 'error');
+                else alert((response && response.message) || 'Gagal menghapus data opname.');
+            }).fail(function () {
+                button.prop('disabled', false);
+                if (window.Swal) Swal.fire('Gagal', 'Server tidak merespons.', 'error');
+                else alert('Server tidak merespons.');
+            });
+        };
+
+        if (window.Swal) {
+            Swal.fire({
+                title: 'Hapus data opname?',
+                text: 'Data yang dihapus tidak dapat dikembalikan dari histori ini.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, hapus',
+                cancelButtonText: 'Batal'
+            }).then(function (result) {
+                if (result.isConfirmed) remove();
+            });
+        } else if (window.confirm('Hapus data opname ini?')) {
+            remove();
+        }
+    });
+});
+</script>

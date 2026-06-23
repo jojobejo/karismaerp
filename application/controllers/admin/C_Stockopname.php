@@ -26,6 +26,7 @@ class C_Stockopname extends CI_Controller
         $inputMethods = [
             'input_opname',
             'history_input',
+            'ajax_delete_history_input',
             'ajax_input_lookup',
             'ajax_input_save',
             'ajax_manual_barang',
@@ -35,8 +36,15 @@ class C_Stockopname extends CI_Controller
             'ajax_request_save',
         ];
         $isStockopnameInputer = $jobdesk === 'STOCKOPNAME' && in_array($method, $inputMethods, true);
+        $supervisorMethods = [
+            'supervisor_opname',
+            'supervisor_tracking',
+            'ajax_manual_barang',
+            'ajax_request_save',
+        ];
+        $isSupervisorOpname = $jobdesk === 'SUPERVISIOR_OPNAME' && in_array($method, $supervisorMethods, true);
 
-        if (!$isAdminDashboard && !$isStockopnameInputer) {
+        if (!$isAdminDashboard && !$isStockopnameInputer && !$isSupervisorOpname) {
             show_error('Anda tidak memiliki akses ke dashboard admin stockopname.', 403, 'Akses Ditolak');
         }
     }
@@ -545,6 +553,10 @@ class C_Stockopname extends CI_Controller
 
     public function input_opname()
     {
+        if (strtoupper(trim((string)$this->session->userdata('jobdesk'))) === 'SUPERVISIOR_OPNAME') {
+            return $this->supervisor_opname();
+        }
+
         $data['page_title'] = 'KARISMA ERP - Input Stockopname';
         $this->stockopname->ensure_master_code_columns();
 
@@ -581,6 +593,30 @@ class C_Stockopname extends CI_Controller
         }
 
         return $value;
+    }
+
+    public function supervisor_opname()
+    {
+        $data['page_title'] = 'KARISMA ERP - Supervisi Opname';
+        $data['wilayah'] = (string)($this->session->userdata('wilayah') ?: '-');
+        $this->stockopname->ensure_master_code_columns();
+        $this->stockopname->ensure_manual_tables();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_supervisor.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function supervisor_tracking()
+    {
+        $wilayah = trim((string)$this->session->userdata('wilayah'));
+        $data['page_title'] = 'KARISMA ERP - Tracking Inputer Wilayah';
+        $data['wilayah'] = $wilayah;
+        $data['comparison_rows'] = $this->stockopname->supervisor_wilayah_compare($wilayah, 1000);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_supervisor_tracking.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     private function normalize_request_expired_date($value)
@@ -778,6 +814,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Expired date wajib format tanggal/bulan/tahun, contoh 15/06/2026.');
         }
 
+        $isSupervisor = strtoupper(trim((string)$this->session->userdata('jobdesk'))) === 'SUPERVISIOR_OPNAME';
         $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
         $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
         $qtyPcs = $qtyPcs === '' ? '0' : $qtyPcs;
@@ -791,7 +828,7 @@ class C_Stockopname extends CI_Controller
 
         $qtyPcs = (int)$qtyPcs;
         $qtyBox = (int)$qtyBox;
-        if (($qtyPcs + $qtyBox) <= 0) {
+        if (!$isSupervisor && ($qtyPcs + $qtyBox) <= 0) {
             return $this->json(false, 'Isi qty pcs atau qty box terlebih dahulu.');
         }
 
@@ -835,6 +872,22 @@ class C_Stockopname extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_master_barang.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_delete_history_input()
+    {
+        $id = $this->post()['id'] ?? '';
+        if (!ctype_digit((string)$id) || (int)$id <= 0) {
+            return $this->json(false, 'Data histori opname tidak valid.');
+        }
+
+        $inputBy = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: '';
+        if ($inputBy === '') {
+            return $this->json(false, 'Identitas pengguna tidak ditemukan.');
+        }
+
+        $result = $this->stockopname->delete_history_input((int)$id, $inputBy, $inputBy);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
     }
 
     public function master_barang_catalog()

@@ -251,9 +251,14 @@ class M_Stockopname extends CI_Model
                 kode_barang,
                 {$expKey} AS exp_key,
                 {$lotKey} AS lot_key,
-                SUM(qty) AS qty_fisik,
-                SUM(qty_box) AS qty_box,
-                SUM(qty_pcs) AS qty_pcs,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty_box, 0) ELSE 0 END) AS box_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty_box, 0) ELSE 0 END) AS box_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty_pcs, 0) ELSE 0 END) AS pcs_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty_pcs, 0) ELSE 0 END) AS pcs_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
                 GROUP_CONCAT(DISTINCT input_by ORDER BY input_by SEPARATOR ', ') AS inputers,
                 GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
                 MAX(created_at) AS last_input
@@ -279,17 +284,29 @@ class M_Stockopname extends CI_Model
                 m.qty AS qty_buku,
                 m.qty_box AS box_buku,
                 m.qty_pcs AS pcs_buku,
-                COALESCE(o.qty_fisik, 0) AS qty_fisik,
-                COALESCE(o.qty_box, 0) AS box_fisik,
-                COALESCE(o.qty_pcs, 0) AS pcs_fisik,
+                COALESCE(o.qty_tim_1, 0) AS qty_tim_1,
+                COALESCE(o.qty_tim_2, 0) AS qty_tim_2,
+                COALESCE(o.input_tim_1, 0) AS input_tim_1,
+                COALESCE(o.input_tim_2, 0) AS input_tim_2,
+                CASE WHEN COALESCE(o.input_tim_1, 0) > 0 THEN COALESCE(o.qty_tim_1, 0) ELSE COALESCE(o.qty_tim_2, 0) END AS qty_fisik,
+                CASE WHEN COALESCE(o.input_tim_1, 0) > 0 THEN COALESCE(o.box_tim_1, 0) ELSE COALESCE(o.box_tim_2, 0) END AS box_fisik,
+                CASE WHEN COALESCE(o.input_tim_1, 0) > 0 THEN COALESCE(o.pcs_tim_1, 0) ELSE COALESCE(o.pcs_tim_2, 0) END AS pcs_fisik,
                 COALESCE(o.inputers, '-') AS inputers,
                 COALESCE(o.wilayah, '-') AS wilayah,
                 o.last_input,
-                COALESCE(o.qty_fisik, 0) - m.qty AS selisih,
                 CASE
-                    WHEN o.qty_fisik IS NULL THEN 'belum'
-                    WHEN COALESCE(o.qty_fisik, 0) = m.qty THEN 'match'
-                    ELSE 'selisih'
+                    WHEN COALESCE(o.input_tim_1, 0) > 0 AND COALESCE(o.qty_tim_1, 0) = m.qty THEN 0
+                    WHEN COALESCE(o.input_tim_2, 0) > 0 AND COALESCE(o.qty_tim_2, 0) = m.qty THEN 0
+                    WHEN COALESCE(o.input_tim_1, 0) > 0 THEN COALESCE(o.qty_tim_1, 0) - m.qty
+                    ELSE COALESCE(o.qty_tim_2, 0) - m.qty
+                END AS selisih,
+                CASE
+                    WHEN COALESCE(o.input_tim_1, 0) = 0 AND COALESCE(o.input_tim_2, 0) = 0 THEN 'not_match'
+                    WHEN COALESCE(o.input_tim_1, 0) > 0 AND COALESCE(o.qty_tim_1, 0) = m.qty
+                        AND COALESCE(o.input_tim_2, 0) > 0 AND COALESCE(o.qty_tim_2, 0) = m.qty THEN 'all_match'
+                    WHEN COALESCE(o.input_tim_1, 0) > 0 AND COALESCE(o.qty_tim_1, 0) = m.qty THEN 'tim_1'
+                    WHEN COALESCE(o.input_tim_2, 0) > 0 AND COALESCE(o.qty_tim_2, 0) = m.qty THEN 'tim_2'
+                    ELSE 're_check'
                 END AS status_opname
             FROM {$this->masterTable} m
             LEFT JOIN ({$opname}) o
@@ -328,9 +345,9 @@ class M_Stockopname extends CI_Model
                 COUNT(*) AS total_item,
                 SUM(qty_buku) AS qty_buku,
                 SUM(qty_fisik) AS qty_fisik,
-                SUM(CASE WHEN status_opname = 'match' THEN 1 ELSE 0 END) AS match_item,
-                SUM(CASE WHEN status_opname = 'selisih' THEN 1 ELSE 0 END) AS selisih_item,
-                SUM(CASE WHEN status_opname = 'belum' THEN 1 ELSE 0 END) AS belum_item,
+                SUM(CASE WHEN status_opname IN ('all_match', 'tim_1', 'tim_2') THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN status_opname = 're_check' THEN 1 ELSE 0 END) AS selisih_item,
+                SUM(CASE WHEN status_opname = 'not_match' THEN 1 ELSE 0 END) AS belum_item,
                 SUM(CASE WHEN selisih > 0 THEN selisih ELSE 0 END) AS qty_plus,
                 SUM(CASE WHEN selisih < 0 THEN ABS(selisih) ELSE 0 END) AS qty_minus,
                 MAX(last_input) AS last_input
@@ -402,7 +419,7 @@ class M_Stockopname extends CI_Model
         $total = (int)$this->db->query("SELECT COUNT(*) AS total FROM ({$base}) x")->row()->total;
         $filtered = (int)$this->db->query("SELECT COUNT(*) AS total FROM ({$base}) x {$where}")->row()->total;
 
-        $columns = ['id', 'kode_barang', 'nama_barang', 'expired_date', 'no_lot', 'qty_buku', 'qty_fisik', 'selisih', 'status_opname', 'last_input'];
+        $columns = ['id', 'kode_barang', 'nama_barang', 'expired_date', 'no_lot', 'qty_buku', 'qty_tim_1', 'qty_tim_1', 'qty_tim_2', 'qty_tim_2', 'status_opname', 'last_input'];
         $orderIndex = (int)($post['order'][0]['column'] ?? 9);
         $orderColumn = $columns[$orderIndex] ?? 'last_input';
         $orderDir = strtolower((string)($post['order'][0]['dir'] ?? 'desc')) === 'asc' ? 'ASC' : 'DESC';
@@ -543,13 +560,15 @@ class M_Stockopname extends CI_Model
                 x.wilayah,
                 x.last_input,
                 CASE
-                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
-                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 <> x.qty_buku THEN 'tim_1'
-                    WHEN x.qty_tim_2 = x.qty_buku AND x.qty_tim_1 <> x.qty_buku THEN 'tim_2'
+                    WHEN x.input_tim_1 = 0 AND x.input_tim_2 = 0 THEN 'not_match'
+                    WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku
+                        AND x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
+                    WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku THEN 'tim_1'
+                    WHEN x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 'tim_2'
                     ELSE 're_check'
                 END AS status_opname,
-                CASE WHEN x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
-                CASE WHEN x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
+                CASE WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
+                CASE WHEN x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
             FROM (
                 SELECT
                     m.kode_barang,
@@ -666,13 +685,15 @@ class M_Stockopname extends CI_Model
                 x.input_sources,
                 x.last_input,
                 CASE
-                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
-                    WHEN x.qty_tim_1 = x.qty_buku AND x.qty_tim_2 <> x.qty_buku THEN 'tim_1'
-                    WHEN x.qty_tim_2 = x.qty_buku AND x.qty_tim_1 <> x.qty_buku THEN 'tim_2'
+                    WHEN x.input_tim_1 = 0 AND x.input_tim_2 = 0 THEN 'not_match'
+                    WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku
+                        AND x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 'all_match'
+                    WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku THEN 'tim_1'
+                    WHEN x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 'tim_2'
                     ELSE 're_check'
                 END AS status_opname,
-                CASE WHEN x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
-                CASE WHEN x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
+                CASE WHEN x.input_tim_1 > 0 AND x.qty_tim_1 = x.qty_buku THEN 1 ELSE 0 END AS tim_1_match,
+                CASE WHEN x.input_tim_2 > 0 AND x.qty_tim_2 = x.qty_buku THEN 1 ELSE 0 END AS tim_2_match
             FROM (
                 SELECT
                     m.master_id,
@@ -1133,6 +1154,23 @@ class M_Stockopname extends CI_Model
             ->order_by('no_lot', 'ASC')
             ->get()
             ->result_array();
+    }
+
+    public function supervisor_wilayah_compare($wilayah, $limit = 1000)
+    {
+        $wilayah = trim((string)$wilayah);
+        if ($wilayah === '' || !$this->db->table_exists($this->opnameTable)) {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $noLotColumn = $this->db->field_exists('no_lot', $this->opnameTable)
+            ? 'no_lot'
+            : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot' : "'-'");
+        $expKey = $this->exp_key('expired_date');
+        $lotKey = $this->lot_key($noLotColumn);
+
+        return $this->db->query("\n            SELECT\n                kode_barang,\n                MAX(nama_barang) AS nama_barang,\n                MAX(expired_date) AS expired_date,\n                MAX({$noLotColumn}) AS no_lot,\n                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,\n                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,\n                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,\n                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,\n                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 1 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_1,\n                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 2 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_2,\n                MAX({$createdColumn}) AS last_input,\n                CASE\n                    WHEN SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) > 0\n                     AND SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) > 0\n                     AND SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) = SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END)\n                    THEN 'SAMA'\n                    ELSE 'RE-CHECK'\n                END AS status_compare\n            FROM {$this->opnameTable}\n            WHERE wilayah = ?\n              AND tim_opname IN (1, 2)\n            GROUP BY kode_barang, {$expKey}, {$lotKey}\n            ORDER BY status_compare ASC, MAX({$createdColumn}) DESC, kode_barang ASC\n            LIMIT " . (int)$limit, [$wilayah])->result_array();
     }
 
     public function master_item_options_by_kode_barang($kodeBarang)
@@ -1760,26 +1798,13 @@ class M_Stockopname extends CI_Model
             return $this->percentage_result(1, 2);
         }
 
-        $masterPositiveWhere = $this->master_positive_sql();
+        $base = $this->monitoring_compare_all_base();
         $sql = "
             SELECT
-                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 1 ELSE 0 END) AS match_item,
-                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 0 ELSE 1 END) AS not_match_item
-            FROM (
-                SELECT
-                    kode_barang,
-                    SUM(COALESCE(qty, 0)) AS qty_buku
-                FROM {$this->masterTable}
-                WHERE {$masterPositiveWhere}
-                GROUP BY kode_barang
-            ) m
-            LEFT JOIN (
-                SELECT
-                    kode_barang,
-                    SUM(COALESCE(qty, 0)) AS qty_fisik
-                FROM {$this->opnameTable}
-                GROUP BY kode_barang
-            ) o ON o.kode_barang = m.kode_barang
+                SUM(CASE WHEN tim_1_match = 1 OR tim_2_match = 1 THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN tim_1_match = 1 OR tim_2_match = 1 THEN 0 ELSE 1 END) AS not_match_item
+            FROM ({$base}) x
+            WHERE x.qty_buku > 0
         ";
         $row = $this->db->query($sql)->row_array();
 
@@ -1795,36 +1820,13 @@ class M_Stockopname extends CI_Model
             return $this->percentage_result(1, 2);
         }
 
-        $masterLot = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot' : "''");
-        $opnameLot = $this->db->field_exists('no_lot', $this->opnameTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot' : "''");
-        $masterPositiveWhere = $this->master_positive_sql();
-
+        $base = $this->monitoring_compare_lot_base();
         $sql = "
             SELECT
-                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 1 ELSE 0 END) AS match_item,
-                SUM(CASE WHEN COALESCE(o.qty_fisik, 0) = m.qty_buku THEN 0 ELSE 1 END) AS not_match_item
-            FROM (
-                SELECT
-                    kode_barang,
-                    {$this->exp_key('expired_date')} AS exp_key,
-                    {$this->lot_key($masterLot)} AS lot_key,
-                    SUM(COALESCE(qty, 0)) AS qty_buku
-                FROM {$this->masterTable}
-                WHERE {$masterPositiveWhere}
-                GROUP BY kode_barang, exp_key, lot_key
-            ) m
-            LEFT JOIN (
-                SELECT
-                    kode_barang,
-                    {$this->exp_key('expired_date')} AS exp_key,
-                    {$this->lot_key($opnameLot)} AS lot_key,
-                    SUM(COALESCE(qty, 0)) AS qty_fisik
-                FROM {$this->opnameTable}
-                GROUP BY kode_barang, exp_key, lot_key
-            ) o
-                ON o.kode_barang = m.kode_barang
-                AND o.exp_key = m.exp_key
-                AND o.lot_key = m.lot_key
+                SUM(CASE WHEN tim_1_match = 1 OR tim_2_match = 1 THEN 1 ELSE 0 END) AS match_item,
+                SUM(CASE WHEN tim_1_match = 1 OR tim_2_match = 1 THEN 0 ELSE 1 END) AS not_match_item
+            FROM ({$base}) x
+            WHERE x.qty_buku > 0
         ";
         $row = $this->db->query($sql)->row_array();
 
@@ -3165,6 +3167,17 @@ class M_Stockopname extends CI_Model
             ->limit((int)$limit)
             ->get()
             ->result_array();
+    }
+
+    public function delete_history_input($id, $inputBy, $actor)
+    {
+        $inputBy = trim((string)$inputBy);
+        $row = $this->input_opname_row_by_id((int)$id);
+        if (!$row || $inputBy === '' || (string)($row['input_by'] ?? '') !== $inputBy) {
+            return ['status' => false, 'message' => 'Data histori opname tidak ditemukan atau bukan milik Anda.'];
+        }
+
+        return $this->delete_input_opname((int)$id, (string)$row['kode_barang'], $actor);
     }
 
     public function update_master_barang($id, $data)
