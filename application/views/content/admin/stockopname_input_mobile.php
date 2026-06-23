@@ -61,26 +61,16 @@
                                         <label>Expired Date</label>
                                         <div id="itemExpired">-</div>
                                     </div>
-                                    <div class="so-readonly">
-                                        <label>No Lot</label>
-                                        <div id="itemLot">-</div>
-                                    </div>
                                 </div>
                                 <div class="so-manual-form" id="manualStockView">
                                     <div class="form-group">
                                         <label>Nama Barang</label>
                                         <select class="form-control" id="manualBarang" name="manual_kode_barang"></select>
                                     </div>
-                                    <div class="form-group">
-                                        <label>No Lot</label>
-                                        <select class="form-control" id="manualLot" name="manual_no_lot" disabled>
-                                            <option value="">Pilih nama barang dahulu</option>
-                                        </select>
-                                    </div>
                                     <div class="form-group mb-0">
                                         <label>Expired Date</label>
                                         <select class="form-control" id="manualExpired" name="manual_expired_id" disabled>
-                                            <option value="">Pilih no lot dahulu</option>
+                                            <option value="">Pilih nama barang dahulu</option>
                                         </select>
                                     </div>
                                 </div>
@@ -88,10 +78,6 @@
                                     <div class="form-group">
                                         <label>Nama Barang</label>
                                         <select class="form-control" id="requestBarang" name="request_kode_barang"></select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>No Lot</label>
-                                        <input type="text" class="form-control" id="requestLot" name="request_no_lot" placeholder="Input no lot">
                                     </div>
                                     <div class="form-group mb-0">
                                         <label>Expired Date</label>
@@ -209,7 +195,6 @@ window.addEventListener('load', function () {
         $('#manualSourceId').val('');
         $('#itemName').html(escapeHtml(row.nama_barang || '-'));
         $('#itemExpired').text(formatExpiredDate(row.expired_date));
-        $('#itemLot').text(row.no_lot || '-');
         selectedDimensi = parseInt(row.dimensi || 0, 10) || 0;
         updateQtyTotal();
         $('#btnSaveOpname').prop('disabled', false);
@@ -219,10 +204,10 @@ window.addEventListener('load', function () {
         $('#formInputOpname')[0].reset();
         $('#masterId').val('');
         $('#manualSourceId').val('');
-        $('#itemName,#itemExpired,#itemLot').text('-');
+        $('#itemName,#itemExpired').text('-');
         $('#manualBarang').val(null).trigger('change');
         $('#requestBarang').val(null).trigger('change');
-        $('#requestLot,#requestExpiredView').val('');
+        $('#requestExpiredView').val('');
         resetManualLot('Pilih nama barang dahulu');
         resetManualExpired('Pilih no lot dahulu');
         selectedDimensi = 0;
@@ -250,7 +235,7 @@ window.addEventListener('load', function () {
             $('#btnScan').removeClass('btn-primary').addClass('btn-outline-primary').html('<i class="fas fa-qrcode"></i>Scan');
             $('#btnRequestMode').removeClass('btn-warning').addClass('btn-outline-warning');
             $('#masterId').val('');
-            $('#itemName,#itemExpired,#itemLot').text('-');
+            $('#itemName,#itemExpired').text('-');
             validateManualReady();
             return;
         }
@@ -263,7 +248,7 @@ window.addEventListener('load', function () {
             $('#btnScan').removeClass('btn-primary').addClass('btn-outline-primary').html('<i class="fas fa-qrcode"></i>Scan');
             $('#btnManualMode').removeClass('btn-primary').addClass('btn-outline-primary');
             $('#masterId,#manualSourceId').val('');
-            $('#itemName,#itemExpired,#itemLot').text('-');
+            $('#itemName,#itemExpired').text('-');
             validateRequestReady();
             return;
         }
@@ -303,7 +288,7 @@ window.addEventListener('load', function () {
 
     function validateRequestReady() {
         if (inputMode !== 'request') return;
-        var ready = !!$('#requestBarang').val() && !!$.trim($('#requestLot').val() || '') && !!requestExpiredStorageValue();
+        var ready = !!$('#requestBarang').val() && !!requestExpiredStorageValue();
         $('#btnSaveOpname').prop('disabled', !ready);
     }
 
@@ -431,9 +416,6 @@ window.addEventListener('load', function () {
         validateRequestReady();
     });
 
-    $('#requestLot').on('input', function () {
-        validateRequestReady();
-    });
 
     $('#requestExpiredView').on('input', function () {
         $(this).val(formatDateView($(this).val()));
@@ -448,46 +430,14 @@ window.addEventListener('load', function () {
 
     $('#manualBarang').on('change', function () {
         var kodeBarang = $(this).val();
-        resetManualLot(kodeBarang ? 'Memuat no lot' : 'Pilih nama barang dahulu');
-        resetManualExpired('Pilih no lot dahulu');
+        resetManualExpired(kodeBarang ? 'Memuat expired date' : 'Pilih nama barang dahulu');
         if (!kodeBarang) return;
-
-        $.ajax({
-            url: '<?= base_url('admin/stockopname/input/manual/lot') ?>',
-            type: 'POST',
-            dataType: 'json',
-            data: {kode_barang: kodeBarang},
-            success: function (res) {
-                var $lot = $('#manualLot');
-                $lot.empty().append(new Option('Pilih no lot', '', true, true));
-                if (!res.status || !(res.data || []).length) {
-                    resetManualLot('No lot tidak tersedia');
-                    toast('warning', res.message || 'No lot tidak tersedia');
-                    return;
-                }
-                $.each(res.data, function (_, row) {
-                    $lot.append(new Option(row.text, row.id, false, false));
-                });
-                $lot.prop('disabled', false).trigger('change');
-            },
-            error: function (xhr) {
-                resetManualLot('Gagal memuat no lot');
-                toast('error', ajaxMessage(xhr, 'Server tidak merespons'));
-            }
-        });
-    });
-
-    $('#manualLot').on('change', function () {
-        var kodeBarang = $('#manualBarang').val();
-        var noLot = $(this).val();
-        resetManualExpired(noLot ? 'Memuat expired date' : 'Pilih no lot dahulu');
-        if (!kodeBarang || !noLot) return;
 
         $.ajax({
             url: '<?= base_url('admin/stockopname/input/manual/expired') ?>',
             type: 'POST',
             dataType: 'json',
-            data: {kode_barang: kodeBarang, no_lot: noLot},
+            data: {kode_barang: kodeBarang},
             success: function (res) {
                 if (!res.status || !(res.data || []).length) {
                     resetManualExpired('Expired date tidak tersedia');

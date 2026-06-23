@@ -62,7 +62,6 @@
                                             <th>Kode</th>
                                             <th>Nama Barang</th>
                                             <th>Exp Date</th>
-                                            <th>Lot</th>
                                             <th class="text-right">Pcs</th>
                                             <th class="text-right">Box</th>
                                             <th class="text-right">Qty</th>
@@ -83,7 +82,6 @@
                                                 <td><span class="sm-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['nama_barang'] ?? '-') ?></td>
                                                 <td><?= $so_e($row['expired_date'] ?? '-') ?></td>
-                                                <td><?= $so_e($row['no_lot'] ?? '-') ?></td>
                                                 <td class="text-right"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-right"><?= number_format((int)($row['qty_box'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-right font-weight-bold"><?= number_format((int)($row['qty'] ?? 0), 0, ',', '.') ?></td>

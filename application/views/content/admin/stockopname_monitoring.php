@@ -121,7 +121,7 @@
                                         </div>
                                     </div>
                                     <div class="om-result-item" data-metric="compare_lot">
-                                        <div class="om-stat-label">Compare By Expired Lot</div>
+                                        <div class="om-stat-label">Compare By Expired Date</div>
                                         <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team1, 'compare_lot', 'persen_match'), 2, ',', '.') ?>%</div>
                                         <div class="om-mini-row">
                                             <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team1, 'compare_lot', 'match'), 0, ',', '.') ?></b></div>
@@ -156,7 +156,7 @@
                                         </div>
                                     </div>
                                     <div class="om-result-item" data-metric="compare_lot">
-                                        <div class="om-stat-label">Compare By Expired Lot</div>
+                                        <div class="om-stat-label">Compare By Expired Date</div>
                                         <div class="om-result-value js-percent-match"><?= number_format((float)$so_metric($team2, 'compare_lot', 'persen_match'), 2, ',', '.') ?>%</div>
                                         <div class="om-mini-row">
                                             <div class="om-pill"><span>Match</span><b class="js-match-count"><?= number_format((int)$so_metric($team2, 'compare_lot', 'match'), 0, ',', '.') ?></b></div>
@@ -320,7 +320,7 @@
                     <div class="col-12 mb-3">
                         <div class="om-panel">
                             <div class="om-panel-header">
-                                <h2 class="om-title">Compare Stock Buku vs Stock Opname - By Exp Date + Lot</h2>
+                                <h2 class="om-title">Compare Stock Buku vs Stock Opname - By Expired Date</h2>
                                 <div>
                                     <select class="custom-select custom-select-sm js-status-filter" data-target="#tableCompareLot" style="width:150px">
                                         <option value="">Semua Status</option>
@@ -337,7 +337,6 @@
                                         <tr>
                                             <th>Nama Barang</th>
                                             <th>Exp Date</th>
-                                            <th>LOT</th>
                                             <th class="text-right">Stock Buku</th>
                                             <th class="text-right">Qty Tim 1</th>
                                             <th class="text-right">Qty Tim 2</th>
@@ -445,7 +444,6 @@ $(function () {
         columns: [
             {data: 'nama_barang'},
             {data: 'expired_date', defaultContent: '-', render: function (value) { return formatExpiredDate(value); }},
-            {data: 'no_lot', defaultContent: '-'},
             {data: 'qty_buku', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
             {data: 'qty_tim_1', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
             {data: 'qty_tim_2', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},

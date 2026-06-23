@@ -244,13 +244,12 @@ class M_Stockopname extends CI_Model
     private function opname_subquery()
     {
         $expKey = $this->exp_key('expired_date');
-        $lotKey = $this->lot_key('no_lot');
 
         return "
             SELECT
                 kode_barang,
+                nama_barang,
                 {$expKey} AS exp_key,
-                {$lotKey} AS lot_key,
                 SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
                 SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
                 SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty_box, 0) ELSE 0 END) AS box_tim_1,
@@ -263,7 +262,7 @@ class M_Stockopname extends CI_Model
                 GROUP_CONCAT(DISTINCT wilayah ORDER BY wilayah SEPARATOR ', ') AS wilayah,
                 MAX(created_at) AS last_input
             FROM {$this->opnameTable}
-            GROUP BY kode_barang, exp_key, lot_key
+            GROUP BY kode_barang, nama_barang, exp_key
         ";
     }
 
@@ -273,6 +272,13 @@ class M_Stockopname extends CI_Model
         $masterLotKey = $this->lot_key('m.no_lot');
         $masterPositiveWhere = $this->master_positive_sql('m');
         $opname = $this->opname_subquery();
+        $master = "
+            SELECT MIN(id) AS id, kode_barang, nama_barang, MAX(expired_date) AS expired_date,
+                '-' AS no_lot, SUM(COALESCE(qty, 0)) AS qty,
+                SUM(COALESCE(qty_box, 0)) AS qty_box, SUM(COALESCE(qty_pcs, 0)) AS qty_pcs
+            FROM {$this->masterTable}
+            WHERE COALESCE(qty, 0) > 0
+            GROUP BY kode_barang, nama_barang, " . $this->exp_key('expired_date');
 
         return "
             SELECT
@@ -308,11 +314,11 @@ class M_Stockopname extends CI_Model
                     WHEN COALESCE(o.input_tim_2, 0) > 0 AND COALESCE(o.qty_tim_2, 0) = m.qty THEN 'tim_2'
                     ELSE 're_check'
                 END AS status_opname
-            FROM {$this->masterTable} m
+            FROM ({$master}) m
             LEFT JOIN ({$opname}) o
                 ON o.kode_barang = m.kode_barang
+                AND o.nama_barang = m.nama_barang
                 AND o.exp_key = {$masterExpKey}
-                AND o.lot_key = {$masterLotKey}
             WHERE {$masterPositiveWhere}
         ";
     }
@@ -610,7 +616,7 @@ class M_Stockopname extends CI_Model
     private function monitoring_master_lot_subquery()
     {
         $expKey = $this->exp_key('expired_date');
-        $lotKey = $this->lot_key('no_lot');
+        // Lot is retained only as historical data; it is not part of the opname key.
         $masterPositiveWhere = $this->master_positive_sql();
 
         return "
@@ -618,7 +624,6 @@ class M_Stockopname extends CI_Model
                 kode_barang,
                 MAX(nama_barang) AS nama_barang,
                 {$expKey} AS exp_key,
-                {$lotKey} AS lot_key,
                 MAX(expired_date) AS expired_date,
                 MAX(no_lot) AS no_lot,
                 MIN(id) AS master_id,
@@ -627,14 +632,13 @@ class M_Stockopname extends CI_Model
                 SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
             FROM {$this->masterTable}
             WHERE {$masterPositiveWhere}
-            GROUP BY kode_barang, exp_key, lot_key
+            GROUP BY kode_barang, nama_barang, exp_key
         ";
     }
 
     private function monitoring_opname_lot_subquery()
     {
         $expKey = $this->exp_key('expired_date');
-        $lotKey = $this->lot_key('no_lot');
         $createdColumn = $this->opname_created_column();
         $inputSource = $this->db->field_exists('input_source', $this->opnameTable)
             ? 'GROUP_CONCAT(DISTINCT input_source ORDER BY input_source SEPARATOR \',\') AS input_sources'
@@ -645,9 +649,8 @@ class M_Stockopname extends CI_Model
                 kode_barang,
                 MAX(nama_barang) AS nama_barang,
                 {$expKey} AS exp_key,
-                {$lotKey} AS lot_key,
                 MAX(expired_date) AS expired_date,
-                MAX(no_lot) AS no_lot,
+                '-' AS no_lot,
                 SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
                 SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
                 SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
@@ -657,7 +660,7 @@ class M_Stockopname extends CI_Model
                 {$inputSource},
                 MAX({$createdColumn}) AS last_input
             FROM {$this->opnameTable}
-            GROUP BY kode_barang, exp_key, lot_key
+            GROUP BY kode_barang, nama_barang, exp_key
         ";
     }
 
@@ -666,7 +669,6 @@ class M_Stockopname extends CI_Model
         $master = $this->monitoring_master_lot_subquery();
         $opname = $this->monitoring_opname_lot_subquery();
         $masterZeroExpKey = $this->exp_key('mz.expired_date');
-        $masterZeroLotKey = $this->lot_key('mz.no_lot');
 
         return "
             SELECT
@@ -713,8 +715,8 @@ class M_Stockopname extends CI_Model
                 FROM ({$master}) m
                 LEFT JOIN ({$opname}) o
                     ON o.kode_barang = m.kode_barang
+                    AND o.nama_barang = m.nama_barang
                     AND o.exp_key = m.exp_key
-                    AND o.lot_key = m.lot_key
                 UNION ALL
                 SELECT
                     0 AS master_id,
@@ -734,8 +736,8 @@ class M_Stockopname extends CI_Model
                 FROM ({$opname}) o
                 LEFT JOIN ({$master}) m
                     ON m.kode_barang = o.kode_barang
+                    AND m.nama_barang = o.nama_barang
                     AND m.exp_key = o.exp_key
-                    AND m.lot_key = o.lot_key
                 WHERE m.kode_barang IS NULL
                     AND (
                         FIND_IN_SET('manual opname request', COALESCE(o.input_sources, '')) > 0
@@ -744,8 +746,8 @@ class M_Stockopname extends CI_Model
                         SELECT 1
                         FROM {$this->masterTable} mz
                         WHERE mz.kode_barang = o.kode_barang
+                            AND mz.nama_barang = o.nama_barang
                             AND {$masterZeroExpKey} = o.exp_key
-                            AND {$masterZeroLotKey} = o.lot_key
                         )
                     )
             ) x
@@ -1141,19 +1143,20 @@ class M_Stockopname extends CI_Model
             return [];
         }
 
-        $noLotColumn = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot AS no_lot' : "'-' AS no_lot");
         $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
-            ? 'COALESCE(dimensi, 0) AS dimensi'
-            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
+            ? 'MAX(COALESCE(dimensi, 0))'
+            : 'MAX(CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END)';
+        $expKey = $this->exp_key('expired_date');
 
-        return $this->db
-            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn},qty,qty_pcs,qty_box,{$dimensi}", false)
-            ->from($this->masterTable)
-            ->where('kode_barang', $kodeBarang)
-            ->order_by('expired_date', 'ASC')
-            ->order_by('no_lot', 'ASC')
-            ->get()
-            ->result_array();
+        return $this->db->query("\n            SELECT MIN(id) AS id, kode_barang, MAX(nama_barang) AS nama_barang,
+                MAX(expired_date) AS expired_date, '-' AS no_lot,
+                SUM(COALESCE(qty, 0)) AS qty, SUM(COALESCE(qty_pcs, 0)) AS qty_pcs,
+                SUM(COALESCE(qty_box, 0)) AS qty_box, {$dimensi} AS dimensi
+            FROM {$this->masterTable}
+            WHERE kode_barang = ?
+            GROUP BY kode_barang, nama_barang, {$expKey}
+            ORDER BY {$expKey} ASC
+        ", [$kodeBarang])->result_array();
     }
 
     public function supervisor_wilayah_compare($wilayah, $limit = 1000)
@@ -1168,7 +1171,8 @@ class M_Stockopname extends CI_Model
             ? 'no_lot'
             : ($this->db->field_exists('nolot', $this->opnameTable) ? 'nolot' : "'-'");
         $expKey = $this->exp_key('expired_date');
-        $lotKey = $this->lot_key($noLotColumn);
+        // Keep the existing query shape, but group by name instead of lot.
+        $lotKey = 'nama_barang';
 
         return $this->db->query("\n            SELECT\n                kode_barang,\n                MAX(nama_barang) AS nama_barang,\n                MAX(expired_date) AS expired_date,\n                MAX({$noLotColumn}) AS no_lot,\n                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,\n                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,\n                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,\n                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,\n                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 1 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_1,\n                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 2 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_2,\n                MAX({$createdColumn}) AS last_input,\n                CASE\n                    WHEN SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) > 0\n                     AND SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) > 0\n                     AND SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) = SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END)\n                    THEN 'SAMA'\n                    ELSE 'RE-CHECK'\n                END AS status_compare\n            FROM {$this->opnameTable}\n            WHERE wilayah = ?\n              AND tim_opname IN (1, 2)\n            GROUP BY kode_barang, {$expKey}, {$lotKey}\n            ORDER BY status_compare ASC, MAX({$createdColumn}) DESC, kode_barang ASC\n            LIMIT " . (int)$limit, [$wilayah])->result_array();
     }
@@ -1180,14 +1184,20 @@ class M_Stockopname extends CI_Model
             return [];
         }
 
-        $this->master_barang_select();
-        return $this->db
-            ->where('kode_barang', $kodeBarang)
-            ->order_by('expired_date', 'ASC')
-            ->order_by('no_lot', 'ASC')
-            ->order_by('id', 'ASC')
-            ->get()
-            ->result_array();
+        $expKey = $this->exp_key('expired_date');
+        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'MAX(COALESCE(dimensi, 0))'
+            : 'MAX(CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END)';
+        return $this->db->query("\n            SELECT MIN(id) AS id, kode_barang, MAX(nama_barang) AS nama_barang,
+                MAX(expired_date) AS expired_date, '-' AS no_lot,
+                {$dimensi} AS dimensi,
+                SUM(COALESCE(qty, 0)) AS qty, SUM(COALESCE(qty_pcs, 0)) AS qty_pcs,
+                SUM(COALESCE(qty_box, 0)) AS qty_box
+            FROM {$this->masterTable}
+            WHERE kode_barang = ?
+            GROUP BY kode_barang, nama_barang, {$expKey}
+            ORDER BY {$expKey} ASC
+        ", [$kodeBarang])->result_array();
     }
 
     public function input_opname_by_kode_barang($kodeBarang)
@@ -1250,6 +1260,45 @@ class M_Stockopname extends CI_Model
             ->order_by('id', 'ASC')
             ->get()
             ->result_array();
+    }
+
+    public function monitoring_activity_compare_tim($wilayah = '', $limit = 300)
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        $wilayah = trim((string)$wilayah);
+        if ($wilayah === '') {
+            return [];
+        }
+
+        $expKey = $this->exp_key('expired_date');
+        $createdColumn = $this->opname_created_column();
+        return $this->db->query("\n            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                MAX(expired_date) AS expired_date,
+                SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END) AS qty_tim_2,
+                SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) AS input_tim_1,
+                SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) AS input_tim_2,
+                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 1 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_1,
+                GROUP_CONCAT(DISTINCT CASE WHEN tim_opname = 2 THEN input_by END ORDER BY input_by SEPARATOR ', ') AS inputer_tim_2,
+                MAX({$createdColumn}) AS last_input,
+                CASE
+                    WHEN SUM(CASE WHEN tim_opname = 1 THEN 1 ELSE 0 END) > 0
+                     AND SUM(CASE WHEN tim_opname = 2 THEN 1 ELSE 0 END) > 0
+                     AND SUM(CASE WHEN tim_opname = 1 THEN COALESCE(qty, 0) ELSE 0 END)
+                       = SUM(CASE WHEN tim_opname = 2 THEN COALESCE(qty, 0) ELSE 0 END)
+                    THEN 'DATA SAMA'
+                    ELSE 'RE-CHECK'
+                END AS status_compare
+            FROM {$this->opnameTable}
+            WHERE wilayah = ? AND tim_opname IN (1, 2)
+            GROUP BY kode_barang, nama_barang, {$expKey}
+            ORDER BY status_compare ASC, MAX({$createdColumn}) DESC, kode_barang ASC
+            LIMIT " . (int)$limit, [$wilayah])->result_array();
     }
 
     private function input_opname_row_by_id($id)
@@ -1426,21 +1475,6 @@ class M_Stockopname extends CI_Model
             $expiredDate = trim((string)($row['expired_date'] ?? ''));
             if ($expiredDate !== '') {
                 $this->db->where($this->exp_key('expired_date') . ' = ' . $this->db->escape($expiredDate), null, false);
-            }
-
-            $noLot = trim((string)($row['no_lot'] ?? '-'));
-            if ($noLot !== '') {
-                $normalizedLot = $noLot === '-' ? ['', '-', '0'] : [$noLot];
-                $this->db->group_start();
-                foreach ($normalizedLot as $index => $lot) {
-                    $condition = "TRIM(COALESCE(no_lot, '')) = " . $this->db->escape($lot);
-                    if ($index === 0) {
-                        $this->db->where($condition, null, false);
-                    } else {
-                        $this->db->or_where($condition, null, false);
-                    }
-                }
-                $this->db->group_end();
             }
 
             $this->db->order_by('id', 'ASC');
@@ -1682,8 +1716,7 @@ class M_Stockopname extends CI_Model
         } else {
             $this->db
                 ->where('kode_barang', $kodeBarang)
-                ->where('expired_date', $expiredDate)
-                ->where('no_lot', $noLot);
+                ->where('expired_date', $expiredDate);
         }
         $request = $this->db->order_by('id', 'DESC')->limit(1)->get()->row_array();
         if (!$request) {
@@ -1881,7 +1914,7 @@ class M_Stockopname extends CI_Model
 
         $where = $qtyMode === 'zero' ? 'COALESCE(qty, 0) = 0' : 'COALESCE(qty, 0) > 0';
         $row = $this->db
-            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} WHERE {$where} GROUP BY nama_barang, expired_date, no_lot) grouped_master")
+            ->query("SELECT COUNT(*) AS total FROM (SELECT 1 FROM {$this->masterTable} WHERE {$where} GROUP BY kode_barang, nama_barang, expired_date) grouped_master")
             ->row_array();
 
         return (int)($row['total'] ?? 0);
@@ -2544,24 +2577,12 @@ class M_Stockopname extends CI_Model
     public function manual_expired_options($kodeBarang, $noLot)
     {
         $kodeBarang = trim((string)$kodeBarang);
-        $noLot = trim((string)$noLot);
-        if ($kodeBarang === '' || $noLot === '' || !$this->db->table_exists($this->masterTable)) {
+        if ($kodeBarang === '' || !$this->db->table_exists($this->masterTable)) {
             return [];
         }
 
-        $normalizedLot = $noLot === '-' ? ['', '-', '0'] : [$noLot];
         $this->master_barang_select();
         $this->db->where('kode_barang', $kodeBarang);
-        $this->db->group_start();
-        foreach ($normalizedLot as $index => $lot) {
-            $condition = "TRIM(COALESCE(no_lot, '')) = " . $this->db->escape($lot);
-            if ($index === 0) {
-                $this->db->where($condition, null, false);
-            } else {
-                $this->db->or_where($condition, null, false);
-            }
-        }
-        $this->db->group_end();
         $this->db
             ->order_by('expired_date', 'ASC')
             ->order_by('id', 'ASC');
@@ -2571,7 +2592,7 @@ class M_Stockopname extends CI_Model
         $seen = [];
         foreach ($rows as $row) {
             $expired = (string)($row['expired_date'] ?? '');
-            $key = $expired . '|' . (string)($row['no_lot'] ?? '');
+            $key = $expired;
             if (isset($seen[$key])) {
                 continue;
             }
@@ -2717,22 +2738,15 @@ class M_Stockopname extends CI_Model
     {
         $kodeBarang = trim((string)$kodeBarang);
         $expiredDate = trim((string)$expiredDate);
-        $noLot = trim((string)$noLot);
-        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '' || !$this->db->table_exists($this->masterTable)) {
+        if ($kodeBarang === '' || $expiredDate === '' || !$this->db->table_exists($this->masterTable)) {
             return ['status' => false, 'message' => 'Data stock buku tidak valid.'];
         }
 
-        $noLotColumn = $this->db->field_exists('no_lot', $this->masterTable) ? 'no_lot' : ($this->db->field_exists('nolot', $this->masterTable) ? 'nolot' : '');
-        if ($noLotColumn === '') {
-            return ['status' => false, 'message' => 'Kolom no lot master item tidak tersedia.'];
-        }
-
         $rows = $this->db
-            ->select("id,kode_barang,nama_barang,expired_date,{$noLotColumn} AS no_lot,qty", false)
+            ->select('id,kode_barang,nama_barang,expired_date,qty')
             ->from($this->masterTable)
             ->where('kode_barang', $kodeBarang)
             ->where('expired_date', $expiredDate)
-            ->where($noLotColumn, $noLot)
             ->get()
             ->result_array();
         if (!$rows) {
@@ -2762,14 +2776,13 @@ class M_Stockopname extends CI_Model
 
         return [
             'status' => true,
-            'message' => 'Data stock buku dan data opname lot terkait berhasil dihapus.',
+            'message' => 'Data stock buku dan data opname expired date terkait berhasil dihapus.',
             'data' => [
                 'deleted' => (int)array_sum($deleted),
                 'deleted_by_table' => $deleted,
                 'ids' => $ids,
                 'kode_barang' => $kodeBarang,
                 'expired_date' => $expiredDate,
-                'no_lot' => $noLot,
             ],
         ];
     }
@@ -2783,15 +2796,9 @@ class M_Stockopname extends CI_Model
             return 0;
         }
 
-        $noLotColumn = $this->db->field_exists('no_lot', $table) ? 'no_lot' : ($this->db->field_exists('nolot', $table) ? 'nolot' : '');
-        if ($noLotColumn === '') {
-            return 0;
-        }
-
         $this->db
             ->where('kode_barang', $kodeBarang)
             ->where('expired_date', $expiredDate)
-            ->where($noLotColumn, $noLot)
             ->delete($table);
 
         return max(0, (int)$this->db->affected_rows());

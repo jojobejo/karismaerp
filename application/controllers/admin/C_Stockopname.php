@@ -223,6 +223,7 @@ class C_Stockopname extends CI_Controller
         $data['selected_tim'] = $tim;
         $data['wilayah_options'] = $this->stockopname->monitoring_activity_wilayah_options();
         $data['activity_logs'] = $this->stockopname->monitoring_activity_log($wilayah, $tim, 300);
+        $data['activity_compare_rows'] = $this->stockopname->monitoring_activity_compare_tim($wilayah, 300);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_activity_log.php', $data);
@@ -370,9 +371,9 @@ class C_Stockopname extends CI_Controller
         $input = $this->post();
         $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
         $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
-        $noLot = trim((string)($input['no_lot'] ?? ''));
+        $noLot = '-';
         $timOpname = (int)($input['tim_opname'] ?? 0);
-        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '') {
+        if ($kodeBarang === '' || $expiredDate === '') {
             return $this->json(false, 'Data request item tidak valid.');
         }
         if (!in_array($timOpname, [1, 2], true)) {
@@ -406,8 +407,8 @@ class C_Stockopname extends CI_Controller
         $input = $this->post();
         $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
         $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
-        $noLot = trim((string)($input['no_lot'] ?? ''));
-        if ($kodeBarang === '' || $expiredDate === '' || $noLot === '') {
+        $noLot = '-';
+        if ($kodeBarang === '' || $expiredDate === '') {
             return $this->json(false, 'Data request item tidak valid.');
         }
 
@@ -427,7 +428,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Kode barang tidak valid.');
         }
         if (!ctype_digit((string)$masterId) || (int)$masterId <= 0) {
-            return $this->json(false, 'Pilih expired date dan no lot terlebih dahulu.');
+            return $this->json(false, 'Pilih expired date terlebih dahulu.');
         }
         if (!in_array($timOpname, [1, 2], true)) {
             return $this->json(false, 'Tim opname harus Tim 1 atau Tim 2.');
@@ -504,13 +505,13 @@ class C_Stockopname extends CI_Controller
         $input = $this->post();
         $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
         $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
-        $noLot = trim((string)($input['no_lot'] ?? ''));
+        $noLot = '-';
 
         if ($kodeBarang === '') {
             return $this->json(false, 'Kode barang tidak valid.');
         }
-        if ($expiredDate === '' || $noLot === '') {
-            return $this->json(false, 'Expired date dan no lot stock buku tidak valid.');
+        if ($expiredDate === '') {
+            return $this->json(false, 'Expired date stock buku tidak valid.');
         }
 
         $result = $this->stockopname->delete_master_item_by_lot($kodeBarang, $expiredDate, $noLot);
@@ -737,14 +738,10 @@ class C_Stockopname extends CI_Controller
     public function ajax_manual_expired()
     {
         $kodeBarang = trim((string)$this->input->post('kode_barang', true));
-        $noLot = trim((string)$this->input->post('no_lot', true));
+        $noLot = '-';
         if ($kodeBarang === '') {
             return $this->json(false, 'Pilih nama barang terlebih dahulu.');
         }
-        if ($noLot === '') {
-            return $this->json(false, 'Pilih no lot terlebih dahulu.');
-        }
-
         $this->stockopname->ensure_master_code_columns();
         $this->stockopname->ensure_manual_tables();
         $this->json(true, 'Data expired date berhasil dimuat.', $this->stockopname->manual_expired_options($kodeBarang, $noLot));
@@ -755,7 +752,7 @@ class C_Stockopname extends CI_Controller
         $input = $this->post();
         $sourceId = $input['manual_source_id'] ?? '';
         if (!ctype_digit((string)$sourceId) || (int)$sourceId <= 0) {
-            return $this->json(false, 'Lengkapi nama barang, no lot, dan expired date terlebih dahulu.');
+            return $this->json(false, 'Lengkapi nama barang dan expired date terlebih dahulu.');
         }
 
         $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
@@ -801,14 +798,11 @@ class C_Stockopname extends CI_Controller
     {
         $input = $this->post();
         $kodeBarang = trim((string)($input['request_kode_barang'] ?? ''));
-        $noLot = trim((string)($input['request_no_lot'] ?? ''));
+        $noLot = '-';
         $expiredDate = $this->normalize_request_expired_date($input['request_expired_date'] ?? '');
 
         if ($kodeBarang === '') {
             return $this->json(false, 'Pilih nama barang terlebih dahulu.');
-        }
-        if ($noLot === '') {
-            return $this->json(false, 'No lot wajib diisi.');
         }
         if ($expiredDate === '') {
             return $this->json(false, 'Expired date wajib format tanggal/bulan/tahun, contoh 15/06/2026.');
@@ -840,7 +834,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $saved = $this->stockopname->save_manual_master_item_queue($row, [
-            'no_lot' => $noLot,
+            'no_lot' => '-',
             'expired_date' => $expiredDate,
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,

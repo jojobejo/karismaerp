@@ -62,7 +62,6 @@
                                             <th>Kode</th>
                                             <th>Nama Barang</th>
                                             <th>Exp Date Request</th>
-                                            <th>Lot Request</th>
                                             <th class="text-right">Dimensi</th>
                                             <th>Status</th>
                                             <th>Requested By</th>
@@ -83,7 +82,6 @@
                                                 <td><span class="sr-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['nama_barang'] ?? '-') ?></td>
                                                 <td><?= $so_e($row['expired_date'] ?? '-') ?></td>
-                                                <td><?= $so_e($row['no_lot'] ?? '-') ?></td>
                                                 <td class="text-right"><?= number_format((int)($row['dimensi'] ?? 0), 0, ',', '.') ?></td>
                                                 <td><span class="sr-badge"><?= $so_e($row['status'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['requested_by'] ?? '-') ?></td>

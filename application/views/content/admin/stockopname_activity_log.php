@@ -12,6 +12,7 @@
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     };
     $activity_logs = $activity_logs ?? [];
+    $activity_compare_rows = $activity_compare_rows ?? [];
     $selected_wilayah = $selected_wilayah ?? '';
     $selected_tim = (int)($selected_tim ?? 0);
     $wilayah_options = $wilayah_options ?? [];
@@ -55,6 +56,7 @@
                     .sa-code{font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid #dbe5ef;border-radius:6px;padding:4px 7px;color:#334155;white-space:nowrap}
                     .sa-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#eef2ff;color:#3730a3}
                     .sa-team{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800}.sa-team-1{background:#dcfce7;color:#166534}.sa-team-2{background:#fef3c7;color:#92400e}
+                    .sa-tabs{display:flex;gap:8px;padding:12px 16px 0}.sa-tab{border:1px solid #dbe5ef;background:#fff;border-radius:6px;padding:7px 11px;font-size:12px;font-weight:800;color:#475569}.sa-tab.active{background:#2563eb;border-color:#2563eb;color:#fff}.sa-tab-content{display:none}.sa-tab-content.active{display:block}.sa-status{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:850}.sa-status.same{background:#dcfce7;color:#166534}.sa-status.recheck{background:#fee2e2;color:#991b1b}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}
                     @media(max-width:768px){.content-header h1{font-size:22px}.sa-panel-header{align-items:flex-start;flex-direction:column}.sa-filter{grid-template-columns:1fr;width:100%}}
                 </style>
@@ -90,7 +92,11 @@
                                     </a>
                                 </form>
                             </div>
-                            <div class="table-responsive p-3">
+                            <div class="sa-tabs">
+                                <button type="button" class="sa-tab active" data-tab="activity">Log Aktivitas</button>
+                                <button type="button" class="sa-tab" data-tab="compare">Compare Data Input Tim</button>
+                            </div>
+                            <div class="sa-tab-content active" data-panel="activity"><div class="table-responsive p-3">
                                 <table class="table table-sm table-bordered table-hover w-100">
                                     <thead>
                                         <tr>
@@ -98,7 +104,6 @@
                                             <th>Kode</th>
                                             <th>Nama Barang</th>
                                             <th>Exp Date</th>
-                                            <th>Lot</th>
                                             <th class="text-right">Pcs</th>
                                             <th class="text-right">Box</th>
                                             <th class="text-right">Qty</th>
@@ -110,7 +115,7 @@
                                     <tbody>
                                         <?php if (empty($activity_logs)) : ?>
                                             <tr>
-                                                <td colspan="11" class="text-center text-muted py-4">Belum ada log aktifitas untuk filter ini.</td>
+                                                <td colspan="10" class="text-center text-muted py-4">Belum ada log aktifitas untuk filter ini.</td>
                                             </tr>
                                         <?php endif; ?>
                                         <?php foreach ($activity_logs as $row) : ?>
@@ -119,7 +124,6 @@
                                                 <td><span class="sa-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['nama_barang'] ?? '-') ?></td>
                                                 <td><?= $so_e($format_expired_date($row['expired_date'] ?? '')) ?></td>
-                                                <td><?= $so_e($row['no_lot'] ?? '-') ?></td>
                                                 <td class="text-right"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-right"><?= number_format((int)($row['qty_box'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-right font-weight-bold"><?= number_format((int)($row['qty'] ?? 0), 0, ',', '.') ?></td>
@@ -131,7 +135,23 @@
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
-                            </div>
+                            </div></div>
+                            <div class="sa-tab-content" data-panel="compare"><div class="table-responsive p-3">
+                                <?php if ($selected_wilayah === '') : ?>
+                                    <div class="text-center text-muted py-4">Pilih wilayah terlebih dahulu untuk membandingkan input Tim 1 dan Tim 2.</div>
+                                <?php else : ?>
+                                <table class="table table-sm table-bordered table-hover w-100">
+                                    <thead><tr><th>Kode</th><th>Nama Barang</th><th>Exp Date</th><th class="text-right">Qty Tim 1</th><th class="text-right">Qty Tim 2</th><th>Inputer Tim 1</th><th>Inputer Tim 2</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        <?php if (empty($activity_compare_rows)) : ?><tr><td colspan="8" class="text-center text-muted py-4">Belum ada data input untuk wilayah ini.</td></tr><?php endif; ?>
+                                        <?php foreach ($activity_compare_rows as $row) : ?>
+                                            <?php $same = ($row['status_compare'] ?? '') === 'DATA SAMA'; ?>
+                                            <tr><td><span class="sa-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td><td><?= $so_e($row['nama_barang'] ?? '-') ?></td><td><?= $so_e($format_expired_date($row['expired_date'] ?? '')) ?></td><td class="text-right font-weight-bold"><?= number_format((int)($row['qty_tim_1'] ?? 0), 0, ',', '.') ?></td><td class="text-right font-weight-bold"><?= number_format((int)($row['qty_tim_2'] ?? 0), 0, ',', '.') ?></td><td><?= $so_e($row['inputer_tim_1'] ?? '-') ?></td><td><?= $so_e($row['inputer_tim_2'] ?? '-') ?></td><td><span class="sa-status <?= $same ? 'same' : 'recheck' ?>"><?= $same ? 'DATA SAMA' : 'RE-CHECK' ?></span></td></tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <?php endif; ?>
+                            </div></div>
                         </div>
                     </div>
                 </div>
@@ -147,3 +167,15 @@
         </div>
     </footer>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.sa-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var target = tab.getAttribute('data-tab');
+            document.querySelectorAll('.sa-tab').forEach(function (item) { item.classList.toggle('active', item === tab); });
+            document.querySelectorAll('.sa-tab-content').forEach(function (panel) { panel.classList.toggle('active', panel.getAttribute('data-panel') === target); });
+        });
+    });
+});
+</script>
