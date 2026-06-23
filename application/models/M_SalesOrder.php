@@ -594,7 +594,7 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
-        $this->db->where('so.status', 'siap_faktur');
+        $this->db->where_in('so.status', ['siap_faktur', 'partial']);
 
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
@@ -1728,24 +1728,46 @@ class M_SalesOrder extends CI_Model
     private function _cek_dan_complete_so($id_so)
     {
         $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
-        $all_done = true;
+        $all_done   = true;
         $has_faktur = false;
+        $has_outstanding_available = false;
+
         foreach ($rows as $r) {
-            if ((float)$r['qty_faktur'] > 0.001) {
+            $qty_faktur  = (float)$r['qty_faktur'];
+            $outstanding = (float)$r['qty'] - $qty_faktur;
+
+            if ($qty_faktur > 0.001) {
                 $has_faktur = true;
             }
-            $outstanding = (float)$r['qty'] - (float)$r['qty_faktur'];
             if ($outstanding > 0.001) {
                 $all_done = false;
+                // Cek apakah item ini masih bisa difakturkan (ada qty_available_faktur)
+                $available = (float)($r['qty_available_faktur'] ?? $outstanding);
+                if ($available > 0.001) {
+                    $has_outstanding_available = true;
+                }
             }
         }
-        if ($all_done || $has_faktur) {
+
+        if ($all_done) {
+            // Semua item sudah terfakturkan penuh → completed
             $this->db->where('id_so', $id_so);
             $this->db->update('tbso_sales_order', [
-                'status'    => $all_done ? 'completed' : 'partial',
+                'status'    => 'completed',
+                'update_at' => date('Y-m-d H:i:s'),
+            ]);
+        } elseif ($has_faktur && $has_outstanding_available) {
+            // Ada faktur tapi masih ada item yang belum/sebagian terfakturkan → partial
+            // Status tetap siap_faktur/partial tergantung asal, set ke partial supaya tetap
+            // muncul di Admin SC dan bisa difakturkan sisa itemnya
+            $this->db->where('id_so', $id_so);
+            $this->db->update('tbso_sales_order', [
+                'status'    => 'partial',
                 'update_at' => date('Y-m-d H:i:s'),
             ]);
         }
+        // Jika has_faktur tapi !has_outstanding_available: semua item yang ada sudah
+        // difakturkan (meski ada qty tidak terkirim), tidak perlu ubah status di sini
     }
 
     // ================================================================

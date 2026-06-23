@@ -73,111 +73,162 @@ class C_SalesOrder extends CI_Controller
 
     private function _attachPlafonToCustomers(array $customers)
     {
-        if (empty($customers)) {
-            return $customers;
-        }
-
-        $plafon_map = $this->_getPlafonCustomerMap();
-
         foreach ($customers as &$customer) {
-            $kode = strtoupper(trim((string)($customer['kd_customer'] ?? '')));
-            $plafon = $plafon_map[$kode] ?? null;
-
-            $customer['plafon_aktif'] = $plafon['plafon_aktif'] ?? null;
-            $customer['piutang'] = $plafon['piutang'] ?? null;
-            $customer['plafon_status'] = $plafon['status'] ?? null;
-            $customer['plafon_updated_at'] = $plafon['updated_at'] ?? null;
+            $customer['plafon_aktif']      = $customer['plafon_aktif']      ?? null;
+            $customer['piutang']           = null;
+            $customer['plafon_status']     = null;
+            $customer['plafon_updated_at'] = $customer['plafon_updated_at'] ?? null;
         }
         unset($customer);
-
         return $customers;
     }
 
     private function _getPlafonCustomerMap($force_refresh = false)
     {
         $this->plafon_fetch_completed = true;
-        $cache_file = APPPATH . 'cache/plafon_customers.json';
-        $cache_ttl = (int)($this->config->item('plafon_api_cache_ttl') ?: 60);
-
-        if (!$force_refresh && is_file($cache_file) && (time() - filemtime($cache_file)) <= $cache_ttl) {
-            $cached = json_decode((string)file_get_contents($cache_file), true);
-            if (is_array($cached)) {
-                return $cached;
-            }
-        }
 
         $base_url = rtrim((string)$this->config->item('plafon_api_base_url'), '/');
-        $api_key = (string)$this->config->item('plafon_api_key');
+        $api_key  = (string)$this->config->item('plafon_api_key');
 
         if ($base_url === '' || $api_key === '' || !function_exists('curl_init')) {
             $this->plafon_fetch_completed = false;
             return [];
         }
 
-        $map = [];
-        $page = 1;
-        $last_page = 1;
+        $timeout   = 30;
         $max_pages = max(1, (int)($this->config->item('plafon_api_max_pages') ?: 100));
-        $timeout = max(1, (int)($this->config->item('plafon_api_timeout') ?: 5));
-        $completed = true;
 
-        do {
-            $url = $base_url . '/api/customers?status=active&per_page=100&page=' . $page;
-            $ch = curl_init($url);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => [
-                    'Accept: application/json',
-                    'Authorization: Bearer ' . $api_key,
-                ],
-                CURLOPT_CONNECTTIMEOUT => $timeout,
-                CURLOPT_TIMEOUT => $timeout,
-            ]);
+        // ── Langkah 1: fetch halaman pertama untuk tahu total halaman ──
+        $first_url = $base_url . '/api/customers?per_page=100&page=1';
+        $ch = curl_init($first_url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                'Accept: application/json',
+                'Authorization: Bearer ' . $api_key,
+            ],
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT        => $timeout,
+        ]);
+        $body      = curl_exec($ch);
+        $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_err  = curl_error($ch);
+        curl_close($ch);
 
-            $body = curl_exec($ch);
-            $http_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($body === false || $http_code < 200 || $http_code >= 300) {
-                $completed = false;
-                break;
-            }
-
-            $payload = json_decode($body, true);
-            if (!is_array($payload) || empty($payload['data']) || !is_array($payload['data'])) {
-                $completed = false;
-                break;
-            }
-
-            foreach ($payload['data'] as $row) {
-                $kode = strtoupper(trim((string)($row['kode_customer'] ?? '')));
-                if ($kode === '') {
-                    continue;
-                }
-
-                $map[$kode] = [
-                    'plafon_aktif' => $row['plafon_aktif'] ?? null,
-                    'piutang' => $row['piutang'] ?? null,
-                    'status' => $row['status'] ?? null,
-                    'updated_at' => $row['updated_at'] ?? null,
-                ];
-            }
-
-            $last_page = (int)($payload['meta']['last_page'] ?? $page);
-            $page++;
-        } while ($page <= $last_page && $page <= $max_pages);
-
-        if ($page <= $last_page) {
-            $completed = false;
+        if ($body === false || $curl_err !== '' || $http_code < 200 || $http_code >= 300) {
+            $this->plafon_fetch_completed = false;
+            return [];
         }
 
-        $this->plafon_fetch_completed = $completed;
+        $first_payload = json_decode($body, true);
+        if (!is_array($first_payload) || empty($first_payload['data'])) {
+            $this->plafon_fetch_completed = false;
+            return [];
+        }
 
-        if ($completed && !empty($map)) {
-            @file_put_contents($cache_file, json_encode($map), LOCK_EX);
+        $last_page = (int)($first_payload['meta']['last_page'] ?? 1);
+        $last_page = min($last_page, $max_pages);
+
+        // Kumpulkan data halaman pertama
+        $map = [];
+        foreach ($first_payload['data'] as $row) {
+            $kode = strtoupper(trim((string)($row['kode_customer'] ?? '')));
+            if ($kode === '') continue;
+            $map[$kode] = ['plafon_aktif' => $row['plafon_aktif'] ?? null];
+        }
+
+        // ── Langkah 2: fetch halaman 2 dst secara paralel ──
+        if ($last_page > 1) {
+            $mh      = curl_multi_init();
+            $handles = [];
+
+            for ($page = 2; $page <= $last_page; $page++) {
+                $url = $base_url . '/api/customers?per_page=100&page=' . $page;
+                $ch  = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER     => [
+                        'Accept: application/json',
+                        'Authorization: Bearer ' . $api_key,
+                    ],
+                    CURLOPT_CONNECTTIMEOUT => 15,
+                    CURLOPT_TIMEOUT        => $timeout,
+                ]);
+                curl_multi_add_handle($mh, $ch);
+                $handles[$page] = $ch;
+            }
+
+            // Jalankan semua request paralel
+            $running = null;
+            do {
+                curl_multi_exec($mh, $running);
+                curl_multi_select($mh);
+            } while ($running > 0);
+
+            // Ambil hasil semua halaman
+            foreach ($handles as $page => $ch) {
+                $page_body = curl_multi_getcontent($ch);
+                $page_code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_multi_remove_handle($mh, $ch);
+                curl_close($ch);
+
+                if (!$page_body || $page_code < 200 || $page_code >= 300) continue;
+
+                $page_payload = json_decode($page_body, true);
+                if (!is_array($page_payload) || empty($page_payload['data'])) continue;
+
+                foreach ($page_payload['data'] as $row) {
+                    $kode = strtoupper(trim((string)($row['kode_customer'] ?? '')));
+                    if ($kode === '') continue;
+                    $map[$kode] = ['plafon_aktif' => $row['plafon_aktif'] ?? null];
+                }
+            }
+
+            curl_multi_close($mh);
+        }
+
+        $this->plafon_fetch_completed = true;
+
+        // ── Langkah 3: simpan ke DB dalam satu batch ──
+        if (!empty($map)) {
+            $this->_ensurePlafonColumns();
+            $this->_savePlafonBatch($map);
         }
 
         return $map;
+    }
+
+    private function _savePlafonBatch(array $map)
+    {
+        if (empty($map)) return;
+
+        $now        = date('Y-m-d H:i:s');
+        $chunk_size = 200; // proses per 200 customer
+        $chunks     = array_chunk($map, $chunk_size, true);
+
+        foreach ($chunks as $chunk) {
+            $case_plafon = '';
+            $kode_list   = [];
+
+            foreach ($chunk as $kode => $plafon) {
+                $kode_esc     = $this->db->escape(strtoupper($kode));
+                $plafon_val   = $plafon['plafon_aktif'] !== null
+                    ? (float)$plafon['plafon_aktif']
+                    : 'NULL';
+                $case_plafon .= " WHEN UPPER(TRIM(kd_customer)) = {$kode_esc} THEN {$plafon_val}";
+                $kode_list[]  = $kode_esc;
+            }
+
+            $in_clause = implode(',', $kode_list);
+
+            $this->db->query("
+                UPDATE tb_customer
+                SET
+                    plafon_aktif      = CASE {$case_plafon} ELSE plafon_aktif END,
+                    plafon_updated_at = '{$now}'
+                WHERE UPPER(TRIM(kd_customer)) IN ({$in_clause})
+            ");
+        }
     }
 
     public function refresh_plafon_customers()
@@ -190,19 +241,20 @@ class C_SalesOrder extends CI_Controller
         }
 
         $map = $this->_getPlafonCustomerMap(true);
+
         if (empty($map) || !$this->plafon_fetch_completed) {
             http_response_code(500);
             echo json_encode([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Gagal mengambil data plafon customer dari API.',
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
 
         echo json_encode([
-            'status' => 'ok',
-            'message' => 'Data plafon customer berhasil diperbarui.',
-            'count' => count($map),
+            'status'     => 'ok',
+            'message'    => 'Data plafon customer berhasil diperbarui ke database.',
+            'count'      => count($map),
             'updated_at' => date('Y-m-d H:i:s'),
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -350,6 +402,30 @@ class C_SalesOrder extends CI_Controller
                 'constraint' => 4,
                 'null'       => true,
                 'after'      => 'username',
+            ],
+        ]);
+    }
+
+    private function _ensurePlafonColumns()
+    {
+        if ($this->db->field_exists('plafon_aktif', 'tb_customer')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tb_customer', [
+            'plafon_aktif' => [
+                'type'       => 'DECIMAL',
+                'constraint' => '16,2',
+                'null'       => true,
+                'after'      => 'nama_kios',
+            ],
+        ]);
+        $this->dbforge->add_column('tb_customer', [
+            'plafon_updated_at' => [
+                'type'  => 'DATETIME',
+                'null'  => true,
+                'after' => 'plafon_aktif',
             ],
         ]);
     }
@@ -874,7 +950,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoLoadingVerificationColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'SO belum siap difakturkan atau harus diverifikasi ulang oleh logistik.');
             redirect('sales_order/admin_sc');
             return;
@@ -1387,7 +1463,7 @@ class C_SalesOrder extends CI_Controller
             $this->_denySoAccess();
             return;
         }
-        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'Faktur hanya dapat dibuat dari SO yang sudah melewati verifikasi logistik.');
             redirect('sales_order/admin_sc');
             return;
@@ -1461,7 +1537,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureFakturPaymentInfoColumns();
 
         $so = $this->M_SalesOrder->get_so($id_so);
-        if (!$so || ($so['status'] ?? '') !== 'siap_faktur') {
+        if (!$so || !in_array(($so['status'] ?? ''), ['siap_faktur', 'partial'], true)) {
             $this->session->set_flashdata('error', 'SO tidak valid atau harus diverifikasi ulang oleh logistik sebelum difakturkan.');
             redirect($this->_isAdminScOnlyUser() ? 'sales_order/admin_sc' : 'sales_order/detail/' . $id_so);
             return;
