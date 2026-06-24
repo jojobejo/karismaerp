@@ -1489,7 +1489,7 @@ class C_SalesOrder extends CI_Controller
         if (!in_array($tax_mode, ['pajak', 'non_pajak'], true)) {
             $tax_mode = 'non_pajak';
         }
-        $tax_rate = ($tax_mode === 'pajak' && empty($so['is_faktur_z'])) ? 11 : 0;
+        $tax_rate = ($tax_mode === 'pajak') ? 11 : 0;
 
         // Filter hanya item yang sudah lolos verifikasi barang dan belum difakturkan.
         $items_outstanding = array_filter($details, function($d) {

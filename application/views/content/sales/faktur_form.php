@@ -80,10 +80,9 @@ $faktur_back_url = $is_admin_sc_context
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
                 Jenis faktur:
                 <strong>
+                    <?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?>
                     <?php if (!empty($so['is_faktur_z'])): ?>
-                        Faktur Z - Pajak tidak dihitung
-                    <?php else: ?>
-                        <?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?>
+                        (Faktur Z)
                     <?php endif; ?>
                 </strong>.
                 Rute / Regional: <strong><?= !empty($so['customer_kd_rute']) ? htmlspecialchars($so['customer_kd_rute']) : '<span class="text-muted">-</span>' ?></strong>
