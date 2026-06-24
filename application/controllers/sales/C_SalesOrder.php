@@ -2458,4 +2458,80 @@ class C_SalesOrder extends CI_Controller
         ]);
         exit;
     }
+
+    public function repost_faktur_item()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['status' => false, 'message' => 'Method tidak valid']);
+            exit;
+        }
+
+        $id_faktur  = (int)$this->input->post('id_faktur');
+        $id_fd_list = $this->input->post('id_fd_list'); // array of int
+        $repost_by  = $this->session->userdata('username') ?? 'system';
+
+        if ($id_faktur <= 0 || empty($id_fd_list)) {
+            echo json_encode(['status' => false, 'message' => 'Data tidak valid']);
+            exit;
+        }
+
+        $id_fd_list = array_map('intval', (array)$id_fd_list);
+
+        $this->load->model('M_SalesOrder');
+        $result = $this->M_SalesOrder->repost_item_faktur($id_faktur, $id_fd_list, $repost_by);
+
+        if (!empty($result['errors'])) {
+            echo json_encode(['status' => false, 'message' => implode('<br>', $result['errors'])]);
+            exit;
+        }
+
+        echo json_encode([
+            'status'  => true,
+            'message' => 'Item berhasil direpost ke SO.',
+            'faktur_cancelled' => ($result['sisa_detail'] === 0),
+        ]);
+        exit;
+    }
+
+    public function get_faktur_detail_json()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $id_faktur = (int)$this->input->get('id_faktur');
+        if ($id_faktur <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID tidak valid']);
+            exit;
+        }
+
+        // Cek faktur belum masuk DO
+        $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        if (!$faktur) {
+            echo json_encode(['status' => false, 'message' => 'Faktur tidak ditemukan']);
+            exit;
+        }
+        $in_do = $this->db->get_where('tb_detail_do', ['kd_faktur' => $faktur['no_faktur']])->num_rows();
+        if ($in_do > 0) {
+            echo json_encode(['status' => false, 'message' => 'Faktur sudah masuk DO, tidak bisa direpost']);
+            exit;
+        }
+
+        $this->load->model('M_SalesOrder');
+        $items = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+
+        // Format expired_date untuk tampilan
+        foreach ($items as &$item) {
+            if (!empty($item['expired_date']) && $item['expired_date'] !== '0000-00-00') {
+                $item['expired_date'] = date('d/m/Y', strtotime($item['expired_date']));
+            } else {
+                $item['expired_date'] = null;
+            }
+        }
+
+        echo json_encode(['status' => true, 'items' => $items]);
+        exit;
+    }
 }

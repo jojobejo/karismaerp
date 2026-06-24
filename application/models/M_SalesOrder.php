@@ -2073,4 +2073,156 @@ class M_SalesOrder extends CI_Model
     {
         return $this->db->insert('tb_log_do', $data);
     }
+
+    public function repost_item_faktur($id_faktur, array $id_fd_list, $repost_by)
+    {
+        if (empty($id_fd_list)) return ['errors' => ['Tidak ada item yang dipilih.']];
+
+        $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        if (!$faktur) return ['errors' => ['Faktur tidak ditemukan.']];
+        if ($faktur['status'] === 'cancelled') return ['errors' => ['Faktur sudah dibatalkan.']];
+
+        // Cek faktur belum masuk DO
+        $in_do = $this->db->get_where('tb_detail_do', ['kd_faktur' => $faktur['no_faktur']])->num_rows();
+        if ($in_do > 0) return ['errors' => ['Faktur sudah masuk Delivery Order, tidak bisa direpost.']];
+
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $faktur['id_so']])->row_array();
+        if (!$so) return ['errors' => ['SO tidak ditemukan.']];
+
+        // Ambil baris faktur detail yang dipilih
+        $fd_rows = $this->db
+            ->where('id_faktur', $id_faktur)
+            ->where_in('id', $id_fd_list)
+            ->get('tbso_faktur_detail')
+            ->result_array();
+
+        if (empty($fd_rows)) return ['errors' => ['Item faktur tidak ditemukan.']];
+
+        $this->db->trans_start();
+        $qty_col = $this->_stockQtyColumn();
+
+        foreach ($fd_rows as $fd) {
+            $qty          = (float)$fd['qty'];
+            $exp          = $this->_normalizeDate($fd['expired_date'] ?? '');
+            $gudang_id    = $fd['gudang_id'] ?: $so['gudang_id'];
+            $kd_barang    = $fd['kd_barang'];
+            $no_lot       = $fd['no_lot'] ?? null;
+            $id_so_detail = (int)$fd['id_so_detail'];
+
+            // 1. Hapus baris faktur detail
+            $this->db->delete('tbso_faktur_detail', ['id' => $fd['id']]);
+
+            // 2. Kembalikan stok fisik (IN) + tambah kembali qty_reserved
+            $this->db->select('id');
+            $this->db->from('tberp_stock_batch');
+            $this->db->where('kd_barang', $kd_barang);
+            $this->db->where('gudang_id', $gudang_id);
+            if (!empty($exp))    $this->db->where('expired_date', $exp);
+            if (!empty($no_lot)) $this->db->where('no_lot', $no_lot);
+            $this->db->limit(1);
+            $batch = $this->db->get()->row_array();
+
+            if ($batch) {
+                $this->db->where('id', $batch['id']);
+                $this->db->set($qty_col,       $qty_col . ' + ' . $qty, false);
+                $this->db->set('qty_reserved', 'qty_reserved + ' . $qty, false);
+                $this->db->set('update_at',    date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+            }
+
+            // Ledger: IN (stok kembali)
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd_barang,
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $no_lot,
+                'expired_date' => $exp,
+                'qty'          => $qty,
+                'tipe'         => 'IN',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'REPOST_FAKTUR',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // Ledger: RESERVE (lock kembali untuk SO)
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang'    => $kd_barang,
+                'gudang_id'    => $gudang_id,
+                'no_lot'       => $no_lot,
+                'expired_date' => $exp,
+                'qty'          => $qty,
+                'tipe'         => 'RESERVE',
+                'ref_no'       => $so['no_so'],
+                'ref_type'     => 'REPOST_FAKTUR_RESERVE',
+                'created_at'   => date('Y-m-d H:i:s'),
+            ]);
+
+            // 3. Kurangi qty_faktur di SO detail
+            $this->db->where('id', $id_so_detail);
+            $this->db->set('qty_faktur', 'GREATEST(0, qty_faktur - ' . $qty . ')', false);
+            $this->db->update('tbso_sales_order_detail');
+
+            // 4. Reset checker_loaded ke 0 (item harus dipilih ulang oleh checker)
+            $this->db->where('id', $id_so_detail);
+            $this->db->update('tbso_sales_order_detail', ['checker_loaded' => 0]);
+        }
+
+        // 5. Cek sisa detail faktur — jika kosong, cancel faktur
+        $sisa_detail = $this->db->where('id_faktur', $id_faktur)->count_all_results('tbso_faktur_detail');
+        if ($sisa_detail === 0) {
+            $this->db->where('id_faktur', $id_faktur);
+            $this->db->update('tbso_faktur_penjualan', [
+                'status'    => 'cancelled',
+                'update_by' => $repost_by,
+                'update_at' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            // Recalculate total tonase/kubikasi faktur yang tersisa
+            $this->db->select('SUM(qty * berat_gram / 1000000) AS t, SUM(qty * kubikasi_m3) AS k', false);
+            $this->db->where('id_faktur', $id_faktur);
+            $sums = $this->db->get('tbso_faktur_detail')->row_array();
+            $this->db->where('id_faktur', $id_faktur);
+            $this->db->update('tbso_faktur_penjualan', [
+                'total_tonase'   => round((float)($sums['t'] ?? 0), 6),
+                'total_kubikasi' => round((float)($sums['k'] ?? 0), 6),
+                'update_by'      => $repost_by,
+                'update_at'      => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // 6. Update status SO
+        $this->_cek_dan_repost_so($faktur['id_so']);
+
+        $this->db->trans_complete();
+        if (!$this->db->trans_status()) {
+            return ['errors' => ['Terjadi kesalahan database saat repost.']];
+        }
+        return ['success' => true, 'sisa_detail' => $sisa_detail];
+    }
+
+    /**
+     * Setelah repost, tentukan status SO:
+     * - Jika ada qty_faktur > 0 di salah satu item → partial
+     * - Jika semua qty_faktur = 0 → kembali ke siap_faktur
+     */
+    private function _cek_dan_repost_so($id_so)
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so) return;
+
+        $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+        $has_faktur = false;
+        foreach ($rows as $r) {
+            if ((float)$r['qty_faktur'] > 0.001) {
+                $has_faktur = true;
+                break;
+            }
+        }
+
+        $new_status = $has_faktur ? 'partial' : 'siap_faktur';
+        $this->db->where('id_so', $id_so);
+        $this->db->update('tbso_sales_order', [
+            'status'    => $new_status,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
 }

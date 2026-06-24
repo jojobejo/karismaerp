@@ -340,13 +340,21 @@
                                             </td>
                                             <td class="text-center text-nowrap">
                                                 <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur']) ?>"
-                                                   class="btn btn-sm btn-info" title="Detail Faktur">
+                                                class="btn btn-sm btn-info" title="Detail Faktur">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 <a href="<?= base_url('sales_order/detail_faktur/' . $f['id_faktur'] . '?print=1') ?>"
-                                                   class="btn btn-sm btn-secondary" target="_blank" title="Cetak Faktur">
+                                                class="btn btn-sm btn-secondary" target="_blank" title="Cetak Faktur">
                                                     <i class="fas fa-print"></i>
                                                 </a>
+                                                <?php if ($status === 'confirmed'): ?>
+                                                    <button class="btn btn-sm btn-warning btn-repost-faktur ml-1"
+                                                            data-id="<?= (int)$f['id_faktur'] ?>"
+                                                            data-nofaktur="<?= htmlspecialchars($f['no_faktur']) ?>"
+                                                            title="Repost item ke SO">
+                                                        <i class="fas fa-undo"></i>
+                                                    </button>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -366,6 +374,55 @@
         <div class="float-right d-none d-sm-inline-block"><b>Version</b> 1.0</div>
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
+
+    <!-- Modal Repost Faktur -->
+    <div class="modal fade" id="modalRepostFaktur" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="fas fa-undo mr-1"></i>Repost Item Faktur ke SO
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="repost-loading" class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Memuat data faktur...</p>
+                    </div>
+                    <div id="repost-content" style="display:none;">
+                        <div class="alert alert-warning py-2">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            Centang item yang <strong>tidak dapat dimuat</strong> untuk dikembalikan ke SO.
+                            Item yang direpost akan dikembalikan statusnya dan bisa difakturkan ulang.
+                        </div>
+                        <p class="mb-1"><strong>Faktur:</strong> <span id="repost-no-faktur"></span></p>
+                        <table class="table table-bordered table-sm mt-2">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th style="width:40px;" class="text-center">
+                                        <input type="checkbox" id="cb-repost-all" title="Pilih semua">
+                                    </th>
+                                    <th>Nama Barang</th>
+                                    <th class="text-center">No Lot</th>
+                                    <th class="text-center">Exp Date</th>
+                                    <th class="text-right">Qty Faktur</th>
+                                    <th class="text-center">Satuan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="repost-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-warning btn-sm" id="btn-submit-repost" disabled>
+                        <i class="fas fa-undo mr-1"></i>Repost Item Terpilih
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -386,6 +443,106 @@ $(document).ready(function () {
             zeroRecords: "Tidak ada data ditemukan",
             emptyTable: "Tidak ada faktur selesai",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
+        }
+    });
+});
+
+// ── Repost Faktur ──────────────────────────────────────
+var repostIdFaktur = 0;
+
+$(document).on('click', '.btn-repost-faktur', function() {
+    repostIdFaktur = $(this).data('id');
+    var noFaktur   = $(this).data('nofaktur');
+
+    $('#repost-no-faktur').text(noFaktur);
+    $('#repost-loading').show();
+    $('#repost-content').hide();
+    $('#repost-tbody').html('');
+    $('#btn-submit-repost').prop('disabled', true);
+    $('#cb-repost-all').prop('checked', false);
+    $('#modalRepostFaktur').modal('show');
+
+    $.ajax({
+        url: '<?= base_url("sales_order/admin_sc/get_faktur_detail_json") ?>',
+        type: 'GET',
+        data: { id_faktur: repostIdFaktur },
+        dataType: 'JSON',
+        success: function(res) {
+            if (!res.status) {
+                alert(res.message || 'Gagal memuat data.');
+                $('#modalRepostFaktur').modal('hide');
+                return;
+            }
+            var tbody = '';
+            $.each(res.items, function(i, item) {
+                var exp = item.expired_date ? item.expired_date : '-';
+                tbody += '<tr>'
+                    + '<td class="text-center"><input type="checkbox" class="cb-repost-item" value="' + item.id + '"></td>'
+                    + '<td>' + (item.nama_barang || '-') + '</td>'
+                    + '<td class="text-center">' + (item.no_lot || '-') + '</td>'
+                    + '<td class="text-center">' + exp + '</td>'
+                    + '<td class="text-right font-weight-bold">' + parseFloat(item.qty).toLocaleString('id-ID', {minimumFractionDigits:2}) + '</td>'
+                    + '<td class="text-center">' + (item.satuan || '') + '</td>'
+                    + '</tr>';
+            });
+            $('#repost-tbody').html(tbody);
+            $('#repost-loading').hide();
+            $('#repost-content').show();
+        },
+        error: function() {
+            alert('Gagal memuat data faktur.');
+            $('#modalRepostFaktur').modal('hide');
+        }
+    });
+});
+
+$('#cb-repost-all').on('change', function() {
+    $('.cb-repost-item').prop('checked', $(this).is(':checked'));
+    updateRepostBtn();
+});
+
+$(document).on('change', '.cb-repost-item', function() {
+    updateRepostBtn();
+    $('#cb-repost-all').prop('checked',
+        $('.cb-repost-item').length === $('.cb-repost-item:checked').length
+    );
+});
+
+function updateRepostBtn() {
+    $('#btn-submit-repost').prop('disabled', $('.cb-repost-item:checked').length === 0);
+}
+
+$('#btn-submit-repost').on('click', function() {
+    var ids = [];
+    $('.cb-repost-item:checked').each(function() { ids.push($(this).val()); });
+    if (ids.length === 0) return;
+
+    if (!confirm('Yakin merepost ' + ids.length + ' item kembali ke SO?\n\nItem ini akan dikeluarkan dari faktur dan bisa difakturkan ulang.')) return;
+
+    var btn = $(this);
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Memproses...');
+
+    $.ajax({
+        url: '<?= base_url("sales_order/admin_sc/repost_faktur_item") ?>',
+        type: 'POST',
+        data: { id_faktur: repostIdFaktur, id_fd_list: ids },
+        dataType: 'JSON',
+        success: function(res) {
+            if (res.status) {
+                $('#modalRepostFaktur').modal('hide');
+                alert(res.faktur_cancelled
+                    ? '✅ Semua item direpost. Faktur otomatis dibatalkan karena tidak ada item tersisa.'
+                    : '✅ Item berhasil direpost ke SO.'
+                );
+                location.reload();
+            } else {
+                alert('❌ ' + (res.message || 'Gagal repost.'));
+                btn.prop('disabled', false).html('<i class="fas fa-undo mr-1"></i>Repost Item Terpilih');
+            }
+        },
+        error: function() {
+            alert('Terjadi kesalahan koneksi.');
+            btn.prop('disabled', false).html('<i class="fas fa-undo mr-1"></i>Repost Item Terpilih');
         }
     });
 });
