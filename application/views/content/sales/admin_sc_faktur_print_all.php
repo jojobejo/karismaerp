@@ -147,7 +147,6 @@ $grand_total = 0;
                                 'transfer' => 'Transfer',
                                 'tempo' => 'Tempo',
                                 'bg' => 'BG',
-                                'bonus' => 'Bonus',
                             ][$payment] ?? ($payment !== '' ? strtoupper($payment) : '-');
                             $tempo = $faktur['jtempo'] ?? $faktur['tempo'] ?? null;
                         ?>

@@ -6,7 +6,6 @@ $metode_options = [
     'cash' => 'Cash',
     'transfer' => 'Transfer',
     'bg' => 'BG',
-    'bonus' => 'Bonus',
 ];
 $default_metode = strtolower((string)($faktur['cara_pembayaran'] ?? ''));
 if (!isset($metode_options[$default_metode])) {

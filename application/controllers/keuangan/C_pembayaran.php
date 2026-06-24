@@ -88,7 +88,7 @@ class C_pembayaran extends CI_Controller
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
         $metode_pembayaran = strtolower(trim((string)$this->input->post('metode_pembayaran', true)));
-        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg', 'bonus'], true)) {
+        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg'], true)) {
             $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }

@@ -465,6 +465,24 @@ class C_SalesOrder extends CI_Controller
         ]);
     }
 
+    private function _ensureSoCaraPembayaranColumn()
+    {
+        if ($this->db->field_exists('cara_pembayaran', 'tbso_sales_order')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order', [
+            'cara_pembayaran' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'null'       => true,
+                'default'    => 'cash',
+                'after'      => 'catatan',
+            ],
+        ]);
+    }
+
     private function _ensureFakturPaymentInfoColumns()
     {
         $this->load->dbforge();
@@ -1010,6 +1028,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function create()
     {
+        $this->_ensureSoCaraPembayaranColumn();
+
         $data['page_title']     = 'KARISMA - Buat Sales Order';
         $data['no_so']          = $this->M_SalesOrder->generate_no_so();
         $data['customers']      = $this->_getCustomersForCurrentSales();
@@ -1033,6 +1053,7 @@ class C_SalesOrder extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
         $this->_ensureSoFakturZColumn();
+        $this->_ensureSoCaraPembayaranColumn();
 
         $post      = $this->input->post(null, true);
         $details   = $this->_parse_detail_post($post);
@@ -1076,6 +1097,11 @@ class C_SalesOrder extends CI_Controller
 
         $no_so = $post['no_so'] ?? $this->M_SalesOrder->generate_no_so();
 
+        $cara_pembayaran_so = strtolower(trim($post['cara_pembayaran'] ?? 'cash'));
+        if (!in_array($cara_pembayaran_so, ['cash', 'transfer', 'bg', 'tempo'], true)) {
+            $cara_pembayaran_so = 'cash';
+        }
+
         $header = [
             'no_so'             => $no_so,
             'tanggal_transaksi' => $post['tanggal'],
@@ -1087,6 +1113,7 @@ class C_SalesOrder extends CI_Controller
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'catatan'           => $post['catatan'] ?? null,
+            'cara_pembayaran'   => $cara_pembayaran_so,
             'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
             'create_by'         => $this->_getUsername(),
         ];
@@ -1180,6 +1207,8 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     public function edit($id_so)
     {
+        $this->_ensureSoCaraPembayaranColumn();
+
         $so = $this->M_SalesOrder->get_so($id_so);
         if ($so && !$this->_canAccessSo($so)) {
             $this->_denySoAccess();
@@ -1258,6 +1287,7 @@ class C_SalesOrder extends CI_Controller
     public function update($id_so)
     {
         $this->_ensureSoFakturZColumn();
+        $this->_ensureSoCaraPembayaranColumn();
 
         $so = $this->M_SalesOrder->get_so($id_so);
         if (!$so) show_404();
@@ -1305,6 +1335,11 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        $cara_pembayaran_so = strtolower(trim($post['cara_pembayaran'] ?? 'cash'));
+        if (!in_array($cara_pembayaran_so, ['cash', 'transfer', 'bg', 'tempo', 'bonus'], true)) {
+            $cara_pembayaran_so = 'cash';
+        }
+
         $header = [
             'tanggal_transaksi' => $post['tanggal'],
             'kd_customer'       => $post['customer_id'],
@@ -1315,6 +1350,7 @@ class C_SalesOrder extends CI_Controller
             'total_tonase'      => $tk['total_tonase'],
             'total_kubikasi'    => $tk['total_kubikasi'],
             'catatan'           => $post['catatan'] ?? null,
+            'cara_pembayaran'   => $cara_pembayaran_so,
             'is_faktur_z'       => !empty($post['is_faktur_z']) ? 1 : 0,
             'update_by'         => $this->_getUsername(),
         ];
@@ -1559,8 +1595,8 @@ class C_SalesOrder extends CI_Controller
         if (strpos($posted_no_faktur, $expected_prefix) !== 0 || $this->M_SalesOrder->is_no_faktur_used($posted_no_faktur)) {
             $no_faktur = $this->M_SalesOrder->generate_no_faktur($faktur_prefix);
         }
-        $cara_pembayaran = strtolower(trim($post['cara_pembayaran'] ?? 'cash'));
-        if (!in_array($cara_pembayaran, ['cash', 'transfer', 'tempo', 'bg', 'bonus'], true)) {
+        $cara_pembayaran = strtolower(trim((string)($so['cara_pembayaran'] ?? 'cash')));
+        if (!in_array($cara_pembayaran, ['cash', 'transfer', 'tempo', 'bg'], true)) {
             $cara_pembayaran = 'cash';
         }
         $jtempo = (int)($post['jtempo'] ?? 0);

@@ -303,7 +303,6 @@
                                             'transfer' => 'Transfer',
                                             'tempo'    => 'Tempo',
                                             'bg'       => 'BG',
-                                            'bonus'    => 'Bonus',
                                         ][$payment] ?? ($payment !== '' ? strtoupper($payment) : '-');
                                         $tempo = $f['jtempo'] ?? $f['tempo'] ?? null;
                                         $rute = $f['so_kd_rute'] ?: ($f['customer_kd_rute'] ?? '');

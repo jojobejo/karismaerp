@@ -144,6 +144,25 @@
                                     </div>
 
                                     <div class="form-group so-form-row mb-0 mt-2">
+                                        <label class="so-form-label">Cara Pembayaran <span class="text-danger">*</span></label>
+                                        <div class="so-form-control">
+                                            <select name="cara_pembayaran" id="cara_pembayaran" class="form-control" required>
+                                                <?php
+                                                $cp_val = $is_edit ? strtolower(trim((string)($so['cara_pembayaran'] ?? 'cash'))) : 'cash';
+                                                $cp_options = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG', 'tempo' => 'Tempo'];
+
+                                                foreach ($cp_options as $cpKey => $cpLabel):
+                                                ?>
+                                                    <option value="<?= $cpKey ?>" <?= $cp_val === $cpKey ? 'selected' : '' ?>>
+                                                        <?= $cpLabel ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small class="text-muted">Cara pembayaran akan otomatis digunakan saat faktur dibuat.</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group so-form-row mb-0 mt-2">
                                         <label class="so-form-label">Faktur</label>
                                         <div class="so-form-control">
                                             <input type="hidden" name="is_faktur_z" value="0">

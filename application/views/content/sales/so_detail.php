@@ -14,7 +14,6 @@ $format_payment = function($value) {
         'transfer' => 'Transfer',
         'tempo'    => 'Tempo',
         'bg'       => 'BG',
-        'bonus'    => 'Bonus',
     ];
     return $labels[$value] ?? ($value !== '' ? strtoupper($value) : '-');
 };

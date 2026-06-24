@@ -141,14 +141,7 @@ $faktur_back_url = $is_admin_sc_context
                                            placeholder="Nama salesman" readonly>
                                     <small class="text-muted">Mengikuti pembuat Sales Order.</small>
                                 </div>
-                                <div class="form-group">
-                                    <label>Cara Pembayaran <span class="text-danger">*</span></label>
-                                    <select class="form-control" name="cara_pembayaran" required>
-                                        <option value="cash">Cash</option>
-                                        <option value="transfer">Transfer</option>
-                                        <option value="bg">BG</option>
-                                    </select>
-                                </div>
+
                                 <div class="form-group">
                                     <label>Catatan</label>
                                     <textarea class="form-control" name="catatan" rows="3"
