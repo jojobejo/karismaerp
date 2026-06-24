@@ -4533,20 +4533,43 @@ FROM (
             return false;
         }
 
+        // Cek apakah ada item yang TIDAK dimuat (checker_loaded = 2/X)
+        // Jika ada item yang di-X, DO tidak boleh dibuat
+        $ada_ditolak = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order_detail sd
+            JOIN tbso_sales_order so ON so.id_so = sd.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            AND so.status IN ('siap_faktur', 'partial', 'completed')
+            AND COALESCE(sd.qty_siap_faktur, sd.qty) > 0
+            AND sd.checker_loaded = 2
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do dd
+                JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                WHERE fp.id_so = so.id_so
+            )
+        ", [$kd_rute])->row_array();
+
+        if ((int)($ada_ditolak['total'] ?? 0) > 0) {
+            return true; // ada yang di-X, blok DO
+        }
+
+        // Cek apakah ada item yang belum dipilih sama sekali (checker_loaded = 0 atau NULL)
         $row = $this->db->query("
             SELECT COUNT(*) AS total
             FROM tbso_sales_order_detail sd
             JOIN tbso_sales_order so ON so.id_so = sd.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             WHERE COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
-              AND so.status IN ('siap_faktur', 'partial', 'completed')
-              AND COALESCE(sd.qty_siap_faktur, sd.qty) > 0
-              AND sd.checker_loaded = 0
-              AND NOT EXISTS (
-                  SELECT 1 FROM tb_detail_do dd
-                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
-                  WHERE fp.id_so = so.id_so
-              )
+            AND so.status IN ('siap_faktur', 'partial', 'completed')
+            AND COALESCE(sd.qty_siap_faktur, sd.qty) > 0
+            AND (sd.checker_loaded IS NULL OR sd.checker_loaded = 0)
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do dd
+                JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                WHERE fp.id_so = so.id_so
+            )
         ", [$kd_rute])->row_array();
 
         return (int)($row['total'] ?? 0) > 0;

@@ -18,6 +18,31 @@
     .unloaded-row {
         transition: background-color 0.3s ease;
     }
+    .btn-load-yes {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 15px;
+    }
+    .btn-load-no {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 15px;
+    }
+    .loaded-row {
+        background-color: #f1fcf4 !important;
+        transition: background-color 0.3s ease;
+    }
+    .rejected-row {
+        background-color: #fff5f5 !important;
+        transition: background-color 0.3s ease;
+    }
+    .unloaded-row {
+        transition: background-color 0.3s ease;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -82,13 +107,13 @@
                                             <th>Expired Date</th>
                                             <th style="width: 140px;" class="text-right">Qty Siap</th>
                                             <th style="width: 80px;">Satuan</th>
-                                            <th style="width: 100px;" class="text-center">Muat Loading</th>
+                                            <th style="width: 120px;" class="text-center">Muat / Tidak</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php $no = 1; foreach ($items as $item): 
-                                            $is_loaded = (int)$item['checker_loaded'] === 1;
-                                            $row_class = $is_loaded ? 'loaded-row' : 'unloaded-row';
+                                            $status_muat = (int)($item['checker_loaded'] ?? 0);
+                                            $row_class = $status_muat === 1 ? 'loaded-row' : ($status_muat === 2 ? 'rejected-row' : 'unloaded-row');
                                         ?>
                                             <tr class="<?= $row_class ?>" id="row-<?= $item['id'] ?>">
                                                 <td class="text-center"><?= $no++ ?></td>
@@ -133,19 +158,40 @@
                                                     ?>
                                                 </td>
                                                 <td class="text-center"><?= htmlspecialchars($item['satuan']) ?></td>
-                                                <td class="text-center">
-                                                    <div class="custom-control custom-checkbox">
-                                                        <input type="checkbox" 
-                                                               class="checkbox-xl cb-load-item" 
-                                                               id="cb-<?= $item['id'] ?>" 
-                                                               data-id="<?= $item['id'] ?>" 
-                                                               <?= $is_loaded ? 'checked' : '' ?>>
-                                                    </div>
+                                                <td class="text-center" style="white-space:nowrap;">
+                                                    <?php
+                                                    // checker_loaded: 1=dimuat, 2=tidak dimuat, 0/null=belum dipilih
+                                                    $status_muat = (int)($item['checker_loaded'] ?? 0);
+                                                    ?>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-load-yes <?= $status_muat === 1 ? 'btn-success' : 'btn-outline-success' ?>"
+                                                            data-id="<?= $item['id'] ?>"
+                                                            data-action="1"
+                                                            title="Dimuat">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-load-no <?= $status_muat === 2 ? 'btn-danger' : 'btn-outline-danger' ?>"
+                                                            data-id="<?= $item['id'] ?>"
+                                                            data-action="2"
+                                                            title="Tidak Dimuat">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                <div class="mt-3 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <span id="info-progress">
+                                            <span id="count-done">0</span> dari <?= count($items) ?> item sudah dipilih
+                                        </span>
+                                    </small>
+                                    <button type="button" id="btn-selesai-loading" class="btn btn-primary btn-sm" disabled>
+                                        <i class="fas fa-flag-checkered mr-1"></i>Selesai Loading
+                                    </button>
+                                </div>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -163,45 +209,106 @@
 
 <script>
 $(document).ready(function() {
-    $('.cb-load-item').on('change', function() {
-        var checkbox = $(this);
-        var idDetail = checkbox.data('id');
-        var isChecked = checkbox.is(':checked') ? 1 : 0;
+    var totalItems = <?= count($items) ?>;
+    var kdRute = '<?= addslashes($kd_rute) ?>';
+
+    function countDone() {
+        var done = 0;
+        $('.btn-load-yes, .btn-load-no').each(function() {
+            // cek per baris: apakah salah satu tombol sudah aktif
+        });
+        // hitung baris yang sudah punya status
+        done = $('tr[id^="row-"]').filter(function() {
+            return $(this).hasClass('loaded-row') || $(this).hasClass('rejected-row');
+        }).length;
+        return done;
+    }
+
+    function updateProgress() {
+        var done = countDone();
+        $('#count-done').text(done);
+        if (done >= totalItems && totalItems > 0) {
+            $('#btn-selesai-loading').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary');
+        } else {
+            $('#btn-selesai-loading').prop('disabled', true);
+        }
+    }
+
+    // Init progress on load
+    updateProgress();
+
+    // Tombol ✅ / ❌ per baris
+    $(document).on('click', '.btn-load-yes, .btn-load-no', function() {
+        var btn = $(this);
+        var idDetail = btn.data('id');
+        var action = btn.data('action'); // 1=dimuat, 2=tidak dimuat
         var row = $('#row-' + idDetail);
 
-        checkbox.prop('disabled', true);
+        btn.prop('disabled', true);
+        row.find('.btn-load-yes, .btn-load-no').prop('disabled', true);
 
         $.ajax({
             url: '<?= base_url("checker/toggle_so_item_loaded") ?>',
             type: 'POST',
-            data: {
-                id_detail: idDetail,
-                loaded: isChecked
-            },
+            data: { id_detail: idDetail, loaded: action },
             dataType: 'JSON',
             success: function(response) {
                 if (response.status) {
-                    if (isChecked) {
-                        row.removeClass('unloaded-row').addClass('loaded-row');
-                    } else {
-                        row.removeClass('loaded-row').addClass('unloaded-row');
-                    }
+                    // Update tampilan tombol
+                    row.find('.btn-load-yes')
+                        .removeClass('btn-success btn-outline-success')
+                        .addClass(action === 1 ? 'btn-success' : 'btn-outline-success');
+                    row.find('.btn-load-no')
+                        .removeClass('btn-danger btn-outline-danger')
+                        .addClass(action === 2 ? 'btn-danger' : 'btn-outline-danger');
 
-                    if (response.created_do) {
-                        alert("🎉 SUKSES!\n\nDelivery Order " + response.created_do + " berhasil dibuat otomatis karena semua SO sudah terfaktur dan barang loading sudah termuat semua.");
-                        window.location.href = '<?= base_url("checker/so_loading") ?>';
-                    }
+                    // Update warna baris
+                    row.removeClass('loaded-row rejected-row unloaded-row');
+                    if (action === 1) row.addClass('loaded-row');
+                    else if (action === 2) row.addClass('rejected-row');
+
+                    updateProgress();
                 } else {
-                    checkbox.prop('checked', !isChecked);
-                    alert(response.message || 'Gagal merubah status muat.');
+                    alert(response.message || 'Gagal merubah status.');
                 }
             },
             error: function(xhr, status, error) {
-                checkbox.prop('checked', !isChecked);
-                alert('Terjadi kesalahan koneksi server: ' + error);
+                alert('Terjadi kesalahan koneksi: ' + error);
             },
             complete: function() {
-                checkbox.prop('disabled', false);
+                row.find('.btn-load-yes, .btn-load-no').prop('disabled', false);
+            }
+        });
+    });
+
+    // Tombol Selesai Loading
+    $('#btn-selesai-loading').on('click', function() {
+        if (!confirm('Konfirmasi: semua barang rute ini sudah selesai diproses (dimuat / tidak dimuat)?\n\nKlik OK untuk menyelesaikan loading.')) return;
+
+        var btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Memproses...');
+
+        $.ajax({
+            url: '<?= base_url("checker/selesai_loading_rute") ?>',
+            type: 'POST',
+            data: { kd_rute: kdRute },
+            dataType: 'JSON',
+            success: function(response) {
+                if (response.status) {
+                    var msg = '✅ Loading rute ' + kdRute + ' selesai!';
+                    if (response.created_do) {
+                        msg += '\n\n🎉 Delivery Order ' + response.created_do + ' berhasil dibuat otomatis.';
+                    }
+                    alert(msg);
+                    window.location.href = '<?= base_url("checker/so_loading") ?>';
+                } else {
+                    alert('❌ ' + (response.message || 'Gagal menyelesaikan loading.'));
+                    btn.prop('disabled', false).html('<i class="fas fa-flag-checkered mr-1"></i>Selesai Loading');
+                }
+            },
+            error: function(xhr, status, error) {
+                alert('Terjadi kesalahan koneksi: ' + error);
+                btn.prop('disabled', false).html('<i class="fas fa-flag-checkered mr-1"></i>Selesai Loading');
             }
         });
     });

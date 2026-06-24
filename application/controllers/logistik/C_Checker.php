@@ -1093,7 +1093,8 @@ class C_Checker extends CI_Controller
         }
 
         $id_detail = (int)$this->input->post('id_detail');
-        $loaded = (int)$this->input->post('loaded') ? 1 : 0;
+        $loaded = (int)$this->input->post('loaded');
+        if (!in_array($loaded, [0, 1, 2])) $loaded = 0;
 
         if ($id_detail <= 0) {
             echo json_encode(['status' => false, 'message' => 'ID item tidak valid']);
@@ -1120,6 +1121,59 @@ class C_Checker extends CI_Controller
         echo json_encode([
             'status' => true,
             'message' => 'Status muat berhasil diperbarui',
+            'created_do' => $created_do ? $created_do['kd_do'] : null
+        ]);
+        exit;
+    }
+
+    public function selesai_loading_rute()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['status' => false, 'message' => 'Method tidak valid']);
+            exit;
+        }
+
+        $kd_rute = trim($this->input->post('kd_rute'));
+        if (empty($kd_rute)) {
+            echo json_encode(['status' => false, 'message' => 'Kode rute tidak valid']);
+            exit;
+        }
+
+        // Cek apakah semua item rute sudah diberi status (1 atau 2), tidak ada yang 0/null
+        $belum = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+            AND NOT EXISTS (
+                SELECT 1 FROM tb_detail_do dd
+                JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                WHERE fp.id_so = so.id_so
+            )
+            AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0)
+        ", [$kd_rute])->row_array();
+
+        if ((int)$belum['total'] > 0) {
+            echo json_encode([
+                'status'  => false,
+                'message' => 'Masih ada ' . $belum['total'] . ' item yang belum dipilih (✅/❌). Harap pilih semua item terlebih dahulu.'
+            ]);
+            exit;
+        }
+
+        $this->load->model('M_Logistik');
+        $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
+        $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
+
+        echo json_encode([
+            'status'     => true,
+            'message'    => 'Loading rute selesai',
             'created_do' => $created_do ? $created_do['kd_do'] : null
         ]);
         exit;

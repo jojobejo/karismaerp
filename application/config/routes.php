@@ -304,8 +304,9 @@ $route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
 // LOGISTIK - Checker
 $route['checker']                                   = 'logistik/C_Checker/index';
 $route['checker/so_loading']                        = 'logistik/C_Checker/so_loading';
-$route['checker/so_loading/detail/(:any)']           = 'logistik/C_Checker/so_loading_detail/$1';
+$route['checker/so_loading/detail/(:any)']          = 'logistik/C_Checker/so_loading_detail/$1';
 $route['checker/toggle_so_item_loaded']             = 'logistik/C_Checker/toggle_so_item_loaded';
+$route['checker/selesai_loading_rute']              = 'logistik/C_Checker/selesai_loading_rute';
 $route['checker/dashboard']                         = 'logistik/C_Checker/dashboard';
 $route['checker/arsip']                             = 'logistik/C_Checker/arsip';
 // Bongkaran
