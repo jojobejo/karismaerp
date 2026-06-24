@@ -262,7 +262,40 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                 <button class="btn btn-info btn-sm" onclick="window.print()">
                     <i class="fas fa-print"></i> Cetak Faktur
                 </button>
+                <?php if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && empty($faktur['is_split_parent']) && !in_array($faktur['status'], ['cancelled', 'draft'], true)): ?>
+                    <a href="<?= base_url('sales_order/split_faktur/' . $faktur['id_faktur']) ?>"
+                       class="btn btn-warning btn-sm">
+                        <i class="fas fa-cut"></i> Pecah Faktur Z
+                    </a>
+                <?php endif; ?>
             </div>
+
+            <?php if (!empty($faktur['is_split_parent'])): ?>
+                <div class="alert alert-warning mb-3 no-print">
+                    <h5><i class="icon fas fa-exclamation-triangle"></i> Faktur Telah Dipecah!</h5>
+                    Faktur ini telah dipecah menjadi faktur turunan berikut:
+                    <ul class="mb-0 mt-2">
+                        <?php foreach ($child_fakturs as $cf): ?>
+                            <li>
+                                <a href="<?= base_url('sales_order/detail_faktur/' . $cf['id_faktur']) ?>" class="font-weight-bold text-dark" style="text-decoration: underline;">
+                                    <?= htmlspecialchars($cf['no_faktur']) ?>
+                                </a> 
+                                - Customer: <?= htmlspecialchars($cf['customer_name']) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($faktur['parent_id_faktur']) && !empty($parent_faktur)): ?>
+                <div class="alert alert-info mb-3 no-print">
+                    <h5><i class="icon fas fa-info"></i> Faktur Turunan</h5>
+                    Faktur ini merupakan faktur turunan yang dipecah dari Faktur Z Induk:
+                    <a href="<?= base_url('sales_order/detail_faktur/' . $parent_faktur['id_faktur']) ?>" class="font-weight-bold text-white" style="text-decoration: underline;">
+                        <?= htmlspecialchars($parent_faktur['no_faktur']) ?>
+                    </a> (Customer Induk: <?= htmlspecialchars($parent_faktur['customer_name']) ?>).
+                </div>
+            <?php endif; ?>
 
             <div class="row">
                 <!-- Info Faktur -->

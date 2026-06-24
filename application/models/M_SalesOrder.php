@@ -2225,4 +2225,149 @@ class M_SalesOrder extends CI_Model
             'update_at' => date('Y-m-d H:i:s'),
         ]);
     }
+
+    public function proses_split_faktur($parent_faktur, $parent_details, $splits, $username)
+    {
+        $this->db->trans_start();
+
+        // 1. Update parent faktur: tandai telah dipecah
+        $this->db->where('id_faktur', $parent_faktur['id_faktur']);
+        $this->db->update('tbso_faktur_penjualan', [
+            'is_split_parent' => 1,
+            'update_by'       => $username,
+            'update_at'       => date('Y-m-d H:i:s')
+        ]);
+
+        $this->load->model('M_ActivityLog');
+        
+        $this->M_ActivityLog->log(
+            $parent_faktur['no_so'], 
+            $parent_faktur['no_faktur'], 
+            'SPLIT_FAKTUR',
+            'Faktur Z ' . $parent_faktur['no_faktur'] . ' dipecah oleh ' . $username,
+            $username,
+            'Faktur dipecah menjadi ' . count($splits) . ' faktur turunan.'
+        );
+
+        $generated_numbers = [];
+
+        // 2. Buat child faktur
+        foreach ($splits as $idx => $s) {
+            $kd_cust = $s['kd_customer'];
+            $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
+            $customer_name = $cust ? $cust['nama_customer'] : 'Unknown Customer';
+
+            $no_faktur_child = $this->_generate_and_track_no_faktur('Z', $generated_numbers);
+
+            $fh = [
+                'no_faktur'           => $no_faktur_child,
+                'id_so'               => $parent_faktur['id_so'],
+                'no_so'               => $parent_faktur['no_so'],
+                'kd_customer'         => $kd_cust,
+                'customer_name'       => $customer_name,
+                'gudang_id'           => $parent_faktur['gudang_id'],
+                'tanggal_faktur'      => $parent_faktur['tanggal_faktur'],
+                'tanggal_jatuh_tempo' => $parent_faktur['tanggal_jatuh_tempo'],
+                'salesman'            => $parent_faktur['salesman'],
+                'cara_pembayaran'     => $parent_faktur['cara_pembayaran'],
+                'jtempo'              => $parent_faktur['jtempo'],
+                'tempo'               => $parent_faktur['tempo'],
+                'catatan'             => 'Pecahan dari Faktur Z ' . $parent_faktur['no_faktur'] . "\n" . ($parent_faktur['catatan'] ?? ''),
+                'status'              => 'confirmed',
+                'parent_id_faktur'    => $parent_faktur['id_faktur'],
+                'is_split_parent'     => 0,
+                'create_by'           => $username,
+                'create_at'           => date('Y-m-d H:i:s'),
+                'total_tonase'        => 0,
+                'total_kubikasi'      => 0
+            ];
+
+            $this->db->insert('tbso_faktur_penjualan', $fh);
+            $child_id_faktur = $this->db->insert_id();
+
+            $items = $s['items'] ?? [];
+            $child_details_logged = [];
+
+            foreach ($parent_details as $pd) {
+                $itemId = $pd['id'];
+                $qty_allocated = isset($items[$itemId]) ? (float)$items[$itemId] : 0.0;
+
+                if ($qty_allocated > 0) {
+                    $isi = max(1, (int)($pd['isi_per_box'] ?? 1));
+                    $qty_box = floor($qty_allocated / $isi);
+                    $qty_satuan = fmod($qty_allocated, $isi);
+
+                    $subtotal_before_disc = $qty_allocated * (float)$pd['hrg_satuan'];
+                    $subtotal_after_disc  = $subtotal_before_disc * (1 - ((float)($pd['disc'] ?? 0) / 100));
+                    $tax_rate             = (float)($pd['pajak'] ?? 0);
+                    $tax_value            = $subtotal_after_disc * ($tax_rate / 100);
+                    $total_harga          = $subtotal_after_disc + $tax_value;
+
+                    $fd = [
+                        'id_faktur'            => $child_id_faktur,
+                        'no_faktur'            => $no_faktur_child,
+                        'id_so'                => $pd['id_so'],
+                        'id_so_detail'         => $pd['id_so_detail'],
+                        'kd_barang'            => $pd['kd_barang'],
+                        'nama_barang'          => $pd['nama_barang'],
+                        'no_lot'               => $pd['no_lot'],
+                        'expired_date'         => $pd['expired_date'],
+                        'qty'                  => $qty_allocated,
+                        'qty_box'              => $qty_box,
+                        'qty_satuan'           => $qty_satuan,
+                        'isi_per_box'          => $pd['isi_per_box'],
+                        'satuan'               => $pd['satuan'],
+                        'hrg_satuan'           => $pd['hrg_satuan'],
+                        'hrg_pokok'            => $pd['hrg_pokok'],
+                        'disc'                 => $pd['disc'],
+                        'pajak'                => $pd['pajak'],
+                        'subtotal_before_disc' => $subtotal_before_disc,
+                        'subtotal_after_disc'  => $subtotal_after_disc,
+                        'total_harga'          => $total_harga,
+                        'berat_gram'           => $pd['berat_gram'],
+                        'kubikasi_m3'          => $pd['kubikasi_m3'],
+                        'gudang_id'            => $pd['gudang_id'],
+                        'create_by'            => $username
+                    ];
+
+                    $this->db->insert('tbso_faktur_detail', $fd);
+                    $child_details_logged[] = $pd['nama_barang'] . " (" . $qty_allocated . " " . $pd['satuan'] . ")";
+                }
+            }
+
+            $this->db->select('SUM(qty * berat_gram / 1000000) AS t, SUM(qty * kubikasi_m3) AS k', false);
+            $this->db->where('id_faktur', $child_id_faktur);
+            $sums = $this->db->get('tbso_faktur_detail')->row_array();
+
+            $this->db->where('id_faktur', $child_id_faktur);
+            $this->db->update('tbso_faktur_penjualan', [
+                'total_tonase'   => round((float)($sums['t'] ?? 0), 6),
+                'total_kubikasi' => round((float)($sums['k'] ?? 0), 6)
+            ]);
+
+            $this->M_ActivityLog->log(
+                $parent_faktur['no_so'],
+                $no_faktur_child,
+                'BUAT_FAKTUR_TURUNAN',
+                'Faktur turunan ' . $no_faktur_child . ' dibuat untuk customer ' . $customer_name . ' (' . $kd_cust . ') dari induk ' . $parent_faktur['no_faktur'],
+                $username,
+                "Item:\n" . implode("\n", $child_details_logged)
+            );
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    private function _generate_and_track_no_faktur($prefix, &$generated_numbers)
+    {
+        $no_faktur = $this->generate_no_faktur($prefix);
+        while (in_array($no_faktur, $generated_numbers, true)) {
+            $base = substr($no_faktur, 0, -4);
+            $last = (int)substr($no_faktur, -4);
+            $no_faktur = $base . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+        $generated_numbers[] = $no_faktur;
+        return $no_faktur;
+    }
 }

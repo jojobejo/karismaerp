@@ -497,6 +497,12 @@ $format_payment = function($value) {
                                     <td><?= $n + 1 ?></td>
                                     <td>
                                         <strong><?= htmlspecialchars($f['no_faktur']) ?></strong>
+                                        <?php if (!empty($f['is_split_parent'])): ?>
+                                            <br><span class="badge badge-warning" style="font-size: 75%; font-weight: normal;"><i class="fas fa-cut mr-1"></i>Split Induk</span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($f['parent_id_faktur'])): ?>
+                                            <br><span class="badge badge-info" style="font-size: 75%; font-weight: normal;"><i class="fas fa-link mr-1"></i>Turunan</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td><?= date('d/m/Y', strtotime($f['tanggal_faktur'])) ?></td>
                                     <td class="text-right"><?= number_format($f['total_tonase'], 3) ?> ton</td>

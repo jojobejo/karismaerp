@@ -519,6 +519,19 @@ class C_SalesOrder extends CI_Controller
                 'null'       => false,
                 'after'      => 'jtempo',
             ],
+            'parent_id_faktur' => [
+                'type'       => 'INT',
+                'constraint' => 11,
+                'null'       => true,
+                'after'      => 'tempo',
+            ],
+            'is_split_parent' => [
+                'type'       => 'TINYINT',
+                'constraint' => 1,
+                'default'    => 0,
+                'null'       => false,
+                'after'      => 'parent_id_faktur',
+            ],
         ] as $field => $definition) {
             if (!$this->db->field_exists($field, 'tbso_faktur_penjualan')) {
                 $this->dbforge->add_column('tbso_faktur_penjualan', [$field => $definition]);
@@ -1687,14 +1700,170 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        $data['page_title'] = 'KARISMA - Faktur ' . $faktur['no_faktur'];
-        $data['faktur']     = $faktur;
-        $data['details']    = $details;
-        $data['so']         = $so;
+        $child_fakturs = [];
+        if (!empty($faktur['is_split_parent'])) {
+            $child_fakturs = $this->db->get_where('tbso_faktur_penjualan', ['parent_id_faktur' => $id_faktur])->result_array();
+        }
+
+        $parent_faktur = null;
+        if (!empty($faktur['parent_id_faktur'])) {
+            $parent_faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $faktur['parent_id_faktur']])->row_array();
+        }
+
+        $data['page_title']    = 'KARISMA - Faktur ' . $faktur['no_faktur'];
+        $data['faktur']        = $faktur;
+        $data['details']       = $details;
+        $data['so']            = $so;
+        $data['child_fakturs'] = $child_fakturs;
+        $data['parent_faktur'] = $parent_faktur;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_detail.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function split_faktur($id_faktur)
+    {
+        $this->_ensureFakturPaymentInfoColumns();
+
+        $faktur = $this->M_SalesOrder->get_faktur($id_faktur);
+        if (!$faktur) show_404();
+
+        $so = $this->M_SalesOrder->get_so($faktur['id_so']);
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
+
+        if (empty($so['is_faktur_z'])) {
+            $this->session->set_flashdata('error', 'Hanya Faktur Z yang dapat dipecah.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
+        }
+        if (!empty($faktur['parent_id_faktur'])) {
+            $this->session->set_flashdata('error', 'Faktur turunan tidak dapat dipecah lagi.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
+        }
+        if (!empty($faktur['is_split_parent'])) {
+            $this->session->set_flashdata('error', 'Faktur induk ini sudah dipecah.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
+        }
+        if (in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+            $this->session->set_flashdata('error', 'Faktur dengan status Draft atau Cancelled tidak dapat dipecah.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
+        }
+
+        $data['page_title'] = 'Pecah Faktur Z - ' . $faktur['no_faktur'];
+        $data['faktur']     = $faktur;
+        $data['so']         = $so;
+        $data['details']    = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        $data['customers']  = $this->M_SalesOrder->get_customers();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/faktur_split_form.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_split_faktur($id_faktur)
+    {
+        $this->_ensureFakturPaymentInfoColumns();
+
+        $faktur = $this->M_SalesOrder->get_faktur($id_faktur);
+        if (!$faktur) show_404();
+
+        $so = $this->M_SalesOrder->get_so($faktur['id_so']);
+        if (!$this->_canAccessSo($so)) {
+            $this->_denySoAccess();
+            return;
+        }
+
+        if (empty($so['is_faktur_z']) || !empty($faktur['parent_id_faktur']) || !empty($faktur['is_split_parent']) || in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+            $this->session->set_flashdata('error', 'Proses pemecahan faktur tidak valid.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
+        }
+
+        $post = $this->input->post(null, true);
+        $splits = $post['splits'] ?? [];
+
+        if (empty($splits)) {
+            $this->session->set_flashdata('error', 'Harap tambahkan minimal 1 customer penerima.');
+            redirect('sales_order/split_faktur/' . $id_faktur);
+            return;
+        }
+
+        $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        $parent_qtys = [];
+        foreach ($details as $d) {
+            $parent_qtys[$d['id']] = [
+                'qty' => (float)$d['qty'],
+                'nama' => $d['nama_barang']
+            ];
+        }
+
+        $allocated_qtys = [];
+        $validation_errors = [];
+
+        foreach ($splits as $idx => $s) {
+            $kd_cust = trim((string)($s['kd_customer'] ?? ''));
+            if ($kd_cust === '') {
+                $validation_errors[] = "Customer Penerima #" . $idx . " belum dipilih.";
+                continue;
+            }
+
+            $cust = $this->db->get_where('tb_customer', ['kd_customer' => $kd_cust])->row_array();
+            if (!$cust) {
+                $validation_errors[] = "Customer Penerima #" . $idx . " tidak valid.";
+                continue;
+            }
+
+            $items = $s['items'] ?? [];
+            $has_qty = false;
+            foreach ($items as $itemId => $qty) {
+                $qty = (float)$qty;
+                if ($qty < 0) {
+                    $validation_errors[] = "Kuantitas untuk customer " . htmlspecialchars($cust['nama_customer']) . " tidak boleh negatif.";
+                }
+                if ($qty > 0) {
+                    $has_qty = true;
+                    if (!isset($allocated_qtys[$itemId])) {
+                        $allocated_qtys[$itemId] = 0.0;
+                    }
+                    $allocated_qtys[$itemId] += $qty;
+                }
+            }
+
+            if (!$has_qty) {
+                $validation_errors[] = "Harap masukkan kuantitas barang minimal 1 item untuk customer " . htmlspecialchars($cust['nama_customer']) . ".";
+            }
+        }
+
+        foreach ($parent_qtys as $itemId => $data) {
+            $allocated = $allocated_qtys[$itemId] ?? 0.0;
+            if ($allocated > $data['qty']) {
+                $validation_errors[] = "Total alokasi untuk barang <b>" . htmlspecialchars($data['nama']) . "</b> (" . $allocated . " pcs) melebihi kuantitas induk (" . $data['qty'] . " pcs).";
+            }
+        }
+
+        if (!empty($validation_errors)) {
+            $this->session->set_flashdata('error', implode('<br>', $validation_errors));
+            redirect('sales_order/split_faktur/' . $id_faktur);
+            return;
+        }
+
+        $username = $this->_getUsername();
+        $result = $this->M_SalesOrder->proses_split_faktur($faktur, $details, $splits, $username);
+
+        if ($result === true) {
+            $this->session->set_flashdata('success', 'Faktur Z <b>' . $faktur['no_faktur'] . '</b> berhasil dipecah menjadi faktur turunan.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+        } else {
+            $this->session->set_flashdata('error', 'Gagal memproses pemecahan: ' . (is_string($result) ? $result : 'Database error'));
+            redirect('sales_order/split_faktur/' . $id_faktur);
+        }
     }
 
     // ================================================================
