@@ -1025,32 +1025,9 @@ class C_Checker extends CI_Controller
         if (!$this->canView()) { show_error('Akses ditolak', 403); }
         $this->load->model('M_Logistik');
         
+        // Query untuk mencari rute yang memiliki SO dengan item yang perlu di-loading
+        // Hanya tampilkan rute yang benar-benar masih memiliki item yang belum selesai di-loading
         $routes = $this->db->query("
-            SELECT DISTINCT
-                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
-                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
-                COUNT(DISTINCT so.id_so) AS total_so
-            FROM tbso_sales_order so
-            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
-            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
-            AND NOT EXISTS (
-                SELECT 1
-                FROM tbso_faktur_penjualan fp
-                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
-                WHERE fp.id_so = so.id_so
-            )
-            AND EXISTS (
-                SELECT 1
-                FROM tbso_sales_order_detail sod
-                WHERE sod.id_so = so.id_so
-                    AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
-                    AND sod.checker_loaded = 2
-            )
-            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
-
-            UNION
-
             SELECT DISTINCT
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
@@ -1064,6 +1041,13 @@ class C_Checker extends CI_Controller
                 FROM tbso_faktur_penjualan fp
                 JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
                 WHERE fp.id_so = so.id_so
+            )
+            AND EXISTS (
+                SELECT 1
+                FROM tbso_sales_order_detail sod
+                WHERE sod.id_so = so.id_so
+                AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+                AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
             )
             GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
         ")->result_array();
@@ -1083,14 +1067,31 @@ class C_Checker extends CI_Controller
         $this->load->model('M_Logistik');
         $kd_rute = rawurldecode($kd_rute);
 
+    public function so_loading_detail($kd_rute)
+    {
+        if (!$this->canView()) { show_error('Akses ditolak', 403); }
+        $this->load->model('M_Logistik');
+        $kd_rute = rawurldecode($kd_rute);
+
+        // Query untuk mengambil item yang benar-benar perlu di-loading
+        // Hanya tampilkan item dari SO yang belum completed atau jika completed tapi ada item yang perlu di-loading ulang
         $items = $this->db->query("
-            SELECT sod.*, so.no_so, so.customer_name, c.nama_kios
+            SELECT 
+                sod.*, 
+                so.no_so, 
+                so.customer_name, 
+                c.nama_kios,
+                b.nama_barang,
+                b.satuan,
+                b.isi_per_box
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            LEFT JOIN tb_barang b ON b.kd_barang = sod.kd_barang
+            WHERE so.status IN ('siap_faktur', 'partial')
               AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
               AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+              AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
               AND NOT EXISTS (
                   SELECT 1 FROM tb_detail_do dd
                   JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
@@ -1175,7 +1176,7 @@ class C_Checker extends CI_Controller
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            WHERE so.status IN ('siap_faktur', 'partial')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
@@ -1200,7 +1201,7 @@ class C_Checker extends CI_Controller
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            WHERE so.status IN ('siap_faktur', 'partial')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
