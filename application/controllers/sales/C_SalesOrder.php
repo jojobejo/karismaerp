@@ -2739,4 +2739,54 @@ class C_SalesOrder extends CI_Controller
         echo json_encode(['status' => true, 'items' => $items]);
         exit;
     }
+
+    public function kembalikan_so_ke_sales()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['status' => false, 'message' => 'Method tidak valid']);
+            exit;
+        }
+
+        if (!$this->_canAccessAdminSc()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak']);
+            exit;
+        }
+
+        $id_so     = (int)$this->input->post('id_so');
+        $update_by = $this->_getUsername();
+
+        if ($id_so <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID SO tidak valid']);
+            exit;
+        }
+
+        $so = $this->M_SalesOrder->get_so($id_so);
+        if (!$so || !$this->_canAccessSo($so)) {
+            echo json_encode(['status' => false, 'message' => 'SO tidak ditemukan atau akses ditolak']);
+            exit;
+        }
+
+        $result = $this->M_SalesOrder->kembalikan_so_ke_sales($id_so, $update_by);
+
+        if (!empty($result['errors'])) {
+            echo json_encode(['status' => false, 'message' => implode('<br>', $result['errors'])]);
+            exit;
+        }
+
+        $this->M_ActivityLog->log(
+            $so['no_so'] ?? '', '', 'KEMBALIKAN_SO_KE_SALES',
+            'SO dikembalikan ke Sales oleh Admin SC. Status baru: ' . $result['new_status'],
+            $update_by
+        );
+
+        echo json_encode([
+            'status'     => true,
+            'message'    => 'SO berhasil dikembalikan ke Sales dengan status <b>' . $result['new_status'] . '</b>.',
+            'new_status' => $result['new_status'],
+        ]);
+        exit;
+    }
 }

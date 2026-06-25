@@ -429,6 +429,7 @@ $route['sales_order/admin_sc/repost_faktur_item']   = 'sales/C_SalesOrder/repost
 $route['sales_order/admin_sc/get_faktur_detail_json'] = 'sales/C_SalesOrder/get_faktur_detail_json';
 $route['sales_order/split_faktur/(:any)']           = 'sales/C_SalesOrder/split_faktur/$1';
 $route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpan_split_faktur/$1';
+$route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
 
 
 // COBA API

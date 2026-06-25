@@ -273,9 +273,16 @@
                                             </td>
                                             <td class="text-center text-nowrap">
                                                 <a href="<?= base_url('sales_order/admin_sc/pilih_barang/' . $row['id_so']) ?>"
-                                                   class="btn btn-sm btn-success" title="Pilih barang untuk faktur">
+                                                class="btn btn-sm btn-success" title="Pilih barang untuk faktur">
                                                     <i class="fas fa-file-invoice-dollar"></i>
                                                 </a>
+                                                <button type="button"
+                                                        class="btn btn-sm btn-danger btn-kembalikan-so ml-1"
+                                                        data-id="<?= (int)$row['id_so'] ?>"
+                                                        data-noso="<?= htmlspecialchars($row['no_so']) ?>"
+                                                        title="Kembalikan ke Sales">
+                                                    <i class="fas fa-reply"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -295,6 +302,33 @@
         <div class="float-right d-none d-sm-inline-block"><b>Version</b> 1.0</div>
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
+
+    <!-- Modal Kembalikan SO ke Sales -->
+    <div class="modal fade" id="modalKembalikanSO" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-reply mr-1"></i>Kembalikan SO ke Sales
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        Perhatian! SO akan dikembalikan ke Sales .
+                    </div>
+                    <p>Yakin mengembalikan SO <strong id="kembalikan-no-so"></strong> ke Sales?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btn-konfirmasi-kembalikan">
+                        <i class="fas fa-reply mr-1"></i>Ya, Kembalikan ke Sales
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -315,6 +349,47 @@ $(document).ready(function () {
             zeroRecords: "Tidak ada data ditemukan",
             emptyTable: "Tidak ada Sales Order siap faktur",
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
+        }
+    });
+});
+// ── Kembalikan SO ke Sales ─────────────────────────────
+var kembalikanIdSO = 0;
+
+$(document).on('click', '.btn-kembalikan-so', function() {
+    kembalikanIdSO = $(this).data('id');
+    $('#kembalikan-no-so').text($(this).data('noso'));
+    $('#btn-konfirmasi-kembalikan')
+        .prop('disabled', false)
+        .html('<i class="fas fa-reply mr-1"></i>Ya, Kembalikan ke Sales');
+    $('#modalKembalikanSO').modal('show');
+});
+
+$('#btn-konfirmasi-kembalikan').on('click', function() {
+    if (!kembalikanIdSO) return;
+
+    var btn = $(this);
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Memproses...');
+
+    $.ajax({
+        url: '<?= base_url("sales_order/admin_sc/kembalikan_so_ke_sales") ?>',
+        type: 'POST',
+        data: { id_so: kembalikanIdSO },
+        dataType: 'JSON',
+        success: function(res) {
+            $('#modalKembalikanSO').modal('hide');
+            if (res.status) {
+                alert('✅ ' + res.message);
+                location.reload();
+            } else {
+                alert('❌ ' + (res.message || 'Gagal mengembalikan SO.'));
+                btn.prop('disabled', false)
+                   .html('<i class="fas fa-reply mr-1"></i>Ya, Kembalikan ke Sales');
+            }
+        },
+        error: function() {
+            alert('Terjadi kesalahan koneksi.');
+            btn.prop('disabled', false)
+               .html('<i class="fas fa-reply mr-1"></i>Ya, Kembalikan ke Sales');
         }
     });
 });

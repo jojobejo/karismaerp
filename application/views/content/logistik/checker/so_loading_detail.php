@@ -295,11 +295,13 @@ $(document).ready(function() {
             dataType: 'JSON',
             success: function(response) {
                 if (response.status) {
-                    var msg = '✅ Loading rute ' + kdRute + ' selesai!';
                     if (response.created_do) {
-                        msg += '\n\n🎉 Delivery Order ' + response.created_do + ' berhasil dibuat otomatis.';
+                        alert('✅ Loading selesai!\n\n🎉 Delivery Order ' + response.created_do + ' berhasil dibuat otomatis.');
+                    } else if (response.ada_ditolak) {
+                        alert('✅ Loading selesai dicatat.\n\n⚠️ ' + response.message + '\n\nRute ini akan tetap muncul sampai Admin SC melakukan repost faktur.');
+                    } else {
+                        alert('✅ Loading selesai.\n\n' + (response.message || 'Menunggu proses selanjutnya.'));
                     }
-                    alert(msg);
                     window.location.href = '<?= base_url("checker/so_loading") ?>';
                 } else {
                     alert('❌ ' + (response.message || 'Gagal menyelesaikan loading.'));
@@ -311,6 +313,6 @@ $(document).ready(function() {
                 btn.prop('disabled', false).html('<i class="fas fa-flag-checkered mr-1"></i>Selesai Loading');
             }
         });
-    });
+        });
 });
 </script>

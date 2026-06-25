@@ -2370,4 +2370,64 @@ class M_SalesOrder extends CI_Model
         $generated_numbers[] = $no_faktur;
         return $no_faktur;
     }
+
+    public function kembalikan_so_ke_sales($id_so, $update_by)
+    {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        if (!$so) return ['errors' => ['SO tidak ditemukan.']];
+        if (!in_array($so['status'], ['siap_faktur', 'partial'], true)) {
+            return ['errors' => ['SO tidak dalam status yang bisa dikembalikan (harus siap_faktur atau partial).']];
+        }
+
+        // Cek apakah SO sudah punya faktur aktif
+        $jumlah_faktur = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_faktur_penjualan
+            WHERE id_so = ? AND status NOT IN ('cancelled')
+        ", [$id_so])->row_array();
+
+        $has_faktur = (int)($jumlah_faktur['total'] ?? 0) > 0;
+
+        // Jika ada faktur yang sudah masuk DO, tidak bisa dikembalikan
+        $in_do = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_faktur_penjualan fp
+            JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
+            WHERE fp.id_so = ?
+        ", [$id_so])->row_array();
+
+        if ((int)($in_do['total'] ?? 0) > 0) {
+            return ['errors' => ['SO tidak dapat dikembalikan karena fakturnya sudah masuk Delivery Order.']];
+        }
+
+        $new_status = $has_faktur ? 'partial' : 'open';
+
+        $this->db->trans_start();
+
+        // Update status SO dan reset kd_rute
+        $this->db->where('id_so', $id_so);
+        $this->db->update('tbso_sales_order', [
+            'status'    => $new_status,
+            'update_by' => $update_by,
+            'update_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        // Reset checker_loaded semua item ke 0
+        $this->db->where('id_so', $id_so);
+        $this->db->update('tbso_sales_order_detail', [
+            'checker_loaded' => 0,
+        ]);
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['errors' => ['Gagal mengembalikan SO ke Sales.']];
+        }
+
+        return [
+            'success'    => true,
+            'new_status' => $new_status,
+            'has_faktur' => $has_faktur,
+        ];
+    }
 }

@@ -1026,18 +1026,45 @@ class C_Checker extends CI_Controller
         $this->load->model('M_Logistik');
         
         $routes = $this->db->query("
-            SELECT DISTINCT COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
-                   COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
-                   COUNT(DISTINCT so.id_so) AS total_so
+            SELECT DISTINCT
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COUNT(DISTINCT so.id_so) AS total_so
+            FROM tbso_sales_order so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            AND NOT EXISTS (
+                SELECT 1
+                FROM tbso_faktur_penjualan fp
+                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
+                WHERE fp.id_so = so.id_so
+            )
+            AND EXISTS (
+                SELECT 1
+                FROM tbso_sales_order_detail sod
+                WHERE sod.id_so = so.id_so
+                    AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+                    AND sod.checker_loaded = 2
+            )
+            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
+
+            UNION
+
+            SELECT DISTINCT
+                COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
+                COUNT(DISTINCT so.id_so) AS total_so
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
             WHERE so.status IN ('siap_faktur', 'partial')
-              AND NOT EXISTS (
-                  SELECT 1 FROM tb_detail_do dd
-                  JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
-                  WHERE fp.id_so = so.id_so
-              )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM tbso_faktur_penjualan fp
+                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
+                WHERE fp.id_so = so.id_so
+            )
             GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
         ")->result_array();
 
@@ -1142,7 +1169,7 @@ class C_Checker extends CI_Controller
             exit;
         }
 
-        // Cek apakah semua item rute sudah diberi status (1 atau 2), tidak ada yang 0/null
+        // Cek item belum dipilih sama sekali (0/null)
         $belum = $this->db->query("
             SELECT COUNT(*) AS total
             FROM tbso_sales_order_detail sod
@@ -1152,8 +1179,8 @@ class C_Checker extends CI_Controller
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
-                SELECT 1 FROM tb_detail_do dd
-                JOIN tbso_faktur_penjualan fp ON fp.no_faktur = dd.kd_faktur
+                SELECT 1 FROM tbso_faktur_penjualan fp
+                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
                 WHERE fp.id_so = so.id_so
             )
             AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0)
@@ -1167,14 +1194,46 @@ class C_Checker extends CI_Controller
             exit;
         }
 
+        // Cek apakah ada item yang di-X (checker_loaded = 2)
+        $ada_ditolak = $this->db->query("
+            SELECT COUNT(*) AS total
+            FROM tbso_sales_order_detail sod
+            JOIN tbso_sales_order so ON so.id_so = sod.id_so
+            LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            WHERE so.status IN ('siap_faktur', 'partial', 'completed')
+            AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
+            AND NOT EXISTS (
+                SELECT 1 FROM tbso_faktur_penjualan fp
+                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
+                WHERE fp.id_so = so.id_so
+            )
+            AND sod.checker_loaded = 2
+        ", [$kd_rute])->row_array();
+
         $this->load->model('M_Logistik');
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';
+
+        if ((int)$ada_ditolak['total'] > 0) {
+            // Ada item X — tandai selesai tapi jangan buat DO
+            // Kembalikan response sukses dengan pesan instruksi untuk Admin SC
+            echo json_encode([
+                'status'      => true,
+                'created_do'  => null,
+                'ada_ditolak' => true,
+                'message'     => (int)$ada_ditolak['total'] . ' item tidak termuat. Admin SC perlu melakukan repost faktur untuk item tersebut sebelum DO dapat dibuat.'
+            ]);
+            exit;
+        }
+
+        // Semua item dimuat (checker_loaded = 1) — coba buat DO
         $created_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $username);
 
         echo json_encode([
-            'status'     => true,
-            'message'    => 'Loading rute selesai',
-            'created_do' => $created_do ? $created_do['kd_do'] : null
+            'status'      => true,
+            'created_do'  => $created_do ? $created_do['kd_do'] : null,
+            'ada_ditolak' => false,
+            'message'     => $created_do ? 'DO berhasil dibuat.' : 'Loading selesai. Menunggu faktur Admin SC sebelum DO dapat dibuat.'
         ]);
         exit;
     }
