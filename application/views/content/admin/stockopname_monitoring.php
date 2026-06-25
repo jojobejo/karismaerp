@@ -40,6 +40,27 @@
                         </button>
                     </div>
                 </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap justify-content-sm-end" style="gap:6px">
+                            <a href="<?= base_url('admin/stockopname/monitoring/export-excel/compare-all') ?>" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> Compare Stock Buku vs Stock Opname - All Barang
+                            </a>
+                            <a href="<?= base_url('admin/stockopname/monitoring/export-excel/compare-expired') ?>" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> Compare Stock Buku vs Stock Opname - By Expired Date
+                            </a>
+                            <a href="<?= base_url('admin/stockopname/monitoring/export-excel/master-all') ?>" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> Data master Opname All Barang
+                            </a>
+                            <a href="<?= base_url('admin/stockopname/monitoring/export-excel/master-expired') ?>" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> Data Master Opname Barang with Expired Date
+                            </a>
+                            <a href="<?= base_url('admin/stockopname/monitoring/export-excel/opname-input') ?>" class="btn btn-success btn-sm">
+                                <i class="fas fa-file-excel"></i> Data Opname
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 

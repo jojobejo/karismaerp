@@ -838,6 +838,97 @@ class M_Stockopname extends CI_Model
         ], true);
     }
 
+    public function monitoring_compare_all_export_rows()
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        return $this->db->query("
+            SELECT *
+            FROM ({$this->monitoring_compare_all_base()}) x
+            ORDER BY nama_barang ASC, kode_barang ASC
+        ")->result_array();
+    }
+
+    public function monitoring_compare_lot_export_rows()
+    {
+        if (!$this->ready()) {
+            return [];
+        }
+
+        return $this->db->query("
+            SELECT *
+            FROM ({$this->monitoring_compare_lot_base()}) x
+            ORDER BY nama_barang ASC, expired_date ASC, kode_barang ASC
+        ")->result_array();
+    }
+
+    public function monitoring_master_opname_all_export_rows()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        return $this->db->query("
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                SUM(COALESCE(qty, 0)) AS qty_all_barang
+            FROM {$this->masterTable}
+            WHERE {$this->master_positive_sql()}
+            GROUP BY kode_barang
+            ORDER BY nama_barang ASC, kode_barang ASC
+        ")->result_array();
+    }
+
+    public function monitoring_master_opname_expired_export_rows()
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $expKey = $this->exp_key('expired_date');
+        return $this->db->query("
+            SELECT
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                MAX(expired_date) AS expired_date,
+                SUM(COALESCE(qty, 0)) AS qty_all_expired_date
+            FROM {$this->masterTable}
+            WHERE {$this->master_positive_sql()}
+            GROUP BY kode_barang, nama_barang, {$expKey}
+            ORDER BY nama_barang ASC, expired_date ASC, kode_barang ASC
+        ")->result_array();
+    }
+
+    public function monitoring_opname_export_rows()
+    {
+        if (!$this->db->table_exists($this->opnameTable)) {
+            return [];
+        }
+
+        $createdColumn = $this->opname_created_column();
+        $expiredDate = $this->db->field_exists('expired_date', $this->opnameTable) ? 'expired_date' : "NULL AS expired_date";
+        $qtyPcs = $this->db->field_exists('qty_pcs', $this->opnameTable) ? 'COALESCE(qty_pcs, 0) AS qty_pcs' : '0 AS qty_pcs';
+        $qtyBox = $this->db->field_exists('qty_box', $this->opnameTable) ? 'COALESCE(qty_box, 0) AS qty_box' : '0 AS qty_box';
+
+        return $this->db->query("
+            SELECT
+                kode_barang,
+                nama_barang,
+                {$expiredDate},
+                COALESCE(qty, 0) AS qty,
+                {$qtyPcs},
+                {$qtyBox},
+                input_by,
+                wilayah,
+                tim_opname
+            FROM {$this->opnameTable}
+            ORDER BY {$createdColumn} DESC, nama_barang ASC, kode_barang ASC
+        ")->result_array();
+    }
+
     private function monitoring_result_from_base($base, $mode = 'overall')
     {
         $matchExpression = 'status_opname = ' . $this->db->escape('all_match');

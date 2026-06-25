@@ -156,6 +156,112 @@ class C_Stockopname extends CI_Controller
         return date('d', $timestamp) . ' ' . $months[(int)date('n', $timestamp)] . ' ' . date('Y', $timestamp);
     }
 
+    private function excel_status_label($status)
+    {
+        $labels = [
+            'all_match' => 'All Match',
+            'tim_1' => 'Tim 1 Match',
+            'tim_2' => 'Tim 2 Match',
+            'not_match' => 'Tidak Match',
+            're_check' => 'Re-Check',
+        ];
+
+        return $labels[$status] ?? (string)$status;
+    }
+
+    private function excel_date_value($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '' || $value === '0000-00-00') {
+            return '-';
+        }
+
+        return $value;
+    }
+
+    private function excel_column_letter($index)
+    {
+        $index = (int)$index;
+        $letter = '';
+        while ($index > 0) {
+            $index--;
+            $letter = chr(65 + ($index % 26)) . $letter;
+            $index = (int)floor($index / 26);
+        }
+
+        return $letter ?: 'A';
+    }
+
+    private function excel_fill_sheet($sheet, $title, $headers, $rows)
+    {
+        $sheet->setTitle(substr($title, 0, 31));
+
+        $column = 1;
+        foreach ($headers as $header) {
+            $sheet->setCellValueByColumnAndRow($column, 1, $header);
+            $column++;
+        }
+
+        $rowNumber = 2;
+        foreach ($rows as $row) {
+            $column = 1;
+            foreach (array_keys($headers) as $key) {
+                $sheet->setCellValueByColumnAndRow($column, $rowNumber, $row[$key] ?? '');
+                $column++;
+            }
+            $rowNumber++;
+        }
+
+        $lastColumn = count($headers);
+        $lastRow = max(1, $rowNumber - 1);
+        $lastColumnLetter = $this->excel_column_letter($lastColumn);
+
+        $sheet->getStyle('A1:' . $lastColumnLetter . '1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:' . $lastColumnLetter . '1')->getFill()
+            ->setFillType('solid')
+            ->getStartColor()->setARGB('FFE8EEF7');
+        $sheet->getStyle('A1:' . $lastColumnLetter . $lastRow)->getBorders()->getAllBorders()
+            ->setBorderStyle('thin');
+        $sheet->setAutoFilter('A1:' . $lastColumnLetter . $lastRow);
+        $sheet->freezePane('A2');
+
+        for ($i = 1; $i <= $lastColumn; $i++) {
+            $sheet->getColumnDimensionByColumn($i)->setAutoSize(true);
+        }
+    }
+
+    private function excel_output_html($filename, $sections)
+    {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        echo '<html><head><meta charset="utf-8"></head><body>';
+        foreach ($sections as $section) {
+            echo '<h3>' . htmlspecialchars($section['title'], ENT_QUOTES, 'UTF-8') . '</h3>';
+            echo '<table border="1">';
+            echo '<thead><tr>';
+            foreach ($section['headers'] as $header) {
+                echo '<th style="background:#e8eef7;font-weight:bold;">' . htmlspecialchars($header, ENT_QUOTES, 'UTF-8') . '</th>';
+            }
+            echo '</tr></thead><tbody>';
+            foreach ($section['rows'] as $row) {
+                echo '<tr>';
+                foreach (array_keys($section['headers']) as $key) {
+                    echo '<td>' . htmlspecialchars((string)($row[$key] ?? ''), ENT_QUOTES, 'UTF-8') . '</td>';
+                }
+                echo '</tr>';
+            }
+            echo '</tbody></table><br>';
+        }
+        echo '</body></html>';
+        exit;
+    }
+
     private function delete_qrcode_files($paths)
     {
         $root = realpath(FCPATH);
@@ -268,6 +374,195 @@ class C_Stockopname extends CI_Controller
     public function monitoring_compare_lot()
     {
         $this->raw_json($this->stockopname->monitoring_compare_lot_datatable($this->post()));
+    }
+
+    public function monitoring_export_excel($type = 'compare-all')
+    {
+        $type = strtolower(trim((string)$type));
+        $section = null;
+
+        if ($type === 'compare-all') {
+            $rows = array_map(function ($row) {
+                return [
+                    'kode_barang' => $row['kode_barang'] ?? '',
+                    'nama_barang' => $row['nama_barang'] ?? '',
+                    'qty_buku' => (int)($row['qty_buku'] ?? 0),
+                    'qty_tim_1' => (int)($row['qty_tim_1'] ?? 0),
+                    'qty_tim_2' => (int)($row['qty_tim_2'] ?? 0),
+                    'status_opname' => $this->excel_status_label($row['status_opname'] ?? ''),
+                    'input_tim_1' => (int)($row['input_tim_1'] ?? 0),
+                    'input_tim_2' => (int)($row['input_tim_2'] ?? 0),
+                    'inputers' => $row['inputers'] ?? '-',
+                    'wilayah' => $row['wilayah'] ?? '-',
+                    'last_input' => $this->excel_date_value($row['last_input'] ?? ''),
+                ];
+            }, $this->stockopname->monitoring_compare_all_export_rows());
+
+            $section = [
+                'title' => 'Compare Stock Buku vs Stock Opname - All Barang',
+                'headers' => [
+                    'kode_barang' => 'Kode Barang',
+                    'nama_barang' => 'Nama Barang',
+                    'qty_buku' => 'Stock Buku',
+                    'qty_tim_1' => 'Qty Tim 1',
+                    'qty_tim_2' => 'Qty Tim 2',
+                    'status_opname' => 'Status',
+                    'input_tim_1' => 'Input Tim 1',
+                    'input_tim_2' => 'Input Tim 2',
+                    'inputers' => 'Inputers',
+                    'wilayah' => 'Wilayah',
+                    'last_input' => 'Input Terakhir',
+                ],
+                'rows' => $rows,
+                'sheet' => 'Compare All Barang',
+                'filename' => 'Compare Stock Buku vs Stock Opname - All Barang',
+            ];
+        } elseif ($type === 'compare-expired') {
+            $rows = array_map(function ($row) {
+                return [
+                    'kode_barang' => $row['kode_barang'] ?? '',
+                    'nama_barang' => $row['nama_barang'] ?? '',
+                    'expired_date' => $this->excel_date_value($row['expired_date'] ?? ''),
+                    'qty_buku' => (int)($row['qty_buku'] ?? 0),
+                    'qty_tim_1' => (int)($row['qty_tim_1'] ?? 0),
+                    'qty_tim_2' => (int)($row['qty_tim_2'] ?? 0),
+                    'status_opname' => $this->excel_status_label($row['status_opname'] ?? ''),
+                    'input_tim_1' => (int)($row['input_tim_1'] ?? 0),
+                    'input_tim_2' => (int)($row['input_tim_2'] ?? 0),
+                    'inputers' => $row['inputers'] ?? '-',
+                    'wilayah' => $row['wilayah'] ?? '-',
+                    'last_input' => $this->excel_date_value($row['last_input'] ?? ''),
+                ];
+            }, $this->stockopname->monitoring_compare_lot_export_rows());
+
+            $section = [
+                'title' => 'Compare Stock Buku vs Stock Opname - By Expired Date',
+                'headers' => [
+                    'kode_barang' => 'Kode Barang',
+                    'nama_barang' => 'Nama Barang',
+                    'expired_date' => 'Expired Date',
+                    'qty_buku' => 'Stock Buku',
+                    'qty_tim_1' => 'Qty Tim 1',
+                    'qty_tim_2' => 'Qty Tim 2',
+                    'status_opname' => 'Status',
+                    'input_tim_1' => 'Input Tim 1',
+                    'input_tim_2' => 'Input Tim 2',
+                    'inputers' => 'Inputers',
+                    'wilayah' => 'Wilayah',
+                    'last_input' => 'Input Terakhir',
+                ],
+                'rows' => $rows,
+                'sheet' => 'Compare Expired Date',
+                'filename' => 'Compare Stock Buku vs Stock Opname - By Expired Date',
+            ];
+        } elseif ($type === 'master-all') {
+            $rows = array_map(function ($row) {
+                return [
+                    'nama_barang' => $row['nama_barang'] ?? '',
+                    'qty_all_barang' => (int)($row['qty_all_barang'] ?? 0),
+                ];
+            }, $this->stockopname->monitoring_master_opname_all_export_rows());
+
+            $section = [
+                'title' => 'Data master Opname All Barang',
+                'headers' => [
+                    'nama_barang' => 'Nama Barang',
+                    'qty_all_barang' => 'Qty All Barang',
+                ],
+                'rows' => $rows,
+                'sheet' => 'Master All Barang',
+                'filename' => 'Data master Opname All Barang',
+            ];
+        } elseif ($type === 'master-expired') {
+            $rows = array_map(function ($row) {
+                return [
+                    'nama_barang' => $row['nama_barang'] ?? '',
+                    'expired_date' => $this->excel_date_value($row['expired_date'] ?? ''),
+                    'qty_all_expired_date' => (int)($row['qty_all_expired_date'] ?? 0),
+                ];
+            }, $this->stockopname->monitoring_master_opname_expired_export_rows());
+
+            $section = [
+                'title' => 'Data Master Opname Barang with Expired Date',
+                'headers' => [
+                    'nama_barang' => 'Nama Barang',
+                    'expired_date' => 'Expired Date',
+                    'qty_all_expired_date' => 'Qty All Expired Date',
+                ],
+                'rows' => $rows,
+                'sheet' => 'Master Expired Date',
+                'filename' => 'Data Master Opname Barang with Expired Date',
+            ];
+        } elseif ($type === 'opname-input') {
+            $rows = array_map(function ($row) {
+                return [
+                    'kode_barang' => $row['kode_barang'] ?? '',
+                    'nama_barang' => $row['nama_barang'] ?? '',
+                    'expired_date' => $this->excel_date_value($row['expired_date'] ?? ''),
+                    'qty' => (int)($row['qty'] ?? 0),
+                    'qty_pcs' => (int)($row['qty_pcs'] ?? 0),
+                    'qty_box' => (int)($row['qty_box'] ?? 0),
+                    'input_by' => $row['input_by'] ?? '',
+                    'wilayah' => $row['wilayah'] ?? '',
+                    'tim_opname' => $row['tim_opname'] ?? '',
+                ];
+            }, $this->stockopname->monitoring_opname_export_rows());
+
+            $section = [
+                'title' => 'Data Opname',
+                'headers' => [
+                    'kode_barang' => 'Kode Barang',
+                    'nama_barang' => 'Nama Barang',
+                    'expired_date' => 'Expired Date',
+                    'qty' => 'Qty',
+                    'qty_pcs' => 'Qty Pcs',
+                    'qty_box' => 'Qty Box',
+                    'input_by' => 'Input By',
+                    'wilayah' => 'Wilayah',
+                    'tim_opname' => 'Tim Opname',
+                ],
+                'rows' => $rows,
+                'sheet' => 'Data Opname',
+                'filename' => 'Data Opname',
+            ];
+        }
+
+        if (!$section) {
+            show_404();
+            return;
+        }
+
+        $sections = [$section];
+        $safeFilename = preg_replace('/[^A-Za-z0-9_-]+/', '_', $section['filename']);
+        $safeFilename = trim($safeFilename, '_') ?: 'stockopname_export';
+
+        if (!is_file(APPPATH . 'third_party/PhpSpreadsheet/src/Bootstrap.php')) {
+            $this->excel_output_html($safeFilename . '_' . date('Ymd_His') . '.xls', $sections);
+        }
+
+        require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+
+        $ps = new PhpSpreadsheetLib();
+        $spreadsheet = $ps->spreadsheet();
+
+        foreach ($sections as $index => $section) {
+            $sheet = $index === 0 ? $spreadsheet->getActiveSheet() : $spreadsheet->createSheet();
+            $this->excel_fill_sheet($sheet, $section['sheet'], $section['headers'], $section['rows']);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $filename = $safeFilename . '_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = $ps->writer($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
     public function detail_input_opname($kodeBarang = '')
