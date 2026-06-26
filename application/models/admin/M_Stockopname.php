@@ -1065,23 +1065,26 @@ class M_Stockopname extends CI_Model
             SELECT
                 COUNT(*) AS total_input,
                 COUNT(DISTINCT NULLIF(TRIM(requested_by), '')) AS total_user,
+                COALESCE(SUM(qty), 0) AS total_qty,
                 MAX(requested_at) AS last_input
             FROM {$this->manualMasterTable}
+            WHERE status = 'Request Master Item'
         ")->row_array();
 
         $manualRow = $this->db->query("
             SELECT
                 COUNT(*) AS total_input,
-                COUNT(DISTINCT NULLIF(TRIM(input_by), '')) AS total_user,
+                COUNT(DISTINCT NULLIF(TRIM(requested_by), '')) AS total_user,
                 COALESCE(SUM(qty), 0) AS total_qty,
-                MAX(input_at) AS last_input
-            FROM {$this->manualOpnameTable}
+                MAX(requested_at) AS last_input
+            FROM {$this->manualMasterTable}
+            WHERE status = 'Manual Input'
         ")->row_array();
 
         $summary['request'] = [
             'total_input' => (int)($requestRow['total_input'] ?? 0),
             'total_user' => (int)($requestRow['total_user'] ?? 0),
-            'total_qty' => (int)($requestRow['total_input'] ?? 0),
+            'total_qty' => (int)($requestRow['total_qty'] ?? 0),
             'last_input' => $requestRow['last_input'] ?: '-',
         ];
         $summary['manual'] = [
@@ -1103,6 +1106,7 @@ class M_Stockopname extends CI_Model
         return $this->db
             ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,status,requested_by,requested_at,reviewed_by,reviewed_at,review_note,created_at,updated_at')
             ->from($this->manualMasterTable)
+            ->where('status', 'Request Master Item')
             ->order_by('requested_at', 'DESC')
             ->order_by('id', 'DESC')
             ->limit((int)$limit)
@@ -1117,9 +1121,10 @@ class M_Stockopname extends CI_Model
         }
 
         return $this->db
-            ->select('id,manual_master_id,source_id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,input_by,input_at,wilayah,tim_opname,created_at,updated_at')
-            ->from($this->manualOpnameTable)
-            ->order_by('input_at', 'DESC')
+            ->select('id AS manual_master_id,source_id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,requested_by AS input_by,requested_at AS input_at,wilayah,tim_opname,created_at,updated_at,status', false)
+            ->from($this->manualMasterTable)
+            ->where('status', 'Manual Input')
+            ->order_by('requested_at', 'DESC')
             ->order_by('id', 'DESC')
             ->limit((int)$limit)
             ->get()
@@ -1234,9 +1239,7 @@ class M_Stockopname extends CI_Model
             return [];
         }
 
-        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
-            ? 'MAX(COALESCE(dimensi, 0))'
-            : 'MAX(CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END)';
+        $dimensi = $this->master_dimensi_aggregate_sql($this->masterTable . '.kode_barang');
         $expKey = $this->exp_key('expired_date');
 
         return $this->db->query("\n            SELECT MIN(id) AS id, kode_barang, MAX(nama_barang) AS nama_barang,
@@ -1276,9 +1279,7 @@ class M_Stockopname extends CI_Model
         }
 
         $expKey = $this->exp_key('expired_date');
-        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
-            ? 'MAX(COALESCE(dimensi, 0))'
-            : 'MAX(CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END)';
+        $dimensi = $this->master_dimensi_aggregate_sql($this->masterTable . '.kode_barang');
         return $this->db->query("\n            SELECT MIN(id) AS id, kode_barang, MAX(nama_barang) AS nama_barang,
                 MAX(expired_date) AS expired_date, '-' AS no_lot,
                 {$dimensi} AS dimensi,
@@ -1523,9 +1524,41 @@ class M_Stockopname extends CI_Model
 
     private function master_dimensi_select_sql()
     {
-        return $this->db->field_exists('dimensi', $this->masterTable)
-            ? 'COALESCE(dimensi, 0) AS dimensi'
-            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
+        return $this->master_dimensi_value_sql($this->masterTable . '.kode_barang') . ' AS dimensi';
+    }
+
+    private function master_dimensi_value_sql($kodeColumn = 'kode_barang')
+    {
+        $fallback = $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'COALESCE(dimensi, 0)'
+            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END';
+
+        if (
+            $this->db->table_exists($this->masterBarangAllTable)
+            && $this->db->field_exists('kd_barang', $this->masterBarangAllTable)
+            && $this->db->field_exists('dimensi', $this->masterBarangAllTable)
+        ) {
+            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE mba.kd_barang = {$kodeColumn} LIMIT 1), {$fallback})";
+        }
+
+        return $fallback;
+    }
+
+    private function master_dimensi_aggregate_sql($kodeColumn = 'kode_barang')
+    {
+        $fallback = $this->db->field_exists('dimensi', $this->masterTable)
+            ? 'MAX(COALESCE(dimensi, 0))'
+            : 'MAX(CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END)';
+
+        if (
+            $this->db->table_exists($this->masterBarangAllTable)
+            && $this->db->field_exists('kd_barang', $this->masterBarangAllTable)
+            && $this->db->field_exists('dimensi', $this->masterBarangAllTable)
+        ) {
+            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE mba.kd_barang = {$kodeColumn} LIMIT 1), {$fallback})";
+        }
+
+        return $fallback;
     }
 
     private function dimensi_from_master_row($row)
@@ -1822,19 +1855,27 @@ class M_Stockopname extends CI_Model
 
         $status = (string)($request['status'] ?? '');
         $inputSource = $status === 'Request Master Item' ? 'master data request opname' : 'manual input';
+        $payloadQtyBox = (int)($payload['qty_box'] ?? 0);
+        $payloadQtyPcs = (int)($payload['qty_pcs'] ?? 0);
+        $payloadTimOpname = (int)($payload['tim_opname'] ?? 0);
+        if ($status === 'Manual Input') {
+            $payloadQtyBox = (int)($request['qty_box'] ?? 0);
+            $payloadQtyPcs = (int)($request['qty_pcs'] ?? 0);
+            $payloadTimOpname = (int)($request['tim_opname'] ?? 0);
+        }
         $row = [
             'source_id' => $sourceId,
             'kode_barang' => (string)$request['kode_barang'],
             'nama_barang' => (string)$request['nama_barang'],
             'expired_date' => (string)$request['expired_date'],
             'no_lot' => (string)$request['no_lot'],
-            'qty_box' => (int)$payload['qty_box'],
-            'qty_pcs' => (int)$payload['qty_pcs'],
-            'qty' => ((int)$payload['qty_box'] * $dimension) + (int)$payload['qty_pcs'],
+            'qty_box' => $payloadQtyBox,
+            'qty_pcs' => $payloadQtyPcs,
+            'qty' => ($payloadQtyBox * $dimension) + $payloadQtyPcs,
             'input_by' => (string)$actor,
             'input_at' => date('Y-m-d H:i:s'),
             'wilayah' => (int)($payload['wilayah'] ?: $request['wilayah']),
-            'tim_opname' => (int)$payload['tim_opname'],
+            'tim_opname' => $payloadTimOpname,
             'scan_code' => null,
         ];
         if ($this->db->field_exists('input_source', $this->opnameTable)) {
@@ -2074,9 +2115,7 @@ class M_Stockopname extends CI_Model
         $qrcodeFile = $this->db->field_exists('qrcode_file', $this->masterTable) ? 'qrcode_file' : 'NULL AS qrcode_file';
         $qrcodeStatus = $this->db->field_exists('qrcode_status', $this->masterTable) ? 'qrcode_status' : 'NULL AS qrcode_status';
         $qrcodeError = $this->db->field_exists('qrcode_error_message', $this->masterTable) ? 'qrcode_error_message' : 'NULL AS qrcode_error_message';
-        $dimensi = $this->db->field_exists('dimensi', $this->masterTable)
-            ? 'COALESCE(dimensi, 0) AS dimensi'
-            : 'CASE WHEN COALESCE(qty_box, 0) > 0 THEN FLOOR((COALESCE(qty, 0) - COALESCE(qty_pcs, 0)) / qty_box) ELSE 0 END AS dimensi';
+        $dimensi = $this->master_dimensi_select_sql();
 
         $this->db->select('
             id,
@@ -2222,7 +2261,7 @@ class M_Stockopname extends CI_Model
         }
 
         $this->db
-            ->select('id, kd_barang, kode_barang_system, nama_barang, p, l, t')
+            ->select('id, kd_barang, kode_barang_system, nama_barang, p, l, t, (COALESCE(p, 0) * COALESCE(l, 0) * COALESCE(t, 0)) AS dimensi, kubikasi', false)
             ->from($this->masterBarangAllTable);
         if (trim((string)$kodeBarang) !== '') {
             $this->db->like('kd_barang', trim((string)$kodeBarang));
@@ -2253,19 +2292,24 @@ class M_Stockopname extends CI_Model
             }
 
             $kodeSystem = $this->next_master_barang_system_code();
+            $p = (int)($input['p'] ?? 0);
+            $l = (int)($input['l'] ?? 0);
+            $t = (int)($input['t'] ?? 0);
+            $dimensi = $p * $l * $t;
+
             $data = [
                 'kd_barang' => $kodeBarang,
                 'kode_barang_system' => $kodeSystem,
                 'nama_barang' => trim((string)($input['nama_barang'] ?? '')),
-                'p' => (int)($input['p'] ?? 0),
-                'l' => (int)($input['l'] ?? 0),
-                't' => (int)($input['t'] ?? 0),
+                'p' => $p,
+                'l' => $l,
+                't' => $t,
                 // Kolom legacy yang NOT NULL tetap diberi nilai standar; input modul hanya enam kolom utama.
                 'kd_supplier' => '-',
                 'bhn_aktif' => '-',
                 'satuan' => '-',
                 'berat' => 0,
-                'kubikasi' => '0',
+                'kubikasi' => (string)$dimensi,
                 'qty_min' => 0,
             ];
             if (!$this->db->insert($this->masterBarangAllTable, $data)) {
@@ -2273,11 +2317,55 @@ class M_Stockopname extends CI_Model
             }
 
             $data['id'] = (int)$this->db->insert_id();
+            $data['dimensi'] = $dimensi;
             $data['next_kode_barang_system'] = $this->next_master_barang_system_code();
             return ['status' => true, 'message' => 'Master barang berhasil disimpan.', 'data' => $data];
         } finally {
             $this->db->query('SELECT RELEASE_LOCK(?)', [$lockName]);
         }
+    }
+
+    public function update_master_barang_catalog($id, array $input)
+    {
+        if (!$this->db->table_exists($this->masterBarangAllTable)) {
+            return ['status' => false, 'message' => 'Tabel tb_master_barang_all belum tersedia.'];
+        }
+
+        $id = (int)$id;
+        $row = $this->db
+            ->select('id, kd_barang, kode_barang_system, nama_barang')
+            ->from($this->masterBarangAllTable)
+            ->where('id', $id)
+            ->limit(1)
+            ->get()
+            ->row_array();
+        if (!$row) {
+            return ['status' => false, 'message' => 'Data master barang tidak ditemukan.'];
+        }
+
+        $p = (int)($input['p'] ?? 0);
+        $l = (int)($input['l'] ?? 0);
+        $t = (int)($input['t'] ?? 0);
+        $dimensi = $p * $l * $t;
+        $data = [
+            'p' => $p,
+            'l' => $l,
+            't' => $t,
+            'kubikasi' => (string)$dimensi,
+        ];
+
+        $updated = $this->db
+            ->where('id', $id)
+            ->update($this->masterBarangAllTable, $data);
+        if (!$updated) {
+            return ['status' => false, 'message' => 'Gagal memperbarui master barang.'];
+        }
+
+        return [
+            'status' => true,
+            'message' => 'Dimensi master barang berhasil diperbarui.',
+            'data' => array_merge($row, $data, ['dimensi' => $dimensi]),
+        ];
     }
 
     public function create_master_barang_from_source($sourceId, array $input)

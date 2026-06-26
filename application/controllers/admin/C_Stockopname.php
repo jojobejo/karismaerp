@@ -1001,6 +1001,7 @@ class C_Stockopname extends CI_Controller
             'nama_barang' => $row['nama_barang'],
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
+            'dimensi' => (int)($row['dimensi'] ?? 0),
         ]);
     }
 
@@ -1224,6 +1225,33 @@ class C_Stockopname extends CI_Controller
         ]);
         if (empty($saved['status'])) {
             return $this->json(false, $saved['message'] ?? 'Gagal menyimpan master barang.');
+        }
+
+        $this->json(true, $saved['message'], $saved['data']);
+    }
+
+    public function ajax_update_master_barang_catalog()
+    {
+        $input = $this->post();
+        $id = trim((string)($input['id'] ?? ''));
+        if ($id === '' || !ctype_digit($id) || (int)$id <= 0) {
+            return $this->json(false, 'ID master barang tidak valid.');
+        }
+
+        foreach (['p' => 'Panjang', 'l' => 'Lebar', 't' => 'Tinggi'] as $field => $label) {
+            $value = trim((string)($input[$field] ?? ''));
+            if ($value === '' || !ctype_digit($value) || (int)$value <= 0) {
+                return $this->json(false, $label . ' harus berupa bilangan bulat lebih dari 0.');
+            }
+        }
+
+        $saved = $this->stockopname->update_master_barang_catalog((int)$id, [
+            'p' => (int)$input['p'],
+            'l' => (int)$input['l'],
+            't' => (int)$input['t'],
+        ]);
+        if (empty($saved['status'])) {
+            return $this->json(false, $saved['message'] ?? 'Gagal memperbarui master barang.');
         }
 
         $this->json(true, $saved['message'], $saved['data']);

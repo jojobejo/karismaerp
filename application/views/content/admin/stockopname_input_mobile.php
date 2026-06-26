@@ -112,6 +112,10 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="form-group so-qty-field mb-0" hidden>
+                                        <label>Dimensi</label>
+                                        <div class="so-dimensi-value" id="itemDimensi">0</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -196,6 +200,7 @@ window.addEventListener('load', function () {
         $('#itemName').html(escapeHtml(row.nama_barang || '-'));
         $('#itemExpired').text(formatExpiredDate(row.expired_date));
         selectedDimensi = parseInt(row.dimensi || 0, 10) || 0;
+        updateDimensiView();
         updateQtyTotal();
         $('#btnSaveOpname').prop('disabled', false);
     }
@@ -211,9 +216,14 @@ window.addEventListener('load', function () {
         resetManualLot('Pilih nama barang dahulu');
         resetManualExpired('Pilih no lot dahulu');
         selectedDimensi = 0;
+        updateDimensiView();
         $('#qtyTotalLabel').text('Total 0');
         $('#btnSaveOpname').prop('disabled', true);
         setInputMode(inputMode);
+    }
+
+    function updateDimensiView() {
+        $('#itemDimensi').text((selectedDimensi || 0).toLocaleString('id-ID'));
     }
 
     function updateQtyTotal() {
@@ -236,6 +246,9 @@ window.addEventListener('load', function () {
             $('#btnRequestMode').removeClass('btn-warning').addClass('btn-outline-warning');
             $('#masterId').val('');
             $('#itemName,#itemExpired').text('-');
+            selectedDimensi = 0;
+            updateDimensiView();
+            updateQtyTotal();
             validateManualReady();
             return;
         }
@@ -249,6 +262,9 @@ window.addEventListener('load', function () {
             $('#btnManualMode').removeClass('btn-primary').addClass('btn-outline-primary');
             $('#masterId,#manualSourceId').val('');
             $('#itemName,#itemExpired').text('-');
+            selectedDimensi = 0;
+            updateDimensiView();
+            updateQtyTotal();
             validateRequestReady();
             return;
         }
@@ -270,6 +286,7 @@ window.addEventListener('load', function () {
         $('#manualExpired').prop('disabled', true).empty().append(new Option(text || 'Pilih expired date', '', true, true)).trigger('change');
         $('#manualSourceId').val('');
         selectedDimensi = 0;
+        updateDimensiView();
         updateQtyTotal();
         validateManualReady();
     }
@@ -412,6 +429,7 @@ window.addEventListener('load', function () {
     $('#requestBarang').on('change', function () {
         var selected = $('#requestBarang').select2('data')[0] || {};
         selectedDimensi = parseInt(selected.dimensi || 0, 10) || 0;
+        updateDimensiView();
         updateQtyTotal();
         validateRequestReady();
     });
@@ -457,6 +475,7 @@ window.addEventListener('load', function () {
         var selected = $(this).find(':selected');
         $('#manualSourceId').val($(this).val() || '');
         selectedDimensi = parseInt(selected.attr('data-dimensi') || 0, 10) || 0;
+        updateDimensiView();
         updateQtyTotal();
         validateManualReady();
     });

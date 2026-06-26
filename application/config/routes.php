@@ -109,6 +109,7 @@ $route['admin/stockopname/master_opname/create']   = 'admin/C_Stockopname/ajax_c
 $route['admin/stockopname/master_barang']          = 'admin/C_Stockopname/master_barang_catalog';
 $route['admin/stockopname/master_barang/list']     = 'admin/C_Stockopname/ajax_master_barang_catalog_list';
 $route['admin/stockopname/master_barang/create']   = 'admin/C_Stockopname/ajax_create_master_barang_catalog';
+$route['admin/stockopname/master_barang/update']   = 'admin/C_Stockopname/ajax_update_master_barang_catalog';
 $route['admin/stockopname/master_opname/qty-zero'] = 'admin/C_Stockopname/master_barang_qty_zero';
 $route['admin/stockopname/master_opname/qty-zero/list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';
 $route['admin/stockopname/master_opname/qty-zero/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';

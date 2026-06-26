@@ -52,7 +52,7 @@
                                     <h2 class="sm-title">Daftar Input Manual Opname</h2>
                                     <div class="sm-muted"><?= number_format(count($manual_logs), 0, ',', '.') ?> data input manual ditampilkan</div>
                                 </div>
-                                <span class="sm-badge">stockopname_opname_manual</span>
+                                <span class="sm-badge">Manual Input</span>
                             </div>
                             <div class="table-responsive p-3">
                                 <table class="table table-sm table-bordered table-hover w-100">
@@ -73,7 +73,7 @@
                                     <tbody>
                                         <?php if (empty($manual_logs)) : ?>
                                             <tr>
-                                                <td colspan="11" class="text-center text-muted py-4">Belum ada input manual opname.</td>
+                                                <td colspan="10" class="text-center text-muted py-4">Belum ada input manual opname.</td>
                                             </tr>
                                         <?php endif; ?>
                                         <?php foreach ($manual_logs as $row) : ?>
