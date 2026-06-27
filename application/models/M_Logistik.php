@@ -1537,6 +1537,10 @@ class M_Logistik extends CI_Model
             return null;
         }
 
+        // Hanya ambil plan dari SO yang BELUM masuk DO.
+        // SO yang sudah jadi DO (fakturnya ada di tb_detail_do) tidak boleh dijadikan
+        // referensi plan, supaya SO baru dengan rute yang sama tidak mewarisi
+        // driver/kendaraan/tanggal dari pengiriman yang sudah selesai.
         return $this->db->query("
             SELECT
                 so.loading_tgl_pengiriman,
@@ -1551,6 +1555,12 @@ class M_Logistik extends CI_Model
                 so.loading_tgl_pengiriman IS NOT NULL
                 OR NULLIF(so.loading_driver, '') IS NOT NULL
                 OR NULLIF(so.loading_nolambung, '') IS NOT NULL
+            )
+            AND NOT EXISTS (
+                SELECT 1
+                FROM tbso_faktur_penjualan fp
+                JOIN tb_detail_do dd ON dd.kd_faktur = fp.no_faktur
+                WHERE fp.id_so = so.id_so
             )
             ORDER BY so.loading_tgl_pengiriman IS NULL ASC, so.loading_urutan ASC, so.update_at DESC
             LIMIT 1
