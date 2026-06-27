@@ -1549,7 +1549,7 @@ class M_Logistik extends CI_Model
                 so.loading_nolambung
             FROM tbso_sales_order so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.status IN ('sedang_verifikasi', 'siap_faktur', 'partial', 'completed')
+            WHERE so.status IN ('sedang_verifikasi', 'siap_faktur', 'partial')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
             AND (
                 so.loading_tgl_pengiriman IS NOT NULL
