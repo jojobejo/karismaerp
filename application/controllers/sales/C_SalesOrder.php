@@ -824,9 +824,13 @@ class C_SalesOrder extends CI_Controller
         foreach ($all_fakturs as $faktur) {
             $rute = trim((string)(($faktur['so_kd_rute'] ?? '') ?: ($faktur['customer_kd_rute'] ?? '')));
             if ($rute === '') $rute = '-';
-            if (!isset($route_summary[$rute])) {
-                $route_summary[$rute] = [
+            $tgl_faktur = substr((string)($faktur['tanggal_faktur'] ?? $faktur['create_at'] ?? date('Y-m-d')), 0, 10);
+            $group_key  = $rute . '||' . $tgl_faktur;
+
+            if (!isset($route_summary[$group_key])) {
+                $route_summary[$group_key] = [
                     'kd_rute'          => $rute,
+                    'tgl_faktur'       => $tgl_faktur,
                     'total_faktur'     => 0,
                     'total_qty'        => 0,
                     'total_pajak'      => 0,
@@ -834,13 +838,13 @@ class C_SalesOrder extends CI_Controller
                     'latest_faktur_at' => '',
                 ];
             }
-            $route_summary[$rute]['total_faktur']++;
-            $route_summary[$rute]['total_qty'] += (float)($faktur['total_qty'] ?? 0);
-            $route_summary[$rute]['total_pajak'] += (float)($faktur['total_pajak'] ?? 0);
-            $route_summary[$rute]['grand_total'] += (float)($faktur['grand_total'] ?? 0);
+            $route_summary[$group_key]['total_faktur']++;
+            $route_summary[$group_key]['total_qty']   += (float)($faktur['total_qty']   ?? 0);
+            $route_summary[$group_key]['total_pajak'] += (float)($faktur['total_pajak'] ?? 0);
+            $route_summary[$group_key]['grand_total'] += (float)($faktur['grand_total'] ?? 0);
             $latest = (string)($faktur['tanggal_faktur'] ?? $faktur['create_at'] ?? '');
-            if ($latest > $route_summary[$rute]['latest_faktur_at']) {
-                $route_summary[$rute]['latest_faktur_at'] = $latest;
+            if ($latest > $route_summary[$group_key]['latest_faktur_at']) {
+                $route_summary[$group_key]['latest_faktur_at'] = $latest;
             }
         }
         uasort($route_summary, function($a, $b) {

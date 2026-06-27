@@ -155,6 +155,7 @@
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Rute</th>
+                                    <th>Tanggal Faktur</th>
                                     <th class="text-center">Total Faktur</th>
                                     <th class="text-right">Total Qty</th>
                                     <th class="text-right">Total Pajak</th>
@@ -171,11 +172,17 @@
                                         </td>
                                     </tr>
                                 <?php else: ?>
+                                    // Ganti loop tbody:
                                     <?php foreach ($route_summary as $row):
-                                        $rute_query = array_merge($active_query, ['rute' => $row['kd_rute']]);
+                                        $rute_query = array_merge($active_query, [
+                                            'rute'  => $row['kd_rute'],
+                                            'date1' => $row['tgl_faktur'],
+                                            'date2' => $row['tgl_faktur'],
+                                        ]);
                                     ?>
                                         <tr>
                                             <td class="font-weight-bold"><?= htmlspecialchars($row['kd_rute']) ?></td>
+                                            <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tgl_faktur'])) ?></td>
                                             <td class="text-center">
                                                 <span class="badge badge-primary px-2 py-1"><?= number_format((int)$row['total_faktur']) ?></span>
                                             </td>
@@ -184,7 +191,7 @@
                                             <td class="text-right font-weight-bold">Rp <?= number_format((float)$row['grand_total'], 0, ',', '.') ?></td>
                                             <td class="text-center">
                                                 <a href="<?= base_url('sales_order/admin_sc/faktur?' . http_build_query($rute_query)) ?>"
-                                                   class="btn btn-sm btn-info" title="Lihat faktur rute">
+                                                class="btn btn-sm btn-info" title="Lihat faktur rute">
                                                     <i class="fas fa-arrow-right mr-1"></i> Lihat
                                                 </a>
                                             </td>

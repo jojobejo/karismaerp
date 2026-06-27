@@ -1089,13 +1089,11 @@ class C_Checker extends CI_Controller
                 so.no_so, 
                 so.customer_name, 
                 c.nama_kios,
-                b.nama_barang,
-                b.satuan,
-                b.isi_per_box
+                b.nama_barang, b.satuan, (b.p * b.l * b.t) AS isi_per_box
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            LEFT JOIN tb_barang b ON b.kd_barang = sod.kd_barang
+            LEFT JOIN tb_master_barang_all b ON b.kd_barang = sod.kd_barang
             WHERE so.status IN ('siap_faktur', 'partial')
               AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
               AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
