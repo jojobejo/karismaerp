@@ -2786,10 +2786,18 @@ class C_SalesOrder extends CI_Controller
             $update_by
         );
 
+        $message = 'SO berhasil dikembalikan ke Sales dengan status <b>' . $result['new_status'] . '</b>.';
+        
+        // Jika DO otomatis dibuat karena matching barang tidak terfaktur = tidak dimuat
+        if (!empty($result['do_created'])) {
+            $message .= '<br><br>🎉 <b>DO ' . htmlspecialchars($result['do_created']) . '</b> berhasil dibuat otomatis karena barang yang tidak terfaktur cocok dengan barang yang tidak dimuat (checker loading).';
+        }
+
         echo json_encode([
             'status'     => true,
-            'message'    => 'SO berhasil dikembalikan ke Sales dengan status <b>' . $result['new_status'] . '</b>.',
+            'message'    => $message,
             'new_status' => $result['new_status'],
+            'do_created' => $result['do_created'] ?? null,
         ]);
         exit;
     }

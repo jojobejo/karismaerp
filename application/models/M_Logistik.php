@@ -4585,7 +4585,7 @@ FROM (
         return (int)($row['total'] ?? 0) > 0;
     }
 
-    public function check_and_auto_create_do($kd_rute, $create_by)
+    public function check_and_auto_create_do($kd_rute, $create_by, $bypass_checks = false)
     {
         $kd_rute = trim((string)$kd_rute);
         if ($kd_rute === '' || strtoupper($kd_rute) === 'TANPA_RUTE') {
@@ -4597,11 +4597,16 @@ FROM (
         if ($this->has_so_loading_verification_by_rute($kd_rute)) {
             return false;
         }
-        if ($this->has_remaining_so_ready_faktur_by_rute($kd_rute)) {
-            return false;
-        }
-        if ($this->has_remaining_so_loading_checker_by_rute($kd_rute)) {
-            return false;
+        // Jika $bypass_checks = true, lewati pemeriksaan has_remaining_so_* karena
+        // pemanggil sudah melakukan matching eksplisit (skenario: barang tidak termuat
+        // sudah di-repost oleh Admin SC dan DO perlu dibuat untuk item yang termuat).
+        if (!$bypass_checks) {
+            if ($this->has_remaining_so_ready_faktur_by_rute($kd_rute)) {
+                return false;
+            }
+            if ($this->has_remaining_so_loading_checker_by_rute($kd_rute)) {
+                return false;
+            }
         }
 
         $note = 'DO otomatis dibuat setelah seluruh SO rute ' . $kd_rute . ' selesai difakturkan dan termuat semua.';

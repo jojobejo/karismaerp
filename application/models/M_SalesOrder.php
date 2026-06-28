@@ -594,7 +594,7 @@ class M_SalesOrder extends CI_Model
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
-        $this->db->where_in('so.status', ['siap_faktur', 'partial']);
+        $this->db->where('so.status', 'siap_faktur');
 
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
@@ -2161,9 +2161,13 @@ class M_SalesOrder extends CI_Model
             $this->db->set('qty_faktur', 'GREATEST(0, qty_faktur - ' . $qty . ')', false);
             $this->db->update('tbso_sales_order_detail');
 
-            // 4. Reset checker_loaded ke 0 (item harus dipilih ulang oleh checker)
-            $this->db->where('id', $id_so_detail);
-            $this->db->update('tbso_sales_order_detail', ['checker_loaded' => 0]);
+            // 4. Reset checker_loaded ke 0 HANYA jika bukan 2 (tidak dimuat)
+            // Jika checker_loaded = 2 (tidak dimuat), pertahankan untuk matching logic
+            $current_detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
+            if ($current_detail && (int)($current_detail['checker_loaded'] ?? 0) !== 2) {
+                $this->db->where('id', $id_so_detail);
+                $this->db->update('tbso_sales_order_detail', ['checker_loaded' => 0]);
+            }
         }
 
         // 5. Cek sisa detail faktur — jika kosong, cancel faktur
@@ -2200,25 +2204,18 @@ class M_SalesOrder extends CI_Model
     }
 
     /**
-     * Setelah repost, tentukan status SO:
-     * - Jika ada qty_faktur > 0 di salah satu item → partial
-     * - Jika semua qty_faktur = 0 → kembali ke siap_faktur
+     * Setelah repost, set status SO kembali ke siap_faktur
+     * agar SO tetap muncul di halaman Admin SC untuk difakturkan ulang
      */
     private function _cek_dan_repost_so($id_so)
     {
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
         if (!$so) return;
 
-        $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
-        $has_faktur = false;
-        foreach ($rows as $r) {
-            if ((float)$r['qty_faktur'] > 0.001) {
-                $has_faktur = true;
-                break;
-            }
-        }
-
-        $new_status = $has_faktur ? 'partial' : 'siap_faktur';
+        // Setelah repost, SO selalu kembali ke status siap_faktur
+        // agar bisa difakturkan ulang di halaman Admin SC
+        $new_status = 'siap_faktur';
+        
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', [
             'status'    => $new_status,
@@ -2400,11 +2397,96 @@ class M_SalesOrder extends CI_Model
             return ['errors' => ['SO tidak dapat dikembalikan karena fakturnya sudah masuk Delivery Order.']];
         }
 
+        // ══════════════════════════════════════════════════════════════════
+        // LOGIKA MATCHING: Barang Tidak Terfaktur vs Barang Tidak Dimuat
+        // ══════════════════════════════════════════════════════════════════
+        // Jika barang yang tidak terfaktur sama dengan barang yang tidak dimuat (checker_loaded=2),
+        // maka DO bisa dibuat untuk barang yang sudah difakturkan dan dimuat (checker_loaded=1)
+        
+        $can_create_do = false;
+        $kd_rute = trim((string)($so['kd_rute'] ?? ''));
+        
+        if ($has_faktur && $kd_rute !== '') {
+            // Ambil barang yang tidak terfaktur (outstanding)
+            $barang_tidak_terfaktur = $this->db->query("
+                SELECT 
+                    sd.id AS id_detail,
+                    sd.kd_barang,
+                    sd.no_lot,
+                    sd.expired_date,
+                    COALESCE(sd.qty_siap_faktur, sd.qty) AS qty_siap,
+                    COALESCE(sd.qty_faktur, 0) AS qty_faktur,
+                    GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0) AS qty_outstanding
+                FROM tbso_sales_order_detail sd
+                WHERE sd.id_so = ?
+                AND GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0) > 0
+                ORDER BY sd.kd_barang, sd.no_lot, sd.expired_date
+            ", [$id_so])->result_array();
+
+            // Ambil barang yang tidak dimuat (checker_loaded=2)
+            $barang_tidak_dimuat = $this->db->query("
+                SELECT 
+                    sd.id AS id_detail,
+                    sd.kd_barang,
+                    sd.no_lot,
+                    sd.expired_date,
+                    COALESCE(sd.qty_siap_faktur, sd.qty) AS qty_siap
+                FROM tbso_sales_order_detail sd
+                WHERE sd.id_so = ?
+                AND sd.checker_loaded = 2
+                AND COALESCE(sd.qty_siap_faktur, sd.qty) > 0
+                ORDER BY sd.kd_barang, sd.no_lot, sd.expired_date
+            ", [$id_so])->result_array();
+
+            // Bandingkan: apakah barang tidak terfaktur = barang tidak dimuat
+            if (!empty($barang_tidak_terfaktur) && !empty($barang_tidak_dimuat)) {
+                $match_count = 0;
+                foreach ($barang_tidak_terfaktur as $btf) {
+                    foreach ($barang_tidak_dimuat as $btd) {
+                        if (
+                            $btf['kd_barang'] === $btd['kd_barang'] &&
+                            $btf['no_lot'] === $btd['no_lot'] &&
+                            $btf['expired_date'] === $btd['expired_date'] &&
+                            abs((float)$btf['qty_outstanding'] - (float)$btd['qty_siap']) < 0.01
+                        ) {
+                            $match_count++;
+                            break;
+                        }
+                    }
+                }
+
+                // Jika semua barang tidak terfaktur cocok dengan barang tidak dimuat
+                if ($match_count === count($barang_tidak_terfaktur) && $match_count === count($barang_tidak_dimuat)) {
+                    $can_create_do = true;
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // AUTO CREATE DO jika matching (SEBELUM reset checker_loaded & update status)
+        // ══════════════════════════════════════════════════════════════════
+        $do_created = null;
+        if ($can_create_do && $kd_rute !== '') {
+            // Panggil check_and_auto_create_do dengan $bypass_checks=true karena
+            // matching antara barang tidak terfaktur vs barang tidak dimuat sudah
+            // terkonfirmasi di atas. Bypass diperlukan agar has_remaining_so_*
+            // tidak memblokir pembuatan DO (item checker_loaded=2 masih ada di DB
+            // dan akan menggagalkan pengecekan jika tidak di-bypass).
+            $this->load->model('M_Logistik');
+            $auto_do = $this->M_Logistik->check_and_auto_create_do($kd_rute, $update_by, true);
+            if (!empty($auto_do['kd_do'])) {
+                $do_created = $auto_do['kd_do'];
+            }
+        }
+
+        // SO yang dikembalikan ke Sales:
+        // - Jika sudah ada faktur → status 'partial' (sudah sebagian terfakturkan)
+        // - Jika belum ada faktur → status 'open' (belum ada proses faktur)
         $new_status = $has_faktur ? 'partial' : 'open';
 
         $this->db->trans_start();
 
-        // Update status SO dan reset kd_rute
+        // Update status SO
         $this->db->where('id_so', $id_so);
         $this->db->update('tbso_sales_order', [
             'status'    => $new_status,
@@ -2412,11 +2494,16 @@ class M_SalesOrder extends CI_Model
             'update_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Reset checker_loaded semua item ke 0
-        $this->db->where('id_so', $id_so);
-        $this->db->update('tbso_sales_order_detail', [
-            'checker_loaded' => 0,
-        ]);
+        // Reset checker_loaded ke 0 HANYA untuk item yang belum terfakturkan
+        // (outstanding qty > 0, yaitu item yang dikembalikan ke SC untuk difakturkan ulang).
+        // Item yang sudah terfakturkan penuh (qty_faktur >= qty_siap_faktur) TIDAK di-reset,
+        // agar rute tidak muncul kembali di halaman so_loading setelah DO dibuat.
+        $this->db->query("
+            UPDATE tbso_sales_order_detail
+            SET checker_loaded = 0
+            WHERE id_so = ?
+            AND GREATEST(COALESCE(qty_siap_faktur, qty) - COALESCE(qty_faktur, 0), 0) > 0.001
+        ", [$id_so]);
 
         $this->db->trans_complete();
 
@@ -2425,9 +2512,11 @@ class M_SalesOrder extends CI_Model
         }
 
         return [
-            'success'    => true,
-            'new_status' => $new_status,
-            'has_faktur' => $has_faktur,
+            'success'      => true,
+            'new_status'   => $new_status,
+            'has_faktur'   => $has_faktur,
+            'do_created'   => $do_created,
+            'can_create_do' => $can_create_do,
         ];
     }
 }
