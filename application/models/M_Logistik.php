@@ -913,7 +913,7 @@ class M_Logistik extends CI_Model
                     ON sd.id_so = so.id_so
                 LEFT JOIN tb_customer c
                     ON c.kd_customer = so.kd_customer
-                WHERE so.status IN ('siap_faktur', 'partial')
+                WHERE so.status IN ('siap_faktur', 'partial', 'completed')
                 AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
                 GROUP BY so.id_so
                 HAVING qty_ready_remaining > 0.001
