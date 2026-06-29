@@ -51,9 +51,13 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Auth';
+$route['default_controller'] = 'Portal';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
+
+// Portal Dashboard
+$route['portal'] = 'Portal/index';
+$route['auth'] = 'Auth/index';
 
 //Auth Login
 $route['process']                                   = 'Auth/process';
