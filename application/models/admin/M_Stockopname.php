@@ -9,6 +9,111 @@ class M_Stockopname extends CI_Model
     private $manualMasterTable = 'stockopname_master_manual_item';
     private $masterBarangAllTable = 'tb_master_barang_all';
 
+    public function wilayah_by_id($id)
+    {
+        return $this->db
+            ->select('w.id, w.nama_wilayah')
+            ->from('tb_wilayah w')
+            ->where('w.id', (int)$id)
+            ->get()
+            ->row_array();
+    }
+
+    public function supervisor_opname_profile($karyawanId)
+    {
+        return $this->db
+            ->select('id, nm_karyawan, tim, wilayah, wilayah_id')
+            ->from('tb_karyawan')
+            ->where('id', (int)$karyawanId)
+            ->get()
+            ->row_array();
+    }
+
+    public function wilayah_by_ids(array $ids)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (empty($ids)) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id, nama_wilayah')
+            ->from('tb_wilayah')
+            ->where_in('id', $ids)
+            ->order_by('id', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    private function supervisor_request_query(array $wilayahIds, $wilayahFilter = 0)
+    {
+        $wilayahIds = array_values(array_unique(array_filter(array_map('intval', $wilayahIds))));
+        $this->db
+            ->select('m.*, w.nama_wilayah')
+            ->from($this->manualMasterTable . ' m')
+            ->join('tb_wilayah w', 'w.id = m.wilayah', 'left')
+            ->where_in('m.wilayah', $wilayahIds)
+            ->where('m.status', 'Request Master Item');
+        if ((int)$wilayahFilter > 0 && in_array((int)$wilayahFilter, $wilayahIds, true)) {
+            $this->db->where('m.wilayah', (int)$wilayahFilter);
+        }
+    }
+
+    public function supervisor_request_opname_count(array $wilayahIds, $wilayahFilter = 0)
+    {
+        if (empty($wilayahIds) || !$this->db->table_exists($this->manualMasterTable)) return 0;
+        $this->supervisor_request_query($wilayahIds, $wilayahFilter);
+        return (int)$this->db->count_all_results();
+    }
+
+    public function supervisor_request_opname_rows(array $wilayahIds, $wilayahFilter = 0, $limit = 10, $offset = 0)
+    {
+        if (empty($wilayahIds) || !$this->db->table_exists($this->manualMasterTable)) return [];
+        $this->supervisor_request_query($wilayahIds, $wilayahFilter);
+        return $this->db->order_by('m.created_at', 'DESC')
+            ->limit((int)$limit)
+            ->offset((int)$offset)
+            ->get()
+            ->result_array();
+    }
+
+    public function affirm_supervisor_request($requestId, array $wilayahIds, $actor)
+    {
+        $request = $this->db->from($this->manualMasterTable)
+            ->where('id', (int)$requestId)
+            ->where('status', 'Request Master Item')
+            ->where_in('wilayah', array_map('intval', $wilayahIds))
+            ->limit(1)->get()->row_array();
+        if (!$request) return ['status' => false, 'message' => 'Request tidak ditemukan atau di luar wilayah supervisi.'];
+
+        return $this->add_request_item_to_opname($request['kode_barang'], $request['expired_date'], $request['no_lot'], [
+            'qty_box' => (int)$request['qty_box'],
+            'qty_pcs' => (int)$request['qty_pcs'],
+            'tim_opname' => (int)$request['tim_opname'],
+            'wilayah' => (int)$request['wilayah'],
+            'input_by' => (string)$request['requested_by'],
+            'manual_master_id' => (int)$request['id'],
+        ], $actor);
+    }
+
+    public function supervisor_result_charts(array $wilayahIds)
+    {
+        $wilayahIds = array_values(array_unique(array_filter(array_map('intval', $wilayahIds))));
+        if (empty($wilayahIds) || !$this->ready()) return ['all_barang' => $this->percentage_result(0, 0), 'expired' => $this->percentage_result(0, 0)];
+        $ids = implode(',', $wilayahIds);
+        $positive = $this->master_positive_sql();
+        $expMaster = $this->exp_key('expired_date');
+        $expOpname = $this->exp_key('expired_date');
+
+        $all = $this->db->query("SELECT SUM(IF(o.qty_tim_1=m.qty_buku OR o.qty_tim_2=m.qty_buku,1,0)) match_item, SUM(IF(o.qty_tim_1=m.qty_buku OR o.qty_tim_2=m.qty_buku,0,1)) not_match_item FROM (SELECT kode_barang,SUM(COALESCE(qty,0)) qty_buku FROM {$this->masterTable} WHERE {$positive} GROUP BY kode_barang) m LEFT JOIN (SELECT kode_barang,SUM(IF(tim_opname=1,COALESCE(qty,0),0)) qty_tim_1,SUM(IF(tim_opname=2,COALESCE(qty,0),0)) qty_tim_2 FROM {$this->opnameTable} WHERE wilayah IN ({$ids}) GROUP BY kode_barang) o ON o.kode_barang=m.kode_barang")->row_array();
+        $expired = $this->db->query("SELECT SUM(IF(o.qty_tim_1=m.qty_buku OR o.qty_tim_2=m.qty_buku,1,0)) match_item, SUM(IF(o.qty_tim_1=m.qty_buku OR o.qty_tim_2=m.qty_buku,0,1)) not_match_item FROM (SELECT kode_barang,{$expMaster} exp_key,SUM(COALESCE(qty,0)) qty_buku FROM {$this->masterTable} WHERE {$positive} GROUP BY kode_barang,exp_key) m LEFT JOIN (SELECT kode_barang,{$expOpname} exp_key,SUM(IF(tim_opname=1,COALESCE(qty,0),0)) qty_tim_1,SUM(IF(tim_opname=2,COALESCE(qty,0),0)) qty_tim_2 FROM {$this->opnameTable} WHERE wilayah IN ({$ids}) GROUP BY kode_barang,exp_key) o ON o.kode_barang=m.kode_barang AND o.exp_key=m.exp_key")->row_array();
+
+        return [
+            'all_barang' => $this->percentage_result($all['match_item'] ?? 0, $all['not_match_item'] ?? 0),
+            'expired' => $this->percentage_result($expired['match_item'] ?? 0, $expired['not_match_item'] ?? 0),
+        ];
+    }
+
     public function ensure_master_code_columns()
     {
         if (!$this->db->table_exists($this->masterTable)) {
@@ -1097,16 +1202,32 @@ class M_Stockopname extends CI_Model
         return $summary;
     }
 
-    public function monitoring_request_opname_rows($limit = 500)
+    public function monitoring_request_opname_rows($limit = 500, $filters = [])
     {
         if (!$this->ensure_manual_tables()) {
             return [];
         }
 
-        return $this->db
-            ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,status,requested_by,requested_at,reviewed_by,reviewed_at,review_note,created_at,updated_at')
+        $tim = isset($filters['tim']) ? (int)$filters['tim'] : 0;
+        $wilayah = trim((string)($filters['wilayah'] ?? ''));
+        $inputBy = trim((string)($filters['input_by'] ?? ''));
+
+        $this->db
+            ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,status,qty,qty_pcs,qty_box,wilayah,tim_opname,requested_by,requested_at,reviewed_by,reviewed_at,review_note,created_at,updated_at')
             ->from($this->manualMasterTable)
-            ->where('status', 'Request Master Item')
+            ->where('status', 'Request Master Item');
+
+        if (in_array($tim, [1, 2], true)) {
+            $this->db->where('tim_opname', $tim);
+        }
+        if ($wilayah !== '') {
+            $this->db->where('wilayah', $wilayah);
+        }
+        if ($inputBy !== '') {
+            $this->db->where('requested_by', $inputBy);
+        }
+
+        return $this->db
             ->order_by('requested_at', 'DESC')
             ->order_by('id', 'DESC')
             ->limit((int)$limit)
@@ -1114,21 +1235,171 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
-    public function monitoring_manual_opname_rows($limit = 500)
+    public function affirm_request_opname_bulk($requestIds, $actor)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return ['status' => false, 'message' => 'Tabel request opname belum siap.'];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)$requestIds))));
+        if (empty($ids)) {
+            return ['status' => false, 'message' => 'Pilih minimal satu data request opname.'];
+        }
+
+        $rows = $this->db
+            ->select('id,kode_barang,expired_date,no_lot,requested_by,wilayah,tim_opname,qty_box,qty_pcs')
+            ->from($this->manualMasterTable)
+            ->where_in('id', $ids)
+            ->where('status', 'Request Master Item')
+            ->get()
+            ->result_array();
+
+        if (empty($rows)) {
+            return ['status' => false, 'message' => 'Data request opname yang dipilih tidak ditemukan atau sudah diproses.'];
+        }
+
+        $success = 0;
+        $failed = [];
+
+        foreach ($rows as $row) {
+            $result = $this->add_request_item_to_opname(
+                (string)($row['kode_barang'] ?? ''),
+                (string)($row['expired_date'] ?? ''),
+                (string)($row['no_lot'] ?? '-'),
+                [
+                    'qty_box' => (int)($row['qty_box'] ?? 0),
+                    'qty_pcs' => (int)($row['qty_pcs'] ?? 0),
+                    'tim_opname' => (int)($row['tim_opname'] ?? 0),
+                    'wilayah' => (int)($row['wilayah'] ?? 0),
+                    'input_by' => (string)($row['requested_by'] ?? ''),
+                    'manual_master_id' => (int)$row['id'],
+                ],
+                $actor
+            );
+
+            if (!empty($result['status'])) {
+                $success++;
+            } else {
+                $failed[] = (string)($row['kode_barang'] ?? ('ID ' . (int)$row['id']));
+            }
+        }
+
+        if ($success <= 0) {
+            return ['status' => false, 'message' => 'Afirmasi bulk request opname gagal diproses.'];
+        }
+
+        $message = $success . ' data request opname berhasil diafirmasi.';
+        if (!empty($failed)) {
+            $message .= ' Gagal: ' . implode(', ', array_slice($failed, 0, 10)) . '.';
+        }
+
+        return [
+            'status' => true,
+            'message' => $message,
+            'data' => [
+                'success_count' => $success,
+                'failed_count' => count($failed),
+                'failed_items' => $failed,
+            ],
+        ];
+    }
+
+    public function monitoring_manual_opname_rows($limit = 500, $filters = [])
     {
         if (!$this->ensure_manual_tables()) {
             return [];
         }
 
-        return $this->db
+        $tim = isset($filters['tim']) ? (int)$filters['tim'] : 0;
+        $wilayah = trim((string)($filters['wilayah'] ?? ''));
+        $inputBy = trim((string)($filters['input_by'] ?? ''));
+
+        $this->db
             ->select('id AS manual_master_id,source_id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,requested_by AS input_by,requested_at AS input_at,wilayah,tim_opname,created_at,updated_at,status', false)
             ->from($this->manualMasterTable)
-            ->where('status', 'Manual Input')
+            ->where('status', 'Manual Input');
+
+        if (in_array($tim, [1, 2], true)) {
+            $this->db->where('tim_opname', $tim);
+        }
+        if ($wilayah !== '') {
+            $this->db->where('wilayah', $wilayah);
+        }
+        if ($inputBy !== '') {
+            $this->db->where('requested_by', $inputBy);
+        }
+
+        return $this->db
             ->order_by('requested_at', 'DESC')
             ->order_by('id', 'DESC')
             ->limit((int)$limit)
             ->get()
             ->result_array();
+    }
+
+    public function affirm_manual_opname_bulk($manualMasterIds, $actor)
+    {
+        if (!$this->ensure_manual_tables()) {
+            return ['status' => false, 'message' => 'Tabel manual opname belum siap.'];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)$manualMasterIds))));
+        if (empty($ids)) {
+            return ['status' => false, 'message' => 'Pilih minimal satu data manual input.'];
+        }
+
+        $rows = $this->db
+            ->select('id,kode_barang,expired_date,no_lot,requested_by')
+            ->from($this->manualMasterTable)
+            ->where_in('id', $ids)
+            ->where('status', 'Manual Input')
+            ->get()
+            ->result_array();
+
+        if (empty($rows)) {
+            return ['status' => false, 'message' => 'Data manual input yang dipilih tidak ditemukan atau sudah diproses.'];
+        }
+
+        $success = 0;
+        $failed = [];
+
+        foreach ($rows as $row) {
+            $result = $this->add_request_item_to_opname(
+                (string)($row['kode_barang'] ?? ''),
+                (string)($row['expired_date'] ?? ''),
+                (string)($row['no_lot'] ?? '-'),
+                [
+                    'input_by' => (string)($row['requested_by'] ?? ''),
+                    'manual_master_id' => (int)$row['id'],
+                ],
+                $actor
+            );
+
+            if (!empty($result['status'])) {
+                $success++;
+            } else {
+                $failed[] = (string)($row['kode_barang'] ?? ('ID ' . (int)$row['id']));
+            }
+        }
+
+        if ($success <= 0) {
+            return ['status' => false, 'message' => 'Afirmasi bulk gagal diproses.'];
+        }
+
+        $message = $success . ' data manual input berhasil diafirmasi.';
+        if (!empty($failed)) {
+            $message .= ' Gagal: ' . implode(', ', array_slice($failed, 0, 10)) . '.';
+        }
+
+        return [
+            'status' => true,
+            'message' => $message,
+            'data' => [
+                'success_count' => $success,
+                'failed_count' => count($failed),
+                'failed_items' => $failed,
+            ],
+        ];
     }
 
     public function monitoring_activity($limit = 10)
@@ -1872,7 +2143,9 @@ class M_Stockopname extends CI_Model
             'qty_box' => $payloadQtyBox,
             'qty_pcs' => $payloadQtyPcs,
             'qty' => ($payloadQtyBox * $dimension) + $payloadQtyPcs,
-            'input_by' => (string)$actor,
+            'input_by' => trim((string)($payload['input_by'] ?? '')) !== ''
+                ? trim((string)$payload['input_by'])
+                : (string)$actor,
             'input_at' => date('Y-m-d H:i:s'),
             'wilayah' => (int)($payload['wilayah'] ?: $request['wilayah']),
             'tim_opname' => $payloadTimOpname,

@@ -39,6 +39,7 @@ class C_Stockopname extends CI_Controller
         $supervisorMethods = [
             'supervisor_opname',
             'supervisor_tracking',
+            'ajax_supervisor_affirm_request',
             'ajax_manual_barang',
             'ajax_request_save',
         ];
@@ -339,21 +340,79 @@ class C_Stockopname extends CI_Controller
     public function monitoring_request_opname()
     {
         $data['page_title'] = 'KARISMA ERP - Request Opname User';
-        $data['request_logs'] = $this->stockopname->monitoring_request_opname_rows(500);
+        $requestLogsAll = $this->stockopname->monitoring_request_opname_rows(500);
+        $filters = [
+            'tim' => (int)$this->input->get('tim'),
+            'wilayah' => trim((string)$this->input->get('wilayah', true)),
+            'input_by' => trim((string)$this->input->get('input_by', true)),
+        ];
+        $data['filters'] = $filters;
+        $data['request_logs'] = $this->stockopname->monitoring_request_opname_rows(500, $filters);
+        $data['request_tim_options'] = [1, 2];
+        $data['request_wilayah_options'] = array_values(array_unique(array_filter(array_map(static function ($row) {
+            return trim((string)($row['wilayah'] ?? ''));
+        }, $requestLogsAll))));
+        sort($data['request_wilayah_options']);
+        $data['request_inputer_options'] = array_values(array_unique(array_filter(array_map(static function ($row) {
+            return trim((string)($row['requested_by'] ?? ''));
+        }, $requestLogsAll))));
+        sort($data['request_inputer_options']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_request_opname.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
+    public function ajax_affirm_request_opname_bulk()
+    {
+        $input = $this->post();
+        $requestIds = $input['request_ids'] ?? [];
+        if (!is_array($requestIds)) {
+            $requestIds = [$requestIds];
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->affirm_request_opname_bulk($requestIds, $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
     public function monitoring_manual_opname()
     {
         $data['page_title'] = 'KARISMA ERP - Input Manual Opname User';
-        $data['manual_logs'] = $this->stockopname->monitoring_manual_opname_rows(500);
+        $manualLogsAll = $this->stockopname->monitoring_manual_opname_rows(500);
+        $filters = [
+            'tim' => (int)$this->input->get('tim'),
+            'wilayah' => trim((string)$this->input->get('wilayah', true)),
+            'input_by' => trim((string)$this->input->get('input_by', true)),
+        ];
+        $data['filters'] = $filters;
+        $data['manual_logs'] = $this->stockopname->monitoring_manual_opname_rows(500, $filters);
+        $data['manual_tim_options'] = [1, 2];
+        $data['manual_wilayah_options'] = array_values(array_unique(array_filter(array_map(static function ($row) {
+            return trim((string)($row['wilayah'] ?? ''));
+        }, $manualLogsAll))));
+        sort($data['manual_wilayah_options']);
+        $data['manual_inputer_options'] = array_values(array_unique(array_filter(array_map(static function ($row) {
+            return trim((string)($row['input_by'] ?? ''));
+        }, $manualLogsAll))));
+        sort($data['manual_inputer_options']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_manual_opname.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_affirm_manual_opname_bulk()
+    {
+        $input = $this->post();
+        $manualMasterIds = $input['manual_master_ids'] ?? [];
+        if (!is_array($manualMasterIds)) {
+            $manualMasterIds = [$manualMasterIds];
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
+        $result = $this->stockopname->affirm_manual_opname_bulk($manualMasterIds, $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
     }
 
     public function monitoring_summary()
@@ -854,6 +913,8 @@ class C_Stockopname extends CI_Controller
         }
 
         $data['page_title'] = 'KARISMA ERP - Input Stockopname';
+        $wilayah = $this->stockopname->wilayah_by_id($this->session->userdata('wilayah'));
+        $data['nama_wilayah'] = $wilayah['nama_wilayah'] ?? '-';
         $this->stockopname->ensure_master_code_columns();
 
         $this->load->view('partial/main/header.php', $data);
@@ -894,21 +955,65 @@ class C_Stockopname extends CI_Controller
     public function supervisor_opname()
     {
         $data['page_title'] = 'KARISMA ERP - Supervisi Opname';
-        $data['wilayah'] = (string)($this->session->userdata('wilayah') ?: '-');
+        [$profile, $wilayahIds] = $this->supervisor_profile_and_wilayah_ids();
+        $wilayahRows = $this->stockopname->wilayah_by_ids($wilayahIds);
+        $wilayahFilter = (int)$this->input->get('wilayah', true);
+        if (!in_array($wilayahFilter, $wilayahIds, true)) $wilayahFilter = 0;
+        $page = max(1, (int)$this->input->get('page', true));
+        $perPage = 10;
+        $total = $this->stockopname->supervisor_request_opname_count($wilayahIds, $wilayahFilter);
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $data['supervisor_nama'] = $profile['nm_karyawan'] ?? ($this->session->userdata('nama') ?: '-');
+        $data['supervisor_tim'] = $profile['tim'] ?? ($this->session->userdata('tim') ?: '-');
+        $data['nama_wilayah'] = implode(', ', array_column($wilayahRows, 'nama_wilayah')) ?: '-';
+        $data['wilayah_rows'] = $wilayahRows;
+        $data['wilayah_filter'] = $wilayahFilter;
+        $data['request_total'] = $total;
+        $data['current_page'] = $page;
+        $data['total_pages'] = $totalPages;
+        $data['request_rows'] = $this->stockopname->supervisor_request_opname_rows($wilayahIds, $wilayahFilter, $perPage, ($page - 1) * $perPage);
+        $data['result_charts'] = $this->stockopname->supervisor_result_charts($wilayahIds);
         $this->stockopname->ensure_master_code_columns();
-        $this->stockopname->ensure_manual_tables();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_supervisor.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
+    private function supervisor_profile_and_wilayah_ids()
+    {
+        $profile = $this->stockopname->supervisor_opname_profile($this->session->userdata('id_karyawan')) ?: [];
+        preg_match_all('/\d+/', (string)($profile['wilayah_id'] ?? ''), $matches);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $matches[0] ?? []))));
+        if (empty($ids) && !empty($profile['wilayah'])) $ids[] = (int)$profile['wilayah'];
+        return [$profile, $ids];
+    }
+
+    public function ajax_supervisor_affirm_request()
+    {
+        $requestId = (int)$this->input->post('id', true);
+        [, $wilayahIds] = $this->supervisor_profile_and_wilayah_ids();
+        if ($requestId <= 0 || empty($wilayahIds)) return $this->json(false, 'Data afirmasi tidak valid.');
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'supervisor';
+        $result = $this->stockopname->affirm_supervisor_request($requestId, $wilayahIds, $actor);
+        $this->json($result['status'], $result['message'], $result['data'] ?? []);
+    }
+
     public function supervisor_tracking()
     {
-        $wilayah = trim((string)$this->session->userdata('wilayah'));
+        [, $wilayahIds] = $this->supervisor_profile_and_wilayah_ids();
+        $wilayahRows = $this->stockopname->wilayah_by_ids($wilayahIds);
+        $wilayahFilter = (int)$this->input->get('wilayah', true);
+        if (!in_array($wilayahFilter, $wilayahIds, true)) {
+            $wilayahFilter = (int)($wilayahIds[0] ?? 0);
+        }
+        $wilayahMap = array_column($wilayahRows, 'nama_wilayah', 'id');
         $data['page_title'] = 'KARISMA ERP - Tracking Inputer Wilayah';
-        $data['wilayah'] = $wilayah;
-        $data['comparison_rows'] = $this->stockopname->supervisor_wilayah_compare($wilayah, 1000);
+        $data['wilayah_rows'] = $wilayahRows;
+        $data['wilayah_filter'] = $wilayahFilter;
+        $data['nama_wilayah'] = $wilayahMap[$wilayahFilter] ?? '-';
+        $data['comparison_rows'] = $this->stockopname->supervisor_wilayah_compare($wilayahFilter, 1000);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_supervisor_tracking.php', $data);

@@ -12,6 +12,10 @@
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     };
     $manual_logs = $manual_logs ?? [];
+    $filters = $filters ?? ['tim' => 0, 'wilayah' => '', 'input_by' => ''];
+    $manual_tim_options = $manual_tim_options ?? [1, 2];
+    $manual_wilayah_options = $manual_wilayah_options ?? [];
+    $manual_inputer_options = $manual_inputer_options ?? [];
     ?>
 
     <div class="content-wrapper so-manual-page">
@@ -40,8 +44,16 @@
                     .sm-muted{color:#64748b;font-size:12px}
                     .sm-code{font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid #dbe5ef;border-radius:6px;padding:4px 7px;color:#334155;white-space:nowrap}
                     .sm-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#dcfce7;color:#166534}
+                    .sm-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+                    .sm-filter-card{padding:16px}
+                    .sm-label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
+                    .sm-select{height:38px;border:1px solid #dbe5ef;border-radius:8px}
+                    .sm-bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid #e8edf3;background:#f8fafc}
+                    .sm-check{width:16px;height:16px}
+                    .sm-affirm-col{min-width:120px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}
-                    @media(max-width:768px){.content-header h1{font-size:22px}.sm-panel-header{align-items:flex-start;flex-direction:column}}
+                    @media(max-width:992px){.sm-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+                    @media(max-width:768px){.content-header h1{font-size:22px}.sm-panel-header{align-items:flex-start;flex-direction:column}.sm-filter-grid{grid-template-columns:1fr}}
                 </style>
 
                 <div class="row">
@@ -54,10 +66,51 @@
                                 </div>
                                 <span class="sm-badge">Manual Input</span>
                             </div>
+                            <div class="sm-filter-card border-bottom">
+                                <form method="get">
+                                    <div class="sm-filter-grid">
+                                        <div>
+                                            <label class="sm-label">Filter Tim</label>
+                                            <select name="tim" class="form-control sm-select">
+                                                <option value="">Semua Tim</option>
+                                                <?php foreach ($manual_tim_options as $timOption) : ?>
+                                                    <option value="<?= (int)$timOption ?>" <?= (int)($filters['tim'] ?? 0) === (int)$timOption ? 'selected' : '' ?>>Tim <?= (int)$timOption ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="sm-label">Filter Wilayah</label>
+                                            <select name="wilayah" class="form-control sm-select">
+                                                <option value="">Semua Wilayah</option>
+                                                <?php foreach ($manual_wilayah_options as $wilayahOption) : ?>
+                                                    <option value="<?= $so_e($wilayahOption) ?>" <?= (string)($filters['wilayah'] ?? '') === (string)$wilayahOption ? 'selected' : '' ?>><?= $so_e($wilayahOption) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="sm-label">Filter Inputer</label>
+                                            <select name="input_by" class="form-control sm-select">
+                                                <option value="">Semua Inputer</option>
+                                                <?php foreach ($manual_inputer_options as $inputerOption) : ?>
+                                                    <option value="<?= $so_e($inputerOption) ?>" <?= (string)($filters['input_by'] ?? '') === (string)$inputerOption ? 'selected' : '' ?>><?= $so_e($inputerOption) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="d-flex align-items-end">
+                                            <div class="w-100 d-flex" style="gap:8px;">
+                                                <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="fas fa-filter"></i> Terapkan</button>
+                                                <a href="<?= base_url('admin/stockopname/monitoring/manual-opname') ?>" class="btn btn-outline-secondary btn-sm flex-fill"><i class="fas fa-undo"></i> Reset</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
                             <div class="table-responsive p-3">
+                                <form id="manualAffirmForm">
                                 <table class="table table-sm table-bordered table-hover w-100">
                                     <thead>
                                         <tr>
+                                            <th class="text-center" style="width:40px"><input type="checkbox" id="checkAllManual" class="sm-check"></th>
                                             <th>Waktu</th>
                                             <th>Kode</th>
                                             <th>Nama Barang</th>
@@ -68,16 +121,20 @@
                                             <th>Input By</th>
                                             <th>Wilayah</th>
                                             <th>Tim</th>
+                                            <th class="sm-affirm-col">Afirmasi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($manual_logs)) : ?>
                                             <tr>
-                                                <td colspan="10" class="text-center text-muted py-4">Belum ada input manual opname.</td>
+                                                <td colspan="12" class="text-center text-muted py-4">Belum ada input manual opname.</td>
                                             </tr>
                                         <?php endif; ?>
                                         <?php foreach ($manual_logs as $row) : ?>
                                             <tr>
+                                                <td class="text-center">
+                                                    <input type="checkbox" name="manual_master_ids[]" value="<?= (int)($row['manual_master_id'] ?? 0) ?>" class="sm-check js-manual-check">
+                                                </td>
                                                 <td><?= $so_e($row['input_at'] ?? $row['created_at'] ?? '-') ?></td>
                                                 <td><span class="sm-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['nama_barang'] ?? '-') ?></td>
@@ -88,10 +145,16 @@
                                                 <td><?= $so_e($row['input_by'] ?? '-') ?></td>
                                                 <td><span class="sm-badge"><?= $so_e($row['wilayah'] ?? '-') ?></span></td>
                                                 <td><?= $so_e($row['tim_opname'] ?? '-') ?></td>
+                                                <td><span class="badge badge-warning">Siap diafirmasi</span></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
+                                </form>
+                            </div>
+                            <div class="sm-bulk-bar">
+                                <div class="sm-muted"><span id="manualSelectedCount">0</span> data dipilih untuk afirmasi manual input</div>
+                                <button type="button" class="btn btn-success btn-sm" id="btnBulkAffirmManual"><i class="fas fa-check-circle"></i> Bulk Afirmasi Manual Input</button>
                             </div>
                         </div>
                     </div>
@@ -108,3 +171,51 @@
         </div>
     </footer>
 </div>
+<script>
+    (function ($) {
+        function updateSelectedCount() {
+            var total = $('.js-manual-check:checked').length;
+            $('#manualSelectedCount').text(total);
+        }
+
+        $(document).on('change', '#checkAllManual', function () {
+            $('.js-manual-check').prop('checked', $(this).is(':checked'));
+            updateSelectedCount();
+        });
+
+        $(document).on('change', '.js-manual-check', function () {
+            var total = $('.js-manual-check').length;
+            var checked = $('.js-manual-check:checked').length;
+            $('#checkAllManual').prop('checked', total > 0 && total === checked);
+            updateSelectedCount();
+        });
+
+        $(document).on('click', '#btnBulkAffirmManual', function () {
+            var checked = $('.js-manual-check:checked');
+            if (!checked.length) {
+                alert('Pilih minimal satu data manual input.');
+                return;
+            }
+            if (!window.confirm('Afirmasi semua data manual input yang dipilih ke hasil opname?')) {
+                return;
+            }
+
+            var button = $(this).prop('disabled', true);
+            $.post('<?= base_url('admin/stockopname/ajax-affirm-manual-opname-bulk') ?>', $('#manualAffirmForm').serialize(), null, 'json')
+                .done(function (res) {
+                    if (!res || !res.status) {
+                        alert((res && res.message) || 'Bulk afirmasi gagal.');
+                        return;
+                    }
+                    alert(res.message || 'Bulk afirmasi berhasil.');
+                    window.location.reload();
+                })
+                .fail(function () {
+                    alert('Terjadi gangguan saat memproses bulk afirmasi.');
+                })
+                .always(function () {
+                    button.prop('disabled', false);
+                });
+        });
+    })(jQuery);
+</script>

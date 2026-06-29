@@ -13,6 +13,7 @@
                 <style>
                     .so-input-page{background:#eef3f8}.so-mobile-shell{max-width:460px;margin:0 auto}.so-panel{background:#fff;border:1px solid #dce5ee;border-radius:8px;box-shadow:0 8px 22px rgba(15,23,42,.07)}
                     .so-panel-header{padding:14px 16px;border-bottom:1px solid #e6edf4;display:flex;align-items:center;justify-content:space-between;gap:10px}.so-panel-title{font-size:16px;font-weight:800;color:#172033;margin:0}.so-scan-status{font-size:12px;color:#64748b}
+                    .so-user-header{display:flex;align-items:center;gap:12px}.so-user-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e0edff;color:#1d4ed8;font-size:18px}.so-user-name{font-size:15px;font-weight:800;color:#172033;line-height:1.25}.so-user-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:4px;font-size:12px;color:#64748b}.so-user-meta span{display:inline-flex;align-items:center;gap:5px}.so-user-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}.so-user-actions .btn{font-weight:800}
                     .so-scan-box{background:#0f172a;border-radius:8px;overflow:hidden;min-height:260px;display:none}.so-scan-box video{object-fit:cover}.so-info-grid{display:grid;gap:10px}.so-readonly{background:#f8fafc;border:1px solid #dbe4ef;border-radius:8px;padding:10px 12px}.so-readonly label{display:block;margin:0 0 3px;color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase}.so-readonly div{font-size:14px;color:#111827;font-weight:700;word-break:break-word}
                     .so-qty-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.so-qty-field label{font-size:12px;font-weight:800;color:#334155}.so-qty-field .input-group-text{border-radius:0 8px 8px 0;background:#f8fafc;font-size:12px;font-weight:800;color:#64748b}.so-qty-field .form-control{border-radius:8px 0 0 8px}.so-action-bar{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(238,243,248,0),#eef3f8 28%);padding:16px 0 4px}.so-action-bar .btn{height:46px;font-weight:800}.so-back-btn{width:36px;height:32px;display:inline-flex;align-items:center;justify-content:center}.so-back-btn i,.so-icon-btn i{margin-right:0}.so-icon-btn{height:44px;font-weight:800}.btn i{margin-right:6px}.form-control{border-radius:8px}.so-muted{font-size:12px;color:#64748b}.so-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.so-mode-grid .btn{height:44px;font-weight:800}.so-mode-grid .so-mode-wide{grid-column:1/-1}.so-manual-form,.so-request-form{display:none}.so-manual-form label,.so-request-form label{font-size:12px;font-weight:800;color:#334155}.select2-container--bootstrap4 .select2-selection{border-radius:8px;min-height:38px}.select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered{line-height:36px}
                     @media(min-width:768px){.so-info-grid{grid-template-columns:1fr 1fr}.so-readonly.full{grid-column:1/-1}.so-scan-box{min-height:320px}}
@@ -20,9 +21,26 @@
                 </style>
 
                 <div class="so-mobile-shell">
-                    <a href="<?= base_url('stockopname/history-input') ?>" class="btn btn-outline-primary btn-block so-icon-btn mb-3">
-                        <i class="fas fa-history"></i>Histori Input
-                    </a>
+                    <div class="so-panel mb-3">
+                        <div class="p-3 so-user-header">
+                            <div class="so-user-avatar"><i class="fas fa-user"></i></div>
+                            <div class="flex-grow-1">
+                                <div class="so-user-name"><?= html_escape($this->session->userdata('nama') ?: '-') ?></div>
+                                <div class="so-user-meta">
+                                    <span><i class="fas fa-users"></i> Tim <?= html_escape($this->session->userdata('tim') ?: '-') ?></span>
+                                    <span><i class="fas fa-map-marker-alt"></i> Wilayah <?= html_escape($nama_wilayah ?? '-') ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="so-user-actions">
+                            <a href="<?= base_url('stockopname/history-input') ?>" class="btn btn-outline-primary">
+                                <i class="fas fa-history"></i>Histori Input
+                            </a>
+                            <a href="<?= base_url('logout') ?>" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt"></i>Logout
+                            </a>
+                        </div>
+                    </div>
 
                     <div class="so-panel mb-3">
                         <div class="p-3">
@@ -33,7 +51,7 @@
                                 <button type="button" class="btn btn-outline-primary so-icon-btn" id="btnManualMode">
                                     <i class="fas fa-keyboard"></i>Input Manual
                                 </button>
-                                <button type="button" class="btn btn-outline-warning so-icon-btn so-mode-wide d-none" id="btnRequestMode">
+                                <button type="button" class="btn btn-outline-warning so-icon-btn so-mode-wide" id="btnRequestMode">
                                     <i class="fas fa-clipboard-list"></i>Opname Request
                                 </button>
                             </div>
@@ -57,7 +75,7 @@
                                         <label>Nama Barang</label>
                                         <div id="itemName">-</div>
                                     </div>
-                                    <div class="so-readonly">
+                                    <div class="so-readonly full">
                                         <label>Expired Date</label>
                                         <div id="itemExpired">-</div>
                                     </div>
