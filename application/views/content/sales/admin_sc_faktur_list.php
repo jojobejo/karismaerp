@@ -172,7 +172,6 @@
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    // Ganti loop tbody:
                                     <?php foreach ($route_summary as $row):
                                         $rute_query = array_merge($active_query, [
                                             'rute'  => $row['kd_rute'],

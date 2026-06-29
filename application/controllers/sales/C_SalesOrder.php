@@ -2108,27 +2108,27 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
-        $total_tonase_open = 0;
-        $total_kubikasi_open = 0;
+        $total_tonase_loading = 0;
+        $total_kubikasi_loading = 0;
         foreach ($sales_orders as $so) {
-            if (($so['status'] ?? '') === 'open') {
-                $total_tonase_open += (float)($so['total_tonase'] ?? 0);
-                $total_kubikasi_open += (float)($so['total_kubikasi'] ?? 0);
+            if (in_array(($so['status'] ?? ''), ['open', 'partial'], true)) {
+                $total_tonase_loading += (float)($so['total_tonase'] ?? 0);
+                $total_kubikasi_loading += (float)($so['total_kubikasi'] ?? 0);
             }
         }
-        if ($total_tonase_open > M_SalesOrder::BATAS_TONASE) {
+        if ($total_tonase_loading > M_SalesOrder::BATAS_TONASE) {
             echo json_encode([
                 'msg' => 'error',
                 'message' => 'Tonase rute melebihi batas maksimal ' . M_SalesOrder::BATAS_TONASE
-                    . ' ton. Total: ' . round($total_tonase_open, 3) . ' ton.'
+                    . ' ton. Total: ' . round($total_tonase_loading, 3) . ' ton.'
             ]);
             exit;
         }
-        if ($total_kubikasi_open > M_SalesOrder::BATAS_KUBIKASI) {
+        if ($total_kubikasi_loading > M_SalesOrder::BATAS_KUBIKASI) {
             echo json_encode([
                 'msg' => 'error',
                 'message' => 'Kubikasi rute melebihi batas maksimal ' . M_SalesOrder::BATAS_KUBIKASI
-                    . ' m3. Total: ' . round($total_kubikasi_open, 4) . ' m3.'
+                    . ' m3. Total: ' . round($total_kubikasi_loading, 4) . ' m3.'
             ]);
             exit;
         }
@@ -2136,7 +2136,7 @@ class C_SalesOrder extends CI_Controller
         $confirm_by = $this->_getUsername();
         $updated = 0;
         foreach ($sales_orders as $so) {
-            if (($so['status'] ?? '') !== 'open') {
+            if (!in_array(($so['status'] ?? ''), ['open', 'partial'], true)) {
                 continue;
             }
 

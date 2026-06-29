@@ -676,7 +676,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_so_rute_summary($filter = [])
     {
-        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), '') <> '' AND so.status = 'open'";
+        $where = "WHERE COALESCE(NULLIF(so.kd_rute, ''), '') <> '' AND so.status IN ('open', 'partial')";
         $params = [];
 
         if (!empty($filter['create_by'])) {
@@ -808,6 +808,7 @@ class M_SalesOrder extends CI_Model
     {
         $where = "WHERE (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
+            OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
         )";
         $params = [];
@@ -1729,6 +1730,8 @@ class M_SalesOrder extends CI_Model
      */
     private function _cek_dan_complete_so($id_so)
     {
+        $so = $this->db->get_where('tbso_sales_order', ['id_so' => $id_so])->row_array();
+        $current_status = $so['status'] ?? '';
         $rows = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
         $all_done   = true;
         $has_faktur = false;
@@ -1759,12 +1762,14 @@ class M_SalesOrder extends CI_Model
                 'update_at' => date('Y-m-d H:i:s'),
             ]);
         } elseif ($has_faktur && $has_outstanding_available) {
-            // Ada faktur tapi masih ada item yang belum/sebagian terfakturkan → partial
-            // Status tetap siap_faktur/partial tergantung asal, set ke partial supaya tetap
-            // muncul di Admin SC dan bisa difakturkan sisa itemnya
+            // Ada faktur tapi masih ada item yang belum/sebagian terfakturkan.
+            // Jika SO asalnya siap_faktur, pertahankan statusnya agar tetap muncul
+            // di Admin SC untuk faktur berikutnya (contoh: pisah pajak/non-pajak).
+            $next_status = $current_status === 'siap_faktur' ? 'siap_faktur' : 'partial';
+
             $this->db->where('id_so', $id_so);
             $this->db->update('tbso_sales_order', [
-                'status'    => 'partial',
+                'status'    => $next_status,
                 'update_at' => date('Y-m-d H:i:s'),
             ]);
         }
@@ -2479,10 +2484,9 @@ class M_SalesOrder extends CI_Model
             }
         }
 
-        // SO yang dikembalikan ke Sales:
-        // - Jika sudah ada faktur → status 'partial' (sudah sebagian terfakturkan)
-        // - Jika belum ada faktur → status 'open' (belum ada proses faktur)
-        $new_status = $has_faktur ? 'partial' : 'open';
+        // SO yang dikembalikan dari Admin SC harus masuk antrian Sales sebagai partial,
+        // agar tidak lagi diperlakukan sebagai SO siap faktur penuh.
+        $new_status = 'partial';
 
         $this->db->trans_start();
 
