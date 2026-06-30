@@ -340,14 +340,24 @@ class C_Stockopname extends CI_Controller
     public function monitoring_request_opname()
     {
         $data['page_title'] = 'KARISMA ERP - Request Opname User';
-        $requestLogsAll = $this->stockopname->monitoring_request_opname_rows(500);
+        $requestTab = $this->input->get('tab', true);
+        $requestTab = $requestTab === 'affirmed' ? 'affirmed' : 'pending';
         $filters = [
             'tim' => (int)$this->input->get('tim'),
             'wilayah' => trim((string)$this->input->get('wilayah', true)),
             'input_by' => trim((string)$this->input->get('input_by', true)),
         ];
+        $requestLogsAll = array_merge(
+            $this->stockopname->monitoring_request_opname_rows(1000),
+            $this->stockopname->monitoring_affirmed_request_opname_rows(1000)
+        );
         $data['filters'] = $filters;
-        $data['request_logs'] = $this->stockopname->monitoring_request_opname_rows(500, $filters);
+        $data['request_active_tab'] = $requestTab;
+        $data['request_pending_count'] = $this->stockopname->monitoring_request_opname_count_by_status('Request Master Item', $filters);
+        $data['request_affirmed_count'] = $this->stockopname->monitoring_request_opname_count_by_status('DONE', $filters);
+        $data['request_logs'] = $requestTab === 'affirmed'
+            ? $this->stockopname->monitoring_affirmed_request_opname_rows(500, $filters)
+            : $this->stockopname->monitoring_request_opname_rows(500, $filters);
         $data['request_tim_options'] = [1, 2];
         $data['request_wilayah_options'] = array_values(array_unique(array_filter(array_map(static function ($row) {
             return trim((string)($row['wilayah'] ?? ''));
@@ -925,9 +935,25 @@ class C_Stockopname extends CI_Controller
     public function history_input()
     {
         $inputBy = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: '';
+        $search = trim((string)$this->input->get('search', true));
+        $page = (int)$this->input->get('page', true);
+        $page = $page > 0 ? $page : 1;
+        $perPage = 10;
+        $totalRows = $this->stockopname->count_history_input_by($inputBy, $search);
+        $totalPages = max(1, (int)ceil($totalRows / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
+        $offset = ($page - 1) * $perPage;
+
         $data['page_title'] = 'KARISMA ERP - Histori Input Stockopname';
         $data['input_by'] = $inputBy;
-        $data['histori'] = $this->stockopname->history_input_by($inputBy);
+        $data['search'] = $search;
+        $data['current_page'] = $page;
+        $data['per_page'] = $perPage;
+        $data['total_rows'] = $totalRows;
+        $data['total_pages'] = $totalPages;
+        $data['histori'] = $this->stockopname->history_input_by($inputBy, $perPage, $offset, $search);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_history_input.php', $data);
@@ -1180,19 +1206,26 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Data master barang manual tidak ditemukan.');
         }
 
-        $saved = $this->stockopname->save_manual_master_item_queue($row, [
+        $saved = $this->stockopname->save_mobile_opname($row, [
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
             'tim_opname' => $this->session->userdata('tim') ?: 0,
-        ], 'Manual Input');
+        ]);
 
-        if (empty($saved['status'])) {
-            return $this->json(false, $saved['message'] ?? 'Gagal menyimpan data opname manual.');
+        if (!$saved) {
+            return $this->json(false, 'Gagal menyimpan data opname manual.');
         }
 
-        $this->json(true, $saved['message'] ?? 'Data input manual berhasil disimpan.', $saved['data'] ?? []);
+        $this->json(true, 'Data input manual berhasil langsung masuk ke hasil opname.', [
+            'id' => $saved,
+            'kode_barang' => $row['kode_barang'],
+            'nama_barang' => $row['nama_barang'],
+            'qty_pcs' => $qtyPcs,
+            'qty_box' => $qtyBox,
+            'dimensi' => (int)($row['dimensi'] ?? 0),
+        ]);
     }
 
     public function ajax_request_save()

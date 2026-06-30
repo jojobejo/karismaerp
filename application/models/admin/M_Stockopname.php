@@ -1235,6 +1235,67 @@ class M_Stockopname extends CI_Model
             ->result_array();
     }
 
+    public function monitoring_request_opname_count_by_status($status, $filters = [])
+    {
+        if (!$this->ensure_manual_tables()) {
+            return 0;
+        }
+
+        $tim = isset($filters['tim']) ? (int)$filters['tim'] : 0;
+        $wilayah = trim((string)($filters['wilayah'] ?? ''));
+        $inputBy = trim((string)($filters['input_by'] ?? ''));
+
+        $this->db
+            ->from($this->manualMasterTable)
+            ->where('status', (string)$status);
+
+        if (in_array($tim, [1, 2], true)) {
+            $this->db->where('tim_opname', $tim);
+        }
+        if ($wilayah !== '') {
+            $this->db->where('wilayah', $wilayah);
+        }
+        if ($inputBy !== '') {
+            $this->db->where('requested_by', $inputBy);
+        }
+
+        return (int)$this->db->count_all_results();
+    }
+
+    public function monitoring_affirmed_request_opname_rows($limit = 500, $filters = [])
+    {
+        if (!$this->ensure_manual_tables()) {
+            return [];
+        }
+
+        $tim = isset($filters['tim']) ? (int)$filters['tim'] : 0;
+        $wilayah = trim((string)($filters['wilayah'] ?? ''));
+        $inputBy = trim((string)($filters['input_by'] ?? ''));
+
+        $this->db
+            ->select('id,source_id,kode_barang,nama_barang,expired_date,no_lot,dimensi,status,qty,qty_pcs,qty_box,wilayah,tim_opname,requested_by,requested_at,reviewed_by,reviewed_at,review_note,created_at,updated_at')
+            ->from($this->manualMasterTable)
+            ->where('status', 'DONE');
+
+        if (in_array($tim, [1, 2], true)) {
+            $this->db->where('tim_opname', $tim);
+        }
+        if ($wilayah !== '') {
+            $this->db->where('wilayah', $wilayah);
+        }
+        if ($inputBy !== '') {
+            $this->db->where('requested_by', $inputBy);
+        }
+
+        return $this->db
+            ->order_by('reviewed_at', 'DESC')
+            ->order_by('requested_at', 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit)
+            ->get()
+            ->result_array();
+    }
+
     public function affirm_request_opname_bulk($requestIds, $actor)
     {
         if (!$this->ensure_manual_tables()) {
@@ -3611,21 +3672,50 @@ class M_Stockopname extends CI_Model
             : ['status' => false, 'message' => 'Gagal menghapus request item.'];
     }
 
-    public function history_input_by($inputBy, $limit = 100)
+    public function history_input_by($inputBy, $limit = 10, $offset = 0, $search = '')
     {
         $inputBy = trim((string)$inputBy);
         if ($inputBy === '' || !$this->db->table_exists($this->opnameTable)) {
             return [];
         }
 
-        return $this->db
-            ->select('id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,input_by,input_at,wilayah,created_at AS create_at')
+        $createdColumn = $this->db->field_exists('created_at', $this->opnameTable) ? 'created_at' : 'input_at';
+
+        $this->db
+            ->select("id,kode_barang,nama_barang,expired_date,no_lot,qty,qty_pcs,qty_box,input_by,input_at,wilayah,{$createdColumn} AS create_at", false)
             ->from($this->opnameTable)
-            ->where('input_by', $inputBy)
-            ->order_by('created_at', 'DESC')
-            ->limit((int)$limit)
+            ->where('input_by', $inputBy);
+
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $this->db->like('nama_barang', $search);
+        }
+
+        return $this->db
+            ->order_by($createdColumn, 'DESC')
+            ->order_by('id', 'DESC')
+            ->limit((int)$limit, (int)$offset)
             ->get()
             ->result_array();
+    }
+
+    public function count_history_input_by($inputBy, $search = '')
+    {
+        $inputBy = trim((string)$inputBy);
+        if ($inputBy === '' || !$this->db->table_exists($this->opnameTable)) {
+            return 0;
+        }
+
+        $this->db
+            ->from($this->opnameTable)
+            ->where('input_by', $inputBy);
+
+        $search = trim((string)$search);
+        if ($search !== '') {
+            $this->db->like('nama_barang', $search);
+        }
+
+        return (int)$this->db->count_all_results();
     }
 
     public function delete_history_input($id, $inputBy, $actor)

@@ -11,11 +11,31 @@
     $so_e = function ($value) {
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     };
+    $so_dt = function ($value) {
+        $value = trim((string)$value);
+        if ($value === '' || $value === '-') {
+            return '-';
+        }
+        $timestamp = strtotime($value);
+        return $timestamp ? date('d/m/Y H:i', $timestamp) : $value;
+    };
+    $so_date = function ($value) {
+        $value = trim((string)$value);
+        if ($value === '' || $value === '-') {
+            return '-';
+        }
+        $timestamp = strtotime($value);
+        return $timestamp ? date('d/m/Y', $timestamp) : $value;
+    };
     $request_logs = $request_logs ?? [];
     $filters = $filters ?? ['tim' => 0, 'wilayah' => '', 'input_by' => ''];
     $request_tim_options = $request_tim_options ?? [1, 2];
     $request_wilayah_options = $request_wilayah_options ?? [];
     $request_inputer_options = $request_inputer_options ?? [];
+    $request_active_tab = $request_active_tab ?? 'pending';
+    $request_pending_count = (int)($request_pending_count ?? 0);
+    $request_affirmed_count = (int)($request_affirmed_count ?? 0);
+    $request_table_colspan = $request_active_tab === 'pending' ? 12 : 10;
     ?>
 
     <div class="content-wrapper so-request-page">
@@ -44,6 +64,11 @@
                     .sr-muted{color:#64748b;font-size:12px}
                     .sr-code{font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid #dbe5ef;border-radius:6px;padding:4px 7px;color:#334155;white-space:nowrap}
                     .sr-badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#fffbeb;color:#92400e}
+                    .sr-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px 0}
+                    .sr-tab{border:1px solid #dbe5ef;border-bottom:none;border-radius:10px 10px 0 0;padding:9px 14px;font-weight:800;font-size:13px;background:#f8fafc;color:#475569;text-decoration:none}
+                    .sr-tab.active{background:#fff;color:#0f172a}
+                    .sr-tab .count{display:inline-flex;min-width:24px;height:24px;align-items:center;justify-content:center;border-radius:999px;margin-left:6px;background:#e2e8f0;color:#334155;font-size:12px}
+                    .sr-tab.active .count{background:#dbeafe;color:#1d4ed8}
                     .sr-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
                     .sr-filter-card{padding:16px}
                     .sr-label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px}
@@ -58,15 +83,24 @@
                 <div class="row">
                     <div class="col-12 mb-3">
                         <div class="sr-panel">
+                            <div class="sr-tabs">
+                                <a href="<?= base_url('admin/stockopname/monitoring/request-opname?tab=pending' . ($filters['tim'] ? '&tim=' . (int)$filters['tim'] : '') . ($filters['wilayah'] !== '' ? '&wilayah=' . urlencode((string)$filters['wilayah']) : '') . ($filters['input_by'] !== '' ? '&input_by=' . urlencode((string)$filters['input_by']) : '')) ?>" class="sr-tab <?= $request_active_tab === 'pending' ? 'active' : '' ?>">
+                                    Request Masuk <span class="count"><?= number_format($request_pending_count, 0, ',', '.') ?></span>
+                                </a>
+                                <a href="<?= base_url('admin/stockopname/monitoring/request-opname?tab=affirmed' . ($filters['tim'] ? '&tim=' . (int)$filters['tim'] : '') . ($filters['wilayah'] !== '' ? '&wilayah=' . urlencode((string)$filters['wilayah']) : '') . ($filters['input_by'] !== '' ? '&input_by=' . urlencode((string)$filters['input_by']) : '')) ?>" class="sr-tab <?= $request_active_tab === 'affirmed' ? 'active' : '' ?>">
+                                    Sudah Diafirmasi <span class="count"><?= number_format($request_affirmed_count, 0, ',', '.') ?></span>
+                                </a>
+                            </div>
                             <div class="sr-panel-header">
                                 <div>
-                                    <h2 class="sr-title">Daftar Request Opname</h2>
-                                    <div class="sr-muted"><?= number_format(count($request_logs), 0, ',', '.') ?> data request ditampilkan</div>
+                                    <h2 class="sr-title"><?= $request_active_tab === 'affirmed' ? 'Daftar Request Opname yang Sudah Diafirmasi' : 'Daftar Request Opname' ?></h2>
+                                    <div class="sr-muted"><?= number_format(count($request_logs), 0, ',', '.') ?> data <?= $request_active_tab === 'affirmed' ? 'sudah diafirmasi' : 'request' ?> ditampilkan</div>
                                 </div>
-                                <span class="sr-badge">Request Master Item</span>
+                                <span class="sr-badge"><?= $request_active_tab === 'affirmed' ? 'DONE / Afirmasi' : 'Request Master Item' ?></span>
                             </div>
                             <div class="sr-filter-card border-bottom">
                                 <form method="get">
+                                    <input type="hidden" name="tab" value="<?= $so_e($request_active_tab) ?>">
                                     <div class="sr-filter-grid">
                                         <div>
                                             <label class="sr-label">Filter Tim</label>
@@ -98,7 +132,7 @@
                                         <div class="d-flex align-items-end">
                                             <div class="w-100 d-flex" style="gap:8px;">
                                                 <button type="submit" class="btn btn-primary btn-sm flex-fill"><i class="fas fa-filter"></i> Terapkan</button>
-                                                <a href="<?= base_url('admin/stockopname/monitoring/request-opname') ?>" class="btn btn-outline-secondary btn-sm flex-fill"><i class="fas fa-undo"></i> Reset</a>
+                                                <a href="<?= base_url('admin/stockopname/monitoring/request-opname?tab=' . $so_e($request_active_tab)) ?>" class="btn btn-outline-secondary btn-sm flex-fill"><i class="fas fa-undo"></i> Reset</a>
                                             </div>
                                         </div>
                                     </div>
@@ -109,64 +143,72 @@
                                 <table class="table table-sm table-bordered table-hover w-100">
                                     <thead>
                                         <tr>
-                                            <th class="text-center" style="width:40px"><input type="checkbox" id="checkAllRequest" class="sr-check"></th>
+                                            <?php if ($request_active_tab === 'pending') : ?>
+                                                <th class="text-center" style="width:40px"><input type="checkbox" id="checkAllRequest" class="sr-check"></th>
+                                            <?php endif; ?>
                                             <th>Waktu</th>
-                                            <th>Kode</th>
                                             <th>Nama Barang</th>
                                             <th>Exp Date Request</th>
-                                            <th class="text-right">Pcs</th>
-                                            <th class="text-right">Box</th>
-                                            <th class="text-right">Qty</th>
-                                            <th class="text-right">Dimensi</th>
+                                            <th class="text-center">Pcs</th>
+                                            <th class="text-center">Box</th>
+                                            <th class="text-center">Qty</th>
                                             <th>Wilayah</th>
-                                            <th>Tim</th>
+                                            <?php if ($request_active_tab === 'pending') : ?>
+                                                <th>Tim</th>
+                                            <?php endif; ?>
                                             <th>Requested By</th>
                                             <th>Afirmasi</th>
                                             <th>Reviewed By</th>
                                             <th>Reviewed At</th>
-                                            <th>Catatan</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php if (empty($request_logs)) : ?>
                                             <tr>
-                                                <td colspan="16" class="text-center text-muted py-4">Belum ada request opname.</td>
+                                                <td colspan="<?= $request_table_colspan ?>" class="text-center text-muted py-4">Belum ada data pada tab ini.</td>
                                             </tr>
                                         <?php endif; ?>
                                         <?php foreach ($request_logs as $row) : ?>
                                             <tr>
-                                                <td class="text-center">
-                                                    <input type="checkbox" name="request_ids[]" value="<?= (int)($row['id'] ?? 0) ?>" class="sr-check js-request-check">
-                                                </td>
-                                                <td><?= $so_e($row['requested_at'] ?? $row['created_at'] ?? '-') ?></td>
-                                                <td><span class="sr-code"><?= $so_e($row['kode_barang'] ?? '-') ?></span></td>
+                                                <?php if ($request_active_tab === 'pending') : ?>
+                                                    <td class="text-center">
+                                                        <input type="checkbox" name="request_ids[]" value="<?= (int)($row['id'] ?? 0) ?>" class="sr-check js-request-check">
+                                                    </td>
+                                                <?php endif; ?>
+                                                <td><?= $so_dt($row['requested_at'] ?? $row['created_at'] ?? '-') ?></td>
                                                 <td><?= $so_e($row['nama_barang'] ?? '-') ?></td>
-                                                <td><?= $so_e($row['expired_date'] ?? '-') ?></td>
-                                                <td class="text-right"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format((int)($row['qty_box'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-right font-weight-bold"><?= number_format((int)($row['qty'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-right"><?= number_format((int)($row['dimensi'] ?? 0), 0, ',', '.') ?></td>
-                                                <td><span class="sr-badge"><?= $so_e($row['wilayah'] ?? '-') ?></span></td>
-                                                <td><?= $so_e($row['tim_opname'] ?? '-') ?></td>
+                                                <td><?= $so_date($row['expired_date'] ?? '-') ?></td>
+                                                <td class="text-center"><?= number_format((int)($row['qty_pcs'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= number_format((int)($row['qty_box'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center font-weight-bold"><?= number_format((int)($row['qty'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center"><span class="sr-badge"><?= $so_e($row['wilayah'] ?? '-') ?></span></td>
+                                                <?php if ($request_active_tab === 'pending') : ?>
+                                                    <td><?= $so_e($row['tim_opname'] ?? '-') ?></td>
+                                                <?php endif; ?>
                                                 <td><?= $so_e($row['requested_by'] ?? '-') ?></td>
                                                 <td>
-                                                    <button type="button" class="btn btn-success btn-sm js-affirm-single" data-id="<?= (int)($row['id'] ?? 0) ?>">
-                                                        <i class="fas fa-check-circle"></i> Afirmasi
-                                                    </button>
+                                                    <?php if ($request_active_tab === 'pending') : ?>
+                                                        <button type="button" class="btn btn-success btn-sm js-affirm-single" data-id="<?= (int)($row['id'] ?? 0) ?>">
+                                                            <i class="fas fa-check-circle"></i> Afirmasi
+                                                        </button>
+                                                    <?php else : ?>
+                                                        <span class="sr-badge" style="background:#dcfce7;color:#166534;">Sudah diafirmasi</span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td><?= $so_e($row['reviewed_by'] ?? '-') ?></td>
-                                                <td><?= $so_e($row['reviewed_at'] ?? '-') ?></td>
-                                                <td><?= $so_e($row['review_note'] ?? '-') ?></td>
+                                                <td><?= $so_dt($row['reviewed_at'] ?? '-') ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                 </table>
                                 </form>
                             </div>
-                            <div class="sr-bulk-bar">
-                                <div class="sr-muted"><span id="requestSelectedCount">0</span> data dipilih untuk afirmasi request opname</div>
-                                <button type="button" class="btn btn-success btn-sm" id="btnBulkAffirmRequest"><i class="fas fa-check-circle"></i> Bulk Afirmasi Request</button>
-                            </div>
+                            <?php if ($request_active_tab === 'pending') : ?>
+                                <div class="sr-bulk-bar">
+                                    <div class="sr-muted"><span id="requestSelectedCount">0</span> data dipilih untuk afirmasi request opname</div>
+                                    <button type="button" class="btn btn-success btn-sm" id="btnBulkAffirmRequest"><i class="fas fa-check-circle"></i> Bulk Afirmasi Request</button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -208,6 +250,7 @@
                 });
         }
 
+        <?php if ($request_active_tab === 'pending') : ?>
         $(document).on('change', '#checkAllRequest', function () {
             $('.js-request-check').prop('checked', $(this).is(':checked'));
             updateSelectedCount();
@@ -247,5 +290,6 @@
             button.prop('disabled', true);
             postAffirmRequest($('#requestAffirmForm').serialize(), button);
         });
+        <?php endif; ?>
     })(jQuery);
 </script>
