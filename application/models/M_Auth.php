@@ -59,4 +59,25 @@ class M_Auth extends CI_Model
         $payload = array_intersect_key($payload, array_flip($this->fields('tb_login_log')));
         return empty($payload) ? true : $this->db->insert('tb_login_log', $payload);
     }
+
+    public function revoke_sso_session($portalSessionId)
+    {
+        if (!$this->db->table_exists('tb_sso_sessions')) {
+            return true;
+        }
+
+        $update = array();
+        if (in_array('revoked_at', $this->fields('tb_sso_sessions'), true)) {
+            $update['revoked_at'] = date('Y-m-d H:i:s');
+        }
+        if (in_array('status', $this->fields('tb_sso_sessions'), true)) {
+            $update['status'] = 'revoked';
+        }
+
+        if (empty($update)) {
+            return true;
+        }
+
+        return $this->db->where('portal_session_id', (string)$portalSessionId)->update('tb_sso_sessions', $update);
+    }
 }

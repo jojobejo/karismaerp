@@ -58,6 +58,12 @@ $route['translate_uri_dashes'] = FALSE;
 // Portal Dashboard
 $route['portal'] = 'Portal/index';
 $route['auth'] = 'Auth/index';
+$route['sso'] = 'Sso/index';
+$route['sso/authorize'] = 'Sso/authorize';
+$route['sso/token'] = 'Sso/token';
+$route['sso/introspect'] = 'Sso/introspect';
+$route['sso/revoke'] = 'Sso/revoke';
+$route['sso/logout'] = 'Sso/logout';
 
 //Auth Login
 $route['process']                                   = 'Auth/process';

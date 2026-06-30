@@ -9,10 +9,31 @@ class Auth extends CI_Controller
         $this->load->model('M_Auth');
     }
 
+    private function sanitize_return_to($returnTo)
+    {
+        $returnTo = trim((string)$returnTo);
+        if ($returnTo === '') {
+            return '';
+        }
+
+        if (strpos($returnTo, '://') !== false || strpos($returnTo, '\\') !== false || strpos($returnTo, '..') !== false || strpos($returnTo, '//') === 0) {
+            return '';
+        }
+
+        return ltrim($returnTo, '/');
+    }
+
+    private function auth_redirect($returnTo = '')
+    {
+        $returnTo = $this->sanitize_return_to($returnTo);
+        return $returnTo !== '' ? 'Auth?return_to=' . rawurlencode($returnTo) : 'Auth';
+    }
+
     function index()
     {
+        $data['return_to'] = $this->sanitize_return_to($this->input->get('return_to', true));
         $this->load->view("partial/login/header");
-        $this->load->view("content/login/body");
+        $this->load->view("content/login/body", $data);
         $this->load->view("partial/login/footer");
     }
 
@@ -20,6 +41,8 @@ class Auth extends CI_Controller
     {
         $username = $this->input->post('user_isi');
         $password = $this->input->post('pass_isi');
+        $returnTo = $this->sanitize_return_to($this->input->post('return_to', true));
+        $loginRedirect = $this->auth_redirect($returnTo);
 
         $check_username = $this->M_Auth->cek_username($username)->num_rows();
         if ($check_username > 0) {
@@ -36,7 +59,7 @@ class Auth extends CI_Controller
                     if (isset($key->status) && (int)$key->status !== 1) {
                         $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
                         $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
-                        redirect('Auth');
+                        redirect($loginRedirect);
                         return;
                     }
 
@@ -61,6 +84,11 @@ class Auth extends CI_Controller
                     $this->session->set_userdata($data_session);
                     $this->M_Auth->update_last_login($key->id);
                     $this->M_Auth->log_login($key, 'success', 'Login berhasil');
+
+                    if ($returnTo !== '') {
+                        redirect($returnTo);
+                        return;
+                    }
 
                     if ($is_admin_dashboard) {
                         redirect('dashboard');
@@ -118,19 +146,22 @@ class Auth extends CI_Controller
                 } else {
                     $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Password salah');
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
-                    redirect('Auth');
+                    redirect($loginRedirect);
                 }
             }
         } else {
             $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Username tidak ditemukan');
             $this->session->set_flashdata("gagal", "username salah");
-            redirect('Auth');
+            redirect($loginRedirect);
         }
     }
 
     function logout()
     {
         $this->session->set_flashdata("logout", "Berhasil Log Out");
+        if (method_exists($this->M_Auth, 'revoke_sso_session')) {
+            $this->M_Auth->revoke_sso_session(session_id());
+        }
         $this->session->sess_destroy();
         redirect('Auth');
     }

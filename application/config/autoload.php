@@ -103,7 +103,7 @@ $autoload['helper'] = array('url','form','file','tanggal');
 | config files.  Otherwise, leave it blank.
 |
 */
-$autoload['config'] = array();
+$autoload['config'] = array('sso');
 
 /*
 | -------------------------------------------------------------------

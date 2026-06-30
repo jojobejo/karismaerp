@@ -102,6 +102,41 @@
             text-transform: uppercase;
         }
 
+        .portal-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .portal-login-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            color: #0f3a72;
+            border: 1px solid rgba(23, 105, 255, .18);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .82);
+            box-shadow: 0 10px 22px rgba(28, 72, 132, .08);
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-decoration: none;
+            text-transform: uppercase;
+            transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease;
+        }
+
+        .portal-login-btn:hover,
+        .portal-login-btn:focus-visible {
+            color: #0b2d5a;
+            border-color: rgba(23, 105, 255, .32);
+            box-shadow: 0 14px 28px rgba(28, 72, 132, .12);
+            outline: none;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -520,7 +555,10 @@
             <img class="brand-logo" src="<?= $portal_asset_base ?>assets/images/Karisma.png" alt="Logo Karisma">
             <span>PT. Karisma Indoagro Universal</span>
         </div>
-        <div class="system-status"><span class="status-dot"></span> System Online</div>
+        <div class="portal-actions">
+            <a class="portal-login-btn" href="<?= html_escape(base_url('auth')) ?>"><i class="fas fa-user-lock"></i> Login SSO</a>
+            <div class="system-status"><span class="status-dot"></span> System Online</div>
+        </div>
     </header>
 
     <section class="portal-hero" aria-labelledby="portal-title">

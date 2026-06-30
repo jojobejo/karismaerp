@@ -6,6 +6,9 @@
     </div>
     <div class="card-body">
       <form action="<?= base_url('process') ?>" method="post">
+        <?php if (!empty($return_to)) : ?>
+          <input type="hidden" name="return_to" value="<?= html_escape($return_to) ?>">
+        <?php endif; ?>
         <div class="input-group mb-3">
           <input type="text" class="form-control" placeholder="Inputkan Username" id="user_isi" name="user_isi">
           <div class="input-group-append">
@@ -28,6 +31,9 @@
           </div>
         </div>
       </form>
+      <div class="alert alert-info mt-3 mb-0 py-2 small" role="alert">
+        Portal ini dipersiapkan sebagai identity provider SSO berbasis <code>tb_karyawan</code>.
+      </div>
       <?php if ($this->session->flashdata("gagal")) : ?>
         <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
           <?php echo "<center>" . $this->session->flashdata("gagal") . "</center>" ?>
