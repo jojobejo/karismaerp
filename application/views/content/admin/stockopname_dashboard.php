@@ -90,6 +90,15 @@
                             </div>
                         </a>
                     </div>
+                    <div class="col-6 col-md-4 col-xl mb-3">
+                        <a class="so-stat-link" href="<?= base_url('admin/stockopname/barang-pending') ?>">
+                            <div class="so-stat warning">
+                                <div class="so-stat-label">Barang Pending</div>
+                                <div class="so-stat-value" id="soBarangPending"><?= number_format((int)($pending_summary['total_item'] ?? 0), 0, ',', '.') ?></div>
+                                <div class="so-stat-meta">Fisik gudang, sistem transaksi</div>
+                            </div>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="row">
@@ -265,6 +274,7 @@ window.addEventListener('load', function () {
             var data = res.data || {};
             renderSummary(data.summary || {});
             renderMasterBarang(data.master_barang || {});
+            renderPendingSummary(data.pending_summary || {});
             renderCharts(data);
             if (showToast) toast('success', 'Dashboard stockopname diperbarui');
         }).fail(function () {
@@ -281,6 +291,10 @@ window.addEventListener('load', function () {
 
     function renderMasterBarang(summary) {
         $('#soMasterBarang').text(formatNumber(summary.total_item));
+    }
+
+    function renderPendingSummary(summary) {
+        $('#soBarangPending').text(formatNumber(summary.total_item));
     }
 
     function renderCharts(data) {

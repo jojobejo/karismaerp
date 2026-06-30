@@ -122,9 +122,19 @@ class Karisma_code_generator
 
     private function commandExists($command)
     {
+        if (!function_exists('shell_exec') || !$this->functionEnabled('shell_exec')) {
+            return false;
+        }
+
         $lookup = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN' ? 'where ' : 'command -v ';
         $result = trim((string)@shell_exec($lookup . escapeshellarg($command)));
         return $result !== '';
+    }
+
+    private function functionEnabled($function)
+    {
+        $disabled = array_map('trim', explode(',', (string)ini_get('disable_functions')));
+        return !in_array($function, $disabled, true);
     }
 
     private function simpleQrCode($value, $targetFile)

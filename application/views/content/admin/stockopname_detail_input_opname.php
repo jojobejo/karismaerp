@@ -36,9 +36,18 @@
     $status_label = ['all_match' => 'All Match', 'tim_1' => 'Tim 1 Match', 'tim_2' => 'Tim 2 Match', 're_check' => 'Re-Check'][$status] ?? 'Re-Check';
     $expired_key = function ($expired) { return trim((string)$expired); };
     $stock_by_expired = [];
+    $stock_tab_counts = ['main' => 0, 'zero' => 0, 'all' => 0];
     foreach ($master_items as $row) {
         $key = $expired_key($row['expired_date'] ?? '');
-        $stock_by_expired[$key] = ($stock_by_expired[$key] ?? 0) + (int)($row['qty_buku'] ?? $row['qty'] ?? 0);
+        $row_book_qty = (int)($row['qty_buku'] ?? $row['qty'] ?? 0);
+        $has_master_stock = (int)($row['master_id'] ?? $row['id'] ?? 0) > 0;
+        $stock_by_expired[$key] = ($stock_by_expired[$key] ?? 0) + $row_book_qty;
+        $stock_tab_counts['all']++;
+        if ($has_master_stock && $row_book_qty > 0) {
+            $stock_tab_counts['main']++;
+        } elseif ($has_master_stock && $row_book_qty === 0) {
+            $stock_tab_counts['zero']++;
+        }
     }
     $source_label = function ($value) {
         $map = ['manual' => 'Manual Request', 'request' => 'Manual Request', 'manual input' => 'Manual Input', 'request master item' => 'Request Master Item', 'manual opname request' => 'Manual Opname Request', 'master data request opname' => 'Master Data Request Opname', 'adjustment' => 'Adjustment', 'repost' => 'Repost', 'system' => 'System'];
@@ -66,7 +75,7 @@
             <div class="container-fluid pb-4">
                 <style>
                     .so-detail-page{background:#f5f7fb}.so-muted{color:#64748b;font-size:12px}.so-panel{background:#fff;border:1px solid #e1e7ef;border-radius:8px;box-shadow:0 8px 22px rgba(16,24,40,.06);overflow:hidden}.so-panel-header{padding:14px 16px;border-bottom:1px solid #e8edf3;display:flex;align-items:center;justify-content:space-between;gap:10px}.so-title{font-weight:800;color:#1f2937;margin:0;font-size:16px}.so-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.so-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}.so-stat{background:#fff;border:1px solid #e1e7ef;border-radius:8px;padding:14px;box-shadow:0 8px 22px rgba(16,24,40,.05)}.so-stat.is-clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}.so-stat.is-clickable:hover{border-color:#60a5fa;box-shadow:0 10px 26px rgba(37,99,235,.14);transform:translateY(-1px)}.so-stat-label{font-size:11px;text-transform:uppercase;color:#64748b;font-weight:800}.so-stat-value{font-size:24px;font-weight:850;color:#111827;line-height:1.1;margin-top:7px}.so-stat-detail{font-size:12px;color:#334155;font-weight:700;line-height:1.35;margin-top:9px}.so-code{font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid #dbe5ef;border-radius:6px;padding:4px 7px}.so-badge{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:800;background:#fee2e2;color:#991b1b}.so-badge.all_match{background:#dcfce7;color:#166534}.so-badge.tim_1{background:#dbeafe;color:#1d4ed8}.so-badge.tim_2{background:#ede9fe;color:#6d28d9}.so-layout{display:grid;grid-template-columns:minmax(360px,40%) minmax(0,60%);gap:14px}.so-stack{display:grid;gap:14px;align-content:start}.so-bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.so-empty{color:#64748b;text-align:center;padding:28px 12px}.so-table{font-size:12px;white-space:nowrap;margin:0}.so-table th{background:#f8fafc;text-align:center}.so-table td,.so-table th{vertical-align:middle;padding:.42rem}.so-cell-main{font-weight:800;color:#1f2937}.so-cell-sub{font-size:11px;color:#64748b;margin-top:2px}.so-action-btn{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center}.so-action-btn i{margin:0}.so-input-row{cursor:pointer}.so-input-row.is-selected{background:#eff6ff;box-shadow:inset 3px 0 #2563eb}.so-log-list{display:grid;gap:8px;max-height:360px;overflow:auto}.so-log-item{border:1px solid #e1e7ef;border-radius:8px;background:#f8fafc;padding:10px}.so-log-title{font-size:13px;font-weight:800}.so-log-meta{font-size:11px;color:#64748b;margin-top:3px}.so-edit-modal{border:0;border-radius:8px;overflow:hidden}.so-edit-modal .modal-header{background:#1f2937;color:#fff}.so-edit-modal .close{color:#fff;text-shadow:none}.so-field-card{background:#fff;border:1px solid #e1e7ef;border-radius:8px;padding:12px;height:100%}.so-field-card label{font-size:11px;text-transform:uppercase;font-weight:850;color:#64748b}.so-field-card.is-editable{border-color:#93c5fd;background:#eff6ff}.so-field-card.is-editable .form-control{font-size:22px;font-weight:850}.so-modal-context{background:#f8fafc;border:1px solid #e1e7ef;border-radius:8px;padding:12px;margin-bottom:14px}.so-loading{opacity:.55;pointer-events:none}.so-toast{position:fixed;right:20px;top:70px;z-index:9999;min-width:280px;max-width:420px;padding:12px 16px;border-radius:8px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none}.so-toast.success{background:#15803d}.so-toast.error{background:#b91c1c}.so-lot-status{display:inline-flex;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:850;background:#e2e8f0;color:#475569}.so-lot-status.done{background:#dcfce7;color:#166534}.so-lot-status.partial{background:#dbeafe;color:#1d4ed8}.so-lot-status.diff{background:#fee2e2;color:#991b1b}.so-team-tabs{display:flex;border-bottom:1px solid #e1e7ef;background:#f8fafc;padding:0 14px}.so-team-tab{border:0;background:transparent;padding:11px 18px;font-weight:850;color:#64748b;border-bottom:3px solid transparent}.so-team-tab.is-active{color:#2563eb;border-bottom-color:#2563eb;background:#fff}.so-filter-empty{display:none}
-                    .so-control-locked{pointer-events:none;background:#f8fafc!important;color:#475569}.so-field-card.is-locked{border-color:#dbe5ef;background:#f8fafc}
+                    .so-control-locked{pointer-events:none;background:#f8fafc!important;color:#475569}.so-field-card.is-locked{border-color:#dbe5ef;background:#f8fafc}.so-stock-tabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.so-stock-tab{border:1px solid #dbe5ef;background:#fff;color:#475569;border-radius:999px;padding:5px 10px;font-size:11px;font-weight:850}.so-stock-tab.is-active{border-color:#2563eb;background:#eff6ff;color:#1d4ed8}
                     @media(max-width:992px){.so-summary{grid-template-columns:repeat(2,1fr)}.so-layout,.so-bottom{grid-template-columns:1fr}}@media(max-width:576px){.so-summary{grid-template-columns:1fr}.so-panel-header{align-items:flex-start;flex-direction:column}}
                 </style>
                 <div id="soToast" class="so-toast"></div>
@@ -83,11 +92,20 @@
                     <div class="so-layout">
                         <div class="so-stack">
                             <div class="so-panel">
-                                <div class="so-panel-header"><h2 class="so-title">Stock Buku Per Expired Date</h2><span class="so-muted"><?= count($master_items) ?> data</span></div>
+                                <div class="so-panel-header">
+                                    <h2 class="so-title">Stock Buku Per Expired Date</h2>
+                                    <div class="so-stock-tabs" id="stockBookTabs">
+                                        <button type="button" class="so-stock-tab is-active js-stock-tab" data-stock-tab="main">Utama <span class="js-stock-count" data-count-tab="main"><?= (int)$stock_tab_counts['main'] ?></span></button>
+                                        <button type="button" class="so-stock-tab js-stock-tab" data-stock-tab="zero">Stock Buku 0 <span class="js-stock-count" data-count-tab="zero"><?= (int)$stock_tab_counts['zero'] ?></span></button>
+                                        <button type="button" class="so-stock-tab js-stock-tab" data-stock-tab="all">Semua <span class="js-stock-count" data-count-tab="all"><?= (int)$stock_tab_counts['all'] ?></span></button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm js-bulk-check-stock" title="Centang semua item pada tab aktif"><i class="fas fa-check-square"></i> Centang Semua</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm js-bulk-uncheck-stock" title="Kosongkan centang pada tab aktif"><i class="far fa-square"></i></button>
+                                    </div>
+                                </div>
                                 <div class="table-responsive">
                                     <?php if (!$master_items) : ?><div class="so-empty">Data stock buku tidak ditemukan.</div><?php else : ?>
                                     <table class="table table-bordered table-hover so-table">
-                                        <thead><tr><th>Expired Date</th><th>Qty Buku</th><th>Tim 1</th><th>Tim 2</th><th>Status</th><th>#</th></tr></thead>
+                                        <thead><tr><th>Expired Date</th><th>Qty Buku</th><th>Tim 1</th><th>Tim 2</th><th>Status</th><th>Pilih</th><th>Hapus</th></tr></thead>
                                         <tbody><?php foreach ($master_items as $row) :
                                             $book_qty = (int)($row['qty_buku'] ?? $row['qty'] ?? 0);
                                             $team_1_qty = (int)($row['qty_tim_1'] ?? 0);
@@ -96,15 +114,20 @@
                                             $team_2_has_input = (int)($row['input_tim_2'] ?? 0) > 0;
                                             $team_1_ok = $team_1_has_input && $team_1_qty === $book_qty;
                                             $team_2_ok = $team_2_has_input && $team_2_qty === $book_qty;
+                                            $has_master_stock = (int)($row['master_id'] ?? $row['id'] ?? 0) > 0;
+                                            if ($has_master_stock && $book_qty > 0) { $stock_tab = 'main'; }
+                                            elseif ($has_master_stock && $book_qty === 0) { $stock_tab = 'zero'; }
+                                            else { $stock_tab = 'other'; }
                                             if ($team_1_ok && $team_2_ok) { $lot_status = 'All Match'; $lot_status_class = 'done'; }
                                             elseif ($team_1_ok) { $lot_status = 'Tim 1'; $lot_status_class = 'partial'; }
                                             elseif ($team_2_ok) { $lot_status = 'Tim 2'; $lot_status_class = 'partial'; }
                                             else { $lot_status = 'Not Match'; $lot_status_class = 'diff'; }
                                             $filter_key = $expired_key($row['expired_date'] ?? '');
                                         ?>
-                                            <tr><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><div class="d-flex justify-content-center align-items-center" style="gap:5px"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input expired date ini"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></div></td></tr>
+                                            <tr class="js-stock-book-row" data-stock-tab="<?= $e($stock_tab) ?>"><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input expired date ini"></td><td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></td></tr>
                                         <?php endforeach ?></tbody>
                                     </table><?php endif ?>
+                                    <div class="so-empty so-filter-empty" id="stockBookFilterEmpty">Data tidak ditemukan untuk tab ini.</div>
                                 </div>
                             </div>
 
@@ -290,6 +313,7 @@ $(function () {
     var requestDimensi = 0;
     var inputDimensi = productDimensi;
     var activeTeam = 1;
+    var activeStockBookTab = 'main';
     var selectedLotKeys = {};
 
     function toast(message, success) {
@@ -307,8 +331,27 @@ $(function () {
             selectedRow = null;
             initRequestPagination();
             restoreOpnameFilters();
+            restoreStockBookTab();
             toast(message, true);
         }).fail(function () { toast('Data tersimpan, tetapi refresh widget gagal.', false); }).always(function () { $('#soDynamicContent').removeClass('so-loading'); });
+    }
+    function applyStockBookTab() {
+        var visible = 0;
+        $('.js-stock-book-row').each(function () {
+            var tab = String($(this).attr('data-stock-tab') || '');
+            var show = activeStockBookTab === 'all' || tab === activeStockBookTab;
+            $(this).toggle(show);
+            if (show) visible++;
+        });
+        $('#stockBookFilterEmpty').toggle(visible === 0);
+    }
+    function restoreStockBookTab() {
+        $('.js-stock-tab').removeClass('is-active').filter('[data-stock-tab="' + activeStockBookTab + '"]').addClass('is-active');
+        if (!$('.js-stock-tab.is-active').length) {
+            activeStockBookTab = 'main';
+            $('.js-stock-tab[data-stock-tab="main"]').addClass('is-active');
+        }
+        applyStockBookTab();
     }
     function applyOpnameFilters() {
         var checkedKeys = Object.keys(selectedLotKeys).filter(function (key) { return selectedLotKeys[key]; });
@@ -391,8 +434,33 @@ $(function () {
         showPage(1);
     }
     initRequestPagination();
+    restoreStockBookTab();
     applyOpnameFilters();
 
+    $(document).on('click', '.js-stock-tab', function () {
+        activeStockBookTab = String($(this).attr('data-stock-tab') || 'main');
+        restoreStockBookTab();
+    });
+    $(document).on('click', '.js-bulk-check-stock', function () {
+        var total = 0;
+        $('.js-stock-book-row:visible .js-lot-filter').each(function () {
+            var key = String($(this).attr('data-key') || '');
+            if (key) selectedLotKeys[key] = true;
+            total++;
+        });
+        restoreOpnameFilters();
+        toast(total ? 'Semua item pada tab aktif sudah dicentang.' : 'Tidak ada item yang bisa dicentang pada tab ini.', !!total);
+    });
+    $(document).on('click', '.js-bulk-uncheck-stock', function () {
+        var total = 0;
+        $('.js-stock-book-row:visible .js-lot-filter').each(function () {
+            var key = String($(this).attr('data-key') || '');
+            if (key) selectedLotKeys[key] = false;
+            total++;
+        });
+        restoreOpnameFilters();
+        toast(total ? 'Centang pada tab aktif sudah dikosongkan.' : 'Tidak ada item yang bisa dikosongkan pada tab ini.', !!total);
+    });
     $(document).on('change', '.js-lot-filter', function () {
         selectedLotKeys[String($(this).attr('data-key'))] = $(this).is(':checked');
         applyOpnameFilters();

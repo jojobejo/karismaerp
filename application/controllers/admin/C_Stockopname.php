@@ -302,6 +302,7 @@ class C_Stockopname extends CI_Controller
     public function index()
     {
         $data['page_title'] = 'KARISMA ERP - Admin Stockopname';
+        $data['pending_summary'] = $this->stockopname->pending_summary();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_dashboard.php', $data);
@@ -889,6 +890,7 @@ class C_Stockopname extends CI_Controller
         $this->json(true, 'Data dashboard stockopname berhasil dimuat.', [
             'summary' => $summary,
             'master_barang' => $this->stockopname->master_barang_summary(),
+            'pending_summary' => $this->stockopname->pending_summary(),
             'all_barang_result' => $this->stockopname->all_barang_result_summary(),
             'expired_lot_result' => $expiredLotResult,
             'fefo_result' => $expiredLotResult,
@@ -1393,6 +1395,135 @@ class C_Stockopname extends CI_Controller
         }
 
         $this->json(true, $saved['message'], $saved['data']);
+    }
+
+    public function barang_pending()
+    {
+        $this->stockopname->ensure_pending_tables();
+        $data['page_title'] = 'KARISMA ERP - Barang Pending Stockopname';
+        $data['page_heading'] = 'Barang Pending';
+        $data['summary'] = $this->stockopname->pending_summary();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_barang_pending.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_barang_pending_list()
+    {
+        $keyword = trim((string)$this->input->get('keyword', true));
+        $this->json(true, 'Data barang pending berhasil dimuat.', [
+            'rows' => $this->stockopname->pending_rows($keyword),
+            'summary' => $this->stockopname->pending_summary(),
+        ]);
+    }
+
+    public function ajax_barang_pending_detail()
+    {
+        $id = $this->input->post('id', true);
+        if (!ctype_digit((string)$id) || (int)$id <= 0) {
+            return $this->json(false, 'ID barang pending tidak valid.');
+        }
+
+        $row = $this->stockopname->pending_by_id((int)$id);
+        if (!$row) {
+            return $this->json(false, 'Data barang pending tidak ditemukan.');
+        }
+
+        $this->json(true, 'Detail barang pending berhasil dimuat.', $row);
+    }
+
+    public function ajax_save_barang_pending()
+    {
+        $input = $this->post();
+        $id = trim((string)($input['id'] ?? ''));
+        if ($id !== '' && (!ctype_digit($id) || (int)$id <= 0)) {
+            return $this->json(false, 'ID barang pending tidak valid.');
+        }
+
+        $required = [
+            'kode_barang' => 'Kode barang',
+            'nama_barang' => 'Nama barang',
+            'expired_date' => 'Expired date',
+        ];
+        foreach ($required as $field => $label) {
+            if (trim((string)($input[$field] ?? '')) === '') {
+                return $this->json(false, $label . ' wajib diisi.');
+            }
+        }
+        if (!$this->valid_date(trim((string)$input['expired_date']))) {
+            return $this->json(false, 'Expired date wajib memakai format tanggal yang valid.');
+        }
+
+        foreach (['qty' => 'Qty', 'qty_pcs' => 'Qty pcs', 'qty_box' => 'Qty box'] as $field => $label) {
+            $value = trim((string)($input[$field] ?? ''));
+            if ($value === '' || !ctype_digit($value)) {
+                return $this->json(false, $label . ' harus berupa bilangan bulat 0 atau lebih.');
+            }
+        }
+        if ((int)$input['qty'] + (int)$input['qty_pcs'] + (int)$input['qty_box'] <= 0) {
+            return $this->json(false, 'Isi minimal salah satu nilai qty, qty pcs, atau qty box.');
+        }
+
+        $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'system';
+        $saved = $this->stockopname->save_pending([
+            'id' => $id === '' ? 0 : (int)$id,
+            'kode_barang' => trim((string)$input['kode_barang']),
+            'nama_barang' => trim((string)$input['nama_barang']),
+            'expired_date' => trim((string)$input['expired_date']),
+            'no_lot' => trim((string)($input['no_lot'] ?? '')),
+            'qty' => (int)$input['qty'],
+            'qty_pcs' => (int)$input['qty_pcs'],
+            'qty_box' => (int)$input['qty_box'],
+        ], $actor);
+
+        if (empty($saved['status'])) {
+            return $this->json(false, $saved['message'] ?? 'Gagal menyimpan barang pending.');
+        }
+
+        $this->json(true, $saved['message'], $saved['data'] ?? []);
+    }
+
+    public function ajax_delete_barang_pending()
+    {
+        $id = $this->input->post('id', true);
+        if (!ctype_digit((string)$id) || (int)$id <= 0) {
+            return $this->json(false, 'ID barang pending tidak valid.');
+        }
+
+        $deleted = $this->stockopname->delete_pending((int)$id);
+        $this->json(!empty($deleted['status']), $deleted['message'] ?? 'Barang pending diproses.', $deleted['data'] ?? []);
+    }
+
+    public function barang_pending_export_csv()
+    {
+        $rows = $this->stockopname->pending_rows('', 2000);
+        $filename = 'barang-pending-stockopname-' . date('Ymd-His') . '.csv';
+
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Kode Barang', 'Expired Date', 'Lot', 'Nama Barang', 'Qty', 'Qty PCS', 'Qty Box', 'Master ID', 'Created By', 'Created At']);
+        foreach ($rows as $row) {
+            fputcsv($output, [
+                $row['kode_barang'] ?? '',
+                $row['expired_date'] ?? '',
+                $row['no_lot'] ?? '',
+                $row['nama_barang'] ?? '',
+                $row['qty'] ?? 0,
+                $row['qty_pcs'] ?? 0,
+                $row['qty_box'] ?? 0,
+                $row['master_id'] ?? '',
+                $row['created_by'] ?? '',
+                $row['created_at'] ?? '',
+            ]);
+        }
+        fclose($output);
+        exit;
     }
 
     public function master_barang_qty_zero()

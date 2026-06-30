@@ -8,6 +8,7 @@ class M_Stockopname extends CI_Model
     private $manualOpnameTable = 'stockopname_opname_manual';
     private $manualMasterTable = 'stockopname_master_manual_item';
     private $masterBarangAllTable = 'tb_master_barang_all';
+    private $pendingTable = 'stockopname_pending';
 
     public function wilayah_by_id($id)
     {
@@ -718,11 +719,11 @@ class M_Stockopname extends CI_Model
         ";
     }
 
-    private function monitoring_master_lot_subquery()
+    private function monitoring_master_lot_subquery($includeZeroQty = false)
     {
         $expKey = $this->exp_key('expired_date');
         // Lot is retained only as historical data; it is not part of the opname key.
-        $masterPositiveWhere = $this->master_positive_sql();
+        $masterWhere = $includeZeroQty ? '1 = 1' : $this->master_positive_sql();
 
         return "
             SELECT
@@ -736,7 +737,7 @@ class M_Stockopname extends CI_Model
                 SUM(COALESCE(qty_box, 0)) AS box_buku,
                 SUM(COALESCE(qty_pcs, 0)) AS pcs_buku
             FROM {$this->masterTable}
-            WHERE {$masterPositiveWhere}
+            WHERE {$masterWhere}
             GROUP BY kode_barang, nama_barang, exp_key
         ";
     }
@@ -769,9 +770,9 @@ class M_Stockopname extends CI_Model
         ";
     }
 
-    private function monitoring_compare_lot_base()
+    private function monitoring_compare_lot_base($includeZeroMasterQty = false)
     {
-        $master = $this->monitoring_master_lot_subquery();
+        $master = $this->monitoring_master_lot_subquery($includeZeroMasterQty);
         $opname = $this->monitoring_opname_lot_subquery();
         $masterZeroExpKey = $this->exp_key('mz.expired_date');
 
@@ -1555,7 +1556,7 @@ class M_Stockopname extends CI_Model
                     x.*,
                     (COALESCE(x.qty_tim_1, 0) - COALESCE(x.qty_buku, 0)) AS selisih_tim_1,
                     (COALESCE(x.qty_tim_2, 0) - COALESCE(x.qty_buku, 0)) AS selisih_tim_2
-                FROM ({$this->monitoring_compare_lot_base()}) x
+                FROM ({$this->monitoring_compare_lot_base(true)}) x
                 WHERE x.kode_barang = ?
                 ORDER BY x.expired_date ASC, x.no_lot ASC
                 ",
@@ -2770,6 +2771,288 @@ class M_Stockopname extends CI_Model
         }
 
         return ['status' => true, 'message' => 'Master opname berhasil ditambahkan.', 'data' => array_merge($data, ['id' => $id, 'p' => $p, 'l' => $l, 't' => $t])];
+    }
+
+    public function ensure_pending_tables()
+    {
+        if (!$this->db->table_exists($this->pendingTable)) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `{$this->pendingTable}` (
+                    `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `kode_barang` VARCHAR(50) NOT NULL,
+                    `nama_barang` TEXT NOT NULL,
+                    `expired_date` DATE NOT NULL,
+                    `no_lot` VARCHAR(100) NOT NULL DEFAULT '',
+                    `qty` INT(12) NOT NULL DEFAULT 0,
+                    `qty_pcs` INT(12) NOT NULL DEFAULT 0,
+                    `qty_box` INT(12) NOT NULL DEFAULT 0,
+                    `created_by` VARCHAR(100) NULL DEFAULT NULL,
+                    `updated_by` VARCHAR(100) NULL DEFAULT NULL,
+                    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`id`),
+                    KEY `idx_pending_barang_expired` (`nama_barang`(191), `expired_date`),
+                    KEY `idx_pending_kode_barang` (`kode_barang`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        }
+
+        $columns = [
+            'kode_barang' => "ALTER TABLE `{$this->pendingTable}` ADD `kode_barang` VARCHAR(50) NOT NULL DEFAULT '' AFTER `id`",
+            'expired_date' => "ALTER TABLE `{$this->pendingTable}` ADD `expired_date` DATE NULL DEFAULT NULL AFTER `nama_barang`",
+            'qty_pcs' => "ALTER TABLE `{$this->pendingTable}` ADD `qty_pcs` INT(12) NOT NULL DEFAULT 0 AFTER `qty`",
+            'qty_box' => "ALTER TABLE `{$this->pendingTable}` ADD `qty_box` INT(12) NOT NULL DEFAULT 0 AFTER `qty_pcs`",
+            'created_by' => "ALTER TABLE `{$this->pendingTable}` ADD `created_by` VARCHAR(100) NULL DEFAULT NULL AFTER `qty_box`",
+            'updated_by' => "ALTER TABLE `{$this->pendingTable}` ADD `updated_by` VARCHAR(100) NULL DEFAULT NULL AFTER `created_by`",
+            'created_at' => "ALTER TABLE `{$this->pendingTable}` ADD `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `updated_by`",
+            'updated_at' => "ALTER TABLE `{$this->pendingTable}` ADD `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`",
+        ];
+        foreach ($columns as $field => $sql) {
+            if (!$this->db->field_exists($field, $this->pendingTable)) {
+                $this->db->query($sql);
+            }
+        }
+        if (!$this->db->field_exists('no_lot', $this->pendingTable)) {
+            $this->db->query("ALTER TABLE `{$this->pendingTable}` ADD `no_lot` VARCHAR(100) NOT NULL DEFAULT '' AFTER `expired_date`");
+        }
+        if ($this->db->field_exists('exp_date', $this->pendingTable)) {
+            $this->db->query("UPDATE `{$this->pendingTable}` SET `expired_date` = COALESCE(`expired_date`, STR_TO_DATE(`exp_date`, '%d/%m/%Y'), STR_TO_DATE(`exp_date`, '%Y-%m-%d')) WHERE `expired_date` IS NULL");
+        }
+
+        if (!$this->db->table_exists($this->masterTable)) {
+            return true;
+        }
+        $masterColumns = [
+            'pending_qty' => "ALTER TABLE `{$this->masterTable}` ADD `pending_qty` INT(12) NOT NULL DEFAULT 0 AFTER `qty_pcs`",
+            'pending_qty_pcs' => "ALTER TABLE `{$this->masterTable}` ADD `pending_qty_pcs` INT(12) NOT NULL DEFAULT 0 AFTER `pending_qty`",
+            'pending_qty_box' => "ALTER TABLE `{$this->masterTable}` ADD `pending_qty_box` INT(12) NOT NULL DEFAULT 0 AFTER `pending_qty_pcs`",
+        ];
+        foreach ($masterColumns as $field => $sql) {
+            if (!$this->db->field_exists($field, $this->masterTable)) {
+                $this->db->query($sql);
+            }
+        }
+
+        return true;
+    }
+
+    private function normalize_pending_key($namaBarang, $expiredDate)
+    {
+        return [
+            'nama_barang' => trim((string)$namaBarang),
+            'expired_date' => trim((string)$expiredDate),
+        ];
+    }
+
+    private function pending_totals($namaBarang, $expiredDate)
+    {
+        if (!$this->db->table_exists($this->pendingTable)) {
+            return ['qty' => 0, 'qty_pcs' => 0, 'qty_box' => 0];
+        }
+
+        $row = $this->db
+            ->select('COALESCE(SUM(qty), 0) AS qty, COALESCE(SUM(qty_pcs), 0) AS qty_pcs, COALESCE(SUM(qty_box), 0) AS qty_box', false)
+            ->from($this->pendingTable)
+            ->where('nama_barang', trim((string)$namaBarang))
+            ->where('expired_date', trim((string)$expiredDate))
+            ->get()
+            ->row_array();
+
+        return [
+            'qty' => (int)($row['qty'] ?? 0),
+            'qty_pcs' => (int)($row['qty_pcs'] ?? 0),
+            'qty_box' => (int)($row['qty_box'] ?? 0),
+        ];
+    }
+
+    private function sync_pending_to_master($namaBarang, $expiredDate)
+    {
+        if (!$this->ensure_pending_tables() || !$this->db->table_exists($this->masterTable)) {
+            return ['status' => false, 'message' => 'Tabel pending atau master opname belum siap.'];
+        }
+
+        $key = $this->normalize_pending_key($namaBarang, $expiredDate);
+        if ($key['nama_barang'] === '' || $key['expired_date'] === '') {
+            return ['status' => false, 'message' => 'Nama barang dan expired date wajib tersedia untuk sinkronisasi pending.'];
+        }
+
+        $masters = $this->db
+            ->select('id, qty, qty_pcs, qty_box, pending_qty, pending_qty_pcs, pending_qty_box')
+            ->from($this->masterTable)
+            ->where('nama_barang', $key['nama_barang'])
+            ->where('expired_date', $key['expired_date'])
+            ->order_by('id', 'ASC')
+            ->get()
+            ->result_array();
+        if (empty($masters)) {
+            return ['status' => true, 'message' => 'Data pending tersimpan, namun belum ada master opname dengan nama barang dan expired date yang sama.', 'target_id' => 0];
+        }
+
+        $totals = $this->pending_totals($key['nama_barang'], $key['expired_date']);
+        $target = $masters[0];
+        $baseQty = max(0, (int)$target['qty'] - (int)$target['pending_qty']);
+        $basePcs = max(0, (int)$target['qty_pcs'] - (int)$target['pending_qty_pcs']);
+        $baseBox = max(0, (int)$target['qty_box'] - (int)$target['pending_qty_box']);
+
+        $this->db->where('nama_barang', $key['nama_barang'])
+            ->where('expired_date', $key['expired_date'])
+            ->update($this->masterTable, [
+                'pending_qty' => 0,
+                'pending_qty_pcs' => 0,
+                'pending_qty_box' => 0,
+            ]);
+
+        $updated = $this->db
+            ->where('id', (int)$target['id'])
+            ->update($this->masterTable, [
+                'qty' => $baseQty + $totals['qty'],
+                'qty_pcs' => $basePcs + $totals['qty_pcs'],
+                'qty_box' => $baseBox + $totals['qty_box'],
+                'pending_qty' => $totals['qty'],
+                'pending_qty_pcs' => $totals['qty_pcs'],
+                'pending_qty_box' => $totals['qty_box'],
+            ]);
+
+        return [
+            'status' => (bool)$updated,
+            'message' => $updated ? 'Qty pending berhasil disinkronkan ke master opname.' : 'Gagal sinkronisasi pending ke master opname.',
+            'target_id' => (int)$target['id'],
+            'totals' => $totals,
+        ];
+    }
+
+    private function sync_pending_keys(array $keys)
+    {
+        $results = [];
+        foreach ($keys as $key) {
+            $normalized = $this->normalize_pending_key($key['nama_barang'] ?? '', $key['expired_date'] ?? '');
+            $mapKey = $normalized['nama_barang'] . '|' . $normalized['expired_date'];
+            if ($normalized['nama_barang'] === '' || $normalized['expired_date'] === '' || isset($results[$mapKey])) {
+                continue;
+            }
+            $results[$mapKey] = $this->sync_pending_to_master($normalized['nama_barang'], $normalized['expired_date']);
+        }
+        return $results;
+    }
+
+    public function pending_summary()
+    {
+        $this->ensure_pending_tables();
+        $row = $this->db
+            ->select('COUNT(*) AS total_item, COALESCE(SUM(qty), 0) AS total_qty, COALESCE(SUM(qty_pcs), 0) AS total_qty_pcs, COALESCE(SUM(qty_box), 0) AS total_qty_box', false)
+            ->from($this->pendingTable)
+            ->get()
+            ->row_array();
+
+        return [
+            'total_item' => (int)($row['total_item'] ?? 0),
+            'total_qty' => (int)($row['total_qty'] ?? 0),
+            'total_qty_pcs' => (int)($row['total_qty_pcs'] ?? 0),
+            'total_qty_box' => (int)($row['total_qty_box'] ?? 0),
+        ];
+    }
+
+    public function pending_rows($keyword = '', $limit = 500)
+    {
+        $this->ensure_pending_tables();
+        $keyword = trim((string)$keyword);
+        $masterIdSelect = $this->db->table_exists($this->masterTable) ? 'm.id AS master_id' : '0 AS master_id';
+        $this->db
+            ->select('p.id, p.kode_barang, p.nama_barang, p.expired_date, p.no_lot, p.qty, p.qty_pcs, p.qty_box, p.created_by, p.updated_by, p.created_at, p.updated_at, ' . $masterIdSelect, false)
+            ->from($this->pendingTable . ' p');
+        if ($this->db->table_exists($this->masterTable)) {
+            $this->db->join($this->masterTable . ' m', 'm.id = (SELECT MIN(mi.id) FROM ' . $this->masterTable . ' mi WHERE mi.nama_barang = p.nama_barang AND mi.expired_date = p.expired_date)', 'left', false);
+        }
+        if ($keyword !== '') {
+            $this->db->group_start()
+                ->like('p.kode_barang', $keyword)
+                ->or_like('p.nama_barang', $keyword)
+                ->or_like('p.expired_date', $keyword)
+                ->or_like('p.no_lot', $keyword)
+                ->group_end();
+        }
+
+        return $this->db
+            ->order_by('p.expired_date', 'ASC')
+            ->order_by('p.nama_barang', 'ASC')
+            ->order_by('p.id', 'DESC')
+            ->limit(max(1, min(2000, (int)$limit)))
+            ->get()
+            ->result_array();
+    }
+
+    public function pending_by_id($id)
+    {
+        $this->ensure_pending_tables();
+        return $this->db
+            ->from($this->pendingTable)
+            ->where('id', (int)$id)
+            ->limit(1)
+            ->get()
+            ->row_array();
+    }
+
+    public function save_pending(array $input, $actor)
+    {
+        $this->ensure_pending_tables();
+        $id = (int)($input['id'] ?? 0);
+        $data = [
+            'kode_barang' => trim((string)($input['kode_barang'] ?? '')),
+            'nama_barang' => trim((string)($input['nama_barang'] ?? '')),
+            'expired_date' => trim((string)($input['expired_date'] ?? '')),
+            'no_lot' => trim((string)($input['no_lot'] ?? '')),
+            'qty' => max(0, (int)($input['qty'] ?? 0)),
+            'qty_pcs' => max(0, (int)($input['qty_pcs'] ?? 0)),
+            'qty_box' => max(0, (int)($input['qty_box'] ?? 0)),
+            'updated_by' => (string)$actor,
+        ];
+
+        $previous = $id > 0 ? $this->pending_by_id($id) : null;
+        $this->db->trans_begin();
+        if ($id > 0) {
+            if (!$previous) {
+                $this->db->trans_rollback();
+                return ['status' => false, 'message' => 'Data barang pending tidak ditemukan.'];
+            }
+            $this->db->where('id', $id)->update($this->pendingTable, $data);
+        } else {
+            $data['created_by'] = (string)$actor;
+            $this->db->insert($this->pendingTable, $data);
+            $id = (int)$this->db->insert_id();
+        }
+        if ($this->db->trans_status() === false || $id <= 0) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Gagal menyimpan barang pending.'];
+        }
+        $this->db->trans_commit();
+
+        $keys = [$data];
+        if ($previous) {
+            $keys[] = $previous;
+        }
+        $sync = $this->sync_pending_keys($keys);
+        $row = $this->pending_by_id($id);
+        return ['status' => true, 'message' => 'Barang pending berhasil disimpan.', 'data' => ['row' => $row, 'sync' => $sync]];
+    }
+
+    public function delete_pending($id)
+    {
+        $this->ensure_pending_tables();
+        $row = $this->pending_by_id((int)$id);
+        if (!$row) {
+            return ['status' => false, 'message' => 'Data barang pending tidak ditemukan.'];
+        }
+
+        $this->db->trans_begin();
+        $this->db->where('id', (int)$id)->delete($this->pendingTable);
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return ['status' => false, 'message' => 'Gagal menghapus barang pending.'];
+        }
+        $this->db->trans_commit();
+        $sync = $this->sync_pending_keys([$row]);
+
+        return ['status' => true, 'message' => 'Barang pending berhasil dihapus.', 'data' => ['sync' => $sync]];
     }
 
     public function get_master_barang_datatable($post, $qtyMode = 'positive')
