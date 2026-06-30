@@ -262,7 +262,7 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                 <button class="btn btn-info btn-sm" onclick="window.print()">
                     <i class="fas fa-print"></i> Cetak Faktur
                 </button>
-                <?php if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && empty($faktur['is_split_parent']) && !in_array($faktur['status'], ['cancelled', 'draft'], true)): ?>
+                <?php if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && (!empty($has_remaining_split_qty) || empty($faktur['is_split_parent'])) && !in_array($faktur['status'], ['cancelled', 'draft'], true)): ?>
                     <a href="<?= base_url('sales_order/split_faktur/' . $faktur['id_faktur']) ?>"
                        class="btn btn-warning btn-sm">
                         <i class="fas fa-cut"></i> Pecah Faktur Z
