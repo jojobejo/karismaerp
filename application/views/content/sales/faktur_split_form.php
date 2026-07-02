@@ -275,6 +275,29 @@ $(document).ready(function () {
 
     // Ketika qty alokasi diubah
     $(document).on('input change', '.input-qty-alokasi', function() {
+        const itemId = $(this).data('item-id');
+        const val = parseFloat($(this).val()) || 0;
+        
+        // Find the parent item total qty (which is already the remaining qty from controller)
+        const parentTotal = parseFloat($('li[data-parent-item-id="' + itemId + '"]').find('.parent-total-qty').data('val')) || 0;
+        
+        // Calculate allocated qty from other inputs of the same item ID
+        let otherAllocated = 0;
+        const currentInput = this;
+        $('#splitsContainer .input-qty-alokasi[data-item-id="' + itemId + '"]').each(function() {
+            if (this !== currentInput) {
+                otherAllocated += parseFloat($(this).val()) || 0;
+            }
+        });
+        
+        const maxAllowed = parentTotal - otherAllocated;
+        if (val < 0) {
+            $(this).val(0);
+        } else if (val > maxAllowed) {
+            const adjustedVal = maxAllowed >= 0 ? maxAllowed : 0;
+            $(this).val(adjustedVal);
+            salesToast('warning', 'Jumlah alokasi melebihi sisa kuantitas induk (' + adjustedVal + ' pcs).');
+        }
         recalculateAllocations();
     });
 
@@ -293,7 +316,7 @@ $(document).ready(function () {
         });
 
         // Jumlahkan semua alokasi dari form anak-anak
-        $('.input-qty-alokasi').each(function() {
+        $('#splitsContainer .input-qty-alokasi').each(function() {
             const id = $(this).data('item-id');
             const val = parseFloat($(this).val()) || 0;
             if (parentItems[id]) {
@@ -336,7 +359,7 @@ $(document).ready(function () {
     // Validasi submit form
     $('#formSplit').on('submit', function(e) {
         let hasEmptyCustomer = false;
-        $('.select-customer').each(function() {
+        $('#splitsContainer .select-customer').each(function() {
             if (!$(this).val()) {
                 hasEmptyCustomer = true;
             }
@@ -350,7 +373,7 @@ $(document).ready(function () {
 
         // Pastikan alokasi total tidak 0
         let totalQty = 0;
-        $('.input-qty-alokasi').each(function() {
+        $('#splitsContainer .input-qty-alokasi').each(function() {
             totalQty += parseFloat($(this).val()) || 0;
         });
 

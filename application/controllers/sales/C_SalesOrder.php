@@ -1714,12 +1714,51 @@ class C_SalesOrder extends CI_Controller
             $parent_faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $faktur['parent_id_faktur']])->row_array();
         }
 
+        $has_remaining_split_qty = false;
+        if (!empty($so['is_faktur_z']) && empty($faktur['parent_id_faktur']) && !in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+            $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
+                ->from('tbso_faktur_detail fd')
+                ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
+                ->where('fp.parent_id_faktur', $id_faktur)
+                ->where('fp.status !=', 'cancelled')
+                ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
+                ->get()
+                ->result_array();
+
+            $allocated_map = [];
+            foreach ($child_details as $cd) {
+                $key = implode('|', [
+                    $cd['id_so_detail'],
+                    $cd['kd_barang'],
+                    (string)$cd['no_lot'],
+                    $cd['expired_date']
+                ]);
+                $allocated_map[$key] = (float)$cd['qty_allocated'];
+            }
+
+            $total_remaining = 0;
+            foreach ($details as $d) {
+                $key = implode('|', [
+                    $d['id_so_detail'],
+                    $d['kd_barang'],
+                    (string)$d['no_lot'],
+                    $d['expired_date']
+                ]);
+                $allocated = $allocated_map[$key] ?? 0.0;
+                $total_remaining += max(0.0, (float)$d['qty'] - $allocated);
+            }
+            if ($total_remaining > 0.001) {
+                $has_remaining_split_qty = true;
+            }
+        }
+
         $data['page_title']    = 'KARISMA - Faktur ' . $faktur['no_faktur'];
         $data['faktur']        = $faktur;
         $data['details']       = $details;
         $data['so']            = $so;
         $data['child_fakturs'] = $child_fakturs;
         $data['parent_faktur'] = $parent_faktur;
+        $data['has_remaining_split_qty'] = $has_remaining_split_qty;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/faktur_detail.php', $data);
@@ -1749,13 +1788,51 @@ class C_SalesOrder extends CI_Controller
             redirect('sales_order/detail_faktur/' . $id_faktur);
             return;
         }
-        if (!empty($faktur['is_split_parent'])) {
-            $this->session->set_flashdata('error', 'Faktur induk ini sudah dipecah.');
+        if (in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+            $this->session->set_flashdata('error', 'Faktur dengan status Draft atau Cancelled tidak dapat dipecah.');
             redirect('sales_order/detail_faktur/' . $id_faktur);
             return;
         }
-        if (in_array($faktur['status'], ['cancelled', 'draft'], true)) {
-            $this->session->set_flashdata('error', 'Faktur dengan status Draft atau Cancelled tidak dapat dipecah.');
+
+        // Calculate remaining quantities
+        $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
+            ->from('tbso_faktur_detail fd')
+            ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
+            ->where('fp.parent_id_faktur', $id_faktur)
+            ->where('fp.status !=', 'cancelled')
+            ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
+            ->get()
+            ->result_array();
+
+        $allocated_map = [];
+        foreach ($child_details as $cd) {
+            $key = implode('|', [
+                $cd['id_so_detail'],
+                $cd['kd_barang'],
+                (string)$cd['no_lot'],
+                $cd['expired_date']
+            ]);
+            $allocated_map[$key] = (float)$cd['qty_allocated'];
+        }
+
+        $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        $total_remaining = 0;
+        foreach ($details as &$d) {
+            $key = implode('|', [
+                $d['id_so_detail'],
+                $d['kd_barang'],
+                (string)$d['no_lot'],
+                $d['expired_date']
+            ]);
+            $allocated = $allocated_map[$key] ?? 0.0;
+            $remaining = max(0.0, (float)$d['qty'] - $allocated);
+            $d['qty'] = $remaining;
+            $total_remaining += $remaining;
+        }
+        unset($d);
+
+        if ($total_remaining <= 0) {
+            $this->session->set_flashdata('error', 'Faktur induk ini sudah sepenuhnya dipecah.');
             redirect('sales_order/detail_faktur/' . $id_faktur);
             return;
         }
@@ -1763,7 +1840,7 @@ class C_SalesOrder extends CI_Controller
         $data['page_title'] = 'Pecah Faktur Z - ' . $faktur['no_faktur'];
         $data['faktur']     = $faktur;
         $data['so']         = $so;
-        $data['details']    = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        $data['details']    = $details;
         $data['customers']  = $this->M_SalesOrder->get_customers();
 
         $this->load->view('partial/main/header.php', $data);
@@ -1784,7 +1861,7 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
-        if (empty($so['is_faktur_z']) || !empty($faktur['parent_id_faktur']) || !empty($faktur['is_split_parent']) || in_array($faktur['status'], ['cancelled', 'draft'], true)) {
+        if (empty($so['is_faktur_z']) || !empty($faktur['parent_id_faktur']) || in_array($faktur['status'], ['cancelled', 'draft'], true)) {
             $this->session->set_flashdata('error', 'Proses pemecahan faktur tidak valid.');
             redirect('sales_order/detail_faktur/' . $id_faktur);
             return;
@@ -1799,13 +1876,50 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        // Calculate remaining quantities
+        $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
+            ->from('tbso_faktur_detail fd')
+            ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
+            ->where('fp.parent_id_faktur', $id_faktur)
+            ->where('fp.status !=', 'cancelled')
+            ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
+            ->get()
+            ->result_array();
+
+        $allocated_map = [];
+        foreach ($child_details as $cd) {
+            $key = implode('|', [
+                $cd['id_so_detail'],
+                $cd['kd_barang'],
+                (string)$cd['no_lot'],
+                $cd['expired_date']
+            ]);
+            $allocated_map[$key] = (float)$cd['qty_allocated'];
+        }
+
         $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
         $parent_qtys = [];
+        $total_remaining = 0;
         foreach ($details as $d) {
+            $key = implode('|', [
+                $d['id_so_detail'],
+                $d['kd_barang'],
+                (string)$d['no_lot'],
+                $d['expired_date']
+            ]);
+            $allocated = $allocated_map[$key] ?? 0.0;
+            $remaining = max(0.0, (float)$d['qty'] - $allocated);
             $parent_qtys[$d['id']] = [
-                'qty' => (float)$d['qty'],
+                'qty' => $remaining,
                 'nama' => $d['nama_barang']
             ];
+            $total_remaining += $remaining;
+        }
+
+        if ($total_remaining <= 0) {
+            $this->session->set_flashdata('error', 'Faktur induk ini sudah sepenuhnya dipecah.');
+            redirect('sales_order/detail_faktur/' . $id_faktur);
+            return;
         }
 
         $allocated_qtys = [];
