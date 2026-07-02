@@ -142,6 +142,18 @@ $faktur_back_url = $is_admin_sc_context
                                 </div>
 
                                 <div class="form-group">
+                                    <label>Cara Pembayaran</label>
+                                    <?php
+                                    $cp_labels = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG', 'tempo' => 'Tempo'];
+                                    $cp_key    = strtolower(trim((string)($so['cara_pembayaran'] ?? 'cash')));
+                                    $cp_label  = $cp_labels[$cp_key] ?? ucfirst($cp_key);
+                                    ?>
+                                    <input type="text" class="form-control" value="<?= htmlspecialchars($cp_label) ?>" readonly>
+                                    <input type="hidden" name="cara_pembayaran" value="<?= htmlspecialchars($cp_key, ENT_QUOTES, 'UTF-8') ?>">
+                                    <small class="text-muted">Mengikuti cara pembayaran Sales Order.</small>
+                                </div>
+
+                                <div class="form-group">
                                     <label>Catatan</label>
                                     <textarea class="form-control" name="catatan" rows="3"
                                               placeholder="Catatan pengiriman (opsional)..."></textarea>

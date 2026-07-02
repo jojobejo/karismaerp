@@ -1,7 +1,7 @@
 <?php
 defined('BASEPATH') OR exit('No direct script access allowed');
 
-$config['plafon_api_base_url'] = getenv('PLAFON_API_BASE_URL') ?: 'https://plafon.kiu.co.id';
+$config['plafon_api_base_url'] = getenv('PLAFON_API_BASE_URL') ?: 'https://plafon.karismaerp.com';
 $config['plafon_api_key'] = getenv('PLAFON_API_KEY') ?: '';
 $config['plafon_api_timeout'] = 5;
 $config['plafon_api_cache_ttl'] = 60;
