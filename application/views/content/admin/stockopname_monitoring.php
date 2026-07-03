@@ -19,6 +19,7 @@
     $wilayah_input = $monitoring_summary['wilayah_input'] ?? [];
     $manual_input = $input_source['manual'] ?? [];
     $request_input = $input_source['request'] ?? [];
+    $pending_summary = $pending_summary ?? ($monitoring_summary['pending_summary'] ?? []);
     $so_metric = function ($team, $group, $key, $default = 0) {
         return $team[$group][$key] ?? $default;
     };
@@ -100,7 +101,7 @@
                     .om-log-title{font-weight:800;color:#1f2937;font-size:13px}
                     .om-source-grid{display:grid;grid-template-columns:1fr;gap:10px;padding:14px}
                     .om-source-item{border:1px solid #dbe5ef;border-radius:8px;background:#f8fafc;padding:12px}
-                    .om-source-item.request{background:#fffbeb;border-color:#fde68a}.om-source-item.manual{background:#f0fdf4;border-color:#bbf7d0}
+                    .om-source-item.request{background:#fffbeb;border-color:#fde68a}.om-source-item.manual{background:#f0fdf4;border-color:#bbf7d0}.om-source-item.pending{background:#eff6ff;border-color:#bfdbfe}
                     .om-source-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
                     .om-source-label{font-size:12px;text-transform:uppercase;font-weight:850;color:#475569}
                     .om-source-open{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:850}
@@ -217,9 +218,19 @@
                         <div class="om-panel h-100">
                             <div class="om-panel-header">
                                 <h2 class="om-title">Input User Opname</h2>
-                                <span class="om-muted">Request & Manual</span>
+                                <span class="om-muted">Request, Manual, Pending</span>
                             </div>
                             <div class="om-source-grid" id="inputSourceSummary">
+                                <div class="om-source-item pending" data-source="pending">
+                                    <div class="om-source-head">
+                                        <a href="<?= base_url('admin/stockopname/monitoring/pending-opname') ?>" class="btn btn-outline-primary om-source-open">
+                                            <i class="fas fa-box-open"></i> Pending Opname
+                                        </a>
+                                        <span class="om-badge tim_1">Gudang</span>
+                                    </div>
+                                    <div class="om-source-value js-total-input"><?= number_format((int)($pending_summary['total_item'] ?? 0), 0, ',', '.') ?></div>
+                                    <div class="om-source-last">Qty: <span class="js-total-qty"><?= number_format((int)($pending_summary['total_qty'] ?? 0), 0, ',', '.') ?></span> | Terakhir: <span class="js-last-input"><?= $so_e($pending_summary['last_input'] ?? '-') ?></span></div>
+                                </div>
                                 <div class="om-source-item request" data-source="request">
                                     <div class="om-source-head">
                                         <a href="<?= base_url('admin/stockopname/monitoring/request-opname') ?>" class="btn btn-outline-warning om-source-open">
@@ -536,6 +547,14 @@ $(function () {
         });
     }
 
+    function renderPendingSummary(summary) {
+        summary = summary || {};
+        var card = $('[data-source="pending"]');
+        card.find('.js-total-input').text(numberId(summary.total_item));
+        card.find('.js-total-qty').text(numberId(summary.total_qty));
+        card.find('.js-last-input').text(summary.last_input || '-');
+    }
+
     function renderActivity(rows) {
         var target = $('#activityLog');
         if (!rows || rows.length === 0) {
@@ -559,6 +578,7 @@ $(function () {
         $.getJSON('<?= base_url('admin/stockopname/monitoring/summary') ?>', function (res) {
             if (res.status) {
                 renderSummary(res.data || {});
+                renderPendingSummary((res.data || {}).pending_summary || {});
             }
         });
 

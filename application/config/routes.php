@@ -66,6 +66,7 @@ $route['dashboard']                                 = 'Dashboard/index';
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
 $route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
 $route['admin/stockopname/monitoring/activity-log'] = 'admin/C_Stockopname/monitoring_activity_log';
+$route['admin/stockopname/monitoring/pending-opname'] = 'admin/C_Stockopname/monitoring_pending_opname';
 $route['admin/stockopname/monitoring/request-opname'] = 'admin/C_Stockopname/monitoring_request_opname';
 $route['admin/stockopname/ajax-affirm-request-opname-bulk'] = 'admin/C_Stockopname/ajax_affirm_request_opname_bulk';
 $route['admin/stockopname/monitoring/manual-opname'] = 'admin/C_Stockopname/monitoring_manual_opname';

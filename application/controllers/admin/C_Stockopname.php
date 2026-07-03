@@ -313,10 +313,24 @@ class C_Stockopname extends CI_Controller
     {
         $data['page_title'] = 'KARISMA ERP - Opname Monitoring';
         $data['monitoring_summary'] = $this->stockopname->monitoring_summary();
+        $data['pending_summary'] = $this->stockopname->pending_summary();
         $data['activity_logs'] = $this->stockopname->monitoring_activity(5);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_monitoring.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function monitoring_pending_opname()
+    {
+        $keyword = trim((string)$this->input->get('keyword', true));
+        $data['page_title'] = 'KARISMA ERP - Detail Pending Opname';
+        $data['keyword'] = $keyword;
+        $data['summary'] = $this->stockopname->pending_summary();
+        $data['pending_rows'] = $this->stockopname->pending_rows($keyword, 1000);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/admin/stockopname_pending_opname_detail.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -428,7 +442,9 @@ class C_Stockopname extends CI_Controller
 
     public function monitoring_summary()
     {
-        $this->json(true, 'Summary monitoring stockopname berhasil dimuat.', $this->stockopname->monitoring_summary());
+        $summary = $this->stockopname->monitoring_summary();
+        $summary['pending_summary'] = $this->stockopname->pending_summary();
+        $this->json(true, 'Summary monitoring stockopname berhasil dimuat.', $summary);
     }
 
     public function monitoring_activity()
@@ -1403,6 +1419,7 @@ class C_Stockopname extends CI_Controller
         $data['page_title'] = 'KARISMA ERP - Barang Pending Stockopname';
         $data['page_heading'] = 'Barang Pending';
         $data['summary'] = $this->stockopname->pending_summary();
+        $data['pending_master_options'] = $this->stockopname->pending_master_options();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_barang_pending.php', $data);
@@ -1442,8 +1459,8 @@ class C_Stockopname extends CI_Controller
         }
 
         $required = [
+            'kd_do' => 'Kode faktur',
             'kode_barang' => 'Kode barang',
-            'nama_barang' => 'Nama barang',
             'expired_date' => 'Expired date',
         ];
         foreach ($required as $field => $label) {
@@ -1455,26 +1472,40 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Expired date wajib memakai format tanggal yang valid.');
         }
 
-        foreach (['qty' => 'Qty', 'qty_pcs' => 'Qty pcs', 'qty_box' => 'Qty box'] as $field => $label) {
+        foreach (['qty_pcs' => 'Qty pcs', 'qty_box' => 'Qty box'] as $field => $label) {
             $value = trim((string)($input[$field] ?? ''));
             if ($value === '' || !ctype_digit($value)) {
                 return $this->json(false, $label . ' harus berupa bilangan bulat 0 atau lebih.');
             }
         }
-        if ((int)$input['qty'] + (int)$input['qty_pcs'] + (int)$input['qty_box'] <= 0) {
-            return $this->json(false, 'Isi minimal salah satu nilai qty, qty pcs, atau qty box.');
+
+        $masterOption = $this->stockopname->pending_master_option($input['kode_barang'], $input['expired_date']);
+        if (!$masterOption) {
+            return $this->json(false, 'Kode barang dan expired date wajib dipilih dari data master opname.');
+        }
+
+        $dimensi = (int)($masterOption['dimensi'] ?? 0);
+        $qtyPcs = (int)$input['qty_pcs'];
+        $qtyBox = (int)$input['qty_box'];
+        if ($qtyBox > 0 && $dimensi <= 0) {
+            return $this->json(false, 'Dimensi master opname belum tersedia sehingga qty box tidak bisa dihitung.');
+        }
+        $qty = ($qtyBox * max(0, $dimensi)) + $qtyPcs;
+        if ($qty <= 0 && $qtyPcs + $qtyBox <= 0) {
+            return $this->json(false, 'Isi minimal salah satu nilai qty pcs atau qty box.');
         }
 
         $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'system';
         $saved = $this->stockopname->save_pending([
             'id' => $id === '' ? 0 : (int)$id,
-            'kode_barang' => trim((string)$input['kode_barang']),
-            'nama_barang' => trim((string)$input['nama_barang']),
-            'expired_date' => trim((string)$input['expired_date']),
-            'no_lot' => trim((string)($input['no_lot'] ?? '')),
-            'qty' => (int)$input['qty'],
-            'qty_pcs' => (int)$input['qty_pcs'],
-            'qty_box' => (int)$input['qty_box'],
+            'kd_do' => trim((string)$input['kd_do']),
+            'kode_barang' => trim((string)$masterOption['kode_barang']),
+            'nama_barang' => trim((string)$masterOption['nama_barang']),
+            'expired_date' => trim((string)$masterOption['expired_date']),
+            'no_lot' => trim((string)($masterOption['no_lot'] ?? '-')),
+            'qty' => $qty,
+            'qty_pcs' => $qtyPcs,
+            'qty_box' => $qtyBox,
         ], $actor);
 
         if (empty($saved['status'])) {
@@ -1507,12 +1538,12 @@ class C_Stockopname extends CI_Controller
         header('Content-Disposition: attachment; filename="' . $filename . '"');
 
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['Kode Barang', 'Expired Date', 'Lot', 'Nama Barang', 'Qty', 'Qty PCS', 'Qty Box', 'Master ID', 'Created By', 'Created At']);
+        fputcsv($output, ['Kode Faktur', 'Kode Barang', 'Expired Date', 'Nama Barang', 'Qty', 'Qty PCS', 'Qty Box', 'Master ID', 'Created By', 'Created At']);
         foreach ($rows as $row) {
             fputcsv($output, [
+                $row['kd_do'] ?? '',
                 $row['kode_barang'] ?? '',
                 $row['expired_date'] ?? '',
-                $row['no_lot'] ?? '',
                 $row['nama_barang'] ?? '',
                 $row['qty'] ?? 0,
                 $row['qty_pcs'] ?? 0,

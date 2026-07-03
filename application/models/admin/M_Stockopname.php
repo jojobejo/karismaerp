@@ -2779,6 +2779,7 @@ class M_Stockopname extends CI_Model
             $this->db->query("
                 CREATE TABLE IF NOT EXISTS `{$this->pendingTable}` (
                     `id` INT(11) NOT NULL AUTO_INCREMENT,
+                    `kd_do` VARCHAR(100) NOT NULL DEFAULT '',
                     `kode_barang` VARCHAR(50) NOT NULL,
                     `nama_barang` TEXT NOT NULL,
                     `expired_date` DATE NOT NULL,
@@ -2791,6 +2792,7 @@ class M_Stockopname extends CI_Model
                     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
                     PRIMARY KEY (`id`),
+                    KEY `idx_pending_kd_do` (`kd_do`),
                     KEY `idx_pending_barang_expired` (`nama_barang`(191), `expired_date`),
                     KEY `idx_pending_kode_barang` (`kode_barang`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -2798,6 +2800,7 @@ class M_Stockopname extends CI_Model
         }
 
         $columns = [
+            'kd_do' => "ALTER TABLE `{$this->pendingTable}` ADD `kd_do` VARCHAR(100) NOT NULL DEFAULT '' AFTER `id`",
             'kode_barang' => "ALTER TABLE `{$this->pendingTable}` ADD `kode_barang` VARCHAR(50) NOT NULL DEFAULT '' AFTER `id`",
             'expired_date' => "ALTER TABLE `{$this->pendingTable}` ADD `expired_date` DATE NULL DEFAULT NULL AFTER `nama_barang`",
             'qty_pcs' => "ALTER TABLE `{$this->pendingTable}` ADD `qty_pcs` INT(12) NOT NULL DEFAULT 0 AFTER `qty`",
@@ -2812,6 +2815,7 @@ class M_Stockopname extends CI_Model
                 $this->db->query($sql);
             }
         }
+        $this->ensure_pending_primary_key();
         if (!$this->db->field_exists('no_lot', $this->pendingTable)) {
             $this->db->query("ALTER TABLE `{$this->pendingTable}` ADD `no_lot` VARCHAR(100) NOT NULL DEFAULT '' AFTER `expired_date`");
         }
@@ -2834,6 +2838,49 @@ class M_Stockopname extends CI_Model
         }
 
         return true;
+    }
+
+    private function ensure_pending_primary_key()
+    {
+        if (!$this->db->table_exists($this->pendingTable) || !$this->db->field_exists('id', $this->pendingTable)) {
+            return;
+        }
+
+        $row = $this->db->query("
+            SELECT COLUMN_KEY, EXTRA
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND COLUMN_NAME = 'id'
+            LIMIT 1
+        ", [$this->pendingTable])->row_array();
+
+        $columnKey = strtoupper((string)($row['COLUMN_KEY'] ?? ''));
+        $extra = strtolower((string)($row['EXTRA'] ?? ''));
+        if ($columnKey === 'PRI' && strpos($extra, 'auto_increment') !== false) {
+            return;
+        }
+
+        $primaryExists = (int)($this->db->query("
+            SELECT COUNT(*) AS total
+            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND CONSTRAINT_TYPE = 'PRIMARY KEY'
+        ", [$this->pendingTable])->row_array()['total'] ?? 0) > 0;
+
+        if ($columnKey !== 'PRI') {
+            $this->db->query('SET @stockopname_pending_row_id := 0');
+            $this->db->query("UPDATE `{$this->pendingTable}` SET `id` = (@stockopname_pending_row_id := @stockopname_pending_row_id + 1) ORDER BY `id`, `kode_barang`, `nama_barang`");
+        }
+
+        if (!$primaryExists) {
+            $this->db->query("ALTER TABLE `{$this->pendingTable}` ADD PRIMARY KEY (`id`)");
+        }
+
+        if (strpos($extra, 'auto_increment') === false) {
+            $this->db->query("ALTER TABLE `{$this->pendingTable}` MODIFY `id` INT(11) NOT NULL AUTO_INCREMENT");
+        }
     }
 
     private function normalize_pending_key($namaBarang, $expiredDate)
@@ -2939,7 +2986,7 @@ class M_Stockopname extends CI_Model
     {
         $this->ensure_pending_tables();
         $row = $this->db
-            ->select('COUNT(*) AS total_item, COALESCE(SUM(qty), 0) AS total_qty, COALESCE(SUM(qty_pcs), 0) AS total_qty_pcs, COALESCE(SUM(qty_box), 0) AS total_qty_box', false)
+            ->select('COUNT(*) AS total_item, COALESCE(SUM(qty), 0) AS total_qty, COALESCE(SUM(qty_pcs), 0) AS total_qty_pcs, COALESCE(SUM(qty_box), 0) AS total_qty_box, MAX(COALESCE(updated_at, created_at)) AS last_input', false)
             ->from($this->pendingTable)
             ->get()
             ->row_array();
@@ -2949,7 +2996,54 @@ class M_Stockopname extends CI_Model
             'total_qty' => (int)($row['total_qty'] ?? 0),
             'total_qty_pcs' => (int)($row['total_qty_pcs'] ?? 0),
             'total_qty_box' => (int)($row['total_qty_box'] ?? 0),
+            'last_input' => $row['last_input'] ?? null,
         ];
+    }
+
+    public function pending_master_options($limit = 5000)
+    {
+        if (!$this->db->table_exists($this->masterTable)) {
+            return [];
+        }
+
+        $expKey = $this->exp_key('expired_date');
+        $dimensi = $this->master_dimensi_aggregate_sql($this->masterTable . '.kode_barang');
+
+        return $this->db->query("
+            SELECT
+                MIN(id) AS id,
+                kode_barang,
+                MAX(nama_barang) AS nama_barang,
+                MAX(expired_date) AS expired_date,
+                '-' AS no_lot,
+                {$dimensi} AS dimensi,
+                SUM(COALESCE(qty, 0)) AS qty,
+                SUM(COALESCE(qty_pcs, 0)) AS qty_pcs,
+                SUM(COALESCE(qty_box, 0)) AS qty_box
+            FROM {$this->masterTable}
+            WHERE TRIM(COALESCE(kode_barang, '')) <> ''
+            GROUP BY kode_barang, nama_barang, {$expKey}
+            ORDER BY kode_barang ASC, {$expKey} ASC
+            LIMIT " . max(1, min(20000, (int)$limit))
+        )->result_array();
+    }
+
+    public function pending_master_option($kodeBarang, $expiredDate)
+    {
+        $kodeBarang = trim((string)$kodeBarang);
+        $expiredDate = trim((string)$expiredDate);
+        if ($kodeBarang === '' || $expiredDate === '' || !$this->db->table_exists($this->masterTable)) {
+            return null;
+        }
+
+        $rows = $this->master_item_options_by_kode_barang($kodeBarang);
+        foreach ($rows as $row) {
+            if ((string)($row['expired_date'] ?? '') === $expiredDate) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 
     public function pending_rows($keyword = '', $limit = 500)
@@ -2958,14 +3052,15 @@ class M_Stockopname extends CI_Model
         $keyword = trim((string)$keyword);
         $masterIdSelect = $this->db->table_exists($this->masterTable) ? 'm.id AS master_id' : '0 AS master_id';
         $this->db
-            ->select('p.id, p.kode_barang, p.nama_barang, p.expired_date, p.no_lot, p.qty, p.qty_pcs, p.qty_box, p.created_by, p.updated_by, p.created_at, p.updated_at, ' . $masterIdSelect, false)
+            ->select('p.id, p.kd_do, p.kode_barang, p.nama_barang, p.expired_date, p.no_lot, p.qty, p.qty_pcs, p.qty_box, p.created_by, p.updated_by, p.created_at, p.updated_at, ' . $masterIdSelect, false)
             ->from($this->pendingTable . ' p');
         if ($this->db->table_exists($this->masterTable)) {
             $this->db->join($this->masterTable . ' m', 'm.id = (SELECT MIN(mi.id) FROM ' . $this->masterTable . ' mi WHERE mi.nama_barang = p.nama_barang AND mi.expired_date = p.expired_date)', 'left', false);
         }
         if ($keyword !== '') {
             $this->db->group_start()
-                ->like('p.kode_barang', $keyword)
+                ->like('p.kd_do', $keyword)
+                ->or_like('p.kode_barang', $keyword)
                 ->or_like('p.nama_barang', $keyword)
                 ->or_like('p.expired_date', $keyword)
                 ->or_like('p.no_lot', $keyword)
@@ -2997,6 +3092,7 @@ class M_Stockopname extends CI_Model
         $this->ensure_pending_tables();
         $id = (int)($input['id'] ?? 0);
         $data = [
+            'kd_do' => trim((string)($input['kd_do'] ?? '')),
             'kode_barang' => trim((string)($input['kode_barang'] ?? '')),
             'nama_barang' => trim((string)($input['nama_barang'] ?? '')),
             'expired_date' => trim((string)($input['expired_date'] ?? '')),
@@ -3006,6 +3102,18 @@ class M_Stockopname extends CI_Model
             'qty_box' => max(0, (int)($input['qty_box'] ?? 0)),
             'updated_by' => (string)$actor,
         ];
+        if ($this->db->field_exists('kd_faktur', $this->pendingTable)) {
+            $data['kd_faktur'] = $data['kd_do'];
+        }
+        if ($this->db->field_exists('tgl_transaksi', $this->pendingTable)) {
+            $data['tgl_transaksi'] = date('Y-m-d');
+        }
+        if ($this->db->field_exists('exp_date', $this->pendingTable)) {
+            $data['exp_date'] = $data['expired_date'];
+        }
+        if ($this->db->field_exists('input_at', $this->pendingTable)) {
+            $data['input_at'] = date('Y-m-d H:i:s');
+        }
 
         $previous = $id > 0 ? $this->pending_by_id($id) : null;
         $this->db->trans_begin();
