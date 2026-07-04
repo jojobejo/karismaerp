@@ -75,6 +75,12 @@ if (!isset($metode_options[$default_metode])) {
                                         <td class="text-muted">Customer</td>
                                         <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                     </tr>
+                                    <?php if (!empty($faktur['nama_barang']) && $faktur['nama_barang'] !== '-'): ?>
+                                    <tr>
+                                        <td class="text-muted">Barang</td>
+                                        <td><small class="text-muted d-block text-wrap" style="max-width: 250px; line-height: 1.2;"><?= htmlspecialchars($faktur['nama_barang']) ?></small></td>
+                                    </tr>
+                                    <?php endif; ?>
                                     <tr>
                                         <td class="text-muted">Cara Pembayaran</td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars(ucfirst($faktur['cara_pembayaran'] ?: '-')) ?></span></td>

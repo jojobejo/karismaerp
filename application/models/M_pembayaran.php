@@ -162,6 +162,17 @@ class M_pembayaran extends CI_Model
         ";
     }
 
+    private function _nama_barang_sql()
+    {
+        return "
+            SELECT
+                id_faktur,
+                GROUP_CONCAT(DISTINCT nama_barang ORDER BY nama_barang ASC SEPARATOR ', ') AS nama_barang
+            FROM tbso_faktur_detail
+            GROUP BY id_faktur
+        ";
+    }
+
     private function _tanggal_selesai_do_expr()
     {
         if ($this->db->field_exists('tanggal_selesai_do', 'tbso_faktur_penjualan')) {
@@ -211,12 +222,14 @@ class M_pembayaran extends CI_Model
                 WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 30 THEN 'Overdue 30'
                 WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 60 THEN 'Overdue 60'
                 ELSE 'Overdue 90'
-            END AS status_overdue
+            END AS status_overdue,
+            COALESCE(fnb.nama_barang, '-') AS nama_barang
         ", false);
         $this->db->from('tbso_faktur_penjualan f');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
         $this->db->join('(' . $this->_total_tagihan_sql() . ') ft', 'ft.id_faktur = f.id_faktur', 'left');
         $this->db->join('(' . $this->_total_pembayaran_sql() . ') fp', 'fp.id_faktur = f.id_faktur', 'left');
+        $this->db->join('(' . $this->_nama_barang_sql() . ') fnb', 'fnb.id_faktur = f.id_faktur', 'left');
         $this->db->where('f.status', 'selesai_do');
     }
 
