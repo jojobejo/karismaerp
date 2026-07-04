@@ -2678,11 +2678,23 @@ class M_Stockopname extends CI_Model
             return ['status' => false, 'message' => 'Data master barang tidak ditemukan.'];
         }
 
+        $kodeBarang = trim((string)($input['kd_barang'] ?? ''));
+        $namaBarang = trim((string)($input['nama_barang'] ?? ''));
+        $exists = $this->db
+            ->where('kd_barang', $kodeBarang)
+            ->where('id !=', $id)
+            ->count_all_results($this->masterBarangAllTable) > 0;
+        if ($exists) {
+            return ['status' => false, 'message' => 'Kode barang sudah digunakan oleh master barang lain.'];
+        }
+
         $p = (int)($input['p'] ?? 0);
         $l = (int)($input['l'] ?? 0);
         $t = (int)($input['t'] ?? 0);
         $dimensi = $p * $l * $t;
         $data = [
+            'kd_barang' => $kodeBarang,
+            'nama_barang' => $namaBarang,
             'p' => $p,
             'l' => $l,
             't' => $t,
@@ -2698,7 +2710,7 @@ class M_Stockopname extends CI_Model
 
         return [
             'status' => true,
-            'message' => 'Dimensi master barang berhasil diperbarui.',
+            'message' => 'Master barang berhasil diperbarui.',
             'data' => array_merge($row, $data, ['dimensi' => $dimensi]),
         ];
     }

@@ -75,18 +75,18 @@ $nextCode = $next_kode_barang_system ?? 'KIUBR00001';
         <div class="modal-dialog" role="document">
             <form class="modal-content" id="formEditDimensiBarang">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditDimensiBarangLabel">Edit Dimensi Barang</h5>
+                    <h5 class="modal-title" id="modalEditDimensiBarangLabel">Edit Master Barang</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id" id="editBarangId">
                     <div class="form-group">
                         <label>Kode barang</label>
-                        <input class="form-control catalog-code" id="editKodeBarang" readonly>
+                        <input name="kd_barang" class="form-control catalog-code" id="editKodeBarang" maxlength="25" required>
                     </div>
                     <div class="form-group">
                         <label>Nama barang</label>
-                        <textarea class="form-control" id="editNamaBarang" rows="2" readonly></textarea>
+                        <textarea name="nama_barang" class="form-control" id="editNamaBarang" rows="2" required></textarea>
                     </div>
                     <div class="form-row">
                         <div class="col-4 form-group"><label>Panjang</label><input name="p" id="editPanjang" type="number" min="1" step="1" class="form-control" required></div>

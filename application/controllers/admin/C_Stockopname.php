@@ -1390,8 +1390,16 @@ class C_Stockopname extends CI_Controller
     {
         $input = $this->post();
         $id = trim((string)($input['id'] ?? ''));
+        $kodeBarang = trim((string)($input['kd_barang'] ?? ''));
+        $namaBarang = trim((string)($input['nama_barang'] ?? ''));
         if ($id === '' || !ctype_digit($id) || (int)$id <= 0) {
             return $this->json(false, 'ID master barang tidak valid.');
+        }
+        if ($kodeBarang === '' || strlen($kodeBarang) > 25) {
+            return $this->json(false, 'Kode barang wajib diisi, maksimal 25 karakter.');
+        }
+        if ($namaBarang === '') {
+            return $this->json(false, 'Nama barang wajib diisi.');
         }
 
         foreach (['p' => 'Panjang', 'l' => 'Lebar', 't' => 'Tinggi'] as $field => $label) {
@@ -1402,6 +1410,8 @@ class C_Stockopname extends CI_Controller
         }
 
         $saved = $this->stockopname->update_master_barang_catalog((int)$id, [
+            'kd_barang' => $kodeBarang,
+            'nama_barang' => $namaBarang,
             'p' => (int)$input['p'],
             'l' => (int)$input['l'],
             't' => (int)$input['t'],
