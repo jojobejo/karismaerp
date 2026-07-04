@@ -18,7 +18,7 @@ class C_Stockopname extends CI_Controller
         }
 
         $lvuser = (int)$this->session->userdata('lv');
-        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $jobdesk = $this->session_jobdesk_code();
         $username = strtolower(trim((string)$this->session->userdata('username')));
         $isAdminDashboard = (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || ($lvuser === 1 && $jobdesk === 'ADMIN');
 
@@ -39,11 +39,13 @@ class C_Stockopname extends CI_Controller
         $supervisorMethods = [
             'supervisor_opname',
             'supervisor_tracking',
+            'ajax_input_lookup',
             'ajax_supervisor_affirm_request',
             'ajax_manual_barang',
+            'ajax_manual_expired',
             'ajax_request_save',
         ];
-        $isSupervisorOpname = $jobdesk === 'SUPERVISIOR_OPNAME' && in_array($method, $supervisorMethods, true);
+        $isSupervisorOpname = $jobdesk === 'SUPERVISOR_OPNAME' && in_array($method, $supervisorMethods, true);
 
         if (!$isAdminDashboard && !$isStockopnameInputer && !$isSupervisorOpname) {
             show_error('Anda tidak memiliki akses ke dashboard admin stockopname.', 403, 'Akses Ditolak');
@@ -319,6 +321,13 @@ class C_Stockopname extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_monitoring.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    private function session_jobdesk_code()
+    {
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $jobdesk = str_replace(['-', ' '], '_', $jobdesk);
+        return $jobdesk === 'SUPERVISIOR_OPNAME' ? 'SUPERVISOR_OPNAME' : $jobdesk;
     }
 
     public function monitoring_pending_opname()
@@ -936,7 +945,7 @@ class C_Stockopname extends CI_Controller
 
     public function input_opname()
     {
-        if (strtoupper(trim((string)$this->session->userdata('jobdesk'))) === 'SUPERVISIOR_OPNAME') {
+        if ($this->session_jobdesk_code() === 'SUPERVISOR_OPNAME') {
             return $this->supervisor_opname();
         }
 
@@ -1260,7 +1269,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Expired date wajib format tanggal/bulan/tahun, contoh 15/06/2026.');
         }
 
-        $isSupervisor = strtoupper(trim((string)$this->session->userdata('jobdesk'))) === 'SUPERVISIOR_OPNAME';
+        $isSupervisor = $this->session_jobdesk_code() === 'SUPERVISOR_OPNAME';
         $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
         $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
         $qtyPcs = $qtyPcs === '' ? '0' : $qtyPcs;

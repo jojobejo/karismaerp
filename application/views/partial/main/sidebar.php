@@ -310,7 +310,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'SUPERVISIOR_OPNAME') : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array(str_replace(['-', ' '], '_', strtoupper((string)$this->session->userdata('jobdesk'))), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) : ?>
       <div class="sidebar">
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">

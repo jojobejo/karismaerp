@@ -1860,6 +1860,11 @@ class M_Stockopname extends CI_Model
         return $this->master_dimensi_value_sql($this->masterTable . '.kode_barang') . ' AS dimensi';
     }
 
+    private function kode_barang_match_sql($leftColumn, $rightColumn)
+    {
+        return "{$leftColumn} COLLATE utf8mb4_general_ci = {$rightColumn} COLLATE utf8mb4_general_ci";
+    }
+
     private function master_dimensi_value_sql($kodeColumn = 'kode_barang')
     {
         $fallback = $this->db->field_exists('dimensi', $this->masterTable)
@@ -1871,7 +1876,8 @@ class M_Stockopname extends CI_Model
             && $this->db->field_exists('kd_barang', $this->masterBarangAllTable)
             && $this->db->field_exists('dimensi', $this->masterBarangAllTable)
         ) {
-            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE mba.kd_barang = {$kodeColumn} LIMIT 1), {$fallback})";
+            $kodeMatch = $this->kode_barang_match_sql('mba.kd_barang', $kodeColumn);
+            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE {$kodeMatch} LIMIT 1), {$fallback})";
         }
 
         return $fallback;
@@ -1888,7 +1894,8 @@ class M_Stockopname extends CI_Model
             && $this->db->field_exists('kd_barang', $this->masterBarangAllTable)
             && $this->db->field_exists('dimensi', $this->masterBarangAllTable)
         ) {
-            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE mba.kd_barang = {$kodeColumn} LIMIT 1), {$fallback})";
+            $kodeMatch = $this->kode_barang_match_sql('mba.kd_barang', $kodeColumn);
+            return "COALESCE((SELECT COALESCE(mba.dimensi, 0) FROM {$this->masterBarangAllTable} mba WHERE {$kodeMatch} LIMIT 1), {$fallback})";
         }
 
         return $fallback;

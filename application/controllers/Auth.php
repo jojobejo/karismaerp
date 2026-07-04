@@ -112,7 +112,7 @@ class Auth extends CI_Controller
             redirect('keuangan');
         } else if ($jobdesk == 'STOCKOPNAME') {
             redirect('stockopname/input');
-        } else if ($jobdesk == 'SUPERVISIOR_OPNAME') {
+        } else if (in_array(str_replace(['-', ' '], '_', strtoupper((string)$jobdesk)), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) {
             redirect('supervisi-opname');
         } else if ($jobdesk == 'SALESONLINE') {
             redirect('stock');
