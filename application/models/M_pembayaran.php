@@ -206,12 +206,11 @@ class M_pembayaran extends CI_Model
                 WHEN COALESCE(fp.total_pembayaran, 0) > 0 THEN 'sebagian'
                 ELSE 'belum_lunas'
             END AS status_pembayaran,
-            DATEDIFF(CURDATE(), DATE({$tanggal_selesai_do})) AS hari_selesai_do,
+            DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) AS hari_overdue,
             CASE
-                WHEN DATEDIFF(CURDATE(), DATE({$tanggal_selesai_do})) >= 90 THEN 'Overdue 90'
-                WHEN DATEDIFF(CURDATE(), DATE({$tanggal_selesai_do})) >= 60 THEN 'Overdue 60'
-                WHEN DATEDIFF(CURDATE(), DATE({$tanggal_selesai_do})) >= 30 THEN 'Overdue 30'
-                ELSE 'Belum overdue'
+                WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 30 THEN 'Overdue 30'
+                WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 60 THEN 'Overdue 60'
+                ELSE 'Overdue 90'
             END AS status_overdue
         ", false);
         $this->db->from('tbso_faktur_penjualan f');

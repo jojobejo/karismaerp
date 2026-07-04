@@ -81,7 +81,7 @@ if (!isset($metode_options[$default_metode])) {
                                     </tr>
                                     <tr>
                                         <td class="text-muted">Status Overdue</td>
-                                        <td><span class="badge badge-<?= $faktur['status_overdue'] === 'Belum overdue' ? 'secondary' : 'danger' ?>"><?= htmlspecialchars($faktur['status_overdue']) ?></span></td>
+                                        <td><span class="badge badge-<?= $faktur['status_overdue'] === 'Belum overdue' ? 'secondary' : ($faktur['status_overdue'] === 'Overdue 30' ? 'warning' : 'danger') ?>"><?= htmlspecialchars($faktur['status_overdue']) ?></span></td>
                                     </tr>
                                     <tr>
                                         <td class="text-muted">Total Tagihan</td>

@@ -55,7 +55,6 @@
                                 <tr>
                                     <th>No Faktur</th>
                                     <th>Tanggal Faktur</th>
-                                    <th>Tanggal Selesai DO</th>
                                     <th>Customer</th>
                                     <th class="text-right">Total Tagihan</th>
                                     <th class="text-right">Total Pembayaran</th>
@@ -69,7 +68,7 @@
                             <tbody>
                                 <?php if (empty($fakturs)): ?>
                                     <tr>
-                                        <td colspan="11" class="text-center text-muted py-4">Tidak ada faktur belum lunas untuk customer ini.</td>
+                                        <td colspan="10" class="text-center text-muted py-4">Tidak ada faktur belum lunas untuk customer ini.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($fakturs as $faktur):
@@ -88,10 +87,9 @@
                                                 <strong><?= htmlspecialchars($faktur['no_faktur']) ?></strong>
                                                 <br><small class="text-muted"><?= htmlspecialchars($faktur['no_so'] ?? '-') ?></small>
                                             </td>
-                                            <td class="text-nowrap"><?= !empty($faktur['tanggal_faktur']) ? date('d/m/Y', strtotime($faktur['tanggal_faktur'])) : '-' ?></td>
                                             <td class="text-nowrap">
-                                                <?= !empty($faktur['tanggal_selesai_do']) ? date('d/m/Y', strtotime($faktur['tanggal_selesai_do'])) : '-' ?>
-                                                <br><small class="text-muted"><?= (int)$faktur['hari_selesai_do'] ?> hari</small>
+                                                <?= !empty($faktur['tanggal_faktur']) ? date('d/m/Y', strtotime($faktur['tanggal_faktur'])) : '-' ?>
+                                                <br><small class="text-muted"><?= (int)$faktur['hari_overdue'] ?> hari</small>
                                             </td>
                                             <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                             <td class="text-right">Rp <?= number_format((float)$faktur['total_tagihan'], 0, ',', '.') ?></td>
