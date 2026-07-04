@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `stockopname_master_manual_item` (
   KEY `idx_manual_master_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `stockopname_opname_manual` (
+CREATE TABLE IF NOT EXISTS `stockopname_manual_input` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
   `manual_master_id` INT(11) NOT NULL,
   `source_id` INT(11) NOT NULL,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS `stockopname_opname_manual` (
   `input_at` DATETIME NOT NULL,
   `wilayah` INT(2) NOT NULL DEFAULT 0,
   `tim_opname` INT(2) NOT NULL DEFAULT 0,
-  `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual',
+  `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual_input',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

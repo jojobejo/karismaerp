@@ -77,5 +77,5 @@ ALTER TABLE `stockopname_opname_log`
   ADD COLUMN IF NOT EXISTS `before_qty_pcs` INT(12) NULL AFTER `after_qty_box`,
   ADD COLUMN IF NOT EXISTS `after_qty_pcs` INT(12) NULL AFTER `before_qty_pcs`;
 
-ALTER TABLE `stockopname_opname_manual`
-  MODIFY `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual';
+ALTER TABLE `stockopname_manual_input`
+  MODIFY `input_source` VARCHAR(30) NOT NULL DEFAULT 'manual_input';

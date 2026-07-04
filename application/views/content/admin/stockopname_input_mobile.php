@@ -130,7 +130,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="form-group so-qty-field mb-0" hidden>
+                                    <div class="form-group so-qty-field mb-0 d-none" hidden style="display:none!important">
                                         <label>Dimensi</label>
                                         <div class="so-dimensi-value" id="itemDimensi">0</div>
                                     </div>

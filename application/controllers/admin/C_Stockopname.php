@@ -8,6 +8,7 @@ class C_Stockopname extends CI_Controller
         parent::__construct();
         $this->load->model('admin/M_Stockopname', 'stockopname');
         $this->load->library('Karisma_code_generator');
+        $this->stockopname->set_pending_calculation_mode($this->session->userdata('stockopname_pending_mode'));
         $this->guard();
     }
 
@@ -39,6 +40,7 @@ class C_Stockopname extends CI_Controller
         $supervisorMethods = [
             'supervisor_opname',
             'supervisor_tracking',
+            'ajax_supervisor_tracking_list',
             'ajax_input_lookup',
             'ajax_supervisor_affirm_request',
             'ajax_manual_barang',
@@ -316,6 +318,7 @@ class C_Stockopname extends CI_Controller
         $data['page_title'] = 'KARISMA ERP - Opname Monitoring';
         $data['monitoring_summary'] = $this->stockopname->monitoring_summary();
         $data['pending_summary'] = $this->stockopname->pending_summary();
+        $data['pending_mode'] = $this->stockopname->pending_calculation_mode();
         $data['activity_logs'] = $this->stockopname->monitoring_activity(5);
 
         $this->load->view('partial/main/header.php', $data);
@@ -333,14 +336,42 @@ class C_Stockopname extends CI_Controller
     public function monitoring_pending_opname()
     {
         $keyword = trim((string)$this->input->get('keyword', true));
+        $perPage = 10;
+        $page = (int)$this->input->get('page', true);
+        $page = $page > 0 ? $page : 1;
+        $totalRows = $this->stockopname->pending_count($keyword);
+        $totalPages = max(1, (int)ceil($totalRows / $perPage));
+        $page = min($page, $totalPages);
+
         $data['page_title'] = 'KARISMA ERP - Detail Pending Opname';
         $data['keyword'] = $keyword;
         $data['summary'] = $this->stockopname->pending_summary();
-        $data['pending_rows'] = $this->stockopname->pending_rows($keyword, 1000);
+        $data['pending_mode'] = $this->stockopname->pending_calculation_mode();
+        $data['pending_rows'] = $this->stockopname->pending_rows($keyword, $perPage, ($page - 1) * $perPage);
+        $data['pagination'] = [
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_rows' => $totalRows,
+            'total_pages' => $totalPages,
+        ];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_pending_opname_detail.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_set_pending_calculation_mode()
+    {
+        $mode = $this->stockopname->normalize_pending_calculation_mode($this->input->post('mode', true));
+        $this->session->set_userdata('stockopname_pending_mode', $mode);
+        $this->stockopname->set_pending_calculation_mode($mode);
+        $sync = $this->stockopname->resync_all_pending();
+
+        $this->json(true, 'Mode perhitungan pending berhasil disimpan.', [
+            'mode' => $mode,
+            'sync' => $sync,
+            'pending_summary' => $this->stockopname->pending_summary(),
+        ]);
     }
 
     public function monitoring_activity_log()
@@ -670,9 +701,11 @@ class C_Stockopname extends CI_Controller
 
         $data['page_title'] = 'KARISMA ERP - Detail Input Opname';
         $data['kode_barang'] = $kodeBarang;
+        $data['pending_mode'] = $this->stockopname->pending_calculation_mode();
         $data['compare'] = $this->stockopname->monitoring_compare_all_detail($kodeBarang);
         $data['master_items'] = $this->stockopname->lot_compare_by_kode_barang($kodeBarang);
         $data['master_item_options'] = $this->stockopname->master_item_options_by_kode_barang($kodeBarang);
+        $data['pending_totals'] = $this->stockopname->pending_totals_by_kode_barang($kodeBarang);
         $data['input_rows'] = $this->stockopname->input_opname_by_kode_barang($kodeBarang);
         $data['recycle_rows'] = $this->stockopname->recycle_input_by_kode_barang($kodeBarang);
         $data['request_rows'] = $this->stockopname->request_item_by_kode_barang($kodeBarang);
@@ -762,30 +795,12 @@ class C_Stockopname extends CI_Controller
         $kodeBarang = trim((string)($input['kode_barang'] ?? ''));
         $expiredDate = $this->normalize_request_expired_date($input['expired_date'] ?? '');
         $noLot = '-';
-        $timOpname = (int)($input['tim_opname'] ?? 0);
         if ($kodeBarang === '' || $expiredDate === '') {
             return $this->json(false, 'Data request item tidak valid.');
-        }
-        if (!in_array($timOpname, [1, 2], true)) {
-            return $this->json(false, 'Tim opname harus Tim 1 atau Tim 2.');
-        }
-
-        $qtyBox = $this->numeric_value($input['qty_box'] ?? '0');
-        $qtyPcs = $this->numeric_value($input['qty_pcs'] ?? '0');
-        foreach (['Qty box' => $qtyBox, 'Qty pcs' => $qtyPcs] as $label => $value) {
-            if ($value === '' || !ctype_digit((string)$value)) {
-                return $this->json(false, $label . ' harus berupa angka bulat 0 atau lebih.');
-            }
-        }
-        if (((int)$qtyBox + (int)$qtyPcs) <= 0) {
-            return $this->json(false, 'Isi Qty Box atau Qty PCS terlebih dahulu.');
         }
 
         $actor = $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system';
         $result = $this->stockopname->add_request_item_to_opname($kodeBarang, $expiredDate, $noLot, [
-            'qty_box' => (int)$qtyBox,
-            'qty_pcs' => (int)$qtyPcs,
-            'tim_opname' => $timOpname,
             'wilayah' => (int)($this->session->userdata('wilayah') ?: 0),
             'manual_master_id' => (int)($input['manual_master_id'] ?? 0),
         ], $actor);
@@ -837,18 +852,30 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Isi Qty Box atau Qty PCS terlebih dahulu.');
         }
 
+        $keterangan = trim((string)($input['keterangan'] ?? ''));
+        if ($keterangan === '') {
+            return $this->json(false, 'Keterangan wajib diisi.');
+        }
+
         $this->stockopname->ensure_master_code_columns();
         $row = $this->stockopname->get_master_barang_by_id((int)$masterId);
         if (!$row || (string)($row['kode_barang'] ?? '') !== $kodeBarang) {
             return $this->json(false, 'Data master barang tidak ditemukan untuk kode barang ini.');
         }
 
+        $inputBy = $this->session->userdata('username') ?: $this->session->userdata('nama') ?: $this->session->userdata('nik') ?: 'system';
+        $sourceUsername = preg_replace('/[^A-Za-z0-9]+/', '_', strtolower(trim((string)$inputBy)));
+        $sourceKeterangan = preg_replace('/[^A-Za-z0-9]+/', '_', strtolower($keterangan));
+        $inputSource = trim($sourceUsername, '_') . '_manual_' . trim($sourceKeterangan, '_');
+        $inputSource = substr($inputSource, 0, 50);
+
         $saved = $this->stockopname->save_mobile_opname($row, [
             'qty_pcs' => (int)$qtyPcs,
             'qty_box' => (int)$qtyBox,
-            'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
+            'input_by' => $inputBy,
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
             'tim_opname' => $timOpname,
+            'input_source' => $inputSource,
         ]);
 
         if (!$saved) {
@@ -1012,9 +1039,10 @@ class C_Stockopname extends CI_Controller
         $wilayahRows = $this->stockopname->wilayah_by_ids($wilayahIds);
         $wilayahFilter = (int)$this->input->get('wilayah', true);
         if (!in_array($wilayahFilter, $wilayahIds, true)) $wilayahFilter = 0;
+        $requestKeyword = trim((string)$this->input->get('keyword', true));
         $page = max(1, (int)$this->input->get('page', true));
-        $perPage = 10;
-        $total = $this->stockopname->supervisor_request_opname_count($wilayahIds, $wilayahFilter);
+        $perPage = 5;
+        $total = $this->stockopname->supervisor_request_opname_count($wilayahIds, $wilayahFilter, $requestKeyword);
         $totalPages = max(1, (int)ceil($total / $perPage));
         $page = min($page, $totalPages);
         $data['supervisor_nama'] = $profile['nm_karyawan'] ?? ($this->session->userdata('nama') ?: '-');
@@ -1022,10 +1050,11 @@ class C_Stockopname extends CI_Controller
         $data['nama_wilayah'] = implode(', ', array_column($wilayahRows, 'nama_wilayah')) ?: '-';
         $data['wilayah_rows'] = $wilayahRows;
         $data['wilayah_filter'] = $wilayahFilter;
+        $data['request_keyword'] = $requestKeyword;
         $data['request_total'] = $total;
         $data['current_page'] = $page;
         $data['total_pages'] = $totalPages;
-        $data['request_rows'] = $this->stockopname->supervisor_request_opname_rows($wilayahIds, $wilayahFilter, $perPage, ($page - 1) * $perPage);
+        $data['request_rows'] = $this->stockopname->supervisor_request_opname_rows($wilayahIds, $wilayahFilter, $perPage, ($page - 1) * $perPage, $requestKeyword);
         $data['result_charts'] = $this->stockopname->supervisor_result_charts($wilayahIds);
         $this->stockopname->ensure_master_code_columns();
 
@@ -1066,11 +1095,80 @@ class C_Stockopname extends CI_Controller
         $data['wilayah_rows'] = $wilayahRows;
         $data['wilayah_filter'] = $wilayahFilter;
         $data['nama_wilayah'] = $wilayahMap[$wilayahFilter] ?? '-';
-        $data['comparison_rows'] = $this->stockopname->supervisor_wilayah_compare($wilayahFilter, 1000);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/admin/stockopname_supervisor_tracking.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_supervisor_tracking_list()
+    {
+        [, $wilayahIds] = $this->supervisor_profile_and_wilayah_ids();
+        $wilayahFilter = (int)$this->input->get('wilayah', true);
+        if (!in_array($wilayahFilter, $wilayahIds, true)) {
+            $wilayahFilter = (int)($wilayahIds[0] ?? 0);
+        }
+
+        $draw = (int)$this->input->get('draw', true);
+        $start = max(0, (int)$this->input->get('start', true));
+        $length = (int)$this->input->get('length', true);
+        $length = $length > 0 ? min($length, 100) : 10;
+        $searchValue = $this->input->get('search', true);
+        $search = is_array($searchValue) ? trim((string)($searchValue['value'] ?? '')) : '';
+        $customSearch = trim((string)$this->input->get('keyword', true));
+        if ($customSearch !== '') {
+            $search = $customSearch;
+        }
+        $statusFilter = strtoupper(trim((string)$this->input->get('status', true)));
+        if (!in_array($statusFilter, ['SAMA', 'RE-CHECK'], true)) {
+            $statusFilter = '';
+        }
+
+        $filters = ['search' => $search, 'status' => $statusFilter];
+        $recordsTotal = $this->stockopname->supervisor_wilayah_compare_count($wilayahFilter);
+        $recordsFiltered = $this->stockopname->supervisor_wilayah_compare_count($wilayahFilter, $filters);
+        $rows = $this->stockopname->supervisor_wilayah_compare($wilayahFilter, $length, $start, $filters);
+
+        $data = array_map(function ($row) {
+            $same = ($row['status_compare'] ?? '') === 'SAMA';
+            return [
+                'nama_barang' => html_escape($row['nama_barang'] ?? '-'),
+                'expired' => html_escape($this->format_tracking_expired($row['expired_date'] ?? '')),
+                'qty_tim_1' => number_format((int)($row['qty_tim_1'] ?? 0), 0, ',', '.'),
+                'qty_tim_2' => number_format((int)($row['qty_tim_2'] ?? 0), 0, ',', '.'),
+                'status' => '<span class="badge badge-' . ($same ? 'success' : 'warning') . '">' . ($same ? 'SAMA' : 'RE-CHECK') . '</span>',
+            ];
+        }, $rows);
+
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode([
+                'draw' => $draw,
+                'recordsTotal' => $recordsTotal,
+                'recordsFiltered' => $recordsFiltered,
+                'data' => $data,
+            ]));
+    }
+
+    private function format_tracking_expired($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '' || $value === '0000-00-00') {
+            return '-';
+        }
+
+        foreach (['Y-m-d', 'Y-m-d H:i:s', 'd/m/Y'] as $format) {
+            $date = DateTime::createFromFormat($format, $value);
+            if ($date instanceof DateTime) {
+                return $date->format('d/m/Y');
+            }
+        }
+
+        $timestamp = strtotime($value);
+        return $timestamp ? date('d/m/Y', $timestamp) : $value;
     }
 
     private function normalize_request_expired_date($value)
@@ -1147,6 +1245,7 @@ class C_Stockopname extends CI_Controller
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
             'wilayah' => $this->session->userdata('wilayah') ?: 0,
             'tim_opname' => $this->session->userdata('tim') ?: 0,
+            'input_source' => 'scan_qrcode',
         ]);
 
         if (!$saved) {
@@ -1233,7 +1332,7 @@ class C_Stockopname extends CI_Controller
             return $this->json(false, 'Data master barang manual tidak ditemukan.');
         }
 
-        $saved = $this->stockopname->save_mobile_opname($row, [
+        $saved = $this->stockopname->save_manual_input_to_opname($row, [
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
             'input_by' => $this->session->userdata('nama') ?: $this->session->userdata('username') ?: $this->session->userdata('nik') ?: 'system',
@@ -1241,17 +1340,19 @@ class C_Stockopname extends CI_Controller
             'tim_opname' => $this->session->userdata('tim') ?: 0,
         ]);
 
-        if (!$saved) {
-            return $this->json(false, 'Gagal menyimpan data opname manual.');
+        if (empty($saved['status'])) {
+            return $this->json(false, $saved['message'] ?? 'Gagal menyimpan data opname manual.');
         }
 
         $this->json(true, 'Data input manual berhasil langsung masuk ke hasil opname.', [
-            'id' => $saved,
+            'id' => $saved['data']['id'] ?? 0,
+            'manual_input_id' => $saved['data']['manual_input_id'] ?? 0,
             'kode_barang' => $row['kode_barang'],
             'nama_barang' => $row['nama_barang'],
             'qty_pcs' => $qtyPcs,
             'qty_box' => $qtyBox,
             'dimensi' => (int)($row['dimensi'] ?? 0),
+            'input_source' => $saved['data']['input_source'] ?? 'manual_input',
         ]);
     }
 
@@ -1448,9 +1549,22 @@ class C_Stockopname extends CI_Controller
     public function ajax_barang_pending_list()
     {
         $keyword = trim((string)$this->input->get('keyword', true));
+        $perPage = 10;
+        $page = (int)$this->input->get('page', true);
+        $page = $page > 0 ? $page : 1;
+        $totalRows = $this->stockopname->pending_count($keyword);
+        $totalPages = max(1, (int)ceil($totalRows / $perPage));
+        $page = min($page, $totalPages);
+
         $this->json(true, 'Data barang pending berhasil dimuat.', [
-            'rows' => $this->stockopname->pending_rows($keyword),
+            'rows' => $this->stockopname->pending_rows($keyword, $perPage, ($page - 1) * $perPage),
             'summary' => $this->stockopname->pending_summary(),
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_rows' => $totalRows,
+                'total_pages' => $totalPages,
+            ],
         ]);
     }
 

@@ -127,47 +127,6 @@
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <div class="so-panel h-100">
-                            <div class="so-panel-header">
-                                <h2 class="so-panel-title">Rekonsiliasi Stok per Tim</h2>
-                                <div class="so-filter">
-                                    <input type="search" class="form-control form-control-sm" id="soSearch" placeholder="Cari barang, kode, expired, lot">
-                                    <select class="form-control form-control-sm" id="soStatus">
-                                        <option value="">Semua status</option>
-                                        <option value="all_match">All Match</option>
-                                        <option value="tim_1">Match Tim 1</option>
-                                        <option value="tim_2">Match Tim 2</option>
-                                        <option value="not_match">Tidak Match (Belum Input)</option>
-                                        <option value="re_check">Re-check</option>
-                                    </select>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="soReset"><i class="fas fa-undo"></i>Reset</button>
-                                </div>
-                            </div>
-                            <div class="so-table-wrap">
-                                <table class="table table-sm table-hover table-bordered w-100" id="tableAdminStockopname">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Kode</th>
-                                            <th>Barang</th>
-                                            <th>Expired</th>
-                                            <th>Lot</th>
-                                            <th>Sistem</th>
-                                            <th>Tim 1</th>
-                                            <th>Selisih T1</th>
-                                            <th>Tim 2</th>
-                                            <th>Selisih T2</th>
-                                            <th>Status</th>
-                                            <th>Update</th>
-                                        </tr>
-                                    </thead>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </section>
     </div>
@@ -184,36 +143,6 @@
 <script>
 window.addEventListener('load', function () {
     var charts = {};
-    var table = $('#tableAdminStockopname').DataTable({
-        processing: true,
-        serverSide: true,
-        responsive: true,
-        searchDelay: 350,
-        lengthMenu: [[10, 25, 50], [10, 25, 50]],
-        ajax: {
-            url: '<?= base_url('admin/stockopname/list') ?>',
-            type: 'POST',
-            data: function (d) {
-                d.search = {value: $('#soSearch').val()};
-                d.status = $('#soStatus').val();
-            }
-        },
-        columns: [
-            {data: 'id', width: '50px'},
-            {data: 'kode_barang'},
-            {data: 'nama_barang'},
-            {data: 'expired_date', render: formatExpiredDate},
-            {data: 'no_lot'},
-            {data: 'qty_buku', className: 'text-right', render: formatNumber},
-            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 1); }},
-            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 1); }},
-            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 2); }},
-            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 2); }},
-            {data: 'status_opname', render: renderStatus},
-            {data: 'last_input', render: function (data) { return data || '-'; }}
-        ],
-        order: [[11, 'desc']]
-    });
 
     function formatNumber(value) {
         value = parseInt(value || 0, 10);
@@ -224,34 +153,6 @@ window.addEventListener('load', function () {
         if (!value) return '-';
         var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T].*)?$/);
         return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
-    }
-
-    function renderSelisih(value) {
-        value = parseInt(value || 0, 10);
-        var cls = value > 0 ? 'so-number-plus' : (value < 0 ? 'so-number-minus' : 'so-number-zero');
-        return '<span class="' + cls + '">' + value.toLocaleString('id-ID') + '</span>';
-    }
-
-    function renderTeamQty(row, team) {
-        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) return '<span class="text-muted">-</span>';
-        return formatNumber(row['qty_tim_' + team]);
-    }
-
-    function renderTeamDifference(row, team) {
-        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) return '<span class="text-muted">-</span>';
-        return renderSelisih(parseInt(row['qty_tim_' + team] || 0, 10) - parseInt(row.qty_buku || 0, 10));
-    }
-
-    function renderStatus(value) {
-        var labels = {
-            all_match: 'All Match',
-            tim_1: 'Match Tim 1',
-            tim_2: 'Match Tim 2',
-            not_match: 'Tidak Match',
-            re_check: 'Re-check'
-        };
-        var label = labels[value] || 'Re-check';
-        return '<span class="so-badge ' + value + '">' + label + '</span>';
     }
 
     function toast(icon, title) {
@@ -364,19 +265,7 @@ window.addEventListener('load', function () {
             .replace(/'/g, '&#039;');
     }
 
-    $('#soSearch').on('keyup', function () {
-        table.ajax.reload();
-    });
-    $('#soStatus').on('change', function () {
-        table.ajax.reload();
-    });
-    $('#soReset').on('click', function () {
-        $('#soSearch').val('');
-        $('#soStatus').val('');
-        table.ajax.reload();
-    });
     $('#btnRefreshStockopname').on('click', function () {
-        table.ajax.reload(null, false);
         loadWidgets(true);
     });
     loadWidgets(false);

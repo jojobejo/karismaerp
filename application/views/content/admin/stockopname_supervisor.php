@@ -384,35 +384,31 @@ $formatTime = static function ($value) {
 
                         <div class="sup-panel mb-3">
                             <div class="sup-panel-head">
-                                <h1 class="sup-title">Stockopname Result</h1>
-                            </div>
-                            <div class="sup-chart-grid">
-                                <div class="sup-chart-card">
-                                    <div class="sup-chart-title">All Barang</div>
-                                    <p class="sup-chart-meta" id="supAllMeta">0% match; Tim 1 atau Tim 2</p>
-                                    <div class="sup-chart-wrap"><canvas id="supAllChart"></canvas></div>
-                                </div>
-                                <div class="sup-chart-card">
-                                    <div class="sup-chart-title">By Expired Date + LOT</div>
-                                    <p class="sup-chart-meta" id="supExpiredMeta">0% match; Tim 1 atau Tim 2</p>
-                                    <div class="sup-chart-wrap"><canvas id="supExpiredChart"></canvas></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="sup-panel">
-                            <div class="sup-panel-head">
                                 <h1 class="sup-title">Daftar Request Opname</h1>
                                 <span class="sup-muted"><?= (int)($request_total ?? 0) ?> data</span>
                             </div>
                             <form method="get" action="<?= base_url('supervisi-opname') ?>" class="sup-filter">
-                                <label for="filterWilayah">Filter Wilayah</label>
-                                <select name="wilayah" id="filterWilayah" class="form-control" onchange="this.form.submit()">
-                                    <option value="0">Semua Wilayah Supervisi</option>
-                                    <?php foreach (($wilayah_rows ?? []) as $wilayahRow) : ?>
-                                        <option value="<?= (int)$wilayahRow['id'] ?>" <?= (int)$wilayah_filter === (int)$wilayahRow['id'] ? 'selected' : '' ?>><?= html_escape($wilayahRow['nama_wilayah']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <div class="form-group">
+                                    <label for="filterWilayah">Filter Wilayah</label>
+                                    <select name="wilayah" id="filterWilayah" class="form-control" onchange="this.form.submit()">
+                                        <option value="0">Semua Wilayah Supervisi</option>
+                                        <?php foreach (($wilayah_rows ?? []) as $wilayahRow) : ?>
+                                            <option value="<?= (int)$wilayahRow['id'] ?>" <?= (int)$wilayah_filter === (int)$wilayahRow['id'] ? 'selected' : '' ?>><?= html_escape($wilayahRow['nama_wilayah']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label for="filterKeyword">Cari Nama Barang Request Opname</label>
+                                    <div class="input-group">
+                                        <input type="text" name="keyword" id="filterKeyword" class="form-control" value="<?= html_escape($request_keyword ?? '') ?>" placeholder="Masukkan nama barang">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+                                            <?php if (trim((string)($request_keyword ?? '')) !== '') : ?>
+                                                <a class="btn btn-outline-secondary" href="<?= base_url('supervisi-opname?wilayah=' . (int)$wilayah_filter) ?>"><i class="fas fa-times"></i></a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
                             </form>
                             <div class="p-3">
                                 <?php if (empty($request_rows)) : ?>
@@ -445,7 +441,12 @@ $formatTime = static function ($value) {
                                         <?php endforeach; ?>
                                     </div>
                                     <?php if (($total_pages ?? 1) > 1) : ?>
-                                        <?php $filterQuery = (int)$wilayah_filter > 0 ? '&wilayah=' . (int)$wilayah_filter : ''; ?>
+                                        <?php
+                                        $queryParams = [];
+                                        if ((int)$wilayah_filter > 0) $queryParams['wilayah'] = (int)$wilayah_filter;
+                                        if (trim((string)($request_keyword ?? '')) !== '') $queryParams['keyword'] = (string)$request_keyword;
+                                        $filterQuery = $queryParams ? '&' . http_build_query($queryParams) : '';
+                                        ?>
                                         <div class="sup-pagination">
                                             <a class="btn btn-outline-secondary btn-sm <?= $current_page <= 1 ? 'disabled' : '' ?>" href="<?= base_url('supervisi-opname?page=' . max(1, $current_page - 1) . $filterQuery) ?>"><i class="fas fa-chevron-left"></i> Sebelumnya</a>
                                             <span class="sup-muted">Halaman <?= (int)$current_page ?> / <?= (int)$total_pages ?></span>
@@ -453,6 +454,24 @@ $formatTime = static function ($value) {
                                         </div>
                                     <?php endif; ?>
                                 <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="sup-panel">
+                            <div class="sup-panel-head">
+                                <h1 class="sup-title">Stockopname Result</h1>
+                            </div>
+                            <div class="sup-chart-grid">
+                                <div class="sup-chart-card">
+                                    <div class="sup-chart-title">All Barang</div>
+                                    <p class="sup-chart-meta" id="supAllMeta">0% match; Tim 1 atau Tim 2</p>
+                                    <div class="sup-chart-wrap"><canvas id="supAllChart"></canvas></div>
+                                </div>
+                                <div class="sup-chart-card">
+                                    <div class="sup-chart-title">By Expired Date + LOT</div>
+                                    <p class="sup-chart-meta" id="supExpiredMeta">0% match; Tim 1 atau Tim 2</p>
+                                    <div class="sup-chart-wrap"><canvas id="supExpiredChart"></canvas></div>
+                                </div>
                             </div>
                         </div>
                     </div>

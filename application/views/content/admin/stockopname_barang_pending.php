@@ -35,6 +35,7 @@ foreach ($pendingMasterOptions as $option) {
                     .pending-stat{border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:12px}
                     .pending-stat span{display:block;color:#64748b;font-size:12px}.pending-stat strong{font-size:20px}
                     .pending-code{font-family:monospace;font-weight:700}.pending-table-wrap{max-height:620px;overflow:auto}
+                    .pending-pagination{padding:12px 16px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
                     .pending-panel .select2-container{width:100%!important}
                 </style>
                 <div class="row mb-3">
@@ -107,19 +108,22 @@ foreach ($pendingMasterOptions as $option) {
                                 <table class="table table-sm table-hover mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Kode Faktur</th>
-                                            <th>Kode</th>
-                                            <th>Expired</th>
+                                            <th>Kode Barang</th>
                                             <th>Nama Barang</th>
+                                            <th>Expired</th>
                                             <th class="text-right">Qty</th>
-                                            <th class="text-right">PCS</th>
                                             <th class="text-right">Box</th>
+                                            <th class="text-right">PCS</th>
                                             <th>Status</th>
                                             <th class="text-center">Aksi</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="barangPendingRows"><tr><td colspan="9" class="text-center text-muted p-4">Memuat data...</td></tr></tbody>
+                                    <tbody id="barangPendingRows"><tr><td colspan="8" class="text-center text-muted p-4">Memuat data...</td></tr></tbody>
                                 </table>
+                            </div>
+                            <div class="pending-pagination">
+                                <div class="text-muted small" id="pendingPageInfo">Menampilkan 0-0 dari 0 data</div>
+                                <ul class="pagination pagination-sm mb-0" id="pendingPagination"></ul>
                             </div>
                         </div>
                     </div>
@@ -140,6 +144,7 @@ window.addEventListener('load', function () {
     }
     var masterRows = <?= json_encode($pendingMasterOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?> || [];
     var masterByCode = {};
+    var pendingPage = 1;
     masterRows.forEach(function (row) {
         var kode = String(row.kode_barang || '');
         if (!masterByCode[kode]) { masterByCode[kode] = []; }
@@ -148,6 +153,12 @@ window.addEventListener('load', function () {
     function esc(value) { return String(value === null || value === undefined ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
     function notify(icon, message) { if (typeof Swal !== 'undefined') { Swal.fire({toast:true,position:'top-end',icon:icon,title:message,showConfirmButton:false,timer:2600}); } else { alert(message); } }
     function toInt(value) { var parsed = parseInt(value, 10); return isNaN(parsed) || parsed < 0 ? 0 : parsed; }
+    function formatDate(value) {
+        value = String(value || '').trim();
+        if (!value || value === '0000-00-00') { return '-'; }
+        var match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : value;
+    }
     function initKodeBarangSelect2() {
         if (!$.fn.select2) { return; }
         $('#kodeBarang').select2({
@@ -239,6 +250,26 @@ window.addEventListener('load', function () {
         $('#statTotalPcs').text(summary.total_qty_pcs || 0);
         $('#statTotalBox').text(summary.total_qty_box || 0);
     }
+    function renderPagination(pagination) {
+        pagination = pagination || {};
+        var page = toInt(pagination.page) || 1;
+        var perPage = toInt(pagination.per_page) || 10;
+        var totalRows = toInt(pagination.total_rows);
+        var totalPages = Math.max(1, toInt(pagination.total_pages) || 1);
+        var fromRow = totalRows > 0 ? ((page - 1) * perPage) + 1 : 0;
+        var toRow = Math.min(totalRows, page * perPage);
+        var startPage = Math.max(1, page - 2);
+        var endPage = Math.min(totalPages, page + 2);
+        var html = '';
+
+        $('#pendingPageInfo').text('Menampilkan ' + fromRow + '-' + toRow + ' dari ' + totalRows + ' data');
+        html += '<li class="page-item ' + (page <= 1 ? 'disabled' : '') + '"><button type="button" class="page-link btn-page-pending" data-page="' + (page - 1) + '"><i class="fas fa-chevron-left"></i></button></li>';
+        for (var i = startPage; i <= endPage; i++) {
+            html += '<li class="page-item ' + (i === page ? 'active' : '') + '"><button type="button" class="page-link btn-page-pending" data-page="' + i + '">' + i + '</button></li>';
+        }
+        html += '<li class="page-item ' + (page >= totalPages ? 'disabled' : '') + '"><button type="button" class="page-link btn-page-pending" data-page="' + (page + 1) + '"><i class="fas fa-chevron-right"></i></button></li>';
+        $('#pendingPagination').html(html);
+    }
     function editPendingRow(id) {
         var row = pendingRows[id];
         if (!row) { notify('error', 'Data pending tidak ditemukan.'); return; }
@@ -274,26 +305,27 @@ window.addEventListener('load', function () {
             notify('error', 'Server gagal memuat detail data pending');
         });
     }
-    function loadRows(resetSearch) {
+    function loadRows(resetSearch, page) {
         if (resetSearch) { $('#searchPending').val(''); }
-        $('#barangPendingRows').html('<tr><td colspan="9" class="text-center text-muted p-4">Memuat data...</td></tr>');
-        $.getJSON('<?= base_url('admin/stockopname/barang-pending/list') ?>', {keyword: $.trim($('#searchPending').val())}, function (res) {
+        pendingPage = page || pendingPage || 1;
+        $('#barangPendingRows').html('<tr><td colspan="8" class="text-center text-muted p-4">Memuat data...</td></tr>');
+        $.getJSON('<?= base_url('admin/stockopname/barang-pending/list') ?>', {keyword: $.trim($('#searchPending').val()), page: pendingPage}, function (res) {
             if (!res.status) { notify('error', res.message || 'Gagal memuat data'); return; }
             updateSummary(res.data.summary);
+            renderPagination(res.data.pagination);
             var rows = res.data.rows || [];
             pendingRows = {};
-            if (!rows.length) { $('#barangPendingRows').html('<tr><td colspan="9" class="text-center text-muted p-4">Belum ada data pending.</td></tr>'); return; }
+            if (!rows.length) { $('#barangPendingRows').html('<tr><td colspan="8" class="text-center text-muted p-4">Belum ada data pending.</td></tr>'); return; }
             $('#barangPendingRows').html(rows.map(function (row) {
                 pendingRows[row.id] = row;
                 var badge = parseInt(row.master_id || 0, 10) > 0 ? '<span class="badge badge-success">Masuk master</span>' : '<span class="badge badge-warning">Belum ada master</span>';
                 return '<tr>' +
-                    '<td class="pending-code">' + esc(row.kd_do || '-') + '</td>' +
                     '<td class="pending-code">' + esc(row.kode_barang) + '</td>' +
-                    '<td>' + esc(row.expired_date) + '</td>' +
                     '<td>' + esc(row.nama_barang) + '</td>' +
+                    '<td>' + esc(formatDate(row.expired_date)) + '</td>' +
                     '<td class="text-right">' + esc(row.qty) + '</td>' +
-                    '<td class="text-right">' + esc(row.qty_pcs) + '</td>' +
                     '<td class="text-right">' + esc(row.qty_box) + '</td>' +
+                    '<td class="text-right">' + esc(row.qty_pcs) + '</td>' +
                     '<td>' + badge + '</td>' +
                     '<td class="text-center"><button type="button" class="btn btn-outline-primary btn-sm btn-edit-pending" data-id="' + esc(row.id) + '"><i class="fas fa-edit"></i></button> <button type="button" class="btn btn-outline-danger btn-sm btn-delete-pending" data-id="' + esc(row.id) + '"><i class="fas fa-trash"></i></button></td>' +
                     '</tr>';
@@ -306,13 +338,18 @@ window.addEventListener('load', function () {
                 requestedEditId = '';
             }
         }).fail(function () {
-            $('#barangPendingRows').html('<tr><td colspan="9" class="text-center text-danger p-4">Gagal memuat data pending.</td></tr>');
+            $('#barangPendingRows').html('<tr><td colspan="8" class="text-center text-danger p-4">Gagal memuat data pending.</td></tr>');
         });
     }
     $('#btnResetPending').on('click', resetForm);
-    $('#btnRefreshPending').on('click', function () { loadRows(true); });
-    $('#btnCariPending').on('click', function () { loadRows(false); });
-    $('#searchPending').on('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); loadRows(false); } });
+    $('#btnRefreshPending').on('click', function () { loadRows(true, 1); });
+    $('#btnCariPending').on('click', function () { loadRows(false, 1); });
+    $('#searchPending').on('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); loadRows(false, 1); } });
+    $('#pendingPagination').on('click', '.btn-page-pending', function () {
+        var page = toInt($(this).data('page'));
+        if (!page || $(this).closest('.page-item').hasClass('disabled') || $(this).closest('.page-item').hasClass('active')) { return; }
+        loadRows(false, page);
+    });
     $('#barangPendingRows').on('click', '.btn-edit-pending', function () {
         editPendingRow($(this).data('id'));
     });
@@ -320,7 +357,7 @@ window.addEventListener('load', function () {
         var id = $(this).data('id');
         var runDelete = function () {
             $.ajax({url:'<?= base_url('admin/stockopname/barang-pending/delete') ?>',type:'POST',dataType:'json',data:{id:id}})
-                .done(function (res) { notify(res.status ? 'success' : 'error', res.message || 'Data diproses'); if (res.status) { resetForm(); loadRows(false); } })
+                .done(function (res) { notify(res.status ? 'success' : 'error', res.message || 'Data diproses'); if (res.status) { resetForm(); loadRows(false, pendingPage); } })
                 .fail(function () { notify('error', 'Server gagal menghapus data pending'); });
         };
         if (typeof Swal !== 'undefined') {
@@ -338,7 +375,7 @@ window.addEventListener('load', function () {
                 if (!res.status) { notify('error', res.message || 'Gagal menyimpan data'); return; }
                 notify('success', res.message || 'Barang pending berhasil disimpan');
                 resetForm();
-                loadRows(false);
+                loadRows(false, pendingPage);
             })
             .fail(function (xhr) { notify('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Server gagal menyimpan data'); })
             .always(function () {
@@ -350,6 +387,6 @@ window.addEventListener('load', function () {
     $('#qtyPcs,#qtyBox').on('input', recalcQty);
     initKodeBarangSelect2();
     populateExpiredOptions('', '');
-    loadRows(false);
+    loadRows(false, 1);
 });
 </script>

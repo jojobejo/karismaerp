@@ -21,6 +21,7 @@
     $input_rows = $input_rows ?? [];
     $master_items = $master_items ?? [];
     $master_item_options = $master_item_options ?? [];
+    $pending_totals = $pending_totals ?? [];
     $recycle_rows = $recycle_rows ?? [];
     $request_rows = $request_rows ?? [];
     $edit_logs = $edit_logs ?? [];
@@ -35,6 +36,7 @@
     $status = $compare['status_opname'] ?? 're_check';
     $status_label = ['all_match' => 'All Match', 'tim_1' => 'Tim 1 Match', 'tim_2' => 'Tim 2 Match', 're_check' => 'Re-Check'][$status] ?? 'Re-Check';
     $expired_key = function ($expired) { return trim((string)$expired); };
+    $pending_key = function ($nama_barang, $expired) { return trim((string)$nama_barang) . '|' . trim((string)$expired); };
     $stock_by_expired = [];
     $stock_tab_counts = ['main' => 0, 'zero' => 0, 'all' => 0];
     foreach ($master_items as $row) {
@@ -50,7 +52,7 @@
         }
     }
     $source_label = function ($value) {
-        $map = ['manual' => 'Manual Request', 'request' => 'Manual Request', 'manual input' => 'Manual Input', 'request master item' => 'Request Master Item', 'manual opname request' => 'Manual Opname Request', 'master data request opname' => 'Master Data Request Opname', 'adjustment' => 'Adjustment', 'repost' => 'Repost', 'system' => 'System'];
+        $map = ['manual' => 'Manual Request', 'request' => 'Manual Request', 'manual input' => 'Manual Input', 'manual_input' => 'Manual Input', 'scan_qrcode' => 'Scan QRCode', 'request master item' => 'Request Master Item', 'manual opname request' => 'Manual Opname Request', 'master data request opname' => 'Master Data Request Opname', 'adjustment' => 'Adjustment', 'repost' => 'Repost', 'system' => 'System'];
         $parts = array_filter(array_map('trim', explode(',', strtolower((string)$value))));
         return implode(', ', array_map(function ($part) use ($map) { return $map[$part] ?? ucwords(str_replace('_', ' ', $part)); }, $parts)) ?: '-';
     };
@@ -105,9 +107,11 @@
                                 <div class="table-responsive">
                                     <?php if (!$master_items) : ?><div class="so-empty">Data stock buku tidak ditemukan.</div><?php else : ?>
                                     <table class="table table-bordered table-hover so-table">
-                                        <thead><tr><th>Expired Date</th><th>Qty Buku</th><th>Tim 1</th><th>Tim 2</th><th>Status</th><th>Pilih</th><th>Hapus</th></tr></thead>
+                                        <thead><tr><th>Expired Date</th><th>Qty Buku</th><th>Pending</th><th>Tim 1</th><th>Tim 2</th><th>Status</th><th>Pilih</th><th>Hapus</th></tr></thead>
                                         <tbody><?php foreach ($master_items as $row) :
                                             $book_qty = (int)($row['qty_buku'] ?? $row['qty'] ?? 0);
+                                            $pending_row = $pending_totals[$pending_key($row['nama_barang'] ?? $nama_barang, $row['expired_date'] ?? '')] ?? ['qty' => 0];
+                                            $pending_qty = (int)($pending_row['qty'] ?? 0);
                                             $team_1_qty = (int)($row['qty_tim_1'] ?? 0);
                                             $team_2_qty = (int)($row['qty_tim_2'] ?? 0);
                                             $team_1_has_input = (int)($row['input_tim_1'] ?? 0) > 0;
@@ -124,7 +128,7 @@
                                             else { $lot_status = 'Not Match'; $lot_status_class = 'diff'; }
                                             $filter_key = $expired_key($row['expired_date'] ?? '');
                                         ?>
-                                            <tr class="js-stock-book-row" data-stock-tab="<?= $e($stock_tab) ?>"><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input expired date ini"></td><td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></td></tr>
+                                            <tr class="js-stock-book-row" data-stock-tab="<?= $e($stock_tab) ?>"><td><?= $e($format_expired_date($row['expired_date'] ?? '')) ?></td><td class="text-right"><?= number_format($book_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($pending_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_1_qty, 0, ',', '.') ?></td><td class="text-right"><?= number_format($team_2_qty, 0, ',', '.') ?></td><td class="text-center"><span class="so-lot-status <?= $lot_status_class ?>"><?= $lot_status ?></span></td><td class="text-center"><input type="checkbox" class="js-lot-filter" data-key="<?= $e($filter_key) ?>" title="Tampilkan hasil input expired date ini"></td><td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-master-item" data-expired="<?= $e($row['expired_date'] ?? '') ?>" title="Hapus stock buku"><i class="fas fa-trash"></i></button></td></tr>
                                         <?php endforeach ?></tbody>
                                     </table><?php endif ?>
                                     <div class="so-empty so-filter-empty" id="stockBookFilterEmpty">Data tidak ditemukan untuk tab ini.</div>
@@ -169,7 +173,7 @@
                                             <td class="text-center"><div class="d-flex justify-content-center" style="gap:5px"><button type="button" class="btn btn-outline-primary btn-sm so-action-btn js-edit-opname" title="Edit Qty"><i class="fas fa-edit"></i></button><button type="button" class="btn btn-outline-danger btn-sm so-action-btn js-delete-opname" title="Delete"><i class="fas fa-trash"></i></button></div></td>
                                         </tr>
                                     <?php endforeach ?></tbody>
-                                </table><div class="so-empty so-filter-empty" id="inputFilterEmpty">Pilih expired date pada Stock Buku untuk menampilkan data tim.</div><?php endif ?>
+                                </table><div class="p-2 text-center js-input-pagination"></div><div class="so-empty so-filter-empty" id="inputFilterEmpty">Pilih expired date pada Stock Buku untuk menampilkan data tim.</div><?php endif ?>
                             </div>
                         </div>
                     </div>
@@ -239,10 +243,10 @@
                     <input type="hidden" name="expired_date" id="request_expired_date">
                     <div class="so-modal-context"><strong id="request_nama_barang">-</strong><div class="so-muted"><span id="request_expired_text">-</span> | Dimensi <span id="request_dimensi_text">0</span></div></div>
                     <div class="row">
-                        <div class="col-md-3"><div class="so-field-card mb-3"><label>Tim Opname</label><select class="form-control" name="tim_opname" id="request_tim_opname" required><option value="1">Tim 1</option><option value="2">Tim 2</option></select></div></div>
+                        <div class="col-md-3"><div class="so-field-card is-locked mb-3"><label>Tim Opname</label><input type="hidden" name="tim_opname" id="request_tim_opname_value"><select class="form-control so-control-locked" id="request_tim_opname" disabled><option value="1">Tim 1</option><option value="2">Tim 2</option></select></div></div>
                         <div class="col-md-3"><div class="so-field-card mb-3"><label>Qty Total</label><input type="number" class="form-control" id="request_qty" readonly></div></div>
-                        <div class="col-md-3"><div class="so-field-card is-editable mb-3"><label>Qty Box</label><input type="number" class="form-control" name="qty_box" id="request_qty_box" min="0" step="1" required></div></div>
-                        <div class="col-md-3"><div class="so-field-card is-editable mb-3"><label>Qty PCS</label><input type="number" class="form-control" name="qty_pcs" id="request_qty_pcs" min="0" step="1" required></div></div>
+                        <div class="col-md-3"><div class="so-field-card is-locked mb-3"><label>Qty Box</label><input type="number" class="form-control" name="qty_box" id="request_qty_box" min="0" step="1" readonly></div></div>
+                        <div class="col-md-3"><div class="so-field-card is-locked mb-3"><label>Qty PCS</label><input type="number" class="form-control" name="qty_pcs" id="request_qty_pcs" min="0" step="1" readonly></div></div>
                     </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Batal</button><button type="submit" class="btn btn-success" id="btnSaveRequest"><i class="fas fa-plus"></i> Tambah ke Opname</button></div>
@@ -264,6 +268,7 @@
                         <div class="col-md-3"><div class="so-field-card mb-3"><label>Qty Total</label><input type="number" class="form-control" id="input_qty" readonly></div></div>
                         <div class="col-md-6"><div class="so-field-card is-editable mb-3"><label>Qty Box</label><input type="number" class="form-control" name="qty_box" id="input_qty_box" min="0" step="1" required></div></div>
                         <div class="col-md-6"><div class="so-field-card is-editable mb-3"><label>Qty PCS</label><input type="number" class="form-control" name="qty_pcs" id="input_qty_pcs" min="0" step="1" required></div></div>
+                        <div class="col-md-12"><div class="so-field-card is-editable mb-3"><label>Keterangan</label><input type="text" class="form-control" name="keterangan" id="input_keterangan" maxlength="80" required></div></div>
                     </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary" id="btnSaveInputOpname"><i class="fas fa-save"></i> Simpan Input</button></div>
@@ -315,6 +320,8 @@ $(function () {
     var activeTeam = 1;
     var activeStockBookTab = 'main';
     var selectedLotKeys = {};
+    var inputCurrentPage = 1;
+    var inputPageSize = 10;
 
     function toast(message, success) {
         $('#soToast').stop(true, true).removeClass('success error').addClass(success ? 'success' : 'error').text(message).fadeIn(150).delay(2600).fadeOut(250);
@@ -355,15 +362,28 @@ $(function () {
     }
     function applyOpnameFilters() {
         var checkedKeys = Object.keys(selectedLotKeys).filter(function (key) { return selectedLotKeys[key]; });
-        var visible = 0;
+        var matchedRows = $();
         $('.js-select-opname').each(function () {
             var show = String($(this).attr('data-team')) === String(activeTeam) && checkedKeys.indexOf(String($(this).attr('data-key'))) !== -1;
-            $(this).toggle(show);
-            if (show) visible++;
+            if (show) matchedRows = matchedRows.add(this);
         });
-        $('#inputFilterEmpty').toggle(visible === 0).text(
+        $('.js-select-opname').hide();
+        var total = matchedRows.length;
+        var totalPages = Math.max(1, Math.ceil(total / inputPageSize));
+        inputCurrentPage = Math.max(1, Math.min(inputCurrentPage, totalPages));
+        matchedRows.slice((inputCurrentPage - 1) * inputPageSize, inputCurrentPage * inputPageSize).show();
+        renderInputPagination(total, totalPages);
+        $('#inputFilterEmpty').toggle(total === 0).text(
             checkedKeys.length ? 'Belum ada data opname Tim ' + activeTeam + ' untuk expired date yang dipilih.' : 'Pilih expired date pada Stock Buku untuk menampilkan data Tim ' + activeTeam + '.'
         );
+    }
+    function renderInputPagination(total, totalPages) {
+        var holder = $('.js-input-pagination').empty();
+        if (total <= inputPageSize) return;
+        for (var i = 1; i <= totalPages; i++) {
+            holder.append('<button type="button" class="btn btn-sm mr-1 ' + (i === inputCurrentPage ? 'btn-primary' : 'btn-outline-secondary') + ' js-input-page" data-page="' + i + '">' + i + '</button>');
+        }
+        holder.append('<span class="so-muted ml-2">Halaman ' + inputCurrentPage + ' dari ' + totalPages + ' | ' + total + ' data</span>');
     }
     function restoreOpnameFilters() {
         $('.js-lot-filter').each(function () {
@@ -416,6 +436,7 @@ $(function () {
         }
         $('#input_tim_opname').val(String(activeTeam));
         $('#input_qty_box,#input_qty_pcs').val(0);
+        $('#input_keterangan').val('');
         var row = selectedInputMaster();
         inputDimensi = parseInt((row && row.dimensi) || productDimensi || 0, 10) || 0;
         $('#input_dimensi_text').text(inputDimensi.toLocaleString('id-ID'));
@@ -448,6 +469,7 @@ $(function () {
             if (key) selectedLotKeys[key] = true;
             total++;
         });
+        inputCurrentPage = 1;
         restoreOpnameFilters();
         toast(total ? 'Semua item pada tab aktif sudah dicentang.' : 'Tidak ada item yang bisa dicentang pada tab ini.', !!total);
     });
@@ -458,11 +480,13 @@ $(function () {
             if (key) selectedLotKeys[key] = false;
             total++;
         });
+        inputCurrentPage = 1;
         restoreOpnameFilters();
         toast(total ? 'Centang pada tab aktif sudah dikosongkan.' : 'Tidak ada item yang bisa dikosongkan pada tab ini.', !!total);
     });
     $(document).on('change', '.js-lot-filter', function () {
         selectedLotKeys[String($(this).attr('data-key'))] = $(this).is(':checked');
+        inputCurrentPage = 1;
         applyOpnameFilters();
     });
     $(document).on('click', '.js-delete-master-item', function () {
@@ -476,6 +500,12 @@ $(function () {
     $(document).on('click', '.js-team-tab', function () {
         activeTeam = parseInt($(this).attr('data-team'), 10) || 1;
         $('.js-team-tab').removeClass('is-active'); $(this).addClass('is-active');
+        selectedRow = null; $('.js-select-opname').removeClass('is-selected');
+        inputCurrentPage = 1;
+        applyOpnameFilters();
+    });
+    $(document).on('click', '.js-input-page', function () {
+        inputCurrentPage = parseInt($(this).attr('data-page'), 10) || 1;
         selectedRow = null; $('.js-select-opname').removeClass('is-selected');
         applyOpnameFilters();
     });
@@ -541,18 +571,18 @@ $(function () {
         var row = {};
         try { row = JSON.parse($(this).attr('data-row') || '{}'); } catch (e) { row = {}; }
         var box = parseInt(row.qty_box || 0, 10) || 0, pcs = parseInt(row.qty_pcs || 0, 10) || 0, qty = parseInt(row.qty || 0, 10) || 0;
-        var lockedManualInput = String(row.status || row.input_source || '').toLowerCase() === 'manual input';
         requestDimensi = box > 0 ? Math.max(0, Math.floor((qty - pcs) / box)) : 0;
         if (requestDimensi <= 0) requestDimensi = parseInt(row.dimensi || 0, 10) || 0;
+        var requestTeam = parseInt(row.tim_opname || 0, 10) || activeTeam;
         $('#request_manual_master_id').val(row.manual_master_id || row.id || '');
         $('#request_kode_barang').val(row.kode_barang || pageKodeBarang);
         $('#request_expired_date').val(row.expired_date || '');
         $('#request_nama_barang').text(row.nama_barang || pageKodeBarang);
         $('#request_expired_text').text(formatExpiredDate(row.expired_date)); $('#request_dimensi_text').text(requestDimensi);
-        $('#request_tim_opname').val(String(lockedManualInput ? (parseInt(row.tim_opname || 0, 10) || activeTeam) : activeTeam));
+        $('#request_tim_opname,#request_tim_opname_value').val(String(requestTeam));
         $('#request_qty_box').val(box); $('#request_qty_pcs').val(pcs); $('#request_qty').val(qty);
-        $('#request_tim_opname').toggleClass('so-control-locked', lockedManualInput).attr('aria-disabled', lockedManualInput ? 'true' : 'false');
-        $('#request_qty_box,#request_qty_pcs').prop('readonly', lockedManualInput).closest('.so-field-card').toggleClass('is-editable', !lockedManualInput).toggleClass('is-locked', lockedManualInput);
+        $('#request_tim_opname').prop('disabled', true).attr('aria-disabled', 'true');
+        $('#request_qty_box,#request_qty_pcs').prop('readonly', true).closest('.so-field-card').removeClass('is-editable').addClass('is-locked');
         $('#addRequestAlert').addClass('d-none').text('');
         $('#modalAddRequest').modal('show');
     });
@@ -577,7 +607,7 @@ $(function () {
         event.preventDefault();
         var button = $('#btnSaveRequest').prop('disabled', true), alertBox = $('#addRequestAlert').addClass('d-none');
         var filterKey = $('#request_expired_date').val();
-        activeTeam = parseInt($('#request_tim_opname').val(), 10) || 1;
+        activeTeam = parseInt($('#request_tim_opname_value').val(), 10) || 1;
         $.post(urls.addRequest, $(this).serialize(), null, 'json').done(function (res) {
             if (!res || !res.status) { alertBox.removeClass('d-none').text((res && res.message) || 'Gagal menambahkan request item.'); return; }
             selectedLotKeys[filterKey] = true;

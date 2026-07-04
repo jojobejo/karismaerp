@@ -51,7 +51,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Portal';
+$route['default_controller'] = 'Auth';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
@@ -75,6 +75,7 @@ $route['admin/stockopname/monitoring/summary']     = 'admin/C_Stockopname/monito
 $route['admin/stockopname/monitoring/activity']    = 'admin/C_Stockopname/monitoring_activity';
 $route['admin/stockopname/monitoring/compare-all'] = 'admin/C_Stockopname/monitoring_compare_all';
 $route['admin/stockopname/monitoring/compare-lot'] = 'admin/C_Stockopname/monitoring_compare_lot';
+$route['admin/stockopname/pending-mode']           = 'admin/C_Stockopname/ajax_set_pending_calculation_mode';
 $route['admin/stockopname/monitoring/export-excel/(:any)'] = 'admin/C_Stockopname/monitoring_export_excel/$1';
 $route['admin/stockopname/monitoring/export-excel'] = 'admin/C_Stockopname/monitoring_export_excel';
 $route['admin/stockopname/detail_input_opname/update'] = 'admin/C_Stockopname/ajax_update_input_opname';
@@ -104,6 +105,7 @@ $route['stockopname/history-input/delete']         = 'admin/C_Stockopname/ajax_d
 $route['supervisi-opname']                         = 'admin/C_Stockopname/supervisor_opname';
 $route['supervisi-opname/afirmasi']                = 'admin/C_Stockopname/ajax_supervisor_affirm_request';
 $route['supervisi-opname/tracking']                = 'admin/C_Stockopname/supervisor_tracking';
+$route['supervisi-opname/tracking/list']           = 'admin/C_Stockopname/ajax_supervisor_tracking_list';
 $route['admin/stockopname/history-input']          = 'admin/C_Stockopname/history_input';
 $route['admin/stockopname/history-input/delete']   = 'admin/C_Stockopname/ajax_delete_history_input';
 $route['admin/stockopname/master_opname']          = 'admin/C_Stockopname/master_barang';

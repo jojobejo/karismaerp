@@ -20,6 +20,7 @@
     $manual_input = $input_source['manual'] ?? [];
     $request_input = $input_source['request'] ?? [];
     $pending_summary = $pending_summary ?? ($monitoring_summary['pending_summary'] ?? []);
+    $pending_mode = in_array(($pending_mode ?? ($pending_summary['mode'] ?? 'add')), ['add', 'subtract'], true) ? ($pending_mode ?? ($pending_summary['mode'] ?? 'add')) : 'add';
     $so_metric = function ($team, $group, $key, $default = 0) {
         return $team[$group][$key] ?? $default;
     };
@@ -108,12 +109,15 @@
                     .om-source-open i{margin-right:0}
                     .om-source-value{font-size:28px;font-weight:850;color:#111827;line-height:1.05;margin-top:8px}
                     .om-source-last{font-size:12px;color:#64748b;margin-top:10px}
+                    .om-filter{display:grid;grid-template-columns:minmax(220px,1fr) 180px 96px;gap:10px}
+                    .om-number-plus{color:#15803d;font-weight:800}.om-number-minus{color:#b91c1c;font-weight:800}.om-number-zero{color:#374151;font-weight:800}
+                    .om-table-wrap{padding:16px}
                     .table td,.table th{vertical-align:middle}.btn i{margin-right:5px}.progress{height:8px;border-radius:99px}
                     .om-action-btn{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}.om-action-btn i{margin-right:0}
                     .om-wilayah-table th{white-space:nowrap;font-size:11px;text-transform:uppercase;color:#64748b}.om-wilayah-table td{white-space:nowrap}
                     @media(min-width:1200px){.om-log{max-height:610px}}
                     @media(max-width:992px){.om-result-grid{grid-template-columns:1fr}}
-                    @media(max-width:768px){.content-header h1{font-size:22px}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
+                    @media(max-width:768px){.content-header h1{font-size:22px}.om-filter{grid-template-columns:1fr}.om-panel-header,.om-result-head{align-items:flex-start;flex-direction:column}.om-stat-value,.om-result-value{font-size:25px}}
                 </style>
 
                 <div class="row">
@@ -230,6 +234,15 @@
                                     </div>
                                     <div class="om-source-value js-total-input"><?= number_format((int)($pending_summary['total_item'] ?? 0), 0, ',', '.') ?></div>
                                     <div class="om-source-last">Qty: <span class="js-total-qty"><?= number_format((int)($pending_summary['total_qty'] ?? 0), 0, ',', '.') ?></span> | Terakhir: <span class="js-last-input"><?= $so_e($pending_summary['last_input'] ?? '-') ?></span></div>
+                                    <form id="monitoringPendingModeForm" class="input-group input-group-sm mt-2">
+                                        <select id="monitoringPendingMode" name="mode" class="form-control">
+                                            <option value="add" <?= $pending_mode === 'add' ? 'selected' : '' ?>>Qty dasar + pending</option>
+                                            <option value="subtract" <?= $pending_mode === 'subtract' ? 'selected' : '' ?>>Qty dasar - pending</option>
+                                        </select>
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-primary" type="submit"><i class="fas fa-save"></i></button>
+                                        </div>
+                                    </form>
                                 </div>
                                 <div class="om-source-item request" data-source="request">
                                     <div class="om-source-head">
@@ -311,6 +324,46 @@
                                             </tr>
                                         <?php endforeach ?>
                                     </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="om-panel h-100">
+                            <div class="om-panel-header">
+                                <h2 class="om-title">Rekonsiliasi Stok per Tim</h2>
+                                <div class="om-filter">
+                                    <input type="search" class="form-control form-control-sm" id="omStockSearch" placeholder="Cari barang, kode, expired, lot">
+                                    <select class="form-control form-control-sm" id="omStockStatus">
+                                        <option value="">Semua status</option>
+                                        <option value="all_match">All Match</option>
+                                        <option value="tim_1">Match Tim 1</option>
+                                        <option value="tim_2">Match Tim 2</option>
+                                        <option value="not_match">Tidak Match (Belum Input)</option>
+                                        <option value="re_check">Re-check</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="omStockReset"><i class="fas fa-undo"></i>Reset</button>
+                                </div>
+                            </div>
+                            <div class="om-table-wrap">
+                                <table class="table table-sm table-hover table-bordered w-100" id="tableMonitoringStockTeam">
+                                    <thead>
+                                        <tr>
+                                            <th>Nama Barang</th>
+                                            <th>expired</th>
+                                            <th>Saldo Buku</th>
+                                            <th>Pending</th>
+                                            <th>Saldo Sistem</th>
+                                            <th>Tim 1</th>
+                                            <th>Selisih T1</th>
+                                            <th>Tim 2</th>
+                                            <th>Selisih T2</th>
+                                            <th>#</th>
+                                        </tr>
+                                    </thead>
                                 </table>
                             </div>
                         </div>
@@ -415,6 +468,14 @@ $(function () {
         return $('<div>').text(value || '-').html();
     }
 
+    function notifyMonitoring(message) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({toast:true,position:'top-end',icon:'success',title:message,showConfirmButton:false,timer:2200});
+        } else {
+            alert(message);
+        }
+    }
+
     function statusBadge(status) {
         var labels = {
             all_match: 'All Match',
@@ -438,6 +499,67 @@ $(function () {
             '<i class="fas fa-eye"></i>' +
         '</a>';
     }
+
+    function renderSelisih(value) {
+        value = parseInt(value || 0, 10);
+        var cls = value > 0 ? 'om-number-plus' : (value < 0 ? 'om-number-minus' : 'om-number-zero');
+        return '<span class="' + cls + '">' + numberId(value) + '</span>';
+    }
+
+    function renderTeamQty(row, team) {
+        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) {
+            return '<span class="text-muted">-</span>';
+        }
+        return numberId(row['qty_tim_' + team]);
+    }
+
+    function renderTeamDifference(row, team) {
+        if (parseInt(row['input_tim_' + team] || 0, 10) === 0) {
+            return '<span class="text-muted">-</span>';
+        }
+        return renderSelisih(parseInt(row['qty_tim_' + team] || 0, 10) - parseInt(row.qty_sistem || 0, 10));
+    }
+
+    function stockStatusBadge(value) {
+        var labels = {
+            all_match: 'All Match',
+            tim_1: 'Match Tim 1',
+            tim_2: 'Match Tim 2',
+            not_match: 'Tidak Match',
+            re_check: 'Re-check'
+        };
+        var label = labels[value] || 'Re-check';
+        return '<span class="om-badge ' + value + '">' + label + '</span>';
+    }
+
+    var stockTeamTable = $('#tableMonitoringStockTeam').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searchDelay: 350,
+        lengthMenu: [[10, 25, 50], [10, 25, 50]],
+        ajax: {
+            url: '<?= base_url('admin/stockopname/list') ?>',
+            type: 'POST',
+            data: function (d) {
+                d.search = {value: $('#omStockSearch').val()};
+                d.status = $('#omStockStatus').val();
+            }
+        },
+        columns: [
+            {data: 'nama_barang'},
+            {data: 'expired_date', render: formatExpiredDate},
+            {data: 'qty_buku', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
+            {data: 'qty_pending', className: 'text-right', render: function (data) { return numberId(data); }},
+            {data: 'qty_sistem', className: 'text-right font-weight-bold', render: function (data) { return numberId(data); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 1); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 1); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamQty(row, 2); }},
+            {data: null, className: 'text-right', render: function (data, type, row) { return renderTeamDifference(row, 2); }},
+            {data: 'kode_barang', className: 'text-center', orderable: false, searchable: false, render: detailInputButton}
+        ],
+        order: [[0, 'asc']]
+    });
 
     var compareAll = $('#tableCompareAll').DataTable({
         processing: true,
@@ -553,6 +675,9 @@ $(function () {
         card.find('.js-total-input').text(numberId(summary.total_item));
         card.find('.js-total-qty').text(numberId(summary.total_qty));
         card.find('.js-last-input').text(summary.last_input || '-');
+        if (summary.mode) {
+            $('#monitoringPendingMode').val(summary.mode);
+        }
     }
 
     function renderActivity(rows) {
@@ -590,6 +715,7 @@ $(function () {
 
         compareAll.ajax.reload(null, false);
         compareLot.ajax.reload(null, false);
+        stockTeamTable.ajax.reload(null, false);
     }
 
     $('.js-status-filter').on('change', function () {
@@ -600,6 +726,35 @@ $(function () {
         renderWilayahInputSummary(wilayahInputRows);
     });
 
+    $('#omStockSearch').on('keyup', function () {
+        stockTeamTable.ajax.reload();
+    });
+
+    $('#omStockStatus').on('change', function () {
+        stockTeamTable.ajax.reload();
+    });
+
+    $('#omStockReset').on('click', function () {
+        $('#omStockSearch').val('');
+        $('#omStockStatus').val('');
+        stockTeamTable.ajax.reload();
+    });
+
     $('#btnRefreshMonitoring').on('click', refreshMonitoring);
+
+    $('#monitoringPendingModeForm').on('submit', function (event) {
+        event.preventDefault();
+        $.ajax({
+            url: '<?= base_url('admin/stockopname/pending-mode') ?>',
+            type: 'POST',
+            dataType: 'json',
+            data: {mode: $('#monitoringPendingMode').val()}
+        }).done(function (res) {
+            notifyMonitoring(res.message || 'Mode pending diproses');
+            refreshMonitoring();
+        }).fail(function () {
+            alert('Server gagal menyimpan mode pending');
+        });
+    });
 });
 </script>
