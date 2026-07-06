@@ -51,7 +51,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Auth';
+$route['default_controller'] = 'Portal';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
 
