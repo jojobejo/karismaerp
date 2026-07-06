@@ -292,6 +292,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('stockopname/input') ?>" class="nav-link">
+                <i class="nav-icon fas fa-mobile-alt"></i>
+                <p>
+                  Input Opname
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -301,6 +309,28 @@
             </li>
         </nav>
         <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array(str_replace(['-', ' '], '_', strtoupper((string)$this->session->userdata('jobdesk'))), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) : ?>
+      <div class="sidebar">
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('supervisi-opname') ?>" class="nav-link">
+                <i class="nav-icon fas fa-clipboard-check"></i><p>Supervisi Opname</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('supervisi-opname/tracking') ?>" class="nav-link">
+                <i class="nav-icon fas fa-map-marked-alt"></i><p>Tracking Inputer Wilayah</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i><p>Log Out</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
       <div class="sidebar">

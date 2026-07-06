@@ -3,6 +3,7 @@
         let mode = 'create';
         let currentId = 0;
         const hasSwal = typeof Swal !== 'undefined';
+        const endpointBase = "<?= base_url($this->uri->uri_string() === 'purchase/listBarang' ? 'purchase/listBarang' : 'master_barang') ?>";
 
         function notify(icon, title, text) {
             if (hasSwal) {
@@ -22,7 +23,7 @@
             responsive: true,
             order: [],
             ajax: {
-                url: "<?= base_url('master_barang/list') ?>",
+                url: endpointBase + "/list",
                 type: "POST"
             },
             columns: [{
@@ -72,7 +73,7 @@
             currentId = $(this).data('id');
 
             $.ajax({
-                url: "<?= base_url('master_barang/detail') ?>",
+                url: endpointBase + "/detail",
                 type: "POST",
                 dataType: "json",
                 data: {
@@ -108,8 +109,8 @@
             e.preventDefault();
 
             const endpoint = mode === 'edit' ?
-                "<?= base_url('master_barang/update') ?>" :
-                "<?= base_url('master_barang/store') ?>";
+                endpointBase + "/update" :
+                endpointBase + "/store";
 
             const payload = {
                 id: mode === 'edit' ? currentId : '',
@@ -155,7 +156,7 @@
 
             const doDelete = function() {
                 $.ajax({
-                    url: "<?= base_url('master_barang/delete') ?>",
+                    url: endpointBase + "/delete",
                     type: "POST",
                     dataType: "json",
                     data: {
