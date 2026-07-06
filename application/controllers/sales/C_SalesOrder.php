@@ -1080,6 +1080,31 @@ class C_SalesOrder extends CI_Controller
             return;
         }
 
+        if (!empty($post['customer_id'])) {
+            $customer = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
+            if ($customer) {
+                $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
+                if ($plafon !== null && (float)$plafon == 1000) {
+                    $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
+                    redirect('sales_order/create');
+                    return;
+                }
+
+                $grand_total = 0;
+                foreach ($details as $d) {
+                    $grand_total += (float)$d['total_harga'];
+                }
+                if ($plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
+                    $this->session->set_flashdata(
+                        'error',
+                        'Grand total SO (Rp ' . number_format($grand_total, 0, ',', '.') . ') melebihi plafon customer (Rp ' . number_format($plafon, 0, ',', '.') . ').'
+                    );
+                    redirect('sales_order/create');
+                    return;
+                }
+            }
+        }
+
         if (empty($details)) {
             $this->session->set_flashdata('error', 'Minimal 1 item barang harus diisi.');
             redirect('sales_order/create');
@@ -1319,6 +1344,31 @@ class C_SalesOrder extends CI_Controller
 
         if (!$this->_validateCustomerForCurrentSales($post['customer_id'] ?? '', 'sales_order/edit/' . $id_so)) {
             return;
+        }
+
+        if (!empty($post['customer_id'])) {
+            $customer = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
+            if ($customer) {
+                $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
+                if ($plafon !== null && (float)$plafon == 1000) {
+                    $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
+                    redirect('sales_order/edit/' . $id_so);
+                    return;
+                }
+
+                $grand_total = 0;
+                foreach ($details as $d) {
+                    $grand_total += (float)$d['total_harga'];
+                }
+                if ($plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
+                    $this->session->set_flashdata(
+                        'error',
+                        'Grand total SO (Rp ' . number_format($grand_total, 0, ',', '.') . ') melebihi plafon customer (Rp ' . number_format($plafon, 0, ',', '.') . ').'
+                    );
+                    redirect('sales_order/edit/' . $id_so);
+                    return;
+                }
+            }
         }
 
         if (empty($details)) {

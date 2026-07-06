@@ -109,6 +109,19 @@
                                                 value="<?= $is_edit ? escAttr($so['kd_customer'] ?? '') : '' ?>">
                                             <input type="hidden" name="customer_name" id="customer_name"
                                                 value="<?= $is_edit ? escAttr($so['customer_name']) : '' ?>">
+                                            <?php
+                                            $plafon_awal = '';
+                                            if ($is_edit && !empty($so['kd_customer']) && isset($customers)) {
+                                                foreach ($customers as $c) {
+                                                    if ((string)($c['kd_customer']) === (string)($so['kd_customer'])) {
+                                                        $plafon_awal = $c['plafon_aktif'] ?? '';
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            ?>
+                                            <input type="hidden" name="customer_plafon" id="customer_plafon"
+                                                value="<?= escAttr($plafon_awal) ?>">
                                             <button type="button" id="btn-refresh-plafon" class="btn btn-outline-info btn-sm mt-2">
                                                 <i class="fas fa-sync-alt mr-1"></i> Update Data Customer
                                             </button>
@@ -136,14 +149,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group so-form-row mb-0">
-                                        <label class="so-form-label">Catatan</label>
-                                        <div class="so-form-control">
-                                            <textarea name="catatan" class="form-control" rows="2"><?= $is_edit ? htmlspecialchars($so['catatan'] ?? '') : '' ?></textarea>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group so-form-row mb-0 mt-2">
+                                     <div class="form-group so-form-row mb-0 mt-2">
                                         <label class="so-form-label">Cara Pembayaran <span class="text-danger">*</span></label>
                                         <div class="so-form-control">
                                             <select name="cara_pembayaran" id="cara_pembayaran" class="form-control" required>
@@ -158,12 +164,12 @@
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <small class="text-muted">Cara pembayaran akan otomatis digunakan saat faktur dibuat.</small>
+                                            <!-- <small class="text-muted">Cara pembayaran akan otomatis digunakan saat faktur dibuat.</small> -->
                                         </div>
                                     </div>
 
                                     <div class="form-group so-form-row mb-0 mt-2">
-                                        <label class="so-form-label">Faktur</label>
+                                        <label class="so-form-label">&nbsp;</label>
                                         <div class="so-form-control">
                                             <input type="hidden" name="is_faktur_z" value="0">
                                             <div class="custom-control custom-checkbox">
@@ -173,13 +179,15 @@
                                                        name="is_faktur_z"
                                                        value="1"
                                                        <?= !empty($so['is_faktur_z']) ? 'checked' : '' ?>>
-                                                <label class="custom-control-label" for="is_faktur_z">
-                                                    Faktur Z
-                                                </label>
+                                                <label class="custom-control-label" for="is_faktur_z"></label>
                                             </div>
-                                            <small class="text-muted">
-                                                Jika dicentang, nomor faktur dari SO ini otomatis memakai awalan Z.
-                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group so-form-row mb-0 mt-2">
+                                        <label class="so-form-label">Catatan</label>
+                                        <div class="so-form-control">
+                                            <textarea name="catatan" class="form-control" rows="2"><?= $is_edit ? htmlspecialchars($so['catatan'] ?? '') : '' ?></textarea>
                                         </div>
                                     </div>
 
@@ -1113,9 +1121,15 @@ function focusTableRow(selector, current, step) {
 
 function chooseCustomerRow(tr) {
     if (!tr) return;
+    var plafon = parsePlafonNumber(tr.dataset.plafon);
+    if (plafon !== null && plafon === 1000) {
+        salesToast('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
+        return;
+    }
     document.getElementById('customer_id').value      = tr.dataset.kd;
     document.getElementById('customer_name').value    = tr.dataset.nama;
     document.getElementById('customer_display').value = tr.dataset.nama;
+    document.getElementById('customer_plafon').value  = tr.dataset.plafon || '';
     updateSelectedCustomerPlafon(tr.dataset.kd, tr.dataset.plafon);
     document.getElementById('customer_validation').style.display = 'none';
     $('#modal-customer').modal('hide');
@@ -1352,6 +1366,28 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         document.getElementById('customer_validation').style.display='block';
         document.getElementById('customer_display').focus();
         salesToast('warning', 'Pilih customer terlebih dahulu.');
+        return;
+    }
+    var custPlafon = parsePlafonNumber(document.getElementById('customer_plafon').value);
+    if (custPlafon !== null && custPlafon === 1000) {
+        e.preventDefault();
+        salesToast('error', 'Customer dengan plafon 1.000 tidak dapat digunakan untuk membuat SO.');
+        return;
+    }
+    var rows=document.querySelectorAll('#item-body tr');
+    var grandTotal = 0;
+    rows.forEach(function(tr) {
+        var i = tr.dataset.idx;
+        var hrg = parseHargaInput((document.getElementById('hrg_'+i)||{value:0}).value);
+        var qB  = parseFloat((document.getElementById('qtybox_'+i)||{value:0}).value)||0;
+        var qE  = parseFloat((document.getElementById('qtyecer_'+i)||{value:0}).value)||0;
+        var d   = parseFloat((document.getElementById('disc_'+i)||{value:0}).value)||0;
+        var qK  = (qB * getIsi(i)) + qE;
+        grandTotal += hrg * qK * (1 - d / 100);
+    });
+    if (custPlafon !== null && custPlafon !== 1000 && grandTotal > custPlafon) {
+        e.preventDefault();
+        salesToast('error', 'Grand total SO (Rp ' + Math.round(grandTotal).toLocaleString('id-ID') + ') melebihi plafon customer (Rp ' + Math.round(custPlafon).toLocaleString('id-ID') + ').');
         return;
     }
     var rows=document.querySelectorAll('#item-body tr');
