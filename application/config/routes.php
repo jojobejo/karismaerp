@@ -63,6 +63,8 @@ $route['auth'] = 'Auth/index';
 $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard/index';
+
+// STOCKOPNAME
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
 $route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
 $route['admin/stockopname/monitoring/activity-log'] = 'admin/C_Stockopname/monitoring_activity_log';
