@@ -571,6 +571,7 @@ class M_SalesOrder extends CI_Model
             COUNT(sd.id) AS jumlah_item,
             SUM(CASE WHEN GREATEST(COALESCE(sd.qty_siap_faktur, sd.qty) - COALESCE(sd.qty_faktur, 0), 0) > 0
                 THEN 1 ELSE 0 END) AS jumlah_item_siap_faktur,
+            SUM(CASE WHEN COALESCE(sd.checker_loaded, 0) = 2 THEN 1 ELSE 0 END) AS jumlah_item_ditolak,
             COALESCE(SUM(sd.qty), 0) AS total_qty_order,
             COALESCE(SUM(sd.qty_faktur), 0) AS total_qty_faktur,
             COALESCE(SUM(GREATEST(sd.qty - COALESCE(sd.qty_faktur, 0), 0)), 0) AS total_qty_outstanding,
@@ -635,6 +636,15 @@ class M_SalesOrder extends CI_Model
             GROUP BY id_faktur
         ";
 
+        // Subquery: hitung item ditolak (checker_loaded=2) per SO
+        $ditolak_summary = "
+            SELECT id_so,
+                   SUM(CASE WHEN COALESCE(checker_loaded, 0) = 2 THEN 1 ELSE 0 END) AS jumlah_item_ditolak,
+                   COALESCE(SUM(COALESCE(qty_tidak_terkirim, 0)), 0) AS total_qty_tidak_terkirim
+            FROM tbso_sales_order_detail
+            GROUP BY id_so
+        ";
+
         $this->db->select('
             f.*,
             so.id_so,
@@ -647,12 +657,15 @@ class M_SalesOrder extends CI_Model
             COALESCE(fs.total_qty, 0) AS total_qty,
             COALESCE(fs.total_nilai_faktur, 0) AS total_nilai_faktur,
             COALESCE(fs.total_pajak, 0) AS total_pajak,
-            COALESCE(fs.grand_total, 0) AS grand_total
+            COALESCE(fs.grand_total, 0) AS grand_total,
+            COALESCE(ds.jumlah_item_ditolak, 0) AS jumlah_item_ditolak,
+            COALESCE(ds.total_qty_tidak_terkirim, 0) AS total_qty_tidak_terkirim
         ');
         $this->db->from('tbso_faktur_penjualan f');
         $this->db->join('tbso_sales_order so', 'so.id_so = f.id_so', 'left');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
         $this->db->join('(' . $detail_summary . ') fs', 'fs.id_faktur = f.id_faktur', 'left');
+        $this->db->join('(' . $ditolak_summary . ') ds', 'ds.id_so = f.id_so', 'left');
         $this->db->where_not_in('f.status', ['draft', 'cancelled']);
 
         if (!empty($filter['date1']))       $this->db->where('f.tanggal_faktur >=', $filter['date1']);
@@ -1054,10 +1067,14 @@ class M_SalesOrder extends CI_Model
                 : (float)$row['qty'];
             $row['qty_tidak_terkirim'] = (float)($row['qty_tidak_terkirim']
                 ?? max(0, $row['qty_outstanding'] - $row['qty_siap_faktur']));
-            $row['qty_available_faktur'] = max(0, min(
-                $row['qty_outstanding'],
-                $row['qty_siap_faktur'] - $row['qty_faktur']
-            ));
+            if ((int)($row['checker_loaded'] ?? 0) === 2) {
+                $row['qty_available_faktur'] = 0;
+            } else {
+                $row['qty_available_faktur'] = max(0, min(
+                    $row['qty_outstanding'],
+                    $row['qty_siap_faktur'] - $row['qty_faktur']
+                ));
+            }
 
             if (!isset($row['qty_box']) || $row['qty_box'] === null) {
                 $isi               = max(1, (int)($row['isi_per_box'] ?? 1));
@@ -1318,7 +1335,11 @@ class M_SalesOrder extends CI_Model
     public function get_faktur_detail($id_faktur)
     {
         return $this->db
-            ->get_where('tbso_faktur_detail', ['id_faktur' => $id_faktur])
+            ->select('fd.*, sod.checker_loaded, sod.qty_tidak_terkirim')
+            ->from('tbso_faktur_detail fd')
+            ->join('tbso_sales_order_detail sod', 'sod.id = fd.id_so_detail', 'left')
+            ->where('fd.id_faktur', $id_faktur)
+            ->get()
             ->result_array();
     }
 

@@ -29,6 +29,34 @@
     .admin-sc-summary .info-box-icon > i {
         line-height: 58px;
     }
+    /* Baris dengan item ditolak checker */
+    .row-ada-ditolak {
+        background-color: #fff8e1 !important;
+    }
+    .row-ada-ditolak:hover {
+        background-color: #fff0c0 !important;
+    }
+    .badge-ditolak {
+        background-color: #e65100;
+        color: #fff;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        display: inline-block;
+        margin-left: 3px;
+        vertical-align: middle;
+    }
+    .alert-ditolak-banner {
+        border-left: 4px solid #e65100;
+        background: #fff3e0;
+        padding: 8px 14px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        color: #bf360c;
+    }
+    .alert-ditolak-banner i { margin-right: 6px; }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
@@ -151,6 +179,15 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <?php
+                        // Cek apakah ada rute dengan item ditolak
+                        $total_rute_faktur_ditolak = 0;
+                        foreach ($route_summary as $rs) {
+                            if ((int)($rs['total_item_ditolak'] ?? 0) > 0) $total_rute_faktur_ditolak++;
+                        }
+                        ?>
+                        <?php if ($total_rute_faktur_ditolak > 0): ?>   
+                        <?php endif; ?>
                         <table class="table table-bordered table-hover table-sm" id="tabelAdminScFaktur">
                             <thead class="thead-dark">
                                 <tr>
@@ -178,9 +215,17 @@
                                             'date1' => $row['tgl_faktur'],
                                             'date2' => $row['tgl_faktur'],
                                         ]);
+                                        $ada_ditolak_r = (int)($row['total_item_ditolak'] ?? 0) > 0;
                                     ?>
-                                        <tr>
-                                            <td class="font-weight-bold"><?= htmlspecialchars($row['kd_rute']) ?></td>
+                                        <tr class="<?= $ada_ditolak_r ? 'row-ada-ditolak' : '' ?>">
+                                            <td class="font-weight-bold">
+                                                <?= htmlspecialchars($row['kd_rute']) ?>
+                                                <?php if ($ada_ditolak_r): ?>
+                                                    <span class="badge-ditolak" title="Ada barang tidak termuat — perlu repost faktur">
+                                                        <i class="fas fa-exclamation-triangle"></i> barang tidak termuat
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-nowrap"><?= date('d/m/Y', strtotime($row['tgl_faktur'])) ?></td>
                                             <td class="text-center">
                                                 <span class="badge badge-primary px-2 py-1"><?= number_format((int)$row['total_faktur']) ?></span>
@@ -208,6 +253,24 @@
                     </a>
                     <span class="badge badge-primary ml-1 px-2 py-1">Rute <?= htmlspecialchars($selected_rute) ?></span>
                 </div>
+
+                <?php
+                $total_faktur_ditolak = 0;
+                foreach ($fakturs as $f) {
+                    if ((int)($f['jumlah_item_ditolak'] ?? 0) > 0) $total_faktur_ditolak++;
+                }
+                ?>
+                <?php if ($total_faktur_ditolak > 0): ?>
+                <div class="alert-ditolak-banner mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Perhatian!</strong> Terdapat <strong><?= $total_faktur_ditolak ?> faktur</strong>
+                    pada rute <strong><?= htmlspecialchars($selected_rute) ?></strong>
+                    yang SO-nya memiliki barang tidak termuat saat loading.
+                    Barang ini <strong>tidak boleh difakturkan</strong>.
+                    Gunakan tombol <strong><i class="fas fa-undo"></i> Repost</strong> pada faktur terkait
+                    untuk mengembalikan item tersebut ke SO.
+                </div>
+                <?php endif; ?>
 
                 <div class="row admin-sc-summary">
                     <div class="col-6 col-md-3">
@@ -312,8 +375,9 @@
                                         ][$payment] ?? ($payment !== '' ? strtoupper($payment) : '-');
                                         $tempo = $f['jtempo'] ?? $f['tempo'] ?? null;
                                         $rute = $f['so_kd_rute'] ?: ($f['customer_kd_rute'] ?? '');
+                                        $ada_ditolak_f = (int)($f['jumlah_item_ditolak'] ?? 0) > 0;
                                     ?>
-                                        <tr>
+                                        <tr class="<?= $ada_ditolak_f ? 'row-ada-ditolak' : '' ?>">
                                             <td class="font-weight-bold">
                                                 <?= htmlspecialchars($f['no_faktur']) ?>
                                                 <?php if (!empty($f['is_split_parent'])): ?>
@@ -321,6 +385,11 @@
                                                 <?php endif; ?>
                                                 <?php if (!empty($f['parent_id_faktur'])): ?>
                                                     <br><span class="badge badge-info" style="font-size: 75%; font-weight: normal;"><i class="fas fa-link mr-1"></i>Turunan</span>
+                                                <?php endif; ?>
+                                                <?php if ($ada_ditolak_f): ?>
+                                                    <br><span class="badge-ditolak" title="SO ini punya <?= (int)$f['jumlah_item_ditolak'] ?> item tidak termuat — repost terlebih dahulu">
+                                                        <i class="fas fa-ban"></i> <?= (int)$f['jumlah_item_ditolak'] ?> tdk termuat
+                                                    </span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
@@ -404,11 +473,6 @@
                         <p class="mt-2">Memuat data faktur...</p>
                     </div>
                     <div id="repost-content" style="display:none;">
-                        <div class="alert alert-warning py-2">
-                            <i class="fas fa-exclamation-triangle mr-1"></i>
-                            Centang item yang <strong>tidak dapat dimuat</strong> untuk dikembalikan ke SO.
-                            Item yang direpost akan dikembalikan statusnya dan bisa difakturkan ulang.
-                        </div>
                         <p class="mb-1"><strong>Faktur:</strong> <span id="repost-no-faktur"></span></p>
                         <table class="table table-bordered table-sm mt-2">
                             <thead class="thead-dark">
@@ -489,9 +553,14 @@ $(document).on('click', '.btn-repost-faktur', function() {
             var tbody = '';
             $.each(res.items, function(i, item) {
                 var exp = item.expired_date ? item.expired_date : '-';
-                tbody += '<tr>'
-                    + '<td class="text-center"><input type="checkbox" class="cb-repost-item" value="' + item.id + '"></td>'
-                    + '<td>' + (item.nama_barang || '-') + '</td>'
+                var isUnloaded = (parseInt(item.checker_loaded) === 2);
+                var rowStyle = isUnloaded ? ' class="table-danger text-danger" style="background-color: #fff5f5 !important;"' : '';
+                tbody += '<tr' + rowStyle + '>'
+                    + '<td class="text-center"><input type="checkbox" class="cb-repost-item" value="' + item.id + '"' + (isUnloaded ? ' checked' : '') + '></td>'
+                    + '<td>' 
+                        + (item.nama_barang || '-') 
+                        + (isUnloaded ? ' <span class="badge badge-danger ml-1">Tidak Termuat</span>' : '')
+                    + '</td>'
                     + '<td class="text-center">' + (item.no_lot || '-') + '</td>'
                     + '<td class="text-center">' + exp + '</td>'
                     + '<td class="text-right font-weight-bold">' + parseFloat(item.qty).toLocaleString('id-ID', {minimumFractionDigits:2}) + '</td>'
@@ -501,6 +570,7 @@ $(document).on('click', '.btn-repost-faktur', function() {
             $('#repost-tbody').html(tbody);
             $('#repost-loading').hide();
             $('#repost-content').show();
+            updateRepostBtn();
         },
         error: function() {
             alert('Gagal memuat data faktur.');

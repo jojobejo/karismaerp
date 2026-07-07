@@ -180,6 +180,7 @@ $faktur_back_url = $is_admin_sc_context
                                             <th class="text-right">Qty Faktur</th>
                                             <th class="text-right">Harga Satuan</th>
                                             <th class="text-right">Subtotal</th>
+                                            <th class="text-center" width="8%">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -261,16 +262,21 @@ $faktur_back_url = $is_admin_sc_context
                                             <td class="text-right subtotal" data-row="<?= $i ?>">
                                                 Rp 0
                                             </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-danger btn-remove-item" title="Hapus Item">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>
                                     <tfoot class="thead-light">
                                         <tr>
-                                            <th colspan="4" class="text-right">Total Nilai Faktur:</th>
+                                            <th colspan="5" class="text-right">Total Nilai Faktur:</th>
                                             <th class="text-right" id="totalNilaiFaktur">Rp 0</th>
                                         </tr>
                                         <tr>
-                                            <th colspan="4" class="text-right">
+                                            <th colspan="5" class="text-right">
                                                 Tax: <?= number_format((float)($tax_rate ?? 0), 0) ?>(%)
                                                 <?php if (!empty($so['is_faktur_z'])): ?>
                                                     <br><small class="text-muted">Faktur Z</small>
@@ -279,7 +285,7 @@ $faktur_back_url = $is_admin_sc_context
                                             <th class="text-right" id="totalTax">Rp 0</th>
                                         </tr>
                                         <tr>
-                                            <th colspan="4" class="text-right">Grand Total Harga:</th>
+                                            <th colspan="5" class="text-right">Grand Total Harga:</th>
                                             <th class="text-right" id="grandTotalHarga">Rp 0</th>
                                         </tr>
                                     </tfoot>
@@ -444,8 +450,18 @@ $(document).ready(function () {
     // Hitung saat pertama kali dan saat nilai berubah
     updateTanggalJatuhTempo();
     $('#tanggalFaktur, #jtempo').on('change', updateTanggalJatuhTempo);
-
+ 
     hitungSubtotal();
+
+    $(document).on('click', '.btn-remove-item', function() {
+        if ($('.btn-remove-item').length <= 1) {
+            salesToast('warning', 'Faktur harus berisi minimal 1 item.');
+            return;
+        }
+        $(this).closest('tr').remove();
+        hitungSubtotal();
+    });
+
     $(document).on('click', '.btn-edit-harga', function() {
         const row = $(this).data('row');
         const harga = $('.harga-satuan-input[data-row="' + row + '"]').val() || 0;

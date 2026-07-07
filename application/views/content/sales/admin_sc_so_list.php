@@ -14,6 +14,34 @@
         max-width: 180px;
         padding: 3px 8px;
     }
+    /* Baris dengan item ditolak checker */
+    .row-ada-ditolak {
+        background-color: #fff8e1 !important;
+    }
+    .row-ada-ditolak:hover {
+        background-color: #fff0c0 !important;
+    }
+    .badge-ditolak {
+        background-color: #e65100;
+        color: #fff;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        display: inline-block;
+        margin-left: 3px;
+        vertical-align: middle;
+    }
+    .alert-ditolak-banner {
+        border-left: 4px solid #e65100;
+        background: #fff3e0;
+        padding: 8px 14px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 13px;
+        color: #bf360c;
+    }
+    .alert-ditolak-banner i { margin-right: 6px; }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
@@ -142,6 +170,22 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <?php
+                        // Cek apakah ada rute dengan item ditolak
+                        $total_rute_ditolak = 0;
+                        foreach ($route_summary as $rs) {
+                            if ((int)($rs['total_item_ditolak'] ?? 0) > 0) $total_rute_ditolak++;
+                        }
+                        ?>
+                        <?php if ($total_rute_ditolak > 0): ?>
+                        <div class="alert-ditolak-banner">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Perhatian!</strong> Terdapat <strong><?= $total_rute_ditolak ?> rute</strong>
+                            yang memiliki barang tidak termuat saat loading.
+                            Barang tersebut <strong>tidak boleh difakturkan</strong> — Admin SC perlu melakukan
+                            <strong>Repost ke SO</strong> terlebih dahulu.
+                        </div>
+                        <?php endif; ?>
                         <table class="table table-bordered table-hover table-sm" id="tabelAdminScSO">
                             <thead class="thead-dark">
                                 <tr>
@@ -165,10 +209,17 @@
                                 <?php else: ?>
                                     <?php foreach ($route_summary as $row):
                                         $rute_query = array_merge($active_query, ['rute' => $row['kd_rute']]);
+                                        $ada_ditolak = (int)($row['total_item_ditolak'] ?? 0) > 0;
                                     ?>
-                                        <tr>
+                                        <tr class="<?= $ada_ditolak ? 'row-ada-ditolak' : '' ?>">
                                             <td class="font-weight-bold">
                                                 <?= htmlspecialchars($row['kd_rute']) ?>
+                                                <?php if ($ada_ditolak): ?>
+                                                    <span class="badge-ditolak" title="Ada barang tidak termuat, perlu repost ke SO">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                        <?= (int)$row['total_item_ditolak'] ?> item ditolak
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge badge-primary px-2 py-1"><?= number_format((int)$row['total_so']) ?></span>
@@ -206,6 +257,23 @@
                     <span class="badge badge-primary ml-1 px-2 py-1">Rute <?= htmlspecialchars($selected_rute) ?></span>
                 </div>
 
+                <?php
+                // Hitung total item ditolak pada SO list ini
+                $total_so_ditolak = 0;
+                foreach ($so_list as $r) {
+                    if ((int)($r['jumlah_item_ditolak'] ?? 0) > 0) $total_so_ditolak++;
+                }
+                ?>
+                <?php if ($total_so_ditolak > 0): ?>
+                <div class="alert-ditolak-banner mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Perhatian!</strong> Terdapat <strong><?= $total_so_ditolak ?> SO</strong>
+                    pada rute <strong><?= htmlspecialchars($selected_rute) ?></strong>
+                    yang memiliki barang tidak termuat saat proses loading.
+                    Barang tersebut <strong>tidak dapat difakturkan</strong>    .
+                </div>
+                <?php endif; ?>
+
                 <div class="card">
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title">
@@ -242,9 +310,20 @@
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($so_list as $row): ?>
-                                        <tr>
-                                            <td><span class="font-weight-bold"><?= htmlspecialchars($row['no_so']) ?></span></td>
+                                    <?php foreach ($so_list as $row):
+                                        $ada_ditolak_so = (int)($row['jumlah_item_ditolak'] ?? 0) > 0;
+                                    ?>
+                                        <tr class="<?= $ada_ditolak_so ? 'row-ada-ditolak' : '' ?>">
+                                            <td>
+                                                <span class="font-weight-bold"><?= htmlspecialchars($row['no_so']) ?></span>
+                                                <?php if ($ada_ditolak_so): ?>
+                                                    <br>
+                                                    <span class="badge-ditolak" title="Ada <?= (int)$row['jumlah_item_ditolak'] ?> barang tidak termuat — perlu repost ke SO dulu">
+                                                        <i class="fas fa-ban"></i>
+                                                        <?= (int)$row['jumlah_item_ditolak'] ?> tdk termuat
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-nowrap">
                                                 <?= !empty($row['tanggal_transaksi']) ? date('d/m/Y', strtotime($row['tanggal_transaksi'])) : '-' ?>
                                             </td>

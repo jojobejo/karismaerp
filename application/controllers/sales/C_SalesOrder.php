@@ -755,6 +755,7 @@ class C_SalesOrder extends CI_Controller
                     'total_belum_faktur'         => 0,
                     'total_qty_siap_faktur'      => 0,
                     'total_qty_tidak_terkirim'   => 0,
+                    'total_item_ditolak'         => 0,
                     'latest_update_at'           => '',
                 ];
             }
@@ -765,8 +766,9 @@ class C_SalesOrder extends CI_Controller
             } else {
                 $route_summary[$rute]['total_belum_faktur']++;
             }
-            $route_summary[$rute]['total_qty_siap_faktur'] += (float)($row['total_qty_siap_faktur'] ?? 0);
+            $route_summary[$rute]['total_qty_siap_faktur']    += (float)($row['total_qty_siap_faktur'] ?? 0);
             $route_summary[$rute]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
+            $route_summary[$rute]['total_item_ditolak']       += (int)($row['jumlah_item_ditolak'] ?? 0);
             $updated_at = (string)($row['update_at'] ?? $row['create_at'] ?? '');
             if ($updated_at > $route_summary[$rute]['latest_update_at']) {
                 $route_summary[$rute]['latest_update_at'] = $updated_at;
@@ -835,6 +837,7 @@ class C_SalesOrder extends CI_Controller
                     'total_qty'        => 0,
                     'total_pajak'      => 0,
                     'grand_total'      => 0,
+                    'total_item_ditolak' => 0,
                     'latest_faktur_at' => '',
                 ];
             }
@@ -842,6 +845,11 @@ class C_SalesOrder extends CI_Controller
             $route_summary[$group_key]['total_qty']   += (float)($faktur['total_qty']   ?? 0);
             $route_summary[$group_key]['total_pajak'] += (float)($faktur['total_pajak'] ?? 0);
             $route_summary[$group_key]['grand_total'] += (float)($faktur['grand_total'] ?? 0);
+            // Accumulate max ditolak per SO per route group (avoid double-counting same SO's items)
+            $route_summary[$group_key]['total_item_ditolak'] = max(
+                (int)$route_summary[$group_key]['total_item_ditolak'],
+                (int)($faktur['jumlah_item_ditolak'] ?? 0)
+            );
             $latest = (string)($faktur['tanggal_faktur'] ?? $faktur['create_at'] ?? '');
             if ($latest > $route_summary[$group_key]['latest_faktur_at']) {
                 $route_summary[$group_key]['latest_faktur_at'] = $latest;
