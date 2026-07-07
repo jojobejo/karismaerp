@@ -7,6 +7,7 @@ class M_Api extends CI_Model
     protected $prePoTable = 'tb_pre_po';
     protected $prePoDiscountHistoryTable = 'tb_pre_po_diskon_history';
     protected $prePoInvoiceAdjustmentTable = 'tb_pre_po_invoice_adjustment';
+    protected $defaultKiuPoDatabase = 'kiucoid_po';
     protected $syncCacheFile;
 
     public function __construct()
@@ -99,6 +100,163 @@ class M_Api extends CI_Model
         $result = $this->sync_pre_po_payload($rows, $url);
 
         return $result;
+    }
+
+    public function sync_pre_po_from_kiu_po($sourceDatabase = null, $fallbackUrl = '')
+    {
+        $sourceDatabase = $sourceDatabase ?: $this->defaultKiuPoDatabase;
+        $source = $this->fetch_kiu_po_database_rows($sourceDatabase);
+
+        if ($source['status']) {
+            return $this->sync_pre_po_payload($source['rows'], 'database:' . $sourceDatabase);
+        }
+
+        if ($fallbackUrl !== '') {
+            log_message('error', 'Sync PRE PO database source gagal, fallback API: ' . $source['message']);
+            return $this->sync_pre_po_from_remote($fallbackUrl);
+        }
+
+        return [
+            'status'    => false,
+            'message'   => $source['message'],
+            'http_code' => 500,
+            'skipped'   => 0
+        ];
+    }
+
+    protected function fetch_kiu_po_database_rows($sourceDatabase)
+    {
+        $sourceDb = null;
+
+        try {
+            $sourceDb = $this->load->database([
+                'dsn'      => '',
+                'hostname' => $this->db->hostname,
+                'username' => $this->db->username,
+                'password' => $this->db->password,
+                'database' => $sourceDatabase,
+                'dbdriver' => 'mysqli',
+                'dbprefix' => '',
+                'pconnect' => false,
+                'db_debug' => false,
+                'cache_on' => false,
+                'cachedir' => '',
+                'char_set' => 'utf8',
+                'dbcollat' => 'utf8_general_ci',
+                'swap_pre' => '',
+                'encrypt'  => false,
+                'compress' => false,
+                'stricton' => false,
+                'failover' => [],
+                'save_queries' => true
+            ], true);
+
+            if (!$sourceDb->table_exists('tb_detail_po') || !$sourceDb->table_exists('tb_po')) {
+                return [
+                    'status'  => false,
+                    'message' => 'Database sumber ' . $sourceDatabase . ' tidak memiliki tabel tb_detail_po/tb_po.'
+                ];
+            }
+
+            $rows = $sourceDb
+                ->select('
+                    a.no_po,
+                    a.kd_po,
+                    a.tgl_transaksi,
+                    a.kd_suplier,
+                    a.kd_barang,
+                    a.satuan,
+                    a.qty,
+                    a.hrg_satuan,
+                    a.hrg_satuan AS harga_satuan,
+                    a.hrg_satuan AS harga,
+                    a.hrg_diskon AS harga_diskon,
+                    a.hrg_total,
+                    a.hrg_total AS total_harga,
+                    a.hrg_total_diskon AS total_harga_diskon,
+                    COALESCE(p.tax, 0) AS tax,
+                    ((COALESCE(p.tax, 0) / 100) * COALESCE(a.hrg_total_diskon, 0)) AS tax_diskon,
+                    (COALESCE(a.hrg_total, 0) + ((COALESCE(p.tax, 0) / 100) * COALESCE(a.hrg_total, 0))) AS grand_total,
+                    (COALESCE(a.hrg_total_diskon, 0) + ((COALESCE(p.tax, 0) / 100) * COALESCE(a.hrg_total_diskon, 0))) AS grand_total_diskon
+                ')
+                ->from('tb_detail_po a')
+                ->join('tb_po p', 'p.kd_po = a.kd_po', 'left')
+                ->where('a.tgl_transaksi IS NOT NULL', null, false)
+                ->where('a.tgl_transaksi <>', '0000-00-00')
+                ->order_by('a.tgl_transaksi', 'DESC')
+                ->order_by('a.kd_po', 'DESC')
+                ->get()
+                ->result_array();
+
+            if (!empty($rows) && $sourceDb->table_exists('tb_diskon')) {
+                $kdPoList = array_values(array_unique(array_filter(array_column($rows, 'kd_po'))));
+                $discountMap = $this->get_kiu_po_discount_history_map($sourceDb, $kdPoList);
+
+                foreach ($rows as &$row) {
+                    $row['histori_diskon'] = $discountMap[$row['kd_po'] ?? ''] ?? [];
+                }
+                unset($row);
+            }
+
+            return [
+                'status' => true,
+                'rows'   => $rows
+            ];
+        } catch (Throwable $e) {
+            return [
+                'status'  => false,
+                'message' => 'Gagal membaca database sumber ' . $sourceDatabase . ': ' . $e->getMessage()
+            ];
+        } finally {
+            if ($sourceDb) {
+                $sourceDb->close();
+            }
+        }
+    }
+
+    protected function get_kiu_po_discount_history_map($sourceDb, array $kdPoList)
+    {
+        if (empty($kdPoList)) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach (array_chunk($kdPoList, 500) as $chunk) {
+            $sourceDb
+                ->select('
+                    d.id_diskon,
+                    d.kd_po,
+                    d.kd_suplier,
+                    p.no_po,
+                    p.tgl_transaksi,
+                    d.keterangan,
+                    d.nominal
+                ')
+                ->from('tb_diskon d')
+                ->join('tb_po p', 'p.kd_po = d.kd_po', 'left');
+
+            if ($sourceDb->table_exists('tb_suplier')) {
+                $sourceDb
+                    ->select('s.nama_suplier')
+                    ->join('tb_suplier s', 's.kd_suplier = d.kd_suplier', 'left');
+            } else {
+                $sourceDb->select('NULL AS nama_suplier', false);
+            }
+
+            $rows = $sourceDb
+                ->where_in('d.kd_po', $chunk)
+                ->order_by('d.kd_po', 'ASC')
+                ->order_by('d.id_diskon', 'ASC')
+                ->get()
+                ->result_array();
+
+            foreach ($rows as $row) {
+                $map[$row['kd_po']][] = $row;
+            }
+        }
+
+        return $map;
     }
 
     public function sync_pre_po_payload(array $rows, $sourceUrl = '')
@@ -381,12 +539,12 @@ class M_Api extends CI_Model
             return null;
         }
 
-        $qty = (int) $this->sanitize_numeric($this->pick_value($row, ['qty', 'jumlah']));
-        $hargaSatuan = (int) $this->sanitize_numeric($this->pick_value($row, ['hrg_satuan', 'harga_satuan']));
+        $qty = $this->sanitize_decimal($this->pick_value($row, ['qty', 'jumlah']));
+        $hargaSatuan = $this->sanitize_decimal($this->pick_value($row, ['hrg_satuan', 'harga_satuan']));
         $hargaTotalValue = $this->pick_value($row, ['hrg_total', 'harga_total']);
         $hargaTotal = $hargaTotalValue === null || $hargaTotalValue === ''
             ? ($qty * $hargaSatuan)
-            : (int) $this->sanitize_numeric($hargaTotalValue);
+            : $this->sanitize_decimal($hargaTotalValue);
         $status = (int) $this->sanitize_numeric($this->pick_value($row, ['status']));
 
         if ($status !== 2) {
@@ -795,10 +953,7 @@ class M_Api extends CI_Model
         return implode('||', [
             trim((string) ($row['kd_po'] ?? '')),
             trim((string) ($row['kd_barang'] ?? '')),
-            trim((string) ($row['satuan'] ?? '')),
-            (string) ((int) ($row['qty'] ?? 0)),
-            (string) ((int) ($row['hrg_satuan'] ?? 0)),
-            (string) ((int) ($row['harga_total'] ?? 0))
+            trim((string) ($row['satuan'] ?? ''))
         ]);
     }
 

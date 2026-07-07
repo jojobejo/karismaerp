@@ -2917,7 +2917,12 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND (
+                CASE
+                    WHEN pp.tgl_transaksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN DATE(pp.tgl_transaksi)
+                    ELSE STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y')
+                END
+            ) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
@@ -2966,7 +2971,7 @@ FROM (
                 MAX(pp.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
                 COUNT(DISTINCT pp.kd_barang) AS total_barang_order,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
+                SUM(pp.qty * COALESCE(NULLIF((mb.p * mb.l * mb.t), 0), 1)) AS total_qty_order
             FROM tb_pre_po pp
             LEFT JOIN tb_suplier supp
                 ON supp.kd_suplier = pp.kd_suplier
@@ -2980,7 +2985,12 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND (
+                CASE
+                    WHEN pp.tgl_transaksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN DATE(pp.tgl_transaksi)
+                    ELSE STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y')
+                END
+            ) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
@@ -3000,7 +3010,12 @@ FROM (
             GROUP BY h.kd_po
         ) rcv
             ON rcv.kd_po = po.kd_po
-        ORDER BY STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC, po.no_po DESC";
+        ORDER BY
+            CASE
+                WHEN po.tgl_transaksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN DATE(po.tgl_transaksi)
+                ELSE STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y')
+            END DESC,
+            po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
     }
@@ -3035,7 +3050,7 @@ FROM (
                 MAX(pp.no_po) AS no_po,
                 MAX(pp.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
+                SUM(pp.qty * COALESCE(NULLIF((mb.p * mb.l * mb.t), 0), 1)) AS total_qty_order
             FROM tb_pre_po pp
             LEFT JOIN tb_suplier supp
                 ON supp.kd_suplier = pp.kd_suplier
@@ -3049,7 +3064,12 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND (
+                CASE
+                    WHEN pp.tgl_transaksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN DATE(pp.tgl_transaksi)
+                    ELSE STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y')
+                END
+            ) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
@@ -3074,7 +3094,10 @@ FROM (
                 WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 2
                 ELSE 3
             END ASC,
-            STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC,
+            CASE
+                WHEN po.tgl_transaksi REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}' THEN DATE(po.tgl_transaksi)
+                ELSE STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y')
+            END DESC,
             po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();

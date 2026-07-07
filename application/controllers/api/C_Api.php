@@ -4,6 +4,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class C_Api extends CI_Controller
 {
     protected $syncPrePoUrl = 'http://localhost/kiu_po/get_data_pre_po_erp';
+    protected $syncPrePoDatabase = 'kiucoid_po';
 
     public function __construct()
     {
@@ -79,7 +80,7 @@ class C_Api extends CI_Controller
         }
 
         try {
-            $result = $this->apiModel->sync_pre_po_from_remote($this->syncPrePoUrl);
+            $result = $this->apiModel->sync_pre_po_from_kiu_po($this->syncPrePoDatabase, $this->syncPrePoUrl);
 
             if (!$result['status']) {
                 return $this->_json_response([
