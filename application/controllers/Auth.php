@@ -90,63 +90,7 @@ class Auth extends CI_Controller
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        if ($jobdesk_hrd === 'inputer_laporan') {
-            redirect('penilaian_lingkungan');
-        } else if ($auth_source === 'tb_users' && !empty($key->default_redirect)) {
-            redirect($key->default_redirect);
-        } else if ($is_admin_dashboard) {
-            redirect('dashboard');
-        } else if ($jobdesk == 'LOGISTIK') {
-            redirect('logistik');
-        } else if ($jobdesk == 'ADMINICS') {
-            redirect('ics/ics_diffrent');
-        } else if ($jobdesk == 'ADMINKEU') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'ADMINPURCHASING') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'DIREKTUR') {
-            redirect('dashboard');
-        } else if ($jobdesk == 'ADMINGA') {
-            redirect('schedule_direktur');
-        } else if ($jobdesk == 'ADMINKEUTC') {
-            redirect('keuangan');
-        } else if ($jobdesk == 'STOCKOPNAME') {
-            redirect('stockopname/input');
-        } else if (in_array(str_replace(['-', ' '], '_', strtoupper((string)$jobdesk)), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) {
-            redirect('supervisi-opname');
-        } else if ($jobdesk == 'SALESONLINE') {
-            redirect('stock');
-        } else if ($jobdesk == 'SALESCOUNTER') {
-            redirect('sales_report');
-        } else if ($jobdesk == 'SALES') {
-            redirect('kiu_katalog');
-        } else if ($jobdesk == 'DISTRIBUSI') {
-            redirect('logistik/distibusi');
-        } else if ($jobdesk == 'ADMINLOGLPB') {
-            redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMIN PO') {
-            redirect('ics/icspo');
-        } else if ($jobdesk == 'ADMLOG') {
-            redirect('checker');
-        } else if ($jobdesk == 'CHECKER') {
-            redirect('checker');
-        } else if ($jobdesk == 'MANAGERWH') {
-            redirect('checker');
-        } else if ($jobdesk == 'SALESCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard');
-        } else if ($jobdesk == 'MANAGERCK') {
-            redirect('checker');
-        } else if ($jobdesk == 'SC') {
-            redirect('sales_order');
-        } else if ($jobdesk == 'SUPERADMIN') {
-            redirect('hrd/penilaian_lingkungan/admin');
-        } else if ($jobdesk == 'KARYAWAN') {
-            redirect('mobile-erp');
-        } else {
-            redirect('dashboard');
-        }
+        redirect('dashboard');
     }
 
     function logout()
