@@ -15,7 +15,7 @@
         .spr-header-logo img { height: 44px; }
         .spr-header-logo .company-name { font-size: 9pt; line-height: 1.4; }
         .spr-header-title { text-align: center; flex: 1; }
-        .spr-header-title h2 { font-size: 14pt; font-weight: 700; letter-spacing: 0.5px; }
+        .spr-header-title h2 { font-size: 11pt; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; margin: 0; }
         .spr-header-no { text-align: right; font-size: 9pt; }
 
         /* INFO TABLE */
@@ -60,6 +60,7 @@
             body { margin: 0; }
             .page { padding: 8mm 10mm; width: 100%; }
             .no-print { display: none !important; }
+            .spr-header-title h2 { font-size: 11pt; }
         }
     </style>
 </head>
@@ -136,18 +137,20 @@
                 <td><?= $d ? htmlspecialchars($d['no_faktur'] ?? '') : '&nbsp;' ?></td>
                 <td><?= $d ? htmlspecialchars($d['no_batch'] ?? '') : '&nbsp;' ?></td>
                 <td class="right"><?= $d && $d['qty'] > 0 ? number_format((float)$d['qty'], 3) : '&nbsp;' ?></td>
-                <td class="keterangan-cell">
+                <?php if ($i === 0): ?>
+                <td class="keterangan-cell" rowspan="<?= $min_rows ?>">
                     <?php
-                    $alasan_brg    = $d ? (int)$d['alasan_brg_bermasalah']    : 0;
-                    $alasan_exp    = $d ? (int)$d['alasan_expired']            : 0;
-                    $alasan_tdk    = $d ? (int)$d['alasan_tidak_laku']         : 0;
-                    $alasan_tes    = $d ? (int)$d['alasan_tes_market']         : 0;
-                    $alasan_bd     = $d ? (int)$d['alasan_bad_debt']           : 0;
-                    $alasan_harga  = $d ? (int)$d['alasan_harga_tidak_sesuai'] : 0;
-                    $alasan_spr    = $d ? (int)$d['alasan_spr_intern']         : 0;
-                    $alasan_ll     = $d ? htmlspecialchars($d['alasan_lainlain'] ?? '') : '';
-                    $brg_opt       = $d ? ($d['alasan_brg_bermasalah_opt'] ?? '') : '';
-                    $exp_opt       = $d ? ($d['alasan_expired_opt'] ?? '') : '';
+                    $d_ket = $rows[0] ?? null;
+                    $alasan_brg    = $d_ket ? (int)$d_ket['alasan_brg_bermasalah']    : 0;
+                    $alasan_exp    = $d_ket ? (int)$d_ket['alasan_expired']            : 0;
+                    $alasan_tdk    = $d_ket ? (int)$d_ket['alasan_tidak_laku']         : 0;
+                    $alasan_tes    = $d_ket ? (int)$d_ket['alasan_tes_market']         : 0;
+                    $alasan_bd     = $d_ket ? (int)$d_ket['alasan_bad_debt']           : 0;
+                    $alasan_harga  = $d_ket ? (int)$d_ket['alasan_harga_tidak_sesuai'] : 0;
+                    $alasan_spr    = $d_ket ? (int)$d_ket['alasan_spr_intern']         : 0;
+                    $alasan_ll     = $d_ket ? htmlspecialchars($d_ket['alasan_lainlain'] ?? '') : '';
+                    $brg_opt       = $d_ket ? ($d_ket['alasan_brg_bermasalah_opt'] ?? '') : '';
+                    $exp_opt       = $d_ket ? ($d_ket['alasan_expired_opt'] ?? '') : '';
                     ?>
                     <div class="chk-row">
                         <span class="chk-box <?= $alasan_brg ? 'checked' : '' ?>"></span>
@@ -172,6 +175,7 @@
                     <div class="chk-row"><span class="chk-box <?= $alasan_spr ? 'checked' : '' ?>"></span><span>SPR Intern (brg Oper)</span></div>
                     <div class="chk-row"><span class="chk-box"></span><span>Lain-lain: <?= $alasan_ll ?>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
                 </td>
+                <?php endif; ?>
             </tr>
             <?php endfor; ?>
         </tbody>
