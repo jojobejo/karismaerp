@@ -123,6 +123,11 @@
                         <i class="fas fa-warehouse"></i> Activity Warehouse
                     </a>
                 </div>
+                <div class="col-auto">
+                    <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger">
+                        <i class="fas fa-undo-alt"></i> Retur Penjualan
+                    </a>
+                </div>
             </div>
 
             <!-- FILTER -->

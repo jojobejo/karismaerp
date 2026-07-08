@@ -432,6 +432,30 @@ $route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpa
 $route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
 
 
+// ---- Retur Penjualan (SPR) ----
+$route['retur_penjualan']                                    = 'sales/C_ReturPenjualan/index';
+$route['retur_penjualan/create']                             = 'sales/C_ReturPenjualan/create';
+$route['retur_penjualan/store']                              = 'sales/C_ReturPenjualan/store';
+$route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPenjualan/detail/$1';
+$route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
+$route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
+// Koor SC
+$route['retur_penjualan/koor_sc']                            = 'sales/C_ReturPenjualan/koor_sc';
+$route['retur_penjualan/koor_sc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/koor_sc_verifikasi/$1';
+$route['retur_penjualan/koor_sc/simpan/(:any)']              = 'sales/C_ReturPenjualan/koor_sc_simpan/$1';
+// Admin Stock
+$route['retur_penjualan/admin_stock']                        = 'sales/C_ReturPenjualan/admin_stock';
+$route['retur_penjualan/admin_stock/cek/(:any)']             = 'sales/C_ReturPenjualan/admin_stock_cek/$1';
+$route['retur_penjualan/admin_stock/simpan/(:any)']          = 'sales/C_ReturPenjualan/admin_stock_simpan/$1';
+// Kadep SC
+$route['retur_penjualan/kadep_sc']                           = 'sales/C_ReturPenjualan/kadep_sc';
+$route['retur_penjualan/kadep_sc/approve/(:any)']            = 'sales/C_ReturPenjualan/kadep_sc_approve/$1';
+$route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPenjualan/kadep_sc_simpan/$1';
+// Logistik
+$route['retur_penjualan/logistik']                           = 'sales/C_ReturPenjualan/logistik';
+$route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPenjualan/logistik_proses/$1';
+$route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
+
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
 
