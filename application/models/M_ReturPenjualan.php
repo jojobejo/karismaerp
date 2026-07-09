@@ -265,4 +265,40 @@ class M_ReturPenjualan extends CI_Model
             ->where('status', $status)
             ->count_all_results('tb_spr_header');
     }
+
+    /**
+     * Get history of SPR approvals and rejections processed by a specific user or role.
+     */
+    public function get_approval_history($username_or_name, $role, $filter = [])
+    {
+        $this->db->select('
+            h.*,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT COUNT(*) FROM tb_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
+        ');
+        $this->db->from('tb_spr_header h');
+        $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
+
+        if ($role === 'admin') {
+            // Admin sees all history (SPRs that are not draft/diajukan, meaning processed at least once)
+            $this->db->where_in('h.status', ['diverifikasi_koor', 'dicek_admin_stock', 'disetujui_kadep', 'selesai', 'ditolak']);
+        } else {
+            $this->db->group_start();
+            $this->db->where('h.koor_sc_by', $username_or_name);
+            $this->db->or_where('h.admin_stock_by', $username_or_name);
+            $this->db->or_where('h.kadep_sc_by', $username_or_name);
+            $this->db->or_where('h.logistik_by', $username_or_name);
+            $this->db->group_end();
+        }
+
+        if (!empty($filter['date1']))       $this->db->where('h.tanggal >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('h.tanggal <=', $filter['date2']);
+        if (!empty($filter['status']))      $this->db->where('h.status', $filter['status']);
+
+        $this->db->order_by('h.tanggal', 'DESC');
+        $this->db->order_by('h.id_spr',  'DESC');
+
+        return $this->db->get()->result_array();
+    }
 }

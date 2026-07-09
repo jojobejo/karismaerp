@@ -263,10 +263,16 @@
                                             <i class="fas fa-paper-plane"></i> Ajukan ke Koor SC
                                         </a>
                                     <?php endif; ?>
+                                    <?php
+                                    $jobdesk = strtoupper((string)($user['jobdesk'] ?? $this->session->userdata('jobdesk') ?? ''));
+                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                                    ?>
+                                    <?php if ($is_logistik): ?>
                                     <a href="<?= base_url('retur_penjualan/print/' . $spr['id_spr']) ?>"
                                        class="btn btn-secondary mr-2" target="_blank">
                                         <i class="fas fa-print"></i> Print SPR
                                     </a>
+                                    <?php endif; ?>
                                     <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
                                         <i class="fas fa-arrow-left"></i> Kembali
                                     </a>

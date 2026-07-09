@@ -70,18 +70,22 @@
 
                 <!-- SHORTCUT ROLE LINKS -->
                 <div class="row mb-3">
+                    <?php
+                    $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
+                    $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
+                    $is_admin_stock = in_array($jobdesk, ['ADMINSTOCK','LOGISTIK','ADMIN']);
+                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                    $is_approval = $is_koor || $is_admin_stock || $is_kadep || $is_logistik;
+                    ?>
+                    <?php if ($is_sc || $is_koor): ?>
                     <div class="col-auto">
                         <a href="<?= base_url('retur_penjualan/create') ?>" class="btn btn-danger">
                             <i class="fas fa-plus"></i> Buat SPR Baru
                         </a>
                     </div>
-                    <?php
-                    $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                    $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                    $is_admin_stock = in_array($jobdesk, ['ADMINSTOCK','LOGISTIK','ADMIN']);
-                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
-                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
-                    ?>
+                    <?php endif; ?>
                     <?php if ($is_koor): ?>
                     <div class="col-auto">
                         <a href="<?= base_url('retur_penjualan/koor_sc') ?>" class="btn btn-warning">
@@ -179,6 +183,11 @@
                     <div class="card-header bg-danger text-white">
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Surat Perintah Retur (SPR)</h3>
                         <div class="card-tools">
+                            <?php if ($is_approval): ?>
+                                <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
+                                    <i class="fas fa-history"></i> Riwayat Persetujuan
+                                </a>
+                            <?php endif; ?>
                             <span class="badge badge-light"><?= count($spr_list) ?> SPR</span>
                         </div>
                     </div>
@@ -268,10 +277,12 @@
                                                    class="btn btn-sm btn-info" title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
-                                                   class="btn btn-sm btn-secondary" title="Print SPR" target="_blank">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
+                                                <?php if ($is_logistik): ?>
+                                                    <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
+                                                       class="btn btn-sm btn-secondary" title="Print SPR" target="_blank">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                                 <?php if ($st === 'draft' && $row['create_by'] === ($user['nama'] ?? '')): ?>
                                                     <a href="<?= base_url('retur_penjualan/submit/' . $row['id_spr']) ?>"
                                                        class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Koor SC"

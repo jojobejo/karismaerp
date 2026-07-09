@@ -71,7 +71,7 @@ class C_ReturPenjualan extends CI_Controller
     /** Admin Stock */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMINSTOCK', 'ADMIN', 'LOGISTIK']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN', 'LOGISTIK']);
     }
 
     /** Kepala Departemen SC */
@@ -112,9 +112,42 @@ class C_ReturPenjualan extends CI_Controller
             'kd_customer' => $this->input->get('kd_customer', true) ?: $this->input->post('kd_customer'),
         ];
 
-        // SC hanya lihat milik sendiri
-        if ($this->_isSC() && !$this->_isJobdesk(['ADMIN'])) {
+        // Filter based on active queue for each role (except Admin)
+        if ($this->_isJobdesk(['ADMIN'])) {
+            // Admin can see all
+        } elseif ($this->_isSC()) {
+            // SC only sees their own
             $filter['create_by'] = $user['nama'];
+        } else {
+            // Restrict statuses based on role active queues
+            $allowed_statuses = [];
+            if ($this->_isKoorSC()) {
+                $allowed_statuses[] = 'diajukan';
+            }
+            if ($this->_isAdminStock()) {
+                $allowed_statuses[] = 'diverifikasi_koor';
+            }
+            if ($this->_isKadepSC()) {
+                $allowed_statuses[] = 'dicek_admin_stock';
+            }
+            if ($this->_isLogistik()) {
+                $allowed_statuses[] = 'disetujui_kadep';
+            }
+
+            if (!empty($allowed_statuses)) {
+                if (!empty($filter['status'])) {
+                    if (is_array($filter['status'])) {
+                        $filter['status'] = array_intersect($filter['status'], $allowed_statuses);
+                    } elseif (!in_array($filter['status'], $allowed_statuses)) {
+                        $filter['status'] = $allowed_statuses;
+                    }
+                } else {
+                    $filter['status'] = $allowed_statuses;
+                }
+            } else {
+                // Not in any allowed role, show nothing
+                $filter['status'] = ['none'];
+            }
         }
 
         $data['page_title']  = 'KARISMA — Retur Penjualan (SPR)';
@@ -683,6 +716,12 @@ class C_ReturPenjualan extends CI_Controller
 
     public function print_spr($id_spr)
     {
+        // Restrict print to Logistik or Admin
+        if (!$this->_isLogistik()) {
+            $this->_denyAccess('Akses ditolak. Cetak SPR hanya diperbolehkan untuk Logistik.');
+            return;
+        }
+
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr) {
             $this->session->set_flashdata('error', 'SPR tidak ditemukan.');
@@ -696,5 +735,52 @@ class C_ReturPenjualan extends CI_Controller
 
         // Load print view tanpa header/footer sidebar
         $this->load->view('content/sales/retur/spr_print.php', $data);
+    }
+
+    // ================================================================
+    // APPROVAL HISTORY
+    // ================================================================
+
+    public function history()
+    {
+        $user = $this->_getUser();
+        $role = '';
+
+        if ($this->_isJobdesk(['ADMIN'])) {
+            $role = 'admin';
+            $role_label = 'Admin';
+        } elseif ($this->_isKoorSC()) {
+            $role = 'koor_sc';
+            $role_label = 'Koor SC';
+        } elseif ($this->_isAdminStock()) {
+            $role = 'admin_stock';
+            $role_label = 'Admin Stock';
+        } elseif ($this->_isKadepSC()) {
+            $role = 'kadep_sc';
+            $role_label = 'Kadep SC';
+        } elseif ($this->_isLogistik()) {
+            $role = 'logistik';
+            $role_label = 'Logistik';
+        } else {
+            $this->_denyAccess('Hanya user approval yang dapat melihat riwayat persetujuan.');
+            return;
+        }
+
+        $filter = [
+            'date1'   => $this->input->get('date1', true),
+            'date2'   => $this->input->get('date2', true),
+            'status'  => $this->input->get('status', true),
+        ];
+
+        $data['page_title'] = 'KARISMA — Riwayat Persetujuan SPR ' . $role_label;
+        $data['spr_list']   = $this->M_ReturPenjualan->get_approval_history($user['nama'], $role, $filter);
+        $data['filter']     = $filter;
+        $data['user']       = $user;
+        $data['role_label'] = $role_label;
+        $data['role']       = $role;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/spr_history.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 }

@@ -87,6 +87,12 @@ class Auth extends CI_Controller
                         redirect('sales_order/admin_sc');
                     } else if ($key->jobdesk == 'SC') {
                         redirect('sales_order');
+                    } else if ($key->jobdesk == 'KOORSC') {
+                        redirect('retur_penjualan');
+                    } else if ($key->jobdesk == 'KADEPSC') {
+                        redirect('retur_penjualan');
+                    } else if ($key->jobdesk == '   ') {
+                        redirect('retur_penjualan');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");

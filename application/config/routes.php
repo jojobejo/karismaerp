@@ -455,6 +455,7 @@ $route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPen
 $route['retur_penjualan/logistik']                           = 'sales/C_ReturPenjualan/logistik';
 $route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPenjualan/logistik_proses/$1';
 $route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
+$route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';

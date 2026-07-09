@@ -19,6 +19,9 @@ $color      = $rc['color']       ?? 'warning';
 $act_base   = $rc['action_base'] ?? '#';
 $act_label  = $rc['action_label'] ?? 'Tindak';
 
+$jobdesk    = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+$is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+
 $badge_map = [
     'draft'               => ['secondary','Draft'],
     'diajukan'            => ['warning','Diajukan'],
@@ -110,6 +113,9 @@ $badge_map = [
                     <div class="card-header bg-<?= $color ?> <?= in_array($color,['warning']) ? 'text-dark' : 'text-white' ?>">
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Antrian SPR — <?= htmlspecialchars($role_label) ?></h3>
                         <div class="card-tools">
+                            <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs <?= in_array($color,['warning']) ? 'btn-dark' : 'btn-outline-light' ?> mr-2">
+                                <i class="fas fa-history"></i> Riwayat Persetujuan
+                            </a>
                             <span class="badge badge-light"><?= count($spr_list) ?> SPR</span>
                         </div>
                     </div>
@@ -157,10 +163,12 @@ $badge_map = [
                                                    class="btn btn-sm btn-<?= $color ?>" title="<?= $act_label ?>">
                                                     <i class="fas fa-<?= $icon ?>"></i> <?= $act_label ?>
                                                 </a>
-                                                <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
-                                                   class="btn btn-sm btn-secondary" title="Print" target="_blank">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
+                                                <?php if ($is_logistik): ?>
+                                                    <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
+                                                       class="btn btn-sm btn-secondary" title="Print" target="_blank">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>
