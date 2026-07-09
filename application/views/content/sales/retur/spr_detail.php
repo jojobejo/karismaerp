@@ -302,12 +302,34 @@
                                             <i class="fas fa-<?= $tindak_icon ?>"></i> <?= $tindak_label ?>
                                         </a>
                                     <?php endif; ?>
+
                                     <?php if ($is_logistik): ?>
                                     <a href="<?= base_url('retur_penjualan/print/' . $spr['id_spr']) ?>"
                                        class="btn btn-secondary mr-2" target="_blank">
                                         <i class="fas fa-print"></i> Print SPR
                                     </a>
                                     <?php endif; ?>
+
+                                    <?php
+                                    // Tombol Buat Retur Penjualan — hanya muncul jika SPR sudah selesai dan Logistik
+                                    if ($spr['status'] === 'selesai' && $is_logistik):
+                                        $existing_retur = $this->M_ReturPenjualan->get_retur_by_spr($spr['id_spr']);
+                                    ?>
+                                    <?php if ($existing_retur): ?>
+                                        <a href="<?= base_url('retur_penjualan/retur/detail/' . $existing_retur['id_retur']) ?>"
+                                           class="btn btn-success mr-2">
+                                            <i class="fas fa-undo-alt"></i> Lihat Retur Penjualan
+                                            <span class="badge badge-light text-success ml-1"><?= htmlspecialchars($existing_retur['no_retur']) ?></span>
+                                        </a>
+                                    <?php else: ?>
+                                        <a href="<?= base_url('retur_penjualan/retur/form/' . $spr['id_spr']) ?>"
+                                           class="btn btn-success mr-2"
+                                           onclick="return confirm('Buat Retur Penjualan berdasarkan SPR <?= htmlspecialchars($spr['no_spr']) ?>?')">
+                                            <i class="fas fa-undo-alt"></i> Buat Retur Penjualan
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php endif; ?>
+
                                     <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
                                         <i class="fas fa-arrow-left"></i> Kembali
                                     </a>

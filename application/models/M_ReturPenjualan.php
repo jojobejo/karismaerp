@@ -29,6 +29,8 @@ class M_ReturPenjualan extends CI_Model
     {
         $this->_ensureHeaderTable();
         $this->_ensureDetailTable();
+        $this->ensure_retur_penjualan_tables();
+
     }
 
     private function _ensureHeaderTable()
@@ -264,6 +266,179 @@ class M_ReturPenjualan extends CI_Model
         return $this->db
             ->where('status', $status)
             ->count_all_results('tb_spr_header');
+    }
+
+    // ================================================================
+    // RETUR PENJUALAN — Tabel & CRUD
+    // Alur: Logistik buat → Admin Stock verifikasi → Collection selesai
+    // ================================================================
+
+    /**
+     * Buat tabel Retur Penjualan jika belum ada.
+     * Dipanggil dari constructor via _ensureTables().
+     */
+    public function ensure_retur_penjualan_tables()
+    {
+        // Header
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_retur_penjualan_header` (
+                `id_retur`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `no_retur`              VARCHAR(40)  NOT NULL,
+                `id_spr`                INT UNSIGNED NOT NULL,
+                `no_spr`               VARCHAR(30)  NOT NULL,
+                `tanggal_retur`        DATE         NOT NULL,
+                `kd_customer`          VARCHAR(30)  DEFAULT NULL,
+                `nama_customer`        VARCHAR(200) DEFAULT NULL,
+                `alamat`               VARCHAR(300) DEFAULT NULL,
+                `nama_sales`           VARCHAR(150) DEFAULT NULL,
+                `catatan_logistik`     TEXT         DEFAULT NULL,
+                `status_retur`         ENUM('menunggu_verifikasi','terverifikasi','menunggu_collection','selesai','ditolak')
+                                       NOT NULL DEFAULT 'menunggu_verifikasi',
+                -- Admin Stock
+                `admin_stock_by_retur` VARCHAR(150) DEFAULT NULL,
+                `admin_stock_at_retur` DATETIME     DEFAULT NULL,
+                `catatan_admin_stock`  TEXT         DEFAULT NULL,
+                -- Collection
+                `collection_by`        VARCHAR(150) DEFAULT NULL,
+                `collection_at`        DATETIME     DEFAULT NULL,
+                `catatan_collection`   TEXT         DEFAULT NULL,
+                `no_faktur_potong`     VARCHAR(500) DEFAULT NULL,
+                -- Audit
+                `create_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `create_at_retur`      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                `update_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `update_at_retur`      DATETIME     DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_retur`),
+                UNIQUE KEY `uq_no_retur` (`no_retur`),
+                KEY `idx_id_spr_retur` (`id_spr`),
+                KEY `idx_status_retur` (`status_retur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+
+        // Detail
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_retur_penjualan_detail` (
+                `id_retur_detail`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `id_retur`         INT UNSIGNED NOT NULL,
+                `id_spr_detail`    INT UNSIGNED DEFAULT NULL,
+                `no_urut`          TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                `nama_barang`      VARCHAR(250) DEFAULT NULL,
+                `no_faktur`        VARCHAR(80)  DEFAULT NULL,
+                `no_batch`         VARCHAR(80)  DEFAULT NULL,
+                `qty_retur`        DECIMAL(12,3) NOT NULL DEFAULT 0,
+                `harga_satuan`     DECIMAL(15,2) NOT NULL DEFAULT 0,
+                PRIMARY KEY (`id_retur_detail`),
+                KEY `idx_id_retur` (`id_retur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    /** Generate nomor Retur Penjualan: RP/ddmmyy/0001 */
+    public function generate_no_retur()
+    {
+        $prefix = 'RP/' . date('dmy') . '/';
+        $row = $this->db
+            ->like('no_retur', $prefix, 'after')
+            ->order_by('no_retur', 'DESC')
+            ->limit(1)
+            ->get('tb_retur_penjualan_header')
+            ->row();
+
+        if ($row) {
+            $last = (int) substr($row->no_retur, -4);
+            return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return $prefix . '0001';
+    }
+
+    /** Simpan header Retur Penjualan */
+    public function save_retur_penjualan(array $data)
+    {
+        $this->db->insert('tb_retur_penjualan_header', $data);
+        return $this->db->insert_id();
+    }
+
+    /** Simpan detail Retur Penjualan */
+    public function save_retur_penjualan_detail(array $rows)
+    {
+        if (empty($rows)) return;
+        $this->db->insert_batch('tb_retur_penjualan_detail', $rows);
+    }
+
+    /** Ambil semua Retur Penjualan dengan filter */
+    public function get_all_retur_penjualan($filter = [])
+    {
+        $this->db->select('
+            r.*,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT SUM(d.qty_retur * d.harga_satuan)
+             FROM tb_retur_penjualan_detail d
+             WHERE d.id_retur = r.id_retur) AS total_nilai
+        ');
+        $this->db->from('tb_retur_penjualan_header r');
+        $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+
+        if (!empty($filter['status'])) {
+            if (is_array($filter['status'])) {
+                $this->db->where_in('r.status_retur', $filter['status']);
+            } else {
+                $this->db->where('r.status_retur', $filter['status']);
+            }
+        }
+        if (!empty($filter['date1'])) $this->db->where('r.tanggal_retur >=', $filter['date1']);
+        if (!empty($filter['date2'])) $this->db->where('r.tanggal_retur <=', $filter['date2']);
+        if (!empty($filter['id_spr'])) $this->db->where('r.id_spr', (int)$filter['id_spr']);
+
+        $this->db->order_by('r.tanggal_retur', 'DESC');
+        $this->db->order_by('r.id_retur', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /** Ambil 1 Retur Penjualan by id */
+    public function get_retur_penjualan($id_retur)
+    {
+        $this->db->select('r.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, s.no_spr');
+        $this->db->from('tb_retur_penjualan_header r');
+        $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+        $this->db->join('tb_spr_header s', 's.id_spr = r.id_spr', 'left');
+        $this->db->where('r.id_retur', (int)$id_retur);
+        return $this->db->get()->row_array();
+    }
+
+    /** Ambil detail Retur Penjualan */
+    public function get_retur_penjualan_detail($id_retur)
+    {
+        return $this->db
+            ->where('id_retur', (int)$id_retur)
+            ->order_by('no_urut', 'ASC')
+            ->get('tb_retur_penjualan_detail')
+            ->result_array();
+    }
+
+    /** Update status Retur Penjualan */
+    public function update_retur_penjualan_status($id_retur, $status, array $extra = [])
+    {
+        $data = array_merge(['status_retur' => $status], $extra);
+        $this->db->where('id_retur', (int)$id_retur);
+        $this->db->update('tb_retur_penjualan_header', $data);
+        return $this->db->affected_rows() > 0;
+    }
+
+    /** Update detail baris (Admin Stock koreksi qty/harga) */
+    public function update_retur_penjualan_detail_row($id_retur_detail, array $data)
+    {
+        $this->db->where('id_retur_detail', (int)$id_retur_detail);
+        $this->db->update('tb_retur_penjualan_detail', $data);
+    }
+
+    /** Cek apakah SPR sudah punya Retur Penjualan */
+    public function get_retur_by_spr($id_spr)
+    {
+        return $this->db
+            ->where('id_spr', (int)$id_spr)
+            ->get('tb_retur_penjualan_header')
+            ->row_array();
     }
 
     /**

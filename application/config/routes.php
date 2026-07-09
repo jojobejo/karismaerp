@@ -457,6 +457,16 @@ $route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPen
 $route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
 $route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
 
+// ---- Retur Penjualan (Hasil Fisik dari SPR yang Selesai) ----
+$route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
+$route['retur_penjualan/retur/form/(:any)']                  = 'sales/C_ReturPenjualan/retur_form/$1';
+$route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';
+$route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
+$route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
+$route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';
+$route['retur_penjualan/retur/collection/(:any)']            = 'sales/C_ReturPenjualan/retur_collection/$1';
+$route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_collection_simpan/$1';
+
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
 
