@@ -73,7 +73,6 @@
                             <div class="card-header d-flex justify-content-between align-items-center py-2"
                                  style="background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;">
                                 <div class="d-flex align-items-center">
-                                    <img src="<?= base_url('assets/images/Karisma.png') ?>" height="36" style="filter:brightness(10); margin-right:10px;" alt="">
                                     <span style="font-size:11px;opacity:.85;">PT. Karisma Indoagro Universal</span>
                                 </div>
                                 <div class="text-center">
@@ -222,10 +221,16 @@
                                     <a href="<?= $back_url ?>" class="btn btn-light btn-block">
                                         <i class="fas fa-arrow-left"></i> Kembali ke Antrian
                                     </a>
+                                    <?php
+                                    $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                                    ?>
+                                    <?php if ($is_logistik): ?>
                                     <a href="<?= base_url('retur_penjualan/print/' . $spr['id_spr']) ?>"
                                        class="btn btn-outline-secondary btn-block mt-1" target="_blank">
                                         <i class="fas fa-print"></i> Print SPR
                                     </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

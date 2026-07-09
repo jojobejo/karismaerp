@@ -71,7 +71,7 @@ class C_ReturPenjualan extends CI_Controller
     /** Admin Stock */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN', 'LOGISTIK']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMINSTOCK', 'ADMIN', 'LOGISTIK']);
     }
 
     /** Kepala Departemen SC */

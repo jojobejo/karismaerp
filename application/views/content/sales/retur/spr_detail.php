@@ -135,7 +135,6 @@
                             <div class="card-header d-flex justify-content-between align-items-center py-2"
                                  style="background: linear-gradient(135deg,#c0392b,#e74c3c); color:#fff;">
                                 <div class="d-flex align-items-center gap-2">
-                                    <img src="<?= base_url('assets/images/Karisma.png') ?>" height="36" style="filter:brightness(10);" alt="Logo">
                                     <span style="font-size:11px; opacity:.85;">PT. Karisma Indoagro Universal</span>
                                 </div>
                                 <div class="text-center">
@@ -265,8 +264,44 @@
                                     <?php endif; ?>
                                     <?php
                                     $jobdesk = strtoupper((string)($user['jobdesk'] ?? $this->session->userdata('jobdesk') ?? ''));
+                                    $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
+                                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','LOGISTIK','ADMIN']);
+                                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
                                     $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+
+                                    $tindak_url = '';
+                                    $tindak_label = '';
+                                    $tindak_icon = '';
+                                    $tindak_class = '';
+                                    $st = $spr['status'];
+
+                                    if ($st === 'diajukan' && $is_koor) {
+                                        $tindak_url = base_url('retur_penjualan/koor_sc/verifikasi/' . $spr['id_spr']);
+                                        $tindak_label = 'Verifikasi SPR';
+                                        $tindak_icon = 'clipboard-check';
+                                        $tindak_class = 'warning';
+                                    } elseif ($st === 'diverifikasi_koor' && $is_admin_stock) {
+                                        $tindak_url = base_url('retur_penjualan/admin_stock/cek/' . $spr['id_spr']);
+                                        $tindak_label = 'Cek Stock';
+                                        $tindak_icon = 'boxes';
+                                        $tindak_class = 'info';
+                                    } elseif ($st === 'dicek_admin_stock' && $is_kadep) {
+                                        $tindak_url = base_url('retur_penjualan/kadep_sc/approve/' . $spr['id_spr']);
+                                        $tindak_label = 'Approve SPR';
+                                        $tindak_icon = 'user-tie';
+                                        $tindak_class = 'primary';
+                                    } elseif ($st === 'disetujui_kadep' && $is_logistik) {
+                                        $tindak_url = base_url('retur_penjualan/logistik/proses/' . $spr['id_spr']);
+                                        $tindak_label = 'Proses Retur';
+                                        $tindak_icon = 'truck-loading';
+                                        $tindak_class = 'success';
+                                    }
                                     ?>
+                                    <?php if (!empty($tindak_url)): ?>
+                                        <a href="<?= $tindak_url ?>" class="btn btn-<?= $tindak_class ?> mr-2">
+                                            <i class="fas fa-<?= $tindak_icon ?>"></i> <?= $tindak_label ?>
+                                        </a>
+                                    <?php endif; ?>
                                     <?php if ($is_logistik): ?>
                                     <a href="<?= base_url('retur_penjualan/print/' . $spr['id_spr']) ?>"
                                        class="btn btn-secondary mr-2" target="_blank">
@@ -292,11 +327,10 @@
                                 <?php
                                 $steps = [
                                     ['key'=>'draft',             'label'=>'Dibuat SC',        'icon'=>'user-edit',   'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak']],
-                                    ['key'=>'diajukan',          'label'=>'Diajukan SC',      'icon'=>'paper-plane', 'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak']],
-                                    ['key'=>'diverifikasi_koor', 'label'=>'Verifikasi Koor SC','icon'=>'clipboard-check','by_field'=>'koor_sc_by','at_field'=>'koor_sc_at',   'note_field'=>'koor_sc_catatan', 'done_statuses'=>['dicek_admin_stock','disetujui_kadep','selesai']],
-                                    ['key'=>'dicek_admin_stock', 'label'=>'Cek Admin Stock',  'icon'=>'boxes',       'by_field'=>'admin_stock_by','at_field'=>'admin_stock_at','note_field'=>'admin_stock_catatan','done_statuses'=>['disetujui_kadep','selesai']],
-                                    ['key'=>'disetujui_kadep',   'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['selesai']],
-                                    ['key'=>'selesai',           'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai']],
+                                    ['key'=>'diajukan',          'label'=>'Verifikasi Koor SC','icon'=>'clipboard-check','by_field'=>'koor_sc_by','at_field'=>'koor_sc_at',   'note_field'=>'koor_sc_catatan', 'done_statuses'=>['diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai']],
+                                    ['key'=>'diverifikasi_koor', 'label'=>'Cek Admin Stock',  'icon'=>'boxes',       'by_field'=>'admin_stock_by','at_field'=>'admin_stock_at','note_field'=>'admin_stock_catatan','done_statuses'=>['dicek_admin_stock','disetujui_kadep','selesai']],
+                                    ['key'=>'dicek_admin_stock', 'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['disetujui_kadep','selesai']],
+                                    ['key'=>'disetujui_kadep',   'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai']],
                                 ];
                                 $cur = $spr['status'];
                                 foreach ($steps as $step):

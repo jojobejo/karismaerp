@@ -74,7 +74,7 @@
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                     $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                     $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                    $is_admin_stock = in_array($jobdesk, ['ADMINSTOCK','LOGISTIK','ADMIN']);
+                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','LOGISTIK','ADMIN']);
                     $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
                     $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
                     $is_approval = $is_koor || $is_admin_stock || $is_kadep || $is_logistik;
@@ -277,6 +277,39 @@
                                                    class="btn btn-sm btn-info" title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <?php
+                                                $tindak_url = '';
+                                                $tindak_label = '';
+                                                $tindak_icon = '';
+                                                $tindak_class = '';
+                                                if ($st === 'diajukan' && $is_koor) {
+                                                    $tindak_url = base_url('retur_penjualan/koor_sc/verifikasi/' . $row['id_spr']);
+                                                    $tindak_label = 'Verifikasi';
+                                                    $tindak_icon = 'clipboard-check';
+                                                    $tindak_class = 'warning';
+                                                } elseif ($st === 'diverifikasi_koor' && $is_admin_stock) {
+                                                    $tindak_url = base_url('retur_penjualan/admin_stock/cek/' . $row['id_spr']);
+                                                    $tindak_label = 'Cek Stock';
+                                                    $tindak_icon = 'boxes';
+                                                    $tindak_class = 'info';
+                                                } elseif ($st === 'dicek_admin_stock' && $is_kadep) {
+                                                    $tindak_url = base_url('retur_penjualan/kadep_sc/approve/' . $row['id_spr']);
+                                                    $tindak_label = 'Approve';
+                                                    $tindak_icon = 'user-tie';
+                                                    $tindak_class = 'primary';
+                                                } elseif ($st === 'disetujui_kadep' && $is_logistik) {
+                                                    $tindak_url = base_url('retur_penjualan/logistik/proses/' . $row['id_spr']);
+                                                    $tindak_label = 'Proses';
+                                                    $tindak_icon = 'truck-loading';
+                                                    $tindak_class = 'success';
+                                                }
+                                                ?>
+                                                <?php if (!empty($tindak_url)): ?>
+                                                    <a href="<?= $tindak_url ?>"
+                                                       class="btn btn-sm btn-<?= $tindak_class ?>" title="<?= $tindak_label ?>">
+                                                        <i class="fas fa-<?= $tindak_icon ?>"></i>
+                                                    </a>
+                                                <?php endif; ?>
                                                 <?php if ($is_logistik): ?>
                                                     <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
                                                        class="btn btn-sm btn-secondary" title="Print SPR" target="_blank">

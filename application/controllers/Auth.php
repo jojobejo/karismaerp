@@ -91,7 +91,7 @@ class Auth extends CI_Controller
                         redirect('retur_penjualan');
                     } else if ($key->jobdesk == 'KADEPSC') {
                         redirect('retur_penjualan');
-                    } else if ($key->jobdesk == '   ') {
+                    } else if ($key->jobdesk == 'ADMSTOCK') {
                         redirect('retur_penjualan');
                     }
                 } else {
