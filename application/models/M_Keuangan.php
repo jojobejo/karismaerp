@@ -360,93 +360,78 @@ class M_Keuangan extends CI_Model
     private function master_barang_base_query($search = '')
     {
         $this->db->select("
-            id,
-            COALESCE(kd_barang) AS kode_barang,
-            COALESCE(kode_barang_system) AS kode_barang_system,
-            COALESCE(nama_barang) AS nama_barang,
-            COALESCE(bhn_aktif, '') AS bahan_aktif,
-            COALESCE(satuan, '') AS satuan,
-            COALESCE(berat, 0) AS berat,
-            COALESCE(kubikasi, 0) AS kubikasi,
-            (COALESCE(p, 0) * COALESCE(l, 0) * COALESCE(t, 0)) AS dimensi
+            a.id_barang,
+            a.kode_barang,
+            a.kd_suplier,
+            a.nama_barang,
+            COALESCE(a.satuan, '') AS satuan,
+            COALESCE(a.kelompok_barang, '') AS kelompok_barang,
+            COALESCE(a.kategori_barang, '') AS kategori_barang,
+            COALESCE(a.bhn_aktif, '') AS bahan_aktif,
+            COALESCE(a.merk_barang, '') AS merk_barang,
+            COALESCE(a.produk_fokus, '') AS produk_fokus,
+            COALESCE(a.stock_minimum, 0) AS stock_minimum,
+            COALESCE(a.panjang, 0) AS panjang,
+            COALESCE(a.lebar, 0) AS lebar,
+            COALESCE(a.tinggi, 0) AS tinggi,
+            COALESCE(a.berat, 0) AS berat,
+            COALESCE(a.isi, 0) AS isi,
+            COALESCE(a.kemasan, 0) AS kemasan,
+            COALESCE(a.is_lot, 'F') AS is_lot,
+            COALESCE(a.is_active, 'T') AS is_active,
+            COALESCE(s.nama_suplier, '') AS nama_suplier
         ", false);
-        $this->db->from('tb_master_barang_all');
+        $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tb_suplier GROUP BY kd_suplier)';
+        $this->db->from('tbpo_barang a');
+        $this->db->join($supplierSubquery . ' s', 's.kd_suplier = a.kd_suplier', 'left', false);
 
         if ($search !== '') {
             $this->db->group_start();
-            $this->db->like('COALESCE(kd_barang, kode_barang_system)', $search, 'both', false);
-            $this->db->or_like('COALESCE(nama_barang)', $search, 'both', false);
-            $this->db->or_like('bhn_aktif', $search);
-            $this->db->or_like('satuan', $search);
+            $this->db->like('a.kode_barang', $search);
+            $this->db->or_like('a.nama_barang', $search);
+            $this->db->or_like('a.kelompok_barang', $search);
+            $this->db->or_like('a.kategori_barang', $search);
+            $this->db->or_like('a.merk_barang', $search);
+            $this->db->or_like('s.nama_suplier', $search);
             $this->db->group_end();
         }
     }
 
-    private function master_barang_columns()
-    {
-        return $this->db->list_fields('tb_master_barang_all');
-    }
-
     private function build_master_barang_payload($input)
     {
-        $columns = $this->master_barang_columns();
-        $data = [];
-
-        if (in_array('kd_barang', $columns, true)) {
-            $data['kd_barang'] = $input['kode_barang'];
-        }
-        if (in_array('kode_barang', $columns, true)) {
-            $data['kode_barang'] = $input['kode_barang'];
-        }
-        if (in_array('kd_system', $columns, true)) {
-            $data['kd_system'] = $input['kode_barang'];
-        }
-        if (in_array('nama_barang', $columns, true)) {
-            $data['nama_barang'] = $input['nama_barang'];
-        }
-        if (in_array('nm_barang', $columns, true)) {
-            $data['nm_barang'] = $input['nama_barang'];
-        }
-        if (in_array('bhn_aktif', $columns, true)) {
-            $data['bhn_aktif'] = $input['bahan_aktif'];
-        }
-        if (in_array('satuan', $columns, true)) {
-            $data['satuan'] = $input['satuan'];
-        }
-        if (in_array('berat', $columns, true)) {
-            $data['berat'] = $input['berat'];
-        }
-        if (in_array('kubikasi', $columns, true)) {
-            $data['kubikasi'] = $input['kubikasi'];
-        }
-        if (in_array('p', $columns, true)) {
-            $data['p'] = $input['p'];
-        }
-        if (in_array('l', $columns, true)) {
-            $data['l'] = $input['l'];
-        }
-        if (in_array('t', $columns, true)) {
-            $data['t'] = $input['t'];
-        }
-
-        return $data;
+        return [
+            'kode_barang'      => $input['kode_barang'],
+            'kd_suplier'       => $input['kd_suplier'],
+            'nama_barang'      => $input['nama_barang'],
+            'satuan'           => $input['satuan'],
+            'panjang'          => $input['panjang'],
+            'lebar'            => $input['lebar'],
+            'tinggi'           => $input['tinggi'],
+            'berat'            => $input['berat'],
+            'isi'              => $input['isi'],
+            'kemasan'          => $input['kemasan'],
+            'stock_minimum'    => $input['stock_minimum'],
+            'merk_barang'      => $input['merk_barang'],
+            'kelompok_barang'  => $input['kelompok_barang'],
+            'kategori_barang'  => $input['kategori_barang'],
+            'bhn_aktif'        => $input['bahan_aktif'],
+            'produk_fokus'     => $input['produk_fokus'],
+            'is_active'        => $input['is_active'],
+            'is_lot'           => $input['is_lot'],
+        ];
     }
 
-    public function master_barang_all($limit = null, $offset = 0, $search = '')
+    public function master_barang_all($search = '', $limit = 100, $offset = 0)
     {
         $this->master_barang_base_query($search);
-        $this->db->order_by('COALESCE(nama_barang)', 'ASC', false);
-
-        if ($limit !== null && (int)$limit > 0) {
-            $this->db->limit((int)$limit, (int)$offset);
-        }
-
+        $this->db->order_by('a.kode_barang', 'ASC');
+        $this->db->limit((int)$limit, (int)$offset);
         return $this->db->get()->result();
     }
 
     public function master_barang_count_all()
     {
-        return $this->db->count_all('tb_master_barang_all');
+        return $this->db->count_all('tbpo_barang');
     }
 
     public function master_barang_count_filtered($search = '')
@@ -457,39 +442,59 @@ class M_Keuangan extends CI_Model
 
     public function master_barang_by_id($id)
     {
-        return $this->db->query("
-            SELECT
-                id,
-                COALESCE(kd_barang, kode_barang_system) AS kode_barang,
-                COALESCE(nama_barang) AS nama_barang,
-                COALESCE(bhn_aktif, '') AS bahan_aktif,
-                COALESCE(satuan, '') AS satuan,
-                COALESCE(berat, 0) AS berat,
-                COALESCE(kubikasi, 0) AS kubikasi,
-                COALESCE(p, 0) AS p,
-                COALESCE(l, 0) AS l,
-                COALESCE(t, 0) AS t
-            FROM tb_master_barang_all
-            WHERE id = ?
-            LIMIT 1
-        ", [(int)$id])->row();
+        $this->master_barang_base_query();
+        $this->db->where('a.id_barang', (int)$id);
+        return $this->db->get()->row();
+    }
+
+    public function master_barang_by_kode($kodeBarang, $excludeId = 0)
+    {
+        $this->db->from('tbpo_barang');
+        $this->db->where('kode_barang', $kodeBarang);
+        if ((int)$excludeId > 0) {
+            $this->db->where('id_barang !=', (int)$excludeId);
+        }
+        return $this->db->get()->row();
     }
 
     public function master_barang_store($input)
     {
         $data = $this->build_master_barang_payload($input);
-        return $this->db->insert('tb_master_barang_all', $data);
+        return $this->db->insert('tbpo_barang', $data);
     }
 
     public function master_barang_update($id, $input)
     {
         $data = $this->build_master_barang_payload($input);
-        return $this->db->where('id', (int)$id)->update('tb_master_barang_all', $data);
+        return $this->db->where('id_barang', (int)$id)->update('tbpo_barang', $data);
+    }
+
+    public function master_barang_update_info_lain($id, $input)
+    {
+        $data = [
+            'panjang' => $input['panjang'],
+            'lebar'   => $input['lebar'],
+            'tinggi'  => $input['tinggi'],
+            'berat'   => $input['berat'],
+            'isi'     => $input['isi'],
+            'kemasan' => $input['kemasan'],
+        ];
+
+        return $this->db->where('id_barang', (int)$id)->update('tbpo_barang', $data);
     }
 
     public function master_barang_delete($id)
     {
-        return $this->db->where('id', (int)$id)->delete('tb_master_barang_all');
+        return $this->db->where('id_barang', (int)$id)->delete('tbpo_barang');
+    }
+
+    public function master_barang_supplier_options()
+    {
+        return $this->db->select('kd_suplier, nama_suplier')
+            ->from('tb_suplier')
+            ->order_by('nama_suplier', 'ASC')
+            ->get()
+            ->result();
     }
 
     private function master_customer_base_query($search = '')

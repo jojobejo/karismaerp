@@ -600,6 +600,13 @@ class C_Keuangan extends CI_Controller
     public function master_barang()
     {
         $data['page_title']         = 'KARISMA';
+        $data['supplier_options']   = $this->M_Keuangan->master_barang_supplier_options();
+        $data['master_barang_access'] = [
+            'jobdesk' => (string)$this->session->userdata('jobdesk'),
+            'lv' => (int)$this->session->userdata('lv'),
+            'can_full_edit' => $this->can_full_edit_master_barang(),
+            'can_info_lain_edit' => $this->can_edit_info_lain_master_barang(),
+        ];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/master_barang.php', $data);
@@ -619,54 +626,67 @@ class C_Keuangan extends CI_Controller
     {
         return [
             'kode_barang' => trim((string)$this->input->post('kode_barang', true)),
+            'kd_suplier'  => trim((string)$this->input->post('kd_suplier', true)),
             'nama_barang' => trim((string)$this->input->post('nama_barang', true)),
             'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
             'satuan'      => trim((string)$this->input->post('satuan', true)),
+            'stock_minimum' => (int)$this->input->post('stock_minimum', true),
+            'merk_barang' => trim((string)$this->input->post('merk_barang', true)),
+            'kelompok_barang' => trim((string)$this->input->post('kelompok_barang', true)),
+            'kategori_barang' => trim((string)$this->input->post('kategori_barang', true)),
+            'produk_fokus' => trim((string)$this->input->post('produk_fokus', true)),
+            'panjang'     => (int)$this->input->post('panjang', true),
+            'lebar'       => (int)$this->input->post('lebar', true),
+            'tinggi'      => (int)$this->input->post('tinggi', true),
             'berat'       => (float)$this->input->post('berat', true),
-            'kubikasi'    => (float)$this->input->post('kubikasi', true),
-            'p'           => (int)$this->input->post('p', true),
-            'l'           => (int)$this->input->post('l', true),
-            't'           => (int)$this->input->post('t', true),
+            'isi'         => (float)$this->input->post('isi', true),
+            'kemasan'     => (float)$this->input->post('kemasan', true),
+            'is_active'   => $this->input->post('is_active', true) === 'F' ? 'F' : 'T',
+            'is_lot'      => $this->input->post('is_lot', true) === 'T' ? 'T' : 'F',
         ];
+    }
+
+    private function can_full_edit_master_barang()
+    {
+        $jobdesk = (string)$this->session->userdata('jobdesk');
+        $level = (int)$this->session->userdata('lv');
+
+        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'ADMINPURCHASING'], true) || $level === 1;
+    }
+
+    private function can_edit_info_lain_master_barang()
+    {
+        return $this->can_full_edit_master_barang() || (string)$this->session->userdata('jobdesk') === 'LOGISTIK';
     }
 
     public function master_barang_list()
     {
-        $draw   = (int)$this->input->post('draw');
-        $start  = (int)$this->input->post('start');
-        $length = (int)$this->input->post('length');
-        $searchInput = $this->input->post('search');
-        $search = '';
-        if (is_array($searchInput) && isset($searchInput['value'])) {
-            $search = trim((string)$searchInput['value']);
+        $search = trim((string)$this->input->post('search', true));
+        $limit = (int)$this->input->post('limit', true);
+        if ($limit <= 0) {
+            $limit = 100;
         }
 
-        if ($length <= 0) {
-            $length = 10;
-        }
-
-        $rows = $this->M_Keuangan->master_barang_all($length, $start, $search);
+        $rows = $this->M_Keuangan->master_barang_all($search, $limit, 0);
         $data = [];
 
         foreach ($rows as $row) {
             $data[] = [
+                'id'          => (int)$row->id_barang,
                 'kode_barang' => $row->kode_barang,
                 'nama_barang' => $row->nama_barang,
-                'bahan_aktif' => $row->bahan_aktif,
+                'nama_suplier' => $row->nama_suplier,
                 'satuan'      => $row->satuan,
-                'berat'       => $row->berat,
-                'kubikasi'    => $row->kubikasi,
-                'dimensi'     => $row->dimensi,
-                'aksi'        => '<button type="button" class="btn btn-sm btn-warning btn-edit-master mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
-                                  <button type="button" class="btn btn-sm btn-danger btn-delete-master" data-id="' . (int)$row->id . '" data-nama="' . html_escape($row->nama_barang) . '"><i class="fas fa-trash"></i></button>',
+                'is_active'   => $row->is_active,
+                'is_lot'      => $row->is_lot,
             ];
         }
 
         $this->response_json([
-            'draw'            => $draw,
-            'recordsTotal'    => $this->M_Keuangan->master_barang_count_all(),
-            'recordsFiltered' => $this->M_Keuangan->master_barang_count_filtered($search),
-            'data'            => $data,
+            'status'   => true,
+            'total'    => $this->M_Keuangan->master_barang_count_all(),
+            'filtered' => $this->M_Keuangan->master_barang_count_filtered($search),
+            'data'     => $data,
         ]);
     }
 
@@ -696,11 +716,25 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang_store()
     {
-        $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if (!$this->can_full_edit_master_barang()) {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
+                'message' => 'Akses anda tidak diizinkan menambah master barang.',
+            ], 403);
+        }
+
+        $payload = $this->master_barang_payload();
+        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+            ], 422);
+        }
+
+        if ($this->M_Keuangan->master_barang_by_kode($payload['kode_barang'])) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang sudah terdaftar pada master barang komersil.',
             ], 422);
         }
 
@@ -722,15 +756,33 @@ class C_Keuangan extends CI_Controller
             ], 422);
         }
 
-        $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if (!$this->can_edit_info_lain_master_barang()) {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
-            ], 422);
+                'message' => 'Akses anda tidak diizinkan mengubah master barang.',
+            ], 403);
         }
 
-        $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+        $payload = $this->master_barang_payload();
+        if ($this->can_full_edit_master_barang()) {
+            if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+                ], 422);
+            }
+
+            if ($this->M_Keuangan->master_barang_by_kode($payload['kode_barang'], $id)) {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kode barang sudah digunakan pada data lain.',
+                ], 422);
+            }
+
+            $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+        } else {
+            $ok = $this->M_Keuangan->master_barang_update_info_lain($id, $payload);
+        }
 
         $this->response_json([
             'status' => (bool)$ok,
@@ -740,6 +792,13 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang_delete()
     {
+        if (!$this->can_full_edit_master_barang()) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Akses anda tidak diizinkan menghapus master barang.',
+            ], 403);
+        }
+
         $id = (int)$this->input->post('id', true);
         if ($id <= 0) {
             return $this->response_json([
