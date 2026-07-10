@@ -91,9 +91,10 @@ class Auth extends CI_Controller
                         redirect('retur_penjualan');
                     } else if ($key->jobdesk == 'KADEPSC') {
                         redirect('retur_penjualan');
+                    } else if ($key->jobdesk == 'LOGISTIC') {
+                        // Logistik Retur — hanya lihat & cetak SPR yang disetujui
+                        redirect('retur_penjualan/logistik');
                     } else if ($key->jobdesk == 'ADMSTOCK') {
-                        redirect('retur_penjualan');
-                    } else if ($key->jobdesk == 'LOGISTICS') {
                         redirect('retur_penjualan');
                     }
                 } else {

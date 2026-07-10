@@ -164,10 +164,13 @@
                     <!-- SIDEBAR: FORM KEPUTUSAN -->
                     <div class="col-lg-4">
                         <div class="card shadow border-<?= $rl[2] ?>" style="border-width:2px !important;">
-                            <div class="card-header bg-<?= $rl[2] ?> text-white py-2">
-                                <h3 class="card-title">
+                            <div class="card-header bg-<?= $rl[2] ?> text-white py-2 d-flex justify-content-between align-items-center">
+                                <h3 class="card-title m-0">
                                     <i class="fas fa-<?= $rl[1] ?> mr-1"></i> Keputusan <?= $rl[0] ?>
                                 </h3>
+                                <?php if ($role === 'admin_stock'): ?>
+                                    <a href="<?= base_url('retur_penjualan/edit/'.$spr['id_spr']) ?>" class="btn btn-sm btn-warning text-dark"><i class="fas fa-edit"></i> Edit Data</a>
+                                <?php endif; ?>
                             </div>
                             <div class="card-body">
                                 <form action="<?= $action_url ?>" method="post" id="formApproval">
@@ -223,7 +226,7 @@
                                     </a>
                                     <?php
                                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                                    $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                                     ?>
                                     <?php if ($is_logistik): ?>
                                     <a href="<?= base_url('retur_penjualan/print/' . $spr['id_spr']) ?>"

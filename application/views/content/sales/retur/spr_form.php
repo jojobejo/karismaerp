@@ -76,6 +76,22 @@
         margin-bottom: 2px;
     }
     #rowTemplate { display: none; }
+    /* Select2 di dalam tabel */
+    .select2-container { width: 100% !important; }
+    .select2-container .select2-selection--single {
+        height: 31px;
+        font-size: 12px;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+    }
+    .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 29px;
+        padding-left: 8px;
+        font-size: 12px;
+    }
+    .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 29px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -113,7 +129,8 @@
                     <div class="alert alert-danger alert-dismissible"><i class="fas fa-exclamation-circle mr-1"></i><?= $msg ?><button class="close" data-dismiss="alert"><span>&times;</span></button></div>
                 <?php endif; ?>
 
-                <form action="<?= base_url('retur_penjualan/store') ?>" method="post" id="formSPR">
+                <?php $is_edit = isset($spr); ?>
+                <form action="<?= $is_edit ? base_url('retur_penjualan/update/' . $spr['id_spr']) : base_url('retur_penjualan/store') ?>" method="post" id="formSPR">
                     <?php if ($this->config->item('csrf_protection') === TRUE): ?>
                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
                     <?php endif; ?>
@@ -144,7 +161,7 @@
                                 <div class="col-md-3">
                                     <label class="form-label-sm">Tanggal <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control form-control-sm" name="tanggal"
-                                           id="tanggal" value="<?= date('Y-m-d') ?>" required>
+                                           id="tanggal" value="<?= $is_edit ? $spr['tanggal'] : date('Y-m-d') ?>" required>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
@@ -152,6 +169,7 @@
                                         <option value="">-- Pilih Customer --</option>
                                         <?php foreach ($customers as $c): ?>
                                             <option value="<?= htmlspecialchars($c['kd_customer']) ?>"
+                                                    <?= ($is_edit && $spr['kd_customer'] == $c['kd_customer']) ? 'selected' : '' ?>
                                                     data-nama="<?= htmlspecialchars($c['nama_customer']) ?>"
                                                     data-alamat="<?= htmlspecialchars($c['alamat_kios'] ?? '') ?>"
                                                     data-sales="<?= htmlspecialchars($c['nama_sales'] ?? '') ?>">
@@ -159,16 +177,16 @@
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <input type="hidden" name="nama_customer" id="nama_customer">
+                                    <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label-sm">Alamat</label>
-                                    <input type="text" class="form-control form-control-sm" name="alamat" id="alamat">
+                                    <input type="text" class="form-control form-control-sm" name="alamat" id="alamat" value="<?= $is_edit ? htmlspecialchars($spr['alamat']) : '' ?>">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label-sm">Sales</label>
                                     <input type="text" class="form-control form-control-sm" name="nama_sales" id="nama_sales"
-                                           value="<?= htmlspecialchars($user['nama'] ?? '') ?>">
+                                           value="<?= $is_edit ? htmlspecialchars($spr['nama_sales']) : htmlspecialchars($user['nama'] ?? '') ?>">
                                 </div>
                             </div>
 
@@ -183,9 +201,11 @@
                                     <thead>
                                         <tr>
                                             <th style="width:36px;">No.</th>
-                                            <th style="min-width:180px;">Nama Barang</th>
-                                            <th style="min-width:120px;">No. Faktur</th>
-                                            <th style="min-width:120px;">No. Batch / No. Lot</th>
+                                            <th style="min-width:200px;">Nama Barang</th>
+                                            <th style="min-width:110px;">No. Faktur</th>
+                                            <th style="min-width:110px;">No. Batch / No. Lot</th>
+                                            <th style="min-width:120px;">Expired Date</th>
+                                            <th style="min-width:110px;">Harga (Rp)</th>
                                             <th style="min-width:70px;">Qty</th>
                                             <th style="width:40px;">Hapus</th>
                                         </tr>
@@ -202,23 +222,29 @@
 
                             <!-- KETERANGAN / ALASAN DI LUAR TABEL (GLOBAL UNTUK 1 SPR) -->
                             <div class="card card-outline card-danger p-3 mb-3">
+                                <?php
+                                $d0 = ($is_edit && !empty($spr_detail)) ? $spr_detail[0] : [];
+                                $chk = function($f) use ($d0) { return !empty($d0[$f]) ? 'checked' : ''; };
+                                $val = function($f) use ($d0) { return $d0[$f] ?? ''; };
+                                $opt = function($f, $v) use ($d0) { return (isset($d0[$f]) && $d0[$f] === $v) ? 'checked' : ''; };
+                                ?>
                                 <h6 class="font-weight-bold text-danger border-bottom pb-2 mb-3">Keterangan Retur (Centang salah satu atau yang sesuai)</h6>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <!-- 1. Barang bermasalah -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_brg_bermasalah" value="1" class="chk-bermasalah">
+                                                <input type="checkbox" name="alasan_brg_bermasalah" value="1" class="chk-bermasalah" <?= $chk('alasan_brg_bermasalah') ?>>
                                                 <strong>Barang bermasalah retur ke pabrik</strong><br>
                                                 <span class="text-muted small" style="margin-left: 18px;">(fail/daya tmbh/berkutu/benih pecah/kemasan rusak)</span>
                                             </label>
-                                            <div class="sub-opt alasan-bermasalah-opt mb-2" style="display:none; margin-left: 18px;">
+                                            <div class="sub-opt alasan-bermasalah-opt mb-2" style="<?= $chk('alasan_brg_bermasalah') ? '' : 'display:none;' ?> margin-left: 18px;">
                                                 <div class="custom-control custom-radio custom-control-inline">
-                                                    <input type="radio" id="brg_opt_replace" name="alasan_brg_bermasalah_opt" value="replace" class="custom-control-input">
+                                                    <input type="radio" id="brg_opt_replace" name="alasan_brg_bermasalah_opt" value="replace" class="custom-control-input" <?= $opt('alasan_brg_bermasalah_opt', 'replace') ?>>
                                                     <label class="custom-control-label small" for="brg_opt_replace">Replace</label>
                                                 </div>
                                                 <div class="custom-control custom-radio custom-control-inline">
-                                                    <input type="radio" id="brg_opt_not" name="alasan_brg_bermasalah_opt" value="not_replace" class="custom-control-input">
+                                                    <input type="radio" id="brg_opt_not" name="alasan_brg_bermasalah_opt" value="not_replace" class="custom-control-input" <?= $opt('alasan_brg_bermasalah_opt', 'not_replace') ?>>
                                                     <label class="custom-control-label small" for="brg_opt_not">Not Replace</label>
                                                 </div>
                                             </div>
@@ -227,17 +253,17 @@
                                         <!-- 2. Expired -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_expired" value="1" class="chk-expired">
+                                                <input type="checkbox" name="alasan_expired" value="1" class="chk-expired" <?= $chk('alasan_expired') ?>>
                                                 <strong>Expired</strong><br>
                                                 <span class="text-muted small" style="margin-left: 18px;">(2 bln sebelum tgl Exp utk benih &amp; 3 bln sebelum tgl exp utk pestisida)</span>
                                             </label>
-                                            <div class="sub-opt alasan-expired-opt mb-2" style="display:none; margin-left: 18px;">
+                                            <div class="sub-opt alasan-expired-opt mb-2" style="<?= $chk('alasan_expired') ? '' : 'display:none;' ?> margin-left: 18px;">
                                                 <div class="custom-control custom-radio custom-control-inline">
-                                                    <input type="radio" id="exp_opt_replace" name="alasan_expired_opt" value="replace" class="custom-control-input">
+                                                    <input type="radio" id="exp_opt_replace" name="alasan_expired_opt" value="replace" class="custom-control-input" <?= $opt('alasan_expired_opt', 'replace') ?>>
                                                     <label class="custom-control-label small" for="exp_opt_replace">Replace</label>
                                                 </div>
                                                 <div class="custom-control custom-radio custom-control-inline">
-                                                    <input type="radio" id="exp_opt_not" name="alasan_expired_opt" value="not_replace" class="custom-control-input">
+                                                    <input type="radio" id="exp_opt_not" name="alasan_expired_opt" value="not_replace" class="custom-control-input" <?= $opt('alasan_expired_opt', 'not_replace') ?>>
                                                     <label class="custom-control-label small" for="exp_opt_not">Not Replace</label>
                                                 </div>
                                             </div>
@@ -246,7 +272,7 @@
                                         <!-- 3. Tidak laku -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_tidak_laku" value="1">
+                                                <input type="checkbox" name="alasan_tidak_laku" value="1" <?= $chk('alasan_tidak_laku') ?>>
                                                 <strong>Barang tidak laku &amp; masuk OD</strong>
                                             </label>
                                         </div>
@@ -254,7 +280,7 @@
                                         <!-- 4. Tes Market -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_tes_market" value="1">
+                                                <input type="checkbox" name="alasan_tes_market" value="1" <?= $chk('alasan_tes_market') ?>>
                                                 <strong>Faktur T/Brg Tes Market</strong>
                                             </label>
                                         </div>
@@ -264,7 +290,7 @@
                                         <!-- 5. Bad Debt -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_bad_debt" value="1">
+                                                <input type="checkbox" name="alasan_bad_debt" value="1" <?= $chk('alasan_bad_debt') ?>>
                                                 <strong>Potensi Bad Debt</strong>
                                             </label>
                                         </div>
@@ -272,7 +298,7 @@
                                         <!-- 6. Harga tidak sesuai -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_harga_tidak_sesuai" value="1">
+                                                <input type="checkbox" name="alasan_harga_tidak_sesuai" value="1" <?= $chk('alasan_harga_tidak_sesuai') ?>>
                                                 <strong>Barang/Harga tdk sesuai Pesanan</strong>
                                             </label>
                                         </div>
@@ -280,7 +306,7 @@
                                         <!-- 7. SPR Intern -->
                                         <div class="form-group mb-2">
                                             <label class="keterangan-label font-weight-normal mb-1">
-                                                <input type="checkbox" name="alasan_spr_intern" value="1">
+                                                <input type="checkbox" name="alasan_spr_intern" value="1" <?= $chk('alasan_spr_intern') ?>>
                                                 <strong>SPR Intern (brg Oper)</strong>
                                             </label>
                                         </div>
@@ -290,7 +316,7 @@
                                             <label class="keterangan-label font-weight-normal mb-1">
                                                 <strong>Lain-lain:</strong>
                                             </label>
-                                            <input type="text" class="form-control form-control-sm" name="alasan_lainlain" placeholder="Keterangan lain...">
+                                            <input type="text" class="form-control form-control-sm" name="alasan_lainlain" placeholder="Keterangan lain..." value="<?= htmlspecialchars($val('alasan_lainlain')) ?>">
                                         </div>
                                     </div>
                                 </div>
@@ -301,7 +327,7 @@
                                 <div class="col-md-8">
                                     <label class="form-label-sm">Catatan Tambahan</label>
                                     <textarea class="form-control form-control-sm" name="catatan" rows="2"
-                                              placeholder="Catatan (opsional)"></textarea>
+                                              placeholder="Catatan (opsional)"><?= $is_edit ? htmlspecialchars($spr['catatan']) : '' ?></textarea>
                                 </div>
                             </div>
 
@@ -314,17 +340,28 @@
 
                             <!-- TOMBOL AKSI -->
                             <div class="row mt-4">
-                                <div class="col-12 d-flex gap-2">
-                                    <button type="submit" name="as_draft" value="1" class="btn btn-secondary mr-2">
-                                        <i class="fas fa-save"></i> Simpan sebagai Draft
-                                    </button>
-                                    <button type="submit" name="as_draft" value="0" class="btn btn-danger mr-2" id="btnAjukan">
-                                        <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Koor SC
-                                    </button>
-                                    <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
-                                        <i class="fas fa-arrow-left"></i> Batal
-                                    </a>
-                                </div>
+                                <?php if ($is_edit): ?>
+                                    <div class="col-12 d-flex gap-2">
+                                        <button type="submit" name="as_draft" value="0" class="btn btn-info mr-2">
+                                            <i class="fas fa-save"></i> Simpan Perubahan (Tetap Diverifikasi)
+                                        </button>
+                                        <a href="<?= base_url('retur_penjualan/admin_stock_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
+                                            <i class="fas fa-arrow-left"></i> Kembali ke Form Cek
+                                        </a>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="col-12 d-flex gap-2">
+                                        <button type="submit" name="as_draft" value="1" class="btn btn-secondary mr-2">
+                                            <i class="fas fa-save"></i> Simpan sebagai Draft
+                                        </button>
+                                        <button type="submit" name="as_draft" value="0" class="btn btn-danger mr-2" id="btnAjukan">
+                                            <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Koor SC
+                                        </button>
+                                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
+                                            <i class="fas fa-arrow-left"></i> Batal
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div><!-- end card -->
@@ -336,9 +373,16 @@
                     <tbody>
                         <tr class="item-row">
                             <td class="text-center row-no font-weight-bold">1</td>
-                            <td><input type="text" class="form-control form-control-sm" name="nama_barang[]" placeholder="Nama barang"></td>
+                            <td>
+                                <!-- Select2 untuk nama barang -->
+                                <select class="form-control form-control-sm select2-barang" name="nama_barang[]">
+                                    <option value=""></option>
+                                </select>
+                            </td>
                             <td><input type="text" class="form-control form-control-sm" name="no_faktur[]" placeholder="No. Faktur"></td>
                             <td><input type="text" class="form-control form-control-sm" name="no_batch[]" placeholder="No. Batch / Lot"></td>
+                            <td><input type="date" class="form-control form-control-sm" name="expired_date[]"></td>
+                            <td><input type="number" class="form-control form-control-sm text-right field-harga" name="harga[]" min="0" step="1" placeholder="0"></td>
                             <td><input type="number" class="form-control form-control-sm text-right" name="qty[]" min="0" step="0.001" placeholder="0"></td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-del-row" title="Hapus baris">
@@ -364,6 +408,8 @@
 <script>
 $(document).ready(function () {
 
+    var AJAX_BARANG_URL = '<?= base_url("retur_penjualan/ajax/search_barang") ?>';
+
     // ---- Auto-fill customer ----
     $('#kd_customer').on('change', function() {
         var opt = $(this).find(':selected');
@@ -385,6 +431,29 @@ $(document).ready(function () {
         if (!this.checked) $('.alasan-expired-opt input').prop('checked', false);
     });
 
+    // ---- Inisialisasi Select2 pada sebuah row ----
+    function initSelect2Barang($row) {
+        $row.find('.select2-barang').select2({
+            theme: 'default',
+            placeholder: 'Ketik nama barang...',
+            allowClear: true,
+            minimumInputLength: 2,
+            ajax: {
+                url: AJAX_BARANG_URL,
+                dataType: 'json',
+                delay: 300,
+                data: function(params) { return { q: params.term }; },
+                processResults: function(data) { return { results: data.results }; },
+                cache: true
+            },
+            templateResult: function(item) {
+                if (!item.id) return item.text;
+                return $('<span>' + item.text + '</span>');
+            },
+            dropdownParent: $('body')
+        });
+    }
+
     // ---- Add row ----
     function renumberRows() {
         $('#rowContainer .item-row').each(function(i) {
@@ -394,15 +463,35 @@ $(document).ready(function () {
 
     function addRow() {
         var tmpl = $('#rowTemplate tbody tr.item-row').clone();
+        // Reset nilai select2 template agar tidak duplikat id
+        tmpl.find('.select2-barang').val('');
         $('#rowContainer').append(tmpl);
         renumberRows();
         bindRowEvents(tmpl);
+        initSelect2Barang(tmpl);
+    }
+
+    function addRowWithData(item) {
+        var tmpl = $('#rowTemplate tbody tr.item-row').clone();
+        if (item.nama_barang) {
+            tmpl.find('.select2-barang').append(new Option(item.nama_barang, item.nama_barang, true, true));
+        }
+        tmpl.find('input[name="no_faktur[]"]').val(item.no_faktur || '');
+        tmpl.find('input[name="no_batch[]"]').val(item.no_batch || '');
+        tmpl.find('input[name="expired_date[]"]').val(item.expired_date || '');
+        tmpl.find('input[name="harga[]"]').val(item.harga || '');
+        tmpl.find('input[name="qty[]"]').val(item.qty || '');
+        $('#rowContainer').append(tmpl);
+        renumberRows();
+        bindRowEvents(tmpl);
+        initSelect2Barang(tmpl);
     }
 
     function bindRowEvents($row) {
-        // Delete row
         $row.find('.btn-del-row').on('click', function() {
             if ($('#rowContainer .item-row').length > 1) {
+                // Destroy select2 sebelum hapus
+                $row.find('.select2-barang').select2('destroy');
                 $row.remove();
                 renumberRows();
             } else {
@@ -413,8 +502,21 @@ $(document).ready(function () {
 
     $('#btnAddRow').on('click', addRow);
 
-    // Init dengan 1 baris
-    addRow();
+    // Init rows
+    var isEdit = <?= isset($spr_detail) ? 'true' : 'false' ?>;
+    if (isEdit) {
+        var initDetail = <?= isset($spr_detail) ? json_encode($spr_detail) : '[]' ?>;
+        if (initDetail.length > 0) {
+            initDetail.forEach(function(item) {
+                addRowWithData(item);
+            });
+        } else {
+            addRow();
+        }
+    } else {
+        // Init dengan 1 baris kosong
+        addRow();
+    }
 
     // ---- Konfirmasi ajukan ----
     $('#btnAjukan').on('click', function(e) {
@@ -425,8 +527,8 @@ $(document).ready(function () {
             return;
         }
         var items = 0;
-        $('#rowContainer .item-row input[name="nama_barang[]"]').each(function(){
-            if ($(this).val().trim()) items++;
+        $('#rowContainer .item-row .select2-barang').each(function(){
+            if ($(this).val() && $(this).val().trim()) items++;
         });
         if (items === 0) {
             e.preventDefault();

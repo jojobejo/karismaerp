@@ -74,55 +74,15 @@
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                     $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                     $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','LOGISTIK','ADMIN']);
+                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']); // Logistik TIDAK masuk admin stock
                     $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
-                    $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
+                    $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                     $is_approval = $is_koor || $is_admin_stock || $is_kadep || $is_logistik;
                     ?>
                     <?php if ($is_sc || $is_koor): ?>
                     <div class="col-auto">
                         <a href="<?= base_url('retur_penjualan/create') ?>" class="btn btn-danger">
                             <i class="fas fa-plus"></i> Buat SPR Baru
-                        </a>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($is_koor): ?>
-                    <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan/koor_sc') ?>" class="btn btn-warning">
-                            <i class="fas fa-clipboard-check"></i> Antrian Koor SC
-                            <?php $c = $this->M_ReturPenjualan->count_pending('diajukan'); if ($c > 0): ?>
-                                <span class="badge badge-light ml-1"><?= $c ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($is_admin_stock): ?>
-                    <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan/admin_stock') ?>" class="btn btn-info">
-                            <i class="fas fa-boxes"></i> Antrian Admin Stock
-                            <?php $c = $this->M_ReturPenjualan->count_pending('diverifikasi_koor'); if ($c > 0): ?>
-                                <span class="badge badge-light ml-1"><?= $c ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($is_kadep): ?>
-                    <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan/kadep_sc') ?>" class="btn btn-primary">
-                            <i class="fas fa-user-tie"></i> Antrian Kadep SC
-                            <?php $c = $this->M_ReturPenjualan->count_pending('dicek_admin_stock'); if ($c > 0): ?>
-                                <span class="badge badge-light ml-1"><?= $c ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($is_logistik): ?>
-                    <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan/logistik') ?>" class="btn btn-success">
-                            <i class="fas fa-truck-loading"></i> Antrian Logistik
-                            <?php $c = $this->M_ReturPenjualan->count_pending('disetujui_kadep'); if ($c > 0): ?>
-                                <span class="badge badge-light ml-1"><?= $c ?></span>
-                            <?php endif; ?>
                         </a>
                     </div>
                     <?php endif; ?>
@@ -297,12 +257,8 @@
                                                     $tindak_label = 'Approve';
                                                     $tindak_icon = 'user-tie';
                                                     $tindak_class = 'primary';
-                                                } elseif ($st === 'disetujui_kadep' && $is_logistik) {
-                                                    $tindak_url = base_url('retur_penjualan/logistik/proses/' . $row['id_spr']);
-                                                    $tindak_label = 'Proses';
-                                                    $tindak_icon = 'truck-loading';
-                                                    $tindak_class = 'success';
                                                 }
+                                                // Logistik TIDAK punya tombol aksi Proses di sini
                                                 ?>
                                                 <?php if (!empty($tindak_url)): ?>
                                                     <a href="<?= $tindak_url ?>"
@@ -310,10 +266,11 @@
                                                         <i class="fas fa-<?= $tindak_icon ?>"></i>
                                                     </a>
                                                 <?php endif; ?>
-                                                <?php if ($is_logistik): ?>
+                                                <?php if ($is_logistik && $st === 'disetujui_kadep'): ?>
+                                                    <?php /* Logistik: hanya cetak SPR yg sudah disetujui kadep */ ?>
                                                     <a href="<?= base_url('retur_penjualan/print/' . $row['id_spr']) ?>"
-                                                       class="btn btn-sm btn-secondary" title="Print SPR" target="_blank">
-                                                        <i class="fas fa-print"></i>
+                                                       class="btn btn-sm btn-success" title="Cetak SPR" target="_blank">
+                                                        <i class="fas fa-print"></i> Cetak
                                                     </a>
                                                 <?php endif; ?>
                                                 <?php if ($st === 'draft' && $row['create_by'] === ($user['nama'] ?? '')): ?>

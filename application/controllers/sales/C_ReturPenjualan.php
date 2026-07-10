@@ -83,7 +83,8 @@ class C_ReturPenjualan extends CI_Controller
     /** Logistik */
     private function _isLogistik()
     {
-        return $this->_isJobdesk(['LOGISTIK', 'ADMIN']);
+        // Toleran terhadap variasi ejaan jobdesk di DB
+        return $this->_isJobdesk(['LOGISTIK', 'LOGISTIC', 'LOGISTICS', 'ADMIN']);
     }
 
     /** Cek apakah boleh lihat semua SPR (bukan SC biasa) */
@@ -251,9 +252,76 @@ class C_ReturPenjualan extends CI_Controller
         redirect('retur_penjualan/detail/' . $id_spr);
     }
 
+    // ================================================================
+    // EDIT & UPDATE (Admin Stock)
+    // ================================================================
+
+    public function edit($id_spr)
+    {
+        if (!$this->_isAdminStock()) {
+            $this->_denyAccess();
+            return;
+        }
+
+        $spr = $this->M_ReturPenjualan->get_spr($id_spr);
+        if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
+            $this->session->set_flashdata('error', 'SPR tidak valid atau tidak dapat diedit saat ini.');
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $data['page_title']  = 'KARISMA — Edit SPR ' . $spr['no_spr'];
+        $data['spr']         = $spr;
+        $data['no_spr']      = $spr['no_spr'];
+        $data['spr_detail']  = $this->M_ReturPenjualan->get_spr_detail($id_spr);
+        $data['user']        = $this->_getUser();
+        $data['customers']   = $this->M_ReturPenjualan->get_customers();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/spr_form.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function update($id_spr)
+    {
+        if (!$this->_isAdminStock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $user = $this->_getUser();
+        $spr  = $this->M_ReturPenjualan->get_spr($id_spr);
+
+        if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
+            $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $header = [
+            'tanggal'       => $this->input->post('tanggal'),
+            'kd_customer'   => $this->input->post('kd_customer'),
+            'nama_customer' => $this->input->post('nama_customer'),
+            'alamat'        => $this->input->post('alamat'),
+            'nama_sales'    => $this->input->post('nama_sales'),
+            'catatan'       => $this->input->post('catatan'),
+            'update_by'     => $user['nama'],
+        ];
+
+        // Update header tanpa merubah status (tetap diverifikasi_koor)
+        $this->M_ReturPenjualan->update_spr_status($id_spr, $spr['status'], $header);
+
+        // Hapus detail lama dan ganti dengan yang baru
+        $this->M_ReturPenjualan->delete_spr_detail($id_spr);
+        $this->_saveDetail($id_spr);
+
+        $this->session->set_flashdata('success', "Data SPR <strong>{$spr['no_spr']}</strong> berhasil diperbarui.");
+        redirect('retur_penjualan/admin_stock_cek/' . $id_spr);
+    }
+
     /**
      * Simpan detail item dari POST array.
-     * POST keys: nama_barang[], no_faktur[], no_batch[], qty[],
+     * POST keys: nama_barang[], no_faktur[], no_batch[], expired_date[], harga[], qty[],
      *            alasan_brg_bermasalah[], alasan_brg_bermasalah_opt[], dst.
      */
     private function _saveDetail($id_spr)
@@ -261,6 +329,8 @@ class C_ReturPenjualan extends CI_Controller
         $nama_barang    = $this->input->post('nama_barang')    ?: [];
         $no_faktur      = $this->input->post('no_faktur')      ?: [];
         $no_batch       = $this->input->post('no_batch')       ?: [];
+        $expired_date   = $this->input->post('expired_date')   ?: [];
+        $harga          = $this->input->post('harga')          ?: [];
         $qty            = $this->input->post('qty')            ?: [];
 
         // Data alasan retur sekarang dikirim sebagai input tunggal (global untuk 1 SPR)
@@ -278,12 +348,15 @@ class C_ReturPenjualan extends CI_Controller
         $rows = [];
         foreach ($nama_barang as $i => $nb) {
             if (empty($nb)) continue;
+            $exp_val = !empty($expired_date[$i]) ? $expired_date[$i] : null;
             $rows[] = [
                 'id_spr'                    => $id_spr,
                 'no_urut'                   => $i + 1,
                 'nama_barang'               => $nb,
                 'no_faktur'                 => $no_faktur[$i] ?? '',
                 'no_batch'                  => $no_batch[$i]  ?? '',
+                'expired_date'              => $exp_val,
+                'harga'                     => (float) str_replace(',', '', ($harga[$i] ?? 0)),
                 'qty'                       => (float) ($qty[$i] ?? 0),
                 'alasan_brg_bermasalah'     => $alasan_brg,
                 'alasan_brg_bermasalah_opt' => $alasan_brg_opt,
@@ -301,6 +374,37 @@ class C_ReturPenjualan extends CI_Controller
         if (!empty($rows)) {
             $this->M_ReturPenjualan->save_spr_detail($rows);
         }
+    }
+
+    // ================================================================
+    // AJAX — Search Barang untuk Select2
+    // ================================================================
+
+    public function ajax_search_barang()
+    {
+        header('Content-Type: application/json');
+        $q = $this->input->get('q', true);
+        if (empty($q) || strlen(trim($q)) < 2) {
+            echo json_encode(['results' => []]);
+            return;
+        }
+        $this->db->select('kd_barang, nama_barang, satuan, hpp');
+        $this->db->from('tb_master_barang_all');
+        $this->db->like('nama_barang', $q);
+        $this->db->order_by('nama_barang', 'ASC');
+        $this->db->limit(30);
+        $rows = $this->db->get()->result_array();
+
+        $results = array_map(function($r) {
+            return [
+                'id'     => $r['nama_barang'],
+                'text'   => $r['nama_barang'],
+                'satuan' => $r['satuan'],
+                'harga'  => (float) $r['hpp'],
+            ];
+        }, $rows);
+
+        echo json_encode(['results' => $results]);
     }
 
     // ================================================================
@@ -354,30 +458,6 @@ class C_ReturPenjualan extends CI_Controller
     // KOOR SC — Antrian verifikasi
     // ================================================================
 
-    public function koor_sc()
-    {
-        if (!$this->_isKoorSC()) {
-            $this->_denyAccess('Anda tidak memiliki akses halaman Koor SC.');
-            return;
-        }
-
-        $filter = [
-            'status'  => 'diajukan',
-            'date1'   => $this->input->get('date1', true),
-            'date2'   => $this->input->get('date2', true),
-        ];
-
-        $data['page_title'] = 'KARISMA — Koor SC: Verifikasi SPR';
-        $data['spr_list']   = $this->M_ReturPenjualan->get_all_spr($filter);
-        $data['filter']     = $filter;
-        $data['user']       = $this->_getUser();
-        $data['role_label'] = 'Koor SC';
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/koor_sc_list.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
     public function koor_sc_verifikasi($id_spr)
     {
         if (!$this->_isKoorSC()) {
@@ -388,7 +468,7 @@ class C_ReturPenjualan extends CI_Controller
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr || $spr['status'] !== 'diajukan') {
             $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
-            redirect('retur_penjualan/koor_sc');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -397,7 +477,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
         $data['role']       = 'koor_sc';
-        $data['back_url']   = base_url('retur_penjualan/koor_sc');
+        $data['back_url']   = base_url('retur_penjualan');
         $data['action_url'] = base_url('retur_penjualan/koor_sc/simpan/' . $id_spr);
 
         $this->load->view('partial/main/header.php', $data);
@@ -408,7 +488,7 @@ class C_ReturPenjualan extends CI_Controller
     public function koor_sc_simpan($id_spr)
     {
         if (!$this->_isKoorSC() || $this->input->server('REQUEST_METHOD') !== 'POST') {
-            redirect('retur_penjualan/koor_sc');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -419,7 +499,7 @@ class C_ReturPenjualan extends CI_Controller
 
         if (!$spr || $spr['status'] !== 'diajukan') {
             $this->session->set_flashdata('error', 'SPR tidak valid.');
-            redirect('retur_penjualan/koor_sc');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -437,36 +517,12 @@ class C_ReturPenjualan extends CI_Controller
             : "SPR <strong>{$spr['no_spr']}</strong> ditolak.";
 
         $this->session->set_flashdata('success', $msg);
-        redirect('retur_penjualan/koor_sc');
+        redirect('retur_penjualan');
     }
 
     // ================================================================
     // ADMIN STOCK — Antrian cek fisik
     // ================================================================
-
-    public function admin_stock()
-    {
-        if (!$this->_isAdminStock()) {
-            $this->_denyAccess('Anda tidak memiliki akses halaman Admin Stock.');
-            return;
-        }
-
-        $filter = [
-            'status' => 'diverifikasi_koor',
-            'date1'  => $this->input->get('date1', true),
-            'date2'  => $this->input->get('date2', true),
-        ];
-
-        $data['page_title'] = 'KARISMA — Admin Stock: Cek SPR';
-        $data['spr_list']   = $this->M_ReturPenjualan->get_all_spr($filter);
-        $data['filter']     = $filter;
-        $data['user']       = $this->_getUser();
-        $data['role_label'] = 'Admin Stock';
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/admin_stock_list.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
 
     public function admin_stock_cek($id_spr)
     {
@@ -478,7 +534,7 @@ class C_ReturPenjualan extends CI_Controller
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
             $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
-            redirect('retur_penjualan/admin_stock');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -487,7 +543,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
         $data['role']       = 'admin_stock';
-        $data['back_url']   = base_url('retur_penjualan/admin_stock');
+        $data['back_url']   = base_url('retur_penjualan');
         $data['action_url'] = base_url('retur_penjualan/admin_stock/simpan/' . $id_spr);
 
         $this->load->view('partial/main/header.php', $data);
@@ -498,7 +554,7 @@ class C_ReturPenjualan extends CI_Controller
     public function admin_stock_simpan($id_spr)
     {
         if (!$this->_isAdminStock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
-            redirect('retur_penjualan/admin_stock');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -509,7 +565,7 @@ class C_ReturPenjualan extends CI_Controller
 
         if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
             $this->session->set_flashdata('error', 'SPR tidak valid.');
-            redirect('retur_penjualan/admin_stock');
+            redirect('retur_penjualan');
             return;
         }
 
@@ -527,36 +583,12 @@ class C_ReturPenjualan extends CI_Controller
             : "SPR <strong>{$spr['no_spr']}</strong> ditolak oleh Admin Stock.";
 
         $this->session->set_flashdata('success', $msg);
-        redirect('retur_penjualan/admin_stock');
+        redirect('retur_penjualan');
     }
 
     // ================================================================
     // KADEP SC — Antrian persetujuan Kepala Departemen
     // ================================================================
-
-    public function kadep_sc()
-    {
-        if (!$this->_isKadepSC()) {
-            $this->_denyAccess('Anda tidak memiliki akses halaman Kadep SC.');
-            return;
-        }
-
-        $filter = [
-            'status' => 'dicek_admin_stock',
-            'date1'  => $this->input->get('date1', true),
-            'date2'  => $this->input->get('date2', true),
-        ];
-
-        $data['page_title'] = 'KARISMA — Kadep SC: Persetujuan SPR';
-        $data['spr_list']   = $this->M_ReturPenjualan->get_all_spr($filter);
-        $data['filter']     = $filter;
-        $data['user']       = $this->_getUser();
-        $data['role_label'] = 'Kadep SC';
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/kadep_sc_list.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
 
     public function kadep_sc_approve($id_spr)
     {
@@ -568,16 +600,16 @@ class C_ReturPenjualan extends CI_Controller
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
         if (!$spr || $spr['status'] !== 'dicek_admin_stock') {
             $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
-            redirect('retur_penjualan/kadep_sc');
+            redirect('retur_penjualan');
             return;
         }
 
-        $data['page_title'] = 'KARISMA — Kadep SC: Setujui ' . $spr['no_spr'];
+        $data['page_title'] = 'KARISMA — Kadep SC: Approve ' . $spr['no_spr'];
         $data['spr']        = $spr;
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
         $data['role']       = 'kadep_sc';
-        $data['back_url']   = base_url('retur_penjualan/kadep_sc');
+        $data['back_url']   = base_url('retur_penjualan');
         $data['action_url'] = base_url('retur_penjualan/kadep_sc/simpan/' . $id_spr);
 
         $this->load->view('partial/main/header.php', $data);
@@ -613,101 +645,11 @@ class C_ReturPenjualan extends CI_Controller
         ]);
 
         $msg = ($aksi === 'setuju')
-            ? "SPR <strong>{$spr['no_spr']}</strong> disetujui Kadep SC, lanjut ke Logistik."
+            ? "SPR <strong>{$spr['no_spr']}</strong> disetujui, lanjut ke Logistik."
             : "SPR <strong>{$spr['no_spr']}</strong> ditolak oleh Kadep SC.";
 
         $this->session->set_flashdata('success', $msg);
-        redirect('retur_penjualan/kadep_sc');
-    }
-
-    // ================================================================
-    // LOGISTIK — Antrian proses retur fisik
-    // ================================================================
-
-    public function logistik()
-    {
-        if (!$this->_isLogistik()) {
-            $this->_denyAccess('Anda tidak memiliki akses halaman Logistik.');
-            return;
-        }
-
-        $filter = [
-            'status' => 'disetujui_kadep',
-            'date1'  => $this->input->get('date1', true),
-            'date2'  => $this->input->get('date2', true),
-        ];
-
-        $data['page_title'] = 'KARISMA — Logistik: Proses SPR';
-        $data['spr_list']   = $this->M_ReturPenjualan->get_all_spr($filter);
-        $data['filter']     = $filter;
-        $data['user']       = $this->_getUser();
-        $data['role_label'] = 'Logistik';
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/logistik_list.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
-    public function logistik_proses($id_spr)
-    {
-        if (!$this->_isLogistik()) {
-            $this->_denyAccess();
-            return;
-        }
-
-        $spr = $this->M_ReturPenjualan->get_spr($id_spr);
-        if (!$spr || $spr['status'] !== 'disetujui_kadep') {
-            $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
-            redirect('retur_penjualan/logistik');
-            return;
-        }
-
-        $data['page_title'] = 'KARISMA — Logistik: Proses ' . $spr['no_spr'];
-        $data['spr']        = $spr;
-        $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
-        $data['user']       = $this->_getUser();
-        $data['role']       = 'logistik';
-        $data['back_url']   = base_url('retur_penjualan/logistik');
-        $data['action_url'] = base_url('retur_penjualan/logistik/simpan/' . $id_spr);
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/spr_approval.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
-    public function logistik_simpan($id_spr)
-    {
-        if (!$this->_isLogistik() || $this->input->server('REQUEST_METHOD') !== 'POST') {
-            redirect('retur_penjualan/logistik');
-            return;
-        }
-
-        $aksi    = $this->input->post('aksi');
-        $catatan = $this->input->post('catatan');
-        $user    = $this->_getUser();
-        $spr     = $this->M_ReturPenjualan->get_spr($id_spr);
-
-        if (!$spr || $spr['status'] !== 'disetujui_kadep') {
-            $this->session->set_flashdata('error', 'SPR tidak valid.');
-            redirect('retur_penjualan/logistik');
-            return;
-        }
-
-        $new_status = ($aksi === 'selesai') ? 'selesai' : 'ditolak';
-
-        $this->M_ReturPenjualan->update_spr_status($id_spr, $new_status, [
-            'logistik_by'      => $user['nama'],
-            'logistik_at'      => date('Y-m-d H:i:s'),
-            'logistik_catatan' => $catatan,
-            'update_by'        => $user['nama'],
-        ]);
-
-        $msg = ($aksi === 'selesai')
-            ? "SPR <strong>{$spr['no_spr']}</strong> telah selesai diproses oleh Logistik."
-            : "SPR <strong>{$spr['no_spr']}</strong> ditolak oleh Logistik.";
-
-        $this->session->set_flashdata('success', $msg);
-        redirect('retur_penjualan/logistik');
+        redirect('retur_penjualan');
     }
 
     // ================================================================

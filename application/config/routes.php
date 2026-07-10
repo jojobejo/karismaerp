@@ -436,23 +436,22 @@ $route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kemb
 $route['retur_penjualan']                                    = 'sales/C_ReturPenjualan/index';
 $route['retur_penjualan/create']                             = 'sales/C_ReturPenjualan/create';
 $route['retur_penjualan/store']                              = 'sales/C_ReturPenjualan/store';
+$route['retur_penjualan/edit/(:any)']                        = 'sales/C_ReturPenjualan/edit/$1';
+$route['retur_penjualan/update/(:any)']                      = 'sales/C_ReturPenjualan/update/$1';
 $route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPenjualan/detail/$1';
 $route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
 $route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
+$route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPenjualan/ajax_search_barang';
 // Koor SC
-$route['retur_penjualan/koor_sc']                            = 'sales/C_ReturPenjualan/koor_sc';
 $route['retur_penjualan/koor_sc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/koor_sc_verifikasi/$1';
 $route['retur_penjualan/koor_sc/simpan/(:any)']              = 'sales/C_ReturPenjualan/koor_sc_simpan/$1';
 // Admin Stock
-$route['retur_penjualan/admin_stock']                        = 'sales/C_ReturPenjualan/admin_stock';
 $route['retur_penjualan/admin_stock/cek/(:any)']             = 'sales/C_ReturPenjualan/admin_stock_cek/$1';
 $route['retur_penjualan/admin_stock/simpan/(:any)']          = 'sales/C_ReturPenjualan/admin_stock_simpan/$1';
 // Kadep SC
-$route['retur_penjualan/kadep_sc']                           = 'sales/C_ReturPenjualan/kadep_sc';
 $route['retur_penjualan/kadep_sc/approve/(:any)']            = 'sales/C_ReturPenjualan/kadep_sc_approve/$1';
 $route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPenjualan/kadep_sc_simpan/$1';
 // Logistik
-$route['retur_penjualan/logistik']                           = 'sales/C_ReturPenjualan/logistik';
 $route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPenjualan/logistik_proses/$1';
 $route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
 $route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
