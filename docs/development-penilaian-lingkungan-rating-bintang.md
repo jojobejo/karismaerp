@@ -13,9 +13,11 @@ Route `penilaian_lingkungan` merender form mobile `application/views/content/mob
 - Teks awal `Pilih nilai` berubah menjadi angka `1` sampai `5` sesuai bintang yang diklik.
 - Saat bintang ke-5 diklik, bintang 1 sampai 5 menjadi emas.
 - Saat bintang ke-4 diklik, bintang 1 sampai 4 menjadi emas.
-- Nilai yang dikirim ke server tetap memakai `rating_id`, mengikuti master `tbhrd_issue_rating`.
+- Nilai yang dikirim ke server memakai `rating_id` dan `star_rating`, mengikuti master `tbhrd_issue_rating`.
 - Submit laporan ditolak jika user belum memilih bintang.
 - Controller `hrd/C_Hrd::submit_environment_issue()` memvalidasi `rating_id` dan memastikan score rating berada pada rentang 1 sampai 5.
+- Jika form yang dikirim adalah tab `Penilaian Lingkungan`, data disimpan ke `tbhrd_nilai_lingkungan`.
+- Jika form yang dikirim adalah tab `Laporan Issue`, data tetap disimpan ke `tbhrd_environment_issues`.
 
 ## File Terkait
 
@@ -30,7 +32,7 @@ Route `penilaian_lingkungan` merender form mobile `application/views/content/mob
 1. Buka route `penilaian_lingkungan`.
 2. Pada bagian `Penilaian Lingkungan`, klik salah satu bintang.
 3. Pastikan label di kanan berubah dari `Pilih nilai` menjadi angka yang dipilih.
-4. Isi lokasi, deskripsi, dan bukti foto.
-5. Klik `Kirim Laporan`.
+4. Isi lokasi dan deskripsi penilaian.
+5. Klik `Kirim Penilaian`.
 
-Data penilaian tersimpan pada `tbhrd_environment_issues.rating_id`.
+Data penilaian tersimpan pada `tbhrd_nilai_lingkungan`.

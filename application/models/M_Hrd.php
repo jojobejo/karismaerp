@@ -280,6 +280,11 @@ class M_Hrd extends CI_Model
         return $this->db->insert('tbhrd_environment_issues', $data);
     }
 
+    public function insert_environment_assessment($data)
+    {
+        return $this->db->insert('tbhrd_nilai_lingkungan', $data);
+    }
+
     public function insert_issue_evidence($data)
     {
         return $this->db->insert('tbhrd_issue_evidences', $data);
@@ -308,12 +313,31 @@ class M_Hrd extends CI_Model
         if (array_key_exists('created_by', $filters) && $filters['created_by'] !== '' && $filters['created_by'] !== null) {
             $this->db->where($alias . '.created_by', $filters['created_by']);
         }
-        if (!empty($filters['assessment_only'])) {
-            $this->db->group_start()
-                ->where($alias . '.star_rating >=', 1)
-                ->where($alias . '.star_rating <=', 5)
-                ->or_where('NOT EXISTS (SELECT 1 FROM tbhrd_issue_evidences ev_assessment WHERE ev_assessment.issue_id = ' . $alias . '.id)', null, false)
-                ->group_end();
+        if (!empty($filters['date_from'])) {
+            $this->db->where('DATE(' . $alias . '.report_datetime) >=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $this->db->where('DATE(' . $alias . '.report_datetime) <=', $filters['date_to']);
+        }
+    }
+
+    private function apply_assessment_filters($filters = array(), $alias = 'n')
+    {
+        if (!is_array($filters)) {
+            $filters = array();
+        }
+
+        if (array_key_exists('location_id', $filters) && $filters['location_id'] !== '' && $filters['location_id'] !== null) {
+            $this->db->where($alias . '.location_id', $filters['location_id']);
+        }
+        if (array_key_exists('status_id', $filters) && $filters['status_id'] !== '' && $filters['status_id'] !== null) {
+            $this->db->where($alias . '.status_id', $filters['status_id']);
+        }
+        if (array_key_exists('rating_id', $filters) && $filters['rating_id'] !== '' && $filters['rating_id'] !== null) {
+            $this->db->where($alias . '.rating_id', $filters['rating_id']);
+        }
+        if (array_key_exists('created_by', $filters) && $filters['created_by'] !== '' && $filters['created_by'] !== null) {
+            $this->db->where($alias . '.created_by', $filters['created_by']);
         }
         if (!empty($filters['date_from'])) {
             $this->db->where('DATE(' . $alias . '.report_datetime) >=', $filters['date_from']);
@@ -354,6 +378,37 @@ class M_Hrd extends CI_Model
             ->row();
     }
 
+    public function get_assessment_list($filters = array())
+    {
+        $this->db->select('n.*, n.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', n.created_by)) AS created_by", false)
+            ->from('tbhrd_nilai_lingkungan n')
+            ->join('tbhrd_lokasi l', 'n.location_id = l.id', 'left')
+            ->join('tbhrd_issue_rating r', 'n.rating_id = r.id', 'left')
+            ->join('tbhrd_issue_status s', 'n.status_id = s.id', 'left')
+            ->join('tb_karyawan k', 'n.created_by = k.id', 'left')
+            ->join('tb_user u', 'n.created_by = u.id', 'left');
+
+        $this->apply_assessment_filters($filters, 'n');
+
+        return $this->db->order_by('n.report_datetime', 'DESC')->get();
+    }
+
+    public function get_assessment_by_id($id)
+    {
+        return $this->db->select('n.*, n.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+            ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', n.created_by)) AS created_by_name", false)
+            ->from('tbhrd_nilai_lingkungan n')
+            ->join('tbhrd_lokasi l', 'n.location_id = l.id', 'left')
+            ->join('tbhrd_issue_rating r', 'n.rating_id = r.id', 'left')
+            ->join('tbhrd_issue_status s', 'n.status_id = s.id', 'left')
+            ->join('tb_karyawan k', 'n.created_by = k.id', 'left')
+            ->join('tb_user u', 'n.created_by = u.id', 'left')
+            ->where('n.id', $id)
+            ->get()
+            ->row();
+    }
+
     public function get_issue_evidences($issue_id)
     {
         return $this->db->select('*')
@@ -382,6 +437,12 @@ class M_Hrd extends CI_Model
     {
         $this->db->where('id', $id);
         return $this->db->update('tbhrd_environment_issues', $data);
+    }
+
+    public function update_environment_assessment($id, $data)
+    {
+        $this->db->where('id', $id);
+        return $this->db->update('tbhrd_nilai_lingkungan', $data);
     }
 
     public function get_issue_counts_by_location($filters = array())
@@ -442,20 +503,18 @@ class M_Hrd extends CI_Model
 
     public function get_location_rating_rankings($filters = array())
     {
-        $scoreExpression = "CASE WHEN e.star_rating BETWEEN 1 AND 5 THEN e.star_rating WHEN NOT EXISTS (SELECT 1 FROM tbhrd_issue_evidences ev_score WHERE ev_score.issue_id = e.id) AND r.score BETWEEN 1 AND 5 THEN r.score ELSE NULL END";
+        $this->db->select('n.location_id, l.name AS location_name')
+            ->select('COUNT(n.id) AS total_assessment', false)
+            ->select('ROUND(AVG(n.star_rating), 2) AS average_score', false)
+            ->select('ROUND(AVG(n.star_rating)) AS rank_score', false)
+            ->select('MAX(n.report_datetime) AS last_assessment_at', false)
+            ->from('tbhrd_nilai_lingkungan n')
+            ->join('tbhrd_lokasi l', 'n.location_id = l.id', 'left')
+            ->where('n.star_rating >=', 1)
+            ->where('n.star_rating <=', 5);
+        $this->apply_assessment_filters($filters, 'n');
 
-        $this->db->select('e.location_id, l.name AS location_name')
-            ->select('COUNT(e.id) AS total_assessment', false)
-            ->select('ROUND(AVG(' . $scoreExpression . '), 2) AS average_score', false)
-            ->select('ROUND(AVG(' . $scoreExpression . ')) AS rank_score', false)
-            ->select('MAX(e.report_datetime) AS last_assessment_at', false)
-            ->from('tbhrd_environment_issues e')
-            ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
-            ->join('tbhrd_issue_rating r', 'e.rating_id = r.id', 'left')
-            ->where($scoreExpression . ' IS NOT NULL', null, false);
-        $this->apply_issue_filters($filters, 'e');
-
-        return $this->db->group_by('e.location_id')
+        return $this->db->group_by('n.location_id')
             ->order_by('average_score', 'DESC')
             ->order_by('total_assessment', 'DESC')
             ->order_by('location_name', 'ASC')

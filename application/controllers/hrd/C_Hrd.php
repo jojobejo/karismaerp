@@ -1100,7 +1100,7 @@ class C_Hrd extends CI_Controller
                 echo json_encode(array('status' => false, 'message' => 'Silakan pilih nilai bintang yang valid.'));
                 return;
             }
-            $starRating = $starRating >= 1 && $starRating <= 5 ? $starRating : intval($rating->score);
+            $starRating = intval($rating->score);
         } else {
             $defaultRating = $this->M_Hrd->get_rating_by_score(5);
             $ratingId = $defaultRating ? intval($defaultRating->id) : 5;
@@ -1115,10 +1115,31 @@ class C_Hrd extends CI_Controller
 
         $created_by = $this->_get_current_user_id();
         $defaultStatusId = $this->_get_default_issue_status_id();
+        if ($submissionType === 'assessment') {
+            $assessmentData = array(
+                'location_id' => $this->input->post('location_id'),
+                'rating_id' => $ratingId,
+                'star_rating' => $starRating,
+                'description' => $this->input->post('description'),
+                'report_datetime' => date('Y-m-d H:i:s'),
+                'status_id' => $defaultStatusId,
+                'created_by' => $created_by,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            );
+
+            if (!$this->M_Hrd->insert_environment_assessment($assessmentData)) {
+                echo json_encode(array('status' => false, 'message' => 'Gagal menyimpan penilaian.'));
+                return;
+            }
+
+            echo json_encode(array('status' => true, 'message' => 'Penilaian berhasil dikirim.'));
+            return;
+        }
+
         $issueData = array(
             'location_id' => $this->input->post('location_id'),
             'rating_id' => $ratingId,
-            'star_rating' => $starRating,
             'description' => $this->input->post('description'),
             'report_datetime' => date('Y-m-d H:i:s'),
             'status_id' => $defaultStatusId,
@@ -1144,12 +1165,12 @@ class C_Hrd extends CI_Controller
         $this->M_Hrd->insert_issue_log(array(
             'issue_id' => $issueId,
             'status_id' => $defaultStatusId,
-            'note' => $submissionType === 'assessment' ? 'Penilaian lingkungan dikirim.' : 'Issue dibuat dan menunggu ditangani.',
+            'note' => 'Issue dibuat dan menunggu ditangani.',
             'changed_by' => $created_by,
             'changed_at' => date('Y-m-d H:i:s'),
         ));
 
-        echo json_encode(array('status' => true, 'message' => $submissionType === 'assessment' ? 'Penilaian berhasil dikirim.' : 'Issue berhasil dikirim.'));
+        echo json_encode(array('status' => true, 'message' => 'Issue berhasil dikirim.'));
     }
 
     public function get_environment_issue_list()
@@ -1161,7 +1182,6 @@ class C_Hrd extends CI_Controller
             'location_id' => $this->input->get_post('location_id'),
             'status_id' => $this->input->get_post('status_id'),
             'rating_id' => $this->input->get_post('rating_id'),
-            'assessment_only' => $this->input->get_post('assessment_only'),
             'date_from' => $this->input->get_post('date_from'),
             'date_to' => $this->input->get_post('date_to'),
         );
@@ -1180,11 +1200,23 @@ class C_Hrd extends CI_Controller
             'status_id' => $this->input->get_post('status_id'),
             'date_from' => $this->input->get_post('date_from'),
             'date_to' => $this->input->get_post('date_to'),
-            'assessment_only' => 1,
         );
 
-        $issues = $this->M_Hrd->get_issue_list($filters)->result();
-        echo json_encode(array('status' => true, 'data' => $issues));
+        $assessments = $this->M_Hrd->get_assessment_list($filters)->result();
+        echo json_encode(array('status' => true, 'data' => $assessments));
+    }
+
+    public function get_environment_assessment_detail($id)
+    {
+        $this->_require_penilaian_admin_access();
+        $this->output->set_content_type('application/json');
+        $assessment = $this->M_Hrd->get_assessment_by_id($id);
+        if (!$assessment) {
+            echo json_encode(array('status' => false, 'message' => 'Penilaian tidak ditemukan.'));
+            return;
+        }
+
+        echo json_encode(array('status' => true, 'assessment' => $assessment));
     }
 
     public function get_environment_issue_detail($id)
@@ -1231,10 +1263,6 @@ class C_Hrd extends CI_Controller
 
         if ($this->input->post('rating_id') !== null && $this->input->post('rating_id') !== '') {
             $updatedData['rating_id'] = $this->input->post('rating_id');
-            if ($this->input->post('update_context') === 'assessment') {
-                $rating = $this->M_Hrd->get_rating_by_id($this->input->post('rating_id'));
-                $updatedData['star_rating'] = $rating ? intval($rating->score) : 0;
-            }
         }
 
         if (!$this->M_Hrd->update_environment_issue($issueId, $updatedData)) {
@@ -1258,6 +1286,43 @@ class C_Hrd extends CI_Controller
         }
 
         echo json_encode(array('status' => true, 'message' => 'Issue berhasil diperbarui.'));
+    }
+
+    public function update_environment_assessment()
+    {
+        $this->_require_penilaian_admin_access();
+        $this->output->set_content_type('application/json');
+        $this->load->library('form_validation');
+
+        $this->form_validation->set_rules('assessment_id', 'Penilaian ID', 'required');
+        $this->form_validation->set_rules('rating_id', 'Nilai', 'required');
+        $this->form_validation->set_rules('status_id', 'Status', 'required');
+
+        if ($this->form_validation->run() === false) {
+            echo json_encode(array('status' => false, 'message' => validation_errors('', '')));
+            return;
+        }
+
+        $rating = $this->M_Hrd->get_rating_by_id($this->input->post('rating_id'));
+        if (!$rating || intval($rating->score) < 1 || intval($rating->score) > 5) {
+            echo json_encode(array('status' => false, 'message' => 'Silakan pilih nilai bintang yang valid.'));
+            return;
+        }
+
+        $updatedData = array(
+            'rating_id' => $this->input->post('rating_id'),
+            'star_rating' => intval($rating->score),
+            'status_id' => $this->input->post('status_id'),
+            'due_date' => $this->input->post('due_date') ?: null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        );
+
+        if (!$this->M_Hrd->update_environment_assessment($this->input->post('assessment_id'), $updatedData)) {
+            echo json_encode(array('status' => false, 'message' => 'Gagal memperbarui penilaian.'));
+            return;
+        }
+
+        echo json_encode(array('status' => true, 'message' => 'Penilaian berhasil diperbarui.'));
     }
 
     public function get_environment_issue_stats()

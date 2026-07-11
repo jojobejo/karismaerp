@@ -20,11 +20,12 @@ Nilai penilaian dan prioritas issue dipisahkan:
 - Endpoint statistik `hrd/penilaian_lingkungan/stats` mengirim `location_rankings`.
 - Endpoint data all penilaian memakai route `hrd/penilaian_lingkungan/penilaian-list`.
 - Halaman dan endpoint all penilaian hanya dapat diakses oleh Admin dan Superadmin.
-- Query ranking memakai `tbhrd_environment_issues.star_rating` untuk data nilai penilaian.
-- Data laporan issue yang memiliki evidence/foto tidak ikut ranking penilaian lokasi.
-- Untuk kompatibilitas data penilaian lama yang belum mengisi `star_rating`, sistem hanya fallback ke `tbhrd_issue_rating.score` jika baris tersebut tidak memiliki evidence/foto.
+- Query ranking memakai `tbhrd_nilai_lingkungan.star_rating` untuk data nilai penilaian.
+- Submit tab `Penilaian Lingkungan` menyimpan data ke `tbhrd_nilai_lingkungan`.
+- Submit tab `Laporan Issue` tetap menyimpan data ke `tbhrd_environment_issues` dan tidak mengirim `star_rating`.
+- Data laporan issue tidak ikut ranking penilaian lokasi.
 - Form mobile tab `Penilaian Lingkungan` mengirim `star_rating` saat user memilih bintang.
-- Form mobile tab `Laporan Issue` tidak mengirim nilai penilaian; `star_rating` disimpan `0`.
+- Form mobile tab `Laporan Issue` tidak mengirim nilai penilaian dan tidak menyimpan `star_rating`.
 
 ## File Terkait
 
@@ -52,9 +53,13 @@ Route berikut hanya untuk Admin dan Superadmin:
 
 - `hrd/penilaian_lingkungan/semua-penilaian`
 - `hrd/penilaian_lingkungan/penilaian-list`
+- `hrd/penilaian_lingkungan/penilaian-detail/(:num)`
+- `hrd/penilaian_lingkungan/penilaian-update`
 
 Validasi akses memakai session `lv = 1` atau `jobdesk = ADMIN/SUPERADMIN`.
 
 ## Catatan Validasi
 
 Ranking dihitung dari rata-rata nilai bintang per lokasi. Nilai ranking yang ditampilkan adalah pembulatan rata-rata ke skala 1 sampai 5.
+
+Jika submit penilaian memunculkan error database terkait `tbhrd_nilai_lingkungan`, jalankan migration `database/sql/penilaian_lingkungan_rating_bintang.sql` pada database yang aktif. Error tersebut berarti kode aplikasi sudah versi pemisahan tabel, tetapi struktur database belum ikut di-upgrade.

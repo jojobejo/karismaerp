@@ -78,6 +78,8 @@
             submit: '<?= site_url('hrd/penilaian_lingkungan/submit') ?>',
             list: '<?= site_url('hrd/penilaian_lingkungan/list') ?>',
             assessmentList: '<?= site_url('hrd/penilaian_lingkungan/penilaian-list') ?>',
+            assessmentDetail: '<?= site_url('hrd/penilaian_lingkungan/penilaian-detail') ?>',
+            assessmentUpdate: '<?= site_url('hrd/penilaian_lingkungan/penilaian-update') ?>',
             detail: '<?= site_url('hrd/penilaian_lingkungan/detail') ?>',
             update: '<?= site_url('hrd/penilaian_lingkungan/update') ?>',
             stats: '<?= site_url('hrd/penilaian_lingkungan/stats') ?>',
@@ -357,7 +359,7 @@
                         '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                         '<td>' + escapeHtml(item.created_by || item.created_by_name || '-') + '</td>' +
                         '<td>' + statusBadge(item.status_name) + '</td>' +
-                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>' +
+                        '<td><button class="btn btn-xs btn-dark btn-update-assessment" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>' +
                         '</tr>';
                 });
             } else {
@@ -379,7 +381,7 @@
                         '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                         '<td>' + escapeHtml(item.created_by || item.created_by_name || '-') + '</td>' +
                         '<td>' + statusBadge(item.status_name) + '</td>' +
-                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-search mr-1"></i> Detail</button></td>' +
+                        '<td><button class="btn btn-xs btn-dark btn-update-assessment" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-search mr-1"></i> Detail</button></td>' +
                         '</tr>';
                 });
             } else {
@@ -397,7 +399,7 @@
             renderLocationAssessmentTable([]);
             $('#locationAssessmentModal').modal('show');
 
-            $.getJSON(urls.list, getDashboardFilters({ location_id: id, assessment_only: 1 }), function(response) {
+            $.getJSON(urls.assessmentList, getDashboardFilters({ location_id: id }), function(response) {
                 var rows = response.data || [];
                 var totalScore = 0;
                 $.each(rows, function(_, item) {
@@ -579,6 +581,8 @@
                 }
 
                 $('#updateIssueId').val(issue.id);
+                $('#updateIssueId').attr('name', 'issue_id');
+                $('#issueUpdateForm').data('mode', 'issue');
                 $('#updateRating').val(issue.rating_id || '');
                 $('#updateStatus').val(issue.status_id);
                 $('#updateDueDate').val(issue.due_date || '');
@@ -607,6 +611,29 @@
                 logHtml += '</div>';
                 $('#historyLogs').html(logHtml);
                 $('#issueUpdateModal').modal('show');
+            });
+        }
+
+        function loadAssessmentDetail(assessmentId) {
+            $.getJSON(urls.assessmentDetail + '/' + assessmentId, function(response) {
+                if (!response.status) {
+                    toast(response.message || 'Penilaian tidak ditemukan.', 'error');
+                    return;
+                }
+                var assessment = response.assessment;
+                $('#updateIssueId').val(assessment.id);
+                $('#updateIssueId').attr('name', 'assessment_id');
+                $('#issueUpdateForm').data('mode', 'assessment');
+                $('#updateRating').val(assessment.rating_id || '');
+                $('#updateStatus').val(assessment.status_id);
+                $('#updateDueDate').val(assessment.due_date || '');
+                $('#updateNote').val('');
+                $('#updateFeedback').html('');
+                $('#currentEvidence').html('<div class="text-muted">Data penilaian tersimpan di tabel nilai lingkungan.</div>');
+                $('#historyLogs').html('');
+                $('#issueUpdateModal').modal('show');
+            }).fail(function(xhr) {
+                toast(ajaxErrorMessage(xhr, 'Terjadi kesalahan saat memuat detail penilaian.'), 'error');
             });
         }
 
@@ -834,6 +861,10 @@
             loadIssueDetail($(this).data('id'), 'admin');
         });
 
+        $(document).on('click', '.btn-update-assessment', function() {
+            loadAssessmentDetail($(this).data('id'));
+        });
+
         $('#issueUpdateForm').on('submit', function(e) {
             e.preventDefault();
             var updateEvidence = $('#updateEvidence')[0];
@@ -843,8 +874,9 @@
                 return;
             }
             var $button = $(this).find('[type="submit"]');
+            var submitUrl = $(this).data('mode') === 'assessment' ? urls.assessmentUpdate : urls.update;
             $.ajax({
-                url: urls.update,
+                url: submitUrl,
                 type: 'POST',
                 data: new FormData(this),
                 processData: false,

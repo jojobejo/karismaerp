@@ -2,13 +2,20 @@
 
 ## Ringkasan
 
-Tidak ada kolom baru. Tab `Laporan Issue` dan `Penilaian Lingkungan` memakai struktur database yang sudah ada:
+Tab `Penilaian Lingkungan` memakai tabel baru yang terpisah dari laporan issue:
 
-- `tbhrd_environment_issues.rating_id`
+- `tbhrd_nilai_lingkungan.location_id`
+- `tbhrd_nilai_lingkungan.rating_id`
+- `tbhrd_nilai_lingkungan.star_rating`
+- `tbhrd_nilai_lingkungan.description`
+- `tbhrd_nilai_lingkungan.report_datetime`
+- `tbhrd_nilai_lingkungan.status_id`
 - `tbhrd_issue_rating.id`
 - `tbhrd_issue_rating.score`
 
-Tab `Penilaian Lingkungan` menyimpan nilai bintang melalui `tbhrd_environment_issues.rating_id`. Tab `Laporan Issue` tetap menyimpan laporan pada tabel yang sama dan memakai rating default score 5 secara tersembunyi agar kompatibel dengan foreign key lama.
+Tab `Penilaian Lingkungan` menyimpan nilai bintang utama melalui `tbhrd_nilai_lingkungan.star_rating`. Kolom `rating_id` tetap diisi agar kompatibel dengan master `tbhrd_issue_rating`.
+
+Tab `Laporan Issue` tetap menyimpan laporan pada `tbhrd_environment_issues` dan tidak lagi mengirim kolom `star_rating`.
 
 ## Migration
 
@@ -16,7 +23,11 @@ File SQL:
 
 `database/sql/penilaian_lingkungan_rating_bintang.sql`
 
-Migration ini menormalkan master rating menjadi:
+Migration ini melakukan:
+
+1. Membuat tabel `tbhrd_nilai_lingkungan` jika belum ada.
+2. Menambahkan index dan foreign key untuk lokasi, rating, status, bintang, dan tanggal laporan.
+3. Menormalkan master rating menjadi:
 
 | id | name | score |
 | --- | --- | --- |
@@ -25,6 +36,8 @@ Migration ini menormalkan master rating menjadi:
 | 3 | Nilai 3 | 3 |
 | 4 | Nilai 4 | 4 |
 | 5 | Nilai 5 | 5 |
+
+Script bersifat idempotent sehingga aman dijalankan ulang pada local, staging, atau production.
 
 ## Cara Menjalankan
 
@@ -36,4 +49,4 @@ Get-Content database/sql/penilaian_lingkungan_rating_bintang.sql | & C:\xampp\my
 
 ## Catatan
 
-Kolom `tbhrd_environment_issues.rating_id` tetap menyimpan id master rating, bukan angka bintang langsung. Angka bintang didapat dari join ke `tbhrd_issue_rating.score`.
+Kolom `tbhrd_nilai_lingkungan.star_rating` menyimpan angka bintang langsung untuk penilaian lokasi. Kolom `rating_id` tetap menyimpan id master rating.
