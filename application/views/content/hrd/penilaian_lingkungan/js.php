@@ -24,6 +24,8 @@
     .env-mini-list .env-mini-item .env-mini-actions { flex-shrink: 0; }
     .env-progress { background: #e5e7eb; border-radius: 99px; height: 6px; margin-top: 6px; overflow: hidden; width: 100%; }
     .env-progress span { background: #111827; display: block; height: 100%; }
+    .env-rating-stars { color: #f59e0b; white-space: nowrap; }
+    .env-ranking-score { align-items: center; background: #ecfdf5; border-radius: 8px; color: #047857; display: inline-flex; font-weight: 800; height: 30px; justify-content: center; min-width: 42px; padding: 0 8px; }
     .env-chart-wrap { min-height: 240px; position: relative; }
     .env-chart-empty { align-items: center; bottom: 0; color: #64748b; display: flex; font-weight: 700; justify-content: center; left: 0; position: absolute; right: 0; text-align: center; top: 0; }
     .env-breakdown-stat { background: #f8fafc; border: 1px solid #e8edf2; border-radius: 8px; height: 100%; padding: 12px; }
@@ -75,6 +77,7 @@
         var urls = {
             submit: '<?= site_url('hrd/penilaian_lingkungan/submit') ?>',
             list: '<?= site_url('hrd/penilaian_lingkungan/list') ?>',
+            assessmentList: '<?= site_url('hrd/penilaian_lingkungan/penilaian-list') ?>',
             detail: '<?= site_url('hrd/penilaian_lingkungan/detail') ?>',
             update: '<?= site_url('hrd/penilaian_lingkungan/update') ?>',
             stats: '<?= site_url('hrd/penilaian_lingkungan/stats') ?>',
@@ -181,6 +184,23 @@
             else if (lower.indexOf('progress') >= 0 || lower.indexOf('proses') >= 0) cls = 'env-badge-progress';
             else if (lower.indexOf('pending') >= 0 || lower.indexOf('menunggu') >= 0 || lower.indexOf('belum') >= 0) cls = 'env-badge-open';
             return '<span class="env-badge ' + cls + '">' + escapeHtml(label) + '</span>';
+        }
+
+        function scoreValue(item) {
+            var star = parseInt(item && item.star_rating, 10) || 0;
+            if (star >= 1 && star <= 5) return star;
+            var score = parseInt(item && item.score, 10) || 0;
+            return score >= 1 && score <= 5 ? score : 0;
+        }
+
+        function starRatingHtml(score) {
+            var value = parseInt(score, 10) || 0;
+            var html = '<span class="env-rating-stars" title="Nilai ' + escapeHtml(value) + ' dari 5">';
+            for (var i = 1; i <= 5; i++) {
+                html += '<i class="' + (i <= value ? 'fas' : 'far') + ' fa-star"></i>';
+            }
+            html += '</span>';
+            return html;
         }
 
         function getDashboardFilters(extraParams) {
@@ -297,6 +317,103 @@
             $('#issueBreakdownTable tbody').html(tbody);
         }
 
+        function renderLocationRankings(rows) {
+            if (!$('#locationRankingTable').length) return;
+            var tbody = '';
+            var totalAverage = 0;
+            var totalLocations = 0;
+
+            if (rows && rows.length) {
+                $.each(rows, function(index, item) {
+                    var average = parseFloat(item.average_score) || 0;
+                    var rankScore = Math.max(1, Math.min(5, parseInt(item.rank_score, 10) || Math.round(average) || 1));
+                    totalAverage += average;
+                    totalLocations++;
+                    tbody += '<tr>' +
+                        '<td class="font-weight-bold">' + (index + 1) + '</td>' +
+                        '<td><div class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</div><small class="text-muted">' + escapeHtml(item.total_assessment || 0) + ' penilaian</small></td>' +
+                        '<td>' + average.toFixed(2) + '</td>' +
+                        '<td><span class="env-ranking-score">' + rankScore + '/5</span></td>' +
+                        '<td><button type="button" class="btn btn-xs btn-dark btn-location-assessment" data-id="' + escapeHtml(item.location_id) + '" data-label="' + escapeHtml(item.location_name || '-') + '" data-average="' + average.toFixed(2) + '" data-rank="' + rankScore + '">Detail</button></td>' +
+                        '</tr>';
+                });
+            } else {
+                tbody = '<tr><td colspan="5" class="text-center text-muted">Belum ada data penilaian lokasi.</td></tr>';
+            }
+
+            $('#locationRankingTable tbody').html(tbody);
+            $('#summaryAverageRating').text(totalLocations > 0 ? (totalAverage / totalLocations).toFixed(2) : '0');
+        }
+
+        function renderLocationAssessmentTable(rows) {
+            var tbody = '';
+            if (rows && rows.length) {
+                $.each(rows, function(index, item) {
+                    var score = scoreValue(item);
+                    tbody += '<tr>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
+                        '<td>' + starRatingHtml(score) + ' <strong class="ml-1">' + escapeHtml(score || '-') + '</strong></td>' +
+                        '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
+                        '<td>' + escapeHtml(item.created_by || item.created_by_name || '-') + '</td>' +
+                        '<td>' + statusBadge(item.status_name) + '</td>' +
+                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>' +
+                        '</tr>';
+                });
+            } else {
+                tbody = '<tr><td colspan="7" class="text-center text-muted">Tidak ada detail penilaian.</td></tr>';
+            }
+            $('#locationAssessmentTable tbody').html(tbody);
+        }
+
+        function renderAssessmentRows(rows, targetSelector, emptyColspan) {
+            var tbody = '';
+            if (rows && rows.length) {
+                $.each(rows, function(index, item) {
+                    var score = scoreValue(item);
+                    tbody += '<tr>' +
+                        '<td>' + (index + 1) + '</td>' +
+                        '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
+                        '<td class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</td>' +
+                        '<td>' + starRatingHtml(score) + ' <strong class="ml-1">' + escapeHtml(score || '-') + '</strong></td>' +
+                        '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
+                        '<td>' + escapeHtml(item.created_by || item.created_by_name || '-') + '</td>' +
+                        '<td>' + statusBadge(item.status_name) + '</td>' +
+                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-search mr-1"></i> Detail</button></td>' +
+                        '</tr>';
+                });
+            } else {
+                tbody = '<tr><td colspan="' + (emptyColspan || 8) + '" class="text-center text-muted">Belum ada data penilaian.</td></tr>';
+            }
+            $(targetSelector).html(tbody);
+        }
+
+        function openLocationAssessmentModal(id, label, average, rankScore) {
+            if (!$('#locationAssessmentModal').length) return;
+            $('#locationAssessmentTitle').text('Detail Penilaian: ' + (label || 'Lokasi'));
+            $('#assessmentTotalRows').text('0');
+            $('#assessmentAverageScore').text(average || '0');
+            $('#assessmentRankScore').text((rankScore || '0') + '/5');
+            renderLocationAssessmentTable([]);
+            $('#locationAssessmentModal').modal('show');
+
+            $.getJSON(urls.list, getDashboardFilters({ location_id: id, assessment_only: 1 }), function(response) {
+                var rows = response.data || [];
+                var totalScore = 0;
+                $.each(rows, function(_, item) {
+                    totalScore += scoreValue(item);
+                });
+                var calculatedAverage = rows.length ? (totalScore / rows.length).toFixed(2) : '0';
+                var calculatedRank = rows.length ? Math.max(1, Math.min(5, Math.round(totalScore / rows.length))) : 0;
+                $('#assessmentTotalRows').text(rows.length);
+                $('#assessmentAverageScore').text(calculatedAverage);
+                $('#assessmentRankScore').text(calculatedRank + '/5');
+                renderLocationAssessmentTable(rows);
+            }).fail(function(xhr) {
+                toast(ajaxErrorMessage(xhr, 'Terjadi kesalahan saat memuat detail penilaian.'), 'error');
+            });
+        }
+
         function openBreakdownModal(type, id, label) {
             if (!$('#issueBreakdownModal').length) return;
             $('#issueBreakdownTitle').text('Memuat detail ' + (label || 'issue') + '...');
@@ -334,6 +451,7 @@
                 $('#summaryPending').text(response.pending_count || 0);
                 $('#summaryInProgress').text(response.in_progress_count || 0);
                 $('#summaryResolved').text(response.resolved_count || 0);
+                renderLocationRankings(response.location_rankings || []);
 
                 var maxLocation = 1;
                 $.each(response.by_location || [], function(_, item) {
@@ -362,7 +480,7 @@
                 if (response.by_rating && response.by_rating.length) {
                     $.each(response.by_rating, function(_, item) {
                         ratingRows += '<tr><td>' + escapeHtml(item.rating_name || '-') + '</td><td>' + escapeHtml(item.score || 0) + '</td><td class="text-right font-weight-bold">' + escapeHtml(item.total || 0) + '</td></tr>';
-                        ratingMini += '<div class="env-mini-item"><div class="env-mini-meta d-flex justify-content-between align-items-center"><span>' + escapeHtml(item.rating_name || '-') + ' <small class="text-muted">(' + escapeHtml(item.score || 0) + ')</small></span><strong>' + escapeHtml(item.total || 0) + '</strong></div><div class="env-mini-actions"><button type="button" class="btn btn-xs btn-outline-dark btn-breakdown" data-type="rating" data-id="' + escapeHtml(item.rating_id) + '" data-label="' + escapeHtml(item.rating_name || '-') + '">Detail</button></div></div>';
+                        ratingMini += '<div class="env-mini-item"><div class="env-mini-meta d-flex justify-content-between align-items-center"><span>' + escapeHtml(item.rating_name || '-') + ' <small class="text-muted">prioritas ' + escapeHtml(item.score || 0) + '</small></span><strong>' + escapeHtml(item.total || 0) + '</strong></div><div class="env-mini-actions"><button type="button" class="btn btn-xs btn-outline-dark btn-breakdown" data-type="rating" data-id="' + escapeHtml(item.rating_id) + '" data-label="' + escapeHtml(item.rating_name || '-') + '">Detail</button></div></div>';
                     });
                 } else {
                     ratingRows = '<tr><td colspan="3" class="text-center text-muted">Tidak ada data.</td></tr>';
@@ -402,6 +520,19 @@
                     tbody = '<tr><td colspan="8" class="text-center text-muted">Tidak ada data issue.</td></tr>';
                 }
                 $('#issueTable tbody').html(tbody);
+            });
+        }
+
+        function loadAllAssessments() {
+            if (!$('#allAssessmentTable').length) return;
+            $.getJSON(urls.assessmentList, getDashboardFilters(), function(response) {
+                var rows = response.data || [];
+                renderAssessmentRows(rows, '#allAssessmentTable tbody', 8);
+                $('#allAssessmentCount').text(rows.length + ' data');
+            }).fail(function(xhr) {
+                $('#allAssessmentCount').text('0 data');
+                $('#allAssessmentTable tbody').html('<tr><td colspan="8" class="text-center text-danger">Data penilaian belum dapat dimuat.</td></tr>');
+                alertBox('#allAssessmentFeedback', ajaxErrorMessage(xhr, 'Akses data penilaian ditolak atau server belum merespons.'), 'danger');
             });
         }
 
@@ -668,10 +799,17 @@
         $('#reloadIssues, #filterLocation, #filterStatus, #filterFrom, #filterTo').on('click change', function() {
             loadIssueTable();
             loadStats();
+            loadAllAssessments();
         });
+
+        $('#reloadAllAssessments').on('click', loadAllAssessments);
 
         $(document).on('click', '.btn-breakdown', function() {
             openBreakdownModal($(this).data('type'), $(this).data('id'), $(this).data('label'));
+        });
+
+        $(document).on('click', '.btn-location-assessment', function() {
+            openLocationAssessmentModal($(this).data('id'), $(this).data('label'), $(this).data('average'), $(this).data('rank'));
         });
 
         $('#btnLocationChartDetail').on('click', function() {
@@ -698,7 +836,8 @@
 
         $('#issueUpdateForm').on('submit', function(e) {
             e.preventDefault();
-            var error = validateFiles($('#updateEvidence')[0].files);
+            var updateEvidence = $('#updateEvidence')[0];
+            var error = updateEvidence ? validateFiles(updateEvidence.files) : null;
             if (error) {
                 alertBox('#updateFeedback', error, 'danger');
                 return;
@@ -720,6 +859,7 @@
                         toast(response.message || 'Issue berhasil diperbarui.', 'success');
                         loadIssueTable();
                         loadStats();
+                        loadAllAssessments();
                     } else {
                         alertBox('#updateFeedback', response.message || 'Gagal memperbarui issue.', 'danger');
                     }
@@ -877,6 +1017,7 @@
 
         loadStats();
         loadIssueTable();
+        loadAllAssessments();
         loadPendingIssuesTable();
         loadMasterData();
     });

@@ -20,6 +20,17 @@ class C_Hrd extends CI_Controller
         }
     }
 
+    private function _require_penilaian_admin_access()
+    {
+        $akses = intval($this->session->userdata('lv'));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        if ($akses === 1 || in_array($jobdesk, array('ADMIN', 'SUPERADMIN'), true)) {
+            return;
+        }
+
+        show_error('Akses hanya untuk Admin dan Superadmin', 403, 'Forbidden');
+    }
+
     private function _get_current_user_id()
     {
         return $this->session->userdata('id') ?: $this->session->userdata('kode') ?: null;
@@ -1034,6 +1045,22 @@ class C_Hrd extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function penilaian_lingkungan_semua_penilaian()
+    {
+        $this->_require_penilaian_admin_access();
+
+        $data['page_title'] = 'All Data Penilaian Lingkungan';
+        $data['lokasi'] = $this->M_Hrd->get_locations()->result();
+        $data['status'] = $this->M_Hrd->get_statuses()->result();
+        $data['rating'] = $this->M_Hrd->get_ratings()->result();
+        $data['default_status_id'] = $this->_get_default_issue_status_id();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/hrd/penilaian_lingkungan/all_penilaian.php', $data);
+        $this->load->view('content/hrd/penilaian_lingkungan/js');
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function penilaian_lingkungan_monitoring()
     {
         // temporarily disabled access check for monitoring
@@ -1064,7 +1091,24 @@ class C_Hrd extends CI_Controller
             return;
         }
 
-        if (empty($_FILES['evidence']['name'][0])) {
+        $submissionType = $this->input->post('submission_type') === 'assessment' ? 'assessment' : 'issue';
+        $ratingId = intval($this->input->post('rating_id'));
+        $starRating = intval($this->input->post('star_rating'));
+        if ($submissionType === 'assessment') {
+            $rating = $this->M_Hrd->get_rating_by_id($ratingId);
+            if (!$rating || intval($rating->score) < 1 || intval($rating->score) > 5) {
+                echo json_encode(array('status' => false, 'message' => 'Silakan pilih nilai bintang yang valid.'));
+                return;
+            }
+            $starRating = $starRating >= 1 && $starRating <= 5 ? $starRating : intval($rating->score);
+        } else {
+            $defaultRating = $this->M_Hrd->get_rating_by_score(5);
+            $ratingId = $defaultRating ? intval($defaultRating->id) : 5;
+            $starRating = 0;
+        }
+
+        $hasEvidence = !empty($_FILES['evidence']['name'][0]);
+        if ($submissionType === 'issue' && !$hasEvidence) {
             echo json_encode(array('status' => false, 'message' => 'Silakan upload minimal satu bukti foto.'));
             return;
         }
@@ -1073,7 +1117,8 @@ class C_Hrd extends CI_Controller
         $defaultStatusId = $this->_get_default_issue_status_id();
         $issueData = array(
             'location_id' => $this->input->post('location_id'),
-            'rating_id' => $this->input->post('rating_id') !== null ? $this->input->post('rating_id') : 0,
+            'rating_id' => $ratingId,
+            'star_rating' => $starRating,
             'description' => $this->input->post('description'),
             'report_datetime' => date('Y-m-d H:i:s'),
             'status_id' => $defaultStatusId,
@@ -1088,21 +1133,23 @@ class C_Hrd extends CI_Controller
         }
 
         $issueId = $this->db->insert_id();
-        $uploadResult = $this->_upload_issue_files($issueId);
-        if (isset($uploadResult['error'])) {
-            echo json_encode(array('status' => false, 'message' => 'Upload file gagal: ' . $uploadResult['error']));
-            return;
+        if ($hasEvidence) {
+            $uploadResult = $this->_upload_issue_files($issueId);
+            if (isset($uploadResult['error'])) {
+                echo json_encode(array('status' => false, 'message' => 'Upload file gagal: ' . $uploadResult['error']));
+                return;
+            }
         }
 
         $this->M_Hrd->insert_issue_log(array(
             'issue_id' => $issueId,
             'status_id' => $defaultStatusId,
-            'note' => 'Issue dibuat dan menunggu ditangani.',
+            'note' => $submissionType === 'assessment' ? 'Penilaian lingkungan dikirim.' : 'Issue dibuat dan menunggu ditangani.',
             'changed_by' => $created_by,
             'changed_at' => date('Y-m-d H:i:s'),
         ));
 
-        echo json_encode(array('status' => true, 'message' => 'Issue berhasil dikirim.'));
+        echo json_encode(array('status' => true, 'message' => $submissionType === 'assessment' ? 'Penilaian berhasil dikirim.' : 'Issue berhasil dikirim.'));
     }
 
     public function get_environment_issue_list()
@@ -1114,12 +1161,30 @@ class C_Hrd extends CI_Controller
             'location_id' => $this->input->get_post('location_id'),
             'status_id' => $this->input->get_post('status_id'),
             'rating_id' => $this->input->get_post('rating_id'),
+            'assessment_only' => $this->input->get_post('assessment_only'),
             'date_from' => $this->input->get_post('date_from'),
             'date_to' => $this->input->get_post('date_to'),
         );
         $filters = $this->_apply_karyawan_issue_scope($filters);
         $issues = $this->M_Hrd->get_issue_list($filters)->result();
         echo json_encode(array('data' => $issues));
+    }
+
+    public function get_environment_assessment_list()
+    {
+        $this->_require_penilaian_admin_access();
+        $this->output->set_content_type('application/json');
+
+        $filters = array(
+            'location_id' => $this->input->get_post('location_id'),
+            'status_id' => $this->input->get_post('status_id'),
+            'date_from' => $this->input->get_post('date_from'),
+            'date_to' => $this->input->get_post('date_to'),
+            'assessment_only' => 1,
+        );
+
+        $issues = $this->M_Hrd->get_issue_list($filters)->result();
+        echo json_encode(array('status' => true, 'data' => $issues));
     }
 
     public function get_environment_issue_detail($id)
@@ -1166,6 +1231,10 @@ class C_Hrd extends CI_Controller
 
         if ($this->input->post('rating_id') !== null && $this->input->post('rating_id') !== '') {
             $updatedData['rating_id'] = $this->input->post('rating_id');
+            if ($this->input->post('update_context') === 'assessment') {
+                $rating = $this->M_Hrd->get_rating_by_id($this->input->post('rating_id'));
+                $updatedData['star_rating'] = $rating ? intval($rating->score) : 0;
+            }
         }
 
         if (!$this->M_Hrd->update_environment_issue($issueId, $updatedData)) {
@@ -1205,6 +1274,7 @@ class C_Hrd extends CI_Controller
         );
         $byLocation = $this->M_Hrd->get_issue_counts_by_location($filters)->result();
         $byRating = $this->M_Hrd->get_issue_counts_by_rating($filters)->result();
+        $locationRankings = $this->M_Hrd->get_location_rating_rankings($filters)->result();
         $statusRows = $this->M_Hrd->get_issue_counts_by_status($filters)->result();
 
         $openCount = 0;
@@ -1237,6 +1307,7 @@ class C_Hrd extends CI_Controller
             'resolved_count' => $resolvedCount,
             'by_location' => $byLocation,
             'by_rating' => $byRating,
+            'location_rankings' => $locationRankings,
         ));
     }
 
@@ -1274,7 +1345,7 @@ class C_Hrd extends CI_Controller
             if ($type === 'location') {
                 $title = 'Lokasi: ' . $issues[0]->location_name;
             } else {
-                $title = 'Prioritas: ' . $issues[0]->rating_name . ' (' . $issues[0]->score . ')';
+                $title = 'Level Prioritas Issue: ' . $issues[0]->rating_name . ' (' . $issues[0]->score . ')';
             }
         }
 

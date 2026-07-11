@@ -131,24 +131,59 @@
     }
 
     function initIssueForm() {
-        const $form = $('#mobileIssueForm');
-        if (!$form.length) return;
+        const $forms = $('.mobile-submit-form');
+        if (!$forms.length) return;
 
-        $('#description').on('input', function () {
-            $('#descriptionCount').text(this.value.length);
+        function setRating($form, score, ratingId) {
+            const selectedScore = parseInt(score, 10) || 0;
+            $form.find('.rating-id').val(ratingId || '');
+            $form.find('.star-rating-value').val(selectedScore > 0 ? selectedScore : '');
+            $form.find('.rating-value').text(selectedScore > 0 ? selectedScore : 'Pilih nilai');
+            $form.find('.star-button').each(function () {
+                const buttonScore = parseInt($(this).data('score'), 10) || 0;
+                const active = selectedScore > 0 && buttonScore <= selectedScore;
+                $(this)
+                    .toggleClass('is-active', active)
+                    .attr('aria-checked', buttonScore === selectedScore ? 'true' : 'false')
+                    .find('i')
+                    .toggleClass('fas', active)
+                    .toggleClass('far', !active);
+            });
+        }
+
+        $('.form-tab-button').on('click', function () {
+            const tab = $(this).data('form-tab');
+            $('.form-tab-button').removeClass('is-active');
+            $(this).addClass('is-active');
+            $('.form-tab-panel').removeClass('is-active');
+            $('.form-tab-panel[data-form-type="' + tab + '"]').addClass('is-active');
         });
 
-        $('#evidence').on('change', function () {
+        $forms.on('click', '.star-button', function () {
+            const $form = $(this).closest('.mobile-submit-form');
+            setRating($form, $(this).data('score'), $(this).data('rating-id'));
+        });
+
+        $forms.on('input', '.description-input', function () {
+            $(this).closest('.mobile-submit-form').find('.description-count').text(this.value.length);
+        });
+
+        $forms.on('change', '.evidence-input', function () {
             const files = Array.from(this.files || []);
             const html = files.map(function (file) {
                 return '<img src="' + URL.createObjectURL(file) + '" alt="' + escapeHtml(file.name) + '">';
             }).join('');
-            $('#evidencePreview').html(html);
+            $(this).closest('.mobile-submit-form').find('.evidence-preview').html(html);
         });
 
-        $form.on('submit', function (event) {
+        $forms.on('submit', function (event) {
             event.preventDefault();
+            const $form = $(this);
             const $button = $form.find('[type="submit"]');
+            if ($form.data('form-type') === 'assessment' && !$form.find('.rating-id').val()) {
+                toast('Silakan pilih nilai bintang terlebih dahulu.', 'warning');
+                return;
+            }
             const formData = new FormData(this);
 
             $.ajax({
@@ -164,9 +199,10 @@
                 success: function (response) {
                     if (response.status) {
                         $form[0].reset();
-                        $('.mobile-select2').val(null).trigger('change');
-                        $('#descriptionCount').text('0');
-                        $('#evidencePreview').empty();
+                        $form.find('.mobile-select2').val(null).trigger('change');
+                        setRating($form, 0, '');
+                        $form.find('.description-count').text('0');
+                        $form.find('.evidence-preview').empty();
                         toast(response.message || 'Laporan berhasil dikirim.', 'success');
                     } else {
                         toast(response.message || 'Laporan belum bisa dikirim.', 'error');

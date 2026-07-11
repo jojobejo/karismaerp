@@ -36,6 +36,13 @@
                         </div>
                         <div class="col-6 col-md-3 col-xl">
                             <div class="env-kpi">
+                                <span class="env-kpi-icon text-success"><i class="fas fa-star"></i></span>
+                                <small>Rata-rata</small>
+                                <strong id="summaryAverageRating">0</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 col-xl">
+                            <div class="env-kpi">
                                 <span class="env-kpi-icon text-warning"><i class="fas fa-inbox"></i></span>
                                 <small>Open</small>
                                 <strong id="summaryOpen">0</strong>
@@ -121,7 +128,7 @@
                                 <div class="col-md-6">
                                     <div class="card env-card">
                                         <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
-                                            <h3 class="card-title font-weight-bold">Pie Prioritas Rating</h3>
+                                            <h3 class="card-title font-weight-bold">Pie Level Prioritas Issue</h3>
                                             <button type="button" class="btn btn-xs btn-outline-dark" id="btnRatingChartDetail">
                                                 <i class="fas fa-search-plus mr-1"></i> Detail
                                             </button>
@@ -146,7 +153,7 @@
                                                 <tr>
                                                     <th>#</th>
                                                     <th>Lokasi</th>
-                                                    <th>Prioritas</th>
+                                                    <th>Level Prioritas</th>
                                                     <th>Deskripsi</th>
                                                     <th>Lapor</th>
                                                     <th>Due</th>
@@ -162,6 +169,33 @@
                         </div>
                         <div class="col-lg-4">
                             <div class="card env-card">
+                                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                                    <h3 class="card-title font-weight-bold">Ranking Penilaian Lokasi</h3>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge badge-light mr-2">1 - 5</span>
+                                        <a href="<?= base_url('hrd/penilaian_lingkungan/semua-penilaian') ?>" class="btn btn-xs btn-dark">
+                                            <i class="fas fa-list mr-1"></i> All Data
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="card-body pt-2">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm env-table mb-0" id="locationRankingTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Lokasi</th>
+                                                    <th>Rata-rata</th>
+                                                    <th>Ranking</th>
+                                                    <th>Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card env-card">
                                 <div class="card-header border-0 pb-0">
                                     <h3 class="card-title font-weight-bold">Issue per Lokasi</h3>
                                 </div>
@@ -171,10 +205,61 @@
                             </div>
                             <div class="card env-card">
                                 <div class="card-header border-0 pb-0">
-                                    <h3 class="card-title font-weight-bold">Prioritas Rating</h3>
+                                    <h3 class="card-title font-weight-bold">Level Prioritas Issue</h3>
                                 </div>
                                 <div class="card-body pt-2">
                                     <div id="ratingMiniList" class="env-mini-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal fade" id="locationAssessmentModal" tabindex="-1" role="dialog" aria-hidden="true">
+                        <div class="modal-dialog modal-xl" role="document">
+                            <div class="modal-content env-modal">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="locationAssessmentTitle">Detail Penilaian Lokasi</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Total Penilaian</small>
+                                                <strong id="assessmentTotalRows">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-6 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Rata-rata</small>
+                                                <strong id="assessmentAverageScore">0</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 col-12 mb-2">
+                                            <div class="env-breakdown-stat">
+                                                <small>Ranking Lokasi</small>
+                                                <strong id="assessmentRankScore">0</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover env-table" id="locationAssessmentTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Tanggal</th>
+                                                    <th>Nilai</th>
+                                                    <th>Deskripsi</th>
+                                                    <th>Pelapor</th>
+                                                    <th>Status</th>
+                                                    <th>Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -286,7 +371,7 @@
                                                 <tr>
                                                     <th>#</th>
                                                     <th>Lokasi</th>
-                                                    <th>Prioritas</th>
+                                                    <th>Level Prioritas</th>
                                                     <th>Deskripsi</th>
                                                     <th>Lapor</th>
                                                     <th>Due</th>

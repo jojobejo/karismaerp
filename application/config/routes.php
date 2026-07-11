@@ -568,9 +568,11 @@ $route['mobile-erp/profile']                        = 'hrd/C_Hrd/mobile_erp_prof
 // Penilaian Lingkungan Kantor
 $route['penilaian_lingkungan']                     = 'hrd/C_Hrd/penilaian_lingkungan';
 $route['hrd/penilaian_lingkungan/admin']           = 'hrd/C_Hrd/penilaian_lingkungan_admin';
+$route['hrd/penilaian_lingkungan/semua-penilaian'] = 'hrd/C_Hrd/penilaian_lingkungan_semua_penilaian';
 $route['hrd/penilaian_lingkungan/monitoring']      = 'hrd/C_Hrd/penilaian_lingkungan_monitoring';
 $route['hrd/penilaian_lingkungan/submit']          = 'hrd/C_Hrd/submit_environment_issue';
 $route['hrd/penilaian_lingkungan/list']            = 'hrd/C_Hrd/get_environment_issue_list';
+$route['hrd/penilaian_lingkungan/penilaian-list']  = 'hrd/C_Hrd/get_environment_assessment_list';
 $route['hrd/penilaian_lingkungan/detail/(:num)']   = 'hrd/C_Hrd/get_environment_issue_detail/$1';
 $route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environment_issue';
 $route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
