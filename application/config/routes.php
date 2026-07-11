@@ -456,15 +456,23 @@ $route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPen
 $route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
 $route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
 
-// ---- Retur Penjualan (Hasil Fisik dari SPR yang Selesai) ----
-$route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
-$route['retur_penjualan/retur/form/(:any)']                  = 'sales/C_ReturPenjualan/retur_form/$1';
+// ---- ADMLPB2 — Buat Retur dari SPR disetujui Kadep ----
+$route['retur_penjualan/admlpb2']                            = 'sales/C_ReturPenjualan/admlpb2_index';
+$route['retur_penjualan/retur/buat/(:any)']                  = 'sales/C_ReturPenjualan/retur_buat/$1';
 $route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';
+
+// ---- Retur Penjualan ----
+$route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
 $route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
+// Admin Stock
 $route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
 $route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';
+// Collection
 $route['retur_penjualan/retur/collection/(:any)']            = 'sales/C_ReturPenjualan/retur_collection/$1';
 $route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_collection_simpan/$1';
+// Kasir
+$route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPenjualan/retur_kasir/$1';
+$route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';

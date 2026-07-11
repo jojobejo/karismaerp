@@ -30,7 +30,7 @@ class M_ReturPenjualan extends CI_Model
         $this->_ensureHeaderTable();
         $this->_ensureDetailTable();
         $this->ensure_retur_penjualan_tables();
-
+        $this->_alterTablesIfNeeded();
     }
 
     private function _ensureHeaderTable()
@@ -102,6 +102,29 @@ class M_ReturPenjualan extends CI_Model
                 KEY `idx_id_spr` (`id_spr`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
+    }
+
+    /**
+     * Tambahkan kolom baru secara aman jika belum ada (ALTER TABLE IF NOT EXISTS kolom).
+     */
+    private function _alterTablesIfNeeded()
+    {
+        // Tambah expired_date ke detail retur jika belum ada
+        if (!$this->db->field_exists('expired_date', 'tb_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tb_retur_penjualan_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        }
+        // Tambah satuan ke detail retur jika belum ada
+        if (!$this->db->field_exists('satuan', 'tb_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tb_retur_penjualan_detail` ADD COLUMN `satuan` VARCHAR(50) DEFAULT NULL AFTER `nama_barang`");
+        }
+        // Tambah kasir fields ke header retur jika belum ada
+        if (!$this->db->field_exists('kasir_by', 'tb_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tb_retur_penjualan_header`
+                ADD COLUMN `kasir_by`    VARCHAR(150) DEFAULT NULL AFTER `no_faktur_potong`,
+                ADD COLUMN `kasir_at`    DATETIME     DEFAULT NULL AFTER `kasir_by`,
+                ADD COLUMN `catatan_kasir` TEXT        DEFAULT NULL AFTER `kasir_at`
+            ");
+        }
     }
 
     // ================================================================
@@ -203,11 +226,13 @@ class M_ReturPenjualan extends CI_Model
 
     public function get_spr_detail($id_spr)
     {
-        return $this->db
-            ->where('id_spr', (int) $id_spr)
-            ->order_by('no_urut', 'ASC')
-            ->get('tb_spr_detail')
-            ->result_array();
+        $this->db->select('d.*, m.satuan');
+        $this->db->from('tb_spr_detail d');
+        $this->db->join('tb_master_barang_all m', 'm.nama_barang = d.nama_barang', 'left');
+        $this->db->where('d.id_spr', (int) $id_spr);
+        $this->db->group_by('d.id_spr_detail'); // prevent duplicates if multiple kd_barang exist
+        $this->db->order_by('d.no_urut', 'ASC');
+        return $this->db->get()->result_array();
     }
 
     // ================================================================
@@ -292,7 +317,7 @@ class M_ReturPenjualan extends CI_Model
                 `alamat`               VARCHAR(300) DEFAULT NULL,
                 `nama_sales`           VARCHAR(150) DEFAULT NULL,
                 `catatan_logistik`     TEXT         DEFAULT NULL,
-                `status_retur`         ENUM('menunggu_verifikasi','terverifikasi','menunggu_collection','selesai','ditolak')
+                `status_retur`         ENUM('menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak')
                                        NOT NULL DEFAULT 'menunggu_verifikasi',
                 -- Admin Stock
                 `admin_stock_by_retur` VARCHAR(150) DEFAULT NULL,
@@ -303,6 +328,10 @@ class M_ReturPenjualan extends CI_Model
                 `collection_at`        DATETIME     DEFAULT NULL,
                 `catatan_collection`   TEXT         DEFAULT NULL,
                 `no_faktur_potong`     VARCHAR(500) DEFAULT NULL,
+                -- Kasir
+                `kasir_by`             VARCHAR(150) DEFAULT NULL,
+                `kasir_at`             DATETIME     DEFAULT NULL,
+                `catatan_kasir`        TEXT         DEFAULT NULL,
                 -- Audit
                 `create_by_retur`      VARCHAR(150) DEFAULT NULL,
                 `create_at_retur`      DATETIME     DEFAULT CURRENT_TIMESTAMP,
@@ -323,8 +352,10 @@ class M_ReturPenjualan extends CI_Model
                 `id_spr_detail`    INT UNSIGNED DEFAULT NULL,
                 `no_urut`          TINYINT UNSIGNED NOT NULL DEFAULT 1,
                 `nama_barang`      VARCHAR(250) DEFAULT NULL,
+                `satuan`           VARCHAR(50)  DEFAULT NULL,
                 `no_faktur`        VARCHAR(80)  DEFAULT NULL,
                 `no_batch`         VARCHAR(80)  DEFAULT NULL,
+                `expired_date`     DATE         DEFAULT NULL,
                 `qty_retur`        DECIMAL(12,3) NOT NULL DEFAULT 0,
                 `harga_satuan`     DECIMAL(15,2) NOT NULL DEFAULT 0,
                 PRIMARY KEY (`id_retur_detail`),
@@ -350,6 +381,11 @@ class M_ReturPenjualan extends CI_Model
         }
         return $prefix . '0001';
     }
+
+    // ================================================================
+    // RETUR PENJUALAN — CRUD
+    // Alur: ADMLPB2 buat → Admin Stock verifikasi → Collection → Kasir selesai
+    // ================================================================
 
     /** Simpan header Retur Penjualan */
     public function save_retur_penjualan(array $data)
@@ -440,6 +476,7 @@ class M_ReturPenjualan extends CI_Model
             ->get('tb_retur_penjualan_header')
             ->row_array();
     }
+
 
     /**
      * Get history of SPR approvals and rejections processed by a specific user or role.

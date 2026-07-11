@@ -95,7 +95,13 @@ class Auth extends CI_Controller
                         // Logistik Retur — hanya lihat & cetak SPR yang disetujui
                         redirect('retur_penjualan/logistik');
                     } else if ($key->jobdesk == 'ADMSTOCK') {
-                        redirect('retur_penjualan');
+                        redirect('retur_penjualan/retur');
+                    } else if ($key->jobdesk == 'ADMLPB2') {
+                        redirect('retur_penjualan/admlpb2');
+                    } else if ($key->jobdesk == 'COLLECTION' || $key->jobdesk == 'KOLEKTOR') {
+                        redirect('retur_penjualan/retur');
+                    } else if ($key->jobdesk == 'KASIR') {
+                        redirect('retur_penjualan/retur');
                     }
                 } else {
                     $this->session->set_flashdata("gagal", "username / password salah!!!");
