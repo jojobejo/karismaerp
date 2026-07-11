@@ -313,7 +313,7 @@ class M_Hrd extends CI_Model
 
     public function get_issue_list($filters = array())
     {
-        $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+        $this->db->select('e.*, e.created_by AS created_by_id, COALESCE(e.star_rating, 0) AS star_rating, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
             ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')
@@ -329,7 +329,7 @@ class M_Hrd extends CI_Model
 
     public function get_issue_by_id($id)
     {
-        return $this->db->select('e.*, e.created_by AS created_by_id, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
+        return $this->db->select('e.*, e.created_by AS created_by_id, COALESCE(e.star_rating, 0) AS star_rating, l.name AS location_name, r.name AS rating_name, r.score, s.name AS status_name')
             ->select("COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(k.username, ''), NULLIF(u.username, ''), CONCAT('User #', e.created_by)) AS created_by_name", false)
             ->from('tbhrd_environment_issues e')
             ->join('tbhrd_lokasi l', 'e.location_id = l.id', 'left')

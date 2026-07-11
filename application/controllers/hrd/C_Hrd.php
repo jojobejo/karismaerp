@@ -1057,6 +1057,7 @@ class C_Hrd extends CI_Controller
         $this->load->library('form_validation');
 
         $this->form_validation->set_rules('location_id', 'Lokasi', 'required');
+        $this->form_validation->set_rules('star_rating', 'Penilaian bintang', 'required|integer|greater_than_equal_to[1]|less_than_equal_to[5]');
         $this->form_validation->set_rules('description', 'Deskripsi', 'required');
 
         if ($this->form_validation->run() === false) {
@@ -1074,6 +1075,7 @@ class C_Hrd extends CI_Controller
         $issueData = array(
             'location_id' => $this->input->post('location_id'),
             'rating_id' => $this->input->post('rating_id') !== null ? $this->input->post('rating_id') : 0,
+            'star_rating' => intval($this->input->post('star_rating')),
             'description' => $this->input->post('description'),
             'report_datetime' => date('Y-m-d H:i:s'),
             'status_id' => $defaultStatusId,

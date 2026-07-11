@@ -54,6 +54,20 @@
                                         </div>
 
                                         <input type="hidden" name="rating_id" value="5">
+                                        <input type="hidden" name="star_rating" id="envStarRatingValue" value="">
+
+                                        <div class="form-group">
+                                            <label>Penilaian Lingkungan</label>
+                                            <div class="env-star-rating" data-env-rating-control>
+                                                <?php for ($star = 1; $star <= 5; $star++) : ?>
+                                                    <button type="button" class="env-star-button" data-value="<?= $star ?>" aria-label="<?= $star ?> bintang">
+                                                        <i class="far fa-star"></i>
+                                                    </button>
+                                                <?php endfor; ?>
+                                                <strong id="envStarRatingText">Pilih nilai</strong>
+                                            </div>
+                                            <small class="form-text text-muted">Klik bintang sesuai kondisi lingkungan yang dinilai.</small>
+                                        </div>
 
                                         <div class="form-group">
                                             <label>Deskripsi Issue</label>

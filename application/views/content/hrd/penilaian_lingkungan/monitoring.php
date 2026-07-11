@@ -204,7 +204,7 @@
                                             <div><small>Lokasi</small><strong id="pendingDetailLocation">-</strong></div>
                                             <div><small>Lapor</small><strong id="pendingDetailReportDatetime">-</strong></div>
                                             <div class="wide"><small>Deskripsi</small><strong id="pendingDetailDescription">-</strong></div>
-                                            <div><small>Rating saat ini</small><strong id="pendingDetailCurrentRating">-</strong></div>
+                                            <div><small>Rating / Nilai saat ini</small><strong id="pendingDetailCurrentRating">-</strong></div>
                                         </div>
                                         <div class="form-row">
                                             <div class="form-group col-md-4">

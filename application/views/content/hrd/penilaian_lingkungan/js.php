@@ -61,6 +61,19 @@
     .env-location-option strong { font-weight: 700; overflow-wrap: anywhere; }
     .env-location-option:hover, .env-location-option.is-selected { background: #111827; border-color: #111827; color: #fff; }
     .env-location-option:hover span, .env-location-option.is-selected span { background: rgba(255,255,255,.16); color: #fff; }
+    .env-star-rating { align-items: center; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; display: inline-flex; gap: 4px; min-height: 44px; padding: 6px 10px; }
+    .env-star-button { align-items: center; background: transparent; border: 0; border-radius: 6px; color: #94a3b8; display: inline-flex; font-size: 1.35rem; height: 32px; justify-content: center; padding: 0; transition: color .16s ease, filter .16s ease, transform .16s ease; width: 32px; }
+    .env-star-button.is-active, .env-star-display { color: #f6b01e; }
+    .env-star-button.is-active { filter: drop-shadow(0 4px 8px rgba(246, 176, 30, .34)); }
+    .env-star-button.is-animating { animation: envGoldStarPop .38s ease both; }
+    .env-star-button:focus { box-shadow: 0 0 0 .2rem rgba(245, 158, 11, .18); outline: 0; }
+    .env-star-rating strong { align-items: center; background: #fff7e6; border-radius: 8px; color: #a15c00; display: inline-flex; font-size: .9rem; font-weight: 900; justify-content: center; margin-left: 8px; min-width: 32px; padding: 3px 8px; white-space: nowrap; }
+    .env-star-display { display: inline-flex; gap: 2px; white-space: nowrap; }
+    @keyframes envGoldStarPop {
+        0% { transform: scale(.82); }
+        55% { transform: scale(1.22); }
+        100% { transform: scale(1); }
+    }
     @media (max-width: 767.98px) {
         .env-toolbar { align-items: stretch; flex-direction: column; }
         .env-nav { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
@@ -183,6 +196,15 @@
             return '<span class="env-badge ' + cls + '">' + escapeHtml(label) + '</span>';
         }
 
+        function starRatingHtml(value) {
+            var rating = Math.max(0, Math.min(5, parseInt(value, 10) || 0));
+            var html = '<span class="env-star-display" aria-label="' + rating + ' bintang">';
+            for (var i = 1; i <= 5; i++) {
+                html += '<i class="' + (i <= rating ? 'fas' : 'far') + ' fa-star"></i>';
+            }
+            return html + '</span>';
+        }
+
         function getDashboardFilters(extraParams) {
             var params = {
                 location_id: $('#filterLocation').val() || '',
@@ -283,7 +305,7 @@
                     tbody += '<tr>' +
                         '<td>' + (index + 1) + '</td>' +
                         '<td class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</td>' +
-                        '<td>' + ratingLabel + '</td>' +
+                        '<td>' + ratingLabel + '<div class="mt-1">' + starRatingHtml(item.star_rating) + '</div></td>' +
                         '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                         '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
                         '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
@@ -390,7 +412,7 @@
                         tbody += '<tr>' +
                             '<td>' + (index + 1) + '</td>' +
                             '<td class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</td>' +
-                            '<td>' + ratingLabel + '</td>' +
+                            '<td>' + ratingLabel + '<div class="mt-1">' + starRatingHtml(item.star_rating) + '</div></td>' +
                             '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                             '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
                             '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
@@ -438,7 +460,7 @@
                     $('#pendingDetailLocation').text(issue.location_name || '-');
                     $('#pendingDetailReportDatetime').text(issue.report_datetime || '-');
                     $('#pendingDetailDescription').text(issue.description || '-');
-                    $('#pendingDetailCurrentRating').text(issue.rating_name ? issue.rating_name + ' (' + issue.score + ')' : 'Belum ditentukan');
+                    $('#pendingDetailCurrentRating').html((issue.rating_name ? escapeHtml(issue.rating_name) + ' (' + escapeHtml(issue.score) + ')' : 'Belum ditentukan') + '<div class="mt-1">' + starRatingHtml(issue.star_rating) + '</div>');
                     $('#pendingUpdateStatus').val(issue.status_id);
                     $('#pendingUpdateRating').val(issue.rating_id || '');
                     $('#pendingUpdateDueDate').val(issue.due_date || '');
@@ -538,6 +560,26 @@
 
         if ($('#issueForm').length) {
             var $description = $('[name="description"]');
+            function setEnvStarRating(value) {
+                var rating = parseInt(value, 10) || 0;
+                $('#envStarRatingValue').val(rating || '');
+                $('[data-env-rating-control] .env-star-button').each(function() {
+                    var isActive = (parseInt($(this).data('value'), 10) || 0) <= rating;
+                    $(this).toggleClass('is-active', isActive)
+                        .toggleClass('is-animating', isActive)
+                        .find('i').toggleClass('fas', isActive).toggleClass('far', !isActive);
+                });
+                window.setTimeout(function() {
+                    $('[data-env-rating-control] .env-star-button').removeClass('is-animating');
+                }, 420);
+                $('#envStarRatingText').text(rating ? rating : 'Pilih nilai');
+            }
+
+            $('[data-env-rating-control]').on('click', '.env-star-button', function() {
+                setEnvStarRating($(this).data('value'));
+                $('#formFeedback').html('');
+            });
+
             $description.on('input', function() {
                 $('#descriptionCounter').text($(this).val().length);
             });
@@ -607,6 +649,7 @@
                     $('#locationId').val('');
                     $('#selectedLocationText').text('Pilih lokasi');
                     $('.env-location-option').removeClass('is-selected');
+                    setEnvStarRating(0);
                     $('#descriptionCounter').text('0');
                     $('#evidencePreview').html('');
                     $('#formFeedback').html('');
@@ -618,6 +661,11 @@
                 if (!$('#locationId').val()) {
                     alertBox('#formFeedback', 'Silakan pilih lokasi laporan.', 'danger');
                     toast('Lokasi laporan wajib dipilih.', 'warning');
+                    return;
+                }
+                if (!$('#envStarRatingValue').val()) {
+                    alertBox('#formFeedback', 'Silakan pilih penilaian bintang.', 'danger');
+                    toast('Penilaian bintang wajib dipilih.', 'warning');
                     return;
                 }
                 var files = $('#evidence')[0].files;

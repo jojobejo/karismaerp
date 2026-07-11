@@ -9,6 +9,7 @@
         </div>
 
         <input type="hidden" name="rating_id" value="5">
+        <input type="hidden" name="star_rating" id="starRatingValue" value="">
 
         <div class="mb-3">
             <label class="form-label fw-bold">Lokasi</label>
@@ -19,6 +20,19 @@
                 <?php endforeach; ?>
             </select>
             <div class="invalid-feedback">Lokasi wajib dipilih.</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Penilaian lingkungan</label>
+            <div class="star-rating-control" data-rating-control>
+                <?php for ($star = 1; $star <= 5; $star++) : ?>
+                    <button type="button" class="star-rating-button" data-value="<?= $star ?>" aria-label="<?= $star ?> bintang">
+                        <i class="far fa-star"></i>
+                    </button>
+                <?php endfor; ?>
+                <span class="star-rating-text" id="starRatingText">Pilih nilai</span>
+            </div>
+            <small class="text-muted-soft">Klik bintang sesuai kondisi lingkungan yang dinilai.</small>
         </div>
 
         <div class="form-floating mb-3">

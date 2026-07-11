@@ -43,6 +43,15 @@
         return '<span class="status-badge ' + cls + '">' + escapeHtml(label) + '</span>';
     }
 
+    function starRatingHtml(value) {
+        const rating = Math.max(0, Math.min(5, parseInt(value, 10) || 0));
+        let html = '<span class="mobile-star-display" aria-label="' + rating + ' bintang">';
+        for (let i = 1; i <= 5; i++) {
+            html += '<i class="' + (i <= rating ? 'fas' : 'far') + ' fa-star"></i>';
+        }
+        return html + '</span>';
+    }
+
     function timelineIcon(status) {
         const label = (status || '').toLowerCase();
         if (label.indexOf('selesai') >= 0 || label.indexOf('done') >= 0 || label.indexOf('closed') >= 0) {
@@ -134,6 +143,25 @@
         const $form = $('#mobileIssueForm');
         if (!$form.length) return;
 
+        function setStarRating(value) {
+            const rating = parseInt(value, 10) || 0;
+            $('#starRatingValue').val(rating || '');
+            $('[data-rating-control] .star-rating-button').each(function () {
+                const isActive = (parseInt($(this).data('value'), 10) || 0) <= rating;
+                $(this).toggleClass('is-active', isActive)
+                    .toggleClass('is-animating', isActive)
+                    .find('i').toggleClass('fas', isActive).toggleClass('far', !isActive);
+            });
+            window.setTimeout(function () {
+                $('[data-rating-control] .star-rating-button').removeClass('is-animating');
+            }, 420);
+            $('#starRatingText').text(rating ? rating : 'Pilih nilai');
+        }
+
+        $('[data-rating-control]').on('click', '.star-rating-button', function () {
+            setStarRating($(this).data('value'));
+        });
+
         $('#description').on('input', function () {
             $('#descriptionCount').text(this.value.length);
         });
@@ -151,6 +179,11 @@
             const $button = $form.find('[type="submit"]');
             const formData = new FormData(this);
 
+            if (!formData.get('star_rating')) {
+                toast('Pilih penilaian bintang terlebih dahulu.', 'warning');
+                return;
+            }
+
             $.ajax({
                 url: app.urls.submitIssue,
                 type: 'POST',
@@ -165,6 +198,7 @@
                     if (response.status) {
                         $form[0].reset();
                         $('.mobile-select2').val(null).trigger('change');
+                        setStarRating(0);
                         $('#descriptionCount').text('0');
                         $('#evidencePreview').empty();
                         toast(response.message || 'Laporan berhasil dikirim.', 'success');
@@ -199,6 +233,7 @@
                 return '<a class="mobile-card data-card text-decoration-none text-reset" href="' + app.siteUrl + '/mobile-erp/detail/' + item.id + '">' +
                     '<div class="data-card-head"><div><h3>' + escapeHtml(item.location_name || 'Lokasi') + '</h3><div class="meta-row"><span><i class="far fa-clock me-1"></i>' + escapeHtml(item.report_datetime || '-') + '</span><span><i class="far fa-user me-1"></i>' + escapeHtml(item.created_by || '-') + '</span></div></div>' +
                     statusBadge(item.status_name) + '</div>' +
+                    '<div class="meta-row"><span>Nilai</span>' + starRatingHtml(item.star_rating) + '</div>' +
                     '<p class="mb-0 text-muted-soft">' + escapeHtml(item.description || '-').slice(0, 130) + '</p>' +
                     '</a>';
             }).join(''));
@@ -223,6 +258,7 @@
             $detail.html(
                 '<div class="mobile-card data-card">' +
                 '<div class="data-card-head"><div><h3>' + escapeHtml(issue.location_name || '-') + '</h3><div class="meta-row"><span>' + escapeHtml(issue.report_datetime || '-') + '</span></div></div>' + statusBadge(issue.status_name) + '</div>' +
+                '<div class="meta-row"><span>Nilai lingkungan</span>' + starRatingHtml(issue.star_rating) + '</div>' +
                 '<p class="mb-0">' + escapeHtml(issue.description || '-') + '</p>' +
                 '</div>' +
                 '<div class="mobile-card"><div class="card-title-row"><h2>Bukti Foto</h2><span class="status-badge status-muted">' + evidence.length + ' file</span></div>' +

@@ -146,7 +146,7 @@
                                                 <tr>
                                                     <th>#</th>
                                                     <th>Lokasi</th>
-                                                    <th>Prioritas</th>
+                                                    <th>Prioritas / Nilai</th>
                                                     <th>Deskripsi</th>
                                                     <th>Lapor</th>
                                                     <th>Due</th>
