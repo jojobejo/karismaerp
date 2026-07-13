@@ -605,4 +605,682 @@ class M_Keuangan extends CI_Model
     {
         return $this->db->where('id', (int)$id)->delete('tb_customer');
     }
+
+    public function accounting_schema_ready()
+    {
+        return $this->db->table_exists('tbkeu_klasifikasi_akun')
+            && $this->db->table_exists('tbkeu_akun');
+    }
+
+    public function accounting_support_schema_ready()
+    {
+        return $this->db->table_exists('tbkeu_saldo_normal')
+            && $this->db->table_exists('tbkeu_tipe_kontrol');
+    }
+
+    public function accounting_journal_schema_ready()
+    {
+        return $this->db->table_exists('tbkeu_jurnal')
+            && $this->db->table_exists('tbkeu_jurnal_detail');
+    }
+
+    private function accounting_default_saldo_normal_options()
+    {
+        return [
+            (object)['kode_saldo' => 'DEBIT', 'nama_saldo' => 'Debit', 'keterangan' => 'Saldo normal debit', 'urutan' => 10, 'is_active' => 1],
+            (object)['kode_saldo' => 'KREDIT', 'nama_saldo' => 'Kredit', 'keterangan' => 'Saldo normal kredit', 'urutan' => 20, 'is_active' => 1],
+        ];
+    }
+
+    private function accounting_default_tipe_kontrol_options()
+    {
+        $rows = [
+            ['NONE', 'None', 'Akun biasa tanpa kontrol khusus', 10],
+            ['KAS', 'Kas', 'Akun kas tunai', 20],
+            ['BANK', 'Bank', 'Akun rekening bank', 30],
+            ['PIUTANG', 'Piutang', 'Akun piutang customer', 40],
+            ['HUTANG', 'Hutang', 'Akun hutang supplier', 50],
+            ['PERSEDIAAN', 'Persediaan', 'Akun persediaan barang', 60],
+            ['GRNI', 'GRNI', 'Barang diterima belum ditagih', 70],
+            ['PAJAK_MASUKAN', 'Pajak Masukan', 'PPN masukan', 80],
+            ['PAJAK_KELUARAN', 'Pajak Keluaran', 'PPN keluaran', 90],
+            ['UANG_MUKA_CUSTOMER', 'Uang Muka Customer', 'Uang muka dari customer', 100],
+            ['UANG_MUKA_SUPPLIER', 'Uang Muka Supplier', 'Uang muka ke supplier', 110],
+            ['LABA_DITAHAN', 'Laba Ditahan', 'Akun laba ditahan', 120],
+        ];
+
+        return array_map(function ($row) {
+            return (object)[
+                'kode_tipe_kontrol' => $row[0],
+                'nama_tipe_kontrol' => $row[1],
+                'keterangan' => $row[2],
+                'urutan' => $row[3],
+                'is_active' => 1,
+            ];
+        }, $rows);
+    }
+
+    public function accounting_klasifikasi_options()
+    {
+        if (!$this->db->table_exists('tbkeu_klasifikasi_akun')) {
+            return [];
+        }
+
+        return $this->db
+            ->where('is_active', 1)
+            ->order_by('urutan', 'ASC')
+            ->get('tbkeu_klasifikasi_akun')
+            ->result();
+    }
+
+    public function accounting_klasifikasi_by_id($id)
+    {
+        if (!$this->db->table_exists('tbkeu_klasifikasi_akun')) {
+            return null;
+        }
+
+        return $this->db
+            ->where('id_klasifikasi', (int)$id)
+            ->get('tbkeu_klasifikasi_akun')
+            ->row();
+    }
+
+    public function accounting_saldo_normal_options()
+    {
+        if (!$this->db->table_exists('tbkeu_saldo_normal')) {
+            return $this->accounting_default_saldo_normal_options();
+        }
+
+        return $this->db
+            ->where('is_active', 1)
+            ->order_by('urutan', 'ASC')
+            ->order_by('kode_saldo', 'ASC')
+            ->get('tbkeu_saldo_normal')
+            ->result();
+    }
+
+    public function accounting_saldo_normal_by_code($kode)
+    {
+        $kode = strtoupper(trim((string)$kode));
+        if ($kode === '') {
+            return null;
+        }
+
+        if (!$this->db->table_exists('tbkeu_saldo_normal')) {
+            foreach ($this->accounting_default_saldo_normal_options() as $row) {
+                if ($row->kode_saldo === $kode) {
+                    return $row;
+                }
+            }
+            return null;
+        }
+
+        return $this->db
+            ->where('kode_saldo', $kode)
+            ->where('is_active', 1)
+            ->get('tbkeu_saldo_normal')
+            ->row();
+    }
+
+    public function accounting_tipe_kontrol_options()
+    {
+        if (!$this->db->table_exists('tbkeu_tipe_kontrol')) {
+            return $this->accounting_default_tipe_kontrol_options();
+        }
+
+        return $this->db
+            ->where('is_active', 1)
+            ->order_by('urutan', 'ASC')
+            ->order_by('kode_tipe_kontrol', 'ASC')
+            ->get('tbkeu_tipe_kontrol')
+            ->result();
+    }
+
+    public function accounting_tipe_kontrol_by_code($kode)
+    {
+        $kode = strtoupper(trim((string)$kode));
+        if ($kode === '') {
+            return null;
+        }
+
+        if (!$this->db->table_exists('tbkeu_tipe_kontrol')) {
+            foreach ($this->accounting_default_tipe_kontrol_options() as $row) {
+                if ($row->kode_tipe_kontrol === $kode) {
+                    return $row;
+                }
+            }
+            return null;
+        }
+
+        return $this->db
+            ->where('kode_tipe_kontrol', $kode)
+            ->where('is_active', 1)
+            ->get('tbkeu_tipe_kontrol')
+            ->row();
+    }
+
+    public function accounting_account_summary()
+    {
+        $summary = [
+            'total' => 0,
+            'header' => 0,
+            'posting' => 0,
+            'active' => 0,
+            'inactive' => 0,
+        ];
+
+        if (!$this->accounting_schema_ready()) {
+            return $summary;
+        }
+
+        $row = $this->db->query("
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN tipe_akun = 'HEADER' THEN 1 ELSE 0 END) AS header,
+                SUM(CASE WHEN tipe_akun = 'POSTING' THEN 1 ELSE 0 END) AS posting,
+                SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active,
+                SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS inactive
+            FROM tbkeu_akun
+        ")->row_array();
+
+        foreach ($summary as $key => $value) {
+            $summary[$key] = (int)($row[$key] ?? 0);
+        }
+
+        return $summary;
+    }
+
+    private function accounting_account_select()
+    {
+        $usedSql = $this->db->table_exists('tbkeu_jurnal_detail')
+            ? '(SELECT COUNT(*) FROM tbkeu_jurnal_detail jd WHERE jd.id_akun = a.id_akun)'
+            : '0';
+
+        $this->db->select("
+            a.id_akun,
+            a.kode_akun,
+            a.nama_akun,
+            a.id_klasifikasi,
+            a.parent_id,
+            a.level_akun,
+            a.saldo_normal,
+            a.tipe_akun,
+            a.tipe_kontrol,
+            a.allow_manual_journal,
+            a.is_active,
+            a.created_by,
+            a.created_at,
+            a.updated_by,
+            a.updated_at,
+            k.kode_klasifikasi,
+            k.nama_klasifikasi,
+            k.alias_klasifikasi,
+            p.kode_akun AS parent_kode_akun,
+            p.nama_akun AS parent_nama_akun,
+            (SELECT COUNT(*) FROM tbkeu_akun c WHERE c.parent_id = a.id_akun) AS child_count,
+            {$usedSql} AS transaction_count
+        ", false);
+        $this->db->from('tbkeu_akun a');
+        $this->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
+        $this->db->join('tbkeu_akun p', 'p.id_akun = a.parent_id', 'left');
+    }
+
+    public function accounting_accounts($search = '', $klasifikasiId = 0)
+    {
+        if (!$this->accounting_schema_ready()) {
+            return [];
+        }
+
+        $this->accounting_account_select();
+        if ((int)$klasifikasiId > 0) {
+            $this->db->where('a.id_klasifikasi', (int)$klasifikasiId);
+        }
+
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('a.kode_akun', $search);
+            $this->db->or_like('a.nama_akun', $search);
+            $this->db->or_like('k.nama_klasifikasi', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->order_by('a.kode_akun', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function accounting_account_journal_rows($idAkun)
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $journalDate = $this->db->field_exists('tanggal_transaksi', 'tbkeu_jurnal') ? 'j.tanggal_transaksi'
+            : ($this->db->field_exists('tanggal_jurnal', 'tbkeu_jurnal') ? 'j.tanggal_jurnal'
+                : ($this->db->field_exists('tanggal', 'tbkeu_jurnal') ? 'j.tanggal' : 'j.created_at'));
+        $journalRef = $this->db->field_exists('nomor_jurnal', 'tbkeu_jurnal') ? 'j.nomor_jurnal'
+            : ($this->db->field_exists('no_jurnal', 'tbkeu_jurnal') ? 'j.no_jurnal'
+                : ($this->db->field_exists('no_referensi', 'tbkeu_jurnal') ? 'j.no_referensi'
+                    : ($this->db->field_exists('kode_jurnal', 'tbkeu_jurnal') ? 'j.kode_jurnal' : 'CAST(j.id_jurnal AS CHAR)')));
+        $journalNote = $this->db->field_exists('keterangan', 'tbkeu_jurnal') ? 'j.keterangan'
+            : ($this->db->field_exists('catatan', 'tbkeu_jurnal') ? 'j.catatan' : '""');
+        $detailNote = $this->db->field_exists('keterangan', 'tbkeu_jurnal_detail') ? 'jd.keterangan'
+            : ($this->db->field_exists('catatan', 'tbkeu_jurnal_detail') ? 'jd.catatan' : '""');
+        $debitField = $this->db->field_exists('debit', 'tbkeu_jurnal_detail') ? 'jd.debit'
+            : ($this->db->field_exists('debet', 'tbkeu_jurnal_detail') ? 'jd.debet' : '0');
+        $kreditField = $this->db->field_exists('kredit', 'tbkeu_jurnal_detail') ? 'jd.kredit' : '0';
+
+        $this->db->select("
+            j.id_jurnal,
+            jd.id_jurnal_detail,
+            {$journalDate} AS tanggal_jurnal,
+            {$journalRef} AS no_referensi,
+            COALESCE(NULLIF({$detailNote}, ''), {$journalNote}, '') AS catatan,
+            COALESCE({$debitField}, 0) AS debit,
+            COALESCE({$kreditField}, 0) AS kredit
+        ", false);
+        $this->db->from('tbkeu_jurnal_detail jd');
+        $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = jd.id_jurnal', 'left');
+        $this->db->where('jd.id_akun', (int)$idAkun);
+        $this->db->order_by($journalDate, 'DESC', false);
+        $this->db->order_by('j.id_jurnal', 'DESC');
+        $this->db->limit(200);
+
+        return $this->db->get()->result();
+    }
+
+    public function accounting_account_by_id($id)
+    {
+        if (!$this->accounting_schema_ready()) {
+            return null;
+        }
+
+        $this->accounting_account_select();
+        $this->db->where('a.id_akun', (int)$id);
+        return $this->db->get()->row();
+    }
+
+    public function accounting_account_by_code($kodeAkun, $excludeId = 0)
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return null;
+        }
+
+        $this->db->where('kode_akun', $kodeAkun);
+        if ((int)$excludeId > 0) {
+            $this->db->where('id_akun !=', (int)$excludeId);
+        }
+
+        return $this->db->get('tbkeu_akun')->row();
+    }
+
+    private function accounting_account_level($parentId)
+    {
+        if ((int)$parentId <= 0) {
+            return 1;
+        }
+
+        $parent = $this->db
+            ->select('level_akun')
+            ->where('id_akun', (int)$parentId)
+            ->get('tbkeu_akun')
+            ->row();
+
+        return $parent ? ((int)$parent->level_akun + 1) : 1;
+    }
+
+    private function accounting_account_payload($input, $userId, $isCreate = true)
+    {
+        $data = [
+            'kode_akun' => $input['kode_akun'],
+            'nama_akun' => $input['nama_akun'],
+            'id_klasifikasi' => (int)$input['id_klasifikasi'],
+            'parent_id' => (int)$input['parent_id'] > 0 ? (int)$input['parent_id'] : null,
+            'level_akun' => $this->accounting_account_level((int)$input['parent_id']),
+            'saldo_normal' => $input['saldo_normal'],
+            'tipe_akun' => $input['tipe_akun'],
+            'tipe_kontrol' => $input['tipe_kontrol'] ?: 'NONE',
+            'allow_manual_journal' => (int)$input['allow_manual_journal'],
+            'is_active' => (int)$input['is_active'],
+            'updated_by' => $userId ?: null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        if ($data['tipe_akun'] === 'HEADER') {
+            $data['allow_manual_journal'] = 0;
+        }
+
+        if ($isCreate) {
+            $data['created_by'] = $userId ?: null;
+            $data['created_at'] = date('Y-m-d H:i:s');
+        }
+
+        return $data;
+    }
+
+    public function accounting_account_store($input, $userId = null)
+    {
+        if (!$this->accounting_schema_ready()) {
+            return false;
+        }
+
+        $data = $this->accounting_account_payload($input, $userId, true);
+        $ok = $this->db->insert('tbkeu_akun', $data);
+        return $ok ? $this->db->insert_id() : false;
+    }
+
+    public function accounting_account_update($id, $input, $userId = null)
+    {
+        if (!$this->accounting_schema_ready()) {
+            return false;
+        }
+
+        $data = $this->accounting_account_payload($input, $userId, false);
+        return $this->db
+            ->where('id_akun', (int)$id)
+            ->update('tbkeu_akun', $data);
+    }
+
+    public function accounting_account_deactivate($id, $userId = null)
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return false;
+        }
+
+        return $this->db
+            ->where('id_akun', (int)$id)
+            ->update('tbkeu_akun', [
+                'is_active' => 0,
+                'updated_by' => $userId ?: null,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+    }
+
+    public function accounting_account_delete($id)
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return false;
+        }
+
+        return $this->db->where('id_akun', (int)$id)->delete('tbkeu_akun');
+    }
+
+    public function accounting_account_used($id)
+    {
+        if (!$this->db->table_exists('tbkeu_jurnal_detail')) {
+            return false;
+        }
+
+        return $this->db
+            ->where('id_akun', (int)$id)
+            ->count_all_results('tbkeu_jurnal_detail') > 0;
+    }
+
+    public function accounting_account_has_children($id)
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return false;
+        }
+
+        return $this->db
+            ->where('parent_id', (int)$id)
+            ->count_all_results('tbkeu_akun') > 0;
+    }
+
+    public function accounting_klasifikasi_duplicate($idKlasifikasi, $kodeKlasifikasi, $excludeId = 0)
+    {
+        if (!$this->db->table_exists('tbkeu_klasifikasi_akun')) {
+            return false;
+        }
+
+        $this->db->from('tbkeu_klasifikasi_akun');
+        $this->db->group_start()
+            ->where('id_klasifikasi', (int)$idKlasifikasi)
+            ->or_where('kode_klasifikasi', $kodeKlasifikasi)
+            ->group_end();
+        if ((string)$excludeId !== '' && (int)$excludeId > 0) {
+            $this->db->where('id_klasifikasi !=', (int)$excludeId);
+        }
+
+        return $this->db->count_all_results() > 0;
+    }
+
+    public function accounting_saldo_normal_duplicate($kodeSaldo, $excludeKode = '')
+    {
+        if (!$this->db->table_exists('tbkeu_saldo_normal')) {
+            return false;
+        }
+
+        $this->db->where('kode_saldo', $kodeSaldo);
+        if ((string)$excludeKode !== '') {
+            $this->db->where('kode_saldo !=', $excludeKode);
+        }
+
+        return $this->db->count_all_results('tbkeu_saldo_normal') > 0;
+    }
+
+    public function accounting_tipe_kontrol_duplicate($kodeTipeKontrol, $excludeKode = '')
+    {
+        if (!$this->db->table_exists('tbkeu_tipe_kontrol')) {
+            return false;
+        }
+
+        $this->db->where('kode_tipe_kontrol', $kodeTipeKontrol);
+        if ((string)$excludeKode !== '') {
+            $this->db->where('kode_tipe_kontrol !=', $excludeKode);
+        }
+
+        return $this->db->count_all_results('tbkeu_tipe_kontrol') > 0;
+    }
+
+    public function accounting_master_rows($master)
+    {
+        if ($master === 'klasifikasi') {
+            if (!$this->db->table_exists('tbkeu_klasifikasi_akun')) {
+                return [];
+            }
+
+            return $this->db
+                ->order_by('urutan', 'ASC')
+                ->order_by('id_klasifikasi', 'ASC')
+                ->get('tbkeu_klasifikasi_akun')
+                ->result();
+        }
+
+        if ($master === 'saldo-normal') {
+            if (!$this->db->table_exists('tbkeu_saldo_normal')) {
+                return $this->accounting_default_saldo_normal_options();
+            }
+
+            return $this->db
+                ->order_by('urutan', 'ASC')
+                ->order_by('kode_saldo', 'ASC')
+                ->get('tbkeu_saldo_normal')
+                ->result();
+        }
+
+        if ($master === 'tipe-kontrol') {
+            if (!$this->db->table_exists('tbkeu_tipe_kontrol')) {
+                return $this->accounting_default_tipe_kontrol_options();
+            }
+
+            return $this->db
+                ->order_by('urutan', 'ASC')
+                ->order_by('kode_tipe_kontrol', 'ASC')
+                ->get('tbkeu_tipe_kontrol')
+                ->result();
+        }
+
+        if ($master === 'parent-subclass') {
+            if (!$this->accounting_schema_ready()) {
+                return [];
+            }
+
+            $this->accounting_account_select();
+            $this->db->where('a.tipe_akun', 'HEADER');
+            $this->db->order_by('a.kode_akun', 'ASC');
+            return $this->db->get()->result();
+        }
+
+        return [];
+    }
+
+    public function accounting_master_row($master, $id)
+    {
+        if ($master === 'klasifikasi') {
+            return $this->accounting_klasifikasi_by_id($id);
+        }
+
+        if ($master === 'saldo-normal') {
+            if (!$this->db->table_exists('tbkeu_saldo_normal')) {
+                return null;
+            }
+
+            return $this->db->where('kode_saldo', $id)->get('tbkeu_saldo_normal')->row();
+        }
+
+        if ($master === 'tipe-kontrol') {
+            if (!$this->db->table_exists('tbkeu_tipe_kontrol')) {
+                return null;
+            }
+
+            return $this->db->where('kode_tipe_kontrol', $id)->get('tbkeu_tipe_kontrol')->row();
+        }
+
+        if ($master === 'parent-subclass') {
+            $row = $this->accounting_account_by_id((int)$id);
+            return $row && $row->tipe_akun === 'HEADER' ? $row : null;
+        }
+
+        return null;
+    }
+
+    public function accounting_master_store($master, $input, $userId = null)
+    {
+        if ($master === 'klasifikasi') {
+            $data = [
+                'id_klasifikasi' => (int)$input['id_klasifikasi'],
+                'kode_klasifikasi' => $input['kode_klasifikasi'],
+                'nama_klasifikasi' => $input['nama_klasifikasi'],
+                'alias_klasifikasi' => $input['alias_klasifikasi'],
+                'jenis_laporan' => $input['jenis_laporan'],
+                'saldo_normal' => $input['saldo_normal'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+            ];
+            return $this->db->insert('tbkeu_klasifikasi_akun', $data) ? $input['id_klasifikasi'] : false;
+        }
+
+        if ($master === 'saldo-normal') {
+            $data = [
+                'kode_saldo' => $input['kode_saldo'],
+                'nama_saldo' => $input['nama_saldo'],
+                'keterangan' => $input['keterangan'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+            ];
+            return $this->db->insert('tbkeu_saldo_normal', $data) ? $input['kode_saldo'] : false;
+        }
+
+        if ($master === 'tipe-kontrol') {
+            $data = [
+                'kode_tipe_kontrol' => $input['kode_tipe_kontrol'],
+                'nama_tipe_kontrol' => $input['nama_tipe_kontrol'],
+                'keterangan' => $input['keterangan'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+            ];
+            return $this->db->insert('tbkeu_tipe_kontrol', $data) ? $input['kode_tipe_kontrol'] : false;
+        }
+
+        if ($master === 'parent-subclass') {
+            return $this->accounting_account_store($input, $userId);
+        }
+
+        return false;
+    }
+
+    public function accounting_master_update($master, $id, $input, $userId = null)
+    {
+        if ($master === 'klasifikasi') {
+            return $this->db->where('id_klasifikasi', (int)$id)->update('tbkeu_klasifikasi_akun', [
+                'kode_klasifikasi' => $input['kode_klasifikasi'],
+                'nama_klasifikasi' => $input['nama_klasifikasi'],
+                'alias_klasifikasi' => $input['alias_klasifikasi'],
+                'jenis_laporan' => $input['jenis_laporan'],
+                'saldo_normal' => $input['saldo_normal'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if ($master === 'saldo-normal') {
+            return $this->db->where('kode_saldo', $id)->update('tbkeu_saldo_normal', [
+                'nama_saldo' => $input['nama_saldo'],
+                'keterangan' => $input['keterangan'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if ($master === 'tipe-kontrol') {
+            return $this->db->where('kode_tipe_kontrol', $id)->update('tbkeu_tipe_kontrol', [
+                'nama_tipe_kontrol' => $input['nama_tipe_kontrol'],
+                'keterangan' => $input['keterangan'],
+                'urutan' => (int)$input['urutan'],
+                'is_active' => (int)$input['is_active'],
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if ($master === 'parent-subclass') {
+            return $this->accounting_account_update((int)$id, $input, $userId);
+        }
+
+        return false;
+    }
+
+    public function accounting_master_used($master, $id)
+    {
+        if ($master === 'klasifikasi') {
+            return $this->db->where('id_klasifikasi', (int)$id)->count_all_results('tbkeu_akun') > 0;
+        }
+
+        if ($master === 'saldo-normal') {
+            return $this->db->where('saldo_normal', $id)->count_all_results('tbkeu_akun') > 0
+                || $this->db->where('saldo_normal', $id)->count_all_results('tbkeu_klasifikasi_akun') > 0;
+        }
+
+        if ($master === 'tipe-kontrol') {
+            return $this->db->where('tipe_kontrol', $id)->count_all_results('tbkeu_akun') > 0;
+        }
+
+        if ($master === 'parent-subclass') {
+            return $this->accounting_account_used((int)$id) || $this->accounting_account_has_children((int)$id);
+        }
+
+        return true;
+    }
+
+    public function accounting_master_delete($master, $id)
+    {
+        if ($master === 'klasifikasi') {
+            return $this->db->where('id_klasifikasi', (int)$id)->delete('tbkeu_klasifikasi_akun');
+        }
+
+        if ($master === 'saldo-normal') {
+            return $this->db->where('kode_saldo', $id)->delete('tbkeu_saldo_normal');
+        }
+
+        if ($master === 'tipe-kontrol') {
+            return $this->db->where('kode_tipe_kontrol', $id)->delete('tbkeu_tipe_kontrol');
+        }
+
+        if ($master === 'parent-subclass') {
+            return $this->accounting_account_delete((int)$id);
+        }
+
+        return false;
+    }
 }

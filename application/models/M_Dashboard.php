@@ -31,6 +31,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Lihat daftar PO pending untuk tindak lanjut pembelian.'),
                     $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
+                    $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'green', 'Kelola chart of accounts dan akun jurnal general ledger.'),
                 ),
             ),
             'hrd' => array(
@@ -86,11 +87,19 @@ class M_Dashboard extends CI_Model
             ),
         );
 
+        if (!empty($context['is_admin'])) {
+            $sections = array('admin' => $this->admin_section($sections)) + $sections;
+        }
+
         return $this->apply_access_rules($sections, $context);
     }
 
     public function default_active_section(array $context, array $sections)
     {
+        if (!empty($context['is_admin']) && isset($sections['admin'])) {
+            return 'admin';
+        }
+
         $jobdesk = $context['jobdesk'];
         $map = array(
             'ADMINKEU' => 'keuangan',
@@ -121,6 +130,132 @@ class M_Dashboard extends CI_Model
     {
         // Rules detail per user dan level akan dipusatkan di sini.
         return $sections;
+    }
+
+    private function admin_section(array $sections)
+    {
+        $menus = array();
+        $seenRoutes = array();
+        $adminMenus = array(
+            $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.'),
+            $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.'),
+            $this->menu('Akses Level', 'master/akses-level', 'fas fa-key', 'orange', 'Atur level akses dan matrix permission user.'),
+            $this->menu('Menu Aplikasi', 'master/menu', 'fas fa-bars', 'cyan', 'Kelola struktur menu dinamis aplikasi.'),
+        );
+
+        foreach ($adminMenus as $menu) {
+            $this->append_unique_menu($menus, $seenRoutes, $menu);
+        }
+
+        foreach ($this->all_module_menus($sections) as $menu) {
+            $this->append_unique_menu($menus, $seenRoutes, $menu);
+        }
+
+        foreach ($this->dynamic_app_menus($seenRoutes) as $menu) {
+            $this->append_unique_menu($menus, $seenRoutes, $menu);
+        }
+
+        return array(
+            'label' => 'ADMIN',
+            'icon' => 'fas fa-user-shield',
+            'description' => 'Panel admin berisi master akses dan seluruh modul aplikasi yang tersedia di dashboard.',
+            'menus' => $menus,
+        );
+    }
+
+    private function all_module_menus(array $sections)
+    {
+        $menus = array();
+        $seenRoutes = array();
+
+        foreach ($sections as $section) {
+            if (empty($section['menus']) || !is_array($section['menus'])) {
+                continue;
+            }
+
+            foreach ($section['menus'] as $menu) {
+                if (empty($menu['route']) || isset($seenRoutes[$menu['route']])) {
+                    continue;
+                }
+
+                $seenRoutes[$menu['route']] = true;
+                $menus[] = $menu;
+            }
+        }
+
+        return $menus;
+    }
+
+    private function dynamic_app_menus(array $seenRoutes)
+    {
+        if (!isset($this->db) || !$this->db->table_exists('tb_menu')) {
+            return array();
+        }
+
+        $fields = $this->db->list_fields('tb_menu');
+        $nameField = $this->first_available_field($fields, array('nama_menu', 'menu_name', 'title', 'label'));
+        $urlField = $this->first_available_field($fields, array('url', 'url_menu', 'route'));
+        $iconField = $this->first_available_field($fields, array('icon', 'icon_menu'));
+        $orderField = $this->first_available_field($fields, array('urutan', 'sort_order', 'order_no', 'id_menu', 'id'));
+
+        if (!$nameField || !$urlField) {
+            return array();
+        }
+
+        if (in_array('status', $fields, true)) {
+            $this->db->where('status', 1);
+        }
+
+        if ($orderField) {
+            $this->db->order_by($orderField, 'ASC');
+        }
+
+        $rows = $this->db->get('tb_menu')->result_array();
+        $menus = array();
+        $tones = array('blue', 'orange', 'slate', 'green', 'red', 'lime', 'purple', 'teal', 'dark', 'brown', 'cyan');
+        $toneIndex = 0;
+
+        foreach ($rows as $row) {
+            $route = trim((string)$row[$urlField]);
+            $title = trim((string)$row[$nameField]);
+
+            if ($route === '' || $route === '#' || $title === '' || isset($seenRoutes[$route])) {
+                continue;
+            }
+
+            $menus[] = $this->menu(
+                $title,
+                $route,
+                !empty($iconField) && !empty($row[$iconField]) ? $row[$iconField] : 'fas fa-th-large',
+                $tones[$toneIndex % count($tones)],
+                'Buka modul ' . $title . ' dari menu aplikasi.'
+            );
+            $seenRoutes[$route] = true;
+            $toneIndex++;
+        }
+
+        return $menus;
+    }
+
+    private function first_available_field(array $fields, array $candidates)
+    {
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $fields, true)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function append_unique_menu(array &$menus, array &$seenRoutes, array $menu)
+    {
+        if (empty($menu['route']) || isset($seenRoutes[$menu['route']])) {
+            return;
+        }
+
+        $seenRoutes[$menu['route']] = true;
+        $menus[] = $menu;
     }
 
     private function menu($title, $route, $icon, $tone, $description)

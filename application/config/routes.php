@@ -64,6 +64,7 @@ $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
 $route['dashboard']                                 = 'Dashboard/index';
 $route['dashboad']                                  = 'Dashboard/index';
+$route['dasboard']                                  = 'Dashboard/index';
 
 // STOCKOPNAME
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
@@ -161,6 +162,32 @@ $route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingk
 
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
+$route['jurnal']                                    = 'keuangan/C_Keuangan/jurnal';
+$route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
+$route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
+$route['jurnal/account-journal']                    = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['jurnal/store']                              = 'keuangan/C_Keuangan/jurnal_store';
+$route['jurnal/update']                             = 'keuangan/C_Keuangan/jurnal_update';
+$route['jurnal/deactivate']                         = 'keuangan/C_Keuangan/jurnal_deactivate';
+$route['jurnal/delete']                             = 'keuangan/C_Keuangan/jurnal_delete';
+$route['jurnal/master/(:any)/list']                 = 'keuangan/C_Keuangan/jurnal_master_list/$1';
+$route['jurnal/master/(:any)/detail']               = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
+$route['jurnal/master/(:any)/store']                = 'keuangan/C_Keuangan/jurnal_master_store/$1';
+$route['jurnal/master/(:any)/update']               = 'keuangan/C_Keuangan/jurnal_master_update/$1';
+$route['jurnal/master/(:any)/delete']               = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
+$route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
+$route['keuangan/jurnal/list']                      = 'keuangan/C_Keuangan/jurnal_list';
+$route['keuangan/jurnal/detail']                    = 'keuangan/C_Keuangan/jurnal_detail';
+$route['keuangan/jurnal/account-journal']           = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['keuangan/jurnal/store']                     = 'keuangan/C_Keuangan/jurnal_store';
+$route['keuangan/jurnal/update']                    = 'keuangan/C_Keuangan/jurnal_update';
+$route['keuangan/jurnal/deactivate']                = 'keuangan/C_Keuangan/jurnal_deactivate';
+$route['keuangan/jurnal/delete']                    = 'keuangan/C_Keuangan/jurnal_delete';
+$route['keuangan/jurnal/master/(:any)/list']        = 'keuangan/C_Keuangan/jurnal_master_list/$1';
+$route['keuangan/jurnal/master/(:any)/detail']      = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
+$route['keuangan/jurnal/master/(:any)/store']       = 'keuangan/C_Keuangan/jurnal_master_store/$1';
+$route['keuangan/jurnal/master/(:any)/update']      = 'keuangan/C_Keuangan/jurnal_master_update/$1';
+$route['keuangan/jurnal/master/(:any)/delete']      = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
 $route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';
 $route['insertmodule']                              = 'keuangan/C_Keuangan/insertmodule';
 $route['insermodule_lot']                           = 'keuangan/C_Keuangan/insermodule_lot';
