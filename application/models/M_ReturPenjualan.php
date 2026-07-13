@@ -226,7 +226,7 @@ class M_ReturPenjualan extends CI_Model
 
     public function get_spr_detail($id_spr)
     {
-        $this->db->select('d.*, m.satuan');
+        $this->db->select('d.*, m.satuan, m.kd_barang');
         $this->db->from('tb_spr_detail d');
         $this->db->join('tb_master_barang_all m', 'm.nama_barang = d.nama_barang', 'left');
         $this->db->where('d.id_spr', (int) $id_spr);

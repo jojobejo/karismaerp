@@ -38,6 +38,23 @@
                     <?php endif; ?>
                 <?php endforeach; ?>
 
+                <?php
+                $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                ?>
+                <?php if ($is_admin_stock): ?>
+                <div class="row mb-3">
+                    <div class="col-auto">
+                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger">
+                            <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
+                        </a>
+                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active">
+                            <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- FILTER -->
                 <div class="card card-outline card-secondary mb-3">
                     <div class="card-header py-2">

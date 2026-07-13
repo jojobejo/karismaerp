@@ -679,6 +679,23 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('content/sales/retur/spr_print.php', $data);
     }
 
+    public function retur_print($id_retur)
+    {
+        $retur = $this->M_ReturPenjualan->get_retur_penjualan($id_retur);
+        if (!$retur) {
+            $this->session->set_flashdata('error', 'Retur Penjualan tidak ditemukan.');
+            redirect('retur_penjualan/retur');
+            return;
+        }
+
+        $data['retur']        = $retur;
+        $data['retur_detail'] = $this->M_ReturPenjualan->get_retur_penjualan_detail($id_retur);
+        $data['user']         = $this->_getUser();
+
+        // Load print view tanpa header/footer sidebar
+        $this->load->view('content/sales/retur/retur_print.php', $data);
+    }
+
     // ================================================================
     // APPROVAL HISTORY
     // ================================================================
@@ -829,11 +846,13 @@ class C_ReturPenjualan extends CI_Controller
             return;
         }
 
+        $this->load->model('M_SalesOrder');
         $data['page_title'] = 'KARISMA — Buat Retur Penjualan dari ' . $spr['no_spr'];
         $data['spr']        = $spr;
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
         $data['no_retur']   = $this->M_ReturPenjualan->generate_no_retur();
+        $data['gudang_list'] = $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/retur_form.php', $data);
@@ -866,6 +885,7 @@ class C_ReturPenjualan extends CI_Controller
         $no_retur    = $this->M_ReturPenjualan->generate_no_retur();
         $tanggal     = $this->input->post('tanggal_retur');
         $catatan_log = $this->input->post('catatan_admlpb2');
+        $gudang_id   = $this->input->post('gudang_id');
 
         $header = [
             'no_retur'          => $no_retur,
@@ -882,6 +902,14 @@ class C_ReturPenjualan extends CI_Controller
             'create_at_retur'   => date('Y-m-d H:i:s'),
         ];
 
+        // simpan gudang_id ke header jika kolomnya ada, tambahkan jika belum ada.
+        if ($this->db->field_exists('gudang_id', 'tb_retur_penjualan_header')) {
+            $header['gudang_id'] = $gudang_id;
+        } else {
+            $this->db->query("ALTER TABLE `tb_retur_penjualan_header` ADD COLUMN `gudang_id` INT DEFAULT NULL AFTER `no_spr`");
+            $header['gudang_id'] = $gudang_id;
+        }
+
         $id_retur = $this->M_ReturPenjualan->save_retur_penjualan($header);
         if (!$id_retur) {
             $this->session->set_flashdata('error', 'Gagal menyimpan Retur Penjualan.');
@@ -891,6 +919,7 @@ class C_ReturPenjualan extends CI_Controller
 
         // Simpan detail dari SPR
         $nama_barang   = $this->input->post('nama_barang') ?: [];
+        $kd_barang_arr = $this->input->post('kd_barang') ?: [];
         $satuan_arr    = $this->input->post('satuan') ?: [];
         $no_faktur_arr = $this->input->post('no_faktur') ?: [];
         $no_batch_arr  = $this->input->post('no_batch') ?: [];
@@ -902,6 +931,14 @@ class C_ReturPenjualan extends CI_Controller
         $rows = [];
         foreach ($nama_barang as $i => $nb) {
             if (empty($nb)) continue;
+
+            $kb = !empty($kd_barang_arr[$i]) ? $kd_barang_arr[$i] : '';
+            if (empty($kb)) {
+                // cari kd_barang dari db jika inputnya kosong
+                $mb = $this->db->get_where('tb_master_barang_all', ['nama_barang' => $nb])->row_array();
+                $kb = $mb ? $mb['kd_barang'] : '';
+            }
+
             $rows[] = [
                 'id_retur'      => $id_retur,
                 'id_spr_detail' => (int)($id_spr_detail[$i] ?? 0),
@@ -914,6 +951,55 @@ class C_ReturPenjualan extends CI_Controller
                 'qty_retur'     => (float)($qty_retur[$i] ?? 0),
                 'harga_satuan'  => (float)str_replace([',', '.'], ['', '.'], ($harga_satuan[$i] ?? 0)),
             ];
+
+            // Insert / update ke tberp_stock_batch & tberp_stock_ledger
+            $stockQty = (float)($qty_retur[$i] ?? 0);
+            $stockNoLot = trim((string)($no_batch_arr[$i] ?? ''));
+            $normalizedExpired = !empty($expired_arr[$i]) ? date('Y-m-d', strtotime($expired_arr[$i])) : null;
+
+            if ($stockQty > 0 && !empty($kb)) {
+                if ($this->db->table_exists('tberp_stock_batch')) {
+                    $this->db->where('kd_barang', $kb);
+                    $this->db->where('gudang_id', $gudang_id);
+                    $this->db->where('no_lot', $stockNoLot);
+                    if ($normalizedExpired !== null) {
+                        $this->db->where('expired_date', $normalizedExpired);
+                    } else {
+                        $this->db->where('expired_date', null);
+                    }
+                    $existingStockBatch = $this->db->get('tberp_stock_batch')->row_array();
+
+                    if ($existingStockBatch) {
+                        $this->db->where('id', $existingStockBatch['id']);
+                        $this->db->set('qty_on_hand', 'qty_on_hand + ' . $stockQty, FALSE);
+                        $this->db->set('update_at', date('Y-m-d H:i:s'));
+                        $this->db->update('tberp_stock_batch');
+                    } else {
+                        $this->db->insert('tberp_stock_batch', [
+                            'kd_barang'    => $kb,
+                            'gudang_id'    => $gudang_id,
+                            'no_lot'       => $stockNoLot,
+                            'expired_date' => $normalizedExpired,
+                            'qty_on_hand'  => $stockQty,
+                            'qty_reserved' => 0,
+                        ]);
+                    }
+                }
+
+                if ($this->db->table_exists('tberp_stock_ledger')) {
+                    $this->db->insert('tberp_stock_ledger', [
+                        'kd_barang'    => $kb,
+                        'gudang_id'    => $gudang_id,
+                        'no_lot'       => $stockNoLot,
+                        'expired_date' => $normalizedExpired,
+                        'qty'          => $stockQty,
+                        'tipe'         => 'RJUAL',
+                        'ref_no'       => $no_retur,
+                        'ref_type'     => 'RETUR_PENJUALAN',
+                        'created_at'   => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
         }
         $this->M_ReturPenjualan->save_retur_penjualan_detail($rows);
 
@@ -1002,12 +1088,34 @@ class C_ReturPenjualan extends CI_Controller
         $id_retur_det = $this->input->post('id_retur_detail') ?: [];
         $qty_retur    = $this->input->post('qty_retur') ?: [];
         $harga_satuan = $this->input->post('harga_satuan') ?: [];
+        
+        $nama_barang_arr = $this->input->post('nama_barang') ?: [];
+        $no_faktur_arr   = $this->input->post('no_faktur') ?: [];
+        $no_batch_arr    = $this->input->post('no_batch') ?: [];
+        $expired_date_arr= $this->input->post('expired_date') ?: [];
 
         foreach ($id_retur_det as $i => $idd) {
-            $this->M_ReturPenjualan->update_retur_penjualan_detail_row((int)$idd, [
+            $update_data = [
                 'qty_retur'    => (float)($qty_retur[$i] ?? 0),
                 'harga_satuan' => (float)str_replace(',', '', ($harga_satuan[$i] ?? 0)),
-            ]);
+            ];
+
+            if (isset($nama_barang_arr[$i])) {
+                $update_data['nama_barang'] = $nama_barang_arr[$i];
+            }
+            if (isset($no_faktur_arr[$i])) {
+                $update_data['no_faktur'] = $no_faktur_arr[$i];
+            }
+            if (isset($no_batch_arr[$i])) {
+                $update_data['no_batch'] = $no_batch_arr[$i];
+            }
+            if (!empty($expired_date_arr[$i])) {
+                $update_data['expired_date'] = $expired_date_arr[$i];
+            } else {
+                $update_data['expired_date'] = null;
+            }
+
+            $this->M_ReturPenjualan->update_retur_penjualan_detail_row((int)$idd, $update_data);
         }
 
         $new_status = ($aksi === 'setuju') ? 'menunggu_collection' : 'ditolak';

@@ -464,6 +464,7 @@ $route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPen
 // ---- Retur Penjualan ----
 $route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
 $route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
+$route['retur_penjualan/retur/print/(:any)']                 = 'sales/C_ReturPenjualan/retur_print/$1';
 // Admin Stock
 $route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
 $route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';

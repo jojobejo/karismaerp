@@ -75,6 +75,17 @@
                                             <input type="date" name="tanggal_retur" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
                                         </div>
                                     </div>
+                                    <div class="form-group row mb-2">
+                                        <label class="col-sm-4 col-form-label col-form-label-sm font-weight-bold text-danger">Masukkan Ke Gudang *</label>
+                                        <div class="col-sm-8">
+                                            <select name="gudang_id" class="form-control form-control-sm" required>
+                                                <option value="">-- Pilih Gudang --</option>
+                                                <?php foreach ($gudang_list as $g): ?>
+                                                    <option value="<?= $g['id_gudang'] ?>"><?= htmlspecialchars($g['nama_gudang']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group row mb-2">
@@ -139,6 +150,7 @@
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td>
                                                     <input type="hidden" name="id_spr_detail[]" value="<?= $d['id_spr_detail'] ?>">
+                                                    <input type="hidden" name="kd_barang[]" value="<?= htmlspecialchars($d['kd_barang'] ?? '') ?>">
                                                     <input type="text" name="nama_barang[]" class="form-control form-control-sm field-retur"
                                                            value="<?= htmlspecialchars($d['nama_barang'] ?? '') ?>" readonly>
                                                 </td>
@@ -156,16 +168,16 @@
                                                 </td>
                                                 <td>
                                                     <?php $exp = $d['expired_date'] ?? null; ?>
-                                                    <input type="date" name="expired_date[]" class="form-control form-control-sm"
-                                                           value="<?= $exp ? date('Y-m-d', strtotime($exp)) : '' ?>">
+                                                    <input type="date" name="expired_date[]" class="form-control form-control-sm field-retur"
+                                                           value="<?= $exp ? date('Y-m-d', strtotime($exp)) : '' ?>" readonly>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input"
-                                                           value="<?= (float)($d['qty'] ?? 0) ?>" min="0.001" step="0.001" required>
+                                                    <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input field-retur"
+                                                           value="<?= (float)($d['qty'] ?? 0) ?>" min="0.001" step="0.001" readonly required>
                                                 </td>
                                                 <td>
-                                                    <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input"
-                                                           value="<?= (float)($d['harga'] ?? 0) ?>" min="0" step="0.01" required>
+                                                    <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input field-retur"
+                                                           value="<?= (float)($d['harga'] ?? 0) ?>" min="0" step="0.01" readonly required>
                                                 </td>
                                                 <td>
                                                     <input type="text" class="form-control form-control-sm text-right subtotal-input"

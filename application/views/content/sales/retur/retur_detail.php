@@ -180,6 +180,9 @@
                                             <i class="fas fa-cash-register"></i> Proses Kasir
                                         </a>
                                     <?php endif; ?>
+                                    <a href="<?= base_url('retur_penjualan/retur/print/' . $retur['id_retur']) ?>" target="_blank" class="btn btn-secondary mr-2">
+                                        <i class="fas fa-print"></i> Cetak Retur Penjualan
+                                    </a>
                                     <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-light">
                                         <i class="fas fa-arrow-left"></i> Kembali
                                     </a>

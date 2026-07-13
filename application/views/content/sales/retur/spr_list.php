@@ -86,6 +86,16 @@
                         </a>
                     </div>
                     <?php endif; ?>
+                    <?php if ($is_admin_stock): ?>
+                    <div class="col-auto">
+                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active">
+                            <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
+                        </a>
+                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary">
+                            <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+                        </a>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- FILTER -->
