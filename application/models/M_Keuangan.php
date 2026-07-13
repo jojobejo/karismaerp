@@ -795,6 +795,9 @@ class M_Keuangan extends CI_Model
         $usedSql = $this->db->table_exists('tbkeu_jurnal_detail')
             ? '(SELECT COUNT(*) FROM tbkeu_jurnal_detail jd WHERE jd.id_akun = a.id_akun)'
             : '0';
+        $eligibleSql = $this->db->field_exists('is_transaction_eligible', 'tbkeu_akun')
+            ? 'a.is_transaction_eligible'
+            : 'CASE WHEN a.tipe_akun = "POSTING" AND a.is_active = 1 THEN 1 ELSE 0 END';
 
         $this->db->select("
             a.id_akun,
@@ -807,6 +810,7 @@ class M_Keuangan extends CI_Model
             a.tipe_akun,
             a.tipe_kontrol,
             a.allow_manual_journal,
+            {$eligibleSql} AS is_transaction_eligible,
             a.is_active,
             a.created_by,
             a.created_at,
@@ -857,10 +861,14 @@ class M_Keuangan extends CI_Model
         $journalDate = $this->db->field_exists('tanggal_transaksi', 'tbkeu_jurnal') ? 'j.tanggal_transaksi'
             : ($this->db->field_exists('tanggal_jurnal', 'tbkeu_jurnal') ? 'j.tanggal_jurnal'
                 : ($this->db->field_exists('tanggal', 'tbkeu_jurnal') ? 'j.tanggal' : 'j.created_at'));
-        $journalRef = $this->db->field_exists('nomor_jurnal', 'tbkeu_jurnal') ? 'j.nomor_jurnal'
-            : ($this->db->field_exists('no_jurnal', 'tbkeu_jurnal') ? 'j.no_jurnal'
-                : ($this->db->field_exists('no_referensi', 'tbkeu_jurnal') ? 'j.no_referensi'
-                    : ($this->db->field_exists('kode_jurnal', 'tbkeu_jurnal') ? 'j.kode_jurnal' : 'CAST(j.id_jurnal AS CHAR)')));
+        if ($this->db->field_exists('source_no', 'tbkeu_jurnal') && $this->db->field_exists('nomor_jurnal', 'tbkeu_jurnal')) {
+            $journalRef = "COALESCE(NULLIF(j.source_no, ''), j.nomor_jurnal)";
+        } else {
+            $journalRef = $this->db->field_exists('nomor_jurnal', 'tbkeu_jurnal') ? 'j.nomor_jurnal'
+                : ($this->db->field_exists('no_jurnal', 'tbkeu_jurnal') ? 'j.no_jurnal'
+                    : ($this->db->field_exists('no_referensi', 'tbkeu_jurnal') ? 'j.no_referensi'
+                        : ($this->db->field_exists('kode_jurnal', 'tbkeu_jurnal') ? 'j.kode_jurnal' : 'CAST(j.id_jurnal AS CHAR)')));
+        }
         $journalNote = $this->db->field_exists('keterangan', 'tbkeu_jurnal') ? 'j.keterangan'
             : ($this->db->field_exists('catatan', 'tbkeu_jurnal') ? 'j.catatan' : '""');
         $detailNote = $this->db->field_exists('keterangan', 'tbkeu_jurnal_detail') ? 'jd.keterangan'
@@ -947,6 +955,10 @@ class M_Keuangan extends CI_Model
 
         if ($data['tipe_akun'] === 'HEADER') {
             $data['allow_manual_journal'] = 0;
+        }
+
+        if ($this->db->field_exists('is_transaction_eligible', 'tbkeu_akun')) {
+            $data['is_transaction_eligible'] = ($data['tipe_akun'] === 'POSTING' && (int)$data['is_active'] === 1) ? 1 : 0;
         }
 
         if ($isCreate) {
