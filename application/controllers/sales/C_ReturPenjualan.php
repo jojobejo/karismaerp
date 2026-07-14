@@ -219,9 +219,11 @@ class C_ReturPenjualan extends CI_Controller
         // ---- Header SPR ----
         $no_spr  = $this->M_ReturPenjualan->generate_no_spr();
         $status  = $as_draft ? 'draft' : 'diajukan';
+        $tipe_retur = $this->input->post('tipe_retur') ?: 'biasa';
 
         $header = [
             'no_spr'        => $no_spr,
+            'tipe_retur'    => $tipe_retur,
             'tanggal'       => $tanggal,
             'kd_customer'   => $kd_customer,
             'nama_customer' => $nama_customer,
@@ -300,6 +302,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $header = [
             'tanggal'       => $this->input->post('tanggal'),
+            'tipe_retur'    => $this->input->post('tipe_retur') ?: 'biasa',
             'kd_customer'   => $this->input->post('kd_customer'),
             'nama_customer' => $this->input->post('nama_customer'),
             'alamat'        => $this->input->post('alamat'),
@@ -857,7 +860,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr']        = $spr;
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
-        $data['no_retur']   = $this->M_ReturPenjualan->generate_no_retur();
+        $data['no_retur']   = $this->M_ReturPenjualan->generate_no_retur($spr['tipe_retur'] ?? 'biasa');
         $data['gudang_list'] = $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
 
         $this->load->view('partial/main/header.php', $data);
@@ -888,13 +891,14 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $user        = $this->_getUser();
-        $no_retur    = $this->M_ReturPenjualan->generate_no_retur();
+        $no_retur    = $this->M_ReturPenjualan->generate_no_retur($spr['tipe_retur'] ?? 'biasa');
         $tanggal     = $this->input->post('tanggal_retur');
         $catatan_log = $this->input->post('catatan_admlpb2');
         $gudang_id   = $this->input->post('gudang_id');
 
         $header = [
             'no_retur'          => $no_retur,
+            'tipe_retur'        => $spr['tipe_retur'] ?? 'biasa',
             'id_spr'            => (int)$id_spr,
             'no_spr'            => $spr['no_spr'],
             'tanggal_retur'     => $tanggal ?: date('Y-m-d'),

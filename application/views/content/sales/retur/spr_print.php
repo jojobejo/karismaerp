@@ -99,12 +99,26 @@
         <tr>
             <td class="lbl">Tanggal</td>
             <td><?= date('d/m/Y', strtotime($spr['tanggal'])) ?></td>
-            <td class="lbl">Nama Customer</td>
+            <td class="lbl">Tipe Retur</td>
+            <td>
+                <strong>
+                    <?php if (($spr['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                        REPLACE (Ganti Barang)
+                    <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                        SERVICE (Servis Barang)
+                    <?php else: ?>
+                        RETUR (Potong Faktur)
+                    <?php endif; ?>
+                </strong>
+            </td>
+            <td class="lbl">Customer</td>
             <td><strong><?= htmlspecialchars($spr['nama_customer'] ?: ($spr['nama_customer_master'] ?? '-')) ?></strong></td>
+        </tr>
+        <tr>
             <td class="lbl">Alamat</td>
-            <td><?= htmlspecialchars($spr['alamat'] ?: ($spr['alamat_master'] ?? '-')) ?></td>
+            <td colspan="3"><?= htmlspecialchars($spr['alamat'] ?: ($spr['alamat_master'] ?? '-')) ?></td>
             <td class="lbl">Sales</td>
-            <td><?= htmlspecialchars($spr['nama_sales'] ?? '-') ?></td>
+            <td colspan="3"><?= htmlspecialchars($spr['nama_sales'] ?? '-') ?></td>
         </tr>
     </table>
 

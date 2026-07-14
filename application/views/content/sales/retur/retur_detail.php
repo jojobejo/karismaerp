@@ -106,6 +106,18 @@
                                         <td class="font-weight-bold">Tgl. Buat</td>
                                         <td>: <?= $retur['create_at_retur'] ? date('d/m/Y H:i', strtotime($retur['create_at_retur'])) : '-' ?></td>
                                     </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Tipe Retur</td>
+                                        <td colspan="3">: 
+                                            <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
+                                            <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 </table>
 
                                 <!-- TABEL DETAIL BARANG -->

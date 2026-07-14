@@ -123,6 +123,7 @@
                                 <thead class="thead-dark">
                                     <tr>
                                         <th>No. Retur</th>
+                                        <th>Tipe Retur</th>
                                         <th>Dari SPR</th>
                                         <th>Tanggal</th>
                                         <th>Customer</th>
@@ -135,7 +136,7 @@
                                 <tbody>
                                     <?php if (empty($retur_list)): ?>
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted py-4">
+                                            <td colspan="9" class="text-center text-muted py-4">
                                                 <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                                 Tidak ada data Retur Penjualan
                                             </td>
@@ -164,6 +165,15 @@
                                                 <a href="<?= base_url('retur_penjualan/retur/detail/' . $r['id_retur']) ?>" class="font-weight-bold text-primary">
                                                     <?= htmlspecialchars($r['no_retur']) ?>
                                                 </a>
+                                            </td>
+                                            <td>
+                                                <?php if (($r['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                    <span class="badge badge-success px-2 py-1">REPLACE</span>
+                                                <?php elseif (($r['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                    <span class="badge badge-warning px-2 py-1">SERVICE</span>
+                                                <?php else: ?>
+                                                    <span class="badge badge-secondary px-2 py-1">RETUR</span>
+                                                <?php endif; ?>
                                             </td>
                                             <td class="text-muted small"><?= htmlspecialchars($r['no_spr'] ?? '-') ?></td>
                                             <td class="text-nowrap"><?= date('d/m/Y', strtotime($r['tanggal_retur'])) ?></td>

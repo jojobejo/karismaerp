@@ -179,6 +179,18 @@
                                         <td class="font-weight-bold">Tanggal Buat</td>
                                         <td>: <?= $spr['create_at'] ? date('d/m/Y H:i', strtotime($spr['create_at'])) : '-' ?></td>
                                     </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Tipe Retur</td>
+                                        <td colspan="3">: 
+                                            <?php if (($spr['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
+                                            <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php else: ?>
+                                                <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 </table>
 
                                 <p class="small text-muted mb-2" style="font-style:italic;">

@@ -39,6 +39,7 @@ class M_ReturPenjualan extends CI_Model
             CREATE TABLE IF NOT EXISTS `tb_spr_header` (
                 `id_spr`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_spr`               VARCHAR(30)  NOT NULL,
+                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
                 `tanggal`              DATE         NOT NULL,
                 `kd_customer`          VARCHAR(30)  DEFAULT NULL,
                 `nama_customer`        VARCHAR(200) DEFAULT NULL,
@@ -134,6 +135,14 @@ class M_ReturPenjualan extends CI_Model
                 ADD COLUMN `kasir_at`    DATETIME     DEFAULT NULL AFTER `kasir_by`,
                 ADD COLUMN `catatan_kasir` TEXT        DEFAULT NULL AFTER `kasir_at`
             ");
+        }
+        // Tambah tipe_retur ke tb_spr_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tb_spr_header')) {
+            $this->db->query("ALTER TABLE `tb_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
+        }
+        // Tambah tipe_retur ke tb_retur_penjualan_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tb_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tb_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
         }
     }
 
@@ -319,6 +328,7 @@ class M_ReturPenjualan extends CI_Model
             CREATE TABLE IF NOT EXISTS `tb_retur_penjualan_header` (
                 `id_retur`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_retur`              VARCHAR(40)  NOT NULL,
+                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
                 `id_spr`                INT UNSIGNED NOT NULL,
                 `no_spr`               VARCHAR(30)  NOT NULL,
                 `tanggal_retur`        DATE         NOT NULL,
@@ -374,10 +384,17 @@ class M_ReturPenjualan extends CI_Model
         ");
     }
 
-    /** Generate nomor Retur Penjualan: RP/ddmmyy/0001 */
-    public function generate_no_retur()
+    /** Generate nomor Retur Penjualan: RP/ddmmyy/0001, RPR/ddmmyy/0001, RPS/ddmmyy/0001 */
+    public function generate_no_retur($tipe = 'biasa')
     {
-        $prefix = 'RP/' . date('dmy') . '/';
+        $prefix_code = 'RP';
+        if ($tipe === 'replace') {
+            $prefix_code = 'RPR';
+        } elseif ($tipe === 'service') {
+            $prefix_code = 'RPS';
+        }
+        
+        $prefix = $prefix_code . '/' . date('dmy') . '/';
         $row = $this->db
             ->like('no_retur', $prefix, 'after')
             ->order_by('no_retur', 'DESC')

@@ -88,6 +88,18 @@
                                         <td class="font-weight-bold">Dari SPR</td>
                                         <td>: <?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td>
                                     </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Tipe Retur</td>
+                                        <td colspan="3">: 
+                                            <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
+                                            <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php else: ?>
+                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
                                 </table>
 
                                 <form method="post" action="<?= base_url('retur_penjualan/retur/verifikasi_simpan/' . $retur['id_retur']) ?>" id="formApproval">

@@ -36,11 +36,23 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <table class="table table-sm table-borderless" style="font-size:13px;">
-                                    <tr><td class="font-weight-bold" style="width:130px;">No. Retur</td><td>: <?= htmlspecialchars($retur['no_retur']) ?></td></tr>
-                                    <tr><td class="font-weight-bold">Dari SPR</td><td>: <?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td></tr>
-                                    <tr><td class="font-weight-bold">Customer</td><td>: <strong><?= htmlspecialchars($retur['nama_customer'] ?: $retur['nama_customer_master'] ?: '-') ?></strong></td></tr>
-                                </table>
+                                 <table class="table table-sm table-borderless" style="font-size:13px;">
+                                     <tr><td class="font-weight-bold" style="width:130px;">No. Retur</td><td>: <?= htmlspecialchars($retur['no_retur']) ?></td></tr>
+                                     <tr><td class="font-weight-bold">Dari SPR</td><td>: <?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td></tr>
+                                     <tr><td class="font-weight-bold">Customer</td><td>: <strong><?= htmlspecialchars($retur['nama_customer'] ?: $retur['nama_customer_master'] ?: '-') ?></strong></td></tr>
+                                     <tr>
+                                         <td class="font-weight-bold">Tipe Retur</td>
+                                         <td>: 
+                                             <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                 <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
+                                             <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                 <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                             <?php else: ?>
+                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
+                                             <?php endif; ?>
+                                         </td>
+                                     </tr>
+                                 </table>
                             </div>
                             <div class="col-md-6">
                                 <table class="table table-sm table-borderless" style="font-size:13px;">

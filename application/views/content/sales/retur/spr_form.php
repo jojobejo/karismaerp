@@ -164,6 +164,14 @@
                                            id="tanggal" value="<?= $is_edit ? $spr['tanggal'] : date('Y-m-d') ?>" required>
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label-sm">Tipe Retur <span class="text-danger">*</span></label>
+                                    <select class="form-control form-control-sm" name="tipe_retur" id="tipe_retur" required>
+                                        <option value="biasa" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'biasa') ? 'selected' : '' ?>>Retur (Refund/Potong Faktur)</option>
+                                        <option value="replace" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'replace') ? 'selected' : '' ?>>Replace (Ganti Barang)</option>
+                                        <option value="service" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'service') ? 'selected' : '' ?>>Service (Servis Barang)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
                                     <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
                                     <select class="form-control form-control-sm" name="kd_customer" id="kd_customer" required>
                                         <option value="">-- Pilih Customer --</option>
@@ -179,11 +187,13 @@
                                     </select>
                                     <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
                                 </div>
-                                <div class="col-md-4">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-8">
                                     <label class="form-label-sm">Alamat</label>
                                     <input type="text" class="form-control form-control-sm" name="alamat" id="alamat" value="<?= $is_edit ? htmlspecialchars($spr['alamat']) : '' ?>">
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-4">
                                     <label class="form-label-sm">Sales</label>
                                     <input type="text" class="form-control form-control-sm" name="nama_sales" id="nama_sales"
                                            value="<?= $is_edit ? htmlspecialchars($spr['nama_sales']) : htmlspecialchars($user['nama'] ?? '') ?>">

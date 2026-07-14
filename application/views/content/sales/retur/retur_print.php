@@ -86,16 +86,28 @@
         <tr>
             <td class="lbl">Tanggal</td>
             <td><?= date('d/m/Y', strtotime($retur['tanggal_retur'])) ?></td>
-            <td class="lbl">Dari SPR</td>
-            <td><?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td>
-            <td class="lbl">Nama Customer</td>
+            <td class="lbl">Tipe Retur</td>
+            <td>
+                <strong>
+                    <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                        REPLACE (Ganti Barang)
+                    <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                        SERVICE (Servis Barang)
+                    <?php else: ?>
+                        RETUR (Potong Faktur)
+                    <?php endif; ?>
+                </strong>
+            </td>
+            <td class="lbl">Customer</td>
             <td><strong><?= htmlspecialchars($retur['nama_customer'] ?: ($retur['nama_customer_master'] ?? '-')) ?></strong></td>
         </tr>
         <tr>
+            <td class="lbl">Dari SPR</td>
+            <td><?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td>
             <td class="lbl">Sales</td>
             <td><?= htmlspecialchars($retur['nama_sales'] ?? '-') ?></td>
             <td class="lbl">Alamat</td>
-            <td colspan="3"><?= htmlspecialchars($retur['alamat'] ?: ($retur['alamat_master'] ?? '-')) ?></td>
+            <td><?= htmlspecialchars($retur['alamat'] ?: ($retur['alamat_master'] ?? '-')) ?></td>
         </tr>
     </table>
 
