@@ -65,6 +65,7 @@
                                     <tr>
                                         <th class="text-center" style="width:40px;">No.</th>
                                         <th>Nama Barang</th>
+                                        <th>Satuan</th>
                                         <th>No. Faktur</th>
                                         <th>No. Batch</th>
                                         <th class="text-center">Exp. Date</th>
@@ -80,6 +81,7 @@
                                     <tr>
                                         <td class="text-center"><?= $i + 1 ?></td>
                                         <td><?= htmlspecialchars($d['nama_barang'] ?? '-') ?></td>
+                                        <td><?= htmlspecialchars($d['satuan'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
                                         <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
                                         <td class="text-center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
@@ -89,7 +91,7 @@
                                     </tr>
                                     <?php endforeach; ?>
                                     <tr class="table-dark">
-                                        <td colspan="7" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
+                                        <td colspan="8" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
                                         <td class="text-right font-weight-bold">Rp <?= number_format($total_retur, 0, ',', '.') ?></td>
                                     </tr>
                                 </tbody>
@@ -117,8 +119,8 @@
                                 <textarea name="catatan_collection" class="form-control" rows="3" placeholder="Catatan proses collection..."></textarea>
                             </div>
                         </div>
-                        <div class="card-footer d-flex justify-content-between">
-                            <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-secondary">
+                        <div class="card-footer d-flex justify-content-end">
+                            <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-secondary mr-2">
                                 <i class="fas fa-arrow-left"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-success"

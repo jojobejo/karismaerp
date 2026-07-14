@@ -108,6 +108,7 @@
             <tr>
                 <th style="width:30px;">No.</th>
                 <th>Nama Barang</th>
+                <th style="width:60px;">Satuan</th>
                 <th style="width:120px;">No Faktur</th>
                 <th style="width:120px;">No. Batch/Lot</th>
                 <th style="width:100px;">Exp. Date</th>
@@ -126,6 +127,7 @@
             <tr>
                 <td class="center"><?= $i + 1 ?></td>
                 <td><?= htmlspecialchars($d['nama_barang'] ?? '') ?></td>
+                <td><?= htmlspecialchars($d['satuan'] ?? '') ?></td>
                 <td><?= htmlspecialchars($d['no_faktur'] ?? '') ?></td>
                 <td><?= htmlspecialchars($d['no_batch'] ?? '') ?></td>
                 <td class="center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
@@ -135,7 +137,7 @@
             </tr>
             <?php endforeach; ?>
             <tr style="background:#f5f5f5; font-weight:bold;">
-                <td colspan="7" class="right">TOTAL NILAI RETUR:</td>
+                <td colspan="8" class="right">TOTAL NILAI RETUR:</td>
                 <td class="right">Rp <?= number_format($total, 0, ',', '.') ?></td>
             </tr>
         </tbody>

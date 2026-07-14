@@ -100,55 +100,60 @@
                                             <thead>
                                                 <tr>
                                                     <th class="text-center" style="width:36px;">No.</th>
-                                                    <th>Nama Barang</th>
-                                                    <th>No. Faktur</th>
-                                                    <th>No. Batch/Lot</th>
+                                                    <th style="width:110px;">Nama Barang</th>
+                                                    <th style="width:70px;">Satuan</th>
+                                                    <th style="width:110px;">No. Faktur</th>
+                                                    <th style="width:110px;">No. Batch/Lot</th>
                                                     <th class="text-center">Exp. Date</th>
-                                                    <th class="text-center" style="width:100px;">Qty Retur</th>
-                                                    <th class="text-right" style="width:130px;">Harga Satuan</th>
-                                                    <th class="text-right" style="width:140px;">Subtotal</th>
+                                                    <th class="text-center" style="width:80px;">Qty Retur</th>
+                                                    <th class="text-right" style="width:100px;">Harga Satuan</th>
+                                                    <th class="text-right" style="width:110px;">Subtotal</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php $total = 0; foreach ($retur_detail as $i => $d):
                                                     $subtotal = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
-                                                    $total += $subtotal;
-                                                ?>
-                                                <tr>
-                                                    <td class="text-center"><?= $i + 1 ?></td>
-                                                    <td>
-                                                        <input type="text" name="nama_barang[]" class="form-control form-control-sm barang-input"
-                                                               value="<?= htmlspecialchars($d['nama_barang'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
-                                                        <input type="hidden" name="id_retur_detail[]" value="<?= $d['id_retur_detail'] ?>">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" name="no_faktur[]" class="form-control form-control-sm faktur-input"
-                                                               value="<?= htmlspecialchars($d['no_faktur'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
-                                                    </td>
-                                                    <td>
-                                                        <input type="text" name="no_batch[]" class="form-control form-control-sm batch-input"
-                                                               value="<?= htmlspecialchars($d['no_batch'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <?php $exp_val = !empty($d['expired_date']) ? date('Y-m-d', strtotime($d['expired_date'])) : ''; ?>
-                                                        <input type="date" name="expired_date[]" class="form-control form-control-sm exp-input"
-                                                               value="<?= $exp_val ?>" readonly style="background:#f5f5f5; border:none;">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input"
-                                                               value="<?= (float)$d['qty_retur'] ?>" min="0.001" step="0.001" readonly style="background:#f5f5f5; border:none;">
-                                                    </td>
-                                                    <td>
-                                                        <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input"
-                                                               value="<?= (float)$d['harga_satuan'] ?>" min="0" step="0.01" readonly style="background:#f5f5f5; border:none;">
-                                                    </td>
-                                                    <td class="text-right subtotal-cell">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                                <tr class="table-secondary">
-                                                    <td colspan="7" class="text-right font-weight-bold">TOTAL VALUE:</td>
-                                                    <td class="text-right font-weight-bold" id="total-val">Rp <?= number_format($total, 0, ',', '.') ?></td>
-                                                </tr>
+                                                     $total += $subtotal;
+                                                 ?>
+                                                 <tr>
+                                                     <td class="text-center"><?= $i + 1 ?></td>
+                                                     <td>
+                                                         <input type="text" name="nama_barang[]" class="form-control form-control-sm barang-input"
+                                                                value="<?= htmlspecialchars($d['nama_barang'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                         <input type="hidden" name="id_retur_detail[]" value="<?= $d['id_retur_detail'] ?>">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="satuan[]" class="form-control form-control-sm satuan-input"
+                                                                value="<?= htmlspecialchars($d['satuan'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="no_faktur[]" class="form-control form-control-sm faktur-input"
+                                                                value="<?= htmlspecialchars($d['no_faktur'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="no_batch[]" class="form-control form-control-sm batch-input"
+                                                                value="<?= htmlspecialchars($d['no_batch'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td class="text-center">
+                                                         <?php $exp_val = !empty($d['expired_date']) ? date('Y-m-d', strtotime($d['expired_date'])) : ''; ?>
+                                                         <input type="date" name="expired_date[]" class="form-control form-control-sm exp-input"
+                                                                value="<?= $exp_val ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input"
+                                                                value="<?= (float)$d['qty_retur'] ?>" min="0.001" step="0.001" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input"
+                                                                value="<?= (float)$d['harga_satuan'] ?>" min="0" step="0.01" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td class="text-right subtotal-cell">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
+                                                 </tr>
+                                                 <?php endforeach; ?>
+                                                 <tr class="table-secondary">
+                                                     <td colspan="8" class="text-right font-weight-bold">TOTAL VALUE:</td>
+                                                     <td class="text-right font-weight-bold" id="total-val">Rp <?= number_format($total, 0, ',', '.') ?></td>
+                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>

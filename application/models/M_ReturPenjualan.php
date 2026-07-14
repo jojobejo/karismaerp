@@ -483,6 +483,39 @@ class M_ReturPenjualan extends CI_Model
      */
     public function get_approval_history($username_or_name, $role, $filter = [])
     {
+        if ($role === 'collection' || $role === 'kasir') {
+            $this->db->select('
+                r.id_retur AS id_spr,
+                r.no_retur AS no_spr,
+                r.tanggal_retur AS tanggal,
+                r.nama_customer,
+                r.nama_sales,
+                r.status_retur AS status,
+                r.catatan_collection,
+                r.catatan_kasir,
+                c.nama_customer AS nama_customer_master,
+                c.alamat_kios   AS alamat_master,
+                (SELECT COUNT(*) FROM tb_retur_penjualan_detail d WHERE d.id_retur = r.id_retur) AS jumlah_item
+            ');
+            $this->db->from('tb_retur_penjualan_header r');
+            $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+
+            if ($role === 'collection') {
+                $this->db->where('r.collection_by', $username_or_name);
+            } else {
+                $this->db->where('r.kasir_by', $username_or_name);
+            }
+
+            if (!empty($filter['date1']))       $this->db->where('r.tanggal_retur >=', $filter['date1']);
+            if (!empty($filter['date2']))       $this->db->where('r.tanggal_retur <=', $filter['date2']);
+            if (!empty($filter['status']))      $this->db->where('r.status_retur', $filter['status']);
+
+            $this->db->order_by('r.tanggal_retur', 'DESC');
+            $this->db->order_by('r.id_retur',  'DESC');
+
+            return $this->db->get()->result_array();
+        }
+
         $this->db->select('
             h.*,
             c.nama_customer AS nama_customer_master,

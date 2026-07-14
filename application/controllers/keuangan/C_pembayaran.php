@@ -66,6 +66,7 @@ class C_pembayaran extends CI_Controller
         $data['faktur'] = $faktur;
         $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
         $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
+        $data['saldo_retur'] = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
@@ -88,9 +89,17 @@ class C_pembayaran extends CI_Controller
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
         $metode_pembayaran = strtolower(trim((string)$this->input->post('metode_pembayaran', true)));
-        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg'], true)) {
+        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg', 'retur'], true)) {
             $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+        }
+
+        if ($metode_pembayaran === 'retur') {
+            $saldo_retur = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
+            if ($jumlah_pembayaran > $saldo_retur) {
+                $this->session->set_flashdata('error', 'Jumlah pembayaran retur (' . number_format($jumlah_pembayaran, 0, ',', '.') . ') melebihi saldo retur customer (' . number_format($saldo_retur, 0, ',', '.') . ').');
+                redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
+            }
         }
         $tanggal_bg_cair = $this->input->post('tanggal_bg_cair', true);
         $keterangan = trim((string)$this->input->post('keterangan', true));

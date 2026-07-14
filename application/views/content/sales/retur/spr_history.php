@@ -64,6 +64,32 @@
                     <?php endif; ?>
                 <?php endforeach; ?>
 
+                <!-- SHORTCUT ROLE LINKS -->
+                <div class="row mb-3">
+                    <?php
+                    $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                    $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                    $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                    $is_approval = !$is_collection && !$is_kasir;
+                    ?>
+                    <div class="col-auto">
+                        <?php if ($is_approval): ?>
+                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger">
+                            <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
+                        </a>
+                        <?php endif; ?>
+                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary">
+                            <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+                        </a>
+                        <?php endif; ?>
+                        <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-secondary active">
+                            <i class="fas fa-history"></i> Riwayat Persetujuan
+                        </a>
+                    </div>
+                </div>
+
                 <!-- FILTER -->
                 <div class="card card-outline card-secondary mb-3">
                     <div class="card-header py-2">
@@ -125,8 +151,8 @@
                             <table class="table table-bordered table-hover table-sm mb-0 table-history" id="tabelHistory">
                                 <thead class="thead-dark">
                                     <tr>
-                                        <th>No. SPR</th>
-                                        <th>Tanggal SPR</th>
+                                        <th><?= ($role === 'collection' || $role === 'kasir') ? 'No. Retur' : 'No. SPR' ?></th>
+                                        <th><?= ($role === 'collection' || $role === 'kasir') ? 'Tanggal Retur' : 'Tanggal SPR' ?></th>
                                         <th>Customer</th>
                                         <th>Sales</th>
                                         <th class="text-center">Item</th>
@@ -153,6 +179,9 @@
                                             'disetujui_kadep'     => ['indigo',    'Acc Kadep'],
                                             'selesai'             => ['success',   'Selesai'],
                                             'ditolak'             => ['danger',    'Ditolak'],
+                                            'menunggu_verifikasi' => ['warning',   'Wait Admin Stock'],
+                                            'menunggu_collection' => ['info',      'Wait Collection'],
+                                            'menunggu_kasir'      => ['primary',   'Wait Kasir'],
                                         ];
 
                                         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
@@ -173,6 +202,10 @@
                                                 $my_catatan = $row['kadep_sc_catatan'];
                                             } elseif ($role === 'logistik') {
                                                 $my_catatan = $row['logistik_catatan'];
+                                            } elseif ($role === 'collection') {
+                                                $my_catatan = $row['catatan_collection'];
+                                            } elseif ($role === 'kasir') {
+                                                $my_catatan = $row['catatan_kasir'];
                                             } else {
                                                 // Admin atau general: show any matching non-empty
                                                 $cats = [];
@@ -180,12 +213,14 @@
                                                 if ($row['admin_stock_catatan']) $cats[] = 'Stock: '.$row['admin_stock_catatan'];
                                                 if ($row['kadep_sc_catatan']) $cats[] = 'Kadep: '.$row['kadep_sc_catatan'];
                                                 if ($row['logistik_catatan']) $cats[] = 'Logistik: '.$row['logistik_catatan'];
+                                                if ($row['catatan_collection']) $cats[] = 'Collection: '.$row['catatan_collection'];
+                                                if ($row['catatan_kasir']) $cats[] = 'Kasir: '.$row['catatan_kasir'];
                                                 $my_catatan = implode(' | ', $cats);
                                             }
                                         ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('retur_penjualan/detail/' . $row['id_spr']) ?>" class="font-weight-bold text-danger">
+                                                <a href="<?= base_url(($role === 'collection' || $role === 'kasir') ? 'retur_penjualan/retur/detail/' . $row['id_spr'] : 'retur_penjualan/detail/' . $row['id_spr']) ?>" class="font-weight-bold text-danger">
                                                     <?= htmlspecialchars($row['no_spr']) ?>
                                                 </a>
                                             </td>
@@ -198,7 +233,7 @@
                                                 <span class="badge badge-<?= $badge ?> history-badge"><?= $label ?></span>
                                             </td>
                                             <td class="text-center text-nowrap">
-                                                <a href="<?= base_url('retur_penjualan/detail/' . $row['id_spr']) ?>"
+                                                <a href="<?= base_url(($role === 'collection' || $role === 'kasir') ? 'retur_penjualan/retur/detail/' . $row['id_spr'] : 'retur_penjualan/detail/' . $row['id_spr']) ?>"
                                                    class="btn btn-sm btn-info" title="Detail">
                                                     <i class="fas fa-eye"></i> Detail
                                                 </a>

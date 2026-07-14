@@ -6,6 +6,7 @@ $metode_options = [
     'cash' => 'Cash',
     'transfer' => 'Transfer',
     'bg' => 'BG',
+    'retur' => 'Saldo Retur',
 ];
 $default_metode = strtolower((string)($faktur['cara_pembayaran'] ?? ''));
 if (!isset($metode_options[$default_metode])) {
@@ -186,13 +187,20 @@ if (!isset($metode_options[$default_metode])) {
                                         <?php if ($is_bg_cair_mode): ?>
                                             <input type="text" class="form-control" value="BG" readonly>
                                         <?php else: ?>
-                                            <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required>
-                                                <?php foreach ($metode_options as $value => $label): ?>
-                                                    <option value="<?= htmlspecialchars($value) ?>" <?= $default_metode === $value ? 'selected' : '' ?>>
-                                                        <?= htmlspecialchars($label) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
+                                             <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required>
+                                                 <?php foreach ($metode_options as $value => $label): ?>
+                                                     <?php
+                                                     $disabled_attr = '';
+                                                     if ($value === 'retur' && (float)$saldo_retur <= 0) {
+                                                         $disabled_attr = 'disabled';
+                                                         $label .= ' (Tidak ada saldo)';
+                                                     }
+                                                     ?>
+                                                     <option value="<?= htmlspecialchars($value) ?>" <?= $default_metode === $value ? 'selected' : '' ?> <?= $disabled_attr ?>>
+                                                         <?= htmlspecialchars($label) ?>
+                                                     </option>
+                                                 <?php endforeach; ?>
+                                             </select>
                                         <?php endif; ?>
                                     </div>
                                     <div class="form-group">
@@ -217,6 +225,16 @@ if (!isset($metode_options[$default_metode])) {
                                                value="<?= $is_bg_cair_mode ? htmlspecialchars($pending_bg['tanggal_bg_cair']) : date('Y-m-d') ?>"
                                                <?= $is_bg_cair_mode || $default_metode === 'bg' ? ($is_bg_cair_mode ? 'readonly' : 'required') : '' ?>>
                                         <small class="text-muted">Pembayaran BG belum mengurangi tagihan sampai tombol BG Sudah Cair diklik.</small>
+                                    </div>
+                                    <div class="form-group" id="saldo_retur_group" style="display:none;">
+                                        <label>Saldo Retur Customer</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">Rp</span>
+                                            </div>
+                                            <input type="text" class="form-control" id="input_saldo_retur" value="<?= number_format($saldo_retur, 0, ',', '.') ?>" readonly>
+                                        </div>
+                                        <small class="text-muted">Saldo retur customer yang tersedia untuk pemotongan faktur ini.</small>
                                     </div>
                                     <div class="form-group mb-0">
                                         <label>Keterangan</label>
@@ -246,16 +264,43 @@ if (!isset($metode_options[$default_metode])) {
 document.addEventListener('DOMContentLoaded', function() {
     var metode = document.getElementById('metode_pembayaran');
     var bgGroup = document.getElementById('tanggal_bg_cair_group');
-    if (!metode || !bgGroup) return;
+    var returGroup = document.getElementById('saldo_retur_group');
+    var jumlahInput = document.querySelector('input[name="jumlah_pembayaran"]');
+    var sisaTagihan = <?= (float)$faktur['sisa_tagihan'] ?>;
+    var saldoRetur = <?= (float)$saldo_retur ?>;
 
-    var bgDate = bgGroup.querySelector('input[name="tanggal_bg_cair"]');
-    function toggleBgDate() {
-        var isBg = metode.value === 'bg';
-        bgGroup.style.display = isBg ? '' : 'none';
-        if (bgDate) bgDate.required = isBg;
+    if (!metode) return;
+
+    var bgDate = bgGroup ? bgGroup.querySelector('input[name="tanggal_bg_cair"]') : null;
+
+    function handleMetodeChange() {
+        var val = metode.value;
+        
+        // Toggle BG Group
+        if (bgGroup) {
+            var isBg = val === 'bg';
+            bgGroup.style.display = isBg ? '' : 'none';
+            if (bgDate) bgDate.required = isBg;
+        }
+
+        // Toggle Retur Group
+        if (returGroup) {
+            var isRetur = val === 'retur';
+            returGroup.style.display = isRetur ? '' : 'none';
+            
+            if (isRetur && jumlahInput) {
+                var maxLimit = Math.min(sisaTagihan, saldoRetur);
+                jumlahInput.max = maxLimit;
+                if (parseFloat(jumlahInput.value) > maxLimit || jumlahInput.value == sisaTagihan) {
+                    jumlahInput.value = maxLimit;
+                }
+            } else if (jumlahInput) {
+                jumlahInput.max = sisaTagihan;
+            }
+        }
     }
 
-    metode.addEventListener('change', toggleBgDate);
-    toggleBgDate();
+    metode.addEventListener('change', handleMetodeChange);
+    handleMetodeChange();
 });
 </script>

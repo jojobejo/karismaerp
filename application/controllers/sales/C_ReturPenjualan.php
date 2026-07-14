@@ -720,8 +720,14 @@ class C_ReturPenjualan extends CI_Controller
         } elseif ($this->_isLogistik()) {
             $role = 'logistik';
             $role_label = 'Logistik';
+        } elseif ($this->_isCollection()) {
+            $role = 'collection';
+            $role_label = 'Collection';
+        } elseif ($this->_isKasir()) {
+            $role = 'kasir';
+            $role_label = 'Kasir';
         } else {
-            $this->_denyAccess('Hanya user approval yang dapat melihat riwayat persetujuan.');
+            $this->_denyAccess('Hanya user approval, collection, atau kasir yang dapat melihat riwayat.');
             return;
         }
 

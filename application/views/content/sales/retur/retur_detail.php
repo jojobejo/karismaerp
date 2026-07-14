@@ -115,6 +115,7 @@
                                             <tr>
                                                 <th class="text-center" style="width:40px;">No.</th>
                                                 <th>Nama Barang</th>
+                                                <th>Satuan</th>
                                                 <th>No. Faktur</th>
                                                 <th>No. Batch</th>
                                                 <th class="text-center">Exp. Date</th>
@@ -125,7 +126,7 @@
                                         </thead>
                                         <tbody>
                                             <?php if (empty($retur_detail)): ?>
-                                                <tr><td colspan="8" class="text-center text-muted py-3">Tidak ada data barang</td></tr>
+                                                <tr><td colspan="9" class="text-center text-muted py-3">Tidak ada data barang</td></tr>
                                             <?php else: ?>
                                                 <?php $total = 0; foreach ($retur_detail as $i => $d):
                                                     $subtotal = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
@@ -134,6 +135,7 @@
                                                 <tr>
                                                     <td class="text-center"><?= $i + 1 ?></td>
                                                     <td><?= htmlspecialchars($d['nama_barang'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($d['satuan'] ?? '-') ?></td>
                                                     <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
                                                     <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
                                                     <td class="text-center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
@@ -143,7 +145,7 @@
                                                 </tr>
                                                 <?php endforeach; ?>
                                                 <tr class="table-dark">
-                                                    <td colspan="7" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
+                                                    <td colspan="8" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
                                                     <td class="text-right font-weight-bold">Rp <?= number_format($total, 0, ',', '.') ?></td>
                                                 </tr>
                                             <?php endif; ?>

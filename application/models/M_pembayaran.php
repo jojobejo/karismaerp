@@ -332,4 +332,28 @@ class M_pembayaran extends CI_Model
             'bg_cair_at' => date('Y-m-d H:i:s'),
         ]);
     }
+
+    /**
+     * Get available return balance (saldo retur) for a customer
+     */
+    public function get_customer_saldo_retur($kd_customer)
+    {
+        // 1. Get total completed returns
+        $this->db->select('SUM(d.qty_retur * d.harga_satuan) AS total_retur');
+        $this->db->from('tb_retur_penjualan_header h');
+        $this->db->join('tb_retur_penjualan_detail d', 'd.id_retur = h.id_retur');
+        $this->db->where('h.kd_customer', $kd_customer);
+        $this->db->where('h.status_retur', 'selesai');
+        $total_retur = (float)$this->db->get()->row()->total_retur;
+
+        // 2. Get total return used in payments
+        $this->db->select('SUM(p.jumlah_pembayaran) AS total_used');
+        $this->db->from($this->payment_table . ' p');
+        $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur');
+        $this->db->where('f.kd_customer', $kd_customer);
+        $this->db->where('p.metode_pembayaran', 'retur');
+        $total_used = (float)$this->db->get()->row()->total_used;
+
+        return max(0.0, $total_retur - $total_used);
+    }
 }

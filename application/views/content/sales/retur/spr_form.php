@@ -173,7 +173,7 @@
                                                     data-nama="<?= htmlspecialchars($c['nama_customer']) ?>"
                                                     data-alamat="<?= htmlspecialchars($c['alamat_kios'] ?? '') ?>"
                                                     data-sales="<?= htmlspecialchars($c['nama_sales'] ?? '') ?>">
-                                                <?= htmlspecialchars($c['nama_customer']) ?>
+                                                <?= htmlspecialchars($c['kd_customer'] . ' - ' . $c['nama_customer']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -409,6 +409,13 @@
 $(document).ready(function () {
 
     var AJAX_BARANG_URL = '<?= base_url("retur_penjualan/ajax/search_barang") ?>';
+
+    // ---- Searchable customer ----
+    $('#kd_customer').select2({
+        theme: 'default',
+        placeholder: '-- Pilih Customer --',
+        allowClear: true
+    });
 
     // ---- Auto-fill customer ----
     $('#kd_customer').on('change', function() {

@@ -41,13 +41,18 @@
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                 $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                $show_nav = $is_admin_stock || $is_collection || $is_kasir;
                 ?>
-                <?php if ($is_admin_stock): ?>
+                <?php if ($show_nav): ?>
                 <div class="row mb-3">
                     <div class="col-auto">
+                        <?php if ($is_admin_stock): ?>
                         <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger">
                             <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
                         </a>
+                        <?php endif; ?>
                         <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active">
                             <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                         </a>
@@ -106,6 +111,9 @@
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Retur Penjualan</h3>
                         <div class="card-tools">
+                            <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
+                                <i class="fas fa-history"></i> Riwayat Persetujuan
+                            </a>
                             <span class="badge badge-light"><?= count($retur_list) ?> Retur</span>
                         </div>
                     </div>

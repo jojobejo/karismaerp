@@ -194,8 +194,8 @@
                                 </table>
                             </div>
                         </div>
-                        <div class="card-footer d-flex justify-content-between">
-                            <a href="<?= base_url('retur_penjualan/admlpb2') ?>" class="btn btn-secondary">
+                        <div class="card-footer d-flex justify-content-end">
+                            <a href="<?= base_url('retur_penjualan/admlpb2') ?>" class="btn btn-secondary mr-2">
                                 <i class="fas fa-arrow-left"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-success" onclick="return confirm('Simpan Retur Penjualan ini? SPR akan otomatis berubah status menjadi Selesai.')">
