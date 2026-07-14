@@ -299,13 +299,12 @@
     });
   });
 
-  console.log("CLICK:", $(this).data('ids'));
-
   $(document).on('click', '.btn-edit-pic', function(e) {
 
     e.preventDefault();
 
     let ids = $(this).data('ids');
+    console.log("CLICK:", ids);
 
     ids = ids.toString();
     const arr = ids.split(',');
@@ -320,8 +319,6 @@
 
     $('#modalEditPIC').modal('show');
   });
-</script>
-
 </script>
 
 <script>

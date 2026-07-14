@@ -86,6 +86,8 @@ class M_ReturPenjualan extends CI_Model
                 `nama_barang`                 VARCHAR(250) DEFAULT NULL,
                 `no_faktur`                   VARCHAR(80)  DEFAULT NULL,
                 `no_batch`                    VARCHAR(80)  DEFAULT NULL,
+                `expired_date`                DATE         DEFAULT NULL,
+                `harga`                       DECIMAL(15,2) NOT NULL DEFAULT 0.00,
                 `qty`                         DECIMAL(12,3) DEFAULT 0,
                 -- Alasan / Keterangan (sesuai form SPR)
                 `alasan_brg_bermasalah`       TINYINT(1) NOT NULL DEFAULT 0,
@@ -109,6 +111,14 @@ class M_ReturPenjualan extends CI_Model
      */
     private function _alterTablesIfNeeded()
     {
+        // Tambah expired_date ke tb_spr_detail jika belum ada
+        if (!$this->db->field_exists('expired_date', 'tb_spr_detail')) {
+            $this->db->query("ALTER TABLE `tb_spr_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        }
+        // Tambah harga ke tb_spr_detail jika belum ada
+        if (!$this->db->field_exists('harga', 'tb_spr_detail')) {
+            $this->db->query("ALTER TABLE `tb_spr_detail` ADD COLUMN `harga` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `expired_date`");
+        }
         // Tambah expired_date ke detail retur jika belum ada
         if (!$this->db->field_exists('expired_date', 'tb_retur_penjualan_detail')) {
             $this->db->query("ALTER TABLE `tb_retur_penjualan_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
