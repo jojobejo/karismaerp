@@ -2941,7 +2941,7 @@ FROM (
     {
         $sql = "SELECT
             po.kd_po,
-            po.tgl_transaksi,
+            DATE_FORMAT(po.tgl_transaksi, '%Y-%m-%d') AS tgl_transaksi,
             po.no_po,
             po.kdsupp,
             CASE
@@ -2968,18 +2968,26 @@ FROM (
             END AS status
         FROM (
             SELECT
-                pp.kd_po,
-                MAX(pp.tgl_transaksi) AS tgl_transaksi,
-                MAX(pp.no_po) AS no_po,
-                MAX(pp.kd_suplier) AS kdsupp,
+                p.kd_po,
+                MAX(p.tgl_transaksi) AS tgl_transaksi,
+                MAX(p.no_po) AS no_po,
+                MAX(p.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
-                COUNT(DISTINCT pp.kd_barang) AS total_barang_order,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
-            FROM tb_pre_po pp
-            LEFT JOIN tb_suplier supp
-                ON supp.kd_suplier = pp.kd_suplier
-            LEFT JOIN tb_master_barang_all mb 
-                ON mb.kd_barang = pp.kd_barang
+                CASE
+                    WHEN COALESCE(MAX(p.jml_item), 0) > 0 THEN MAX(p.jml_item)
+                    ELSE COUNT(DISTINCT d.kd_barang)
+                END AS total_barang_order,
+                COALESCE(SUM(
+                    CASE
+                        WHEN COALESCE(d.qty_kecil, 0) > 0 THEN d.qty_kecil
+                        ELSE d.qty
+                    END
+                ), 0) AS total_qty_order
+            FROM tbpo_po p
+            LEFT JOIN tbpo_suplier supp
+                ON supp.kd_suplier = p.kd_suplier
+            LEFT JOIN tbpo_detail_po d
+                ON d.kd_po = p.kd_po
             WHERE 1=1";
 
         $params = [];
@@ -2988,13 +2996,13 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND DATE(p.tgl_transaksi) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
 
         $sql .= "
-            GROUP BY pp.kd_po
+            GROUP BY p.kd_po
         ) po
         LEFT JOIN (
             SELECT
@@ -3008,7 +3016,7 @@ FROM (
             GROUP BY h.kd_po
         ) rcv
             ON rcv.kd_po = po.kd_po
-        ORDER BY STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC, po.no_po DESC";
+        ORDER BY po.tgl_transaksi DESC, po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
     }
@@ -3017,13 +3025,14 @@ FROM (
     {
         $sql = "SELECT
             po.kd_po,
-            po.tgl_transaksi,
+            DATE_FORMAT(po.tgl_transaksi, '%Y-%m-%d') AS tgl_transaksi,
             po.no_po,
             po.kdsupp,
             CASE
                 WHEN po.nm_suplier IS NULL OR po.nm_suplier = '' THEN po.kdsupp
                 ELSE po.nm_suplier
             END AS nm_suplier,
+            po.total_barang_order,
             po.total_qty_order,
             COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
             CASE
@@ -3038,17 +3047,26 @@ FROM (
             END AS status
         FROM (
             SELECT
-                pp.kd_po,
-                MAX(pp.tgl_transaksi) AS tgl_transaksi,
-                MAX(pp.no_po) AS no_po,
-                MAX(pp.kd_suplier) AS kdsupp,
+                p.kd_po,
+                MAX(p.tgl_transaksi) AS tgl_transaksi,
+                MAX(p.no_po) AS no_po,
+                MAX(p.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
-            FROM tb_pre_po pp
-            LEFT JOIN tb_suplier supp
-                ON supp.kd_suplier = pp.kd_suplier
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                CASE
+                    WHEN COALESCE(MAX(p.jml_item), 0) > 0 THEN MAX(p.jml_item)
+                    ELSE COUNT(DISTINCT d.kd_barang)
+                END AS total_barang_order,
+                COALESCE(SUM(
+                    CASE
+                        WHEN COALESCE(d.qty_kecil, 0) > 0 THEN d.qty_kecil
+                        ELSE d.qty
+                    END
+                ), 0) AS total_qty_order
+            FROM tbpo_po p
+            LEFT JOIN tbpo_suplier supp
+                ON supp.kd_suplier = p.kd_suplier
+            LEFT JOIN tbpo_detail_po d
+                ON d.kd_po = p.kd_po
             WHERE 1=1";
 
         $params = [];
@@ -3057,13 +3075,13 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND DATE(p.tgl_transaksi) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
 
         $sql .= "
-            GROUP BY pp.kd_po
+            GROUP BY p.kd_po
         ) po
         LEFT JOIN (
             SELECT
@@ -3082,7 +3100,7 @@ FROM (
                 WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 2
                 ELSE 3
             END ASC,
-            STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC,
+            po.tgl_transaksi DESC,
             po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
@@ -3169,30 +3187,36 @@ FROM (
     public function detail_po_received($nopo, $kdsup)
     {
         $sql = "SELECT 
-                a.id_pre_po AS id,
+                a.id_det_po AS id,
                 a.no_po,
                 a.kd_po,
                 a.kd_barang,
-                b.nama_barang,
-                (b.p * b.l * b.t) AS dimensi_br,
-                a.qty * (b.p * b.l * b.t) AS qty_kecil, 
+                COALESCE(NULLIF(a.nama_barang, ''), b.nama_barang, '-') AS nama_barang,
+                CASE
+                    WHEN COALESCE(a.qty_kecil, 0) > 0 AND COALESCE(a.qty, 0) > 0 THEN a.qty_kecil / a.qty
+                    ELSE COALESCE(b.p * b.l * b.t, 1)
+                END AS dimensi_br,
+                CASE
+                    WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil
+                    ELSE a.qty
+                END AS qty_kecil,
                 a.qty AS qty_besar,
                 a.satuan,
                 a.hrg_satuan,
-                a.harga_total,
+                a.hrg_total AS harga_total,
                 COALESCE(r.qty_diterima, 0) AS qty_diterima,
                 COALESCE(r.qty_diterima, 0) AS qty_kecil_diterima,
-                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_kecil_sisa,
+                GREATEST((CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) - COALESCE(r.qty_diterima, 0), 0) AS qty_kecil_sisa,
                 COALESCE(r.total_lpb_record, 0) AS total_lpb_record,
                 
                 CASE 
-                    WHEN COALESCE(r.qty_diterima, 0) = 0 THEN 'BELUM'
-                    WHEN  a.qty * (b.p * b.l * b.t) - COALESCE(r.qty_diterima, 0) != a.qty THEN 'PARTIAL'
+                    WHEN COALESCE(r.qty_diterima, 0) <= 0 THEN 'BELUM'
+                    WHEN COALESCE(r.qty_diterima, 0) < (CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) THEN 'PARTIAL'
                     ELSE 'FULL'
                 END AS status_barang
-                          
-            FROM tb_pre_po a
+
+            FROM tbpo_detail_po a
             LEFT JOIN tb_master_barang_all b 
                 ON b.kd_barang = a.kd_barang
             LEFT JOIN (
@@ -3344,7 +3368,7 @@ FROM (
         ');
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3388,7 +3412,7 @@ FROM (
 
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3418,13 +3442,14 @@ FROM (
         $sql = "SELECT
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
+                CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
+                    ELSE pp.qty
+                END AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
-            FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
+            FROM tbpo_detail_po pp
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -3450,13 +3475,14 @@ FROM (
                 pp.kd_suplier,
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
+                CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
+                    ELSE pp.qty
+                END AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
-            FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
+            FROM tbpo_detail_po pp
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -3490,7 +3516,7 @@ FROM (
         ');
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3503,9 +3529,23 @@ FROM (
 
     public function update_pre_po_status_by_kd_po($kd_po, $status)
     {
-        return $this->db
-            ->where('kd_po', $kd_po)
-            ->update('tb_pre_po', ['status' => $status]);
+        $legacyStatus = $status;
+        $poStatus = ((string) $status === '2') ? 'DONE' : (string) $status;
+        $updated = TRUE;
+
+        if ($this->db->table_exists('tbpo_po')) {
+            $updated = $this->db
+                ->where('kd_po', $kd_po)
+                ->update('tbpo_po', ['status' => $poStatus]) && $updated;
+        }
+
+        if ($this->db->table_exists('tb_pre_po')) {
+            $updated = $this->db
+                ->where('kd_po', $kd_po)
+                ->update('tb_pre_po', ['status' => $legacyStatus]) && $updated;
+        }
+
+        return $updated;
     }
 
     public function get_pre_po_adjustment($kd_po)
