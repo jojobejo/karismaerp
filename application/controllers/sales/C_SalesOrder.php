@@ -608,6 +608,7 @@ class C_SalesOrder extends CI_Controller
                 'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
                 'kode_akun'    => $post['kode_akun'][$i]     ?? null,
                 'approve_by'   => $approve_by_item,
+                'is_nego'      => $is_nego,
                 'create_by'    => $this->_getUsername(),
             ];
         }
@@ -731,9 +732,35 @@ class C_SalesOrder extends CI_Controller
                 'keterangan' => 'SALES CONFIRM - SIAP LOADING oleh ' . $confirm_by,
                 'inputer'    => $confirm_by
             ]);
+
+            $fakturList = $this->db
+                ->select('kd_faktur')
+                ->distinct()
+                ->where('kd_do', $kd_do)
+                ->get('tb_detail_do')
+                ->result_array();
+            $this->load->library('Accounting_source_service');
+            $accountingResults = [];
+            foreach ($fakturList as $faktur) {
+                $noFaktur = trim((string)($faktur['kd_faktur'] ?? ''));
+                if ($noFaktur === '') {
+                    continue;
+                }
+                $this->M_Logistik->sync_so_status_by_faktur($noFaktur, 'completed');
+                $accountingResults[$noFaktur] = $this->accounting_source_service->post_sales_invoice(
+                    $noFaktur,
+                    $kd_do,
+                    (int)$this->session->userdata('id') ?: null
+                );
+            }
         }
 
-        echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
+        echo json_encode([
+            'msg' => 'success',
+            'message' => $msg,
+            'action' => $action,
+            'accounting' => isset($accountingResults) ? $accountingResults : [],
+        ]);
         exit;
     }
 }

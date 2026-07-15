@@ -12,17 +12,21 @@ Status: decision log awal. Item `PENDING` wajib dikunci sebelum implementasi fit
 | D-004 | Semua nominal accounting baru memakai `DECIMAL(19,4)`. | APPROVED | Source yang bertipe double/int harus dikonversi saat posting, bukan disalin sebagai schema accounting. |
 | D-005 | Account resolution wajib melalui `tbkeu_mapping_akun`. | APPROVED | Tidak boleh hardcode kode akun di code. |
 | D-006 | Jurnal POSTED immutable dan koreksi lewat reversal. | APPROVED | Tidak ada edit/delete jurnal posted. |
+| D-007 | Route produksi accounting adalah `accounting` dan `keuangan/accounting`; simulator hanya tersedia di `accounting-test`. | APPROVED | Payload nominal buatan tidak dapat diposting dari route produksi. |
+| D-008 | DO confirm sales action `siap` membaca faktur final dan membuat event `SALES_INVOICE` serta `GOODS_ISSUE`. | APPROVED | Revenue/VAT dan HPP/inventory terpisah, idempotent, dan kegagalan masuk exception. |
+| D-009 | Payment AR/AP baru memakai `tbkeu_pembayaran` dan `tbkeu_pembayaran_alokasi`. | APPROVED | Piutang/hutang ditutup dari tabel accounting yang punya nominal dan alokasi benar. |
+| D-010 | Periode fiskal open, close, dan reopen wajib mencatat reason dan approval user di `tbkeu_periode_fiskal_log`. | APPROVED | Audit periode tersedia tanpa mengubah tabel legacy. |
 
 ## Keputusan Pending
 
 | ID | Keputusan yang dibutuhkan | Status | Opsi | Risiko jika belum diputuskan |
 | --- | --- | --- | --- | --- |
 | D-101 | Nama dokumen canonical accounting | PENDING | Rename/duplikasi ke `AGENTS.md` dan `MASTER_SPEC.md`, atau resmi gunakan `AGENT.md` dan `MASTER_SPECS.md` | Agent/developer bisa membaca spec yang salah atau menganggap spec hilang. |
-| D-102 | Final event faktur penjualan | PENDING | `do/confirm_sales action=siap`, `tb_do.status` tertentu, atau tabel faktur baru | Revenue/HPP bisa diposting terlalu cepat atau terlambat. |
-| D-103 | Source invoice penjualan resmi | PENDING | `tb_detail_do`, `tbso_sales_order_detail`, atau buat `tbso_faktur_penjualan`/detail baru | Piutang, revenue, VAT, dan HPP tidak bisa dihitung konsisten. |
-| D-104 | Source nominal pembayaran customer | PENDING | Cari tabel lain, tambah `tbkeu_pembayaran`, atau perluas pembayaran existing | Pembayaran tidak bisa mengurangi piutang karena tabel existing tidak punya nominal. |
-| D-105 | Source pembayaran supplier | PENDING | Modul baru `tbkeu_pembayaran` atau source existing yang belum ditemukan | Hutang tidak bisa ditutup secara valid. |
-| D-106 | Harga LPB untuk GRNI | PENDING | `tb_pre_po.hrg_satuan`, `tb_pre_po_invoice_adjustment.harga_satuan`, `tbpo_detail_po.harga_satuan_kecil_setelah_diskon` | Persediaan/GRNI bisa salah nilai. |
+| D-102 | Source invoice penjualan resmi final setelah DO | APPROVED | Hook memakai `do/confirm_sales action=siap` dan membaca ulang tabel faktur final | Posting tidak bergantung pada detail DO orphan. |
+| D-103 | Source invoice penjualan resmi | APPROVED | `tbso_faktur_penjualan` dan `tbso_faktur_detail` | Piutang, revenue, VAT, dan HPP dihitung dari satu sumber final. |
+| D-104 | Source nominal pembayaran customer | APPROVED | Gunakan `tbkeu_pembayaran` dan `tbkeu_pembayaran_alokasi` | Pembayaran customer dapat mengurangi piutang dengan alokasi. |
+| D-105 | Source pembayaran supplier | APPROVED | Gunakan `tbkeu_pembayaran` dan `tbkeu_pembayaran_alokasi` | Pembayaran supplier dapat mengurangi hutang dengan alokasi. |
+| D-106 | Harga LPB untuk GRNI | APPROVED | Prioritas `tb_pre_po_invoice_adjustment.harga_satuan`, fallback `tb_pre_po.hrg_satuan`; harga nol menjadi exception | Persediaan/GRNI tidak pernah diposting nol. |
 | D-107 | Master supplier authoritative | PENDING | `tb_suplier`, `tbpo_suplier`, atau mapping keduanya | AP dan aging supplier bisa terpecah/duplikat. |
 | D-108 | Master customer authoritative | PENDING | `tb_customer.kd_customer` dengan dedupe, atau tabel baru snapshot | AR bisa salah relasi jika duplicate customer. |
 | D-109 | Treatment mutasi gudang | PENDING | Tidak posting jika akun inventory sama, posting transfer jika mapping gudang beda | Jurnal inventory bisa dobel atau tidak tercatat. |

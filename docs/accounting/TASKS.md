@@ -1,6 +1,16 @@
 # FASE 0 - Implementation Tasks
 
-Status: planning only. Tidak ada implementasi fitur pada fase ini.
+Status: produksi bertahap. Core runtime accounting, route produksi, periode fiskal, payment allocation, opening balance, exception workflow, dan laporan dasar sudah tersedia.
+
+Update 2026-07-15:
+
+- `Accounting_service` naik menjadi service produksi melalui route `accounting` dan `keuangan/accounting`.
+- UI produksi tersedia untuk jurnal manual, posting, reversal, detail jurnal, daftar jurnal, periode fiskal, payment allocation, opening balance, exception dashboard, dan laporan.
+- Hook non-blocking membaca faktur final untuk `SALES_INVOICE` + `GOODS_ISSUE`; LPB final memakai `GOODS_RECEIPT` atau exception jika harga belum lengkap.
+- Nomor jurnal memakai counter terkunci, period close memiliki checklist, reversal mempertahankan jurnal sumber di laporan, dan payment allocation memvalidasi outstanding per invoice.
+- Migration hardening, rollback, SQL UAT DB-01–DB-19, flow UAT, dan panduan operasional tersedia.
+- Payment customer/supplier memakai tabel accounting baru agar alokasi AR/AP tidak bergantung pada tabel legacy yang belum jelas.
+- Source final untuk purchase invoice, supplier payment legacy, retur bernilai nominal, stock adjustment, dan mutasi gudang masih perlu validasi bisnis jika akan di-hook langsung ke controller legacy.
 
 ## Prinsip Eksekusi
 

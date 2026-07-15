@@ -22,6 +22,11 @@ class Accounting_service
             'tbkeu_mapping_akun',
             'tbkeu_posting_exception',
             'tbkeu_jurnal_log',
+            'tbkeu_nomor_dokumen',
+            'tbkeu_periode_fiskal_log',
+            'tbkeu_pembayaran',
+            'tbkeu_pembayaran_alokasi',
+            'tbkeu_saldo_awal_akun',
         ];
 
         foreach ($tables as $table) {
@@ -72,13 +77,66 @@ class Accounting_service
             ->result();
     }
 
+    public function fiscal_period_rows($status = '', $limit = 36)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_periode_fiskal')) {
+            return [];
+        }
+
+        if ($status !== '') {
+            $this->CI->db->where('status', strtoupper(trim((string)$status)));
+        }
+
+        return $this->CI->db
+            ->order_by('tanggal_mulai', 'DESC')
+            ->limit((int)$limit > 0 ? (int)$limit : 36)
+            ->get('tbkeu_periode_fiskal')
+            ->result();
+    }
+
+    public function payment_rows($status = '', $limit = 100)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_pembayaran')) {
+            return [];
+        }
+
+        if ($status !== '') {
+            $this->CI->db->where('status', strtoupper(trim((string)$status)));
+        }
+
+        return $this->CI->db
+            ->order_by('tanggal_pembayaran', 'DESC')
+            ->order_by('id_pembayaran', 'DESC')
+            ->limit((int)$limit > 0 ? (int)$limit : 100)
+            ->get('tbkeu_pembayaran')
+            ->result();
+    }
+
+    public function opening_balance_rows($tanggal = '')
+    {
+        if (!$this->CI->db->table_exists('tbkeu_saldo_awal_akun')) {
+            return [];
+        }
+
+        $this->CI->db->select('s.*, a.kode_akun, a.nama_akun');
+        $this->CI->db->from('tbkeu_saldo_awal_akun s');
+        $this->CI->db->join('tbkeu_akun a', 'a.id_akun = s.id_akun', 'inner');
+        if ($tanggal !== '') {
+            $this->CI->db->where('s.tanggal_saldo', $tanggal);
+        }
+        $this->CI->db->order_by('a.kode_akun', 'ASC');
+
+        return $this->CI->db->get()->result();
+    }
+
     public function journal_rows($filters = [])
     {
         if (!$this->CI->db->table_exists('tbkeu_jurnal')) {
             return [];
         }
 
-        $this->CI->db->select('j.*, jj.kode_jenis_jurnal, jj.nama_jenis_jurnal');
+        $this->CI->db->select("j.*, jj.kode_jenis_jurnal, jj.nama_jenis_jurnal,
+            CASE WHEN j.reversed_at IS NOT NULL THEN 'REVERSED' ELSE j.status END AS display_status", false);
         $this->CI->db->from('tbkeu_jurnal j');
         $this->CI->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
 
@@ -171,6 +229,12 @@ class Accounting_service
         return $result;
     }
 
+    public function capture_posting_exception($event, $payload, $message, $errors = [])
+    {
+        $payload['posting_event'] = strtoupper(trim((string)$event));
+        return $this->record_exception($payload, $message, $errors);
+    }
+
     public function post_sales($payload, $userId = null)
     {
         return $this->post_auto('SALES_INVOICE', $payload, $userId);
@@ -225,13 +289,23 @@ class Accounting_service
 
     public function reverse_journal($idJurnal, $reason, $userId = null)
     {
-        $source = $this->journal_detail($idJurnal);
-        if (!$source || !$source['journal']) {
+        $reason = trim((string)$reason);
+        if ($reason === '') {
+            return $this->fail('Alasan reversal wajib diisi.', ['REVERSAL_REASON_REQUIRED']);
+        }
+
+        $this->CI->db->trans_begin();
+        $journal = $this->CI->db->query(
+            'SELECT * FROM tbkeu_jurnal WHERE id_jurnal = ? FOR UPDATE',
+            [(int)$idJurnal]
+        )->row();
+        if (!$journal) {
+            $this->CI->db->trans_rollback();
             return $this->fail('Jurnal sumber tidak ditemukan.', ['JOURNAL_NOT_FOUND']);
         }
 
-        $journal = $source['journal'];
-        if ($journal->status !== 'POSTED') {
+        if ($journal->status !== 'POSTED' || $journal->reversed_at !== null) {
+            $this->CI->db->trans_rollback();
             return $this->fail('Hanya jurnal POSTED yang dapat direversal.', ['JOURNAL_NOT_POSTED']);
         }
 
@@ -242,16 +316,18 @@ class Accounting_service
             ->row();
 
         if ($existing) {
+            $this->CI->db->trans_rollback();
             return $this->fail('Jurnal ini sudah memiliki reversal.', ['REVERSAL_EXISTS']);
         }
 
+        $source = $this->journal_detail($idJurnal);
         $lines = [];
         foreach ($source['details'] as $detail) {
             $lines[] = [
                 'id_akun' => (int)$detail->id_akun,
                 'keterangan' => 'Reversal: ' . (string)$detail->keterangan,
-                'debit' => (float)$detail->kredit,
-                'kredit' => (float)$detail->debit,
+                'debit' => $detail->kredit,
+                'kredit' => $detail->debit,
                 'id_customer' => $detail->id_customer,
                 'id_supplier' => $detail->id_supplier,
                 'id_barang' => $detail->id_barang,
@@ -265,7 +341,7 @@ class Accounting_service
         $payload = [
             'journal_type' => 'REV',
             'tanggal_transaksi' => date('Y-m-d'),
-            'keterangan' => trim((string)$reason) !== '' ? trim((string)$reason) : 'Reversal ' . $journal->nomor_jurnal,
+            'keterangan' => $reason,
             'source_module' => 'ACCOUNTING',
             'source_type' => 'REVERSAL',
             'source_id' => (string)$journal->id_jurnal,
@@ -277,7 +353,6 @@ class Accounting_service
             'lines' => $lines,
         ];
 
-        $this->CI->db->trans_begin();
         $created = $this->create_journal_inside_transaction($payload, $userId, true);
 
         if (!$created['success']) {
@@ -285,17 +360,25 @@ class Accounting_service
             return $created;
         }
 
+        // Jurnal sumber tetap POSTED agar laporan membaca transaksi asli dan
+        // jurnal pembalik secara bersamaan. Status reversal ditampilkan dari
+        // reversed_at; nilai jurnal sumber tidak pernah diubah.
         $this->CI->db
             ->where('id_jurnal', (int)$journal->id_jurnal)
             ->where('status', 'POSTED')
+            ->where('reversed_at IS NULL', null, false)
             ->update('tbkeu_jurnal', [
-                'status' => 'REVERSED',
                 'reversed_by' => $userId ?: null,
                 'reversed_at' => date('Y-m-d H:i:s'),
                 'updated_by' => $userId ?: null,
                 'updated_at' => date('Y-m-d H:i:s'),
                 'lock_version' => (int)$journal->lock_version + 1,
             ]);
+
+        if ($this->CI->db->affected_rows() !== 1) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Jurnal berubah saat proses reversal.', ['CONCURRENT_UPDATE']);
+        }
 
         $this->log_journal((int)$journal->id_jurnal, 'REVERSED', $reason, $userId);
 
@@ -306,6 +389,557 @@ class Accounting_service
 
         $this->CI->db->trans_commit();
         return $created;
+    }
+
+    public function save_fiscal_period($payload, $userId = null)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_periode_fiskal')) {
+            return $this->fail('Schema periode fiskal belum tersedia.', ['SCHEMA_NOT_READY']);
+        }
+
+        $id = (int)($payload['id_periode'] ?? 0);
+        $kode = trim((string)($payload['kode_periode'] ?? ''));
+        $nama = trim((string)($payload['nama_periode'] ?? ''));
+        $tanggalMulai = $this->normalize_date($payload['tanggal_mulai'] ?? '');
+        $tanggalSelesai = $this->normalize_date($payload['tanggal_selesai'] ?? '');
+        $reason = trim((string)($payload['reason'] ?? ''));
+
+        if ($kode === '' || $nama === '' || $tanggalMulai === '' || $tanggalSelesai === '') {
+            return $this->fail('Kode, nama, tanggal mulai, dan tanggal selesai periode wajib diisi.', ['INVALID_PERIOD']);
+        }
+
+        if (strtotime($tanggalMulai) > strtotime($tanggalSelesai)) {
+            return $this->fail('Tanggal mulai periode tidak boleh melewati tanggal selesai.', ['INVALID_PERIOD_RANGE']);
+        }
+
+        if ($reason === '') {
+            return $this->fail('Alasan/approval periode wajib diisi.', ['APPROVAL_REASON_REQUIRED']);
+        }
+
+        $overlap = $this->CI->db
+            ->where('tanggal_mulai <=', $tanggalSelesai)
+            ->where('tanggal_selesai >=', $tanggalMulai)
+            ->where('id_periode !=', $id)
+            ->get('tbkeu_periode_fiskal')
+            ->row();
+        if ($overlap) {
+            return $this->fail('Rentang periode bertabrakan dengan ' . $overlap->kode_periode . '.', ['PERIOD_OVERLAP']);
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $data = [
+            'kode_periode' => $kode,
+            'nama_periode' => $nama,
+            'tanggal_mulai' => $tanggalMulai,
+            'tanggal_selesai' => $tanggalSelesai,
+            'status' => 'OPEN',
+            'is_active' => 1,
+            'updated_at' => $now,
+        ];
+
+        $this->CI->db->trans_begin();
+        if ($id > 0) {
+            $period = $this->CI->db->where('id_periode', $id)->get('tbkeu_periode_fiskal')->row();
+            if (!$period) {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Periode fiskal tidak ditemukan.', ['PERIOD_NOT_FOUND']);
+            }
+            if ($period->status === 'CLOSED') {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Periode CLOSED harus dibuka melalui workflow reopen.', ['PERIOD_CLOSED']);
+            }
+            $this->CI->db->where('id_periode', $id)->update('tbkeu_periode_fiskal', $data);
+        } else {
+            $data['created_at'] = $now;
+            $this->CI->db->insert('tbkeu_periode_fiskal', $data);
+            $id = (int)$this->CI->db->insert_id();
+        }
+
+        $this->log_period($id, 'OPEN', $reason, $userId);
+
+        if ($this->CI->db->trans_status() === false) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Periode fiskal gagal disimpan.', ['DATABASE_ERROR']);
+        }
+
+        $this->CI->db->trans_commit();
+        return $this->ok('Periode fiskal berhasil disimpan dan berstatus OPEN.', ['id_periode' => $id]);
+    }
+
+    public function change_fiscal_period_status($idPeriode, $action, $reason, $userId = null)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_periode_fiskal')) {
+            return $this->fail('Schema periode fiskal belum tersedia.', ['SCHEMA_NOT_READY']);
+        }
+
+        $action = strtoupper(trim((string)$action));
+        $reason = trim((string)$reason);
+        if (!in_array($action, ['OPEN', 'CLOSE', 'REOPEN'], true)) {
+            return $this->fail('Aksi periode fiskal tidak valid.', ['INVALID_PERIOD_ACTION']);
+        }
+        if ($reason === '') {
+            return $this->fail('Alasan approval wajib diisi.', ['APPROVAL_REASON_REQUIRED']);
+        }
+
+        $this->CI->db->trans_begin();
+        $period = $this->CI->db->query(
+            'SELECT * FROM tbkeu_periode_fiskal WHERE id_periode = ? FOR UPDATE',
+            [(int)$idPeriode]
+        )->row();
+        if (!$period) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Periode fiskal tidak ditemukan.', ['PERIOD_NOT_FOUND']);
+        }
+
+        $newStatus = $action === 'CLOSE' ? 'CLOSED' : 'OPEN';
+        if ($action === 'CLOSE' && $period->status !== 'OPEN') {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Hanya periode OPEN yang dapat ditutup.', ['PERIOD_NOT_OPEN']);
+        }
+        if ($action === 'REOPEN' && $period->status !== 'CLOSED') {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Hanya periode CLOSED yang dapat dibuka ulang.', ['PERIOD_NOT_CLOSED']);
+        }
+
+        if ($action === 'CLOSE') {
+            $draftCount = (int)$this->CI->db
+                ->where('id_periode', (int)$idPeriode)
+                ->where('status', 'DRAFT')
+                ->count_all_results('tbkeu_jurnal');
+            if ($draftCount > 0) {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Periode masih memiliki ' . $draftCount . ' jurnal DRAFT.', ['PERIOD_HAS_DRAFT']);
+            }
+
+            $openExceptionCount = (int)$this->CI->db
+                ->where('status', 'OPEN')
+                ->count_all_results('tbkeu_posting_exception');
+            if ($openExceptionCount > 0) {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Masih ada ' . $openExceptionCount . ' posting exception OPEN.', ['PERIOD_HAS_OPEN_EXCEPTION']);
+            }
+
+            $unappliedCount = (int)$this->CI->db
+                ->where('tanggal_pembayaran >=', $period->tanggal_mulai)
+                ->where('tanggal_pembayaran <=', $period->tanggal_selesai)
+                ->where('status', 'POSTED')
+                ->where('unapplied_amount >', 0)
+                ->count_all_results('tbkeu_pembayaran');
+            if ($unappliedCount > 0) {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Masih ada ' . $unappliedCount . ' pembayaran belum dialokasikan penuh.', ['PERIOD_HAS_UNAPPLIED_PAYMENT']);
+            }
+
+            $invalid = $this->CI->db->query(
+                "SELECT j.id_jurnal
+                 FROM tbkeu_jurnal j
+                 LEFT JOIN tbkeu_jurnal_detail d ON d.id_jurnal = j.id_jurnal
+                 WHERE j.id_periode = ? AND j.status = 'POSTED'
+                 GROUP BY j.id_jurnal, j.total_debit, j.total_kredit
+                 HAVING j.total_debit <> j.total_kredit OR j.total_debit <= 0
+                    OR j.total_debit <> COALESCE(SUM(d.debit),0)
+                    OR j.total_kredit <> COALESCE(SUM(d.kredit),0)
+                 LIMIT 1",
+                [(int)$idPeriode]
+            )->row();
+            if ($invalid) {
+                $this->CI->db->trans_rollback();
+                return $this->fail('Periode memiliki jurnal POSTED tidak balance/bernilai nol.', ['PERIOD_HAS_INVALID_JOURNAL']);
+            }
+        }
+
+        $statusData = [
+            'status' => $newStatus,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+        if ($this->CI->db->field_exists('closed_at', 'tbkeu_periode_fiskal')) {
+            if ($action === 'CLOSE') {
+                $statusData['closed_by'] = $userId ?: null;
+                $statusData['closed_at'] = date('Y-m-d H:i:s');
+            } elseif ($action === 'REOPEN') {
+                $statusData['reopened_by'] = $userId ?: null;
+                $statusData['reopened_at'] = date('Y-m-d H:i:s');
+            }
+        }
+        $this->CI->db
+            ->where('id_periode', (int)$idPeriode)
+            ->update('tbkeu_periode_fiskal', $statusData);
+        $this->log_period((int)$idPeriode, $action, $reason, $userId);
+
+        if ($this->CI->db->trans_status() === false) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Status periode fiskal gagal diubah.', ['DATABASE_ERROR']);
+        }
+
+        $this->CI->db->trans_commit();
+        return $this->ok('Status periode fiskal berhasil diubah.', ['id_periode' => (int)$idPeriode, 'status' => $newStatus]);
+    }
+
+    public function create_payment($payload, $userId = null)
+    {
+        if (!$this->schema_ready()) {
+            return $this->fail('Schema runtime accounting belum lengkap.', ['SCHEMA_NOT_READY']);
+        }
+
+        $paymentType = strtoupper(trim((string)($payload['payment_type'] ?? 'CUSTOMER_PAYMENT')));
+        if (!in_array($paymentType, ['CUSTOMER_PAYMENT', 'SUPPLIER_PAYMENT'], true)) {
+            return $this->fail('Tipe pembayaran tidak valid.', ['INVALID_PAYMENT_TYPE']);
+        }
+
+        $amount = $this->money($payload['amount'] ?? 0);
+        if ((float)$amount <= 0) {
+            return $this->fail('Nominal pembayaran harus lebih dari nol.', ['INVALID_PAYMENT_AMOUNT']);
+        }
+
+        $allocations = $payload['allocations'] ?? [];
+        if (!is_array($allocations)) {
+            $allocations = [];
+        }
+
+        $allocated = '0.0000';
+        $seenInvoices = [];
+        foreach ($allocations as $allocation) {
+            $allocationAmount = $this->money($allocation['amount_allocated'] ?? 0);
+            if (bccomp($allocationAmount, '0', 4) <= 0) {
+                continue;
+            }
+            $invoiceNo = trim((string)($allocation['invoice_no'] ?? ''));
+            if ($invoiceNo === '') {
+                return $this->fail('Nomor invoice wajib diisi pada setiap alokasi.', ['PAYMENT_INVOICE_REQUIRED']);
+            }
+            if (isset($seenInvoices[$invoiceNo])) {
+                return $this->fail('Invoice tidak boleh dialokasikan lebih dari sekali.', ['DUPLICATE_PAYMENT_ALLOCATION']);
+            }
+            $seenInvoices[$invoiceNo] = true;
+            $outstanding = $this->invoice_outstanding($paymentType, $invoiceNo);
+            if (bccomp($allocationAmount, $outstanding, 4) === 1) {
+                return $this->fail('Alokasi invoice ' . $invoiceNo . ' melebihi outstanding ' . $outstanding . '.', ['PAYMENT_EXCEEDS_OUTSTANDING']);
+            }
+            $allocated = bcadd($allocated, $allocationAmount, 4);
+        }
+        if (bccomp($allocated, $amount, 4) === 1) {
+            return $this->fail('Total alokasi tidak boleh melebihi pembayaran.', ['PAYMENT_OVER_ALLOCATED']);
+        }
+
+        $nomor = trim((string)($payload['nomor_pembayaran'] ?? $payload['source_no'] ?? ''));
+        if ($nomor === '') {
+            $nomor = ($paymentType === 'CUSTOMER_PAYMENT' ? 'RCV' : 'PAY') . '-' . date('YmdHis');
+        }
+
+        $existing = $this->CI->db
+            ->where('nomor_pembayaran', $nomor)
+            ->get('tbkeu_pembayaran')
+            ->row();
+        if ($existing) {
+            return $this->fail('Nomor pembayaran sudah digunakan.', ['DUPLICATE_PAYMENT_NUMBER']);
+        }
+
+        $journalPayload = [
+            'tanggal_transaksi' => $payload['tanggal_pembayaran'] ?? $payload['tanggal_transaksi'] ?? date('Y-m-d'),
+            'keterangan' => trim((string)($payload['keterangan'] ?? $nomor)),
+            'source_module' => strtoupper(trim((string)($payload['source_module'] ?? 'ACCOUNTING'))),
+            'source_type' => $paymentType,
+            'source_id' => trim((string)($payload['source_id'] ?? $nomor)),
+            'source_no' => $nomor,
+            'posting_event' => $paymentType,
+            'idempotency_key' => trim((string)($payload['idempotency_key'] ?? ($paymentType . '-' . $nomor))),
+            'journal_type' => 'AUTO',
+            'amount' => $amount,
+        ];
+        $journalPayload['lines'] = $this->build_auto_lines($paymentType, $journalPayload + $payload);
+
+        // Baris kontrol piutang/hutang dipecah per invoice supaya aging dan
+        // outstanding dapat direkonsiliasi per dokumen, bukan per nomor bayar.
+        if (!empty($allocations) && count($journalPayload['lines']) >= 2) {
+            $cashLine = $journalPayload['lines'][$paymentType === 'CUSTOMER_PAYMENT' ? 0 : 1];
+            $controlTemplate = $journalPayload['lines'][$paymentType === 'CUSTOMER_PAYMENT' ? 1 : 0];
+            $journalPayload['lines'] = [$cashLine];
+            foreach ($allocations as $allocation) {
+                $allocationAmount = $this->money($allocation['amount_allocated'] ?? 0);
+                if (bccomp($allocationAmount, '0', 4) <= 0) {
+                    continue;
+                }
+                $controlLine = $controlTemplate;
+                $controlLine[$paymentType === 'CUSTOMER_PAYMENT' ? 'kredit' : 'debit'] = $allocationAmount;
+                $controlLine[$paymentType === 'CUSTOMER_PAYMENT' ? 'debit' : 'kredit'] = '0.0000';
+                $controlLine['nomor_dokumen'] = trim((string)$allocation['invoice_no']);
+                $controlLine['keterangan'] = $journalPayload['keterangan'] . ' - ' . $controlLine['nomor_dokumen'];
+                $journalPayload['lines'][] = $controlLine;
+            }
+            $unapplied = bcsub($amount, $allocated, 4);
+            if (bccomp($unapplied, '0', 4) === 1) {
+                $controlLine = $controlTemplate;
+                $controlLine[$paymentType === 'CUSTOMER_PAYMENT' ? 'kredit' : 'debit'] = $unapplied;
+                $controlLine[$paymentType === 'CUSTOMER_PAYMENT' ? 'debit' : 'kredit'] = '0.0000';
+                $controlLine['nomor_dokumen'] = $nomor;
+                $controlLine['keterangan'] = $journalPayload['keterangan'] . ' - belum dialokasikan';
+                $journalPayload['lines'][] = $controlLine;
+            }
+        }
+
+        $this->CI->db->trans_begin();
+        $journal = $this->create_journal_inside_transaction($journalPayload, $userId, true);
+        if (!$journal['success']) {
+            $this->CI->db->trans_rollback();
+            $this->record_exception($journalPayload, $journal['message'], $journal['errors']);
+            return $journal;
+        }
+
+        $unapplied = bcsub($amount, $allocated, 4);
+        $this->CI->db->insert('tbkeu_pembayaran', [
+            'payment_type' => $paymentType,
+            'nomor_pembayaran' => $nomor,
+            'tanggal_pembayaran' => $journalPayload['tanggal_transaksi'],
+            'source_module' => $journalPayload['source_module'],
+            'source_type' => $journalPayload['source_type'],
+            'source_id' => $journalPayload['source_id'],
+            'source_no' => $journalPayload['source_no'],
+            'id_customer' => (int)($payload['id_customer'] ?? 0) ?: null,
+            'id_supplier' => (int)($payload['id_supplier'] ?? 0) ?: null,
+            'amount' => $amount,
+            'allocated_amount' => $allocated,
+            'unapplied_amount' => $unapplied,
+            'status' => 'POSTED',
+            'id_jurnal' => (int)($journal['data']['id_jurnal'] ?? 0) ?: null,
+            'keterangan' => $journalPayload['keterangan'],
+            'created_by' => $userId ?: null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $idPembayaran = (int)$this->CI->db->insert_id();
+
+        foreach ($allocations as $index => $allocation) {
+            $allocationAmount = $this->money($allocation['amount_allocated'] ?? 0);
+            if ((float)$allocationAmount <= 0) {
+                continue;
+            }
+            $this->CI->db->insert('tbkeu_pembayaran_alokasi', [
+                'id_pembayaran' => $idPembayaran,
+                'nomor_baris' => $index + 1,
+                'invoice_source_module' => strtoupper(trim((string)($allocation['invoice_source_module'] ?? ''))),
+                'invoice_source_type' => strtoupper(trim((string)($allocation['invoice_source_type'] ?? ''))),
+                'invoice_source_id' => trim((string)($allocation['invoice_source_id'] ?? '')),
+                'invoice_no' => trim((string)($allocation['invoice_no'] ?? '')),
+                'amount_allocated' => $allocationAmount,
+                'keterangan' => trim((string)($allocation['keterangan'] ?? '')),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if ($this->CI->db->trans_status() === false) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Pembayaran gagal disimpan.', ['DATABASE_ERROR']);
+        }
+
+        $this->CI->db->trans_commit();
+        return $this->ok('Pembayaran berhasil diposting dan dialokasikan.', [
+            'id_pembayaran' => $idPembayaran,
+            'id_jurnal' => (int)($journal['data']['id_jurnal'] ?? 0),
+            'nomor_pembayaran' => $nomor,
+        ]);
+    }
+
+    public function save_opening_balance($payload, $userId = null)
+    {
+        if (!$this->schema_ready()) {
+            return $this->fail('Schema runtime accounting belum lengkap.', ['SCHEMA_NOT_READY']);
+        }
+
+        $idAkun = (int)($payload['id_akun'] ?? 0);
+        $tanggal = $this->normalize_date($payload['tanggal_saldo'] ?? '');
+        $debit = $this->money($payload['debit'] ?? 0);
+        $kredit = $this->money($payload['kredit'] ?? 0);
+
+        if ($tanggal === '') {
+            return $this->fail('Tanggal saldo awal wajib diisi.', ['INVALID_DATE']);
+        }
+        if ((float)$debit > 0 && (float)$kredit > 0) {
+            return $this->fail('Saldo awal satu akun hanya boleh debit atau kredit.', ['DOUBLE_SIDE_LINE']);
+        }
+        if ((float)$debit == 0.0 && (float)$kredit == 0.0) {
+            return $this->fail('Saldo awal tidak boleh nol.', ['ZERO_LINE']);
+        }
+
+        $accountCheck = $this->validate_account($idAkun, true);
+        if (!$accountCheck['success']) {
+            return $accountCheck;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $row = $this->CI->db
+            ->where('id_akun', $idAkun)
+            ->where('tanggal_saldo', $tanggal)
+            ->get('tbkeu_saldo_awal_akun')
+            ->row();
+
+        $data = [
+            'id_akun' => $idAkun,
+            'tanggal_saldo' => $tanggal,
+            'debit' => $debit,
+            'kredit' => $kredit,
+            'keterangan' => trim((string)($payload['keterangan'] ?? '')),
+            'updated_by' => $userId ?: null,
+            'updated_at' => $now,
+        ];
+
+        if ($row) {
+            if ((int)$row->is_migrated === 1) {
+                return $this->fail('Saldo awal yang sudah dimigrasikan tidak dapat diubah.', ['OPENING_BALANCE_MIGRATED']);
+            }
+            $this->CI->db->where('id_saldo_awal', (int)$row->id_saldo_awal)->update('tbkeu_saldo_awal_akun', $data);
+            $id = (int)$row->id_saldo_awal;
+        } else {
+            $data['created_by'] = $userId ?: null;
+            $data['created_at'] = $now;
+            $this->CI->db->insert('tbkeu_saldo_awal_akun', $data);
+            $id = (int)$this->CI->db->insert_id();
+        }
+
+        return $this->ok('Saldo awal akun berhasil disimpan.', ['id_saldo_awal' => $id]);
+    }
+
+    public function migrate_opening_balance($tanggal, $reason, $userId = null)
+    {
+        if (!$this->schema_ready()) {
+            return $this->fail('Schema runtime accounting belum lengkap.', ['SCHEMA_NOT_READY']);
+        }
+
+        $tanggal = $this->normalize_date($tanggal);
+        $reason = trim((string)$reason);
+        if ($tanggal === '' || $reason === '') {
+            return $this->fail('Tanggal dan alasan migrasi saldo awal wajib diisi.', ['INVALID_OPENING_MIGRATION']);
+        }
+
+        $rows = $this->opening_balance_rows($tanggal);
+        if (empty($rows)) {
+            return $this->fail('Saldo awal pada tanggal tersebut belum tersedia.', ['OPENING_BALANCE_EMPTY']);
+        }
+
+        $lines = [];
+        $totalDebit = '0.0000';
+        $totalKredit = '0.0000';
+        foreach ($rows as $row) {
+            $totalDebit = bcadd($totalDebit, $this->money($row->debit), 4);
+            $totalKredit = bcadd($totalKredit, $this->money($row->kredit), 4);
+            $lines[] = [
+                'id_akun' => (int)$row->id_akun,
+                'keterangan' => 'Migrasi saldo awal ' . $tanggal,
+                'debit' => $row->debit,
+                'kredit' => $row->kredit,
+                'nomor_dokumen' => 'OPENING-' . $tanggal,
+            ];
+        }
+
+        if (bccomp($totalDebit, $totalKredit, 4) !== 0) {
+            return $this->fail('Total saldo awal debit dan kredit harus balance sebelum migrasi.', ['UNBALANCED_OPENING_BALANCE']);
+        }
+
+        $payload = [
+            'journal_type' => 'AUTO',
+            'tanggal_transaksi' => $tanggal,
+            'keterangan' => $reason,
+            'source_module' => 'ACCOUNTING',
+            'source_type' => 'OPENING_BALANCE',
+            'source_id' => $tanggal,
+            'source_no' => 'OPENING-' . $tanggal,
+            'posting_event' => 'OPENING_BALANCE',
+            'idempotency_key' => 'OPENING_BALANCE-' . $tanggal,
+            'lines' => $lines,
+        ];
+
+        $this->CI->db->trans_begin();
+        $created = $this->create_journal_inside_transaction($payload, $userId, true);
+        if (!$created['success']) {
+            $this->CI->db->trans_rollback();
+            return $created;
+        }
+
+        $this->CI->db
+            ->where('tanggal_saldo', $tanggal)
+            ->update('tbkeu_saldo_awal_akun', [
+                'is_migrated' => 1,
+                'id_jurnal' => (int)($created['data']['id_jurnal'] ?? 0) ?: null,
+                'migrated_by' => $userId ?: null,
+                'migrated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        if ($this->CI->db->trans_status() === false) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Migrasi saldo awal gagal disimpan.', ['DATABASE_ERROR']);
+        }
+
+        $this->CI->db->trans_commit();
+        return $this->ok('Migrasi saldo awal berhasil diposting.', $created['data']);
+    }
+
+    public function retry_exception($idException, $userId = null)
+    {
+        $exception = $this->CI->db
+            ->where('id_exception', (int)$idException)
+            ->get('tbkeu_posting_exception')
+            ->row();
+        if (!$exception) {
+            return $this->fail('Exception posting tidak ditemukan.', ['EXCEPTION_NOT_FOUND']);
+        }
+        if ($exception->status !== 'OPEN') {
+            return $this->fail('Hanya exception OPEN yang dapat di-retry.', ['EXCEPTION_NOT_OPEN']);
+        }
+
+        $payload = json_decode((string)$exception->payload_json, true);
+        if (!is_array($payload)) {
+            return $this->fail('Payload exception tidak valid.', ['INVALID_EXCEPTION_PAYLOAD']);
+        }
+
+        if ($exception->source_module === 'LOGISTIK' && $exception->source_type === 'LPB_FINAL') {
+            $this->CI->load->library('Accounting_source_service');
+            $result = $this->CI->accounting_source_service->post_goods_receipt((int)$exception->source_id, $userId);
+        } elseif ($exception->source_module === 'SALES' && $exception->source_type === 'FAKTUR_PENJUALAN') {
+            $this->CI->load->library('Accounting_source_service');
+            $result = $this->CI->accounting_source_service->post_sales_invoice((string)$exception->source_id, '', $userId);
+        } else {
+            $result = $this->post_auto((string)$exception->posting_event, $payload, $userId);
+        }
+        $update = [
+            'retry_count' => (int)($exception->retry_count ?? 0) + 1,
+            'last_retry_at' => date('Y-m-d H:i:s'),
+        ];
+        if ($result['success']) {
+            $update['status'] = 'RESOLVED';
+            $update['id_jurnal'] = (int)($result['data']['id_jurnal'] ?? 0) ?: null;
+            $update['resolved_by'] = $userId ?: null;
+            $update['resolved_at'] = date('Y-m-d H:i:s');
+            $update['resolution_note'] = 'Resolved by retry';
+        }
+        $this->CI->db->where('id_exception', (int)$idException)->update('tbkeu_posting_exception', $update);
+
+        return $result['success'] ? $this->ok('Exception berhasil di-retry dan resolved.', $result['data']) : $result;
+    }
+
+    public function update_exception_status($idException, $status, $note, $userId = null)
+    {
+        $status = strtoupper(trim((string)$status));
+        $note = trim((string)$note);
+        if (!in_array($status, ['RESOLVED', 'IGNORED'], true)) {
+            return $this->fail('Status exception tidak valid.', ['INVALID_EXCEPTION_STATUS']);
+        }
+        if ($note === '') {
+            return $this->fail('Catatan resolve/ignore wajib diisi.', ['RESOLUTION_NOTE_REQUIRED']);
+        }
+
+        $this->CI->db
+            ->where('id_exception', (int)$idException)
+            ->where('status', 'OPEN')
+            ->update('tbkeu_posting_exception', [
+                'status' => $status,
+                'resolved_by' => $userId ?: null,
+                'resolved_at' => date('Y-m-d H:i:s'),
+                'resolution_note' => $note,
+            ]);
+
+        if ($this->CI->db->affected_rows() < 1) {
+            return $this->fail('Exception OPEN tidak ditemukan atau sudah diproses.', ['EXCEPTION_NOT_OPEN']);
+        }
+
+        return $this->ok('Status exception berhasil diperbarui.', ['id_exception' => (int)$idException, 'status' => $status]);
     }
 
     public function reports($report, $dateFrom, $dateTo, $accountId = 0)
@@ -367,23 +1001,14 @@ class Accounting_service
     private function create_journal_inside_transaction($payload, $userId = null, $postNow = false)
     {
         $normalized = $this->normalize_payload($payload);
+        $existing = $this->existing_journal_for($normalized);
+        if ($existing) {
+            return $this->idempotent_result($existing, $postNow);
+        }
+
         $validation = $this->validate_journal_payload($normalized, $postNow);
         if (!$validation['success']) {
             return $validation;
-        }
-
-        if ($normalized['idempotency_key'] !== '') {
-            $existing = $this->CI->db
-                ->where('idempotency_key', $normalized['idempotency_key'])
-                ->get('tbkeu_jurnal')
-                ->row();
-            if ($existing) {
-                return $this->ok('Jurnal sudah pernah dibuat untuk idempotency key ini.', [
-                    'id_jurnal' => (int)$existing->id_jurnal,
-                    'nomor_jurnal' => $existing->nomor_jurnal,
-                    'idempotent' => true,
-                ]);
-            }
         }
 
         $period = $this->period_for_date($normalized['tanggal_transaksi']);
@@ -400,6 +1025,16 @@ class Accounting_service
         $nomor = $normalized['nomor_jurnal'] !== ''
             ? $normalized['nomor_jurnal']
             : $this->generate_journal_number($normalized['journal_type'], $normalized['tanggal_transaksi']);
+        if ($nomor === '') {
+            return $this->fail('Nomor jurnal gagal dibuat.', ['JOURNAL_NUMBER_FAILED']);
+        }
+
+        // Counter nomor di atas mengunci dan menserialkan proses insert. Cek
+        // ulang setelah lock untuk menutup race dua request event sumber sama.
+        $existing = $this->existing_journal_for($normalized);
+        if ($existing) {
+            return $this->idempotent_result($existing, $postNow);
+        }
 
         $now = date('Y-m-d H:i:s');
         $status = $postNow ? 'POSTED' : 'DRAFT';
@@ -462,22 +1097,46 @@ class Accounting_service
             return $this->fail('Schema runtime accounting belum lengkap.', ['SCHEMA_NOT_READY']);
         }
 
-        $detail = $this->journal_detail($idJurnal);
-        if (!$detail || !$detail['journal']) {
+        $this->CI->db->trans_begin();
+        $journal = $this->CI->db->query(
+            'SELECT * FROM tbkeu_jurnal WHERE id_jurnal = ? FOR UPDATE',
+            [(int)$idJurnal]
+        )->row();
+
+        if (!$journal) {
+            $this->CI->db->trans_rollback();
             return $this->fail('Jurnal tidak ditemukan.', ['JOURNAL_NOT_FOUND']);
         }
 
-        $journal = $detail['journal'];
         if ($journal->status === 'POSTED') {
+            $this->CI->db->trans_commit();
             return $this->ok('Jurnal sudah POSTED.', ['id_jurnal' => (int)$journal->id_jurnal, 'nomor_jurnal' => $journal->nomor_jurnal]);
         }
 
         if ($journal->status !== 'DRAFT') {
+            $this->CI->db->trans_rollback();
             return $this->fail('Hanya jurnal DRAFT yang dapat diposting.', ['JOURNAL_NOT_DRAFT']);
         }
 
+        $period = $this->CI->db->query(
+            'SELECT * FROM tbkeu_periode_fiskal WHERE id_periode = ? FOR UPDATE',
+            [(int)$journal->id_periode]
+        )->row();
+        if (!$period || $period->status !== 'OPEN' || (int)$period->is_active !== 1) {
+            $this->CI->db->trans_rollback();
+            $result = $this->fail('Periode jurnal sudah CLOSED atau tidak aktif.', ['PERIOD_NOT_OPEN']);
+            $this->record_exception((array)$journal, $result['message'], $result['errors']);
+            return $result;
+        }
+
+        $detailRows = $this->CI->db
+            ->where('id_jurnal', (int)$journal->id_jurnal)
+            ->order_by('nomor_baris', 'ASC')
+            ->get('tbkeu_jurnal_detail')
+            ->result();
+
         $lines = [];
-        foreach ($detail['details'] as $row) {
+        foreach ($detailRows as $row) {
             $lines[] = [
                 'id_akun' => (int)$row->id_akun,
                 'debit' => $row->debit,
@@ -490,13 +1149,13 @@ class Accounting_service
             'tanggal_transaksi' => $journal->tanggal_transaksi,
             'journal_type' => 'JU',
             'lines' => $lines,
-        ], true);
+        ], false);
         if (!$validation['success']) {
+            $this->CI->db->trans_rollback();
             $this->record_exception((array)$journal, $validation['message'], $validation['errors']);
             return $validation;
         }
 
-        $this->CI->db->trans_begin();
         $now = date('Y-m-d H:i:s');
         $this->CI->db
             ->where('id_jurnal', (int)$journal->id_jurnal)
@@ -509,6 +1168,11 @@ class Accounting_service
                 'updated_at' => $now,
                 'lock_version' => (int)$journal->lock_version + 1,
             ]);
+
+        if ($this->CI->db->affected_rows() !== 1) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Jurnal berubah saat proses posting. Muat ulang data.', ['CONCURRENT_UPDATE']);
+        }
         $this->log_journal((int)$journal->id_jurnal, 'POSTED', 'Posting manual jurnal', $userId);
 
         if ($this->CI->db->trans_status() === false) {
@@ -555,7 +1219,45 @@ class Accounting_service
         ];
     }
 
-    private function validate_journal_payload($payload, $posting = false)
+    private function existing_journal_for($payload)
+    {
+        if (!empty($payload['idempotency_key'])) {
+            $row = $this->CI->db
+                ->where('idempotency_key', $payload['idempotency_key'])
+                ->get('tbkeu_jurnal')
+                ->row();
+            if ($row) {
+                return $row;
+            }
+        }
+
+        if (!empty($payload['source_module']) && !empty($payload['source_type'])
+            && !empty($payload['source_id']) && !empty($payload['posting_event'])) {
+            return $this->CI->db
+                ->where('source_module', $payload['source_module'])
+                ->where('source_type', $payload['source_type'])
+                ->where('source_id', $payload['source_id'])
+                ->where('posting_event', $payload['posting_event'])
+                ->get('tbkeu_jurnal')
+                ->row();
+        }
+
+        return null;
+    }
+
+    private function idempotent_result($journal, $mustBePosted = false)
+    {
+        if ($mustBePosted && $journal->status !== 'POSTED') {
+            return $this->fail('Event sumber sudah memiliki jurnal yang tidak POSTED.', ['SOURCE_JOURNAL_NOT_POSTED']);
+        }
+        return $this->ok('Jurnal sudah pernah dibuat untuk event sumber ini.', [
+            'id_jurnal' => (int)$journal->id_jurnal,
+            'nomor_jurnal' => $journal->nomor_jurnal,
+            'idempotent' => true,
+        ]);
+    }
+
+    private function validate_journal_payload($payload, $automatedPosting = false)
     {
         if (empty($payload['tanggal_transaksi'])) {
             return $this->fail('Tanggal transaksi tidak valid.', ['INVALID_DATE']);
@@ -587,7 +1289,7 @@ class Accounting_service
                 return $this->fail('Baris jurnal tidak boleh bernilai nol.', ['ZERO_LINE']);
             }
 
-            $accountCheck = $this->validate_account((int)$line['id_akun'], $posting);
+            $accountCheck = $this->validate_account((int)$line['id_akun'], $automatedPosting);
             if (!$accountCheck['success']) {
                 return $accountCheck;
             }
@@ -596,7 +1298,7 @@ class Accounting_service
         return $this->ok('Valid.');
     }
 
-    private function validate_account($idAkun, $posting = false)
+    private function validate_account($idAkun, $automatedPosting = false)
     {
         $account = $this->CI->db
             ->where('id_akun', (int)$idAkun)
@@ -619,7 +1321,7 @@ class Accounting_service
             return $this->fail('Akun tidak eligible untuk transaksi.', ['ACCOUNT_NOT_ELIGIBLE']);
         }
 
-        if (!$posting && (int)$account->allow_manual_journal !== 1) {
+        if (!$automatedPosting && (int)$account->allow_manual_journal !== 1) {
             return $this->fail('Akun ini tidak diizinkan untuk jurnal manual.', ['ACCOUNT_MANUAL_NOT_ALLOWED']);
         }
 
@@ -631,7 +1333,7 @@ class Accounting_service
         $amount = $this->money($payload['amount'] ?? 0);
         $tax = $this->money($payload['tax'] ?? 0);
         $cogs = $this->money($payload['cogs'] ?? 0);
-        $total = $this->money((float)$amount + (float)$tax);
+        $total = bcadd($amount, $tax, 4);
         $description = trim((string)($payload['keterangan'] ?? $event));
         $lineSpecs = [];
 
@@ -640,6 +1342,9 @@ class Accounting_service
                 ['ACCOUNT_RECEIVABLE', 'DEBIT', $total],
                 ['SALES_REVENUE', 'KREDIT', $amount],
                 ['VAT_OUTPUT', 'KREDIT', $tax],
+            ];
+        } elseif ($event === 'GOODS_ISSUE') {
+            $lineSpecs = [
                 ['COGS', 'DEBIT', $cogs],
                 ['INVENTORY', 'KREDIT', $cogs],
             ];
@@ -737,6 +1442,19 @@ class Accounting_service
         $this->CI->db->where_in('m.posting_event', [$event, '*']);
         $this->CI->db->where_in('m.source_module', [$sourceModule, '*']);
         $this->CI->db->where_in('m.source_type', [$sourceType, '*']);
+        if ($this->CI->db->field_exists('scope_type', 'tbkeu_mapping_akun')) {
+            $scopeType = strtoupper(trim((string)($payload['scope_type'] ?? 'GLOBAL')));
+            $scopeKey = trim((string)($payload['scope_key'] ?? '*'));
+            $this->CI->db->where_in('m.scope_type', [$scopeType, 'GLOBAL']);
+            $this->CI->db->where_in('m.scope_key', [$scopeKey, '*']);
+            $this->CI->db->order_by(
+                'CASE WHEN m.scope_type = ' . $this->CI->db->escape($scopeType)
+                . ' AND m.scope_key = ' . $this->CI->db->escape($scopeKey)
+                . ' THEN 0 ELSE 1 END',
+                '',
+                false
+            );
+        }
         $this->CI->db->order_by('m.priority', 'ASC');
         $this->CI->db->limit(1);
 
@@ -766,14 +1484,38 @@ class Accounting_service
 
     private function generate_journal_number($type, $date)
     {
-        $prefix = strtoupper($type) . '-' . date('Ym', strtotime($date)) . '-';
-        $row = $this->CI->db
-            ->select('MAX(CAST(RIGHT(nomor_jurnal, 5) AS UNSIGNED)) AS last_no', false)
-            ->like('nomor_jurnal', $prefix, 'after')
-            ->get('tbkeu_jurnal')
-            ->row();
+        $type = strtoupper(trim((string)$type));
+        $period = date('Ym', strtotime($date));
+        $prefix = $type . '-' . $period . '-';
 
-        return $prefix . sprintf('%05d', ((int)($row->last_no ?? 0)) + 1);
+        // create_journal() selalu membuka transaction sebelum method ini.
+        // Counter row dikunci agar dua request paralel tidak memperoleh nomor sama.
+        $this->CI->db->query(
+            'INSERT INTO tbkeu_nomor_dokumen (kode_jenis_jurnal, periode_yyyymm, last_number, updated_at)
+             VALUES (?, ?, 0, NOW())
+             ON DUPLICATE KEY UPDATE updated_at = updated_at',
+            [$type, $period]
+        );
+
+        $counter = $this->CI->db->query(
+            'SELECT id_nomor, last_number FROM tbkeu_nomor_dokumen
+             WHERE kode_jenis_jurnal = ? AND periode_yyyymm = ? FOR UPDATE',
+            [$type, $period]
+        )->row();
+
+        if (!$counter) {
+            return '';
+        }
+
+        $next = (int)$counter->last_number + 1;
+        $this->CI->db
+            ->where('id_nomor', (int)$counter->id_nomor)
+            ->update('tbkeu_nomor_dokumen', [
+                'last_number' => $next,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        return $prefix . sprintf('%05d', $next);
     }
 
     private function line_totals($lines)
@@ -790,7 +1532,28 @@ class Accounting_service
 
     private function money($value)
     {
-        return number_format((float)$value, 4, '.', '');
+        $value = trim((string)$value);
+        if ($value === '') {
+            return '0.0000';
+        }
+
+        $value = str_replace(' ', '', $value);
+        if (strpos($value, ',') !== false && strpos($value, '.') !== false) {
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        } elseif (strpos($value, ',') !== false) {
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!preg_match('/^-?\d+(?:\.\d+)?$/', $value)) {
+            return '0.0000';
+        }
+
+        return bcadd($value, '0', 4);
     }
 
     private function normalize_date($value)
@@ -819,24 +1582,72 @@ class Accounting_service
         ]);
     }
 
+    private function log_period($idPeriode, $action, $reason, $userId = null)
+    {
+        if (!$this->CI->db->table_exists('tbkeu_periode_fiskal_log')) {
+            return;
+        }
+
+        $this->CI->db->insert('tbkeu_periode_fiskal_log', [
+            'id_periode' => (int)$idPeriode,
+            'action' => strtoupper(trim((string)$action)),
+            'reason' => trim((string)$reason),
+            'approval_by' => $userId ?: null,
+            'approval_at' => date('Y-m-d H:i:s'),
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
     private function record_exception($payload, $message, $errors)
     {
         if (!$this->CI->db->table_exists('tbkeu_posting_exception')) {
             return false;
         }
 
-        return $this->CI->db->insert('tbkeu_posting_exception', [
-            'source_module' => strtoupper(trim((string)($payload['source_module'] ?? ''))),
-            'source_type' => strtoupper(trim((string)($payload['source_type'] ?? ''))),
-            'source_id' => trim((string)($payload['source_id'] ?? '')),
+        $sourceModule = strtoupper(trim((string)($payload['source_module'] ?? '')));
+        $sourceType = strtoupper(trim((string)($payload['source_type'] ?? '')));
+        $sourceId = trim((string)($payload['source_id'] ?? ''));
+        $event = strtoupper(trim((string)($payload['posting_event'] ?? '')));
+        $errorCode = !empty($errors[0]) ? (string)$errors[0] : 'POSTING_FAILED';
+
+        $existing = $this->CI->db
+            ->where('source_module', $sourceModule)
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->where('posting_event', $event)
+            ->where('error_code', $errorCode)
+            ->where('status', 'OPEN')
+            ->get('tbkeu_posting_exception')
+            ->row();
+        if ($existing) {
+            $update = [
+                'error_message' => $message,
+                'payload_json' => json_encode($payload),
+            ];
+            if ($this->CI->db->field_exists('occurrence_count', 'tbkeu_posting_exception')) {
+                $this->CI->db->set('occurrence_count', 'occurrence_count + 1', false);
+                $update['last_occurred_at'] = date('Y-m-d H:i:s');
+            }
+            return $this->CI->db->where('id_exception', (int)$existing->id_exception)->update('tbkeu_posting_exception', $update);
+        }
+
+        $data = [
+            'source_module' => $sourceModule,
+            'source_type' => $sourceType,
+            'source_id' => $sourceId,
             'source_no' => trim((string)($payload['source_no'] ?? '')),
-            'posting_event' => strtoupper(trim((string)($payload['posting_event'] ?? ''))),
-            'error_code' => !empty($errors[0]) ? (string)$errors[0] : 'POSTING_FAILED',
+            'posting_event' => $event,
+            'error_code' => $errorCode,
             'error_message' => $message,
             'payload_json' => json_encode($payload),
             'status' => 'OPEN',
             'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+        if ($this->CI->db->field_exists('occurrence_count', 'tbkeu_posting_exception')) {
+            $data['occurrence_count'] = 1;
+            $data['last_occurred_at'] = date('Y-m-d H:i:s');
+        }
+        return $this->CI->db->insert('tbkeu_posting_exception', $data);
     }
 
     private function report_ledger($dateFrom, $dateTo, $accountId = 0)
@@ -854,26 +1665,49 @@ class Accounting_service
         $this->CI->db->order_by('j.tanggal_transaksi', 'ASC');
         $this->CI->db->order_by('j.id_jurnal', 'ASC');
         $this->CI->db->order_by('d.nomor_baris', 'ASC');
-        return $this->CI->db->get()->result();
+        $rows = $this->CI->db->get()->result();
+        $balances = [];
+        foreach ($rows as $row) {
+            $key = (string)$row->kode_akun;
+            if (!isset($balances[$key])) {
+                $balances[$key] = '0.0000';
+            }
+            $balances[$key] = bcadd($balances[$key], bcsub($this->money($row->debit), $this->money($row->kredit), 4), 4);
+            $row->saldo_berjalan = $balances[$key];
+        }
+        return $rows;
     }
 
     private function report_trial_balance($dateFrom, $dateTo)
     {
-        $this->CI->db->select('a.id_akun, a.kode_akun, a.nama_akun, a.saldo_normal, k.nama_klasifikasi, COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit', false);
-        $this->CI->db->from('tbkeu_akun a');
-        $this->CI->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
-        $this->CI->db->join('tbkeu_jurnal_detail d', 'd.id_akun = a.id_akun', 'left');
-        $this->CI->db->join('tbkeu_jurnal j', "j.id_jurnal = d.id_jurnal AND j.status = 'POSTED'", 'left', false);
+        $conditions = "j.status = 'POSTED'";
+        $params = [];
         if ($dateFrom !== '') {
-            $this->CI->db->where('j.tanggal_transaksi >=', $dateFrom);
+            $conditions .= ' AND j.tanggal_transaksi >= ?';
+            $params[] = $dateFrom;
         }
         if ($dateTo !== '') {
-            $this->CI->db->where('j.tanggal_transaksi <=', $dateTo);
+            $conditions .= ' AND j.tanggal_transaksi <= ?';
+            $params[] = $dateTo;
         }
-        $this->CI->db->where('a.tipe_akun', 'POSTING');
-        $this->CI->db->group_by('a.id_akun');
-        $this->CI->db->order_by('a.kode_akun', 'ASC');
-        return $this->CI->db->get()->result();
+
+        return $this->CI->db->query(
+            "SELECT a.id_akun, a.kode_akun, a.nama_akun, a.saldo_normal,
+                    k.nama_klasifikasi, COALESCE(x.debit, 0) AS debit,
+                    COALESCE(x.kredit, 0) AS kredit
+             FROM tbkeu_akun a
+             LEFT JOIN tbkeu_klasifikasi_akun k ON k.id_klasifikasi = a.id_klasifikasi
+             LEFT JOIN (
+                 SELECT d.id_akun, SUM(d.debit) AS debit, SUM(d.kredit) AS kredit
+                 FROM tbkeu_jurnal_detail d
+                 INNER JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal
+                 WHERE {$conditions}
+                 GROUP BY d.id_akun
+             ) x ON x.id_akun = a.id_akun
+             WHERE a.tipe_akun = 'POSTING'
+             ORDER BY a.kode_akun ASC",
+            $params
+        )->result();
     }
 
     private function report_by_statement($dateFrom, $dateTo, $statement)
@@ -885,7 +1719,13 @@ class Accounting_service
         $this->CI->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'inner');
         $this->CI->db->where('j.status', 'POSTED');
         $this->CI->db->where('k.jenis_laporan', $statement);
-        $this->apply_date_range($dateFrom, $dateTo);
+        if ($statement === 'NERACA') {
+            if ($dateTo !== '') {
+                $this->CI->db->where('j.tanggal_transaksi <=', $dateTo);
+            }
+        } else {
+            $this->apply_date_range($dateFrom, $dateTo);
+        }
         $this->CI->db->group_by('a.id_akun');
         $this->CI->db->order_by('k.urutan', 'ASC');
         $this->CI->db->order_by('a.kode_akun', 'ASC');
@@ -928,6 +1768,25 @@ class Accounting_service
         if ($dateTo !== '') {
             $this->CI->db->where('j.tanggal_transaksi <=', $dateTo);
         }
+    }
+
+    private function invoice_outstanding($paymentType, $invoiceNo)
+    {
+        $control = $paymentType === 'CUSTOMER_PAYMENT' ? 'PIUTANG' : 'HUTANG';
+        $row = $this->CI->db->query(
+            "SELECT COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit
+             FROM tbkeu_jurnal_detail d
+             INNER JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED'
+             INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
+             WHERE a.tipe_kontrol = ? AND d.nomor_dokumen = ?",
+            [$control, $invoiceNo]
+        )->row();
+        if (!$row) {
+            return '0.0000';
+        }
+        return $paymentType === 'CUSTOMER_PAYMENT'
+            ? bcsub($this->money($row->debit), $this->money($row->kredit), 4)
+            : bcsub($this->money($row->kredit), $this->money($row->debit), 4);
     }
 
     private function ok($message, $data = [])

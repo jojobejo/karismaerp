@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS `tbkeu_posting_exception` (
   `error_message` VARCHAR(1000) NOT NULL,
   `payload_json` LONGTEXT DEFAULT NULL,
   `status` ENUM('OPEN','RESOLVED','IGNORED') NOT NULL DEFAULT 'OPEN',
+  `retry_count` INT UNSIGNED NOT NULL DEFAULT 0,
+  `last_retry_at` DATETIME DEFAULT NULL,
   `id_jurnal` BIGINT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `resolved_by` BIGINT DEFAULT NULL,
@@ -80,6 +82,10 @@ CREATE TABLE IF NOT EXISTS `tbkeu_posting_exception` (
     FOREIGN KEY (`id_jurnal`) REFERENCES `tbkeu_jurnal` (`id_jurnal`)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `tbkeu_posting_exception`
+  ADD COLUMN IF NOT EXISTS `retry_count` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `status`,
+  ADD COLUMN IF NOT EXISTS `last_retry_at` DATETIME DEFAULT NULL AFTER `retry_count`;
 
 CREATE TABLE IF NOT EXISTS `tbkeu_nomor_dokumen` (
   `id_nomor` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -98,11 +104,81 @@ CREATE TABLE IF NOT EXISTS `tbkeu_saldo_awal_akun` (
   `debit` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
   `kredit` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
   `keterangan` VARCHAR(255) DEFAULT NULL,
+  `is_migrated` TINYINT(1) NOT NULL DEFAULT 0,
+  `id_jurnal` BIGINT UNSIGNED DEFAULT NULL,
+  `created_by` BIGINT DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_by` BIGINT DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `migrated_by` BIGINT DEFAULT NULL,
+  `migrated_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`id_saldo_awal`),
   UNIQUE KEY `uk_tbkeu_saldo_awal` (`id_akun`, `tanggal_saldo`),
+  KEY `idx_tbkeu_saldo_awal_jurnal` (`id_jurnal`),
   CONSTRAINT `fk_tbkeu_saldo_awal_akun`
     FOREIGN KEY (`id_akun`) REFERENCES `tbkeu_akun` (`id_akun`)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT `fk_tbkeu_saldo_awal_jurnal`
+    FOREIGN KEY (`id_jurnal`) REFERENCES `tbkeu_jurnal` (`id_jurnal`)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `tbkeu_saldo_awal_akun`
+  ADD COLUMN IF NOT EXISTS `is_migrated` TINYINT(1) NOT NULL DEFAULT 0 AFTER `keterangan`,
+  ADD COLUMN IF NOT EXISTS `id_jurnal` BIGINT UNSIGNED DEFAULT NULL AFTER `is_migrated`,
+  ADD COLUMN IF NOT EXISTS `created_by` BIGINT DEFAULT NULL AFTER `id_jurnal`,
+  ADD COLUMN IF NOT EXISTS `updated_by` BIGINT DEFAULT NULL AFTER `created_at`,
+  ADD COLUMN IF NOT EXISTS `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `updated_by`,
+  ADD COLUMN IF NOT EXISTS `migrated_by` BIGINT DEFAULT NULL AFTER `updated_at`,
+  ADD COLUMN IF NOT EXISTS `migrated_at` DATETIME DEFAULT NULL AFTER `migrated_by`;
+
+CREATE TABLE IF NOT EXISTS `tbkeu_pembayaran` (
+  `id_pembayaran` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `payment_type` ENUM('CUSTOMER_PAYMENT','SUPPLIER_PAYMENT') NOT NULL,
+  `nomor_pembayaran` VARCHAR(100) NOT NULL,
+  `tanggal_pembayaran` DATE NOT NULL,
+  `source_module` VARCHAR(50) DEFAULT NULL,
+  `source_type` VARCHAR(50) DEFAULT NULL,
+  `source_id` VARCHAR(100) DEFAULT NULL,
+  `source_no` VARCHAR(100) DEFAULT NULL,
+  `id_customer` BIGINT DEFAULT NULL,
+  `id_supplier` BIGINT DEFAULT NULL,
+  `amount` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+  `allocated_amount` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+  `unapplied_amount` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+  `status` ENUM('DRAFT','POSTED','VOID') NOT NULL DEFAULT 'DRAFT',
+  `id_jurnal` BIGINT UNSIGNED DEFAULT NULL,
+  `keterangan` VARCHAR(500) DEFAULT NULL,
+  `created_by` BIGINT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `updated_by` BIGINT DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_pembayaran`),
+  UNIQUE KEY `uk_tbkeu_pembayaran_nomor` (`nomor_pembayaran`),
+  KEY `idx_tbkeu_pembayaran_type_status` (`payment_type`, `status`, `tanggal_pembayaran`),
+  KEY `idx_tbkeu_pembayaran_source` (`source_module`, `source_type`, `source_id`),
+  KEY `idx_tbkeu_pembayaran_jurnal` (`id_jurnal`),
+  CONSTRAINT `fk_tbkeu_pembayaran_jurnal`
+    FOREIGN KEY (`id_jurnal`) REFERENCES `tbkeu_jurnal` (`id_jurnal`)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `tbkeu_pembayaran_alokasi` (
+  `id_alokasi` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id_pembayaran` BIGINT UNSIGNED NOT NULL,
+  `nomor_baris` SMALLINT UNSIGNED NOT NULL,
+  `invoice_source_module` VARCHAR(50) DEFAULT NULL,
+  `invoice_source_type` VARCHAR(50) DEFAULT NULL,
+  `invoice_source_id` VARCHAR(100) DEFAULT NULL,
+  `invoice_no` VARCHAR(100) DEFAULT NULL,
+  `amount_allocated` DECIMAL(19,4) NOT NULL DEFAULT 0.0000,
+  `keterangan` VARCHAR(500) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_alokasi`),
+  UNIQUE KEY `uk_tbkeu_payment_alloc_line` (`id_pembayaran`, `nomor_baris`),
+  KEY `idx_tbkeu_payment_alloc_invoice` (`invoice_source_module`, `invoice_source_type`, `invoice_source_id`, `invoice_no`),
+  CONSTRAINT `fk_tbkeu_payment_alloc_payment`
+    FOREIGN KEY (`id_pembayaran`) REFERENCES `tbkeu_pembayaran` (`id_pembayaran`)
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

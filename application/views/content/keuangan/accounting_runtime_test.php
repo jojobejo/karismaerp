@@ -5,7 +5,12 @@ $events = isset($events) ? $events : [];
 $mappings = isset($mappings) ? $mappings : [];
 $exceptions = isset($exceptions) ? $exceptions : [];
 $journals = isset($journals) ? $journals : [];
+$periods = isset($periods) ? $periods : [];
+$payments = isset($payments) ? $payments : [];
+$openingBalances = isset($opening_balances) ? $opening_balances : [];
 $dummySources = isset($dummy_sources) ? $dummy_sources : [];
+$uatMode = !empty($uat_mode);
+$accountingCsrf = isset($accounting_csrf) ? (string)$accounting_csrf : '';
 ?>
 <style>
     .acct-page .content-header { padding: 8px .5rem 0; }
@@ -45,13 +50,13 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
             <section class="content">
                 <div class="container-fluid">
                     <div class="page-row">
-                        <h1 class="page-title">Accounting Runtime Test</h1>
+                        <h1 class="page-title">Accounting Produksi</h1>
                         <a href="<?= base_url('jurnal') ?>" class="btn btn-outline-primary btn-sm"><i class="fas fa-sitemap mr-1"></i> Chart of Accounts</a>
                     </div>
 
                     <?php if (!$schemaReady) : ?>
                         <div class="alert alert-warning">
-                            <strong>Runtime schema belum lengkap.</strong> Jalankan SQL `docs/database/accounting_runtime_full_20260713.sql`.
+                            <strong>Runtime schema belum lengkap.</strong> Jalankan SQL general ledger dan runtime pada folder `docs/database`.
                         </div>
                     <?php endif; ?>
 
@@ -94,20 +99,21 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
                                 </div>
                             </div>
 
+                            <?php if ($uatMode) : ?>
                             <div class="panel">
-                                <div class="panel-head"><span>Auto Posting Dummy Distributor Agro</span></div>
+                                <div class="panel-head"><span>Simulator Auto Posting UAT</span></div>
                                 <div class="panel-body">
                                     <form id="autoForm">
                                         <div class="mb-2">
                                             <select class="form-control" id="dummyScenario" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                                <option value="">Pilih skenario dummy bisnis distributor agro</option>
+                                                <option value="">Pilih contoh payload event bisnis</option>
                                                 <?php foreach ($dummySources as $dummy) : ?>
                                                     <option value="<?= (int)$dummy->id_dummy ?>">
                                                         <?= html_escape($dummy->posting_event . ' | ' . $dummy->source_no . ' | ' . $dummy->product_name) ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <div class="small-muted mt-1" id="dummyScenarioInfo">Contoh default: penjualan obat pertanian oleh PT distributor agrobisnis.</div>
+                                            <div class="small-muted mt-1" id="dummyScenarioInfo">Payload produksi wajib memakai source final dan idempotency key dari dokumen bisnis.</div>
                                         </div>
                                         <div class="form-row-grid mb-2">
                                             <select class="form-control" name="posting_event" <?= !$schemaReady ? 'disabled' : '' ?>>
@@ -129,6 +135,7 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
                                     </form>
                                 </div>
                             </div>
+                            <?php endif; ?>
 
                             <div class="panel">
                                 <div class="panel-head">
@@ -143,7 +150,7 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
                                                 <tr data-id="<?= (int)$journal->id_jurnal ?>">
                                                     <td><?= html_escape($journal->nomor_jurnal) ?></td>
                                                     <td><?= html_escape($journal->tanggal_transaksi) ?></td>
-                                                    <td><?= html_escape($journal->status) ?></td>
+                                                    <td><?= html_escape(isset($journal->display_status) ? $journal->display_status : $journal->status) ?></td>
                                                     <td class="money"><?= number_format((float)$journal->total_debit, 2, ',', '.') ?></td>
                                                     <td><button type="button" class="btn btn-xs btn-outline-primary btn-detail" data-id="<?= (int)$journal->id_jurnal ?>">Detail</button></td>
                                                 </tr>
@@ -166,16 +173,117 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
                             </div>
 
                             <div class="panel">
+                                <div class="panel-head"><span>Periode Fiskal</span></div>
+                                <div class="panel-body">
+                                    <form id="periodForm">
+                                        <div class="form-row-grid mb-2">
+                                            <input type="text" class="form-control" name="kode_periode" placeholder="2026-07" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="text" class="form-control" name="nama_periode" placeholder="Juli 2026" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="date" class="form-control" name="tanggal_mulai" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="date" class="form-control" name="tanggal_selesai" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        </div>
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" name="reason" placeholder="Alasan/approval open" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <div class="input-group-append">
+                                                <button type="submit" class="btn btn-acct" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-lock-open mr-1"></i> Open</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                    <div class="scroll-box">
+                                        <table class="table table-sm" id="periodTable">
+                                            <thead><tr><th>Periode</th><th>Status</th><th></th></tr></thead>
+                                            <tbody>
+                                                <?php foreach ($periods as $period) : ?>
+                                                    <tr>
+                                                        <td><?= html_escape($period->kode_periode) ?></td>
+                                                        <td><?= html_escape($period->status) ?></td>
+                                                        <td class="text-right">
+                                                            <button type="button" class="btn btn-xs btn-outline-warning btn-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="CLOSE">Close</button>
+                                                            <button type="button" class="btn btn-xs btn-outline-primary btn-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="REOPEN">Reopen</button>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-head"><span>Pembayaran dan Alokasi</span></div>
+                                <div class="panel-body">
+                                    <form id="paymentForm">
+                                        <div class="form-row-grid mb-2">
+                                            <select class="form-control" name="payment_type" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                                <option value="CUSTOMER_PAYMENT">Payment Customer</option>
+                                                <option value="SUPPLIER_PAYMENT">Supplier Payment</option>
+                                            </select>
+                                            <input type="date" class="form-control" name="tanggal_pembayaran" value="<?= date('Y-m-d') ?>" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="text" class="form-control" name="nomor_pembayaran" placeholder="No pembayaran" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="number" min="0" step="0.01" class="form-control" name="amount" placeholder="Nominal" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        </div>
+                                        <div class="form-row-grid mb-2">
+                                            <input type="text" class="form-control" name="source_module" value="ACCOUNTING" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="number" class="form-control" name="id_customer" placeholder="ID customer" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="number" class="form-control" name="id_supplier" placeholder="ID supplier" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="text" class="form-control" name="keterangan" placeholder="Keterangan" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm" id="allocationTable">
+                                                <thead><tr><th>No Invoice</th><th>Source ID</th><th>Nominal Alokasi</th><th></th></tr></thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddAllocation" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-plus mr-1"></i> Alokasi</button>
+                                            <button type="submit" class="btn btn-acct" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-check mr-1"></i> Posting Payment</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="panel-head"><span>Saldo Awal Akun</span></div>
+                                <div class="panel-body">
+                                    <form id="openingForm">
+                                        <div class="form-row-grid mb-2">
+                                            <input type="date" class="form-control" name="tanggal_saldo" value="<?= date('Y-m-01') ?>" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <select class="form-control" name="id_akun" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                                <option value="">Pilih akun</option>
+                                                <?php foreach ($accounts as $account) : ?>
+                                                    <option value="<?= (int)$account->id_akun ?>"><?= html_escape($account->kode_akun . ' - ' . $account->nama_akun) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <input type="number" min="0" step="0.01" class="form-control" name="debit" placeholder="Debit" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <input type="number" min="0" step="0.01" class="form-control" name="kredit" placeholder="Kredit" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        </div>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" name="keterangan" placeholder="Keterangan saldo awal" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                            <div class="input-group-append">
+                                                <button type="submit" class="btn btn-acct" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-save"></i></button>
+                                                <button type="button" class="btn btn-warning" id="btnMigrateOpening" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-share-square"></i></button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="panel">
                                 <div class="panel-head"><span>Posting Exception</span></div>
                                 <div class="panel-body scroll-box">
                                     <table class="table table-sm">
-                                        <thead><tr><th>Event</th><th>Source</th><th>Error</th></tr></thead>
+                                        <thead><tr><th>Event</th><th>Source</th><th>Error</th><th></th></tr></thead>
                                         <tbody id="exceptionRows">
                                             <?php foreach ($exceptions as $row) : ?>
                                                 <tr>
                                                     <td><?= html_escape($row->posting_event) ?></td>
                                                     <td><?= html_escape($row->source_no ?: $row->source_id) ?></td>
                                                     <td><?= html_escape($row->error_code) ?></td>
+                                                    <td class="text-right">
+                                                        <button type="button" class="btn btn-xs btn-outline-primary btn-exception-action" data-id="<?= (int)$row->id_exception ?>" data-action="RETRY">Retry</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-success btn-exception-action" data-id="<?= (int)$row->id_exception ?>" data-action="RESOLVED">Resolve</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary btn-exception-action" data-id="<?= (int)$row->id_exception ?>" data-action="IGNORED">Ignore</button>
+                                                    </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
@@ -252,15 +360,22 @@ $dummySources = isset($dummy_sources) ? $dummy_sources : [];
 $(function() {
     const accounts = <?= json_encode($accounts) ?>;
     const dummySources = <?= json_encode($dummySources) ?>;
+    const accountingCsrf = <?= json_encode($accountingCsrf) ?>;
     const endpoints = {
-        manualStore: "<?= base_url('accounting-test/manual-store') ?>",
-        manualPost: "<?= base_url('accounting-test/manual-post') ?>",
+        manualStore: "<?= base_url('accounting/manual-store') ?>",
+        manualPost: "<?= base_url('accounting/manual-post') ?>",
         autoPost: "<?= base_url('accounting-test/auto-post') ?>",
-        reverse: "<?= base_url('accounting-test/reverse') ?>",
-        detail: "<?= base_url('accounting-test/journal-detail') ?>",
-        journals: "<?= base_url('accounting-test/journals') ?>",
-        exceptions: "<?= base_url('accounting-test/exceptions') ?>",
-        report: "<?= base_url('accounting-test/report') ?>"
+        reverse: "<?= base_url('accounting/reverse') ?>",
+        detail: "<?= base_url('accounting/journal-detail') ?>",
+        journals: "<?= base_url('accounting/journals') ?>",
+        exceptions: "<?= base_url('accounting/exceptions') ?>",
+        exceptionAction: "<?= base_url('accounting/exception-action') ?>",
+        periodStore: "<?= base_url('accounting/period-store') ?>",
+        periodAction: "<?= base_url('accounting/period-action') ?>",
+        paymentStore: "<?= base_url('accounting/payment-store') ?>",
+        openingStore: "<?= base_url('accounting/opening-balance-store') ?>",
+        openingMigrate: "<?= base_url('accounting/opening-balance-migrate') ?>",
+        report: "<?= base_url('accounting/report') ?>"
     };
     let selectedJournalId = 0;
 
@@ -330,6 +445,29 @@ $(function() {
         return lines;
     }
 
+    function addAllocation() {
+        $('#allocationTable tbody').append(
+            '<tr>' +
+                '<td><input type="text" class="form-control form-control-sm alloc-invoice-no"></td>' +
+                '<td><input type="text" class="form-control form-control-sm alloc-source-id"></td>' +
+                '<td><input type="number" min="0" step="0.01" class="form-control form-control-sm alloc-amount"></td>' +
+                '<td><button type="button" class="btn btn-xs btn-outline-danger btn-remove-allocation"><i class="fas fa-times"></i></button></td>' +
+            '</tr>'
+        );
+    }
+
+    function collectAllocations() {
+        const rows = [];
+        $('#allocationTable tbody tr').each(function() {
+            rows.push({
+                invoice_no: $(this).find('.alloc-invoice-no').val(),
+                invoice_source_id: $(this).find('.alloc-source-id').val(),
+                amount_allocated: $(this).find('.alloc-amount').val() || 0
+            });
+        });
+        return rows;
+    }
+
     function moduleForEvent(eventName) {
         if (eventName === 'SALES_INVOICE' || eventName === 'CUSTOMER_PAYMENT' || eventName === 'SALES_RETURN') {
             return 'SALES_DISTRIBUTOR_AGRO';
@@ -360,6 +498,11 @@ $(function() {
     }
 
     function postForm(url, data, done) {
+        if (typeof data === 'string') {
+            data += (data ? '&' : '') + $.param({ accounting_csrf: accountingCsrf });
+        } else {
+            data = $.extend({}, data || {}, { accounting_csrf: accountingCsrf });
+        }
         $.post(url, data).done(function(resp) {
             notify(resp.message || 'OK');
             if (resp.success && done) done(resp);
@@ -377,7 +520,7 @@ $(function() {
                 html += '<tr data-id="' + row.id_jurnal + '">' +
                     '<td>' + escapeHtml(row.nomor_jurnal) + '</td>' +
                     '<td>' + escapeHtml(row.tanggal_transaksi) + '</td>' +
-                    '<td>' + escapeHtml(row.status) + '</td>' +
+                    '<td>' + escapeHtml(row.display_status || row.status) + '</td>' +
                     '<td class="money">' + money(row.total_debit) + '</td>' +
                     '<td><button type="button" class="btn btn-xs btn-outline-primary btn-detail" data-id="' + row.id_jurnal + '">Detail</button></td>' +
                     '</tr>';
@@ -406,9 +549,14 @@ $(function() {
             const rows = (resp.data && resp.data.rows) || [];
             let html = '';
             rows.forEach(function(row) {
-                html += '<tr><td>' + escapeHtml(row.posting_event) + '</td><td>' + escapeHtml(row.source_no || row.source_id) + '</td><td>' + escapeHtml(row.error_code) + '</td></tr>';
+                html += '<tr><td>' + escapeHtml(row.posting_event) + '</td><td>' + escapeHtml(row.source_no || row.source_id) + '</td><td>' + escapeHtml(row.error_code) + '</td>' +
+                    '<td class="text-right">' +
+                    '<button type="button" class="btn btn-xs btn-outline-primary btn-exception-action" data-id="' + row.id_exception + '" data-action="RETRY">Retry</button> ' +
+                    '<button type="button" class="btn btn-xs btn-outline-success btn-exception-action" data-id="' + row.id_exception + '" data-action="RESOLVED">Resolve</button> ' +
+                    '<button type="button" class="btn btn-xs btn-outline-secondary btn-exception-action" data-id="' + row.id_exception + '" data-action="IGNORED">Ignore</button>' +
+                    '</td></tr>';
             });
-            $('#exceptionRows').html(html || '<tr><td colspan="3" class="text-center text-muted">Tidak ada exception.</td></tr>');
+            $('#exceptionRows').html(html || '<tr><td colspan="4" class="text-center text-muted">Tidak ada exception.</td></tr>');
         });
     }
 
@@ -450,6 +598,56 @@ $(function() {
 
     $('#btnRefreshJournals').on('click', refreshJournals);
 
+    $('#periodForm').on('submit', function(e) {
+        e.preventDefault();
+        postForm(endpoints.periodStore, $(this).serialize(), function() { location.reload(); });
+    });
+
+    $('#periodTable').on('click', '.btn-period-action', function() {
+        const reason = prompt('Alasan approval ' + $(this).data('action') + ':');
+        if (!reason) return;
+        postForm(endpoints.periodAction, {
+            id_periode: $(this).data('id'),
+            action: $(this).data('action'),
+            reason: reason
+        }, function() { location.reload(); });
+    });
+
+    $('#btnAddAllocation').on('click', addAllocation);
+    $('#allocationTable').on('click', '.btn-remove-allocation', function() { $(this).closest('tr').remove(); });
+    $('#paymentForm').on('submit', function(e) {
+        e.preventDefault();
+        const data = $(this).serializeArray();
+        data.push({ name: 'allocations_json', value: JSON.stringify(collectAllocations()) });
+        postForm(endpoints.paymentStore, $.param(data), function() { refreshJournals(); });
+    });
+
+    $('#openingForm').on('submit', function(e) {
+        e.preventDefault();
+        postForm(endpoints.openingStore, $(this).serialize());
+    });
+
+    $('#btnMigrateOpening').on('click', function() {
+        const tanggal = $('#openingForm [name="tanggal_saldo"]').val();
+        const reason = prompt('Alasan approval migrasi saldo awal:');
+        if (!tanggal || !reason) return;
+        postForm(endpoints.openingMigrate, { tanggal_saldo: tanggal, reason: reason }, function() { refreshJournals(); });
+    });
+
+    $('#exceptionRows').on('click', '.btn-exception-action', function() {
+        const action = $(this).data('action');
+        let note = '';
+        if (action !== 'RETRY') {
+            note = prompt('Catatan ' + action + ':');
+            if (!note) return;
+        }
+        postForm(endpoints.exceptionAction, {
+            id_exception: $(this).data('id'),
+            action: action,
+            note: note
+        }, function() { refreshExceptions(); refreshJournals(); });
+    });
+
     $('#reportForm').on('submit', function(e) {
         e.preventDefault();
         postForm(endpoints.report, $(this).serialize(), function(resp) {
@@ -470,6 +668,8 @@ $(function() {
         addLine();
         addLine();
     }
+
+    addAllocation();
 
     if (dummySources.length) {
         $('#dummyScenario').val(dummySources[0].id_dummy);

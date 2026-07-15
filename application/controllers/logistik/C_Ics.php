@@ -1542,11 +1542,17 @@ class C_Ics extends CI_Controller
         }
 
         $this->db->trans_commit();
+        $this->load->library('Accounting_source_service');
+        $accountingResult = $this->accounting_source_service->post_goods_receipt(
+            $idLpb,
+            (int)$this->session->userdata('id') ?: null
+        );
 
         echo json_encode([
             'status'  => 'success',
             'step'    => 'save_final',
             'message' => 'Penerimaan berhasil disimpan ke LPB, status PO diperbarui, dan draft temporary sudah dibersihkan.',
+            'accounting' => $accountingResult,
             'debug'   => [
                 'id_lpb'       => $idLpb,
                 'no_po'        => $payload['no_po'],

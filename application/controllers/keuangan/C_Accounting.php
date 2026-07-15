@@ -5,6 +5,7 @@ class C_Accounting extends CI_Controller
 {
     private $events = [
         'SALES_INVOICE' => 'Sales invoice',
+        'GOODS_ISSUE' => 'Pengeluaran persediaan / COGS',
         'PURCHASE_INVOICE' => 'Purchase invoice',
         'GOODS_RECEIPT' => 'LPB / Goods receipt',
         'CUSTOMER_PAYMENT' => 'Payment customer',
@@ -30,14 +31,19 @@ class C_Accounting extends CI_Controller
             return;
         }
 
-        $data['page_title'] = 'KARISMA - ACCOUNTING TEST';
+        $data['page_title'] = 'KARISMA - ACCOUNTING';
         $data['schema_ready'] = $this->accounting_service->schema_ready();
         $data['accounts'] = $this->posting_accounts();
         $data['events'] = $this->events;
         $data['mappings'] = $this->accounting_service->mapping_rows();
         $data['exceptions'] = $this->accounting_service->exception_rows('OPEN', 20);
         $data['journals'] = $this->accounting_service->journal_rows(['limit' => 20]);
-        $data['dummy_sources'] = $this->dummy_sources();
+        $data['periods'] = $this->accounting_service->fiscal_period_rows('', 18);
+        $data['payments'] = $this->accounting_service->payment_rows('', 20);
+        $data['opening_balances'] = $this->accounting_service->opening_balance_rows();
+        $data['uat_mode'] = $this->is_uat_route();
+        $data['dummy_sources'] = $data['uat_mode'] ? $this->dummy_sources() : [];
+        $data['accounting_csrf'] = $this->accounting_csrf_token();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/accounting_runtime_test.php', $data);
@@ -69,6 +75,14 @@ class C_Accounting extends CI_Controller
     {
         if (!$this->require_access(true)) {
             return;
+        }
+        if (!$this->is_uat_route()) {
+            return $this->json_result([
+                'success' => false,
+                'message' => 'Simulator auto-post hanya tersedia melalui route accounting-test.',
+                'data' => null,
+                'errors' => ['UAT_ROUTE_REQUIRED'],
+            ], 403);
         }
 
         $event = strtoupper(trim((string)$this->input->post('posting_event', true)));
@@ -188,6 +202,126 @@ class C_Accounting extends CI_Controller
         ]);
     }
 
+    public function exception_action()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_exception', true);
+        $action = strtoupper(trim((string)$this->input->post('action', true)));
+        $note = trim((string)$this->input->post('note', true));
+
+        if ($action === 'RETRY') {
+            $result = $this->accounting_service->retry_exception($id, $this->user_id());
+        } elseif (in_array($action, ['RESOLVED', 'IGNORED'], true)) {
+            $result = $this->accounting_service->update_exception_status($id, $action, $note, $this->user_id());
+        } else {
+            $result = [
+                'success' => false,
+                'message' => 'Aksi exception tidak valid.',
+                'data' => null,
+                'errors' => ['INVALID_EXCEPTION_ACTION'],
+            ];
+        }
+
+        return $this->json_result($result, $result['success'] ? 200 : 422);
+    }
+
+    public function period_store()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->save_fiscal_period([
+            'id_periode' => (int)$this->input->post('id_periode', true),
+            'kode_periode' => trim((string)$this->input->post('kode_periode', true)),
+            'nama_periode' => trim((string)$this->input->post('nama_periode', true)),
+            'tanggal_mulai' => trim((string)$this->input->post('tanggal_mulai', true)),
+            'tanggal_selesai' => trim((string)$this->input->post('tanggal_selesai', true)),
+            'reason' => trim((string)$this->input->post('reason', true)),
+        ], $this->user_id());
+
+        return $this->json_result($result, $result['success'] ? 201 : 422);
+    }
+
+    public function period_action()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->change_fiscal_period_status(
+            (int)$this->input->post('id_periode', true),
+            trim((string)$this->input->post('action', true)),
+            trim((string)$this->input->post('reason', true)),
+            $this->user_id()
+        );
+
+        return $this->json_result($result, $result['success'] ? 200 : 422);
+    }
+
+    public function payment_store()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $allocations = json_decode((string)$this->input->post('allocations_json', false), true);
+        if (!is_array($allocations)) {
+            $allocations = [];
+        }
+
+        $result = $this->accounting_service->create_payment([
+            'payment_type' => trim((string)$this->input->post('payment_type', true)),
+            'nomor_pembayaran' => trim((string)$this->input->post('nomor_pembayaran', true)),
+            'tanggal_pembayaran' => trim((string)$this->input->post('tanggal_pembayaran', true)),
+            'source_module' => trim((string)$this->input->post('source_module', true)),
+            'source_id' => trim((string)$this->input->post('source_id', true)),
+            'source_no' => trim((string)$this->input->post('nomor_pembayaran', true)),
+            'id_customer' => (int)$this->input->post('id_customer', true),
+            'id_supplier' => (int)$this->input->post('id_supplier', true),
+            'amount' => $this->decimal_input('amount'),
+            'keterangan' => trim((string)$this->input->post('keterangan', true)),
+            'allocations' => $allocations,
+        ], $this->user_id());
+
+        return $this->json_result($result, $result['success'] ? 201 : 422);
+    }
+
+    public function opening_balance_store()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->save_opening_balance([
+            'id_akun' => (int)$this->input->post('id_akun', true),
+            'tanggal_saldo' => trim((string)$this->input->post('tanggal_saldo', true)),
+            'debit' => $this->decimal_input('debit'),
+            'kredit' => $this->decimal_input('kredit'),
+            'keterangan' => trim((string)$this->input->post('keterangan', true)),
+        ], $this->user_id());
+
+        return $this->json_result($result, $result['success'] ? 201 : 422);
+    }
+
+    public function opening_balance_migrate()
+    {
+        if (!$this->require_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->migrate_opening_balance(
+            trim((string)$this->input->post('tanggal_saldo', true)),
+            trim((string)$this->input->post('reason', true)),
+            $this->user_id()
+        );
+
+        return $this->json_result($result, $result['success'] ? 201 : 422);
+    }
+
     public function report()
     {
         if (!$this->require_access(true)) {
@@ -271,6 +405,15 @@ class C_Accounting extends CI_Controller
     private function require_access($json = false)
     {
         if ($this->can_access()) {
+            if ($json && !$this->valid_accounting_csrf()) {
+                $this->json_result([
+                    'success' => false,
+                    'message' => 'Token keamanan accounting tidak valid atau sesi sudah berubah.',
+                    'data' => null,
+                    'errors' => ['INVALID_CSRF_TOKEN'],
+                ], 403);
+                return false;
+            }
             return true;
         }
 
@@ -303,7 +446,29 @@ class C_Accounting extends CI_Controller
         } elseif (strpos($value, ',') !== false) {
             $value = str_replace(',', '.', $value);
         }
-        return is_numeric($value) ? number_format((float)$value, 4, '.', '') : '0.0000';
+        return is_numeric($value) ? bcadd($value, '0', 4) : '0.0000';
+    }
+
+    private function accounting_csrf_token()
+    {
+        $token = (string)$this->session->userdata('accounting_csrf');
+        if ($token === '') {
+            $token = bin2hex(random_bytes(32));
+            $this->session->set_userdata('accounting_csrf', $token);
+        }
+        return $token;
+    }
+
+    private function valid_accounting_csrf()
+    {
+        $expected = (string)$this->session->userdata('accounting_csrf');
+        $received = (string)$this->input->post('accounting_csrf', false);
+        return $expected !== '' && $received !== '' && hash_equals($expected, $received);
+    }
+
+    private function is_uat_route()
+    {
+        return strpos(trim((string)$this->uri->uri_string(), '/'), 'accounting-test') !== false;
     }
 
     private function json_result($result, $code = 200)

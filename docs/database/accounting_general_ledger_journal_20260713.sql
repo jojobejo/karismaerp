@@ -29,6 +29,22 @@ CREATE TABLE IF NOT EXISTS `tbkeu_periode_fiskal` (
   KEY `idx_tbkeu_periode_status` (`status`, `is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS `tbkeu_periode_fiskal_log` (
+  `id_log` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id_periode` BIGINT UNSIGNED NOT NULL,
+  `action` ENUM('OPEN','CLOSE','REOPEN') NOT NULL,
+  `reason` VARCHAR(500) NOT NULL,
+  `approval_by` BIGINT DEFAULT NULL,
+  `approval_at` DATETIME DEFAULT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_log`),
+  KEY `idx_tbkeu_periode_log_periode` (`id_periode`),
+  KEY `idx_tbkeu_periode_log_action` (`action`, `approval_at`),
+  CONSTRAINT `fk_tbkeu_periode_log_periode`
+    FOREIGN KEY (`id_periode`) REFERENCES `tbkeu_periode_fiskal` (`id_periode`)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE IF NOT EXISTS `tbkeu_jenis_jurnal` (
   `id_jenis_jurnal` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `kode_jenis_jurnal` VARCHAR(20) NOT NULL,

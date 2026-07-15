@@ -327,6 +327,7 @@ class M_SalesOrder extends CI_Model
         $gudang_id = $header['gudang_id'];
 
         foreach ($details as $d) {
+            $d['id_so']      = $id_so;
             $d['no_faktur'] = $no_faktur;
             $d['no_so']     = $no_so;
             $this->db->insert('tbso_sales_order_detail', $d);
@@ -439,6 +440,7 @@ class M_SalesOrder extends CI_Model
 
         // Insert new details and create new reservations
         foreach ($details as $d) {
+            $d['id_so']      = $id_so;
             $d['no_faktur'] = $no_faktur;
             $d['no_so']     = $no_so;
             $this->db->insert('tbso_sales_order_detail', $d);
