@@ -142,8 +142,14 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                 ============================================================ -->
                 <?php
                 $today = date('Y-m-d');
-                $ab_today = !empty($arsip_bongkar) ? array_filter($arsip_bongkar, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) === $today) : [];
-                $ab_older = !empty($arsip_bongkar) ? array_filter($arsip_bongkar, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) !== $today) : [];
+                $isArchivedToday = function ($r) use ($today) {
+                    return date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) === $today;
+                };
+                $isArchivedOlder = function ($r) use ($today) {
+                    return date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) !== $today;
+                };
+                $ab_today = !empty($arsip_bongkar) ? array_filter($arsip_bongkar, $isArchivedToday) : [];
+                $ab_older = !empty($arsip_bongkar) ? array_filter($arsip_bongkar, $isArchivedOlder) : [];
                 ?>
                 <div class="card">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
@@ -239,8 +245,8 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                      ARSIP LOADING LK  (thead biru)
                 ============================================================ -->
                 <?php
-                $al_today = !empty($arsip_lk) ? array_filter($arsip_lk, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) === $today) : [];
-                $al_older = !empty($arsip_lk) ? array_filter($arsip_lk, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) !== $today) : [];
+                $al_today = !empty($arsip_lk) ? array_filter($arsip_lk, $isArchivedToday) : [];
+                $al_older = !empty($arsip_lk) ? array_filter($arsip_lk, $isArchivedOlder) : [];
                 ?>
                 <div class="card">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
@@ -350,8 +356,8 @@ tr.separator-label { display: none; } /* disembunyikan di DT, ditampilkan manual
                      ARSIP LOADING KK  (thead hijau)
                 ============================================================ -->
                 <?php
-                $ak_today = !empty($arsip_kk) ? array_filter($arsip_kk, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) === $today) : [];
-                $ak_older = !empty($arsip_kk) ? array_filter($arsip_kk, fn($r) => date('Y-m-d', strtotime($r['archived_at'] ?? 'now')) !== $today) : [];
+                $ak_today = !empty($arsip_kk) ? array_filter($arsip_kk, $isArchivedToday) : [];
+                $ak_older = !empty($arsip_kk) ? array_filter($arsip_kk, $isArchivedOlder) : [];
                 ?>
                 <div class="card">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">

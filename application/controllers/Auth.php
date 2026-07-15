@@ -18,103 +18,145 @@ class Auth extends CI_Controller
 
     function process()
     {
-        $username = $this->input->post('user_isi');
-        $password = $this->input->post('pass_isi');
+        $username = trim((string) $this->input->post('user_isi'));
+        $password = (string) $this->input->post('pass_isi');
+        $auth_candidates = method_exists($this->M_Auth, 'get_auth_candidates')
+            ? $this->M_Auth->get_auth_candidates($username)
+            : array_filter([$this->M_Auth->get_auth_user($username)]);
+        $key = null;
 
-        $check_username = $this->M_Auth->cek_username($username)->num_rows();
-        if ($check_username > 0) {
-
-            $check_password = $this->M_Auth->cek_password($username);
-
-            foreach ($check_password as $key) {
-                if ($key->username == $username && password_verify($password, $key->password)) {
-                    $data_session = array(
-                        'id'            => $key->id,
-                        'nik'           => $key->nik,
-                        'username'      => $key->username,
-                        'departemen'    => $key->departemen,
-                        'lv'            => $key->akses_lv,
-                        'jobdesk'       => $key->jobdesk,
-                        'nama'          => $key->nm_karyawan,
-                        'tim'           => $key->tim,
-                        'wilayah'       => $key->wilayah
-                    );
-                    $this->session->set_userdata('logged_in', true);
-                    $this->session->set_userdata($data_session);
-                    if ($key->jobdesk == 'LOGISTIK') {
-                        redirect('logistik');
-                    } else if ($key->jobdesk == 'ADMINICS') {
-                        redirect('ics/ics_diffrent');
-                    } else if ($key->jobdesk == 'ADMINKEU') {
-                        redirect('keuangan');
-                    } else if ($key->jobdesk == 'KIUKEU') {
-                        redirect('keuangan/pembayaran');
-                    } else if ($key->jobdesk == 'ADMINPURCHASING') {
-                        redirect('keuangan');
-                    } else if ($key->jobdesk == 'DIREKTUR') {
-                        redirect('dashboard');
-                    } else if ($key->jobdesk == 'ADMINGA') {
-                        redirect('schedule_direktur');
-                    } else if ($key->jobdesk == 'ADMINKEUTC') {
-                        redirect('keuangan');
-                    } else if ($key->jobdesk == 'STOCKOPNAME') {
-                        redirect('stockopname');
-                    } else if ($key->jobdesk == 'ADMIN') {
-                        redirect('extravaganza');
-                    } else if ($key->jobdesk == 'SALESONLINE') {
-                        redirect('stock');
-                    } else if ($key->jobdesk == 'SALESCOUNTER') {
-                        redirect('sales_report');
-                    } else if ($key->jobdesk == 'SALES') {
-                        redirect('kiu_katalog');
-                    } else if ($key->jobdesk == 'DISTRIBUSI') {
-                        redirect('logistik/distibusi');
-                    } else if ($key->jobdesk == 'ADMINLOGLPB') {
-                        redirect('ics/icspo');
-                    } else if ($key->jobdesk == 'ADMLOG') {
-                        redirect('checker');
-                    } else if ($key->jobdesk == 'CHECKER') {
-                        redirect('checker');
-                    } else if ($key->jobdesk == 'MANAGERWH') {
-                        redirect('checker');
-                    } else if ($key->jobdesk == 'SALESCK') {
-                        redirect('checker');
-                    } else if ($key->jobdesk == 'DIREKTURCK') {
-                        redirect('checker/dashboard'); 
-                    } else if ($key->jobdesk == 'MANAGERCK') {
-                        redirect('checker');
-                    } else if ($key->jobdesk == 'ADMINSC') {
-                        redirect('sales_order/admin_sc');
-                    } else if ($key->jobdesk == 'SC') {
-                        redirect('sales_order');
-                    } else if ($key->jobdesk == 'KOORSC') {
-                        redirect('retur_penjualan');
-                    } else if ($key->jobdesk == 'KADEPSC' || $key->jobdesk == 'KADEPUB') {
-                        redirect('retur_penjualan');
-                    } else if ($key->jobdesk == 'LOGISTIC') {
-                        // Logistik Retur — hanya lihat & cetak SPR yang disetujui
-                        redirect('retur_penjualan/logistik');
-                    } else if ($key->jobdesk == 'ADMSTOCK') {
-                        redirect('retur_penjualan/retur');
-                    } else if ($key->jobdesk == 'ADMPNJ') {
-                        redirect('retur_penjualan');
-                    } else if ($key->jobdesk == 'ADMLPB2') {
-                        redirect('retur_penjualan/admlpb2');
-                    } else if ($key->jobdesk == 'COLLECTION' || $key->jobdesk == 'KOLEKTOR') {
-                        redirect('retur_penjualan/retur');
-                    } else if ($key->jobdesk == 'KASIR') {
-                        redirect('retur_penjualan/retur');
-                    } else if ($key->jobdesk == 'MANAGERACC' || $key->jobdesk == 'MANAGERSE' || $key->jobdesk == 'DIREKTUROP' || $key->jobdesk == 'DIREKTURUTAMA') {
-                        redirect('retur_penjualan/retur');
-                    }
-                } else {
-                    $this->session->set_flashdata("gagal", "username / password salah!!!");
-                    redirect('Auth');
-                }
-            }
-        } else {
+        if (empty($auth_candidates)) {
+            $this->M_Auth->log_login((object)['username' => $username], 'failed', 'Username tidak ditemukan');
             $this->session->set_flashdata("gagal", "username salah");
             redirect('Auth');
+            return;
+        }
+
+        foreach ($auth_candidates as $candidate) {
+            if ($this->M_Auth->verify_password($password, $candidate->password ?? '')) {
+                $key = $candidate;
+                break;
+            }
+        }
+
+        if (!$key) {
+            $this->M_Auth->log_login($auth_candidates[0], 'failed', 'Password salah');
+            $this->session->set_flashdata("gagal", "username / password salah!!!");
+            redirect('Auth');
+            return;
+        }
+
+        if (isset($key->status) && (int)$key->status !== 1) {
+            $this->M_Auth->log_login($key, 'blocked', 'User nonaktif');
+            $this->session->set_flashdata("gagal", "User nonaktif. Hubungi administrator.");
+            redirect('Auth');
+            return;
+        }
+
+        $auth_source = $key->auth_source ?? 'tb_karyawan';
+        $akses_lv = (int)($key->akses_lv ?? $key->level ?? 0);
+        $jobdesk_hrd = strtolower(trim((string)($key->jobdesk_hrd ?? '')));
+        $jobdesk = strtoupper(trim((string)($key->jobdesk ?? $key->jabatan ?? '')));
+        $username_login = strtolower(trim((string)($key->username ?? '')));
+        $is_admin_dashboard = ($username_login === 'admin' || ($akses_lv === 1 && $jobdesk === 'ADMIN'));
+        $nama = $key->nm_karyawan ?? $key->nama_lngkp ?? $key->nama_user ?? $key->username;
+        $departemen = $key->departemen ?? $key->departement ?? null;
+
+        $data_session = array(
+            'id'            => $key->id,
+            'id_karyawan'   => $auth_source === 'tb_karyawan' ? $key->id : null,
+            'auth_source'   => $auth_source,
+            'nik'           => $key->nik ?? null,
+            'username'      => $key->username,
+            'departemen'    => $departemen,
+            'lv'            => $akses_lv,
+            'akses_lv'      => $akses_lv,
+            'akses_lv_id'   => $key->akses_lv_id ?? $akses_lv,
+            'jobdesk'       => $jobdesk,
+            'jobdesk_hrd'   => $jobdesk_hrd,
+            'jobdesk_id'    => $key->jobdesk_id ?? null,
+            'nama'          => $nama,
+            'nama_user'     => $nama,
+            'tim'           => $key->tim ?? null,
+            'wilayah'       => $key->wilayah ?? null,
+            'is_admin_dashboard' => $is_admin_dashboard,
+            'logged_in'     => true
+        );
+
+        $this->session->set_userdata($data_session);
+        if ($this->M_Auth->password_should_be_hashed($key->password ?? '')) {
+            $this->M_Auth->update_password_hash($key->id, $auth_source, $password);
+        }
+        $this->M_Auth->update_last_login($key->id, $auth_source);
+        $this->M_Auth->log_login($key, 'success', 'Login berhasil');
+
+        // Redirect based on jobdesk
+        if ($jobdesk == 'LOGISTIK') {
+            redirect('logistik');
+        } else if ($jobdesk == 'ADMINICS') {
+            redirect('ics/ics_diffrent');
+        } else if ($jobdesk == 'ADMINKEU') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'KIUKEU') {
+            redirect('keuangan/pembayaran');
+        } else if ($jobdesk == 'ADMINPURCHASING') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'DIREKTUR') {
+            redirect('dashboard');
+        } else if ($jobdesk == 'ADMINGA') {
+            redirect('schedule_direktur');
+        } else if ($jobdesk == 'ADMINKEUTC') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'STOCKOPNAME') {
+            redirect('stockopname');
+        } else if ($jobdesk == 'ADMIN') {
+            redirect('extravaganza');
+        } else if ($jobdesk == 'SALESONLINE') {
+            redirect('stock');
+        } else if ($jobdesk == 'SALESCOUNTER') {
+            redirect('sales_report');
+        } else if ($jobdesk == 'SALES') {
+            redirect('kiu_katalog');
+        } else if ($jobdesk == 'DISTRIBUSI') {
+            redirect('logistik/distibusi');
+        } else if ($jobdesk == 'ADMINLOGLPB') {
+            redirect('ics/icspo');
+        } else if ($jobdesk == 'ADMLOG') {
+            redirect('checker');
+        } else if ($jobdesk == 'CHECKER') {
+            redirect('checker');
+        } else if ($jobdesk == 'MANAGERWH') {
+            redirect('checker');
+        } else if ($jobdesk == 'SALESCK') {
+            redirect('checker');
+        } else if ($jobdesk == 'DIREKTURCK') {
+            redirect('checker/dashboard'); 
+        } else if ($jobdesk == 'MANAGERCK') {
+            redirect('checker');
+        } else if ($jobdesk == 'ADMINSC') {
+            redirect('sales_order/admin_sc');
+        } else if ($jobdesk == 'SC') {
+            redirect('sales_order');
+        } else if ($jobdesk == 'KOORSC') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'KADEPSC' || $jobdesk == 'KADEPUB') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'LOGISTIC') {
+            redirect('retur_penjualan/logistik');
+        } else if ($jobdesk == 'ADMSTOCK') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'ADMPNJ') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'ADMLPB2') {
+            redirect('retur_penjualan/admlpb2');
+        } else if ($jobdesk == 'COLLECTION' || $jobdesk == 'KOLEKTOR') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'KASIR') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'MANAGERACC' || $jobdesk == 'MANAGERSE' || $jobdesk == 'DIREKTUROP' || $jobdesk == 'DIREKTURUTAMA') {
+            redirect('retur_penjualan/retur');
+        } else {
+            redirect('dashboard');
         }
     }
 

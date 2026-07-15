@@ -35,9 +35,9 @@
                     ? base_url('kmt/retur/update/' . $row['id'])
                     : base_url('kmt/retur/simpan');
                 $lv      = (int)$lv;
-                $v       = fn($key, $default = '') => $is_edit
-                    ? htmlspecialchars($row[$key] ?? $default)
-                    : $default;
+                $v       = function ($key, $default = '') use ($is_edit, $row) {
+                    return $is_edit ? htmlspecialchars($row[$key] ?? $default) : $default;
+                };
                 ?>
                 <form action="<?= $action ?>" method="POST">
                     <?= form_open($action) ?>

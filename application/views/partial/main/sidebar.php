@@ -8,10 +8,98 @@
 
     <?php 
     $allowed_roles = ['DIREKTURCK', 'ADMLOG', 'MANAGERWH', 'SALESCK', 'MANAGERCK'];
+    $CI =& get_instance();
+    $hasMasterUserManagementAccess = (strtolower((string) $CI->session->userdata('username')) === 'admin');
+    $dynamicSidebarTree = [];
+    if (isset($CI->db) && $CI->db->table_exists('tb_menu')) {
+      $CI->load->model('master/M_Menu', 'sidebarMenuModel');
+      $dynamicSidebarTree = $CI->sidebarMenuModel->sidebar_tree($CI->session->userdata('akses_lv_id') ?: $CI->session->userdata('lv'));
+    }
+
+    $renderDynamicMenu = function ($menus) use (&$renderDynamicMenu) {
+      foreach ($menus as $menu) {
+        $hasChildren = !empty($menu['children']);
+        $url = $hasChildren ? '#' : base_url($menu['url']);
+        ?>
+        <li class="nav-item <?= $hasChildren ? 'has-treeview' : '' ?>">
+          <a href="<?= $url ?>" class="nav-link">
+            <i class="nav-icon <?= html_escape($menu['icon'] ?: 'fas fa-circle') ?>"></i>
+            <p>
+              <?= html_escape($menu['nama_menu']) ?>
+              <?php if ($hasChildren) : ?><i class="right fas fa-angle-left"></i><?php endif; ?>
+            </p>
+          </a>
+          <?php if ($hasChildren) : ?>
+            <ul class="nav nav-treeview">
+              <?php $renderDynamicMenu($menu['children']); ?>
+            </ul>
+          <?php endif; ?>
+        </li>
+        <?php
+      }
+    };
     ?>
 
+    <?php if ($hasMasterUserManagementAccess) : ?>
+      <div class="sidebar pb-0">
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item has-treeview">
+              <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-user-shield"></i>
+                <p>
+                  Master User
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a href="<?= base_url('master/user-management') ?>" class="nav-link">
+                    <i class="fas fa-users nav-icon"></i>
+                    <p>User Management</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="<?= base_url('master/jobdesk') ?>" class="nav-link">
+                    <i class="fas fa-briefcase nav-icon"></i>
+                    <p>Jobdesk</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="<?= base_url('master/akses-level') ?>" class="nav-link">
+                    <i class="fas fa-key nav-icon"></i>
+                    <p>Akses Level</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a href="<?= base_url('master/menu') ?>" class="nav-link">
+                    <i class="fas fa-bars nav-icon"></i>
+                    <p>Menu</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    <?php endif; ?>
+
     <!-- Sidebar -->
-    <?php if ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
+    <?php if (!empty($dynamicSidebarTree)) : ?>
+      <div class="sidebar">
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <?php $renderDynamicMenu($dynamicSidebarTree); ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>Log Out</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEU') : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -21,6 +109,14 @@
                 <i class="nav-icon fas fa-quran"></i>
                 <p>
                   Daily Stock Product
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('jurnal') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book-open"></i>
+                <p>
+                  Jurnal
                 </p>
               </a>
             </li>
@@ -237,6 +333,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('stockopname/input') ?>" class="nav-link">
+                <i class="nav-icon fas fa-mobile-alt"></i>
+                <p>
+                  Input Opname
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -246,6 +350,28 @@
             </li>
         </nav>
         <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array(str_replace(['-', ' '], '_', strtoupper((string)$this->session->userdata('jobdesk'))), ['SUPERVISIOR_OPNAME', 'SUPERVISOR_OPNAME'], true)) : ?>
+      <div class="sidebar">
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('supervisi-opname') ?>" class="nav-link">
+                <i class="nav-icon fas fa-clipboard-check"></i><p>Supervisi Opname</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('supervisi-opname/tracking') ?>" class="nav-link">
+                <i class="nav-icon fas fa-map-marked-alt"></i><p>Tracking Inputer Wilayah</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i><p>Log Out</p>
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
     <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMINKEUTC') : ?>
       <div class="sidebar">
