@@ -600,6 +600,13 @@ class C_Keuangan extends CI_Controller
     public function master_barang()
     {
         $data['page_title']         = 'KARISMA';
+        $data['supplier_options']   = $this->M_Keuangan->master_barang_supplier_options();
+        $data['master_barang_access'] = [
+            'jobdesk' => (string)$this->session->userdata('jobdesk'),
+            'lv' => (int)$this->session->userdata('lv'),
+            'can_full_edit' => $this->can_full_edit_master_barang(),
+            'can_info_lain_edit' => $this->can_edit_info_lain_master_barang(),
+        ];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/master_barang.php', $data);
@@ -619,54 +626,67 @@ class C_Keuangan extends CI_Controller
     {
         return [
             'kode_barang' => trim((string)$this->input->post('kode_barang', true)),
+            'kd_suplier'  => trim((string)$this->input->post('kd_suplier', true)),
             'nama_barang' => trim((string)$this->input->post('nama_barang', true)),
             'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
             'satuan'      => trim((string)$this->input->post('satuan', true)),
+            'stock_minimum' => (int)$this->input->post('stock_minimum', true),
+            'merk_barang' => trim((string)$this->input->post('merk_barang', true)),
+            'kelompok_barang' => trim((string)$this->input->post('kelompok_barang', true)),
+            'kategori_barang' => trim((string)$this->input->post('kategori_barang', true)),
+            'produk_fokus' => trim((string)$this->input->post('produk_fokus', true)),
+            'panjang'     => (int)$this->input->post('panjang', true),
+            'lebar'       => (int)$this->input->post('lebar', true),
+            'tinggi'      => (int)$this->input->post('tinggi', true),
             'berat'       => (float)$this->input->post('berat', true),
-            'kubikasi'    => (float)$this->input->post('kubikasi', true),
-            'p'           => (int)$this->input->post('p', true),
-            'l'           => (int)$this->input->post('l', true),
-            't'           => (int)$this->input->post('t', true),
+            'isi'         => (float)$this->input->post('isi', true),
+            'kemasan'     => (float)$this->input->post('kemasan', true),
+            'is_active'   => $this->input->post('is_active', true) === 'F' ? 'F' : 'T',
+            'is_lot'      => $this->input->post('is_lot', true) === 'T' ? 'T' : 'F',
         ];
+    }
+
+    private function can_full_edit_master_barang()
+    {
+        $jobdesk = (string)$this->session->userdata('jobdesk');
+        $level = (int)$this->session->userdata('lv');
+
+        return in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'ADMINPURCHASING'], true) || $level === 1;
+    }
+
+    private function can_edit_info_lain_master_barang()
+    {
+        return $this->can_full_edit_master_barang() || (string)$this->session->userdata('jobdesk') === 'LOGISTIK';
     }
 
     public function master_barang_list()
     {
-        $draw   = (int)$this->input->post('draw');
-        $start  = (int)$this->input->post('start');
-        $length = (int)$this->input->post('length');
-        $searchInput = $this->input->post('search');
-        $search = '';
-        if (is_array($searchInput) && isset($searchInput['value'])) {
-            $search = trim((string)$searchInput['value']);
+        $search = trim((string)$this->input->post('search', true));
+        $limit = (int)$this->input->post('limit', true);
+        if ($limit <= 0) {
+            $limit = 100;
         }
 
-        if ($length <= 0) {
-            $length = 10;
-        }
-
-        $rows = $this->M_Keuangan->master_barang_all($length, $start, $search);
+        $rows = $this->M_Keuangan->master_barang_all($search, $limit, 0);
         $data = [];
 
         foreach ($rows as $row) {
             $data[] = [
+                'id'          => (int)$row->id_barang,
                 'kode_barang' => $row->kode_barang,
                 'nama_barang' => $row->nama_barang,
-                'bahan_aktif' => $row->bahan_aktif,
+                'nama_suplier' => $row->nama_suplier,
                 'satuan'      => $row->satuan,
-                'berat'       => $row->berat,
-                'kubikasi'    => $row->kubikasi,
-                'dimensi'     => $row->dimensi,
-                'aksi'        => '<button type="button" class="btn btn-sm btn-warning btn-edit-master mr-1" data-id="' . (int)$row->id . '"><i class="fas fa-pen"></i></button>
-                                  <button type="button" class="btn btn-sm btn-danger btn-delete-master" data-id="' . (int)$row->id . '" data-nama="' . html_escape($row->nama_barang) . '"><i class="fas fa-trash"></i></button>',
+                'is_active'   => $row->is_active,
+                'is_lot'      => $row->is_lot,
             ];
         }
 
         $this->response_json([
-            'draw'            => $draw,
-            'recordsTotal'    => $this->M_Keuangan->master_barang_count_all(),
-            'recordsFiltered' => $this->M_Keuangan->master_barang_count_filtered($search),
-            'data'            => $data,
+            'status'   => true,
+            'total'    => $this->M_Keuangan->master_barang_count_all(),
+            'filtered' => $this->M_Keuangan->master_barang_count_filtered($search),
+            'data'     => $data,
         ]);
     }
 
@@ -696,11 +716,25 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang_store()
     {
-        $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if (!$this->can_full_edit_master_barang()) {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
+                'message' => 'Akses anda tidak diizinkan menambah master barang.',
+            ], 403);
+        }
+
+        $payload = $this->master_barang_payload();
+        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+            ], 422);
+        }
+
+        if ($this->M_Keuangan->master_barang_by_kode($payload['kode_barang'])) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode barang sudah terdaftar pada master barang komersil.',
             ], 422);
         }
 
@@ -722,15 +756,33 @@ class C_Keuangan extends CI_Controller
             ], 422);
         }
 
-        $payload = $this->master_barang_payload();
-        if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '') {
+        if (!$this->can_edit_info_lain_master_barang()) {
             return $this->response_json([
                 'status' => false,
-                'message' => 'Kode barang dan nama barang wajib diisi.',
-            ], 422);
+                'message' => 'Akses anda tidak diizinkan mengubah master barang.',
+            ], 403);
         }
 
-        $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+        $payload = $this->master_barang_payload();
+        if ($this->can_full_edit_master_barang()) {
+            if ($payload['kode_barang'] === '' || $payload['nama_barang'] === '' || $payload['kd_suplier'] === '') {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+                ], 422);
+            }
+
+            if ($this->M_Keuangan->master_barang_by_kode($payload['kode_barang'], $id)) {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kode barang sudah digunakan pada data lain.',
+                ], 422);
+            }
+
+            $ok = $this->M_Keuangan->master_barang_update($id, $payload);
+        } else {
+            $ok = $this->M_Keuangan->master_barang_update_info_lain($id, $payload);
+        }
 
         $this->response_json([
             'status' => (bool)$ok,
@@ -740,6 +792,13 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang_delete()
     {
+        if (!$this->can_full_edit_master_barang()) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Akses anda tidak diizinkan menghapus master barang.',
+            ], 403);
+        }
+
         $id = (int)$this->input->post('id', true);
         if ($id <= 0) {
             return $this->response_json([
@@ -906,6 +965,571 @@ class C_Keuangan extends CI_Controller
         $this->response_json([
             'status' => (bool)$ok,
             'message' => $ok ? 'Data master customer berhasil dihapus.' : 'Gagal menghapus data.',
+        ], $ok ? 200 : 500);
+    }
+
+    private function accounting_ajax_response($success, $message, $data = [], $errors = [], $code = 200)
+    {
+        return $this->response_json([
+            'success' => (bool)$success,
+            'message' => $message,
+            'data' => $success ? $data : null,
+            'errors' => $success ? (object)[] : $errors,
+            'meta' => [
+                'request_id' => uniqid('acct_', true),
+                'timestamp' => date('c'),
+            ],
+        ], $code);
+    }
+
+    private function can_access_jurnal()
+    {
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        $level = (int)$this->session->userdata('lv');
+
+        return $username === 'admin'
+            || (bool)$this->session->userdata('is_admin_dashboard')
+            || ($level === 1 && in_array($jobdesk, ['ADMIN', 'ADMINKEU', 'ADMINKEUTC'], true));
+    }
+
+    private function require_jurnal_access($json = false)
+    {
+        if ($this->can_access_jurnal()) {
+            return true;
+        }
+
+        if ($json) {
+            $this->accounting_ajax_response(false, 'Akses modul jurnal hanya untuk admin dan keuangan.', null, [
+                'code' => 'FORBIDDEN',
+                'details' => [],
+            ], 403);
+            return false;
+        }
+
+        show_error('Akses modul jurnal hanya untuk admin dan keuangan.', 403, 'Akses Ditolak');
+        return false;
+    }
+
+    private function jurnal_payload()
+    {
+        return [
+            'kode_akun' => trim((string)$this->input->post('kode_akun', true)),
+            'nama_akun' => trim((string)$this->input->post('nama_akun', true)),
+            'id_klasifikasi' => (int)$this->input->post('id_klasifikasi', true),
+            'parent_id' => (int)$this->input->post('parent_id', true),
+            'saldo_normal' => strtoupper(trim((string)$this->input->post('saldo_normal', true))),
+            'tipe_akun' => strtoupper(trim((string)$this->input->post('tipe_akun', true))),
+            'tipe_kontrol' => strtoupper(trim((string)$this->input->post('tipe_kontrol', true))),
+            'allow_manual_journal' => (int)$this->input->post('allow_manual_journal', true) === 1 ? 1 : 0,
+            'is_active' => (int)$this->input->post('is_active', true) === 0 ? 0 : 1,
+        ];
+    }
+
+    private function validate_jurnal_payload($payload, $id = 0)
+    {
+        if (!$this->M_Keuangan->accounting_schema_ready()) {
+            return 'Schema accounting belum tersedia. Jalankan SQL migration modul jurnal terlebih dahulu.';
+        }
+
+        if ($payload['kode_akun'] === '' || $payload['nama_akun'] === '') {
+            return 'Kode akun dan nama akun wajib diisi.';
+        }
+
+        if ($payload['id_klasifikasi'] <= 0 || !$this->M_Keuangan->accounting_klasifikasi_by_id($payload['id_klasifikasi'])) {
+            return 'Klasifikasi akun wajib dipilih.';
+        }
+
+        if (!$this->M_Keuangan->accounting_saldo_normal_by_code($payload['saldo_normal'])) {
+            return 'Saldo normal tidak valid.';
+        }
+
+        if (!in_array($payload['tipe_akun'], ['HEADER', 'POSTING'], true)) {
+            return 'Tipe akun tidak valid.';
+        }
+
+        if (!$this->M_Keuangan->accounting_tipe_kontrol_by_code($payload['tipe_kontrol'])) {
+            return 'Tipe kontrol tidak valid.';
+        }
+
+        if ($this->M_Keuangan->accounting_account_by_code($payload['kode_akun'], $id)) {
+            return 'Kode akun sudah digunakan.';
+        }
+
+        if ($payload['parent_id'] > 0) {
+            if ((int)$payload['parent_id'] === (int)$id) {
+                return 'Akun tidak boleh menjadi parent bagi dirinya sendiri.';
+            }
+
+            $parent = $this->M_Keuangan->accounting_account_by_id($payload['parent_id']);
+            if (!$parent) {
+                return 'Parent akun tidak ditemukan.';
+            }
+
+            if ($parent->tipe_akun !== 'HEADER') {
+                return 'Parent akun harus bertipe HEADER.';
+            }
+        }
+
+        if ($id > 0 && $payload['tipe_akun'] === 'POSTING' && $this->M_Keuangan->accounting_account_has_children($id)) {
+            return 'Akun yang memiliki child account harus bertipe HEADER.';
+        }
+
+        return '';
+    }
+
+    private function accounting_support_cards()
+    {
+        return [
+            [
+                'key' => 'klasifikasi',
+                'title' => 'Klasifikasi',
+                'icon' => 'fas fa-layer-group',
+                'description' => 'Kelola kelompok laporan dan saldo normal dasar akun.',
+            ],
+            [
+                'key' => 'saldo-normal',
+                'title' => 'Saldo Normal',
+                'icon' => 'fas fa-balance-scale',
+                'description' => 'Kelola master DEBIT/KREDIT yang dipakai akun.',
+            ],
+            [
+                'key' => 'tipe-kontrol',
+                'title' => 'Tipe Kontrol',
+                'icon' => 'fas fa-sliders-h',
+                'description' => 'Kelola fungsi bisnis akun seperti kas, bank, piutang, dan hutang.',
+            ],
+            [
+                'key' => 'parent-subclass',
+                'title' => 'Parent / Subclass',
+                'icon' => 'fas fa-sitemap',
+                'description' => 'Kelola akun HEADER sebagai parent/subclass.',
+            ],
+        ];
+    }
+
+    public function jurnal()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+        $data['support_schema_ready'] = $this->M_Keuangan->accounting_support_schema_ready();
+        $data['klasifikasi_options'] = $this->M_Keuangan->accounting_klasifikasi_options();
+        $data['saldo_normal_options'] = $this->M_Keuangan->accounting_saldo_normal_options();
+        $data['tipe_kontrol_options'] = $this->M_Keuangan->accounting_tipe_kontrol_options();
+        $data['support_cards'] = $this->accounting_support_cards();
+        $data['summary'] = $this->M_Keuangan->accounting_account_summary();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+        $this->load->view('content/keuangan/ajax/ajax_jurnal.php', $data);
+    }
+
+    public function jurnal_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        if (!$this->M_Keuangan->accounting_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        $klasifikasiId = (int)$this->input->post('id_klasifikasi', true);
+        $rows = $this->M_Keuangan->accounting_accounts($search, $klasifikasiId);
+
+        return $this->accounting_ajax_response(true, 'Data akun berhasil dimuat.', [
+            'rows' => $rows,
+            'summary' => $this->M_Keuangan->accounting_account_summary(),
+            'klasifikasi_options' => $this->M_Keuangan->accounting_klasifikasi_options(),
+            'saldo_normal_options' => $this->M_Keuangan->accounting_saldo_normal_options(),
+            'tipe_kontrol_options' => $this->M_Keuangan->accounting_tipe_kontrol_options(),
+        ]);
+    }
+
+    public function jurnal_detail()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id', true);
+        $row = $id > 0 ? $this->M_Keuangan->accounting_account_by_id($id) : null;
+        if (!$row) {
+            return $this->accounting_ajax_response(false, 'Data akun tidak ditemukan.', null, [
+                'code' => 'ACCOUNT_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Detail akun berhasil dimuat.', ['row' => $row]);
+    }
+
+    public function jurnal_account_journal()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        if (!$this->M_Keuangan->accounting_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $id = (int)$this->input->post('id_akun', true);
+        $row = $id > 0 ? $this->M_Keuangan->accounting_account_by_id($id) : null;
+        if (!$row) {
+            return $this->accounting_ajax_response(false, 'Data akun tidak ditemukan.', null, [
+                'code' => 'ACCOUNT_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Data jurnal akun berhasil dimuat.', [
+            'account' => $row,
+            'rows' => $this->M_Keuangan->accounting_account_journal_rows($id),
+            'journal_schema_ready' => $this->M_Keuangan->accounting_journal_schema_ready(),
+        ]);
+    }
+
+    public function jurnal_store()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $payload = $this->jurnal_payload();
+        $error = $this->validate_jurnal_payload($payload);
+        if ($error !== '') {
+            return $this->accounting_ajax_response(false, $error, null, [
+                'code' => 'VALIDATION_ERROR',
+                'details' => [$error],
+            ], 422);
+        }
+
+        $id = $this->M_Keuangan->accounting_account_store($payload, $this->session->userdata('id'));
+        if (!$id) {
+            return $this->accounting_ajax_response(false, 'Gagal menyimpan akun jurnal.', null, [
+                'code' => 'DATABASE_ERROR',
+                'details' => [],
+            ], 500);
+        }
+
+        return $this->accounting_ajax_response(true, 'Akun jurnal berhasil disimpan.', ['id_akun' => $id], [], 201);
+    }
+
+    public function jurnal_update()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_akun', true);
+        if ($id <= 0 || !$this->M_Keuangan->accounting_account_by_id($id)) {
+            return $this->accounting_ajax_response(false, 'Data akun tidak ditemukan.', null, [
+                'code' => 'ACCOUNT_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        $payload = $this->jurnal_payload();
+        $error = $this->validate_jurnal_payload($payload, $id);
+        if ($error !== '') {
+            return $this->accounting_ajax_response(false, $error, null, [
+                'code' => 'VALIDATION_ERROR',
+                'details' => [$error],
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->accounting_account_update($id, $payload, $this->session->userdata('id'));
+        return $this->accounting_ajax_response((bool)$ok, $ok ? 'Akun jurnal berhasil diupdate.' : 'Gagal update akun jurnal.', ['id_akun' => $id], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
+        ], $ok ? 200 : 500);
+    }
+
+    public function jurnal_deactivate()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_akun', true);
+        if ($id <= 0 || !$this->M_Keuangan->accounting_account_by_id($id)) {
+            return $this->accounting_ajax_response(false, 'Data akun tidak ditemukan.', null, [
+                'code' => 'ACCOUNT_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        $ok = $this->M_Keuangan->accounting_account_deactivate($id, $this->session->userdata('id'));
+        return $this->accounting_ajax_response((bool)$ok, $ok ? 'Akun jurnal berhasil dinonaktifkan.' : 'Gagal menonaktifkan akun.', ['id_akun' => $id], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
+        ], $ok ? 200 : 500);
+    }
+
+    public function jurnal_delete()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_akun', true);
+        if ($id <= 0 || !$this->M_Keuangan->accounting_account_by_id($id)) {
+            return $this->accounting_ajax_response(false, 'Data akun tidak ditemukan.', null, [
+                'code' => 'ACCOUNT_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        if ($this->M_Keuangan->accounting_account_used($id) || $this->M_Keuangan->accounting_account_has_children($id)) {
+            return $this->accounting_ajax_response(false, 'Akun sudah dipakai atau memiliki child account. Gunakan nonaktifkan.', null, [
+                'code' => 'ACCOUNT_DELETE_RESTRICTED',
+                'details' => [],
+            ], 409);
+        }
+
+        $ok = $this->M_Keuangan->accounting_account_delete($id);
+        return $this->accounting_ajax_response((bool)$ok, $ok ? 'Akun jurnal berhasil dihapus.' : 'Gagal menghapus akun.', [], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
+        ], $ok ? 200 : 500);
+    }
+
+    private function jurnal_master_payload($master)
+    {
+        if ($master === 'klasifikasi') {
+            return [
+                'id_klasifikasi' => (int)$this->input->post('id_klasifikasi', true),
+                'kode_klasifikasi' => trim((string)$this->input->post('kode_klasifikasi', true)),
+                'nama_klasifikasi' => trim((string)$this->input->post('nama_klasifikasi', true)),
+                'alias_klasifikasi' => trim((string)$this->input->post('alias_klasifikasi', true)),
+                'jenis_laporan' => strtoupper(trim((string)$this->input->post('jenis_laporan', true))),
+                'saldo_normal' => strtoupper(trim((string)$this->input->post('saldo_normal', true))),
+                'urutan' => (int)$this->input->post('urutan', true),
+                'is_active' => (int)$this->input->post('is_active', true) === 0 ? 0 : 1,
+            ];
+        }
+
+        if ($master === 'saldo-normal') {
+            return [
+                'kode_saldo' => strtoupper(trim((string)$this->input->post('kode_saldo', true))),
+                'nama_saldo' => trim((string)$this->input->post('nama_saldo', true)),
+                'keterangan' => trim((string)$this->input->post('keterangan', true)),
+                'urutan' => (int)$this->input->post('urutan', true),
+                'is_active' => (int)$this->input->post('is_active', true) === 0 ? 0 : 1,
+            ];
+        }
+
+        if ($master === 'tipe-kontrol') {
+            return [
+                'kode_tipe_kontrol' => strtoupper(trim((string)$this->input->post('kode_tipe_kontrol', true))),
+                'nama_tipe_kontrol' => trim((string)$this->input->post('nama_tipe_kontrol', true)),
+                'keterangan' => trim((string)$this->input->post('keterangan', true)),
+                'urutan' => (int)$this->input->post('urutan', true),
+                'is_active' => (int)$this->input->post('is_active', true) === 0 ? 0 : 1,
+            ];
+        }
+
+        if ($master === 'parent-subclass') {
+            $payload = $this->jurnal_payload();
+            $payload['tipe_akun'] = 'HEADER';
+            $payload['allow_manual_journal'] = 0;
+            return $payload;
+        }
+
+        return [];
+    }
+
+    private function validate_jurnal_master_payload($master, $payload, $id = 0)
+    {
+        if (!$this->M_Keuangan->accounting_schema_ready()) {
+            return 'Schema accounting belum tersedia.';
+        }
+
+        if (in_array($master, ['saldo-normal', 'tipe-kontrol'], true) && !$this->M_Keuangan->accounting_support_schema_ready()) {
+            return 'Schema master pendukung belum tersedia. Jalankan SQL migration master pendukung jurnal.';
+        }
+
+        if ($master === 'klasifikasi') {
+            if ((int)$id > 0 && (int)$payload['id_klasifikasi'] !== (int)$id) {
+                return 'ID klasifikasi tidak dapat diubah. Buat data baru jika membutuhkan ID lain.';
+            }
+
+            if ((int)$payload['id_klasifikasi'] <= 0 || $payload['kode_klasifikasi'] === '' || $payload['nama_klasifikasi'] === '') {
+                return 'ID, kode, dan nama klasifikasi wajib diisi.';
+            }
+
+            if (!in_array($payload['jenis_laporan'], ['NERACA', 'LABA_RUGI'], true)) {
+                return 'Jenis laporan tidak valid.';
+            }
+
+            if (!$this->M_Keuangan->accounting_saldo_normal_by_code($payload['saldo_normal'])) {
+                return 'Saldo normal klasifikasi tidak valid.';
+            }
+
+            if ($this->M_Keuangan->accounting_klasifikasi_duplicate($payload['id_klasifikasi'], $payload['kode_klasifikasi'], $id)) {
+                return 'ID atau kode klasifikasi sudah digunakan.';
+            }
+
+            return '';
+        }
+
+        if ($master === 'saldo-normal') {
+            if ((string)$id !== '' && $payload['kode_saldo'] !== (string)$id) {
+                return 'Kode saldo normal tidak dapat diubah. Buat data baru jika membutuhkan kode lain.';
+            }
+
+            if ($payload['kode_saldo'] === '' || $payload['nama_saldo'] === '') {
+                return 'Kode dan nama saldo normal wajib diisi.';
+            }
+
+            if ($this->M_Keuangan->accounting_saldo_normal_duplicate($payload['kode_saldo'], $id)) {
+                return 'Kode saldo normal sudah digunakan.';
+            }
+
+            return '';
+        }
+
+        if ($master === 'tipe-kontrol') {
+            if ((string)$id !== '' && $payload['kode_tipe_kontrol'] !== (string)$id) {
+                return 'Kode tipe kontrol tidak dapat diubah. Buat data baru jika membutuhkan kode lain.';
+            }
+
+            if ($payload['kode_tipe_kontrol'] === '' || $payload['nama_tipe_kontrol'] === '') {
+                return 'Kode dan nama tipe kontrol wajib diisi.';
+            }
+
+            if ($this->M_Keuangan->accounting_tipe_kontrol_duplicate($payload['kode_tipe_kontrol'], $id)) {
+                return 'Kode tipe kontrol sudah digunakan.';
+            }
+
+            return '';
+        }
+
+        if ($master === 'parent-subclass') {
+            return $this->validate_jurnal_payload($payload, $id);
+        }
+
+        return 'Master tidak valid.';
+    }
+
+    public function jurnal_master_list($master)
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $rows = $this->M_Keuangan->accounting_master_rows($master);
+        return $this->accounting_ajax_response(true, 'Data master berhasil dimuat.', ['rows' => $rows]);
+    }
+
+    public function jurnal_master_detail($master)
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = $this->input->post('id', true);
+        $row = $this->M_Keuangan->accounting_master_row($master, $id);
+        if (!$row) {
+            return $this->accounting_ajax_response(false, 'Data master tidak ditemukan.', null, [
+                'code' => 'MASTER_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Detail master berhasil dimuat.', ['row' => $row]);
+    }
+
+    public function jurnal_master_store($master)
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $payload = $this->jurnal_master_payload($master);
+        $error = $this->validate_jurnal_master_payload($master, $payload);
+        if ($error !== '') {
+            return $this->accounting_ajax_response(false, $error, null, [
+                'code' => 'VALIDATION_ERROR',
+                'details' => [$error],
+            ], 422);
+        }
+
+        $id = $this->M_Keuangan->accounting_master_store($master, $payload, $this->session->userdata('id'));
+        return $this->accounting_ajax_response((bool)$id, $id ? 'Data master berhasil disimpan.' : 'Gagal menyimpan master.', ['id' => $id], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
+        ], $id ? 201 : 500);
+    }
+
+    public function jurnal_master_update($master)
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = $this->input->post('id', true);
+        if (!$this->M_Keuangan->accounting_master_row($master, $id)) {
+            return $this->accounting_ajax_response(false, 'Data master tidak ditemukan.', null, [
+                'code' => 'MASTER_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        $payload = $this->jurnal_master_payload($master);
+        $error = $this->validate_jurnal_master_payload($master, $payload, $id);
+        if ($error !== '') {
+            return $this->accounting_ajax_response(false, $error, null, [
+                'code' => 'VALIDATION_ERROR',
+                'details' => [$error],
+            ], 422);
+        }
+
+        $ok = $this->M_Keuangan->accounting_master_update($master, $id, $payload, $this->session->userdata('id'));
+        return $this->accounting_ajax_response((bool)$ok, $ok ? 'Data master berhasil diupdate.' : 'Gagal update master.', ['id' => $id], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
+        ], $ok ? 200 : 500);
+    }
+
+    public function jurnal_master_delete($master)
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = $this->input->post('id', true);
+        if (!$this->M_Keuangan->accounting_master_row($master, $id)) {
+            return $this->accounting_ajax_response(false, 'Data master tidak ditemukan.', null, [
+                'code' => 'MASTER_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        if ($this->M_Keuangan->accounting_master_used($master, $id)) {
+            return $this->accounting_ajax_response(false, 'Data master sudah digunakan. Nonaktifkan data, jangan dihapus.', null, [
+                'code' => 'MASTER_DELETE_RESTRICTED',
+                'details' => [],
+            ], 409);
+        }
+
+        $ok = $this->M_Keuangan->accounting_master_delete($master, $id);
+        return $this->accounting_ajax_response((bool)$ok, $ok ? 'Data master berhasil dihapus.' : 'Gagal hapus master.', [], [
+            'code' => 'DATABASE_ERROR',
+            'details' => [],
         ], $ok ? 200 : 500);
     }
 

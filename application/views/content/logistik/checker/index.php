@@ -151,7 +151,9 @@ tr.row-pending { background:#fafafa !important; }
                     <div class="card-body p-3" style="background:#fff;">
                         <?php
                         $nama_pintu_map = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
-                        $fn_pintu = fn($p) => isset($nama_pintu_map[($p??1)-1]) ? $nama_pintu_map[($p)-1] : 'P'.$p;
+                        $fn_pintu = function ($p) use ($nama_pintu_map) {
+                            return isset($nama_pintu_map[($p ?? 1) - 1]) ? $nama_pintu_map[$p - 1] : 'P' . $p;
+                        };
                         ?>
                         <div class="row">
 
@@ -309,19 +311,19 @@ tr.row-pending { background:#fafafa !important; }
 
                         <!-- Footer ringkasan -->
                         <?php
-                        $aktif_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'PROSES');
-                        $aktif_lk      = array_filter($list_lk,   fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG']));
-                        $aktif_kk      = array_filter($list_kk,   fn($r) => in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG']));
+                        $aktif_bongkar = array_filter($bongkaran, function ($r) { return $r['status'] === 'PROSES'; });
+                        $aktif_lk      = array_filter($list_lk, function ($r) { return in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG']); });
+                        $aktif_kk      = array_filter($list_kk, function ($r) { return in_array($r['status'], ['PROSES_LOADING','PENYIAPAN_BARANG']); });
                         $total_aktif   = count($aktif_bongkar) + count($aktif_lk) + count($aktif_kk);
 
-                        $selesai_bongkar = array_filter($bongkaran, fn($r) => $r['status'] === 'DONE');
-                        $selesai_lk      = array_filter($list_lk,   fn($r) => $r['status'] === 'DONE');
-                        $selesai_kk      = array_filter($list_kk,   fn($r) => $r['status'] === 'DONE');
+                        $selesai_bongkar = array_filter($bongkaran, function ($r) { return $r['status'] === 'DONE'; });
+                        $selesai_lk      = array_filter($list_lk, function ($r) { return $r['status'] === 'DONE'; });
+                        $selesai_kk      = array_filter($list_kk, function ($r) { return $r['status'] === 'DONE'; });
                         $total_selesai   = count($selesai_bongkar) + count($selesai_lk) + count($selesai_kk);
 
-                        $pause_bongkar = array_filter($bongkaran, fn($r) => !empty($r['is_paused']));
-                        $pause_lk      = array_filter($list_lk,   fn($r) => !empty($r['is_paused']) || !empty($r['is_paused_siapkan']));
-                        $pause_kk      = array_filter($list_kk,   fn($r) => !empty($r['is_paused']) || !empty($r['is_paused_siapkan']));
+                        $pause_bongkar = array_filter($bongkaran, function ($r) { return !empty($r['is_paused']); });
+                        $pause_lk      = array_filter($list_lk, function ($r) { return !empty($r['is_paused']) || !empty($r['is_paused_siapkan']); });
+                        $pause_kk      = array_filter($list_kk, function ($r) { return !empty($r['is_paused']) || !empty($r['is_paused_siapkan']); });
                         $total_pause   = count($pause_bongkar) + count($pause_lk) + count($pause_kk);
                         ?>
                         <hr style="border-color:#e0e0e0; margin:10px 0 8px;">
@@ -358,9 +360,9 @@ tr.row-pending { background:#fafafa !important; }
                         $has_aksi_b = in_array($role, ['CHECKER','MANAGERCK','MANAGERWH','ADMLOG']);
                         $can_edit_b = ($role === 'MANAGERWH');
                         $colspan_b  = $has_aksi_b ? 12 : 11;
-                        $b_aktif    = array_filter($bongkaran, fn($r) => in_array($r['status'], ['PROSES','PENYIAPAN_BARANG','CETAK_DO']));
-                        $b_pending  = array_filter($bongkaran, fn($r) => $r['status'] === 'MENUNGGU');
-                        $b_done     = array_filter($bongkaran, fn($r) => $r['status'] === 'DONE');
+                        $b_aktif    = array_filter($bongkaran, function ($r) { return in_array($r['status'], ['PROSES','PENYIAPAN_BARANG','CETAK_DO']); });
+                        $b_pending  = array_filter($bongkaran, function ($r) { return $r['status'] === 'MENUNGGU'; });
+                        $b_done     = array_filter($bongkaran, function ($r) { return $r['status'] === 'DONE'; });
 
                         $renderBongkaran = function($b) use (&$no, $role, $nik, $my_active_id, $has_aksi_b, $can_edit_b, $fn_pintu) {
                             $is_done         = ($b['status'] === 'DONE');

@@ -9,6 +9,7 @@ class C_SalesOrder extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_SalesOrder');
+        $this->load->model('M_Stock');
         $this->load->model('M_Logistik');
         $this->load->model('M_ActivityLog');
         $this->load->model('M_Checker');

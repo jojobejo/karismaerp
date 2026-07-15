@@ -1865,11 +1865,40 @@ class C_Logistik extends CI_Controller
                 $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'selesai_do');
             }
 
-            echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
+            echo json_encode([
+                'msg' => 'success',
+                'message' => $msg,
+                'action' => $action,
+                'accounting' => isset($accountingResults) ? $accountingResults : [],
+            ]);
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Gagal menyimpan konfirmasi']);
         }
         exit;
+    }
+
+    private function post_accounting_sales_invoice_for_do($kd_do, array $faktur_list)
+    {
+        if (!$this->db->table_exists('tbkeu_jurnal') || !$this->db->table_exists('tbkeu_mapping_akun')) {
+            return [];
+        }
+
+        $this->load->library('Accounting_source_service');
+        $results = [];
+        foreach ($faktur_list as $fk) {
+            $kdFaktur = is_array($fk) ? ($fk['kd_faktur'] ?? '') : (string)$fk;
+            $kdFaktur = trim((string)$kdFaktur);
+            if ($kdFaktur === '') {
+                continue;
+            }
+            $results[$kdFaktur] = $this->accounting_source_service->post_sales_invoice(
+                $kdFaktur,
+                $kd_do,
+                (int)$this->session->userdata('id') ?: null
+            );
+        }
+
+        return $results;
     }
 
     public function repost_status()

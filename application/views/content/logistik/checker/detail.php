@@ -350,7 +350,9 @@
 <?php
 // ── Helper ──────────────────────────────────────────────────
 $nama_pintu_map = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','C'];
-$fn_pintu = fn($p) => isset($nama_pintu_map[($p??1)-1]) ? $nama_pintu_map[$p-1] : 'P'.$p;
+$fn_pintu = function ($p) use ($nama_pintu_map) {
+    return isset($nama_pintu_map[($p ?? 1) - 1]) ? $nama_pintu_map[$p - 1] : 'P' . $p;
+};
 
 $fn_durasi = function($mulai, $akhir = null, $pause_secs = 0) {
     if (empty($mulai)) return null;
@@ -369,8 +371,8 @@ $fn_durasi = function($mulai, $akhir = null, $pause_secs = 0) {
     return trim($out);
 };
 
-$fn_fmt_dt = fn($dt) => $dt ? date('d/m/Y H:i:s', strtotime($dt)) : '-';
-$fn_fmt_d  = fn($dt) => $dt ? date('d/m/Y', strtotime($dt)) : '-';
+$fn_fmt_dt = function ($dt) { return $dt ? date('d/m/Y H:i:s', strtotime($dt)) : '-'; };
+$fn_fmt_d  = function ($dt) { return $dt ? date('d/m/Y', strtotime($dt)) : '-'; };
 
 // ── Flag status ──────────────────────────────────────────────
 $is_paused         = !empty($row['is_paused']);

@@ -51,14 +51,114 @@ defined('BASEPATH') or exit('No direct script access allowed');
 */
 
 // Sistem Routes
-$route['default_controller'] = 'Auth';
+$route['default_controller'] = 'Portal';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
+
+// Portal Dashboard
+$route['portal'] = 'Portal/index';
+$route['auth'] = 'Auth/index';
 
 //Auth Login
 $route['process']                                   = 'Auth/process';
 $route['logout']                                    = 'Auth/logout';
-$route['dashboard']                                 = 'Dashboard';
+$route['dashboard']                                 = 'Dashboard/index';
+$route['dashboad']                                  = 'Dashboard/index';
+$route['dasboard']                                  = 'Dashboard/index';
+
+// STOCKOPNAME
+$route['admin/stockopname']                        = 'admin/C_Stockopname/index';
+$route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
+$route['admin/stockopname/monitoring/activity-log'] = 'admin/C_Stockopname/monitoring_activity_log';
+$route['admin/stockopname/monitoring/pending-opname'] = 'admin/C_Stockopname/monitoring_pending_opname';
+$route['admin/stockopname/monitoring/request-opname'] = 'admin/C_Stockopname/monitoring_request_opname';
+$route['admin/stockopname/ajax-affirm-request-opname-bulk'] = 'admin/C_Stockopname/ajax_affirm_request_opname_bulk';
+$route['admin/stockopname/monitoring/manual-opname'] = 'admin/C_Stockopname/monitoring_manual_opname';
+$route['admin/stockopname/ajax-affirm-manual-opname-bulk'] = 'admin/C_Stockopname/ajax_affirm_manual_opname_bulk';
+$route['admin/stockopname/monitoring/summary']     = 'admin/C_Stockopname/monitoring_summary';
+$route['admin/stockopname/monitoring/activity']    = 'admin/C_Stockopname/monitoring_activity';
+$route['admin/stockopname/monitoring/compare-all'] = 'admin/C_Stockopname/monitoring_compare_all';
+$route['admin/stockopname/monitoring/compare-lot'] = 'admin/C_Stockopname/monitoring_compare_lot';
+$route['admin/stockopname/pending-mode']           = 'admin/C_Stockopname/ajax_set_pending_calculation_mode';
+$route['admin/stockopname/monitoring/export-excel/(:any)'] = 'admin/C_Stockopname/monitoring_export_excel/$1';
+$route['admin/stockopname/monitoring/export-excel'] = 'admin/C_Stockopname/monitoring_export_excel';
+$route['admin/stockopname/detail_input_opname/update'] = 'admin/C_Stockopname/ajax_update_input_opname';
+$route['admin/stockopname/detail_input_opname/delete'] = 'admin/C_Stockopname/ajax_delete_input_opname';
+$route['admin/stockopname/detail_input_opname/repost'] = 'admin/C_Stockopname/ajax_repost_input_opname';
+$route['admin/stockopname/detail_input_opname/add_request'] = 'admin/C_Stockopname/ajax_add_request_item';
+$route['admin/stockopname/detail_input_opname/delete_request'] = 'admin/C_Stockopname/ajax_delete_request_item';
+$route['admin/stockopname/detail_input_opname/add_input'] = 'admin/C_Stockopname/ajax_add_input_opname_detail';
+$route['admin/stockopname/detail_input_opname/delete_master_item'] = 'admin/C_Stockopname/ajax_delete_master_item_detail';
+$route['admin/stockopname/detail_input_opname/update_dimensi'] = 'admin/C_Stockopname/ajax_update_detail_dimensi';
+$route['admin/stockopname/detail_input_opname'] = 'admin/C_Stockopname/detail_input_opname';
+$route['admin/stockopname/detail_input_opname/(:any)'] = 'admin/C_Stockopname/detail_input_opname/$1';
+$route['admin/stockopname/widgets']                = 'admin/C_Stockopname/widgets';
+$route['admin/stockopname/list']                   = 'admin/C_Stockopname/list';
+$route['admin/stockopname/demo-preview']           = 'admin/C_Stockopname/demo_preview';
+$route['admin/stockopname/input']                  = 'admin/C_Stockopname/input_opname';
+$route['admin/stockopname/input/lookup']           = 'admin/C_Stockopname/ajax_input_lookup';
+$route['admin/stockopname/input/save']             = 'admin/C_Stockopname/ajax_input_save';
+$route['admin/stockopname/input/manual/barang']    = 'admin/C_Stockopname/ajax_manual_barang';
+$route['admin/stockopname/input/manual/lot']       = 'admin/C_Stockopname/ajax_manual_lot';
+$route['admin/stockopname/input/manual/expired']   = 'admin/C_Stockopname/ajax_manual_expired';
+$route['admin/stockopname/input/manual/save']      = 'admin/C_Stockopname/ajax_manual_save';
+$route['admin/stockopname/input/request/save']     = 'admin/C_Stockopname/ajax_request_save';
+$route['stockopname/input']                        = 'admin/C_Stockopname/input_opname';
+$route['stockopname/history-input']                = 'admin/C_Stockopname/history_input';
+$route['stockopname/history-input/delete']         = 'admin/C_Stockopname/ajax_delete_history_input';
+$route['supervisi-opname']                         = 'admin/C_Stockopname/supervisor_opname';
+$route['supervisi-opname/afirmasi']                = 'admin/C_Stockopname/ajax_supervisor_affirm_request';
+$route['supervisi-opname/tracking']                = 'admin/C_Stockopname/supervisor_tracking';
+$route['supervisi-opname/tracking/list']           = 'admin/C_Stockopname/ajax_supervisor_tracking_list';
+$route['admin/stockopname/history-input']          = 'admin/C_Stockopname/history_input';
+$route['admin/stockopname/history-input/delete']   = 'admin/C_Stockopname/ajax_delete_history_input';
+$route['admin/stockopname/master_opname']          = 'admin/C_Stockopname/master_barang';
+$route['admin/stockopname/master_opname/widgets']  = 'admin/C_Stockopname/master_barang_widgets';
+$route['admin/stockopname/master_opname/list']     = 'admin/C_Stockopname/ajax_master_barang_list';
+$route['admin/stockopname/master_opname/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_list';
+$route['admin/stockopname/master_opname/detail']   = 'admin/C_Stockopname/ajax_master_barang_detail';
+$route['admin/stockopname/master_opname/update']   = 'admin/C_Stockopname/ajax_update_master_barang';
+$route['admin/stockopname/master_opname/item-search'] = 'admin/C_Stockopname/ajax_master_barang_source_search';
+$route['admin/stockopname/master_opname/create']   = 'admin/C_Stockopname/ajax_create_master_barang';
+$route['admin/stockopname/master_barang']          = 'admin/C_Stockopname/master_barang_catalog';
+$route['admin/stockopname/master_barang/list']     = 'admin/C_Stockopname/ajax_master_barang_catalog_list';
+$route['admin/stockopname/master_barang/create']   = 'admin/C_Stockopname/ajax_create_master_barang_catalog';
+$route['admin/stockopname/master_barang/update']   = 'admin/C_Stockopname/ajax_update_master_barang_catalog';
+$route['admin/stockopname/barang-pending']         = 'admin/C_Stockopname/barang_pending';
+$route['admin/stockopname/barang-pending/list']    = 'admin/C_Stockopname/ajax_barang_pending_list';
+$route['admin/stockopname/barang-pending/detail']  = 'admin/C_Stockopname/ajax_barang_pending_detail';
+$route['admin/stockopname/barang-pending/save']    = 'admin/C_Stockopname/ajax_save_barang_pending';
+$route['admin/stockopname/barang-pending/delete']  = 'admin/C_Stockopname/ajax_delete_barang_pending';
+$route['admin/stockopname/barang-pending/export-csv'] = 'admin/C_Stockopname/barang_pending_export_csv';
+$route['admin/stockopname/master_opname/qty-zero'] = 'admin/C_Stockopname/master_barang_qty_zero';
+$route['admin/stockopname/master_opname/qty-zero/list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';
+$route['admin/stockopname/master_opname/qty-zero/ajax-list'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_list';
+$route['admin/stockopname/master_opname/qty-zero/detail'] = 'admin/C_Stockopname/ajax_master_barang_qty_zero_detail';
+$route['admin/stockopname/master_opname/qty-zero/generate-qrcode'] = 'admin/C_Stockopname/ajax_generate_qrcode_qty_zero';
+$route['admin/stockopname/master_opname/qty-zero/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset_qty_zero';
+$route['admin/stockopname/master_opname/qty-zero/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset_qty_zero';
+$route['admin/stockopname/master_opname/qty-zero/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode_qty_zero/$1';
+$route['admin/stockopname/qrcode/summary']         = 'admin/C_Stockopname/qrcode_summary';
+$route['admin/stockopname/qrcode/generate_batch']  = 'admin/C_Stockopname/qrcode_generate_batch';
+$route['admin/stockopname/qrcode/retry_failed']    = 'admin/C_Stockopname/qrcode_retry_failed';
+$route['admin/stockopname/qrcode/failed_list']     = 'admin/C_Stockopname/qrcode_failed_list';
+$route['admin/stockopname/qrcode/reset']           = 'admin/C_Stockopname/qrcode_reset';
+$route['admin/stockopname/qrcode/qty-zero/summary'] = 'admin/C_Stockopname/qrcode_qty_zero_summary';
+$route['admin/stockopname/qrcode/qty-zero/generate_batch'] = 'admin/C_Stockopname/qrcode_qty_zero_generate_batch';
+$route['admin/stockopname/qrcode/qty-zero/retry_failed'] = 'admin/C_Stockopname/qrcode_qty_zero_retry_failed';
+$route['admin/stockopname/qrcode/qty-zero/failed_list'] = 'admin/C_Stockopname/qrcode_qty_zero_failed_list';
+$route['admin/stockopname/master_opname/generate-qrcode'] = 'admin/C_Stockopname/ajax_generate_qrcode';
+$route['admin/stockopname/master_opname/generate-qrcode-all'] = 'admin/C_Stockopname/ajax_generate_all_qrcode';
+$route['admin/stockopname/master_opname/generate-barcode'] = 'admin/C_Stockopname/ajax_generate_barcode';
+$route['admin/stockopname/master_opname/preview-asset'] = 'admin/C_Stockopname/ajax_preview_asset';
+$route['admin/stockopname/master_opname/print-preview-asset'] = 'admin/C_Stockopname/print_preview_asset';
+$route['admin/stockopname/master_opname/positive-qty-pcs-ids'] = 'admin/C_Stockopname/ajax_master_barang_positive_qty_pcs_ids';
+$route['admin/stockopname/master_opname/print-sebagian'] = 'admin/C_Stockopname/print_kartu_stock_sebagian';
+$route['admin/stockopname/master_opname/print-kartu-stock-3075-3267'] = 'admin/C_Stockopname/print_kartu_stock_3075_3267';
+$route['admin/stockopname/master_opname/print-qrcode/(:num)'] = 'admin/C_Stockopname/print_qrcode/$1';
+
+// Penilaian Lingkungan Kantor alias route
+$route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingkungan';
 
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
@@ -67,6 +167,78 @@ $route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/cus
 $route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
 $route['keuangan/pembayaran/simpan/(:num)']         = 'keuangan/C_pembayaran/simpan/$1';
 $route['keuangan/pembayaran/cair/(:num)']           = 'keuangan/C_pembayaran/cair/$1';
+$route['jurnal']                                    = 'keuangan/C_Keuangan/jurnal';
+$route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
+$route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
+$route['jurnal/account-journal']                    = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['jurnal/store']                              = 'keuangan/C_Keuangan/jurnal_store';
+$route['jurnal/update']                             = 'keuangan/C_Keuangan/jurnal_update';
+$route['jurnal/deactivate']                         = 'keuangan/C_Keuangan/jurnal_deactivate';
+$route['jurnal/delete']                             = 'keuangan/C_Keuangan/jurnal_delete';
+$route['jurnal/master/(:any)/list']                 = 'keuangan/C_Keuangan/jurnal_master_list/$1';
+$route['jurnal/master/(:any)/detail']               = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
+$route['jurnal/master/(:any)/store']                = 'keuangan/C_Keuangan/jurnal_master_store/$1';
+$route['jurnal/master/(:any)/update']               = 'keuangan/C_Keuangan/jurnal_master_update/$1';
+$route['jurnal/master/(:any)/delete']               = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
+$route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
+$route['keuangan/jurnal/list']                      = 'keuangan/C_Keuangan/jurnal_list';
+$route['keuangan/jurnal/detail']                    = 'keuangan/C_Keuangan/jurnal_detail';
+$route['keuangan/jurnal/account-journal']           = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['keuangan/jurnal/store']                     = 'keuangan/C_Keuangan/jurnal_store';
+$route['keuangan/jurnal/update']                    = 'keuangan/C_Keuangan/jurnal_update';
+$route['keuangan/jurnal/deactivate']                = 'keuangan/C_Keuangan/jurnal_deactivate';
+$route['keuangan/jurnal/delete']                    = 'keuangan/C_Keuangan/jurnal_delete';
+$route['keuangan/jurnal/master/(:any)/list']        = 'keuangan/C_Keuangan/jurnal_master_list/$1';
+$route['keuangan/jurnal/master/(:any)/detail']      = 'keuangan/C_Keuangan/jurnal_master_detail/$1';
+$route['keuangan/jurnal/master/(:any)/store']       = 'keuangan/C_Keuangan/jurnal_master_store/$1';
+$route['keuangan/jurnal/master/(:any)/update']      = 'keuangan/C_Keuangan/jurnal_master_update/$1';
+$route['keuangan/jurnal/master/(:any)/delete']      = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
+$route['accounting']                                = 'keuangan/C_Accounting/index';
+$route['accounting/manual-store']                   = 'keuangan/C_Accounting/manual_store';
+$route['accounting/manual-post']                    = 'keuangan/C_Accounting/manual_post';
+$route['accounting/reverse']                        = 'keuangan/C_Accounting/reverse';
+$route['accounting/journal-detail']                 = 'keuangan/C_Accounting/journal_detail';
+$route['accounting/journals']                       = 'keuangan/C_Accounting/journal_list';
+$route['accounting/exceptions']                     = 'keuangan/C_Accounting/exceptions';
+$route['accounting/exception-action']               = 'keuangan/C_Accounting/exception_action';
+$route['accounting/report']                         = 'keuangan/C_Accounting/report';
+$route['accounting/period-store']                   = 'keuangan/C_Accounting/period_store';
+$route['accounting/period-action']                  = 'keuangan/C_Accounting/period_action';
+$route['accounting/payment-store']                  = 'keuangan/C_Accounting/payment_store';
+$route['accounting/opening-balance-store']          = 'keuangan/C_Accounting/opening_balance_store';
+$route['accounting/opening-balance-migrate']        = 'keuangan/C_Accounting/opening_balance_migrate';
+$route['keuangan/accounting']                       = 'keuangan/C_Accounting/index';
+$route['keuangan/accounting/manual-store']          = 'keuangan/C_Accounting/manual_store';
+$route['keuangan/accounting/manual-post']           = 'keuangan/C_Accounting/manual_post';
+$route['keuangan/accounting/reverse']               = 'keuangan/C_Accounting/reverse';
+$route['keuangan/accounting/journal-detail']        = 'keuangan/C_Accounting/journal_detail';
+$route['keuangan/accounting/journals']              = 'keuangan/C_Accounting/journal_list';
+$route['keuangan/accounting/exceptions']            = 'keuangan/C_Accounting/exceptions';
+$route['keuangan/accounting/exception-action']      = 'keuangan/C_Accounting/exception_action';
+$route['keuangan/accounting/report']                = 'keuangan/C_Accounting/report';
+$route['keuangan/accounting/period-store']          = 'keuangan/C_Accounting/period_store';
+$route['keuangan/accounting/period-action']         = 'keuangan/C_Accounting/period_action';
+$route['keuangan/accounting/payment-store']         = 'keuangan/C_Accounting/payment_store';
+$route['keuangan/accounting/opening-balance-store'] = 'keuangan/C_Accounting/opening_balance_store';
+$route['keuangan/accounting/opening-balance-migrate'] = 'keuangan/C_Accounting/opening_balance_migrate';
+$route['accounting-test']                           = 'keuangan/C_Accounting/index';
+$route['accounting-test/manual-store']              = 'keuangan/C_Accounting/manual_store';
+$route['accounting-test/manual-post']               = 'keuangan/C_Accounting/manual_post';
+$route['accounting-test/auto-post']                 = 'keuangan/C_Accounting/auto_post';
+$route['accounting-test/reverse']                   = 'keuangan/C_Accounting/reverse';
+$route['accounting-test/journal-detail']            = 'keuangan/C_Accounting/journal_detail';
+$route['accounting-test/journals']                  = 'keuangan/C_Accounting/journal_list';
+$route['accounting-test/exceptions']                = 'keuangan/C_Accounting/exceptions';
+$route['accounting-test/report']                    = 'keuangan/C_Accounting/report';
+$route['keuangan/accounting-test']                  = 'keuangan/C_Accounting/index';
+$route['keuangan/accounting-test/manual-store']     = 'keuangan/C_Accounting/manual_store';
+$route['keuangan/accounting-test/manual-post']      = 'keuangan/C_Accounting/manual_post';
+$route['keuangan/accounting-test/auto-post']        = 'keuangan/C_Accounting/auto_post';
+$route['keuangan/accounting-test/reverse']          = 'keuangan/C_Accounting/reverse';
+$route['keuangan/accounting-test/journal-detail']   = 'keuangan/C_Accounting/journal_detail';
+$route['keuangan/accounting-test/journals']         = 'keuangan/C_Accounting/journal_list';
+$route['keuangan/accounting-test/exceptions']       = 'keuangan/C_Accounting/exceptions';
+$route['keuangan/accounting-test/report']           = 'keuangan/C_Accounting/report';
 $route['pendingpo']                                 = 'keuangan/C_Keuangan/pendingpo';
 $route['insertmodule']                              = 'keuangan/C_Keuangan/insertmodule';
 $route['insermodule_lot']                           = 'keuangan/C_Keuangan/insermodule_lot';
@@ -86,7 +258,15 @@ $route['pagination']                                = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
 // STOCK ONLINE GUDANG
-$route['stock']                                     = 'logistik/C_Logistik/stock_control';
+$route['stock']                                     = 'stock/C_Stock/index';
+$route['stock/summary']                             = 'stock/C_Stock/summary';
+$route['stock/gudangs']                             = 'stock/C_Stock/gudangs';
+$route['stock/available']                           = 'stock/C_Stock/available';
+$route['stock/items']                               = 'stock/C_Stock/items';
+$route['stock/batches']                             = 'stock/C_Stock/batches';
+$route['stock/ledger']                              = 'stock/C_Stock/ledger';
+$route['stock/reconciliation']                      = 'stock/C_Stock/reconciliation';
+$route['stock/sync']                                = 'stock/C_Stock/sync';
 
 // MASTER BARANG
 $route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
@@ -95,12 +275,50 @@ $route['master_barang/detail']                      = 'keuangan/C_Keuangan/maste
 $route['master_barang/store']                       = 'keuangan/C_Keuangan/master_barang_store';
 $route['master_barang/update']                      = 'keuangan/C_Keuangan/master_barang_update';
 $route['master_barang/delete']                      = 'keuangan/C_Keuangan/master_barang_delete';
+$route['purchase/listBarang']                       = 'keuangan/C_Keuangan/master_barang';
+$route['purchase/listBarang/list']                  = 'keuangan/C_Keuangan/master_barang_list';
+$route['purchase/listBarang/detail']                = 'keuangan/C_Keuangan/master_barang_detail';
+$route['purchase/listBarang/store']                 = 'keuangan/C_Keuangan/master_barang_store';
+$route['purchase/listBarang/update']                = 'keuangan/C_Keuangan/master_barang_update';
+$route['purchase/listBarang/delete']                = 'keuangan/C_Keuangan/master_barang_delete';
 $route['master_customer']                           = 'keuangan/C_Keuangan/master_customer';
 $route['master_customer/list']                      = 'keuangan/C_Keuangan/master_customer_list';
 $route['master_customer/detail']                    = 'keuangan/C_Keuangan/master_customer_detail';
 $route['master_customer/store']                     = 'keuangan/C_Keuangan/master_customer_store';
 $route['master_customer/update']                    = 'keuangan/C_Keuangan/master_customer_update';
 $route['master_customer/delete']                    = 'keuangan/C_Keuangan/master_customer_delete';
+
+// MASTER - USER MANAGEMENT
+$route['master/user-management']                    = 'master/C_Usermanagement';
+$route['master/user-management/list']               = 'master/C_Usermanagement/list';
+$route['master/user-management/detail/(:num)']      = 'master/C_Usermanagement/detail/$1';
+$route['master/user-management/save']               = 'master/C_Usermanagement/save';
+$route['master/user-management/update/(:num)']      = 'master/C_Usermanagement/update/$1';
+$route['master/user-management/delete/(:num)']      = 'master/C_Usermanagement/delete/$1';
+$route['master/user-management/reset-password/(:num)'] = 'master/C_Usermanagement/reset_password/$1';
+$route['master/user-management/toggle-status/(:num)'] = 'master/C_Usermanagement/toggle_status/$1';
+$route['master/user-management/options']            = 'master/C_Usermanagement/select_options';
+$route['master/jobdesk']                            = 'master/C_Jobdesk';
+$route['master/jobdesk/list']                       = 'master/C_Jobdesk/list';
+$route['master/jobdesk/detail/(:num)']              = 'master/C_Jobdesk/detail/$1';
+$route['master/jobdesk/save']                       = 'master/C_Jobdesk/save';
+$route['master/jobdesk/update/(:num)']              = 'master/C_Jobdesk/update/$1';
+$route['master/jobdesk/delete/(:num)']              = 'master/C_Jobdesk/delete/$1';
+$route['master/akses-level']                        = 'master/C_Akseslevel';
+$route['master/akses-level/list']                   = 'master/C_Akseslevel/list';
+$route['master/akses-level/detail/(:num)']          = 'master/C_Akseslevel/detail/$1';
+$route['master/akses-level/save']                   = 'master/C_Akseslevel/save';
+$route['master/akses-level/update/(:num)']          = 'master/C_Akseslevel/update/$1';
+$route['master/akses-level/delete/(:num)']          = 'master/C_Akseslevel/delete/$1';
+$route['master/akses-level/matrix/(:num)']          = 'master/C_Akseslevel/matrix/$1';
+$route['master/akses-level/update-permission']      = 'master/C_Akseslevel/update_permission';
+$route['master/menu']                               = 'master/C_Menu';
+$route['master/menu/list']                          = 'master/C_Menu/list';
+$route['master/menu/detail/(:num)']                 = 'master/C_Menu/detail/$1';
+$route['master/menu/save']                          = 'master/C_Menu/save';
+$route['master/menu/update/(:num)']                 = 'master/C_Menu/update/$1';
+$route['master/menu/delete/(:num)']                 = 'master/C_Menu/delete/$1';
+$route['master/menu/sidebar']                       = 'master/C_Menu/sidebar';
 
 // LOGISTIK ICS
 $route['ics']                                       = 'logistik/C_Ics';
@@ -150,6 +368,12 @@ $route['ics/detail_po']                             = 'logistik/C_Ics/detail_po'
 $route['ics/detail_record_lpb']                     = 'logistik/C_Ics/detail_record_lpb';
 $route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
 $route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';
+$route['ics/ajax_get_pre_po_adjustment']            = 'logistik/C_Ics/ajax_get_pre_po_adjustment';
+$route['ics/ajax_submit_adjustment']                = 'logistik/C_Ics/ajax_submit_adjustment';
+$route['ics/ajax_history_adjustment']               = 'logistik/C_Ics/ajax_history_adjustment';
+$route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_history_invoice';
+$route['ics/ajax_history_diskon']                   = 'logistik/C_Ics/ajax_history_diskon';
+$route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
 $route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
 $route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';
 $route['ics/ajax_save_tmp_po_received']             = 'logistik/C_Ics/ajax_save_tmp_po_received';
@@ -234,6 +458,8 @@ $route['detail_tonase/(:any)']                      = 'logistik/C_Distribusi/det
 
 // LOGISTIK & OPNAME
 $route['final_result']                              = 'logistik/C_Logistik/final_result_opname';
+$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
+$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
 $route['ics/(:any)']                                = 'logistik/C_Logistik/ics/$1';
 $route['stockopname']                               = 'logistik/C_Logistik/stockopname';
 $route['gudang']                                    = 'logistik/C_Logistik/module_gudang';
@@ -482,6 +708,7 @@ $route['retur_penjualan/get_pending_notifications']          = 'sales/C_ReturPen
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
+$route['sync_pre_po_erp']                          = 'api/C_Api/sync_pre_po_erp';
 
 //SCHEDULE DIREKTUR
 $route['schedule_direktur']                         = 'schedule/C_Schedule';
@@ -521,3 +748,53 @@ $route['ratingreview']                              = 'pelanggan/C_Pelanggan/rat
 // LPB
 $route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
 $route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
+
+//LOGISTIK - Checker
+$route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';
+$route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
+$route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
+$route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
+$route['checker/pause']                             = 'logistik/C_Checker/pause';
+$route['checker/resume']                            = 'logistik/C_Checker/resume';
+$route['checker/pause_kk']                          = 'logistik/C_Checker/pause_kk';
+$route['checker/resume_kk']                         = 'logistik/C_Checker/resume_kk';
+$route['checker/pause_lk']                          = 'logistik/C_Checker/pause_lk';
+$route['checker/resume_lk']                         = 'logistik/C_Checker/resume_lk';
+$route['checker/start_siapkan_kk']                  = 'logistik/C_Checker/start_siapkan_kk';
+$route['checker/update_progres_siapkan_kk']         = 'logistik/C_Checker/update_progres_siapkan_kk';
+$route['checker/done_siapkan_kk']                   = 'logistik/C_Checker/done_siapkan_kk';
+$route['checker/pause_siapkan_kk']                  = 'logistik/C_Checker/pause_siapkan_kk';
+$route['checker/resume_siapkan_kk']                 = 'logistik/C_Checker/resume_siapkan_kk';
+$route['checker/start_siapkan_lk']                  = 'logistik/C_Checker/start_siapkan_lk';
+$route['checker/update_progres_siapkan_lk']         = 'logistik/C_Checker/update_progres_siapkan_lk';
+$route['checker/done_siapkan_lk']                   = 'logistik/C_Checker/done_siapkan_lk';
+$route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_siapkan_lk';
+$route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
+$route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
+$route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
+
+// dashboard_penilaian
+$route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
+
+// Mobile ERP modern UI
+$route['mobile-erp']                                = 'hrd/C_Hrd/mobile_erp_dashboard';
+$route['mobile-erp/list']                           = 'hrd/C_Hrd/mobile_erp_list';
+$route['mobile-erp/detail/(:num)']                  = 'hrd/C_Hrd/mobile_erp_detail/$1';
+$route['mobile-erp/profile']                        = 'hrd/C_Hrd/mobile_erp_profile';
+
+// Penilaian Lingkungan Kantor
+$route['penilaian_lingkungan']                     = 'hrd/C_Hrd/penilaian_lingkungan';
+$route['hrd/penilaian_lingkungan/admin']           = 'hrd/C_Hrd/penilaian_lingkungan_admin';
+$route['hrd/penilaian_lingkungan/monitoring']      = 'hrd/C_Hrd/penilaian_lingkungan_monitoring';
+$route['hrd/penilaian_lingkungan/submit']          = 'hrd/C_Hrd/submit_environment_issue';
+$route['hrd/penilaian_lingkungan/list']            = 'hrd/C_Hrd/get_environment_issue_list';
+$route['hrd/penilaian_lingkungan/detail/(:num)']   = 'hrd/C_Hrd/get_environment_issue_detail/$1';
+$route['hrd/penilaian_lingkungan/update']          = 'hrd/C_Hrd/update_environment_issue';
+$route['hrd/penilaian_lingkungan/stats']           = 'hrd/C_Hrd/get_environment_issue_stats';
+$route['hrd/penilaian_lingkungan/breakdown']       = 'hrd/C_Hrd/get_environment_issue_breakdown';
+$route['hrd/penilaian_lingkungan/locations']       = 'hrd/C_Hrd/get_hrd_locations';
+$route['hrd/penilaian_lingkungan/locations/save']  = 'hrd/C_Hrd/save_hrd_location';
+$route['hrd/penilaian_lingkungan/locations/delete'] = 'hrd/C_Hrd/delete_hrd_location';
+$route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
+$route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
+$route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
