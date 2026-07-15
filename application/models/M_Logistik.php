@@ -404,47 +404,47 @@ class M_Logistik extends CI_Model
     {
         $sql = "
             SELECT
-                so.no_faktur                                        AS kd_faktur,
-                so.tanggal_transaksi                                AS tgl_inputer,
-                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y')       AS tgl_inputer_fmt,
-                so.kd_customer,
-                so.status                                           AS data_sts,
+                f.no_faktur                                         AS kd_faktur,
+                f.tanggal_faktur                                    AS tgl_inputer,
+                DATE_FORMAT(f.tanggal_faktur, '%d/%m/%Y')           AS tgl_inputer_fmt,
+                f.kd_customer,
+                f.status                                            AS data_sts,
                 c.nama_customer,
                 c.nama_kios,
                 c.alamat_kios,
                 c.regional,
                 COALESCE(r.kd_rute, c.regional)                    AS kd_rute,
                 COALESCE(r.keterangan, c.regional)                  AS keterangan_rute,
-                COUNT(DISTINCT sod.kd_barang)                       AS total_barang
-            FROM tbso_sales_order so
-            INNER JOIN tbso_sales_order_detail sod
-                ON sod.no_so = so.no_so
+                COUNT(DISTINCT fd.kd_barang)                        AS total_barang
+            FROM tbso_faktur_penjualan f
+            INNER JOIN tbso_faktur_detail fd
+                ON fd.id_faktur = f.id_faktur
             INNER JOIN tb_customer c
-                ON c.kd_customer = so.kd_customer
+                ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
-            WHERE so.status IN ('approved', 'draft')
+            WHERE f.status <> 'cancelled'
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
-                WHERE d.kd_faktur = so.no_faktur
+                WHERE d.kd_faktur = f.no_faktur
             )
             AND NOT EXISTS (
                 SELECT 1 FROM tb_tmp_detaildo t
-                WHERE t.kd_faktur = so.no_faktur
+                WHERE t.kd_faktur = f.no_faktur
             )
             GROUP BY
-                so.no_so,
-                so.no_faktur,
-                so.tanggal_transaksi,
-                so.kd_customer,
-                so.status,
+                f.id_faktur,
+                f.no_faktur,
+                f.tanggal_faktur,
+                f.kd_customer,
+                f.status,
                 c.nama_customer,
                 c.nama_kios,
                 c.alamat_kios,
                 c.regional,
                 r.kd_rute,
                 r.keterangan
-            ORDER BY so.tanggal_transaksi DESC
+            ORDER BY f.tanggal_faktur DESC
         ";
 
         return $this->db->query($sql)->result();
@@ -628,24 +628,24 @@ class M_Logistik extends CI_Model
     {
         return $this->db->query("
             SELECT
-                DATE_FORMAT(so.tanggal_transaksi, '%d/%m/%Y') AS tgl_inputer,
-                so.no_faktur        AS kd_faktur,
+                DATE_FORMAT(f.tanggal_faktur, '%d/%m/%Y') AS tgl_inputer,
+                f.no_faktur         AS kd_faktur,
                 c.nama_customer,
                 c.nama_kios,
                 c.alamat_kios,
                 c.regional,
                 COALESCE(r.kd_rute, c.regional)     AS kd_rute,
                 COALESCE(r.keterangan, c.regional)   AS keterangan_rute,
-                COUNT(DISTINCT sod.kd_barang)        AS total_barang,
-                so.status                            AS data_sts
-            FROM tbso_sales_order so
-            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
-            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+                COUNT(DISTINCT fd.kd_barang)         AS total_barang,
+                f.status                             AS data_sts
+            FROM tbso_faktur_penjualan f
+            JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
+            JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
-            LEFT JOIN tb_detail_do d ON d.kd_faktur = so.no_faktur
-            WHERE so.status IN ('approved', 'draft')
+            LEFT JOIN tb_detail_do d ON d.kd_faktur = f.no_faktur
+            WHERE f.status <> 'cancelled'
             AND d.kd_faktur IS NULL
-            GROUP BY so.no_so, so.no_faktur
+            GROUP BY f.id_faktur, f.no_faktur
         ")->result();
     }
 
@@ -653,23 +653,32 @@ class M_Logistik extends CI_Model
     {
         return $this->db->query("
             SELECT DISTINCT
-                so.no_faktur            AS kd_faktur,
-                so.kd_customer,
+                f.no_faktur             AS kd_faktur,
+                f.kd_customer,
                 c.regional              AS kd_rute,
-                so.tanggal_transaksi    AS tgl_inputer,
-                so.status
-            FROM tbso_sales_order so
+                f.tanggal_faktur        AS tgl_inputer,
+                f.status
+            FROM tbso_faktur_penjualan f
             INNER JOIN tb_customer c
-                ON c.kd_customer = so.kd_customer
-            WHERE so.no_faktur = ?
+                ON c.kd_customer = f.kd_customer
+            WHERE f.no_faktur = ?
             LIMIT 1
         ", [$kd_faktur])->result();
     }
 
     public function sync_so_status_by_faktur($kd_faktur, $so_status)
     {
-        $this->db->where('no_faktur', $kd_faktur);
-        return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+        $statusMap = ['in_progress' => 'partial', 'done' => 'completed'];
+        $normalizedStatus = $statusMap[$so_status] ?? $so_status;
+        $faktur = $this->db
+            ->select('id_so')
+            ->where('no_faktur', $kd_faktur)
+            ->get('tbso_faktur_penjualan')
+            ->row();
+        if (!$faktur) {
+            return false;
+        }
+        return $this->db->where('id_so', (int)$faktur->id_so)->update('tbso_sales_order', ['status' => $normalizedStatus]);
     }
 
     public function insert_tmp_detdo_batch($data)
@@ -686,30 +695,30 @@ class M_Logistik extends CI_Model
     {
         return $this->db->query("
             SELECT
-                so.no_so                                            AS id,
-                so.no_faktur                                        AS kd_faktur,
-                so.kd_customer,
+                f.no_so                                             AS id,
+                f.no_faktur                                         AS kd_faktur,
+                f.kd_customer,
                 COALESCE(r.kd_rute, c.regional)                    AS kd_rute,
-                so.tanggal_transaksi                                AS tgl_inputer,
-                sod.kd_barang,
+                f.tanggal_faktur                                    AS tgl_inputer,
+                fd.kd_barang,
                 mb.nama_barang,
-                sod.qty                                             AS qty,
-                COALESCE(sod.satuan, 'PCS')                         AS satuan,
-                COALESCE(sod.no_lot, '')                            AS no_lot,
-                sod.expired_date                                    AS tgl_exp,
-                COALESCE(sod.hrg_satuan, 0)                         AS nominal_p,
-                0                                                   AS jtempo,
+                fd.qty                                              AS qty,
+                COALESCE(fd.satuan, 'PCS')                          AS satuan,
+                COALESCE(fd.no_lot, '')                             AS no_lot,
+                fd.expired_date                                     AS tgl_exp,
+                COALESCE(fd.hrg_satuan, 0)                          AS nominal_p,
+                f.jtempo                                            AS jtempo,
                 1                                                   AS barang_sts
-            FROM tbso_sales_order so
-            INNER JOIN tbso_sales_order_detail sod
-                ON sod.no_so = so.no_so
+            FROM tbso_faktur_penjualan f
+            INNER JOIN tbso_faktur_detail fd
+                ON fd.id_faktur = f.id_faktur
             INNER JOIN tb_customer c
-                ON c.kd_customer = so.kd_customer
+                ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
             INNER JOIN tb_master_barang_all mb
-                ON mb.kd_barang = sod.kd_barang
-            WHERE so.no_faktur = ?
+                ON mb.kd_barang = fd.kd_barang
+            WHERE f.no_faktur = ?
         ", [$kd_faktur])->result();
     }
 
@@ -749,6 +758,7 @@ class M_Logistik extends CI_Model
                 a.kd_barang,
                 a.nama_barang,
                 a.qty,
+                COALESCE(a.nominal_p, 0) AS nominal_p,
                 a.tgl_exp,
                 a.no_lot
             FROM tb_detail_do a
@@ -792,9 +802,9 @@ class M_Logistik extends CI_Model
     {
         $status_map = [
             '1' => 'draft',
-            '2' => 'in_delivery',
-            '3' => 'in_progress',
-            '4' => 'in_delivery',
+            '2' => 'partial',
+            '3' => 'partial',
+            '4' => 'completed',
         ];
 
         $so_status = null;
@@ -803,8 +813,7 @@ class M_Logistik extends CI_Model
         }
 
         if ($so_status !== null) {
-            $this->db->where('no_faktur', $kd_faktur);
-            return $this->db->update('tbso_sales_order', ['status' => $so_status]);
+            return $this->sync_so_status_by_faktur($kd_faktur, $so_status);
         }
 
         return false;
@@ -880,8 +889,8 @@ class M_Logistik extends CI_Model
                 COALESCE(c.jam_buka_tutup, '-')        AS jam_buka_tutup,
                 COALESCE(c.karakteristik_kios, '-')    AS toko
             FROM tb_tmp_do a
-            JOIN tbso_sales_order so ON so.no_faktur = a.kd_faktur
-            JOIN tb_customer c ON c.kd_customer = so.kd_customer
+            JOIN tbso_faktur_penjualan f ON f.no_faktur = a.kd_faktur
+            JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
             GROUP BY a.kd_faktur
         ")->result();
@@ -1133,25 +1142,25 @@ class M_Logistik extends CI_Model
 
     public function detail_fk($kd)
     {
-        // Coba ambil dari tbso_sales_order_detail dulu
+        // Ambil dari tabel faktur final agar nomor faktur dan detail konsisten.
         $result = $this->db->query("
             SELECT
-                sod.id                              AS id,
-                so.no_faktur                        AS kd_faktur,
-                sod.kd_barang,
+                fd.id                               AS id,
+                f.no_faktur                         AS kd_faktur,
+                fd.kd_barang,
                 mb.nama_barang,
-                sod.qty,
+                fd.qty,
                 mb.berat                            AS gr_berat,
                 (mb.berat / 1000)                   AS convert_kg,
-                (sod.qty * (mb.berat / 1000))       AS total_berat,
-                sod.satuan,
-                sod.no_lot,
-                sod.expired_date                    AS tgl_exp,
+                (fd.qty * (mb.berat / 1000))        AS total_berat,
+                fd.satuan,
+                fd.no_lot,
+                fd.expired_date                     AS tgl_exp,
                 1                                   AS barang_sts
-            FROM tbso_sales_order so
-            JOIN tbso_sales_order_detail sod ON sod.no_so = so.no_so
-            JOIN tb_master_barang_all mb ON mb.kd_barang = sod.kd_barang
-            WHERE so.no_faktur = ?
+            FROM tbso_faktur_penjualan f
+            JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
+            JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            WHERE f.no_faktur = ?
         ", [$kd])->result();
 
         // Fallback ke tb_pre_do jika kosong
@@ -1177,18 +1186,18 @@ class M_Logistik extends CI_Model
 
     public function det_customer($kd)
     {
-        // Coba dari tbso_sales_order dulu
+        // Customer mengikuti header faktur final.
         $result = $this->db->query("
             SELECT
                 c.nama_customer,
                 c.nama_kios,
                 c.regional,
-                so.status       AS upload_sts,
-                so.status       AS data_sts,
+                f.status        AS upload_sts,
+                f.status        AS data_sts,
                 1               AS barang_sts
-            FROM tbso_sales_order so
-            JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            WHERE so.no_faktur = ?
+            FROM tbso_faktur_penjualan f
+            JOIN tb_customer c ON c.kd_customer = f.kd_customer
+            WHERE f.no_faktur = ?
             LIMIT 1
         ", [$kd])->result();
 
@@ -2932,7 +2941,7 @@ FROM (
     {
         $sql = "SELECT
             po.kd_po,
-            po.tgl_transaksi,
+            DATE_FORMAT(po.tgl_transaksi, '%Y-%m-%d') AS tgl_transaksi,
             po.no_po,
             po.kdsupp,
             CASE
@@ -2959,18 +2968,26 @@ FROM (
             END AS status
         FROM (
             SELECT
-                pp.kd_po,
-                MAX(pp.tgl_transaksi) AS tgl_transaksi,
-                MAX(pp.no_po) AS no_po,
-                MAX(pp.kd_suplier) AS kdsupp,
+                p.kd_po,
+                MAX(p.tgl_transaksi) AS tgl_transaksi,
+                MAX(p.no_po) AS no_po,
+                MAX(p.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
-                COUNT(DISTINCT pp.kd_barang) AS total_barang_order,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
-            FROM tb_pre_po pp
-            LEFT JOIN tb_suplier supp
-                ON supp.kd_suplier = pp.kd_suplier
-            LEFT JOIN tb_master_barang_all mb 
-                ON mb.kd_barang = pp.kd_barang
+                CASE
+                    WHEN COALESCE(MAX(p.jml_item), 0) > 0 THEN MAX(p.jml_item)
+                    ELSE COUNT(DISTINCT d.kd_barang)
+                END AS total_barang_order,
+                COALESCE(SUM(
+                    CASE
+                        WHEN COALESCE(d.qty_kecil, 0) > 0 THEN d.qty_kecil
+                        ELSE d.qty
+                    END
+                ), 0) AS total_qty_order
+            FROM tbpo_po p
+            LEFT JOIN tbpo_suplier supp
+                ON supp.kd_suplier = p.kd_suplier
+            LEFT JOIN tbpo_detail_po d
+                ON d.kd_po = p.kd_po
             WHERE 1=1";
 
         $params = [];
@@ -2979,13 +2996,13 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND DATE(p.tgl_transaksi) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
 
         $sql .= "
-            GROUP BY pp.kd_po
+            GROUP BY p.kd_po
         ) po
         LEFT JOIN (
             SELECT
@@ -2999,7 +3016,7 @@ FROM (
             GROUP BY h.kd_po
         ) rcv
             ON rcv.kd_po = po.kd_po
-        ORDER BY STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC, po.no_po DESC";
+        ORDER BY po.tgl_transaksi DESC, po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
     }
@@ -3008,13 +3025,14 @@ FROM (
     {
         $sql = "SELECT
             po.kd_po,
-            po.tgl_transaksi,
+            DATE_FORMAT(po.tgl_transaksi, '%Y-%m-%d') AS tgl_transaksi,
             po.no_po,
             po.kdsupp,
             CASE
                 WHEN po.nm_suplier IS NULL OR po.nm_suplier = '' THEN po.kdsupp
                 ELSE po.nm_suplier
             END AS nm_suplier,
+            po.total_barang_order,
             po.total_qty_order,
             COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
             CASE
@@ -3029,17 +3047,26 @@ FROM (
             END AS status
         FROM (
             SELECT
-                pp.kd_po,
-                MAX(pp.tgl_transaksi) AS tgl_transaksi,
-                MAX(pp.no_po) AS no_po,
-                MAX(pp.kd_suplier) AS kdsupp,
+                p.kd_po,
+                MAX(p.tgl_transaksi) AS tgl_transaksi,
+                MAX(p.no_po) AS no_po,
+                MAX(p.kd_suplier) AS kdsupp,
                 MAX(supp.nama_suplier) AS nm_suplier,
-                SUM(pp.qty * (mb.p*mb.l*mb.t)) AS total_qty_order
-            FROM tb_pre_po pp
-            LEFT JOIN tb_suplier supp
-                ON supp.kd_suplier = pp.kd_suplier
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                CASE
+                    WHEN COALESCE(MAX(p.jml_item), 0) > 0 THEN MAX(p.jml_item)
+                    ELSE COUNT(DISTINCT d.kd_barang)
+                END AS total_barang_order,
+                COALESCE(SUM(
+                    CASE
+                        WHEN COALESCE(d.qty_kecil, 0) > 0 THEN d.qty_kecil
+                        ELSE d.qty
+                    END
+                ), 0) AS total_qty_order
+            FROM tbpo_po p
+            LEFT JOIN tbpo_suplier supp
+                ON supp.kd_suplier = p.kd_suplier
+            LEFT JOIN tbpo_detail_po d
+                ON d.kd_po = p.kd_po
             WHERE 1=1";
 
         $params = [];
@@ -3048,13 +3075,13 @@ FROM (
             $date1_formatted = date('Y-m-d', strtotime($date1));
             $date2_formatted = date('Y-m-d', strtotime($date2));
 
-            $sql .= " AND STR_TO_DATE(pp.tgl_transaksi, '%d/%m/%Y') BETWEEN ? AND ?";
+            $sql .= " AND DATE(p.tgl_transaksi) BETWEEN ? AND ?";
             $params[] = $date1_formatted;
             $params[] = $date2_formatted;
         }
 
         $sql .= "
-            GROUP BY pp.kd_po
+            GROUP BY p.kd_po
         ) po
         LEFT JOIN (
             SELECT
@@ -3073,7 +3100,7 @@ FROM (
                 WHEN COALESCE(rcv.total_qty_diterima, 0) <= 0 THEN 2
                 ELSE 3
             END ASC,
-            STR_TO_DATE(po.tgl_transaksi, '%d/%m/%Y') DESC,
+            po.tgl_transaksi DESC,
             po.no_po DESC";
 
         return $this->db->query($sql, $params)->result_array();
@@ -3160,30 +3187,36 @@ FROM (
     public function detail_po_received($nopo, $kdsup)
     {
         $sql = "SELECT 
-                a.id_pre_po AS id,
+                a.id_det_po AS id,
                 a.no_po,
                 a.kd_po,
                 a.kd_barang,
-                b.nama_barang,
-                (b.p * b.l * b.t) AS dimensi_br,
-                a.qty * (b.p * b.l * b.t) AS qty_kecil, 
+                COALESCE(NULLIF(a.nama_barang, ''), b.nama_barang, '-') AS nama_barang,
+                CASE
+                    WHEN COALESCE(a.qty_kecil, 0) > 0 AND COALESCE(a.qty, 0) > 0 THEN a.qty_kecil / a.qty
+                    ELSE COALESCE(b.p * b.l * b.t, 1)
+                END AS dimensi_br,
+                CASE
+                    WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil
+                    ELSE a.qty
+                END AS qty_kecil,
                 a.qty AS qty_besar,
                 a.satuan,
                 a.hrg_satuan,
-                a.harga_total,
+                a.hrg_total AS harga_total,
                 COALESCE(r.qty_diterima, 0) AS qty_diterima,
                 COALESCE(r.qty_diterima, 0) AS qty_kecil_diterima,
-                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST((a.qty * (b.p * b.l * b.t)) - COALESCE(r.qty_diterima, 0), 0) AS qty_kecil_sisa,
+                GREATEST((CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) - COALESCE(r.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) - COALESCE(r.qty_diterima, 0), 0) AS qty_kecil_sisa,
                 COALESCE(r.total_lpb_record, 0) AS total_lpb_record,
                 
                 CASE 
-                    WHEN COALESCE(r.qty_diterima, 0) = 0 THEN 'BELUM'
-                    WHEN  a.qty * (b.p * b.l * b.t) - COALESCE(r.qty_diterima, 0) != a.qty THEN 'PARTIAL'
+                    WHEN COALESCE(r.qty_diterima, 0) <= 0 THEN 'BELUM'
+                    WHEN COALESCE(r.qty_diterima, 0) < (CASE WHEN COALESCE(a.qty_kecil, 0) > 0 THEN a.qty_kecil ELSE a.qty END) THEN 'PARTIAL'
                     ELSE 'FULL'
                 END AS status_barang
-                          
-            FROM tb_pre_po a
+
+            FROM tbpo_detail_po a
             LEFT JOIN tb_master_barang_all b 
                 ON b.kd_barang = a.kd_barang
             LEFT JOIN (
@@ -3335,7 +3368,7 @@ FROM (
         ');
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3379,7 +3412,7 @@ FROM (
 
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3409,13 +3442,14 @@ FROM (
         $sql = "SELECT
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
+                CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
+                    ELSE pp.qty
+                END AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
-            FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
+            FROM tbpo_detail_po pp
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -3441,13 +3475,14 @@ FROM (
                 pp.kd_suplier,
                 pp.kd_po,
                 pp.kd_barang,
-                pp.qty * (mb.p * mb.l * mb.t) AS qty_order,
+                CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
+                    ELSE pp.qty
+                END AS qty_order,
                 COALESCE(rcv.qty_diterima, 0) AS qty_diterima,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
-                GREATEST(pp.qty * (mb.p * mb.l * mb.t) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
-            FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_sisa,
+                GREATEST((CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE pp.qty END) - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa
+            FROM tbpo_detail_po pp
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -3481,7 +3516,7 @@ FROM (
         ');
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
-            'tb_pre_po pp',
+            'tbpo_detail_po pp',
             'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
             'inner'
         );
@@ -3494,9 +3529,23 @@ FROM (
 
     public function update_pre_po_status_by_kd_po($kd_po, $status)
     {
-        return $this->db
-            ->where('kd_po', $kd_po)
-            ->update('tb_pre_po', ['status' => $status]);
+        $legacyStatus = $status;
+        $poStatus = ((string) $status === '2') ? 'DONE' : (string) $status;
+        $updated = TRUE;
+
+        if ($this->db->table_exists('tbpo_po')) {
+            $updated = $this->db
+                ->where('kd_po', $kd_po)
+                ->update('tbpo_po', ['status' => $poStatus]) && $updated;
+        }
+
+        if ($this->db->table_exists('tb_pre_po')) {
+            $updated = $this->db
+                ->where('kd_po', $kd_po)
+                ->update('tb_pre_po', ['status' => $legacyStatus]) && $updated;
+        }
+
+        return $updated;
     }
 
     public function get_pre_po_adjustment($kd_po)

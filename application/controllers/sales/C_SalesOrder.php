@@ -7,6 +7,7 @@ class C_SalesOrder extends CI_Controller
     {
         parent::__construct();
         $this->load->model('M_SalesOrder');
+        $this->load->model('M_Stock');
         $this->load->model('M_Logistik');
         $this->load->model('M_ActivityLog');
         $this->load->library(['form_validation', 'session', 'pagination']);
@@ -506,7 +507,11 @@ class C_SalesOrder extends CI_Controller
 
         try {
             $kd_barang = $this->input->get('kd_barang', true) ?: null;
-            $stock = $this->M_SalesOrder->get_available_stock_with_dimensi(null, $kd_barang);
+            $gudang_id = $this->input->get('gudang_id', true) ?: null;
+            $stock = $this->M_Stock->get_available_for_sales([
+                'kd_barang' => $kd_barang,
+                'gudang_id' => $gudang_id,
+            ]);
 
             foreach ($stock as &$row) {
                 $row['available_stock'] = (float)($row['available_stock'] ?? 0);
@@ -519,7 +524,7 @@ class C_SalesOrder extends CI_Controller
                 $row['p']               = (float)($row['p']              ?? 0);
                 $row['l']               = (float)($row['l']              ?? 0);
                 $row['t']               = (float)($row['t']              ?? 0);
-                foreach (['kode_barang','nama_barang','satuan','exp_date','no_lot','gudang'] as $f) {
+                foreach (['kd_barang','kode_barang','nama_barang','satuan','exp_date','expired_date','no_lot','gudang','gudang_id'] as $f) {
                     if (isset($row[$f])) {
                         $row[$f] = mb_convert_encoding((string)$row[$f], 'UTF-8', 'UTF-8');
                     }
@@ -608,6 +613,7 @@ class C_SalesOrder extends CI_Controller
                 'kubikasi_m3'  => (float)($post['kubikasi_m3'][$i] ?? 0),
                 'kode_akun'    => $post['kode_akun'][$i]     ?? null,
                 'approve_by'   => $approve_by_item,
+                'is_nego'      => $is_nego,
                 'create_by'    => $this->_getUsername(),
             ];
         }
@@ -731,9 +737,35 @@ class C_SalesOrder extends CI_Controller
                 'keterangan' => 'SALES CONFIRM - SIAP LOADING oleh ' . $confirm_by,
                 'inputer'    => $confirm_by
             ]);
+
+            $fakturList = $this->db
+                ->select('kd_faktur')
+                ->distinct()
+                ->where('kd_do', $kd_do)
+                ->get('tb_detail_do')
+                ->result_array();
+            $this->load->library('Accounting_source_service');
+            $accountingResults = [];
+            foreach ($fakturList as $faktur) {
+                $noFaktur = trim((string)($faktur['kd_faktur'] ?? ''));
+                if ($noFaktur === '') {
+                    continue;
+                }
+                $this->M_Logistik->sync_so_status_by_faktur($noFaktur, 'completed');
+                $accountingResults[$noFaktur] = $this->accounting_source_service->post_sales_invoice(
+                    $noFaktur,
+                    $kd_do,
+                    (int)$this->session->userdata('id') ?: null
+                );
+            }
         }
 
-        echo json_encode(['msg' => 'success', 'message' => $msg, 'action' => $action]);
+        echo json_encode([
+            'msg' => 'success',
+            'message' => $msg,
+            'action' => $action,
+            'accounting' => isset($accountingResults) ? $accountingResults : [],
+        ]);
         exit;
     }
 }

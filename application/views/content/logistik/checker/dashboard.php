@@ -92,6 +92,9 @@
                 function isProses($s)  { return in_array($s, ['PROSES', 'PROSES_LOADING', 'PENYIAPAN_BARANG']); }
                 function isDone($s)    { return $s === 'DONE'; }
                 function isWait($s)    { return !isProses($s) && !isDone($s); }
+                $filterWait = function ($r) { return isWait($r['status']); };
+                $filterProses = function ($r) { return isProses($r['status']); };
+                $filterDone = function ($r) { return isDone($r['status']); };
 
                 function statusLabel($s) {
                     $map = [
@@ -232,9 +235,9 @@
                             <span class="badge badge-warning ml-2"><?= count($bongkaran) ?></span>
                         </div>
                         <?php echo dashboardColumns(
-                            array_filter($bongkaran, fn($r) => isWait($r['status'])),
-                            array_filter($bongkaran, fn($r) => isProses($r['status'])),
-                            array_filter($bongkaran, fn($r) => isDone($r['status'])),
+                            array_filter($bongkaran, $filterWait),
+                            array_filter($bongkaran, $filterProses),
+                            array_filter($bongkaran, $filterDone),
                             'bongkar'
                         ); ?>
 
@@ -243,9 +246,9 @@
                             <span class="badge badge-info ml-2"><?= count($list_lk) ?></span>
                         </div>
                         <?php echo dashboardColumns(
-                            array_filter($list_lk, fn($r) => isWait($r['status'])),
-                            array_filter($list_lk, fn($r) => isProses($r['status'])),
-                            array_filter($list_lk, fn($r) => isDone($r['status'])),
+                            array_filter($list_lk, $filterWait),
+                            array_filter($list_lk, $filterProses),
+                            array_filter($list_lk, $filterDone),
                             'lk'
                         ); ?>
 
@@ -254,9 +257,9 @@
                             <span class="badge badge-success ml-2"><?= count($list_kk) ?></span>
                         </div>
                         <?php echo dashboardColumns(
-                            array_filter($list_kk, fn($r) => isWait($r['status'])),
-                            array_filter($list_kk, fn($r) => isProses($r['status'])),
-                            array_filter($list_kk, fn($r) => isDone($r['status'])),
+                            array_filter($list_kk, $filterWait),
+                            array_filter($list_kk, $filterProses),
+                            array_filter($list_kk, $filterDone),
                             'kk'
                         ); ?>
                     </div>
@@ -264,9 +267,9 @@
                     <!-- TAB BONGKARAN -->
                     <div class="tab-pane fade" id="tab-bongkaran">
                         <?php echo dashboardColumns(
-                            array_filter($bongkaran, fn($r) => isWait($r['status'])),
-                            array_filter($bongkaran, fn($r) => isProses($r['status'])),
-                            array_filter($bongkaran, fn($r) => isDone($r['status'])),
+                            array_filter($bongkaran, $filterWait),
+                            array_filter($bongkaran, $filterProses),
+                            array_filter($bongkaran, $filterDone),
                             'bongkar'
                         ); ?>
                     </div>
@@ -274,9 +277,9 @@
                     <!-- TAB LOADING LK -->
                     <div class="tab-pane fade" id="tab-lk">
                         <?php echo dashboardColumns(
-                            array_filter($list_lk, fn($r) => isWait($r['status'])),
-                            array_filter($list_lk, fn($r) => isProses($r['status'])),
-                            array_filter($list_lk, fn($r) => isDone($r['status'])),
+                            array_filter($list_lk, $filterWait),
+                            array_filter($list_lk, $filterProses),
+                            array_filter($list_lk, $filterDone),
                             'lk'
                         ); ?>
                     </div>
@@ -284,9 +287,9 @@
                     <!-- TAB LOADING KK -->
                     <div class="tab-pane fade" id="tab-kk">
                         <?php echo dashboardColumns(
-                            array_filter($list_kk, fn($r) => isWait($r['status'])),
-                            array_filter($list_kk, fn($r) => isProses($r['status'])),
-                            array_filter($list_kk, fn($r) => isDone($r['status'])),
+                            array_filter($list_kk, $filterWait),
+                            array_filter($list_kk, $filterProses),
+                            array_filter($list_kk, $filterDone),
                             'kk'
                         ); ?>
                     </div>

@@ -616,6 +616,7 @@ class C_Ics extends CI_Controller
             ->get('tb_gudang')
             ->result_array();
         $data['detail']     = $this->M_Logistik->detail_po_received($nopo, $kdsuplier);
+        $data['kd_po']      = !empty($data['detail'][0]['kd_po']) ? $data['detail'][0]['kd_po'] : '';
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_po.php', $data);
@@ -1542,11 +1543,17 @@ class C_Ics extends CI_Controller
         }
 
         $this->db->trans_commit();
+        $this->load->library('Accounting_source_service');
+        $accountingResult = $this->accounting_source_service->post_goods_receipt(
+            $idLpb,
+            (int)$this->session->userdata('id') ?: null
+        );
 
         echo json_encode([
             'status'  => 'success',
             'step'    => 'save_final',
             'message' => 'Penerimaan berhasil disimpan ke LPB, status PO diperbarui, dan draft temporary sudah dibersihkan.',
+            'accounting' => $accountingResult,
             'debug'   => [
                 'id_lpb'       => $idLpb,
                 'no_po'        => $payload['no_po'],
