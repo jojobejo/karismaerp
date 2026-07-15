@@ -1,14 +1,14 @@
 <!-- views/content/sales/retur/spr_approval.php -->
 <!-- Digunakan oleh: Koor SC, Admin Stock, Kadep SC, Logistik -->
 <style>
-    .table-detail-spr th { background:#f8f9fa; font-size:12px; border:1px solid #dee2e6; }
-    .table-detail-spr td { font-size:12px; border:1px solid #dee2e6; vertical-align:middle; }
-    .alasan-list { list-style:none; padding:0; margin:0; }
-    .alasan-list li { font-size:11px; line-height:1.5; }
-    .alasan-list li::before { content:"✓ "; color:#28a745; font-weight:700; }
+    .table-detail-spr th { background: #f8f9fa; font-size: 14px; border: 1px solid #dee2e6; padding: 8px !important; }
+    .table-detail-spr td { font-size: 14px; border: 1px solid #dee2e6; vertical-align: middle; padding: 8px !important; }
+    .alasan-list { list-style: none; padding: 0; margin: 0; }
+    .alasan-list li { font-size: 13px; line-height: 1.5; }
+    .alasan-list li::before { content: "✓ "; color: #28a745; font-weight: 700; }
     .spr-note-bottom {
-        background:#fff8f8; border:1px solid #f5c6cb; border-radius:4px;
-        padding:10px 14px; font-size:12px; color:#721c24;
+        background: #fff8f8; border: 1px solid #f5c6cb; border-radius: 4px;
+        padding: 10px 14px; font-size: 12px; color: #721c24;
     }
 </style>
 
@@ -29,7 +29,8 @@
                         <?php
                         $role_labels = [
                             'koor_sc'     => ['Koor SC', 'clipboard-check', 'warning'],
-                            'admin_stock' => ['Admin Stock', 'boxes', 'info'],
+                            'admin_stock' => ['Admin Penjualan', 'boxes', 'info'],
+                            'kadepub'     => ['Kadep Unit Bisnis', 'user-tie', 'success'],
                             'kadep_sc'    => ['Kadep SC', 'user-tie', 'primary'],
                             'logistik'    => ['Logistik', 'truck-loading', 'success'],
                         ];

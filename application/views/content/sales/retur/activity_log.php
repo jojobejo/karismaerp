@@ -34,14 +34,15 @@
                 $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                 $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
                 $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
-                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
                 ?>
                 <div class="row mb-3">
                     <div class="col-auto">
-                        <?php if ($is_admin_stock || $is_logistik): ?>
+                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep): ?>
                             <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger mr-2">
                                 <i class="fas fa-file-invoice"></i> Daftar SPR
                             </a>

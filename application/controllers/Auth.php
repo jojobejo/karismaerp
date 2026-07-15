@@ -89,18 +89,22 @@ class Auth extends CI_Controller
                         redirect('sales_order');
                     } else if ($key->jobdesk == 'KOORSC') {
                         redirect('retur_penjualan');
-                    } else if ($key->jobdesk == 'KADEPSC') {
+                    } else if ($key->jobdesk == 'KADEPSC' || $key->jobdesk == 'KADEPUB') {
                         redirect('retur_penjualan');
                     } else if ($key->jobdesk == 'LOGISTIC') {
                         // Logistik Retur — hanya lihat & cetak SPR yang disetujui
                         redirect('retur_penjualan/logistik');
                     } else if ($key->jobdesk == 'ADMSTOCK') {
                         redirect('retur_penjualan/retur');
+                    } else if ($key->jobdesk == 'ADMPNJ') {
+                        redirect('retur_penjualan');
                     } else if ($key->jobdesk == 'ADMLPB2') {
                         redirect('retur_penjualan/admlpb2');
                     } else if ($key->jobdesk == 'COLLECTION' || $key->jobdesk == 'KOLEKTOR') {
                         redirect('retur_penjualan/retur');
                     } else if ($key->jobdesk == 'KASIR') {
+                        redirect('retur_penjualan/retur');
+                    } else if ($key->jobdesk == 'MANAGERACC' || $key->jobdesk == 'MANAGERSE' || $key->jobdesk == 'DIREKTUROP' || $key->jobdesk == 'DIREKTURUTAMA') {
                         redirect('retur_penjualan/retur');
                     }
                 } else {

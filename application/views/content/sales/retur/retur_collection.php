@@ -119,16 +119,20 @@
                     <?php endif; ?>
                     <div class="card shadow">
                         <div class="card-header bg-info text-white py-2">
-                            <h3 class="card-title"><i class="fas fa-handshake mr-1"></i> Proses Collection</h3>
+                            <h3 class="card-title"><i class="fas fa-file-signature mr-1"></i> Penyerahan Surat Retur & Alokasi Faktur Potong</h3>
                         </div>
                         <div class="card-body">
+                            <div class="alert alert-success py-2 mb-3 small">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                <strong>Status Retur: Approved.</strong> Saldo customer untuk retur ini sudah aktif (cair). Silakan masukkan nomor faktur tujuan pemotongan di bawah ini untuk diserahkan ke bagian Keuangan/Kasir.
+                            </div>
                             <div class="form-group">
-                                <label class="font-weight-bold">No. Faktur Potong</label>
-                                <input type="text" name="no_faktur_potong" class="form-control" placeholder="Isi No. Faktur Potong (jika ada)...">
+                                <label class="font-weight-bold">No. Faktur Potong <span class="text-danger">*</span></label>
+                                <input type="text" name="no_faktur_potong" class="form-control" required placeholder="Isi No. Faktur Potong yang akan dikurangi nilainya...">
                             </div>
                             <div class="form-group mb-0">
-                                <label class="font-weight-bold">Catatan Collection</label>
-                                <textarea name="catatan_collection" class="form-control" rows="3" placeholder="Catatan proses collection..."></textarea>
+                                <label class="font-weight-bold">Catatan Penyerahan (Collection)</label>
+                                <textarea name="catatan_collection" class="form-control" rows="3" placeholder="Catatan/keterangan penyerahan surat retur..."></textarea>
                             </div>
                         </div>
                         <div class="card-footer d-flex justify-content-end">
@@ -136,8 +140,8 @@
                                 <i class="fas fa-arrow-left"></i> Batal
                             </a>
                             <button type="submit" class="btn btn-success"
-                                    onclick="return confirm('Selesaikan proses Collection dan lanjutkan ke Kasir?')">
-                                <i class="fas fa-arrow-right"></i> Selesai → Kasir
+                                    onclick="return confirm('Serahkan surat retur ini ke Kasir?')">
+                                <i class="fas fa-paper-plane mr-1"></i> Serahkan ke Kasir
                             </button>
                         </div>
                     </div>

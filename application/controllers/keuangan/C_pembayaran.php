@@ -68,6 +68,17 @@ class C_pembayaran extends CI_Controller
         $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
         $data['saldo_retur'] = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
 
+        // Fetch returns linked by Collection to this invoice
+        $data['linked_returs'] = $this->db
+            ->select('h.no_retur, h.tipe_retur, h.tanggal_retur, h.status_retur, COALESCE(SUM(d.qty_retur * d.harga_satuan), 0) AS total_retur')
+            ->from('tbrp_retur_penjualan_header h')
+            ->join('tbrp_retur_penjualan_detail d', 'd.id_retur = h.id_retur', 'left')
+            ->where('h.no_faktur_potong', $faktur['no_faktur'])
+            ->where_in('h.status_retur', ['menunggu_collection', 'menunggu_kasir', 'selesai'])
+            ->group_by('h.id_retur')
+            ->get()
+            ->result_array();
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
         $this->load->view('partial/main/footer.php');

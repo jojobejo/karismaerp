@@ -75,12 +75,14 @@
                     $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                     $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
                     $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
-                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                     $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                     $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                     $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
                     $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
-                    $is_approval    = $is_koor || $is_admin_stock || $is_kadep;
+                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
+                    $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                    $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
                     ?>
                     <div class="col-auto">
                         <?php if ($is_sc || $is_koor): ?>
@@ -89,13 +91,13 @@
                             </a>
                         <?php endif; ?>
                         
-                        <?php if ($is_admin_stock || $is_logistik): ?>
+                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep): ?>
                             <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active mr-1">
                                 <i class="fas fa-file-invoice"></i> Daftar SPR
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                        <?php if ($is_admin_stock || $is_collection || $is_kasir || $is_admlpb2 || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MANAGERSE','DIREKTUROP','DIREKTURUTAMA'])): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -199,8 +201,9 @@
                                         $badge_map = [
                                             'draft'               => ['secondary', 'Draft'],
                                             'diajukan'            => ['warning',   'Diajukan'],
+                                            'menunggu_kadepub'    => ['warning',   'Wait Kadep UB'],
                                             'diverifikasi_koor'   => ['info',      'Verif. Koor'],
-                                            'dicek_admin_stock'   => ['primary',   'Cek Stock'],
+                                            'dicek_admin_stock'   => ['primary',   'Cek Penjualan'],
                                             'disetujui_kadep'     => ['indigo',    'Acc Kadep'],
                                             'selesai'             => ['success',   'Selesai'],
                                             'ditolak'             => ['danger',    'Ditolak'],
@@ -210,6 +213,7 @@
                                         $progress_map = [
                                             'draft'               => 0,
                                             'diajukan'            => 20,
+                                            'menunggu_kadepub'    => 30,
                                             'diverifikasi_koor'   => 40,
                                             'dicek_admin_stock'   => 60,
                                             'disetujui_kadep'     => 80,
@@ -276,9 +280,14 @@
                                                     $tindak_label = 'Verifikasi';
                                                     $tindak_icon = 'clipboard-check';
                                                     $tindak_class = 'warning';
-                                                } elseif ($st === 'diverifikasi_koor' && $is_admin_stock) {
+                                                } elseif ($st === 'menunggu_kadepub' && $is_kadepub) {
+                                                    $tindak_url = base_url('retur_penjualan/kadepub/verifikasi/' . $row['id_spr']);
+                                                    $tindak_label = 'Verifikasi Jagung';
+                                                    $tindak_icon = 'clipboard-check';
+                                                    $tindak_class = 'success';
+                                                } elseif ($st === 'diverifikasi_koor' && $is_admpnj) {
                                                     $tindak_url = base_url('retur_penjualan/admin_stock/cek/' . $row['id_spr']);
-                                                    $tindak_label = 'Cek Stock';
+                                                    $tindak_label = 'Cek SPR';
                                                     $tindak_icon = 'boxes';
                                                     $tindak_class = 'info';
                                                 } elseif ($st === 'dicek_admin_stock' && $is_kadep) {

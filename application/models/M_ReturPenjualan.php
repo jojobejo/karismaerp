@@ -47,12 +47,16 @@ class M_ReturPenjualan extends CI_Model
                 `alamat`               VARCHAR(300) DEFAULT NULL,
                 `nama_sales`           VARCHAR(150) DEFAULT NULL,
                 `catatan`              TEXT         DEFAULT NULL,
-                `status`               ENUM('draft','diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak')
+                `status`               ENUM('draft','diajukan','menunggu_kadepub','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak')
                                        NOT NULL DEFAULT 'draft',
                 -- Koor SC
                 `koor_sc_by`           VARCHAR(150) DEFAULT NULL,
                 `koor_sc_at`           DATETIME     DEFAULT NULL,
                 `koor_sc_catatan`      TEXT         DEFAULT NULL,
+                -- Kadep UB
+                `kadepub_by`           VARCHAR(150) DEFAULT NULL,
+                `kadepub_at`           DATETIME     DEFAULT NULL,
+                `kadepub_catatan`      TEXT         DEFAULT NULL,
                 -- Admin Stock
                 `admin_stock_by`       VARCHAR(150) DEFAULT NULL,
                 `admin_stock_at`       DATETIME     DEFAULT NULL,
@@ -141,9 +145,102 @@ class M_ReturPenjualan extends CI_Model
         if (!$this->db->field_exists('tipe_retur', 'tbrp_spr_header')) {
             $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
         }
+        // Tambah is_jagung ke tbrp_spr_header jika belum ada
+        if (!$this->db->field_exists('is_jagung', 'tbrp_spr_header')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `is_jagung` TINYINT(1) NOT NULL DEFAULT 0 AFTER `tipe_retur`");
+        }
+        // Update status enum of tbrp_spr_header to include menunggu_kadepub
+        $this->db->query("ALTER TABLE `tbrp_spr_header` MODIFY COLUMN `status` ENUM('draft','diajukan','menunggu_kadepub','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak') NOT NULL DEFAULT 'draft'");
+        // Tambah kolom approval KADEPUB ke tbrp_spr_header jika belum ada
+        if (!$this->db->field_exists('kadepub_by', 'tbrp_spr_header')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_header`
+                ADD COLUMN `kadepub_by`      VARCHAR(150) DEFAULT NULL AFTER `koor_sc_catatan`,
+                ADD COLUMN `kadepub_at`      DATETIME     DEFAULT NULL AFTER `kadepub_by`,
+                ADD COLUMN `kadepub_catatan` TEXT         DEFAULT NULL AFTER `kadepub_at`
+            ");
+        }
         // Tambah tipe_retur ke tbrp_retur_penjualan_header jika belum ada
         if (!$this->db->field_exists('tipe_retur', 'tbrp_retur_penjualan_header')) {
             $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
+        }
+
+        // Modify status_retur enum to include new approval stages
+        $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` MODIFY COLUMN `status_retur` ENUM(
+            'menunggu_verifikasi',
+            'retur_menunggu_kadepub',
+            'retur_menunggu_mngacc',
+            'retur_menunggu_koorsc',
+            'retur_menunggu_mngse',
+            'retur_menunggu_kadepsc',
+            'retur_menunggu_dirop',
+            'retur_menunggu_dirut',
+            'menunggu_collection',
+            'menunggu_kasir',
+            'selesai',
+            'ditolak'
+        ) NOT NULL DEFAULT 'menunggu_verifikasi'");
+
+        // Add kadepub_by_retur fields
+        if (!$this->db->field_exists('kadepub_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `kadepub_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `kadepub_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_kadepub_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add mngacc_by_retur fields
+        if (!$this->db->field_exists('mngacc_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `mngacc_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `mngacc_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_mngacc_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add koorsc_by_retur fields
+        if (!$this->db->field_exists('koorsc_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `koorsc_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `koorsc_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_koorsc_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add mngse_by_retur fields
+        if (!$this->db->field_exists('mngse_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `mngse_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `mngse_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_mngse_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add kadepsc_by_retur fields
+        if (!$this->db->field_exists('kadepsc_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `kadepsc_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `kadepsc_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_kadepsc_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add dirop_by_retur fields
+        if (!$this->db->field_exists('dirop_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `dirop_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `dirop_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_dirop_retur` TEXT         DEFAULT NULL
+            ");
+        }
+
+        // Add dirut_by_retur fields
+        if (!$this->db->field_exists('dirut_by_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `dirut_by_retur`      VARCHAR(150) DEFAULT NULL,
+                ADD COLUMN `dirut_at_retur`      DATETIME     DEFAULT NULL,
+                ADD COLUMN `catatan_dirut_retur` TEXT         DEFAULT NULL
+            ");
         }
     }
 
@@ -349,12 +446,40 @@ class M_ReturPenjualan extends CI_Model
                 `alamat`               VARCHAR(300) DEFAULT NULL,
                 `nama_sales`           VARCHAR(150) DEFAULT NULL,
                 `catatan_logistik`     TEXT         DEFAULT NULL,
-                `status_retur`         ENUM('menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak')
+                `status_retur`         ENUM('menunggu_verifikasi','retur_menunggu_kadepub','retur_menunggu_mngacc','retur_menunggu_koorsc','retur_menunggu_mngse','retur_menunggu_kadepsc','retur_menunggu_dirop','retur_menunggu_dirut','menunggu_collection','menunggu_kasir','selesai','ditolak')
                                        NOT NULL DEFAULT 'menunggu_verifikasi',
                 -- Admin Stock
                 `admin_stock_by_retur` VARCHAR(150) DEFAULT NULL,
                 `admin_stock_at_retur` DATETIME     DEFAULT NULL,
                 `catatan_admin_stock`  TEXT         DEFAULT NULL,
+                -- Kadep UB
+                `kadepub_by_retur`     VARCHAR(150) DEFAULT NULL,
+                `kadepub_at_retur`     DATETIME     DEFAULT NULL,
+                `catatan_kadepub_retur` TEXT        DEFAULT NULL,
+                -- Manager Account
+                `mngacc_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `mngacc_at_retur`      DATETIME     DEFAULT NULL,
+                `catatan_mngacc_retur` TEXT         DEFAULT NULL,
+                -- Koor SC
+                `koorsc_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `koorsc_at_retur`      DATETIME     DEFAULT NULL,
+                `catatan_koorsc_retur` TEXT         DEFAULT NULL,
+                -- Manager SE
+                `mngse_by_retur`       VARCHAR(150) DEFAULT NULL,
+                `mngse_at_retur`       DATETIME     DEFAULT NULL,
+                `catatan_mngse_retur`  TEXT         DEFAULT NULL,
+                -- Kadep SC
+                `kadepsc_by_retur`     VARCHAR(150) DEFAULT NULL,
+                `kadepsc_at_retur`     DATETIME     DEFAULT NULL,
+                `catatan_kadepsc_retur` TEXT        DEFAULT NULL,
+                -- Direktur Operasional
+                `dirop_by_retur`       VARCHAR(150) DEFAULT NULL,
+                `dirop_at_retur`       DATETIME     DEFAULT NULL,
+                `catatan_dirop_retur`  TEXT         DEFAULT NULL,
+                -- Direktur Utama
+                `dirut_by_retur`       VARCHAR(150) DEFAULT NULL,
+                `dirut_at_retur`       DATETIME     DEFAULT NULL,
+                `catatan_dirut_retur`  TEXT         DEFAULT NULL,
                 -- Collection
                 `collection_by`        VARCHAR(150) DEFAULT NULL,
                 `collection_at`        DATETIME     DEFAULT NULL,
@@ -495,7 +620,7 @@ class M_ReturPenjualan extends CI_Model
     /** Ambil 1 Retur Penjualan by id */
     public function get_retur_penjualan($id_retur)
     {
-        $this->db->select('r.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, s.no_spr');
+        $this->db->select('r.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, s.no_spr, s.is_jagung');
         $this->db->from('tbrp_retur_penjualan_header r');
         $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
         $this->db->join('tbrp_spr_header s', 's.id_spr = r.id_spr', 'left');

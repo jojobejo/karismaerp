@@ -71,16 +71,21 @@
                     $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
                     $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                     $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
+                    $is_kadep       = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
+                    $is_sc          = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
+                    $is_koor        = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
+                    $is_logistik    = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                     $is_approval = !$is_collection && !$is_kasir;
                     ?>
                     <div class="col-auto">
-                        <?php if ($is_approval): ?>
-                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger">
+                        <?php if ($is_approval || $is_admpnj || $is_kadep || $is_sc || $is_koor || $is_logistik): ?>
+                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger mr-1">
                             <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
                         </a>
                         <?php endif; ?>
                         <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
-                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary">
+                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                             <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                         </a>
                         <?php endif; ?>
@@ -117,8 +122,9 @@
                                         <option value="">-- Semua Status --</option>
                                         <?php
                                         $status_opts = [
+                                            'menunggu_kadepub'    => 'Menunggu Kadep UB',
                                             'diverifikasi_koor'   => 'Verifikasi Koor SC',
-                                            'dicek_admin_stock'   => 'Dicek Admin Stock',
+                                            'dicek_admin_stock'   => 'Dicek Admin Penjualan',
                                             'disetujui_kadep'     => 'Disetujui Kadep',
                                             'selesai'             => 'Selesai',
                                             'ditolak'             => 'Ditolak',
@@ -174,8 +180,9 @@
                                         $badge_map = [
                                             'draft'               => ['secondary', 'Draft'],
                                             'diajukan'            => ['warning',   'Diajukan'],
+                                            'menunggu_kadepub'    => ['warning',   'Wait Kadep UB'],
                                             'diverifikasi_koor'   => ['info',      'Verif. Koor'],
-                                            'dicek_admin_stock'   => ['primary',   'Cek Stock'],
+                                            'dicek_admin_stock'   => ['primary',   'Cek Penjualan'],
                                             'disetujui_kadep'     => ['indigo',    'Acc Kadep'],
                                             'selesai'             => ['success',   'Selesai'],
                                             'ditolak'             => ['danger',    'Ditolak'],
@@ -196,6 +203,8 @@
                                             $my_catatan = '';
                                             if ($role === 'koor_sc') {
                                                 $my_catatan = $row['koor_sc_catatan'];
+                                            } elseif ($role === 'kadepub') {
+                                                $my_catatan = $row['kadepub_catatan'];
                                             } elseif ($role === 'admin_stock') {
                                                 $my_catatan = $row['admin_stock_catatan'];
                                             } elseif ($role === 'kadep_sc') {
@@ -210,7 +219,8 @@
                                                 // Admin atau general: show any matching non-empty
                                                 $cats = [];
                                                 if ($row['koor_sc_catatan']) $cats[] = 'Koor: '.$row['koor_sc_catatan'];
-                                                if ($row['admin_stock_catatan']) $cats[] = 'Stock: '.$row['admin_stock_catatan'];
+                                                if ($row['kadepub_catatan']) $cats[] = 'Kadep UB: '.$row['kadepub_catatan'];
+                                                if ($row['admin_stock_catatan']) $cats[] = 'Penjualan: '.$row['admin_stock_catatan'];
                                                 if ($row['kadep_sc_catatan']) $cats[] = 'Kadep: '.$row['kadep_sc_catatan'];
                                                 if ($row['logistik_catatan']) $cats[] = 'Logistik: '.$row['logistik_catatan'];
                                                 if ($row['catatan_collection']) $cats[] = 'Collection: '.$row['catatan_collection'];

@@ -43,20 +43,27 @@
                 $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                 $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
                 $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
-                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
+                $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
+                $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
+                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','ADMIN']);
+                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','ADMIN']);
+                $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
                 ?>
                 <div class="row mb-3">
                     <div class="col-auto">
-                        <?php if ($is_admin_stock || $is_logistik): ?>
+                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep): ?>
                             <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger mr-1">
                                 <i class="fas fa-file-invoice"></i> Daftar SPR
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                        <?php if ($is_admin_stock || $is_collection || $is_kasir || $is_admlpb2 || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -93,11 +100,18 @@
                                         <option value="">-- Semua --</option>
                                         <?php
                                         $status_opts = [
-                                            'menunggu_verifikasi' => 'Menunggu Admin Stock',
-                                            'menunggu_collection' => 'Menunggu Collection',
-                                            'menunggu_kasir'      => 'Menunggu Kasir',
-                                            'selesai'             => 'Selesai',
-                                            'ditolak'             => 'Ditolak',
+                                            'menunggu_verifikasi'    => 'Menunggu Admin Stock',
+                                            'retur_menunggu_kadepub' => 'Menunggu Kadep UB',
+                                            'retur_menunggu_mngacc'  => 'Menunggu Manager Account',
+                                            'retur_menunggu_koorsc'  => 'Menunggu Koor SC',
+                                            'retur_menunggu_mngse'   => 'Menunggu Manager SE',
+                                            'retur_menunggu_kadepsc' => 'Menunggu Kadep SC',
+                                            'retur_menunggu_dirop'   => 'Menunggu Dirop',
+                                            'retur_menunggu_dirut'   => 'Menunggu Dirut',
+                                            'menunggu_collection'    => 'Menunggu Collection',
+                                            'menunggu_kasir'         => 'Menunggu Kasir',
+                                            'selesai'                => 'Selesai',
+                                            'ditolak'                => 'Ditolak',
                                         ];
                                         foreach ($status_opts as $val => $lbl):
                                         ?>
@@ -120,7 +134,7 @@
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Retur Penjualan</h3>
                         <div class="card-tools">
                             <?php 
-                            $is_approver = in_array($jobdesk, ['KOORSC', 'ADMINSC', 'ADMSTOCK', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN']);
+                            $is_approver = in_array($jobdesk, ['KOORSC', 'ADMINSC', 'ADMSTOCK', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB']);
                             if ($is_approver): 
                             ?>
                                 <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
@@ -163,6 +177,13 @@
                                         $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
 
                                         $badge_map = [
+                                            'retur_menunggu_kadepub' => ['info',     'Menunggu Kadep UB'],
+                                            'retur_menunggu_mngacc'  => ['info',     'Menunggu Manager Account'],
+                                            'retur_menunggu_koorsc'  => ['info',     'Menunggu Koor SC'],
+                                            'retur_menunggu_mngse'   => ['info',     'Menunggu Manager SE'],
+                                            'retur_menunggu_kadepsc' => ['info',     'Menunggu Kadep SC'],
+                                            'retur_menunggu_dirop'   => ['info',     'Menunggu Dirop'],
+                                            'retur_menunggu_dirut'   => ['info',     'Menunggu Dirut'],
                                             'menunggu_verifikasi' => ['warning',  'Menunggu Admin Stock'],
                                             'menunggu_collection' => ['info',     'Menunggu Collection'],
                                             'menunggu_kasir'      => ['primary',  'Menunggu Kasir'],
@@ -207,16 +228,29 @@
                                                        class="btn btn-sm btn-warning" title="Verifikasi">
                                                         <i class="fas fa-clipboard-check"></i> Verifikasi
                                                     </a>
+                                                <?php elseif (
+                                                    ($st === 'retur_menunggu_mngacc' && $is_mngacc) ||
+                                                    ($st === 'retur_menunggu_koorsc' && $is_koor) ||
+                                                    ($st === 'retur_menunggu_kadepub' && $is_kadepub) ||
+                                                    ($st === 'retur_menunggu_mngse' && $is_mngse) ||
+                                                    ($st === 'retur_menunggu_kadepsc' && $is_kadep) ||
+                                                    ($st === 'retur_menunggu_dirop' && $is_dirop) ||
+                                                    ($st === 'retur_menunggu_dirut' && $is_dirut)
+                                                ): ?>
+                                                    <a href="<?= base_url('retur_penjualan/retur/approve/' . $r['id_retur']) ?>"
+                                                       class="btn btn-sm btn-warning" title="Persetujuan">
+                                                        <i class="fas fa-check-circle"></i> Persetujuan
+                                                    </a>
                                                 <?php elseif ($st === 'menunggu_collection' && $is_collection): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/collection/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-info" title="Proses Collection">
                                                         <i class="fas fa-handshake"></i> Proses
-                                                     </a>
+                                                      </a>
                                                 <?php elseif ($st === 'menunggu_kasir' && $is_kasir): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/kasir/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-success" title="Proses Kasir">
                                                         <i class="fas fa-cash-register"></i> Kasir
-                                                     </a>
+                                                      </a>
                                                 <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/edit/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-primary" title="Edit Retur">

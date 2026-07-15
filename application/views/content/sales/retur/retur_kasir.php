@@ -124,15 +124,15 @@
                     <?php endif; ?>
                     <div class="card shadow">
                         <div class="card-header bg-success text-white py-2">
-                            <h3 class="card-title"><i class="fas fa-cash-register mr-1"></i> Konfirmasi Kasir</h3>
+                            <h3 class="card-title"><i class="fas fa-archive mr-1"></i> Pencatatan & Pengarsipan Surat Retur (Kasir)</h3>
                         </div>
                         <div class="card-body">
-                            <div class="alert alert-warning py-2">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                                <strong>Perhatian:</strong> Setelah dikonfirmasi oleh Kasir, proses Retur Penjualan ini dinyatakan <strong>SELESAI</strong> dan tidak dapat diubah lagi.
+                            <div class="alert alert-info py-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                <strong>Dokumentasi Kasir:</strong> Surat Retur Penjualan ini telah disetujui sepenuhnya oleh Direktur Utama dan diproses oleh Collection. Klik tombol di bawah untuk menandai bahwa fisik surat retur telah diterima oleh Kasir untuk diarsipkan.
                             </div>
                             <div class="form-group mb-2">
-                                <label class="font-weight-bold">Total Nilai Retur yang Diproses</label>
+                                <label class="font-weight-bold">Total Nilai Retur yang Dicatat</label>
                                 <input type="text" class="form-control font-weight-bold text-success"
                                        value="Rp <?= number_format($total_retur, 0, ',', '.') ?>" readonly style="font-size:1.2rem;">
                             </div>
@@ -145,9 +145,9 @@
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-secondary mr-2">
                                 <i class="fas fa-arrow-left"></i> Batal
                             </a>
-                            <button type="submit" class="btn btn-success btn-lg"
-                                    onclick="return confirm('Konfirmasi dan selesaikan Retur Penjualan ini?\n\nTotal: Rp <?= number_format($total_retur, 0, ',', '.') ?>\n\nTindakan ini tidak dapat dibatalkan!')">
-                                <i class="fas fa-check-double"></i> Konfirmasi Selesai
+                            <button type="submit" class="btn btn-success"
+                                    onclick="return confirm('Catat dan selesaikan arsip Retur Penjualan ini?')">
+                                <i class="fas fa-check-double mr-1"></i> Catat & Selesaikan Arsip
                             </button>
                         </div>
                     </div>

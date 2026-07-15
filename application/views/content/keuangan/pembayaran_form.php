@@ -56,6 +56,52 @@ if (!isset($metode_options[$default_metode])) {
                     </a>
                 </div>
 
+                <?php if (!empty($linked_returs)): ?>
+                    <div class="alert alert-info shadow-sm border-info mb-4" style="background-color: #e8f4fd; color: #0c5460; border-left: 5px solid #17a2b8;">
+                        <h5 class="font-weight-bold mb-2"><i class="fas fa-info-circle mr-2"></i>Informasi Pemotongan Retur dari Collection</h5>
+                        <p class="mb-2">Collection telah menentukan bahwa Faktur ini dapat dipotong menggunakan Retur Penjualan berikut:</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-2 bg-white text-dark small" style="border-radius: 4px; overflow: hidden;">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>No. Retur</th>
+                                        <th>Tipe Retur</th>
+                                        <th>Tanggal Retur</th>
+                                        <th>Status Retur</th>
+                                        <th class="text-right">Nominal Retur</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($linked_returs as $ret): ?>
+                                        <tr>
+                                            <td>
+                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['no_retur']) ?>" class="font-weight-bold" target="_blank">
+                                                    <?= htmlspecialchars($ret['no_retur']) ?> <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
+                                                </a>
+                                            </td>
+                                            <td><span class="badge badge-secondary"><?= htmlspecialchars(ucfirst($ret['tipe_retur'])) ?></span></td>
+                                            <td><?= date('d/m/Y', strtotime($ret['tanggal_retur'])) ?></td>
+                                            <td>
+                                                <?php
+                                                $lbl = $ret['status_retur'];
+                                                if ($lbl === 'menunggu_collection') $lbl = 'Menunggu Collection';
+                                                elseif ($lbl === 'menunggu_kasir') $lbl = 'Menunggu Kasir (Serah Terima)';
+                                                elseif ($lbl === 'selesai') $lbl = 'Selesai';
+                                                ?>
+                                                <span class="badge badge-info"><?= htmlspecialchars($lbl) ?></span>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-success">Rp <?= number_format((float)$ret['total_retur'], 0, ',', '.') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <span class="small text-muted font-italic">
+                            <i class="fas fa-lightbulb mr-1"></i> Tips: Silakan pilih metode pembayaran <strong>Saldo Retur</strong> di form sebelah kanan untuk memotong tagihan menggunakan retur di atas.
+                        </span>
+                    </div>
+                <?php endif; ?>
+
                 <div class="row">
                     <div class="col-md-5">
                         <div class="card card-outline card-info">
