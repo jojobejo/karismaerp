@@ -478,6 +478,7 @@ $route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPen
 $route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPenjualan/retur_kasir/$1';
 $route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
 $route['retur_penjualan/activity_log']                       = 'sales/C_ReturPenjualan/activity_log';
+$route['retur_penjualan/get_pending_notifications']          = 'sales/C_ReturPenjualan/get_pending_notifications';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';

@@ -26,6 +26,13 @@ class C_ReturPenjualan extends CI_Controller
         if (!$this->session->userdata('username') && !$this->session->userdata('nm_karyawan')) {
             redirect('Auth');
         }
+
+        // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
+        $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+        $allowed_jobdesks = ['SC', 'KOORSC', 'ADMSTOCK', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN'];
+        if (!in_array($jobdesk, $allowed_jobdesks)) {
+            show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
+        }
     }
 
     // ================================================================
@@ -59,32 +66,31 @@ class C_ReturPenjualan extends CI_Controller
     /** SC / Sales Counter — pembuat SPR */
     private function _isSC()
     {
-        return $this->_isJobdesk(['SC', 'SALESCOUNTER']);
+        return $this->_isJobdesk(['SC', 'ADMIN']);
     }
 
     /** Koordinator SC */
     private function _isKoorSC()
     {
-        return $this->_isJobdesk(['KOORSC', 'ADMINSC', 'ADMIN']);
+        return $this->_isJobdesk(['KOORSC', 'ADMIN']);
     }
 
     /** Admin Stock */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMINSTOCK', 'ADMIN', 'LOGISTIK']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN']);
     }
 
     /** Kepala Departemen SC */
     private function _isKadepSC()
     {
-        return $this->_isJobdesk(['KADEPSC', 'KADEP', 'ADMIN', 'MANAGER']);
+        return $this->_isJobdesk(['KADEPSC', 'ADMIN']);
     }
 
     /** Logistik */
     private function _isLogistik()
     {
-        // Toleran terhadap variasi ejaan jobdesk di DB
-        return $this->_isJobdesk(['LOGISTIK', 'LOGISTIC', 'LOGISTICS', 'ADMIN']);
+        return $this->_isJobdesk(['ADMLPB2', 'LOGISTIC', 'ADMIN']);
     }
 
     /** Cek apakah boleh lihat semua SPR (bukan SC biasa) */
@@ -780,7 +786,7 @@ class C_ReturPenjualan extends CI_Controller
 
     private function _isCollection()
     {
-        return $this->_isJobdesk(['COLLECTION', 'KOLEKTOR', 'ADMIN']);
+        return $this->_isJobdesk(['COLLECTION', 'ADMIN']);
     }
 
     private function _isKasir()
@@ -1450,6 +1456,107 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/activity_log.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    /** Real-time pending approval notifications */
+    public function get_pending_notifications()
+    {
+        $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+        $pending_items = [];
+        
+        // 1. Koor SC
+        if (in_array($jobdesk, ['KOORSC', 'ADMIN'])) {
+            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diajukan'])->result_array();
+            foreach ($sprs as $s) {
+                $pending_items[] = [
+                    'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
+                    'title' => 'Persetujuan SPR Baru',
+                    'body' => 'SPR ' . $s['no_spr'] . ' menunggu verifikasi Anda.',
+                    'url' => base_url('retur_penjualan/koor_sc/verifikasi/' . $s['id_spr'])
+                ];
+            }
+        }
+        
+        // 2. Admin Stock
+        if (in_array($jobdesk, ['ADMSTOCK', 'ADMIN'])) {
+            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diverifikasi_koor'])->result_array();
+            foreach ($sprs as $s) {
+                $pending_items[] = [
+                    'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
+                    'title' => 'Pengecekan SPR (Admin Stock)',
+                    'body' => 'SPR ' . $s['no_spr'] . ' menunggu pengecekan Anda.',
+                    'url' => base_url('retur_penjualan/admin_stock/cek/' . $s['id_spr'])
+                ];
+            }
+            
+            $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'menunggu_verifikasi'])->result_array();
+            foreach ($returs as $r) {
+                $pending_items[] = [
+                    'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
+                    'title' => 'Verifikasi Retur (Admin Stock)',
+                    'body' => 'Retur ' . $r['no_retur'] . ' menunggu verifikasi Anda.',
+                    'url' => base_url('retur_penjualan/retur/verifikasi/' . $r['id_retur'])
+                ];
+            }
+        }
+        
+        // 3. Kadep SC
+        if (in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
+            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'dicek_admin_stock'])->result_array();
+            foreach ($sprs as $s) {
+                $pending_items[] = [
+                    'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
+                    'title' => 'Persetujuan SPR (Kadep SC)',
+                    'body' => 'SPR ' . $s['no_spr'] . ' menunggu persetujuan Anda.',
+                    'url' => base_url('retur_penjualan/kadep_sc/approve/' . $s['id_spr'])
+                ];
+            }
+        }
+        
+        // 4. Logistik / ADMLPB2 / LOGISTIC (sprlog)
+        $user_info = $this->_getUser();
+        $username = strtoupper((string)$user_info['username']);
+        if (in_array($jobdesk, ['ADMLPB2', 'LOGISTIC', 'ADMIN']) || $username === 'SPRLOG') {
+            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'disetujui_kadep'])->result_array();
+            foreach ($sprs as $s) {
+                $pending_items[] = [
+                    'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
+                    'title' => 'Proses SPR (Logistik)',
+                    'body' => 'SPR ' . $s['no_spr'] . ' siap diproses menjadi Retur.',
+                    'url' => base_url('retur_penjualan/retur/buat/' . $s['id_spr'])
+                ];
+            }
+        }
+        
+        // 5. Collection
+        if (in_array($jobdesk, ['COLLECTION', 'ADMIN'])) {
+            $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'menunggu_collection'])->result_array();
+            foreach ($returs as $r) {
+                $pending_items[] = [
+                    'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
+                    'title' => 'Proses Retur (Collection)',
+                    'body' => 'Retur ' . $r['no_retur'] . ' siap diproses oleh Collection.',
+                    'url' => base_url('retur_penjualan/retur/collection/' . $r['id_retur'])
+                ];
+            }
+        }
+        
+        // 6. Kasir
+        if (in_array($jobdesk, ['KASIR', 'ADMIN'])) {
+            $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'menunggu_kasir'])->result_array();
+            foreach ($returs as $r) {
+                $pending_items[] = [
+                    'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
+                    'title' => 'Penyelesaian Retur (Kasir)',
+                    'body' => 'Retur ' . $r['no_retur'] . ' siap diselesaikan oleh Kasir.',
+                    'url' => base_url('retur_penjualan/retur/kasir/' . $r['id_retur'])
+                ];
+            }
+        }
+        
+        header('Content-Type: application/json');
+        echo json_encode(['status' => true, 'data' => $pending_items]);
+        exit;
     }
 }
 
