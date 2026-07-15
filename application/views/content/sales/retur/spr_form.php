@@ -352,12 +352,24 @@
                             <div class="row mt-4">
                                 <?php if ($is_edit): ?>
                                     <div class="col-12 d-flex gap-2">
-                                        <button type="submit" name="as_draft" value="0" class="btn btn-info mr-2">
-                                            <i class="fas fa-save"></i> Simpan Perubahan (Tetap Diverifikasi)
-                                        </button>
-                                        <a href="<?= base_url('retur_penjualan/admin_stock_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
-                                            <i class="fas fa-arrow-left"></i> Kembali ke Form Cek
-                                        </a>
+                                        <?php if (in_array($spr['status'], ['draft', 'ditolak'], true)): ?>
+                                            <button type="submit" name="as_draft" value="1" class="btn btn-secondary mr-2">
+                                                <i class="fas fa-save"></i> Simpan sebagai Draft
+                                            </button>
+                                            <button type="submit" name="as_draft" value="0" class="btn btn-danger mr-2" id="btnAjukan">
+                                                <i class="fas fa-paper-plane"></i> Simpan & Ajukan Kembali
+                                            </button>
+                                            <a href="<?= base_url('retur_penjualan/detail/' . $spr['id_spr']) ?>" class="btn btn-light">
+                                                <i class="fas fa-arrow-left"></i> Batal
+                                            </a>
+                                        <?php else: ?>
+                                            <button type="submit" name="as_draft" value="0" class="btn btn-info mr-2">
+                                                <i class="fas fa-save"></i> Simpan Perubahan (Tetap Diverifikasi)
+                                            </button>
+                                            <a href="<?= base_url('retur_penjualan/admin_stock_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
+                                                <i class="fas fa-arrow-left"></i> Kembali ke Form Cek
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
                                     <div class="col-12 d-flex gap-2">

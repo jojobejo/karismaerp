@@ -1704,6 +1704,28 @@ class M_SalesOrder extends CI_Model
             $this->db->update('tbso_sales_order_detail');
         }
 
+        // ── Perhitungan Jurnal & Simpan ke Database ────────────────
+        $total_nilai_pesanan = 0;
+        foreach ($faktur_items as $item) {
+            $total_nilai_pesanan += (float)($item['subtotal_after_disc'] ?? 0);
+        }
+        $tax_rate = (float)($faktur_items[0]['pajak'] ?? 0);
+        $div_factor = 1 + ($tax_rate / 100);
+        
+        $jurnal_piutang = round($total_nilai_pesanan);
+        $jurnal_penjualan = round($jurnal_piutang / $div_factor);
+        $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
+
+        $fj = [
+            'id_faktur'      => $id_faktur,
+            'no_faktur'      => $no_faktur,
+            'piutang_dagang' => $jurnal_piutang,
+            'penjualan'      => $jurnal_penjualan,
+            'ppn_keluar'     => $jurnal_ppn_keluar,
+            'created_at'     => date('Y-m-d H:i:s')
+        ];
+        $this->db->insert('tbso_faktur_jurnal', $fj);
+
         // ── Cek apakah semua outstanding = 0 → Completed ────────────
         $this->_cek_dan_complete_so($id_so);
 

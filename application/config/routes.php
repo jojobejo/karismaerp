@@ -460,6 +460,9 @@ $route['retur_penjualan/history']                            = 'sales/C_ReturPen
 $route['retur_penjualan/admlpb2']                            = 'sales/C_ReturPenjualan/admlpb2_index';
 $route['retur_penjualan/retur/buat/(:any)']                  = 'sales/C_ReturPenjualan/retur_buat/$1';
 $route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';
+$route['retur_penjualan/retur/edit/(:any)']                  = 'sales/C_ReturPenjualan/retur_edit/$1';
+$route['retur_penjualan/retur/update/(:any)']                = 'sales/C_ReturPenjualan/retur_update/$1';
+$route['retur_penjualan/retur/submit/(:any)']                = 'sales/C_ReturPenjualan/retur_submit/$1';
 
 // ---- Retur Penjualan ----
 $route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
@@ -474,6 +477,7 @@ $route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPen
 // Kasir
 $route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPenjualan/retur_kasir/$1';
 $route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
+$route['retur_penjualan/activity_log']                       = 'sales/C_ReturPenjualan/activity_log';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';

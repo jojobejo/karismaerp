@@ -1,4 +1,22 @@
 <!-- views/content/sales/retur/spr_detail.php -->
+<?php
+if (!function_exists('hitung_durasi')) {
+    function hitung_durasi($from, $to) {
+        if (empty($from) || empty($to)) return null;
+        $t1 = new DateTime($from);
+        $t2 = new DateTime($to);
+        $diff = $t1->diff($t2);
+        
+        $parts = [];
+        if ($diff->d > 0) $parts[] = $diff->d . ' hari';
+        if ($diff->h > 0) $parts[] = $diff->h . ' jam';
+        if ($diff->i > 0) $parts[] = $diff->i . ' menit';
+        if ($diff->s > 0 && empty($parts)) $parts[] = $diff->s . ' detik';
+        
+        return empty($parts) ? '0 menit' : implode(' ', $parts);
+    }
+}
+?>
 <style>
     .spr-badge-timeline {
         display: flex;
@@ -53,11 +71,11 @@
     .step-pending .spr-step-icon { background: #dee2e6; color: #888; }
     .step-rejected .spr-step-icon { background: #dc3545; }
 
-    .table-detail-spr th { background: #f8f9fa; font-size: 12px; border: 1px solid #dee2e6; }
-    .table-detail-spr td { font-size: 12px; border: 1px solid #dee2e6; vertical-align: middle; }
+    .table-detail-spr th { background: #f8f9fa; font-size: 14px; border: 1px solid #dee2e6; padding: 8px !important; }
+    .table-detail-spr td { font-size: 14px; border: 1px solid #dee2e6; vertical-align: middle; padding: 8px !important; }
 
     .alasan-list { list-style: none; padding: 0; margin: 0; }
-    .alasan-list li { font-size: 11px; line-height: 1.5; }
+    .alasan-list li { font-size: 13px; line-height: 1.5; }
     .alasan-list li::before { content: "✓ "; color: #28a745; font-weight: 700; }
 
     .spr-note-bottom {
@@ -359,12 +377,30 @@
                             </div>
                             <div class="card-body p-3">
                                 <?php
+                                $total_duration = '';
+                                if ($spr['status'] === 'selesai' && !empty($spr['logistik_at'])) {
+                                    $total_duration = 'Total Waktu (Selesai): <strong>' . hitung_durasi($spr['create_at'], $spr['logistik_at']) . '</strong>';
+                                } elseif ($spr['status'] === 'ditolak') {
+                                    $rejection_at = $spr['kadep_sc_at'] ?: ($spr['admin_stock_at'] ?: ($spr['koor_sc_at'] ?: null));
+                                    if ($rejection_at) {
+                                        $total_duration = 'Total Waktu (Sampai Ditolak): <strong>' . hitung_durasi($spr['create_at'], $rejection_at) . '</strong>';
+                                    }
+                                } else {
+                                    $total_duration = 'Total Waktu (Berjalan): <strong>' . hitung_durasi($spr['create_at'], date('Y-m-d H:i:s')) . '</strong>';
+                                }
+                                ?>
+                                <?php if ($total_duration !== ''): ?>
+                                    <div class="alert alert-info py-2 px-3 mb-3 small">
+                                        <i class="fas fa-clock mr-1"></i> <?= $total_duration ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php
                                 $steps = [
-                                    ['key'=>'draft',             'label'=>'Dibuat SC',        'icon'=>'user-edit',   'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak']],
-                                    ['key'=>'diajukan',          'label'=>'Verifikasi Koor SC','icon'=>'clipboard-check','by_field'=>'koor_sc_by','at_field'=>'koor_sc_at',   'note_field'=>'koor_sc_catatan', 'done_statuses'=>['diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai']],
-                                    ['key'=>'diverifikasi_koor', 'label'=>'Cek Admin Stock',  'icon'=>'boxes',       'by_field'=>'admin_stock_by','at_field'=>'admin_stock_at','note_field'=>'admin_stock_catatan','done_statuses'=>['dicek_admin_stock','disetujui_kadep','selesai']],
-                                    ['key'=>'dicek_admin_stock', 'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['disetujui_kadep','selesai']],
-                                    ['key'=>'disetujui_kadep',   'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai']],
+                                    ['key'=>'draft',             'label'=>'Dibuat SC',        'icon'=>'user-edit',   'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak'], 'prev_at'=>null],
+                                    ['key'=>'diajukan',          'label'=>'Verifikasi Koor SC','icon'=>'clipboard-check','by_field'=>'koor_sc_by','at_field'=>'koor_sc_at',   'note_field'=>'koor_sc_catatan', 'done_statuses'=>['diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai'], 'prev_at'=>'create_at'],
+                                    ['key'=>'diverifikasi_koor', 'label'=>'Cek Admin Stock',  'icon'=>'boxes',       'by_field'=>'admin_stock_by','at_field'=>'admin_stock_at','note_field'=>'admin_stock_catatan','done_statuses'=>['dicek_admin_stock','disetujui_kadep','selesai'], 'prev_at'=>'koor_sc_at'],
+                                    ['key'=>'dicek_admin_stock', 'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['disetujui_kadep','selesai'], 'prev_at'=>'admin_stock_at'],
+                                    ['key'=>'disetujui_kadep',   'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai'], 'prev_at'=>'kadep_sc_at'],
                                 ];
                                 $cur = $spr['status'];
                                 foreach ($steps as $step):
@@ -380,11 +416,21 @@
                                         <div class="flex-grow-1">
                                             <div style="font-size:12px; font-weight:600;"><?= $step['label'] ?></div>
                                             <?php if ($is_done || ($is_active && $spr[$step['by_field']])): ?>
+                                                <?php
+                                                $step_duration = '';
+                                                if ($step['prev_at'] && !empty($spr[$step['at_field']]) && !empty($spr[$step['prev_at']])) {
+                                                    $dur = hitung_durasi($spr[$step['prev_at']], $spr[$step['at_field']]);
+                                                    if ($dur) {
+                                                        $step_duration = '<span class="badge badge-light border ml-1 px-2 py-1 text-dark font-weight-bold" style="font-size:10px;"><i class="fas fa-stopwatch text-secondary mr-1"></i>' . $dur . '</span>';
+                                                    }
+                                                }
+                                                ?>
                                                 <div style="font-size:11px; color:#555;">
                                                     oleh: <strong><?= htmlspecialchars($spr[$step['by_field']] ?? '-') ?></strong>
                                                     <?php if ($spr[$step['at_field']]): ?>
                                                         &mdash; <?= date('d/m/Y H:i', strtotime($spr[$step['at_field']])) ?>
                                                     <?php endif; ?>
+                                                    <?= $step_duration ?>
                                                 </div>
                                                 <?php if ($step['note_field'] && !empty($spr[$step['note_field']])): ?>
                                                     <div style="font-size:11px; color:#666; margin-top:2px;"><em>"<?= htmlspecialchars($spr[$step['note_field']]) ?>"</em></div>
@@ -402,18 +448,41 @@
                                 </div>
                                 <?php endforeach; ?>
 
-                                <?php if ($spr['status'] === 'ditolak'): ?>
-                                    <div class="alert alert-danger mt-2 py-2 small">
-                                        <i class="fas fa-times-circle mr-1"></i>
-                                        <strong>SPR Ditolak.</strong>
-                                        <?php
-                                        // Tampilkan catatan penolak terakhir
-                                        foreach (['logistik_catatan','kadep_sc_catatan','admin_stock_catatan','koor_sc_catatan'] as $f) {
-                                            if (!empty($spr[$f])) { echo '<br>' . htmlspecialchars($spr[$f]); break; }
-                                        }
-                                        ?>
-                                    </div>
-                                <?php endif; ?>
+                                 <?php if ($spr['status'] === 'ditolak'): ?>
+                                     <div class="alert alert-danger mt-2 py-2 small">
+                                         <i class="fas fa-times-circle mr-1"></i>
+                                         <strong>SPR Ditolak.</strong>
+                                         <?php
+                                         $rejected_by = '';
+                                         $rejected_at = '';
+                                         $rejected_note = '';
+                                         
+                                         if (!empty($spr['kadep_sc_by'])) {
+                                             $rejected_by = $spr['kadep_sc_by'];
+                                             $rejected_at = $spr['kadep_sc_at'];
+                                             $rejected_note = $spr['kadep_sc_catatan'];
+                                         } elseif (!empty($spr['admin_stock_by'])) {
+                                             $rejected_by = $spr['admin_stock_by'];
+                                             $rejected_at = $spr['admin_stock_at'];
+                                             $rejected_note = $spr['admin_stock_catatan'];
+                                         } elseif (!empty($spr['koor_sc_by'])) {
+                                             $rejected_by = $spr['koor_sc_by'];
+                                             $rejected_at = $spr['koor_sc_at'];
+                                             $rejected_note = $spr['koor_sc_catatan'];
+                                         }
+                                         
+                                         if ($rejected_by) {
+                                             echo '<br>Ditolak oleh: <strong>' . htmlspecialchars($rejected_by) . '</strong>';
+                                             if ($rejected_at) {
+                                                 echo ' &mdash; ' . date('d/m/Y H:i', strtotime($rejected_at));
+                                             }
+                                         }
+                                         if ($rejected_note) {
+                                             echo '<br>Catatan: <em>"' . htmlspecialchars($rejected_note) . '"</em>';
+                                         }
+                                         ?>
+                                     </div>
+                                 <?php endif; ?>
                             </div>
                         </div>
                     </div>

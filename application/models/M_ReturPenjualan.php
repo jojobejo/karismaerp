@@ -10,8 +10,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *   SC (buat SPR) → Koor SC (verifikasi) → Admin Stock (cek) → Kadep SC (setuju) → Logistik (proses)
  *
  * Tabel:
- *   - tb_spr_header : header SPR
- *   - tb_spr_detail : detail item barang per SPR
+ *   - tbrp_spr_header : header SPR
+ *   - tbrp_spr_detail : detail item barang per SPR
  */
 class M_ReturPenjualan extends CI_Model
 {
@@ -30,13 +30,14 @@ class M_ReturPenjualan extends CI_Model
         $this->_ensureHeaderTable();
         $this->_ensureDetailTable();
         $this->ensure_retur_penjualan_tables();
+        $this->_ensureActivityLogTable();
         $this->_alterTablesIfNeeded();
     }
 
     private function _ensureHeaderTable()
     {
         $this->db->query("
-            CREATE TABLE IF NOT EXISTS `tb_spr_header` (
+            CREATE TABLE IF NOT EXISTS `tbrp_spr_header` (
                 `id_spr`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_spr`               VARCHAR(30)  NOT NULL,
                 `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
@@ -80,7 +81,7 @@ class M_ReturPenjualan extends CI_Model
     private function _ensureDetailTable()
     {
         $this->db->query("
-            CREATE TABLE IF NOT EXISTS `tb_spr_detail` (
+            CREATE TABLE IF NOT EXISTS `tbrp_spr_detail` (
                 `id_spr_detail`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `id_spr`                      INT UNSIGNED NOT NULL,
                 `no_urut`                     TINYINT UNSIGNED NOT NULL DEFAULT 1,
@@ -112,37 +113,37 @@ class M_ReturPenjualan extends CI_Model
      */
     private function _alterTablesIfNeeded()
     {
-        // Tambah expired_date ke tb_spr_detail jika belum ada
-        if (!$this->db->field_exists('expired_date', 'tb_spr_detail')) {
-            $this->db->query("ALTER TABLE `tb_spr_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        // Tambah expired_date ke tbrp_spr_detail jika belum ada
+        if (!$this->db->field_exists('expired_date', 'tbrp_spr_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
         }
-        // Tambah harga ke tb_spr_detail jika belum ada
-        if (!$this->db->field_exists('harga', 'tb_spr_detail')) {
-            $this->db->query("ALTER TABLE `tb_spr_detail` ADD COLUMN `harga` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `expired_date`");
+        // Tambah harga ke tbrp_spr_detail jika belum ada
+        if (!$this->db->field_exists('harga', 'tbrp_spr_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_detail` ADD COLUMN `harga` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `expired_date`");
         }
         // Tambah expired_date ke detail retur jika belum ada
-        if (!$this->db->field_exists('expired_date', 'tb_retur_penjualan_detail')) {
-            $this->db->query("ALTER TABLE `tb_retur_penjualan_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        if (!$this->db->field_exists('expired_date', 'tbrp_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
         }
         // Tambah satuan ke detail retur jika belum ada
-        if (!$this->db->field_exists('satuan', 'tb_retur_penjualan_detail')) {
-            $this->db->query("ALTER TABLE `tb_retur_penjualan_detail` ADD COLUMN `satuan` VARCHAR(50) DEFAULT NULL AFTER `nama_barang`");
+        if (!$this->db->field_exists('satuan', 'tbrp_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_detail` ADD COLUMN `satuan` VARCHAR(50) DEFAULT NULL AFTER `nama_barang`");
         }
         // Tambah kasir fields ke header retur jika belum ada
-        if (!$this->db->field_exists('kasir_by', 'tb_retur_penjualan_header')) {
-            $this->db->query("ALTER TABLE `tb_retur_penjualan_header`
+        if (!$this->db->field_exists('kasir_by', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
                 ADD COLUMN `kasir_by`    VARCHAR(150) DEFAULT NULL AFTER `no_faktur_potong`,
                 ADD COLUMN `kasir_at`    DATETIME     DEFAULT NULL AFTER `kasir_by`,
                 ADD COLUMN `catatan_kasir` TEXT        DEFAULT NULL AFTER `kasir_at`
             ");
         }
-        // Tambah tipe_retur ke tb_spr_header jika belum ada
-        if (!$this->db->field_exists('tipe_retur', 'tb_spr_header')) {
-            $this->db->query("ALTER TABLE `tb_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
+        // Tambah tipe_retur ke tbrp_spr_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tbrp_spr_header')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
         }
-        // Tambah tipe_retur ke tb_retur_penjualan_header jika belum ada
-        if (!$this->db->field_exists('tipe_retur', 'tb_retur_penjualan_header')) {
-            $this->db->query("ALTER TABLE `tb_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
+        // Tambah tipe_retur ke tbrp_retur_penjualan_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
         }
     }
 
@@ -159,7 +160,7 @@ class M_ReturPenjualan extends CI_Model
             ->like('no_spr', $prefix, 'after')
             ->order_by('no_spr', 'DESC')
             ->limit(1)
-            ->get('tb_spr_header')
+            ->get('tbrp_spr_header')
             ->row();
 
         if ($row) {
@@ -211,9 +212,9 @@ class M_ReturPenjualan extends CI_Model
             h.*,
             c.nama_customer AS nama_customer_master,
             c.alamat_kios   AS alamat_master,
-            (SELECT COUNT(*) FROM tb_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
+            (SELECT COUNT(*) FROM tbrp_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
         ');
-        $this->db->from('tb_spr_header h');
+        $this->db->from('tbrp_spr_header h');
         $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
 
         if (!empty($filter['status'])) {
@@ -223,9 +224,20 @@ class M_ReturPenjualan extends CI_Model
                 $this->db->where('h.status', $filter['status']);
             }
         }
+
+        // Batasan visibilitas berdasarkan role
+        if (isset($filter['own_created_by']) && isset($filter['allowed_statuses'])) {
+            $creator = $this->db->escape($filter['own_created_by']);
+            $statuses = array_map([$this->db, 'escape'], $filter['allowed_statuses']);
+            $status_list = implode(',', $statuses);
+            
+            $this->db->where("(h.create_by = {$creator} OR (h.create_by != {$creator} AND h.status IN ({$status_list})))");
+        } else {
+            if (!empty($filter['create_by']))   $this->db->where('h.create_by', $filter['create_by']);
+        }
+
         if (!empty($filter['date1']))       $this->db->where('h.tanggal >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('h.tanggal <=', $filter['date2']);
-        if (!empty($filter['create_by']))   $this->db->where('h.create_by', $filter['create_by']);
         if (!empty($filter['kd_customer'])) $this->db->where('h.kd_customer', $filter['kd_customer']);
 
         $this->db->order_by('h.tanggal', 'DESC');
@@ -237,7 +249,7 @@ class M_ReturPenjualan extends CI_Model
     public function get_spr($id_spr)
     {
         $this->db->select('h.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, c.nama_sales AS sales_master');
-        $this->db->from('tb_spr_header h');
+        $this->db->from('tbrp_spr_header h');
         $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
         $this->db->where('h.id_spr', (int) $id_spr);
         return $this->db->get()->row_array();
@@ -246,7 +258,7 @@ class M_ReturPenjualan extends CI_Model
     public function get_spr_detail($id_spr)
     {
         $this->db->select('d.*, m.satuan, m.kd_barang');
-        $this->db->from('tb_spr_detail d');
+        $this->db->from('tbrp_spr_detail d');
         $this->db->join('tb_master_barang_all m', 'm.nama_barang = d.nama_barang', 'left');
         $this->db->where('d.id_spr', (int) $id_spr);
         $this->db->group_by('d.id_spr_detail'); // prevent duplicates if multiple kd_barang exist
@@ -260,19 +272,19 @@ class M_ReturPenjualan extends CI_Model
 
     public function save_spr(array $data)
     {
-        $this->db->insert('tb_spr_header', $data);
+        $this->db->insert('tbrp_spr_header', $data);
         return $this->db->insert_id();
     }
 
     public function save_spr_detail(array $rows)
     {
         if (empty($rows)) return;
-        $this->db->insert_batch('tb_spr_detail', $rows);
+        $this->db->insert_batch('tbrp_spr_detail', $rows);
     }
 
     public function delete_spr_detail($id_spr)
     {
-        $this->db->delete('tb_spr_detail', ['id_spr' => (int) $id_spr]);
+        $this->db->delete('tbrp_spr_detail', ['id_spr' => (int) $id_spr]);
     }
 
     /**
@@ -286,14 +298,14 @@ class M_ReturPenjualan extends CI_Model
     {
         $data = array_merge(['status' => $status], $extra);
         $this->db->where('id_spr', (int) $id_spr);
-        $this->db->update('tb_spr_header', $data);
+        $this->db->update('tbrp_spr_header', $data);
         return $this->db->affected_rows() > 0;
     }
 
     public function update_spr($id_spr, array $data)
     {
         $this->db->where('id_spr', (int) $id_spr);
-        $this->db->update('tb_spr_header', $data);
+        $this->db->update('tbrp_spr_header', $data);
         return $this->db->affected_rows() > 0;
     }
 
@@ -309,7 +321,7 @@ class M_ReturPenjualan extends CI_Model
     {
         return $this->db
             ->where('status', $status)
-            ->count_all_results('tb_spr_header');
+            ->count_all_results('tbrp_spr_header');
     }
 
     // ================================================================
@@ -325,7 +337,7 @@ class M_ReturPenjualan extends CI_Model
     {
         // Header
         $this->db->query("
-            CREATE TABLE IF NOT EXISTS `tb_retur_penjualan_header` (
+            CREATE TABLE IF NOT EXISTS `tbrp_retur_penjualan_header` (
                 `id_retur`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `no_retur`              VARCHAR(40)  NOT NULL,
                 `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
@@ -366,7 +378,7 @@ class M_ReturPenjualan extends CI_Model
 
         // Detail
         $this->db->query("
-            CREATE TABLE IF NOT EXISTS `tb_retur_penjualan_detail` (
+            CREATE TABLE IF NOT EXISTS `tbrp_retur_penjualan_detail` (
                 `id_retur_detail`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `id_retur`         INT UNSIGNED NOT NULL,
                 `id_spr_detail`    INT UNSIGNED DEFAULT NULL,
@@ -380,6 +392,28 @@ class M_ReturPenjualan extends CI_Model
                 `harga_satuan`     DECIMAL(15,2) NOT NULL DEFAULT 0,
                 PRIMARY KEY (`id_retur_detail`),
                 KEY `idx_id_retur` (`id_retur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    private function _ensureActivityLogTable()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_activity_log` (
+                `id_log`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `no_referensi`    VARCHAR(50)  NOT NULL,
+                `tipe_referensi`  ENUM('spr','retur') NOT NULL,
+                `aksi`            VARCHAR(50)  NOT NULL,
+                `status_awal`     VARCHAR(50)  DEFAULT NULL,
+                `status_akhir`    VARCHAR(50)  DEFAULT NULL,
+                `catatan`         TEXT         DEFAULT NULL,
+                `user_by`         VARCHAR(150) NOT NULL,
+                `created_at`      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_log`),
+                KEY `idx_no_referensi` (`no_referensi`),
+                KEY `idx_tipe_referensi` (`tipe_referensi`),
+                KEY `idx_aksi` (`aksi`),
+                KEY `idx_user_by` (`user_by`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
     }
@@ -399,7 +433,7 @@ class M_ReturPenjualan extends CI_Model
             ->like('no_retur', $prefix, 'after')
             ->order_by('no_retur', 'DESC')
             ->limit(1)
-            ->get('tb_retur_penjualan_header')
+            ->get('tbrp_retur_penjualan_header')
             ->row();
 
         if ($row) {
@@ -417,7 +451,7 @@ class M_ReturPenjualan extends CI_Model
     /** Simpan header Retur Penjualan */
     public function save_retur_penjualan(array $data)
     {
-        $this->db->insert('tb_retur_penjualan_header', $data);
+        $this->db->insert('tbrp_retur_penjualan_header', $data);
         return $this->db->insert_id();
     }
 
@@ -425,7 +459,7 @@ class M_ReturPenjualan extends CI_Model
     public function save_retur_penjualan_detail(array $rows)
     {
         if (empty($rows)) return;
-        $this->db->insert_batch('tb_retur_penjualan_detail', $rows);
+        $this->db->insert_batch('tbrp_retur_penjualan_detail', $rows);
     }
 
     /** Ambil semua Retur Penjualan dengan filter */
@@ -436,10 +470,10 @@ class M_ReturPenjualan extends CI_Model
             c.nama_customer AS nama_customer_master,
             c.alamat_kios   AS alamat_master,
             (SELECT SUM(d.qty_retur * d.harga_satuan)
-             FROM tb_retur_penjualan_detail d
+             FROM tbrp_retur_penjualan_detail d
              WHERE d.id_retur = r.id_retur) AS total_nilai
         ');
-        $this->db->from('tb_retur_penjualan_header r');
+        $this->db->from('tbrp_retur_penjualan_header r');
         $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
 
         if (!empty($filter['status'])) {
@@ -462,9 +496,9 @@ class M_ReturPenjualan extends CI_Model
     public function get_retur_penjualan($id_retur)
     {
         $this->db->select('r.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, s.no_spr');
-        $this->db->from('tb_retur_penjualan_header r');
+        $this->db->from('tbrp_retur_penjualan_header r');
         $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
-        $this->db->join('tb_spr_header s', 's.id_spr = r.id_spr', 'left');
+        $this->db->join('tbrp_spr_header s', 's.id_spr = r.id_spr', 'left');
         $this->db->where('r.id_retur', (int)$id_retur);
         return $this->db->get()->row_array();
     }
@@ -475,7 +509,7 @@ class M_ReturPenjualan extends CI_Model
         return $this->db
             ->where('id_retur', (int)$id_retur)
             ->order_by('no_urut', 'ASC')
-            ->get('tb_retur_penjualan_detail')
+            ->get('tbrp_retur_penjualan_detail')
             ->result_array();
     }
 
@@ -484,7 +518,7 @@ class M_ReturPenjualan extends CI_Model
     {
         $data = array_merge(['status_retur' => $status], $extra);
         $this->db->where('id_retur', (int)$id_retur);
-        $this->db->update('tb_retur_penjualan_header', $data);
+        $this->db->update('tbrp_retur_penjualan_header', $data);
         return $this->db->affected_rows() > 0;
     }
 
@@ -492,7 +526,7 @@ class M_ReturPenjualan extends CI_Model
     public function update_retur_penjualan_detail_row($id_retur_detail, array $data)
     {
         $this->db->where('id_retur_detail', (int)$id_retur_detail);
-        $this->db->update('tb_retur_penjualan_detail', $data);
+        $this->db->update('tbrp_retur_penjualan_detail', $data);
     }
 
     /** Cek apakah SPR sudah punya Retur Penjualan */
@@ -500,7 +534,7 @@ class M_ReturPenjualan extends CI_Model
     {
         return $this->db
             ->where('id_spr', (int)$id_spr)
-            ->get('tb_retur_penjualan_header')
+            ->get('tbrp_retur_penjualan_header')
             ->row_array();
     }
 
@@ -522,9 +556,9 @@ class M_ReturPenjualan extends CI_Model
                 r.catatan_kasir,
                 c.nama_customer AS nama_customer_master,
                 c.alamat_kios   AS alamat_master,
-                (SELECT COUNT(*) FROM tb_retur_penjualan_detail d WHERE d.id_retur = r.id_retur) AS jumlah_item
+                (SELECT COUNT(*) FROM tbrp_retur_penjualan_detail d WHERE d.id_retur = r.id_retur) AS jumlah_item
             ');
-            $this->db->from('tb_retur_penjualan_header r');
+            $this->db->from('tbrp_retur_penjualan_header r');
             $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
 
             if ($role === 'collection') {
@@ -547,9 +581,9 @@ class M_ReturPenjualan extends CI_Model
             h.*,
             c.nama_customer AS nama_customer_master,
             c.alamat_kios   AS alamat_master,
-            (SELECT COUNT(*) FROM tb_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
+            (SELECT COUNT(*) FROM tbrp_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
         ');
-        $this->db->from('tb_spr_header h');
+        $this->db->from('tbrp_spr_header h');
         $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
 
         if ($role === 'admin') {
@@ -572,5 +606,39 @@ class M_ReturPenjualan extends CI_Model
         $this->db->order_by('h.id_spr',  'DESC');
 
         return $this->db->get()->result_array();
+    }
+
+    public function record_log($no_ref, $tipe_ref, $aksi, $status_awal, $status_akhir, $catatan = null, $user_by = null)
+    {
+        if (empty($user_by)) {
+            $user = $this->session->userdata('user') ?: $this->session->userdata('nama');
+            if (is_array($user)) {
+                $user_by = $user['nama'] ?? $user['username'] ?? 'System';
+            } else {
+                $user_by = is_string($user) ? $user : 'System';
+            }
+        }
+        
+        $log_data = [
+            'no_referensi'   => $no_ref,
+            'tipe_referensi' => $tipe_ref,
+            'aksi'           => $aksi,
+            'status_awal'    => $status_awal,
+            'status_akhir'   => $status_akhir,
+            'catatan'        => $catatan,
+            'user_by'        => $user_by,
+            'created_at'     => date('Y-m-d H:i:s'),
+        ];
+        
+        $this->db->insert('tbrp_activity_log', $log_data);
+    }
+
+    public function get_activity_logs()
+    {
+        return $this->db
+            ->order_by('created_at', 'DESC')
+            ->order_by('id_log', 'DESC')
+            ->get('tbrp_activity_log')
+            ->result_array();
     }
 }

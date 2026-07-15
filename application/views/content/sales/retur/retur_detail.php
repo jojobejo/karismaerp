@@ -1,4 +1,21 @@
-<?php /* views/content/sales/retur/retur_detail.php */ ?>
+<?php /* views/content/sales/retur/retur_detail.php */
+if (!function_exists('hitung_durasi')) {
+    function hitung_durasi($from, $to) {
+        if (empty($from) || empty($to)) return null;
+        $t1 = new DateTime($from);
+        $t2 = new DateTime($to);
+        $diff = $t1->diff($t2);
+        
+        $parts = [];
+        if ($diff->d > 0) $parts[] = $diff->d . ' hari';
+        if ($diff->h > 0) $parts[] = $diff->h . ' jam';
+        if ($diff->i > 0) $parts[] = $diff->i . ' menit';
+        if ($diff->s > 0 && empty($parts)) $parts[] = $diff->s . ' detik';
+        
+        return empty($parts) ? '0 menit' : implode(' ', $parts);
+    }
+}
+?>
 <style>
     .timeline-retur { border-left: 3px solid #dee2e6; padding-left: 16px; margin-left: 8px; }
     .timeline-retur .tl-step { margin-bottom: 16px; position: relative; }
@@ -15,8 +32,8 @@
     .timeline-retur .tl-step.done::before   { background: #28a745; }
     .timeline-retur .tl-step.active::before { background: #ffc107; }
     .timeline-retur .tl-step.reject::before { background: #dc3545; }
-    .table-det th { background: #f8f9fa; font-size: 12px; }
-    .table-det td { font-size: 12px; }
+    .table-det th { background: #f8f9fa; font-size: 14px; padding: 8px !important; }
+    .table-det td { font-size: 14px; padding: 8px !important; }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -172,12 +189,12 @@
                                     <div class="mt-2 small text-info"><strong>No. Faktur Potong:</strong> <?= htmlspecialchars($retur['no_faktur_potong']) ?></div>
                                 <?php endif; ?>
 
-                                <!-- TOMBOL AKSI -->
                                 <?php
                                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                                 $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
                                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
                                 $st = $retur['status_retur'];
                                 ?>
                                 <div class="mt-3 d-flex flex-wrap gap-2">
@@ -192,6 +209,14 @@
                                     <?php elseif ($st === 'menunggu_kasir' && $is_kasir): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/kasir/' . $retur['id_retur']) ?>" class="btn btn-success mr-2">
                                             <i class="fas fa-cash-register"></i> Proses Kasir
+                                        </a>
+                                    <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
+                                        <a href="<?= base_url('retur_penjualan/retur/edit/' . $retur['id_retur']) ?>" class="btn btn-primary mr-2">
+                                            <i class="fas fa-edit"></i> Edit Retur
+                                        </a>
+                                        <a href="<?= base_url('retur_penjualan/retur/submit/' . $retur['id_retur']) ?>" class="btn btn-success mr-2"
+                                           onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                            <i class="fas fa-paper-plane"></i> Ajukan Kembali
                                         </a>
                                     <?php endif; ?>
                                     <a href="<?= base_url('retur_penjualan/retur/print/' . $retur['id_retur']) ?>" target="_blank" class="btn btn-secondary mr-2">
@@ -214,11 +239,26 @@
                             <div class="card-body p-3">
                                 <?php
                                 $st = $retur['status_retur'];
+                                $total_duration = '';
+                                if ($st === 'selesai' && !empty($retur['kasir_at'])) {
+                                    $total_duration = 'Total Waktu (Selesai): <strong>' . hitung_durasi($retur['create_at_retur'], $retur['kasir_at']) . '</strong>';
+                                } elseif ($st === 'ditolak' && !empty($retur['admin_stock_at_retur'])) {
+                                    $total_duration = 'Total Waktu (Sampai Ditolak): <strong>' . hitung_durasi($retur['create_at_retur'], $retur['admin_stock_at_retur']) . '</strong>';
+                                } else {
+                                    $total_duration = 'Total Waktu (Berjalan): <strong>' . hitung_durasi($retur['create_at_retur'], date('Y-m-d H:i:s')) . '</strong>';
+                                }
+                                ?>
+                                <?php if ($total_duration !== ''): ?>
+                                    <div class="alert alert-info py-2 px-3 mb-3 small">
+                                        <i class="fas fa-clock mr-1"></i> <?= $total_duration ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php
                                 $steps_retur = [
-                                    ['label' => 'Dibuat ADMLPB2',   'icon' => 'file-alt',       'done_statuses' => ['menunggu_verifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak'], 'by' => $retur['create_by_retur'],     'at' => $retur['create_at_retur'],     'note' => $retur['catatan_logistik'] ?? null],
-                                    ['label' => 'Verifikasi Admin Stock','icon' => 'clipboard-check','done_statuses' => ['menunggu_collection','menunggu_kasir','selesai'],                             'by' => $retur['admin_stock_by_retur'],'at' => $retur['admin_stock_at_retur'],'note' => $retur['catatan_admin_stock'] ?? null],
-                                    ['label' => 'Proses Collection', 'icon' => 'handshake',      'done_statuses' => ['menunggu_kasir','selesai'],                                                       'by' => $retur['collection_by'] ?? null,'at' => $retur['collection_at'] ?? null,'note' => $retur['catatan_collection'] ?? null],
-                                    ['label' => 'Kasir Selesai',    'icon' => 'cash-register',  'done_statuses' => ['selesai'],                                                                        'by' => $retur['kasir_by'] ?? null,    'at' => $retur['kasir_at'] ?? null,    'note' => $retur['catatan_kasir'] ?? null],
+                                    ['label' => 'Dibuat ADMLPB2',   'icon' => 'file-alt',       'done_statuses' => ['menunggu_verifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak'], 'by' => $retur['create_by_retur'],     'at' => $retur['create_at_retur'],     'note' => $retur['catatan_logistik'] ?? null, 'prev_at'=>null],
+                                    ['label' => 'Verifikasi Admin Stock','icon' => 'clipboard-check','done_statuses' => ['menunggu_collection','menunggu_kasir','selesai'],                             'by' => $retur['admin_stock_by_retur'],'at' => $retur['admin_stock_at_retur'],'note' => $retur['catatan_admin_stock'] ?? null, 'prev_at'=>'create_at_retur'],
+                                    ['label' => 'Proses Collection', 'icon' => 'handshake',      'done_statuses' => ['menunggu_kasir','selesai'],                                                       'by' => $retur['collection_by'] ?? null,'at' => $retur['collection_at'] ?? null,'note' => $retur['catatan_collection'] ?? null, 'prev_at'=>'admin_stock_at_retur'],
+                                    ['label' => 'Kasir Selesai',    'icon' => 'cash-register',  'done_statuses' => ['selesai'],                                                                        'by' => $retur['kasir_by'] ?? null,    'at' => $retur['kasir_at'] ?? null,    'note' => $retur['catatan_kasir'] ?? null, 'prev_at'=>'collection_at'],
                                 ];
                                 ?>
                                 <div class="timeline-retur">
@@ -232,9 +272,19 @@
                                             <?= $step['label'] ?>
                                         </div>
                                         <?php if ($step['by']): ?>
+                                            <?php
+                                            $step_duration = '';
+                                            if ($step['prev_at'] && !empty($step['at']) && !empty($retur[$step['prev_at']])) {
+                                                $dur = hitung_durasi($retur[$step['prev_at']], $step['at']);
+                                                if ($dur) {
+                                                    $step_duration = '<span class="badge badge-light border ml-1 px-2 py-1 text-dark font-weight-bold" style="font-size:10px;"><i class="fas fa-stopwatch text-secondary mr-1"></i>' . $dur . '</span>';
+                                                }
+                                            }
+                                            ?>
                                             <div style="font-size:11px; color:#555;">
                                                 oleh: <strong><?= htmlspecialchars($step['by']) ?></strong>
                                                 <?php if ($step['at']): ?> &mdash; <?= date('d/m/Y H:i', strtotime($step['at'])) ?><?php endif; ?>
+                                                <?= $step_duration ?>
                                             </div>
                                         <?php else: ?>
                                             <div style="font-size:11px; color:#aaa;">Menunggu...</div>
@@ -249,8 +299,14 @@
                                     <div class="alert alert-danger py-2 small mt-2">
                                         <i class="fas fa-times-circle mr-1"></i>
                                         <strong>Retur Ditolak.</strong>
+                                        <?php if (!empty($retur['admin_stock_by_retur'])): ?>
+                                            <br>Ditolak oleh: <strong><?= htmlspecialchars($retur['admin_stock_by_retur']) ?></strong>
+                                            <?php if (!empty($retur['admin_stock_at_retur'])): ?>
+                                                &mdash; <?= date('d/m/Y H:i', strtotime($retur['admin_stock_at_retur'])) ?>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                         <?php if ($retur['catatan_admin_stock']): ?>
-                                            <br><?= htmlspecialchars($retur['catatan_admin_stock']) ?>
+                                            <br>Catatan: <em>"<?= htmlspecialchars($retur['catatan_admin_stock']) ?>"</em>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>

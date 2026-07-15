@@ -74,28 +74,37 @@
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                     $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                     $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']); // Logistik TIDAK masuk admin stock
+                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
                     $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
                     $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
-                    $is_approval = $is_koor || $is_admin_stock || $is_kadep || $is_logistik;
+                    $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                    $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                    $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                    $is_approval    = $is_koor || $is_admin_stock || $is_kadep;
                     ?>
-                    <?php if ($is_sc || $is_koor): ?>
                     <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan/create') ?>" class="btn btn-danger">
-                            <i class="fas fa-plus"></i> Buat SPR Baru
+                        <?php if ($is_sc || $is_koor): ?>
+                            <a href="<?= base_url('retur_penjualan/create') ?>" class="btn btn-danger mr-1">
+                                <i class="fas fa-plus"></i> Buat SPR Baru
+                            </a>
+                        <?php endif; ?>
+                        
+                        <?php if ($is_admin_stock || $is_logistik): ?>
+                            <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active mr-1">
+                                <i class="fas fa-file-invoice"></i> Daftar SPR
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                            <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
+                                <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+                            </a>
+                        <?php endif; ?>
+
+                        <a href="<?= base_url('retur_penjualan/activity_log') ?>" class="btn btn-outline-success">
+                            <i class="fas fa-history"></i> Log Aktivitas
                         </a>
                     </div>
-                    <?php endif; ?>
-                    <?php if ($is_admin_stock): ?>
-                    <div class="col-auto">
-                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active">
-                            <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
-                        </a>
-                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary">
-                            <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
-                        </a>
-                    </div>
-                    <?php endif; ?>
                 </div>
 
                 <!-- FILTER -->
@@ -293,13 +302,19 @@
                                                         <i class="fas fa-print"></i> Cetak
                                                     </a>
                                                 <?php endif; ?>
-                                                <?php if ($st === 'draft' && $row['create_by'] === ($user['nama'] ?? '')): ?>
-                                                    <a href="<?= base_url('retur_penjualan/submit/' . $row['id_spr']) ?>"
-                                                       class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Koor SC"
-                                                       data-nospr="<?= htmlspecialchars($row['no_spr']) ?>">
-                                                        <i class="fas fa-paper-plane"></i>
-                                                    </a>
-                                                <?php endif; ?>
+                                                <?php if (in_array($st, ['draft', 'ditolak'], true) && ($row['create_by'] === ($user['nama'] ?? '') || $is_sc || $jobdesk === 'ADMIN')): ?>
+                                                     <a href="<?= base_url('retur_penjualan/edit/' . $row['id_spr']) ?>"
+                                                        class="btn btn-sm btn-primary" title="Edit SPR">
+                                                         <i class="fas fa-edit"></i>
+                                                     </a>
+                                                 <?php endif; ?>
+                                                 <?php if (in_array($st, ['draft', 'ditolak'], true) && $row['create_by'] === ($user['nama'] ?? '')): ?>
+                                                     <a href="<?= base_url('retur_penjualan/submit/' . $row['id_spr']) ?>"
+                                                        class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Koor SC"
+                                                        data-nospr="<?= htmlspecialchars($row['no_spr']) ?>">
+                                                         <i class="fas fa-paper-plane"></i>
+                                                     </a>
+                                                 <?php endif; ?>
                                             </td>
                                         </tr>
                                         <?php endforeach; ?>

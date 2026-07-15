@@ -338,12 +338,13 @@ class M_pembayaran extends CI_Model
      */
     public function get_customer_saldo_retur($kd_customer)
     {
-        // 1. Get total completed returns
+        // 1. Get total completed returns (only for tipe 'biasa')
         $this->db->select('SUM(d.qty_retur * d.harga_satuan) AS total_retur');
-        $this->db->from('tb_retur_penjualan_header h');
-        $this->db->join('tb_retur_penjualan_detail d', 'd.id_retur = h.id_retur');
+        $this->db->from('tbrp_retur_penjualan_header h');
+        $this->db->join('tbrp_retur_penjualan_detail d', 'd.id_retur = h.id_retur');
         $this->db->where('h.kd_customer', $kd_customer);
         $this->db->where('h.status_retur', 'selesai');
+        $this->db->where('h.tipe_retur', 'biasa');
         $total_retur = (float)$this->db->get()->row()->total_retur;
 
         // 2. Get total return used in payments

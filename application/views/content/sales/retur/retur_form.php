@@ -44,7 +44,12 @@
                     <?php endif; ?>
                 <?php endforeach; ?>
 
-                <form method="post" action="<?= base_url('retur_penjualan/retur/simpan/' . $spr['id_spr']) ?>">
+                <?php
+                $action_url = isset($retur['id_retur']) 
+                    ? base_url('retur_penjualan/retur/update/' . $retur['id_retur']) 
+                    : base_url('retur_penjualan/retur/simpan/' . $spr['id_spr']);
+                ?>
+                <form method="post" action="<?= $action_url ?>">
                     <?php if ($this->config->item('csrf_protection') === TRUE): ?>
                         <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
                     <?php endif; ?>
@@ -72,7 +77,7 @@
                                     <div class="form-group row mb-2">
                                         <label class="col-sm-4 col-form-label col-form-label-sm font-weight-bold">Tanggal Retur</label>
                                         <div class="col-sm-8">
-                                            <input type="date" name="tanggal_retur" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
+                                            <input type="date" name="tanggal_retur" class="form-control form-control-sm" value="<?= isset($retur['tanggal_retur']) ? htmlspecialchars($retur['tanggal_retur']) : date('Y-m-d') ?>" required>
                                         </div>
                                     </div>
                                     <div class="form-group row mb-2">
@@ -81,7 +86,7 @@
                                             <select name="gudang_id" class="form-control form-control-sm" required>
                                                 <option value="">-- Pilih Gudang --</option>
                                                 <?php foreach ($gudang_list as $g): ?>
-                                                    <option value="<?= $g['id_gudang'] ?>"><?= htmlspecialchars($g['nama_gudang']) ?></option>
+                                                    <option value="<?= $g['id_gudang'] ?>" <?= (isset($retur['gudang_id']) && $retur['gudang_id'] == $g['id_gudang']) ? 'selected' : '' ?>><?= htmlspecialchars($g['nama_gudang']) ?></option>
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
@@ -110,7 +115,7 @@
                                 <div class="col-12">
                                     <div class="form-group mb-0">
                                         <label class="small font-weight-bold">Catatan (Opsional)</label>
-                                        <textarea name="catatan_admlpb2" class="form-control form-control-sm" rows="2" placeholder="Catatan tambahan..."></textarea>
+                                        <textarea name="catatan_admlpb2" class="form-control form-control-sm" rows="2" placeholder="Catatan tambahan..."><?= isset($retur['catatan_logistik']) ? htmlspecialchars($retur['catatan_logistik']) : '' ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -195,12 +200,21 @@
                             </div>
                         </div>
                         <div class="card-footer d-flex justify-content-end">
-                            <a href="<?= base_url('retur_penjualan/admlpb2') ?>" class="btn btn-secondary mr-2">
+                            <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-secondary mr-2">
                                 <i class="fas fa-arrow-left"></i> Batal
                             </a>
-                            <button type="submit" class="btn btn-success" onclick="return confirm('Simpan Retur Penjualan ini? SPR akan otomatis berubah status menjadi Selesai.')">
-                                <i class="fas fa-save"></i> Simpan Retur Penjualan
-                            </button>
+                            <?php if (isset($retur['id_retur'])): ?>
+                                <button type="submit" name="submit_action" value="update" class="btn btn-primary mr-2" onclick="return confirm('Simpan perubahan Retur Penjualan ini?')">
+                                    <i class="fas fa-save"></i> Simpan Perubahan
+                                </button>
+                                <button type="submit" name="submit_action" value="resubmit" class="btn btn-success" onclick="return confirm('Simpan perubahan dan ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                    <i class="fas fa-paper-plane"></i> Simpan & Ajukan Kembali
+                                </button>
+                            <?php else: ?>
+                                <button type="submit" class="btn btn-success" onclick="return confirm('Simpan Retur Penjualan ini? SPR akan otomatis berubah status menjadi Selesai.')">
+                                    <i class="fas fa-save"></i> Simpan Retur Penjualan
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </form>

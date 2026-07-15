@@ -246,6 +246,9 @@ class C_ReturPenjualan extends CI_Controller
         // ---- Detail Barang ----
         $this->_saveDetail($id_spr);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($no_spr, 'spr', $as_draft ? 'create_draft' : 'create_submit', null, $status, $catatan, $user['nama']);
+
         $msg = $as_draft
             ? "SPR <strong>{$no_spr}</strong> berhasil disimpan sebagai Draft."
             : "SPR <strong>{$no_spr}</strong> berhasil diajukan dan menunggu verifikasi Koor SC.";
@@ -317,6 +320,9 @@ class C_ReturPenjualan extends CI_Controller
         // Hapus detail lama dan ganti dengan yang baru
         $this->M_ReturPenjualan->delete_spr_detail($id_spr);
         $this->_saveDetail($id_spr);
+
+        // Record Log
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'edit_stock', $spr['status'], $spr['status'], $header['catatan'], $user['nama']);
 
         $this->session->set_flashdata('success', "Data SPR <strong>{$spr['no_spr']}</strong> berhasil diperbarui.");
         redirect('retur_penjualan/admin_stock_cek/' . $id_spr);
@@ -453,6 +459,9 @@ class C_ReturPenjualan extends CI_Controller
             'update_by' => $user['nama'],
         ]);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'submit', $spr['status'], 'diajukan', null, $user['nama']);
+
         $this->session->set_flashdata('success', "SPR <strong>{$spr['no_spr']}</strong> berhasil diajukan ke Koor SC.");
         redirect('retur_penjualan/detail/' . $id_spr);
     }
@@ -514,6 +523,9 @@ class C_ReturPenjualan extends CI_Controller
             'koor_sc_catatan' => $catatan,
             'update_by'       => $user['nama'],
         ]);
+
+        // Record Log
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', $aksi === 'setuju' ? 'koor_verify' : 'koor_reject', $spr['status'], $new_status, $catatan, $user['nama']);
 
         $msg = ($aksi === 'setuju')
             ? "SPR <strong>{$spr['no_spr']}</strong> disetujui, lanjut ke Admin Stock."
@@ -581,6 +593,9 @@ class C_ReturPenjualan extends CI_Controller
             'update_by'           => $user['nama'],
         ]);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', $aksi === 'setuju' ? 'admin_stock_check' : 'admin_stock_reject', $spr['status'], $new_status, $catatan, $user['nama']);
+
         $msg = ($aksi === 'setuju')
             ? "SPR <strong>{$spr['no_spr']}</strong> dicek Admin Stock, lanjut ke Kadep SC."
             : "SPR <strong>{$spr['no_spr']}</strong> ditolak oleh Admin Stock.";
@@ -646,6 +661,9 @@ class C_ReturPenjualan extends CI_Controller
             'kadep_sc_catatan' => $catatan,
             'update_by'        => $user['nama'],
         ]);
+
+        // Record Log
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', $aksi === 'setuju' ? 'kadep_approve' : 'kadep_reject', $spr['status'], $new_status, $catatan, $user['nama']);
 
         $msg = ($aksi === 'setuju')
             ? "SPR <strong>{$spr['no_spr']}</strong> disetujui, lanjut ke Logistik."
@@ -913,10 +931,10 @@ class C_ReturPenjualan extends CI_Controller
         ];
 
         // simpan gudang_id ke header jika kolomnya ada, tambahkan jika belum ada.
-        if ($this->db->field_exists('gudang_id', 'tb_retur_penjualan_header')) {
+        if ($this->db->field_exists('gudang_id', 'tbrp_retur_penjualan_header')) {
             $header['gudang_id'] = $gudang_id;
         } else {
-            $this->db->query("ALTER TABLE `tb_retur_penjualan_header` ADD COLUMN `gudang_id` INT DEFAULT NULL AFTER `no_spr`");
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `gudang_id` INT DEFAULT NULL AFTER `no_spr`");
             $header['gudang_id'] = $gudang_id;
         }
 
@@ -1020,6 +1038,10 @@ class C_ReturPenjualan extends CI_Controller
             'logistik_catatan' => 'Retur Penjualan dibuat: ' . $no_retur,
             'update_by'        => $user['nama'],
         ]);
+
+        // Record Log for SPR completed and Retur created
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'logistik_process', $spr['status'], 'selesai', 'Retur Penjualan dibuat: ' . $no_retur, $user['nama']);
+        $this->M_ReturPenjualan->record_log($no_retur, 'retur', 'retur_create', null, 'menunggu_verifikasi', $catatan_log, $user['nama']);
 
         $this->session->set_flashdata('success', "Retur Penjualan <strong>{$no_retur}</strong> berhasil dibuat dan menunggu verifikasi Admin Stock.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
@@ -1137,6 +1159,9 @@ class C_ReturPenjualan extends CI_Controller
             'update_by_retur'      => $user['nama'],
         ]);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', $aksi === 'setuju' ? 'retur_verify' : 'retur_reject', $retur['status_retur'], $new_status, $catatan, $user['nama']);
+
         $msg = ($aksi === 'setuju')
             ? "Retur <strong>{$retur['no_retur']}</strong> diverifikasi, lanjut ke Team Collection."
             : "Retur <strong>{$retur['no_retur']}</strong> ditolak oleh Admin Stock.";
@@ -1206,6 +1231,9 @@ class C_ReturPenjualan extends CI_Controller
             'update_by_retur'    => $user['nama'],
         ]);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_collection', $retur['status_retur'], 'menunggu_kasir', $catatan_collection, $user['nama']);
+
         $this->session->set_flashdata('success', "Retur <strong>{$retur['no_retur']}</strong> selesai diproses Collection, lanjut ke Kasir.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
     }
@@ -1269,10 +1297,160 @@ class C_ReturPenjualan extends CI_Controller
             'update_by_retur'=> $user['nama'],
         ]);
 
+        // Record Log
+        $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_kasir', $retur['status_retur'], 'selesai', $catatan_kasir, $user['nama']);
+
         $this->session->set_flashdata('success', "Retur Penjualan <strong>{$retur['no_retur']}</strong> selesai diproses oleh Kasir.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
     }
 
+    /** ADMLPB2: Form edit Retur Penjualan yang ditolak */
+    public function retur_edit($id_retur)
+    {
+        if (!$this->_isAdmlpb2()) {
+            $this->_denyAccess('Hanya ADMLPB2 yang dapat mengedit Retur Penjualan.');
+            return;
+        }
+
+        $retur = $this->M_ReturPenjualan->get_retur_penjualan($id_retur);
+        if (!$retur || $retur['status_retur'] !== 'ditolak') {
+            $this->session->set_flashdata('error', 'Retur Penjualan tidak valid atau statusnya bukan Ditolak.');
+            redirect('retur_penjualan/retur');
+            return;
+        }
+
+        $this->load->model('M_SalesOrder');
+        $data['page_title']  = 'KARISMA — Edit Retur Penjualan ' . $retur['no_retur'];
+        $data['retur']       = $retur;
+        $data['retur_detail'] = $this->M_ReturPenjualan->get_retur_penjualan_detail($id_retur);
+        $data['user']        = $this->_getUser();
+        $data['no_retur']    = $retur['no_retur'];
+        $data['gudang_list'] = $this->db->where('is_active', 1)->order_by('nama_gudang', 'ASC')->get('tb_gudang')->result_array();
+
+        // Agar retur_form.php reuseable, kita mapping $spr ke info dasar
+        $data['spr'] = [
+            'id_spr'        => $retur['id_spr'],
+            'no_spr'        => $retur['no_spr'],
+            'nama_customer' => $retur['nama_customer'],
+            'alamat'        => $retur['alamat'],
+            'nama_sales'    => $retur['nama_sales'],
+            'tipe_retur'    => $retur['tipe_retur'],
+        ];
+
+        // Mapping $retur_detail ke bentuk yang mirip dengan $spr_detail agar foreach di retur_form.php jalan
+        $data['spr_detail'] = [];
+        foreach ($data['retur_detail'] as $rd) {
+            $data['spr_detail'][] = [
+                'id_spr_detail' => $rd['id_spr_detail'],
+                'kd_barang'     => $rd['kd_barang'] ?? '',
+                'nama_barang'   => $rd['nama_barang'],
+                'satuan'        => $rd['satuan'],
+                'no_faktur'     => $rd['no_faktur'],
+                'no_batch'      => $rd['no_batch'],
+                'expired_date'  => $rd['expired_date'],
+                'qty'           => $rd['qty_retur'],
+                'harga'         => $rd['harga_satuan'],
+            ];
+        }
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/retur_form.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /** ADMLPB2: Update Retur Penjualan yang ditolak */
+    public function retur_update($id_retur)
+    {
+        if (!$this->_isAdmlpb2() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+            redirect('retur_penjualan/retur');
+            return;
+        }
+
+        $retur = $this->M_ReturPenjualan->get_retur_penjualan($id_retur);
+        if (!$retur || $retur['status_retur'] !== 'ditolak') {
+            $this->session->set_flashdata('error', 'Retur tidak valid atau statusnya bukan Ditolak.');
+            redirect('retur_penjualan/retur');
+            return;
+        }
+
+        $user        = $this->_getUser();
+        $tanggal     = $this->input->post('tanggal_retur');
+        $catatan_log = $this->input->post('catatan_admlpb2');
+        $gudang_id   = $this->input->post('gudang_id');
+        $submit_action = $this->input->post('submit_action');
+
+        $header = [
+            'tanggal_retur'     => $tanggal ?: date('Y-m-d'),
+            'catatan_logistik'  => $catatan_log,
+            'gudang_id'         => $gudang_id,
+            'update_by_retur'   => $user['nama'],
+            'update_at_retur'   => date('Y-m-d H:i:s'),
+        ];
+
+        if ($submit_action === 'resubmit') {
+            $header['status_retur'] = 'menunggu_verifikasi';
+            $header['admin_stock_by_retur'] = null;
+            $header['admin_stock_at_retur'] = null;
+            $header['catatan_admin_stock'] = null;
+        }
+
+        $this->db->where('id_retur', $id_retur);
+        $this->db->update('tbrp_retur_penjualan_header', $header);
+
+        // Record Log
+        $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', $submit_action === 'resubmit' ? 'retur_edit_submit' : 'retur_edit', $retur['status_retur'], $submit_action === 'resubmit' ? 'menunggu_verifikasi' : $retur['status_retur'], $catatan_log, $user['nama']);
+
+        $msg = ($submit_action === 'resubmit')
+            ? "Retur Penjualan <strong>{$retur['no_retur']}</strong> berhasil diupdate dan diajukan kembali."
+            : "Retur Penjualan <strong>{$retur['no_retur']}</strong> berhasil diupdate.";
+
+        $this->session->set_flashdata('success', $msg);
+        redirect('retur_penjualan/retur/detail/' . $id_retur);
+    }
+
+    /** ADMLPB2: Ajukan kembali Retur Penjualan yang ditolak */
+    public function retur_submit($id_retur)
+    {
+        if (!$this->_isAdmlpb2()) {
+            $this->_denyAccess('Hanya ADMLPB2 yang dapat mengajukan Retur Penjualan.');
+            return;
+        }
+
+        $retur = $this->M_ReturPenjualan->get_retur_penjualan($id_retur);
+        if (!$retur || $retur['status_retur'] !== 'ditolak') {
+            $this->session->set_flashdata('error', 'Retur tidak valid atau statusnya bukan Ditolak.');
+            redirect('retur_penjualan/retur');
+            return;
+        }
+
+        $user = $this->_getUser();
+
+        $this->M_ReturPenjualan->update_retur_penjualan_status($id_retur, 'menunggu_verifikasi', [
+            'update_by_retur' => $user['nama'],
+            // Reset rejection info
+            'admin_stock_by_retur' => null,
+            'admin_stock_at_retur' => null,
+            'catatan_admin_stock' => null,
+        ]);
+
+        // Record Log
+        $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_submit', $retur['status_retur'], 'menunggu_verifikasi', null, $user['nama']);
+
+        $this->session->set_flashdata('success', "Retur Penjualan <strong>{$retur['no_retur']}</strong> berhasil diajukan kembali ke Admin Stock.");
+        redirect('retur_penjualan/retur');
+    }
+
+    /** View activity logs */
+    public function activity_log()
+    {
+        $data['page_title']    = 'KARISMA — Activity Log Modul Retur';
+        $data['logs']          = $this->M_ReturPenjualan->get_activity_logs();
+        $data['user']          = $this->_getUser();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/activity_log.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
 }
 
 

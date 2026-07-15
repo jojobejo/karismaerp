@@ -40,25 +40,33 @@
 
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
+                $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
                 $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                $show_nav = $is_admin_stock || $is_collection || $is_kasir;
                 ?>
-                <?php if ($show_nav): ?>
                 <div class="row mb-3">
                     <div class="col-auto">
-                        <?php if ($is_admin_stock): ?>
-                        <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger">
-                            <i class="fas fa-file-invoice"></i> Daftar SPR (Approval)
-                        </a>
+                        <?php if ($is_admin_stock || $is_logistik): ?>
+                            <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-outline-danger mr-1">
+                                <i class="fas fa-file-invoice"></i> Daftar SPR
+                            </a>
                         <?php endif; ?>
-                        <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active">
-                            <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+
+                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                            <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active mr-1">
+                                <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
+                            </a>
+                        <?php endif; ?>
+
+                        <a href="<?= base_url('retur_penjualan/activity_log') ?>" class="btn btn-outline-success">
+                            <i class="fas fa-history"></i> Log Aktivitas
                         </a>
                     </div>
                 </div>
-                <?php endif; ?>
 
                 <!-- FILTER -->
                 <div class="card card-outline card-secondary mb-3">
@@ -111,9 +119,14 @@
                     <div class="card-header bg-primary text-white">
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Retur Penjualan</h3>
                         <div class="card-tools">
-                            <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
-                                <i class="fas fa-history"></i> Riwayat Persetujuan
-                            </a>
+                            <?php 
+                            $is_approver = in_array($jobdesk, ['KOORSC', 'ADMINSC', 'ADMSTOCK', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN']);
+                            if ($is_approver): 
+                            ?>
+                                <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
+                                    <i class="fas fa-history"></i> Riwayat Persetujuan
+                                </a>
+                            <?php endif; ?>
                             <span class="badge badge-light"><?= count($retur_list) ?> Retur</span>
                         </div>
                     </div>
@@ -147,6 +160,7 @@
                                         $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
                                         $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                                         $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                                        $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
 
                                         $badge_map = [
                                             'menunggu_verifikasi' => ['warning',  'Menunggu Admin Stock'],
@@ -197,11 +211,21 @@
                                                     <a href="<?= base_url('retur_penjualan/retur/collection/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-info" title="Proses Collection">
                                                         <i class="fas fa-handshake"></i> Proses
-                                                    </a>
+                                                     </a>
                                                 <?php elseif ($st === 'menunggu_kasir' && $is_kasir): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/kasir/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-success" title="Proses Kasir">
                                                         <i class="fas fa-cash-register"></i> Kasir
+                                                     </a>
+                                                <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
+                                                    <a href="<?= base_url('retur_penjualan/retur/edit/' . $r['id_retur']) ?>"
+                                                       class="btn btn-sm btn-primary" title="Edit Retur">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="<?= base_url('retur_penjualan/retur/submit/' . $r['id_retur']) ?>"
+                                                       class="btn btn-sm btn-success" title="Ajukan Kembali"
+                                                       onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                                        <i class="fas fa-paper-plane"></i>
                                                     </a>
                                                 <?php endif; ?>
                                             </td>
