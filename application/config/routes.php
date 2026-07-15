@@ -253,7 +253,15 @@ $route['pagination']                                = 'keuangan/C_Coba1';
 $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock_suplier/$1/$2';
 
 // STOCK ONLINE GUDANG
-$route['stock']                                     = 'logistik/C_Logistik/stock_control';
+$route['stock']                                     = 'stock/C_Stock/index';
+$route['stock/summary']                             = 'stock/C_Stock/summary';
+$route['stock/gudangs']                             = 'stock/C_Stock/gudangs';
+$route['stock/available']                           = 'stock/C_Stock/available';
+$route['stock/items']                               = 'stock/C_Stock/items';
+$route['stock/batches']                             = 'stock/C_Stock/batches';
+$route['stock/ledger']                              = 'stock/C_Stock/ledger';
+$route['stock/reconciliation']                      = 'stock/C_Stock/reconciliation';
+$route['stock/sync']                                = 'stock/C_Stock/sync';
 
 // MASTER BARANG
 $route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
