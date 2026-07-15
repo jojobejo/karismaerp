@@ -16,7 +16,22 @@
                             <label>Regional DO</label>
                             <input type="text" name="kddo" id="kddo" class="form-control" value="<?= $k->kd_do ?>" readonly required hidden>
                             <input type="text" name="id" id="id" class="form-control" value="<?= $k->id ?>" readonly required hidden>
-                            <input type="text" name="regional" id="regional" class="form-control" value="<?= $k->regional ?>" required>
+                            <select name="regional" id="regional" class="form-control" required>
+                                <option value="">Pilih Rute Pengiriman</option>
+                                <?php foreach (['LK' => 'Luar Kota', 'KK' => 'Karisidenan'] as $jenis => $label) : ?>
+                                    <optgroup label="<?= $jenis ?> - <?= $label ?>">
+                                        <?php foreach (($rute_options ?? []) as $rute) : ?>
+                                            <?php if ($rute->jenis_rute !== $jenis) continue; ?>
+                                            <option value="<?= htmlspecialchars($rute->kd_rute, ENT_QUOTES, 'UTF-8') ?>"
+                                                <?= (string)$k->regional === (string)$rute->kd_rute ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($rute->kd_rute, ENT_QUOTES, 'UTF-8') ?>
+                                                - <?= htmlspecialchars($rute->keterangan, ENT_QUOTES, 'UTF-8') ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">Pilihan rute diambil dari master rute LK/KK.</small>
                         </div>
                         <button type="submit" class="btn btn-success">Simpan</button>
                     </form>

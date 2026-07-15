@@ -1,5 +1,52 @@
 <!-- views/content/sales/detail_do_sales.php -->
-<body class="hold-transition sidebar-mini sidebar-collapse">
+<style>
+    .sales-do-line-table {
+        border-collapse: collapse;
+        border-spacing: 0;
+        color: #111;
+        font-size: 13px;
+        box-shadow: none !important;
+        margin-bottom: 0;
+        width: 100%;
+    }
+    .sales-do-line-table,
+    .sales-do-line-table * {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+    .sales-do-line-table th,
+    .sales-do-line-table td {
+        background: transparent;
+        border: 1px solid #111;
+        color: #111;
+        padding: 5px 7px;
+        text-align: center;
+        vertical-align: middle;
+    }
+    .sales-do-line-table thead th {
+        background: #343a40;
+        color: #fff;
+        font-weight: 700;
+    }
+    .sales-do-plain-info {
+        color: #111;
+        font-size: 14px;
+        margin-bottom: 18px;
+    }
+    .sales-do-plain-row {
+        display: flex;
+        line-height: 1.6;
+    }
+    .sales-do-plain-label {
+        flex: 0 0 110px;
+        font-weight: 400;
+    }
+    .sales-do-plain-value {
+        flex: 1 1 auto;
+    }
+</style>
+<body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
     <?php $this->load->view('partial/main/navbar') ?>
     <?php $this->load->view('partial/main/sidebar') ?>
@@ -35,19 +82,30 @@
 
                         <!-- Info DO -->
                         <div class="row mb-4">
-                            <!-- Kiri: Info + Progress -->
-                            <div class="col-md-6">
-                                <table class="table table-sm table-borderless">
-                                    <tr><td><strong>Kode DO</strong></td><td>: <?= $k->kd_do ?></td></tr>
-                                    <tr><td><strong>Regional</strong></td><td>: <?= $k->regional ?></td></tr>
-                                    <tr><td><strong>Total Faktur</strong></td><td>: <?= $k->totalfaktur ?></td></tr>
-                                    <tr><td><strong>Total Barang</strong></td><td>: <?= $k->total_barang ?></td></tr>
-                                </table>
+                            <div class="col-md-12">
+                                <div class="sales-do-plain-info">
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Kode DO</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->kd_do, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Regional</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->regional, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Total Faktur</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->totalfaktur, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                    <div class="sales-do-plain-row">
+                                        <div class="sales-do-plain-label">Total Barang</div>
+                                        <div class="sales-do-plain-value">: <?= htmlspecialchars($k->total_barang, ENT_QUOTES, 'UTF-8') ?></div>
+                                    </div>
+                                </div>
 
                                 <?php
                                 $tonase   = (float)$k->total_tonase_faktur;
                                 $kubikasi = (float)$k->total_kubikasi;
-                                $max_ton  = 6;
+                                $max_ton  = 7;
                                 $max_kub  = 9;
 
                                 $pct_ton = min(100, round(($tonase   / $max_ton) * 100, 1));
@@ -114,73 +172,13 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- ✅ Kanan: Status konfirmasi + Tombol -->
-                            <div class="col-md-6">
-                                <?php
-                                $confirm_status = $k->sales_confirm_status ?? 'pending';
-                                if ($confirm_status === 'pending' || $confirm_status === null) {
-                                    echo '<div class="alert alert-warning">
-                                            <i class="fas fa-clock mr-1"></i>
-                                            <strong>Menunggu Konfirmasi</strong><br>
-                                        </div>';
-                                } elseif ($confirm_status === 'siap') {
-                                    echo '<div class="alert alert-success">
-                                            <i class="fas fa-check-circle mr-1"></i>
-                                            <strong>Siap Loading</strong><br>
-                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small><br>
-                                            <small>Waktu: ' . ($k->sales_confirm_at ?? '-') . '</small>
-                                        </div>';
-                                } elseif ($confirm_status === 'belum_siap') {
-                                    echo '<div class="alert alert-danger">
-                                            <i class="fas fa-times-circle mr-1"></i>
-                                            <strong>Belum Siap Loading</strong><br>
-                                            <small>Catatan: ' . htmlspecialchars($k->sales_confirm_note ?? '-') . '</small><br>
-                                            <small>Dikonfirmasi oleh: <strong>' . htmlspecialchars($k->sales_confirm_by ?? '-') . '</strong></small>
-                                        </div>';
-                                }
-                                ?>
-
-                                <!-- ✅ Tombol konfirmasi — muncul jika pending ATAU belum_siap -->
-                                <?php if (in_array($confirm_status, ['pending', 'belum_siap', null])) : ?>
-                                <div class="card card-body bg-light">
-                                    <h6 class="mb-3">
-                                        <i class="fas fa-clipboard-check mr-1"></i>
-                                        Konfirmasi Kesiapan Loading
-                                    </h6>
-                                    <div class="form-group mb-3">
-                                        <label style="font-size:13px;">Catatan <span class="text-muted">(opsional)</span></label>
-                                        <textarea id="confirm_note" class="form-control form-control-sm"
-                                                rows="2"
-                                                placeholder="Tambahkan catatan jika diperlukan..."></textarea>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <button type="button"
-                                                    class="btn btn-success btn-block btn-confirm-loading"
-                                                    data-kd="<?= $k->kd_do ?>"
-                                                    data-action="siap">
-                                                <i class="fas fa-check mr-1"></i> Siap Loading
-                                            </button>
-                                        </div>
-                                        <div class="col-6">
-                                            <button type="button"
-                                                    class="btn btn-danger btn-block btn-confirm-loading"
-                                                    data-kd="<?= $k->kd_do ?>"
-                                                    data-action="belum_siap">
-                                                <i class="fas fa-times mr-1"></i> Belum Siap
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-                            </div>
                         </div>
 
                         <!-- Tabel Detail Barang — VIEW ONLY -->
-                        <table class="table table-bordered table-striped table-sm">
-                            <thead style="background-color:#212529;color:white;">
+                        <table class="sales-do-line-table">
+                            <thead>
                                 <tr>
+                                    <th>No</th>
                                     <th>Nama Kios</th>
                                     <th>Regional</th>
                                     <th>Rute</th>
@@ -198,6 +196,7 @@
                                 $prev_faktur   = null;
                                 $rowspan_count = [];
                                 $printed       = [];
+                                $no            = 1;
 
                                 foreach ($data_list as $row) {
                                     if (!isset($rowspan_count[$row->kd_faktur])) {
@@ -212,6 +211,7 @@
                                 ?>
                                 <tr>
                                     <?php if ($show) : ?>
+                                        <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $no++ ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->nama_kios ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->regional ?></td>
                                         <td rowspan="<?= $rowspan_count[$row->kd_faktur] ?>"><?= $row->kd_rute ?></td>
@@ -228,32 +228,6 @@
                             </tbody>
                         </table>
 
-                        <!-- Log Konfirmasi -->
-                        <?php if (!empty($log_confirm)) : ?>
-                        <div class="mt-3">
-                            <h5>Riwayat Konfirmasi</h5>
-                            <table class="table table-sm table-bordered">
-                                <thead><tr><th>Waktu</th><th>Action</th><th>Oleh</th><th>Catatan</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($log_confirm as $log) : ?>
-                                    <tr>
-                                        <td><?= $log->confirm_at ?></td>
-                                        <td>
-                                            <?php if ($log->action === 'siap') : ?>
-                                                <span class="badge badge-success">Siap Loading</span>
-                                            <?php else : ?>
-                                                <span class="badge badge-danger">Belum Siap Loading</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= htmlspecialchars($log->confirm_by ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($log->note ?? '-') ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <?php endif; ?>
-
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -266,33 +240,3 @@
     </footer>
 </div>
 
-<script>
-$(document).ready(function () {
-    $('.btn-confirm-loading').on('click', function () {
-        var kd_do  = $(this).data('kd');
-        var action = $(this).data('action');
-        var note   = $('#confirm_note').val();
-        var label  = action === 'siap' ? 'Siap Loading' : 'Belum Siap Loading';
-
-        if (!confirm('Konfirmasi: ' + label + ' untuk DO ' + kd_do + '?')) return;
-
-        $.ajax({
-            url: '<?= base_url("sales_order/confirm_loading") ?>',
-            type: 'POST',
-            data: { kd_do: kd_do, action: action, note: note },
-            dataType: 'json',
-            success: function (res) {
-                if (res.msg === 'success') {
-                    alert(res.message);
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + res.message);
-                }
-            },
-            error: function () {
-                alert('Terjadi kesalahan koneksi.');
-            }
-        });
-    });
-});
-</script>

@@ -299,13 +299,12 @@
     });
   });
 
-  console.log("CLICK:", $(this).data('ids'));
-
   $(document).on('click', '.btn-edit-pic', function(e) {
 
     e.preventDefault();
 
     let ids = $(this).data('ids');
+    console.log("CLICK:", ids);
 
     ids = ids.toString();
     const arr = ids.split(',');
@@ -320,8 +319,6 @@
 
     $('#modalEditPIC').modal('show');
   });
-</script>
-
 </script>
 
 <script>
@@ -400,7 +397,53 @@
   });
 </script>
 
+<script>
+(function() {
+    function requestNotifPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+    requestNotifPermission();
 
+    function pollReturNotifications() {
+        var base_url = '<?= base_url() ?>';
+        $.getJSON(base_url + 'retur_penjualan/get_pending_notifications', function(res) {
+            if (res && res.status && res.data && res.data.length > 0) {
+                res.data.forEach(function(item) {
+                    var storageKey = 'notif_retur_' + item.id;
+                    if (!localStorage.getItem(storageKey)) {
+                        localStorage.setItem(storageKey, '1');
+                        
+                        if ('Notification' in window && Notification.permission === 'granted') {
+                            var notif = new Notification('🔔 ' + item.title, {
+                                body: item.body,
+                                icon: base_url + 'assets/images/Karisma.png',
+                                badge: base_url + 'assets/images/Karisma.png',
+                                tag: item.id,
+                                requireInteraction: true
+                            });
+                            
+                            notif.onclick = function() {
+                                window.focus();
+                                window.location.href = item.url;
+                                notif.close();
+                            };
+                        }
+                    }
+                });
+            }
+        }).fail(function() {
+            // Silently ignore errors
+        });
+    }
+
+    setTimeout(function() {
+        pollReturNotifications();
+        setInterval(pollReturNotifications, 15000);
+    }, 5000);
+})();
+</script>
 
 </body>
 

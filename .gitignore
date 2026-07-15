@@ -17,6 +17,8 @@ user_guide_src/cilexer/dist/*
 user_guide_src/cilexer/pycilexer.egg-info/*
 /vendor/
 
+application/config/plafon_api_local.php
+
 # IDE Files
 #-------------------------
 /nbproject/

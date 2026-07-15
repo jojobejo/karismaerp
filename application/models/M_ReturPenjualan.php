@@ -1,0 +1,644 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+/**
+ * M_ReturPenjualan.php
+ *
+ * Model untuk modul Surat Perintah Retur (SPR) / Surat Pengajuan Retur Barang.
+ *
+ * Alur:
+ *   SC (buat SPR) → Koor SC (verifikasi) → Admin Stock (cek) → Kadep SC (setuju) → Logistik (proses)
+ *
+ * Tabel:
+ *   - tbrp_spr_header : header SPR
+ *   - tbrp_spr_detail : detail item barang per SPR
+ */
+class M_ReturPenjualan extends CI_Model
+{
+    public function __construct()
+    {
+        parent::__construct();
+        $this->_ensureTables();
+    }
+
+    // ================================================================
+    // AUTO-CREATE TABLES
+    // ================================================================
+
+    private function _ensureTables()
+    {
+        $this->_ensureHeaderTable();
+        $this->_ensureDetailTable();
+        $this->ensure_retur_penjualan_tables();
+        $this->_ensureActivityLogTable();
+        $this->_alterTablesIfNeeded();
+    }
+
+    private function _ensureHeaderTable()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_spr_header` (
+                `id_spr`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `no_spr`               VARCHAR(30)  NOT NULL,
+                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+                `tanggal`              DATE         NOT NULL,
+                `kd_customer`          VARCHAR(30)  DEFAULT NULL,
+                `nama_customer`        VARCHAR(200) DEFAULT NULL,
+                `alamat`               VARCHAR(300) DEFAULT NULL,
+                `nama_sales`           VARCHAR(150) DEFAULT NULL,
+                `catatan`              TEXT         DEFAULT NULL,
+                `status`               ENUM('draft','diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak')
+                                       NOT NULL DEFAULT 'draft',
+                -- Koor SC
+                `koor_sc_by`           VARCHAR(150) DEFAULT NULL,
+                `koor_sc_at`           DATETIME     DEFAULT NULL,
+                `koor_sc_catatan`      TEXT         DEFAULT NULL,
+                -- Admin Stock
+                `admin_stock_by`       VARCHAR(150) DEFAULT NULL,
+                `admin_stock_at`       DATETIME     DEFAULT NULL,
+                `admin_stock_catatan`  TEXT         DEFAULT NULL,
+                -- Kadep SC
+                `kadep_sc_by`          VARCHAR(150) DEFAULT NULL,
+                `kadep_sc_at`          DATETIME     DEFAULT NULL,
+                `kadep_sc_catatan`     TEXT         DEFAULT NULL,
+                -- Logistik
+                `logistik_by`          VARCHAR(150) DEFAULT NULL,
+                `logistik_at`          DATETIME     DEFAULT NULL,
+                `logistik_catatan`     TEXT         DEFAULT NULL,
+                -- Audit
+                `create_by`            VARCHAR(150) DEFAULT NULL,
+                `create_at`            DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                `update_by`            VARCHAR(150) DEFAULT NULL,
+                `update_at`            DATETIME     DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_spr`),
+                UNIQUE KEY `uq_no_spr` (`no_spr`),
+                KEY `idx_status` (`status`),
+                KEY `idx_create_by` (`create_by`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    private function _ensureDetailTable()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_spr_detail` (
+                `id_spr_detail`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `id_spr`                      INT UNSIGNED NOT NULL,
+                `no_urut`                     TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                `nama_barang`                 VARCHAR(250) DEFAULT NULL,
+                `no_faktur`                   VARCHAR(80)  DEFAULT NULL,
+                `no_batch`                    VARCHAR(80)  DEFAULT NULL,
+                `expired_date`                DATE         DEFAULT NULL,
+                `harga`                       DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+                `qty`                         DECIMAL(12,3) DEFAULT 0,
+                -- Alasan / Keterangan (sesuai form SPR)
+                `alasan_brg_bermasalah`       TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_brg_bermasalah_opt`   ENUM('','replace','not_replace') NOT NULL DEFAULT '',
+                `alasan_expired`              TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_expired_opt`          ENUM('','replace','not_replace') NOT NULL DEFAULT '',
+                `alasan_tidak_laku`           TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_tes_market`           TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_bad_debt`             TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_harga_tidak_sesuai`   TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_spr_intern`           TINYINT(1) NOT NULL DEFAULT 0,
+                `alasan_lainlain`             VARCHAR(300) DEFAULT NULL,
+                PRIMARY KEY (`id_spr_detail`),
+                KEY `idx_id_spr` (`id_spr`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    /**
+     * Tambahkan kolom baru secara aman jika belum ada (ALTER TABLE IF NOT EXISTS kolom).
+     */
+    private function _alterTablesIfNeeded()
+    {
+        // Tambah expired_date ke tbrp_spr_detail jika belum ada
+        if (!$this->db->field_exists('expired_date', 'tbrp_spr_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        }
+        // Tambah harga ke tbrp_spr_detail jika belum ada
+        if (!$this->db->field_exists('harga', 'tbrp_spr_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_detail` ADD COLUMN `harga` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `expired_date`");
+        }
+        // Tambah expired_date ke detail retur jika belum ada
+        if (!$this->db->field_exists('expired_date', 'tbrp_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_detail` ADD COLUMN `expired_date` DATE DEFAULT NULL AFTER `no_batch`");
+        }
+        // Tambah satuan ke detail retur jika belum ada
+        if (!$this->db->field_exists('satuan', 'tbrp_retur_penjualan_detail')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_detail` ADD COLUMN `satuan` VARCHAR(50) DEFAULT NULL AFTER `nama_barang`");
+        }
+        // Tambah kasir fields ke header retur jika belum ada
+        if (!$this->db->field_exists('kasir_by', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header`
+                ADD COLUMN `kasir_by`    VARCHAR(150) DEFAULT NULL AFTER `no_faktur_potong`,
+                ADD COLUMN `kasir_at`    DATETIME     DEFAULT NULL AFTER `kasir_by`,
+                ADD COLUMN `catatan_kasir` TEXT        DEFAULT NULL AFTER `kasir_at`
+            ");
+        }
+        // Tambah tipe_retur ke tbrp_spr_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tbrp_spr_header')) {
+            $this->db->query("ALTER TABLE `tbrp_spr_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_spr`");
+        }
+        // Tambah tipe_retur ke tbrp_retur_penjualan_header jika belum ada
+        if (!$this->db->field_exists('tipe_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
+        }
+    }
+
+    // ================================================================
+    // GENERATE NOMOR SPR
+    // Format: SPR/ddmmyy/0001
+    // ================================================================
+
+    public function generate_no_spr()
+    {
+        $prefix = 'SPR/' . date('dmy') . '/';
+
+        $row = $this->db
+            ->like('no_spr', $prefix, 'after')
+            ->order_by('no_spr', 'DESC')
+            ->limit(1)
+            ->get('tbrp_spr_header')
+            ->row();
+
+        if ($row) {
+            $last = (int) substr($row->no_spr, -4);
+            return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return $prefix . '0001';
+    }
+
+    // ================================================================
+    // MASTER DATA
+    // ================================================================
+
+    public function get_customers($nama_sales = null)
+    {
+        $nama_sales = trim((string) $nama_sales);
+        if ($nama_sales !== '' && $this->db->field_exists('nama_sales', 'tb_customer')) {
+            $this->db->where(
+                'LOWER(TRIM(nama_sales)) = ' . $this->db->escape(strtolower($nama_sales)),
+                null, false
+            );
+        }
+        return $this->db
+            ->order_by('nama_customer', 'ASC')
+            ->get('tb_customer')
+            ->result_array();
+    }
+
+    public function get_customer_by_kd($kd_customer)
+    {
+        return $this->db
+            ->get_where('tb_customer', ['kd_customer' => $kd_customer])
+            ->row_array();
+    }
+
+    // ================================================================
+    // LIST / READ
+    // ================================================================
+
+    /**
+     * Ambil semua SPR dengan filter opsional.
+     *
+     * Filter keys:
+     *   status, date1, date2, create_by, kd_customer, id_spr
+     */
+    public function get_all_spr($filter = [])
+    {
+        $this->db->select('
+            h.*,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT COUNT(*) FROM tbrp_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
+        ');
+        $this->db->from('tbrp_spr_header h');
+        $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
+
+        if (!empty($filter['status'])) {
+            if (is_array($filter['status'])) {
+                $this->db->where_in('h.status', $filter['status']);
+            } else {
+                $this->db->where('h.status', $filter['status']);
+            }
+        }
+
+        // Batasan visibilitas berdasarkan role
+        if (isset($filter['own_created_by']) && isset($filter['allowed_statuses'])) {
+            $creator = $this->db->escape($filter['own_created_by']);
+            $statuses = array_map([$this->db, 'escape'], $filter['allowed_statuses']);
+            $status_list = implode(',', $statuses);
+            
+            $this->db->where("(h.create_by = {$creator} OR (h.create_by != {$creator} AND h.status IN ({$status_list})))");
+        } else {
+            if (!empty($filter['create_by']))   $this->db->where('h.create_by', $filter['create_by']);
+        }
+
+        if (!empty($filter['date1']))       $this->db->where('h.tanggal >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('h.tanggal <=', $filter['date2']);
+        if (!empty($filter['kd_customer'])) $this->db->where('h.kd_customer', $filter['kd_customer']);
+
+        $this->db->order_by('h.tanggal', 'DESC');
+        $this->db->order_by('h.id_spr',  'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_spr($id_spr)
+    {
+        $this->db->select('h.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, c.nama_sales AS sales_master');
+        $this->db->from('tbrp_spr_header h');
+        $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
+        $this->db->where('h.id_spr', (int) $id_spr);
+        return $this->db->get()->row_array();
+    }
+
+    public function get_spr_detail($id_spr)
+    {
+        $this->db->select('d.*, m.satuan, m.kd_barang');
+        $this->db->from('tbrp_spr_detail d');
+        $this->db->join('tb_master_barang_all m', 'm.nama_barang = d.nama_barang', 'left');
+        $this->db->where('d.id_spr', (int) $id_spr);
+        $this->db->group_by('d.id_spr_detail'); // prevent duplicates if multiple kd_barang exist
+        $this->db->order_by('d.no_urut', 'ASC');
+        return $this->db->get()->result_array();
+    }
+
+    // ================================================================
+    // WRITE
+    // ================================================================
+
+    public function save_spr(array $data)
+    {
+        $this->db->insert('tbrp_spr_header', $data);
+        return $this->db->insert_id();
+    }
+
+    public function save_spr_detail(array $rows)
+    {
+        if (empty($rows)) return;
+        $this->db->insert_batch('tbrp_spr_detail', $rows);
+    }
+
+    public function delete_spr_detail($id_spr)
+    {
+        $this->db->delete('tbrp_spr_detail', ['id_spr' => (int) $id_spr]);
+    }
+
+    /**
+     * Update status SPR beserta field audit dari masing-masing tahap.
+     *
+     * @param int    $id_spr
+     * @param string $status  Nilai ENUM baru
+     * @param array  $extra   Field tambahan, misal: ['koor_sc_by'=>...,'koor_sc_at'=>..., ...]
+     */
+    public function update_spr_status($id_spr, $status, array $extra = [])
+    {
+        $data = array_merge(['status' => $status], $extra);
+        $this->db->where('id_spr', (int) $id_spr);
+        $this->db->update('tbrp_spr_header', $data);
+        return $this->db->affected_rows() > 0;
+    }
+
+    public function update_spr($id_spr, array $data)
+    {
+        $this->db->where('id_spr', (int) $id_spr);
+        $this->db->update('tbrp_spr_header', $data);
+        return $this->db->affected_rows() > 0;
+    }
+
+    // ================================================================
+    // STATISTIK BADGE (untuk dashboard / sidebar)
+    // ================================================================
+
+    /**
+     * Hitung jumlah SPR menunggu tindakan per status.
+     * Berguna untuk badge notifikasi di menu.
+     */
+    public function count_pending($status)
+    {
+        return $this->db
+            ->where('status', $status)
+            ->count_all_results('tbrp_spr_header');
+    }
+
+    // ================================================================
+    // RETUR PENJUALAN — Tabel & CRUD
+    // Alur: Logistik buat → Admin Stock verifikasi → Collection selesai
+    // ================================================================
+
+    /**
+     * Buat tabel Retur Penjualan jika belum ada.
+     * Dipanggil dari constructor via _ensureTables().
+     */
+    public function ensure_retur_penjualan_tables()
+    {
+        // Header
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_retur_penjualan_header` (
+                `id_retur`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `no_retur`              VARCHAR(40)  NOT NULL,
+                `tipe_retur`           ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+                `id_spr`                INT UNSIGNED NOT NULL,
+                `no_spr`               VARCHAR(30)  NOT NULL,
+                `tanggal_retur`        DATE         NOT NULL,
+                `kd_customer`          VARCHAR(30)  DEFAULT NULL,
+                `nama_customer`        VARCHAR(200) DEFAULT NULL,
+                `alamat`               VARCHAR(300) DEFAULT NULL,
+                `nama_sales`           VARCHAR(150) DEFAULT NULL,
+                `catatan_logistik`     TEXT         DEFAULT NULL,
+                `status_retur`         ENUM('menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak')
+                                       NOT NULL DEFAULT 'menunggu_verifikasi',
+                -- Admin Stock
+                `admin_stock_by_retur` VARCHAR(150) DEFAULT NULL,
+                `admin_stock_at_retur` DATETIME     DEFAULT NULL,
+                `catatan_admin_stock`  TEXT         DEFAULT NULL,
+                -- Collection
+                `collection_by`        VARCHAR(150) DEFAULT NULL,
+                `collection_at`        DATETIME     DEFAULT NULL,
+                `catatan_collection`   TEXT         DEFAULT NULL,
+                `no_faktur_potong`     VARCHAR(500) DEFAULT NULL,
+                -- Kasir
+                `kasir_by`             VARCHAR(150) DEFAULT NULL,
+                `kasir_at`             DATETIME     DEFAULT NULL,
+                `catatan_kasir`        TEXT         DEFAULT NULL,
+                -- Audit
+                `create_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `create_at_retur`      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                `update_by_retur`      VARCHAR(150) DEFAULT NULL,
+                `update_at_retur`      DATETIME     DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_retur`),
+                UNIQUE KEY `uq_no_retur` (`no_retur`),
+                KEY `idx_id_spr_retur` (`id_spr`),
+                KEY `idx_status_retur` (`status_retur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+
+        // Detail
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_retur_penjualan_detail` (
+                `id_retur_detail`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `id_retur`         INT UNSIGNED NOT NULL,
+                `id_spr_detail`    INT UNSIGNED DEFAULT NULL,
+                `no_urut`          TINYINT UNSIGNED NOT NULL DEFAULT 1,
+                `nama_barang`      VARCHAR(250) DEFAULT NULL,
+                `satuan`           VARCHAR(50)  DEFAULT NULL,
+                `no_faktur`        VARCHAR(80)  DEFAULT NULL,
+                `no_batch`         VARCHAR(80)  DEFAULT NULL,
+                `expired_date`     DATE         DEFAULT NULL,
+                `qty_retur`        DECIMAL(12,3) NOT NULL DEFAULT 0,
+                `harga_satuan`     DECIMAL(15,2) NOT NULL DEFAULT 0,
+                PRIMARY KEY (`id_retur_detail`),
+                KEY `idx_id_retur` (`id_retur`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    private function _ensureActivityLogTable()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tbrp_activity_log` (
+                `id_log`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `no_referensi`    VARCHAR(50)  NOT NULL,
+                `tipe_referensi`  ENUM('spr','retur') NOT NULL,
+                `aksi`            VARCHAR(50)  NOT NULL,
+                `status_awal`     VARCHAR(50)  DEFAULT NULL,
+                `status_akhir`    VARCHAR(50)  DEFAULT NULL,
+                `catatan`         TEXT         DEFAULT NULL,
+                `user_by`         VARCHAR(150) NOT NULL,
+                `created_at`      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id_log`),
+                KEY `idx_no_referensi` (`no_referensi`),
+                KEY `idx_tipe_referensi` (`tipe_referensi`),
+                KEY `idx_aksi` (`aksi`),
+                KEY `idx_user_by` (`user_by`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+    }
+
+    /** Generate nomor Retur Penjualan: RP/ddmmyy/0001, RPR/ddmmyy/0001, RPS/ddmmyy/0001 */
+    public function generate_no_retur($tipe = 'biasa')
+    {
+        $prefix_code = 'RP';
+        if ($tipe === 'replace') {
+            $prefix_code = 'RPR';
+        } elseif ($tipe === 'service') {
+            $prefix_code = 'RPS';
+        }
+        
+        $prefix = $prefix_code . '/' . date('dmy') . '/';
+        $row = $this->db
+            ->like('no_retur', $prefix, 'after')
+            ->order_by('no_retur', 'DESC')
+            ->limit(1)
+            ->get('tbrp_retur_penjualan_header')
+            ->row();
+
+        if ($row) {
+            $last = (int) substr($row->no_retur, -4);
+            return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        }
+        return $prefix . '0001';
+    }
+
+    // ================================================================
+    // RETUR PENJUALAN — CRUD
+    // Alur: ADMLPB2 buat → Admin Stock verifikasi → Collection → Kasir selesai
+    // ================================================================
+
+    /** Simpan header Retur Penjualan */
+    public function save_retur_penjualan(array $data)
+    {
+        $this->db->insert('tbrp_retur_penjualan_header', $data);
+        return $this->db->insert_id();
+    }
+
+    /** Simpan detail Retur Penjualan */
+    public function save_retur_penjualan_detail(array $rows)
+    {
+        if (empty($rows)) return;
+        $this->db->insert_batch('tbrp_retur_penjualan_detail', $rows);
+    }
+
+    /** Ambil semua Retur Penjualan dengan filter */
+    public function get_all_retur_penjualan($filter = [])
+    {
+        $this->db->select('
+            r.*,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT SUM(d.qty_retur * d.harga_satuan)
+             FROM tbrp_retur_penjualan_detail d
+             WHERE d.id_retur = r.id_retur) AS total_nilai
+        ');
+        $this->db->from('tbrp_retur_penjualan_header r');
+        $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+
+        if (!empty($filter['status'])) {
+            if (is_array($filter['status'])) {
+                $this->db->where_in('r.status_retur', $filter['status']);
+            } else {
+                $this->db->where('r.status_retur', $filter['status']);
+            }
+        }
+        if (!empty($filter['date1'])) $this->db->where('r.tanggal_retur >=', $filter['date1']);
+        if (!empty($filter['date2'])) $this->db->where('r.tanggal_retur <=', $filter['date2']);
+        if (!empty($filter['id_spr'])) $this->db->where('r.id_spr', (int)$filter['id_spr']);
+
+        $this->db->order_by('r.tanggal_retur', 'DESC');
+        $this->db->order_by('r.id_retur', 'DESC');
+        return $this->db->get()->result_array();
+    }
+
+    /** Ambil 1 Retur Penjualan by id */
+    public function get_retur_penjualan($id_retur)
+    {
+        $this->db->select('r.*, c.nama_customer AS nama_customer_master, c.alamat_kios AS alamat_master, s.no_spr');
+        $this->db->from('tbrp_retur_penjualan_header r');
+        $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+        $this->db->join('tbrp_spr_header s', 's.id_spr = r.id_spr', 'left');
+        $this->db->where('r.id_retur', (int)$id_retur);
+        return $this->db->get()->row_array();
+    }
+
+    /** Ambil detail Retur Penjualan */
+    public function get_retur_penjualan_detail($id_retur)
+    {
+        return $this->db
+            ->where('id_retur', (int)$id_retur)
+            ->order_by('no_urut', 'ASC')
+            ->get('tbrp_retur_penjualan_detail')
+            ->result_array();
+    }
+
+    /** Update status Retur Penjualan */
+    public function update_retur_penjualan_status($id_retur, $status, array $extra = [])
+    {
+        $data = array_merge(['status_retur' => $status], $extra);
+        $this->db->where('id_retur', (int)$id_retur);
+        $this->db->update('tbrp_retur_penjualan_header', $data);
+        return $this->db->affected_rows() > 0;
+    }
+
+    /** Update detail baris (Admin Stock koreksi qty/harga) */
+    public function update_retur_penjualan_detail_row($id_retur_detail, array $data)
+    {
+        $this->db->where('id_retur_detail', (int)$id_retur_detail);
+        $this->db->update('tbrp_retur_penjualan_detail', $data);
+    }
+
+    /** Cek apakah SPR sudah punya Retur Penjualan */
+    public function get_retur_by_spr($id_spr)
+    {
+        return $this->db
+            ->where('id_spr', (int)$id_spr)
+            ->get('tbrp_retur_penjualan_header')
+            ->row_array();
+    }
+
+
+    /**
+     * Get history of SPR approvals and rejections processed by a specific user or role.
+     */
+    public function get_approval_history($username_or_name, $role, $filter = [])
+    {
+        if ($role === 'collection' || $role === 'kasir') {
+            $this->db->select('
+                r.id_retur AS id_spr,
+                r.no_retur AS no_spr,
+                r.tanggal_retur AS tanggal,
+                r.nama_customer,
+                r.nama_sales,
+                r.status_retur AS status,
+                r.catatan_collection,
+                r.catatan_kasir,
+                c.nama_customer AS nama_customer_master,
+                c.alamat_kios   AS alamat_master,
+                (SELECT COUNT(*) FROM tbrp_retur_penjualan_detail d WHERE d.id_retur = r.id_retur) AS jumlah_item
+            ');
+            $this->db->from('tbrp_retur_penjualan_header r');
+            $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+
+            if ($role === 'collection') {
+                $this->db->where('r.collection_by', $username_or_name);
+            } else {
+                $this->db->where('r.kasir_by', $username_or_name);
+            }
+
+            if (!empty($filter['date1']))       $this->db->where('r.tanggal_retur >=', $filter['date1']);
+            if (!empty($filter['date2']))       $this->db->where('r.tanggal_retur <=', $filter['date2']);
+            if (!empty($filter['status']))      $this->db->where('r.status_retur', $filter['status']);
+
+            $this->db->order_by('r.tanggal_retur', 'DESC');
+            $this->db->order_by('r.id_retur',  'DESC');
+
+            return $this->db->get()->result_array();
+        }
+
+        $this->db->select('
+            h.*,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT COUNT(*) FROM tbrp_spr_detail d WHERE d.id_spr = h.id_spr) AS jumlah_item
+        ');
+        $this->db->from('tbrp_spr_header h');
+        $this->db->join('tb_customer c', 'c.kd_customer = h.kd_customer', 'left');
+
+        if ($role === 'admin') {
+            // Admin sees all history (SPRs that are not draft/diajukan, meaning processed at least once)
+            $this->db->where_in('h.status', ['diverifikasi_koor', 'dicek_admin_stock', 'disetujui_kadep', 'selesai', 'ditolak']);
+        } else {
+            $this->db->group_start();
+            $this->db->where('h.koor_sc_by', $username_or_name);
+            $this->db->or_where('h.admin_stock_by', $username_or_name);
+            $this->db->or_where('h.kadep_sc_by', $username_or_name);
+            $this->db->or_where('h.logistik_by', $username_or_name);
+            $this->db->group_end();
+        }
+
+        if (!empty($filter['date1']))       $this->db->where('h.tanggal >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('h.tanggal <=', $filter['date2']);
+        if (!empty($filter['status']))      $this->db->where('h.status', $filter['status']);
+
+        $this->db->order_by('h.tanggal', 'DESC');
+        $this->db->order_by('h.id_spr',  'DESC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function record_log($no_ref, $tipe_ref, $aksi, $status_awal, $status_akhir, $catatan = null, $user_by = null)
+    {
+        if (empty($user_by)) {
+            $user = $this->session->userdata('user') ?: $this->session->userdata('nama');
+            if (is_array($user)) {
+                $user_by = $user['nama'] ?? $user['username'] ?? 'System';
+            } else {
+                $user_by = is_string($user) ? $user : 'System';
+            }
+        }
+        
+        $log_data = [
+            'no_referensi'   => $no_ref,
+            'tipe_referensi' => $tipe_ref,
+            'aksi'           => $aksi,
+            'status_awal'    => $status_awal,
+            'status_akhir'   => $status_akhir,
+            'catatan'        => $catatan,
+            'user_by'        => $user_by,
+            'created_at'     => date('Y-m-d H:i:s'),
+        ];
+        
+        $this->db->insert('tbrp_activity_log', $log_data);
+    }
+
+    public function get_activity_logs()
+    {
+        return $this->db
+            ->order_by('created_at', 'DESC')
+            ->order_by('id_log', 'DESC')
+            ->get('tbrp_activity_log')
+            ->result_array();
+    }
+}

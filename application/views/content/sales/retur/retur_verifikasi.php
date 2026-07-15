@@ -1,0 +1,330 @@
+<?php /* views/content/sales/retur/retur_verifikasi.php */ ?>
+<style>
+    .table-detail-spr th { background:#f8f9fa; font-size:12px; border:1px solid #dee2e6; }
+    .table-detail-spr td { font-size:12px; border:1px solid #dee2e6; vertical-align:middle; }
+    .spr-note-bottom {
+        background:#fff8f8; border:1px solid #f5c6cb; border-radius:4px;
+        padding:10px 14px; font-size:12px; color:#721c24;
+    }
+</style>
+
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+    <div class="preloader flex-column justify-content-center align-items-center">
+        <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" alt="Logo" height="150" width="300">
+    </div>
+
+    <?php $this->load->view('partial/main/navbar') ?>
+    <?php $this->load->view('partial/main/sidebar') ?>
+
+    <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">
+                            <i class="fas fa-boxes mr-2 text-info"></i>
+                            Admin Stock: Verifikasi <?= htmlspecialchars($retur['no_retur']) ?>
+                        </h1>
+                    </div>
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
+                            <li class="breadcrumb-item"><a href="<?= base_url('retur_penjualan/retur') ?>">Retur Penjualan</a></li>
+                            <li class="breadcrumb-item active"><?= htmlspecialchars($retur['no_retur']) ?></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="content">
+            <div class="container-fluid">
+
+                <!-- FLASH -->
+                <?php foreach (['success'=>'success','error'=>'danger'] as $k=>$c): ?>
+                    <?php if ($msg = $this->session->flashdata($k)): ?>
+                        <div class="alert alert-<?= $c ?> alert-dismissible">
+                            <i class="fas fa-<?= $k==='success'?'check-circle':'exclamation-circle' ?> mr-1"></i>
+                            <?= $msg ?>
+                            <button class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+
+                <div class="row">
+                    <div class="col-lg-8">
+
+                        <!-- KARTU RETUR (desain mirip KARTU SPR) -->
+                        <div class="card shadow" style="border:2px solid #007bff;">
+                            <div class="card-header d-flex justify-content-between align-items-center py-2"
+                                 style="background:linear-gradient(135deg,#0056b3,#007bff);color:#fff;">
+                                <div class="d-flex align-items-center">
+                                    <span style="font-size:11px;opacity:.85;">PT. Karisma Indoagro Universal</span>
+                                </div>
+                                <div class="text-center">
+                                    <div style="font-size:1rem;font-weight:700;">RETUR PENJUALAN</div>
+                                    <div style="font-size:11px;">No. <?= htmlspecialchars($retur['no_retur']) ?></div>
+                                </div>
+                                <div style="font-size:12px; text-align:right;">
+                                    Tgl: <?= date('d/m/Y', strtotime($retur['tanggal_retur'])) ?>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm table-borderless mb-2" style="font-size:13px;">
+                                    <tr>
+                                        <td style="width:130px;" class="font-weight-bold">Customer</td>
+                                        <td>: <strong><?= htmlspecialchars($retur['nama_customer'] ?: ($retur['nama_customer_master'] ?? '-')) ?></strong></td>
+                                        <td style="width:80px;" class="font-weight-bold">Sales</td>
+                                        <td>: <?= htmlspecialchars($retur['nama_sales'] ?? '-') ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Alamat</td>
+                                        <td colspan="3">: <?= htmlspecialchars($retur['alamat'] ?: ($retur['alamat_master'] ?? '-')) ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Dibuat oleh</td>
+                                        <td>: <?= htmlspecialchars($retur['create_by_retur'] ?? '-') ?> (<?= $retur['create_at_retur'] ? date('d/m/Y H:i', strtotime($retur['create_at_retur'])) : '' ?>)</td>
+                                        <td class="font-weight-bold">Dari SPR</td>
+                                        <td>: <?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">Tipe Retur</td>
+                                        <td colspan="3">: 
+                                            <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
+                                                <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
+                                            <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
+                                                <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
+                                            <?php else: ?>
+                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <form method="post" action="<?= base_url('retur_penjualan/retur/verifikasi_simpan/' . $retur['id_retur']) ?>" id="formApproval">
+                                    <?php if ($this->config->item('csrf_protection') === TRUE): ?>
+                                        <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+                                    <?php endif; ?>
+
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-bordered table-sm table-detail-spr">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-center" style="width:36px;">No.</th>
+                                                    <th style="width:110px;">Nama Barang</th>
+                                                    <th style="width:70px;">Satuan</th>
+                                                    <th style="width:110px;">No. Faktur</th>
+                                                    <th style="width:110px;">No. Batch/Lot</th>
+                                                    <th class="text-center">Exp. Date</th>
+                                                    <th class="text-center" style="width:80px;">Qty Retur</th>
+                                                    <th class="text-right" style="width:100px;">Harga Satuan</th>
+                                                    <th class="text-right" style="width:110px;">Subtotal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php $total = 0; foreach ($retur_detail as $i => $d):
+                                                    $subtotal = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
+                                                     $total += $subtotal;
+                                                 ?>
+                                                 <tr>
+                                                     <td class="text-center"><?= $i + 1 ?></td>
+                                                     <td>
+                                                         <input type="text" name="nama_barang[]" class="form-control form-control-sm barang-input"
+                                                                value="<?= htmlspecialchars($d['nama_barang'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                         <input type="hidden" name="id_retur_detail[]" value="<?= $d['id_retur_detail'] ?>">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="satuan[]" class="form-control form-control-sm satuan-input"
+                                                                value="<?= htmlspecialchars($d['satuan'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="no_faktur[]" class="form-control form-control-sm faktur-input"
+                                                                value="<?= htmlspecialchars($d['no_faktur'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="text" name="no_batch[]" class="form-control form-control-sm batch-input"
+                                                                value="<?= htmlspecialchars($d['no_batch'] ?? '') ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td class="text-center">
+                                                         <?php $exp_val = !empty($d['expired_date']) ? date('Y-m-d', strtotime($d['expired_date'])) : ''; ?>
+                                                         <input type="date" name="expired_date[]" class="form-control form-control-sm exp-input"
+                                                                value="<?= $exp_val ?>" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input"
+                                                                value="<?= (float)$d['qty_retur'] ?>" min="0.001" step="0.001" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td>
+                                                         <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input"
+                                                                value="<?= (float)$d['harga_satuan'] ?>" min="0" step="0.01" readonly style="background:#f5f5f5; border:none;">
+                                                     </td>
+                                                     <td class="text-right subtotal-cell">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
+                                                 </tr>
+                                                 <?php endforeach; ?>
+                                                 <tr class="table-secondary">
+                                                     <td colspan="8" class="text-right font-weight-bold">TOTAL VALUE:</td>
+                                                     <td class="text-right font-weight-bold" id="total-val">Rp <?= number_format($total, 0, ',', '.') ?></td>
+                                                 </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <?php if ($retur['catatan_logistik']): ?>
+                                        <div class="mt-2 small"><strong>Catatan ADMLPB2:</strong> <?= nl2br(htmlspecialchars($retur['catatan_logistik'])) ?></div>
+                                    <?php endif; ?>
+
+                                    <div class="spr-note-bottom mt-3">
+                                        Barang yang kami retur sesuai dengan data di atas. Bilamana tidak sesuai, maka kami (toko) akan bertanggung jawab
+                                        menerima konsekuensinya (retur ditolak) sesuai kebijakan PT Karisma Indoagro Universal.
+                                    </div>
+                            </div>
+                        </div>
+
+                    </div><!-- col-lg-8 -->
+
+                    <!-- SIDEBAR: FORM KEPUTUSAN -->
+                    <div class="col-lg-4">
+                        <div class="card shadow border-info" style="border-width:2px !important;">
+                            <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                                <h3 class="card-title m-0">
+                                    <i class="fas fa-boxes mr-1"></i> Keputusan Admin Stock
+                                </h3>
+                                <button type="button" id="btn-edit-lock" class="btn btn-sm btn-warning text-dark">
+                                    <i class="fas fa-edit"></i> Edit Data
+                                </button>
+                            </div>
+                            <div class="card-body">
+
+                                    <div class="form-group mb-3">
+                                        <label class="font-weight-bold mb-1">Tindakan <span class="text-danger">*</span></label>
+                                        <div>
+                                            <div class="custom-control custom-radio mb-2">
+                                                <input type="radio" id="aksi_setuju" name="aksi" value="setuju" class="custom-control-input" required>
+                                                <label class="custom-control-label text-success" for="aksi_setuju">
+                                                    <i class="fas fa-check-circle"></i> <strong>Setuju — Lanjutkan</strong>
+                                                </label>
+                                            </div>
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="aksi_tolak" name="aksi" value="tolak" class="custom-control-input">
+                                                <label class="custom-control-label text-danger" for="aksi_tolak">
+                                                    <i class="fas fa-times-circle"></i> <strong>Tolak — Kembalikan</strong>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label class="font-weight-bold mb-1">
+                                            Catatan / Alasan
+                                            <small class="text-muted font-weight-normal">(wajib jika ditolak)</small>
+                                        </label>
+                                        <textarea class="form-control" name="catatan_admin_stock" id="catatanInput" rows="4"
+                                                  placeholder="Tulis catatan atau alasan keputusan..."></textarea>
+                                    </div>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-info btn-block mr-2" id="btnSubmitApproval">
+                                            <i class="fas fa-save"></i> Simpan Keputusan
+                                        </button>
+                                    </div>
+                                </form>
+                                <div class="mt-2">
+                                    <a href="<?= base_url('retur_penjualan/retur/print/' . $retur['id_retur']) ?>" target="_blank" class="btn btn-outline-primary btn-block mb-1">
+                                        <i class="fas fa-print"></i> Cetak Detail Retur
+                                    </a>
+                                    <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-light btn-block">
+                                        <i class="fas fa-arrow-left"></i> Kembali ke Antrian
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- col-lg-4 -->
+                </div><!-- row -->
+
+            </div>
+        </section>
+    </div>
+
+    <footer class="main-footer">
+        <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
+        All rights reserved.
+    </footer>
+    <aside class="control-sidebar control-sidebar-dark"></aside>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Tombol Edit Click
+    $('#btn-edit-lock').on('click', function() {
+        var qtyInputs = $('.qty-input');
+        var isReadOnly = qtyInputs.prop('readonly');
+        var inputs = $('.barang-input, .faktur-input, .batch-input, .exp-input, .qty-input, .harga-input');
+        
+        if (isReadOnly) {
+            // Unlock
+            inputs.prop('readonly', false).css({
+                'background': '#ffffff',
+                'border': '1px solid #ced4da'
+            });
+            $(this).html('<i class="fas fa-lock"></i> Kunci Edit').removeClass('btn-warning').addClass('btn-secondary');
+        } else {
+            // Lock
+            inputs.prop('readonly', true).css({
+                'background': '#f5f5f5',
+                'border': 'none'
+            });
+            $(this).html('<i class="fas fa-edit"></i> Edit Data').removeClass('btn-secondary').addClass('btn-warning text-dark');
+        }
+    });
+
+    // Realtime calculation
+    function calculateSubtotal(row) {
+        var qty = parseFloat($(row).find('.qty-input').val()) || 0;
+        var harga = parseFloat($(row).find('.harga-input').val()) || 0;
+        var subtotal = qty * harga;
+        $(row).find('.subtotal-cell').text('Rp ' + subtotal.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+        return subtotal;
+    }
+
+    function calculateTotal() {
+        var total = 0;
+        $('.qty-input').each(function() {
+            var row = $(this).closest('tr');
+            total += calculateSubtotal(row);
+        });
+        $('#total-val').text('Rp ' + total.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
+    }
+
+    $(document).on('input', '.qty-input, .harga-input', function() {
+        calculateTotal();
+    });
+
+    $('#formApproval').on('submit', function(e) {
+        var aksi    = $('input[name="aksi"]:checked').val();
+        var catatan = $('#catatanInput').val().trim();
+
+        if (!aksi) {
+            e.preventDefault();
+            alert('Pilih tindakan terlebih dahulu (Setuju atau Tolak).');
+            return;
+        }
+        if ((aksi === 'tolak') && !catatan) {
+            e.preventDefault();
+            alert('Catatan/alasan wajib diisi jika Retur ditolak.');
+            $('#catatanInput').focus();
+            return;
+        }
+
+        var konfirm = aksi === 'tolak'
+            ? 'Yakin menolak Retur ini? Tindakan ini tidak dapat dibatalkan.'
+            : 'Yakin menyetujui Retur ini dan meneruskan ke tahap berikutnya?';
+
+        if (!confirm(konfirm)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+</body>
+</html>

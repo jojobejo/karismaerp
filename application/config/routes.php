@@ -162,6 +162,11 @@ $route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingk
 
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
+$route['keuangan/pembayaran']                       = 'keuangan/C_pembayaran';
+$route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/customer/$1';
+$route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
+$route['keuangan/pembayaran/simpan/(:num)']         = 'keuangan/C_pembayaran/simpan/$1';
+$route['keuangan/pembayaran/cair/(:num)']           = 'keuangan/C_pembayaran/cair/$1';
 $route['jurnal']                                    = 'keuangan/C_Keuangan/jurnal';
 $route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
 $route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
@@ -486,16 +491,29 @@ $route['data_preview_do']                           = 'logistik/C_Logistik/previ
 $route['pre_do/insert_csv']                         = 'logistik/C_Logistik/insert_csv';
 $route['logistik']                                  = 'logistik/C_Logistik/delivery_order';
 $route['logistikprepare']                           = 'logistik/C_Logistik/delivery_order';
+$route['logistik/so_siap_loading']                  = 'logistik/C_Logistik/so_siap_loading';
+$route['logistik/so_siap_loading/tambah']           = 'logistik/C_Logistik/tambah_so_siap_loading';
+$route['logistik/so_siap_loading/tambah/(:any)']    = 'logistik/C_Logistik/simpan_tambah_so_siap_loading/$1';
+$route['logistik/so_siap_loading/verifikasi/(:any)'] = 'logistik/C_Logistik/verifikasi_barang_so_siap_loading/$1';
+$route['logistik/so_siap_loading/verifikasi/(:any)/simpan'] = 'logistik/C_Logistik/simpan_verifikasi_barang_so_siap_loading/$1';
+$route['logistik/so_siap_loading/update_urutan']     = 'logistik/C_Logistik/update_urutan_so_siap_loading';
+$route['logistik/so_siap_loading/siap_faktur']      = 'logistik/C_Logistik/siap_faktur_so_siap_loading';
+$route['logistik/so_siap_loading/kembalikan/(:any)'] = 'logistik/C_Logistik/kembalikan_so_siap_loading/$1';
 $route['create_do']                                 = 'logistik/C_Logistik/create_do';
 $route['view_faktur_not_list']                      = 'logistik/C_Logistik/view_faktur_not_list';
 $route['ajax_view_faktur_not_list']                 = 'logistik/C_Logistik/ajax_view_faktur_not_list';
 $route['ajax_update_kd_barang_not_list']            = 'logistik/C_Logistik/ajax_update_kd_barang_not_list';
 $route['faktur_on_site']                            = 'logistik/C_Logistik/faktur_on_site';
 $route['edited_rute_do']                            = 'logistik/C_Logistik/edited_rute_do';
+$route['insert_tmp']                                = 'logistik/C_Logistik/insert_tmp';
 $route['insert_tmp/(:any)/(:any)']                  = 'logistik/C_Logistik/insert_tmp/$1/$2';
+$route['revert_do']                                 = 'logistik/C_Logistik/revert_do';
 $route['revert_do/(:any)/(:any)']                   = 'logistik/C_Logistik/revert_do/$1/$2';
 $route['cancel_fk/(:any)/(:any)']                   = 'logistik/C_Logistik/cancel_fk/$1/$2';
+$route['detail_fk']                                 = 'logistik/C_Logistik/detail_fk';
 $route['detail_fk/(:any)']                          = 'logistik/C_Logistik/detail_fk/$1';
+$route['insertfromdraft']                           = 'logistik/C_Logistik/insertfromdraft';
+$route['insertfromdraft_batch']                     = 'logistik/C_Logistik/insertfromdraft_batch';
 $route['insertfromdraft/(:any)/(:any)']             = 'logistik/C_Logistik/insertfromdraft/$1/$2';
 $route['detail_do/(:any)']                          = 'logistik/C_Logistik/detail_do/$1';
 $route['logistik/get_faktur']                       = 'logistik/C_Logistik/get_faktur';
@@ -509,26 +527,66 @@ $route['tonase_report']                             = 'logistik/C_Logistik/tonas
 $route['do/confirm_sales']              = 'logistik/C_Logistik/confirm_sales';
 $route['get_list_faktur_ajax'] = 'logistik/C_Logistik/get_list_faktur_ajax';
 
-//LOGISTIK - Checker
+// LOGISTIK - Checker
 $route['checker']                                   = 'logistik/C_Checker/index';
+$route['checker/so_loading']                        = 'logistik/C_Checker/so_loading';
+$route['checker/so_loading/detail/(:any)']          = 'logistik/C_Checker/so_loading_detail/$1';
+$route['checker/toggle_so_item_loaded']             = 'logistik/C_Checker/toggle_so_item_loaded';
+$route['checker/selesai_loading_rute']              = 'logistik/C_Checker/selesai_loading_rute';
 $route['checker/dashboard']                         = 'logistik/C_Checker/dashboard';
 $route['checker/arsip']                             = 'logistik/C_Checker/arsip';
+// Bongkaran
 $route['checker/store']                             = 'logistik/C_Checker/store';
 $route['checker/start']                             = 'logistik/C_Checker/start';
 $route['checker/update_progres']                    = 'logistik/C_Checker/update_progres';
 $route['checker/done']                              = 'logistik/C_Checker/done';
+$route['checker/pause']                             = 'logistik/C_Checker/pause';
+$route['checker/resume']                            = 'logistik/C_Checker/resume';
 $route['checker/update_status_bongkaran']           = 'logistik/C_Checker/update_status_bongkaran';
 $route['checker/archive_all_today']                 = 'logistik/C_Checker/archive_all_today';
+$route['checker/ganti_checker']                     = 'logistik/C_Checker/ganti_checker';
+// KK
 $route['checker/store_kk']                          = 'logistik/C_Checker/store_kk';
+$route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';
+$route['checker/hapus_kk']                          = 'logistik/C_Checker/hapus_kk';
+$route['checker/siap_loading_kk']                   = 'logistik/C_Checker/siap_loading_kk';
 $route['checker/update_kk']                         = 'logistik/C_Checker/update_kk';
+$route['checker/start_kk']                          = 'logistik/C_Checker/start_kk';
+$route['checker/update_progres_kk']                 = 'logistik/C_Checker/update_progres_kk';
+$route['checker/done_kk']                           = 'logistik/C_Checker/done_kk';
+$route['checker/pause_kk']                          = 'logistik/C_Checker/pause_kk';
+$route['checker/resume_kk']                         = 'logistik/C_Checker/resume_kk';
+$route['checker/ganti_checker_kk']                  = 'logistik/C_Checker/ganti_checker_kk';
+$route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
+// LK
 $route['checker/store_lk']                          = 'logistik/C_Checker/store_lk';
+$route['checker/edit_lk']                           = 'logistik/C_Checker/edit_lk';
+$route['checker/hapus_lk']                          = 'logistik/C_Checker/hapus_lk';
+$route['checker/siap_loading_lk']                   = 'logistik/C_Checker/siap_loading_lk';
 $route['checker/update_lk']                         = 'logistik/C_Checker/update_lk';
 $route['checker/start_lk']                          = 'logistik/C_Checker/start_lk';
 $route['checker/update_progres_lk']                 = 'logistik/C_Checker/update_progres_lk';
 $route['checker/done_lk']                           = 'logistik/C_Checker/done_lk';
-$route['checker/start_kk']                          = 'logistik/C_Checker/start_kk';
-$route['checker/update_progres_kk']                 = 'logistik/C_Checker/update_progres_kk';
-$route['checker/done_kk']                           = 'logistik/C_Checker/done_kk';
+$route['checker/pause_lk']                          = 'logistik/C_Checker/pause_lk';
+$route['checker/resume_lk']                         = 'logistik/C_Checker/resume_lk';
+$route['checker/ganti_checker_lk']                  = 'logistik/C_Checker/ganti_checker_lk';
+$route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
+// Siapkan Barang KK
+$route['checker/start_siapkan_kk']                  = 'logistik/C_Checker/start_siapkan_kk';
+$route['checker/update_progres_siapkan_kk']         = 'logistik/C_Checker/update_progres_siapkan_kk';
+$route['checker/done_siapkan_kk']                   = 'logistik/C_Checker/done_siapkan_kk';
+$route['checker/pause_siapkan_kk']                  = 'logistik/C_Checker/pause_siapkan_kk';
+$route['checker/resume_siapkan_kk']                 = 'logistik/C_Checker/resume_siapkan_kk';
+// Siapkan Barang LK
+$route['checker/start_siapkan_lk']                  = 'logistik/C_Checker/start_siapkan_lk';
+$route['checker/update_progres_siapkan_lk']         = 'logistik/C_Checker/update_progres_siapkan_lk';
+$route['checker/done_siapkan_lk']                   = 'logistik/C_Checker/done_siapkan_lk';
+$route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_siapkan_lk';
+$route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
+// Notifikasi
+$route['checker/push_notif']                        = 'logistik/C_Checker/push_notif';
+$route['checker/get_notif']                         = 'logistik/C_Checker/get_notif';
+$route['checker/read_notif']                        = 'logistik/C_Checker/read_notif';
 
 //LOGISTIK - DO (FAKTUR PENDING)
 $route['detail_fk_pnd/(:any)']                      = 'logistik/C_Logistik/detail_fk_pnd/$1';
@@ -539,6 +597,7 @@ $route['create_pending_do/(:any)']                  = 'logistik/C_Logistik/creat
 $route['list_faktur/(:any)']                        = 'logistik/C_Logistik/list_faktur_sortby_rute/$1';
 $route['acc_check/(:any)/(:any)/(:any)']            = 'logistik/C_Logistik/acc_check/$1/$2/$3';
 $route['rekam_order_check']                         = 'logistik/C_Logistik/rekam_order_check';
+$route['do/update_urutan_faktur']                   = 'logistik/C_Logistik/update_urutan_faktur_do';
 $route['do/repost_status']                          = 'logistik/C_Logistik/repost_status';
 $route['do/delete_ics_do']                          = 'logistik/C_Logistik/delete_ics_do';
 $route['print_do/(:any)']                           = 'logistik/C_Logistik/print_do/$1';
@@ -565,14 +624,87 @@ $route['sales_order/detail/(:any)']                 = 'sales/C_SalesOrder/detail
 $route['sales_order/edit/(:any)']                   = 'sales/C_SalesOrder/edit/$1';
 $route['sales_order/update/(:any)']                 = 'sales/C_SalesOrder/update/$1';
 $route['sales_order/cancel/(:any)']                 = 'sales/C_SalesOrder/cancel/$1';
+$route['sales_order/rekam/(:any)']                  = 'sales/C_SalesOrder/rekam/$1';
 $route['sales_order/approval']                      = 'sales/C_SalesOrder/approval';
 $route['sales_order/approve']                       = 'sales/C_SalesOrder/approve';
 $route['sales_order/get_stock']                     = 'sales/C_SalesOrder/get_stock';
 $route['sales_order/get_barang']                    = 'sales/C_SalesOrder/get_barang';
+$route['sales_order/refresh_plafon_customers']      = 'sales/C_SalesOrder/refresh_plafon_customers';
 $route['sales_order/activity_log']                  = 'sales/C_SalesOrder/activity_log';
+$route['sales_order/activity_log_so/(:any)']        = 'sales/C_SalesOrder/activity_log_so/$1';  // tambahan
+$route['sales_order/form_faktur/(:any)']            = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';       // faktur dibuat dari Admin SC
+$route['sales_order/simpan_faktur/(:any)']          = 'sales/C_SalesOrder/simpan_faktur/$1';     // tambahan
+$route['sales_order/detail_faktur/(:any)']          = 'sales/C_SalesOrder/detail_faktur/$1';     // tambahan
+$route['sales_order/admin_sc']                      = 'sales/C_SalesOrder/admin_sc';
+$route['sales_order/admin_sc/faktur']               = 'sales/C_SalesOrder/admin_sc_faktur';
+$route['sales_order/admin_sc/faktur/print_rute']    = 'sales/C_SalesOrder/admin_sc_print_faktur_rute';
+$route['sales_order/admin_sc/pilih_barang/(:any)']  = 'sales/C_SalesOrder/admin_sc_pilih_barang/$1';
+$route['sales_order/admin_sc/form_faktur/(:any)']   = 'sales/C_SalesOrder/admin_sc_form_faktur/$1';
+$route['sales_order/admin_sc/update_harga_faktur/(:any)'] = 'sales/C_SalesOrder/admin_sc_update_harga_faktur/$1';
+$route['admin_sc']                                  = 'sales/C_SalesOrder/admin_sc';
+$route['sales_order/faktur_rute']                   = 'sales/C_SalesOrder/faktur_rute';
+$route['sales_order/so_rute']                       = 'sales/C_SalesOrder/so_rute';
+$route['sales_order/bulk_update_so_rute']           = 'sales/C_SalesOrder/bulk_update_so_rute';
+$route['sales_order/reset_so_rute']                 = 'sales/C_SalesOrder/reset_so_rute';
+$route['sales_order/confirm_so_rute_loading']       = 'sales/C_SalesOrder/confirm_so_rute_loading';
 $route['sales_order/list_do']                       = 'sales/C_SalesOrder/list_do';
 $route['sales_order/detail_do/(:any)']              = 'sales/C_SalesOrder/detail_do/$1';
 $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confirm_loading';
+$route['sales_order/confirm_rute_loading']          = 'sales/C_SalesOrder/confirm_rute_loading';
+$route['sales_order/admin_sc/repost_faktur_item']   = 'sales/C_SalesOrder/repost_faktur_item';
+$route['sales_order/admin_sc/get_faktur_detail_json'] = 'sales/C_SalesOrder/get_faktur_detail_json';
+$route['sales_order/split_faktur/(:any)']           = 'sales/C_SalesOrder/split_faktur/$1';
+$route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpan_split_faktur/$1';
+$route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
+
+
+// ---- Retur Penjualan (SPR) ----
+$route['retur_penjualan']                                    = 'sales/C_ReturPenjualan/index';
+$route['retur_penjualan/create']                             = 'sales/C_ReturPenjualan/create';
+$route['retur_penjualan/store']                              = 'sales/C_ReturPenjualan/store';
+$route['retur_penjualan/edit/(:any)']                        = 'sales/C_ReturPenjualan/edit/$1';
+$route['retur_penjualan/update/(:any)']                      = 'sales/C_ReturPenjualan/update/$1';
+$route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPenjualan/detail/$1';
+$route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
+$route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
+$route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPenjualan/ajax_search_barang';
+// Koor SC
+$route['retur_penjualan/koor_sc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/koor_sc_verifikasi/$1';
+$route['retur_penjualan/koor_sc/simpan/(:any)']              = 'sales/C_ReturPenjualan/koor_sc_simpan/$1';
+// Admin Stock
+$route['retur_penjualan/admin_stock/cek/(:any)']             = 'sales/C_ReturPenjualan/admin_stock_cek/$1';
+$route['retur_penjualan/admin_stock/simpan/(:any)']          = 'sales/C_ReturPenjualan/admin_stock_simpan/$1';
+// Kadep SC
+$route['retur_penjualan/kadep_sc/approve/(:any)']            = 'sales/C_ReturPenjualan/kadep_sc_approve/$1';
+$route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPenjualan/kadep_sc_simpan/$1';
+// Logistik
+$route['retur_penjualan/logistik/proses/(:any)']             = 'sales/C_ReturPenjualan/logistik_proses/$1';
+$route['retur_penjualan/logistik/simpan/(:any)']             = 'sales/C_ReturPenjualan/logistik_simpan/$1';
+$route['retur_penjualan/history']                            = 'sales/C_ReturPenjualan/history';
+
+// ---- ADMLPB2 — Buat Retur dari SPR disetujui Kadep ----
+$route['retur_penjualan/admlpb2']                            = 'sales/C_ReturPenjualan/admlpb2_index';
+$route['retur_penjualan/retur/buat/(:any)']                  = 'sales/C_ReturPenjualan/retur_buat/$1';
+$route['retur_penjualan/retur/simpan/(:any)']                = 'sales/C_ReturPenjualan/retur_simpan/$1';
+$route['retur_penjualan/retur/edit/(:any)']                  = 'sales/C_ReturPenjualan/retur_edit/$1';
+$route['retur_penjualan/retur/update/(:any)']                = 'sales/C_ReturPenjualan/retur_update/$1';
+$route['retur_penjualan/retur/submit/(:any)']                = 'sales/C_ReturPenjualan/retur_submit/$1';
+
+// ---- Retur Penjualan ----
+$route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
+$route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
+$route['retur_penjualan/retur/print/(:any)']                 = 'sales/C_ReturPenjualan/retur_print/$1';
+// Admin Stock
+$route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
+$route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';
+// Collection
+$route['retur_penjualan/retur/collection/(:any)']            = 'sales/C_ReturPenjualan/retur_collection/$1';
+$route['retur_penjualan/retur/collection_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_collection_simpan/$1';
+// Kasir
+$route['retur_penjualan/retur/kasir/(:any)']                 = 'sales/C_ReturPenjualan/retur_kasir/$1';
+$route['retur_penjualan/retur/kasir_simpan/(:any)']          = 'sales/C_ReturPenjualan/retur_kasir_simpan/$1';
+$route['retur_penjualan/activity_log']                       = 'sales/C_ReturPenjualan/activity_log';
+$route['retur_penjualan/get_pending_notifications']          = 'sales/C_ReturPenjualan/get_pending_notifications';
 
 // COBA API
 $route['getdata_kiupo']                             = 'api/C_Api';
@@ -613,6 +745,9 @@ $route['kepuasan_pelanggan']                        = 'pelanggan/C_Pelanggan';
 $route['nilai_ipkp/(:any)']                         = 'pelanggan/C_Pelanggan/input_nilai/$1';
 $route['ratingreview']                              = 'pelanggan/C_Pelanggan/rating_review';
 
+// LPB
+$route['ics/print_lpb_record/(:num)']               = 'logistik/C_Ics/print_lpb_record/$1';
+$route['ics/print_lpb_records_all']                 = 'logistik/C_Ics/print_lpb_records_all';
 
 //LOGISTIK - Checker
 $route['checker/edit_kk']                           = 'logistik/C_Checker/edit_kk';

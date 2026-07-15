@@ -12,9 +12,164 @@ class C_Logistik extends CI_Controller
         parent::__construct();
         $this->load->model('M_Logistik');
         $this->load->model('M_Keuangan');
+        $this->load->model('M_Checker');
         $this->load->helper('stock_helper');
         $this->load->helper('login_auth');
         is_logged_in();
+    }
+
+    private function _ensureSoRouteColumn()
+    {
+        if ($this->db->field_exists('kd_rute', 'tbso_sales_order')) {
+            return;
+        }
+
+        $this->load->dbforge();
+        $this->dbforge->add_column('tbso_sales_order', [
+            'kd_rute' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
+                'null'       => true,
+                'after'      => 'kd_customer',
+            ],
+        ]);
+    }
+
+    private function _ensureSoSedangVerifikasiStatus()
+    {
+        $column = $this->db->query("SHOW COLUMNS FROM tbso_sales_order LIKE 'status'")->row_array();
+        $type = strtolower((string)($column['Type'] ?? ''));
+        if (strpos($type, "'sedang_verifikasi'") !== false && strpos($type, "'siap_faktur'") !== false && strpos($type, "'partial'") !== false) {
+            return;
+        }
+
+        $this->db->query("
+            ALTER TABLE tbso_sales_order
+            MODIFY COLUMN status ENUM('draft','open','sedang_verifikasi','siap_faktur','partial','completed','cancelled')
+            NOT NULL DEFAULT 'draft'
+        ");
+    }
+
+    private function _ensureSoLoadingVerificationColumns()
+    {
+        $this->load->dbforge();
+
+        if (!$this->db->field_exists('qty_siap_faktur', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_siap_faktur' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'null'       => true,
+                    'after'      => 'qty_faktur',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('qty_tidak_terkirim', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'qty_tidak_terkirim' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '12,3',
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'qty_siap_faktur',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_status', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_status' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 20,
+                    'default'    => 'pending',
+                    'null'       => false,
+                    'after'      => 'qty_tidak_terkirim',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_note', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_note' => [
+                    'type' => 'TEXT',
+                    'null' => true,
+                    'after' => 'verifikasi_loading_status',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_by', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'verifikasi_loading_note',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('verifikasi_loading_at', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'verifikasi_loading_at' => [
+                    'type' => 'DATETIME',
+                    'null' => true,
+                    'after' => 'verifikasi_loading_by',
+                ],
+            ]);
+        }
+        if (!$this->db->field_exists('checker_loaded', 'tbso_sales_order_detail')) {
+            $this->dbforge->add_column('tbso_sales_order_detail', [
+                'checker_loaded' => [
+                    'type'       => 'TINYINT',
+                    'constraint' => 1,
+                    'default'    => 0,
+                    'null'       => false,
+                    'after'      => 'verifikasi_loading_at',
+                ],
+            ]);
+        }
+    }
+
+    private function _ensureSoLoadingPlanColumns()
+    {
+        $this->load->dbforge();
+
+        $columns = [
+            'loading_tgl_pengiriman' => [
+                'type' => 'DATE',
+                'null' => true,
+                'after' => 'kd_rute',
+            ],
+            'loading_jenis_pengiriman' => [
+                'type' => 'VARCHAR',
+                'constraint' => 30,
+                'default' => 'expedisi_kantor',
+                'null' => false,
+                'after' => 'loading_tgl_pengiriman',
+            ],
+            'loading_driver' => [
+                'type' => 'VARCHAR',
+                'constraint' => 100,
+                'null' => true,
+                'after' => 'loading_jenis_pengiriman',
+            ],
+            'loading_nolambung' => [
+                'type' => 'VARCHAR',
+                'constraint' => 100,
+                'null' => true,
+                'after' => 'loading_driver',
+            ],
+            'loading_urutan' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'default' => 0,
+                'null' => false,
+                'after' => 'loading_nolambung',
+            ],
+        ];
+
+        foreach ($columns as $field => $definition) {
+            if (!$this->db->field_exists($field, 'tbso_sales_order')) {
+                $this->dbforge->add_column('tbso_sales_order', [$field => $definition]);
+            }
+        }
     }
 
     public function index()
@@ -944,15 +1099,278 @@ class C_Logistik extends CI_Controller
 
     public function delivery_order()
     {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdgenerate']     = $this->M_Keuangan->generate_update();
         $data['list_faktur']    = $this->M_Logistik->get_data_penjualan_zahir();
         $data['updated']        = $this->M_Logistik->get_updated_data_preparation();
         $data['listdo']         = $this->M_Logistik->getdo();
+        $data['total_so_siap_loading'] = $this->M_Logistik->count_so_siap_loading();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function so_siap_loading()
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $selected_rute = trim((string)($this->input->get('rute', true) ?? ''));
+        $routes = $this->M_Logistik->get_so_siap_loading_rute_summary();
+        if ($selected_rute === '' && !empty($routes)) {
+            $selected_rute = $routes[0]->kd_rute;
+        }
+
+        $data['page_title']    = 'KARISMA - LOGISTIK - SO Siap Loading';
+        $data['routes']        = $routes;
+        $data['selected_rute'] = $selected_rute;
+        $data['so_list']       = $this->M_Logistik->get_so_siap_loading_by_rute($selected_rute);
+        $data['loading_plan']  = $this->M_Logistik->get_so_siap_loading_plan_by_rute($selected_rute);
+        $data['driver']        = $this->M_Logistik->getalldriver();
+        $data['truck']         = $this->M_Logistik->getallplat();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_siap_loading.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function tambah_so_siap_loading()
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $data['page_title'] = 'KARISMA - Tambah SO Siap Loading';
+        $data['so_list'] = $this->M_Logistik->get_so_siap_loading_candidates();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_siap_loading_tambah.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_tambah_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $user = $this->session->userdata('username')
+            ?? $this->session->userdata('nama')
+            ?? $this->session->userdata('nm_karyawan')
+            ?? 'system';
+
+        $result = $this->M_Logistik->move_so_to_siap_loading($id_so, $user);
+        if (!empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading/tambah');
+            return;
+        }
+
+        $no_so = htmlspecialchars($result['no_so'] ?? 'SO');
+        $kd_rute = (string)($result['kd_rute'] ?? '');
+        $this->session->set_flashdata('msg', '<b>' . $no_so . '</b> berhasil ditambahkan ke SO Siap Loading untuk diverifikasi.');
+        redirect('logistik/so_siap_loading' . ($kd_rute !== '' ? '?rute=' . rawurlencode($kd_rute) : ''));
+    }
+
+    public function verifikasi_barang_so_siap_loading($id_so)
+    {
+        $this->_ensureSoRouteColumn();
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $so = $this->M_Logistik->get_so_siap_loading_verification($id_so);
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau sudah tidak berstatus Sedang Verifikasi.');
+            redirect('logistik/so_siap_loading');
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - Verifikasi Barang SO ' . $so->no_so;
+        $data['so'] = $so;
+        $data['details'] = $this->M_Logistik->get_so_siap_loading_verification_detail($id_so);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/so_verifikasi_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function simpan_verifikasi_barang_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $so = $this->M_Logistik->get_so_siap_loading_verification($id_so);
+        $redirect_rute = trim((string)$this->input->post('current_rute', true));
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau sudah tidak berstatus Sedang Verifikasi.');
+            redirect('logistik/so_siap_loading' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+            return;
+        }
+
+        $post = $this->input->post(null, true);
+        $items = [];
+        $ids = $post['id_so_detail'] ?? [];
+        foreach ((array)$ids as $idx => $id_detail) {
+            $items[] = [
+                'id_so_detail' => (int)$id_detail,
+                'qty_siap'     => (float)($post['qty_siap_faktur'][$idx] ?? 0),
+                'note'         => trim((string)($post['verifikasi_loading_note'][$idx] ?? '')),
+            ];
+        }
+
+        $result = $this->M_Logistik->save_so_siap_loading_verification($id_so, $items, $this->session->userdata('username') ?? '');
+        if (isset($result['errors']) && !empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading/verifikasi/' . $id_so);
+            return;
+        }
+
+        $this->session->set_flashdata('msg', 'Verifikasi barang SO <b>' . htmlspecialchars($so->no_so) . '</b> berhasil disimpan.');
+        redirect('logistik/so_siap_loading' . ($redirect_rute !== '' ? '?rute=' . rawurlencode($redirect_rute) : ''));
+    }
+
+    private function _collectSoLoadingPlanPost()
+    {
+        $jenis_pengiriman = trim((string)$this->input->post('jenis_pengiriman', true));
+        if (!in_array($jenis_pengiriman, ['expedisi_kantor', 'expedisi_luar'], true)) {
+            $jenis_pengiriman = 'expedisi_kantor';
+        }
+
+        $driver = $jenis_pengiriman === 'expedisi_luar'
+            ? trim((string)$this->input->post('driver_luar_isi', true))
+            : trim((string)$this->input->post('driver_isi', true));
+
+        $nolambung = $jenis_pengiriman === 'expedisi_luar'
+            ? trim((string)$this->input->post('truck_luar_isi', true))
+            : trim((string)$this->input->post('truck_isi', true));
+
+        return [
+            'tgl_pengiriman' => trim((string)$this->input->post('tgl_isi', true)),
+            'jenis_pengiriman' => $jenis_pengiriman,
+            'driver' => $driver,
+            'nolambung' => $nolambung,
+        ];
+    }
+
+    public function update_urutan_so_siap_loading()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['msg' => 'error', 'message' => 'Method tidak valid']);
+            exit;
+        }
+
+        $this->_ensureSoLoadingPlanColumns();
+
+        $kd_rute = trim((string)$this->input->post('current_rute', true));
+        $urutan = $this->input->post('urutan');
+        $urutan = array_values(array_unique(array_filter(array_map('intval', (array)$urutan))));
+
+        if ($kd_rute === '' || empty($urutan)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data urutan SO tidak lengkap.']);
+            exit;
+        }
+
+        $updated = $this->M_Logistik->update_urutan_so_siap_loading($kd_rute, $urutan);
+        echo json_encode([
+            'msg' => $updated ? 'success' : 'error',
+            'message' => $updated ? 'Urutan SO berhasil disimpan.' : 'Gagal menyimpan urutan SO.',
+        ]);
+        exit;
+    }
+
+    public function siap_faktur_so_siap_loading()
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+
+        $kd_rute = trim((string)$this->input->post('current_rute', true));
+        if ($kd_rute === '') {
+            $this->session->set_flashdata('msg', 'Pilih rute terlebih dahulu.');
+            redirect('logistik/so_siap_loading');
+            return;
+        }
+
+        $plan = $this->_collectSoLoadingPlanPost();
+        if ($plan['tgl_pengiriman'] === '' || $plan['driver'] === '' || $plan['nolambung'] === '') {
+            $this->session->set_flashdata('msg', 'Lengkapi tanggal pengiriman, driver, dan kendaraan sebelum menjadikan SO siap faktur.');
+            redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));
+            return;
+        }
+        $this->M_Logistik->save_so_siap_loading_plan_by_rute($kd_rute, $plan);
+
+        $result = $this->M_Logistik->mark_so_siap_loading_route_ready_for_faktur(
+            $kd_rute,
+            $this->session->userdata('username') ?? ''
+        );
+
+        if (!empty($result['errors'])) {
+            $this->session->set_flashdata('msg', implode('<br>', $result['errors']));
+            redirect('logistik/so_siap_loading?rute=' . rawurlencode($kd_rute));
+            return;
+        }
+
+        $this->session->set_flashdata('msg', '<b>' . (int)$result['updated'] . ' SO</b> rute <b>' . htmlspecialchars($kd_rute) . '</b> sudah siap difakturkan oleh Admin Sales.');
+        redirect('logistik/so_siap_loading');
+    }
+
+    public function kembalikan_so_siap_loading($id_so)
+    {
+        if ($this->input->method() !== 'post') show_404();
+
+        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureSoLoadingPlanColumns();
+        $current_rute = trim((string)$this->input->post('current_rute', true));
+        $catatan_logistik = trim((string)$this->input->post('catatan_logistik', true));
+        $redirect_url = 'logistik/so_siap_loading' . ($current_rute !== '' ? '?rute=' . rawurlencode($current_rute) : '');
+
+        if ($catatan_logistik === '') {
+            $this->session->set_flashdata('msg', 'Catatan logistik wajib diisi saat mengembalikan SO ke status Open/Partial.');
+            redirect($redirect_url);
+            return;
+        }
+
+        $so = $this->M_Logistik->get_so_siap_loading_by_id($id_so);
+        if (!$so) {
+            $this->session->set_flashdata('msg', 'SO tidak ditemukan atau statusnya sudah bukan Sedang Verifikasi.');
+            redirect($redirect_url);
+            return;
+        }
+
+        $user = $this->session->userdata('nama')
+            ?? $this->session->userdata('nm_karyawan')
+            ?? $this->session->userdata('username')
+            ?? 'system';
+
+        $updated = $this->M_Logistik->kembalikan_so_siap_loading($id_so, $user, $catatan_logistik);
+        if (!empty($updated['success'])) {
+            $status_label = ($updated['status'] ?? 'open') === 'partial' ? 'Partial' : 'Open';
+            $this->session->set_flashdata('msg', 'SO <b>' . htmlspecialchars($so['no_so']) . '</b> dikembalikan ke status ' . $status_label . ' dengan catatan logistik.');
+        } else {
+            $this->session->set_flashdata('msg', 'Gagal mengembalikan SO ke status Open/Partial.');
+        }
+
+        redirect($redirect_url);
     }
 
     public function create_do()
@@ -962,6 +1380,7 @@ class C_Logistik extends CI_Controller
         $data['tmp_faktur']             = $this->M_Logistik->get_tmp_do();
         $data['generate_do']            = $this->M_Logistik->generate_kd_do();
         $data['qcount_tonase_kubikasi'] = $this->M_Logistik->get_tonase_kubikasi();
+        $data['rute_options']           = $this->M_Logistik->get_rute_do_options();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/createdo.php', $data);
@@ -1073,7 +1492,7 @@ class C_Logistik extends CI_Controller
         }
 
         $query = $this->db->query("SELECT
-            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,x.note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
+            x.norut,d.nama_customer AS nama_kios,d.telp1,d.telp2,x.kd_rute,d.regional,x.id,x.kd_faktur,x.tgl_transaksi,COALESCE(NULLIF(x.note_faktur, ''), fp.catatan, '') AS note_faktur,c.kd_barang AS kd_system,c.nama_barang AS nm_barang,
             x.no_lot,x.nominal_p,x.jtempo,x.tgl_exp,x.satuan,x.status,x.kd_do,x.qty,(c.p * c.l * c.t)      AS dimensi,FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
             (x.qty % (c.p * c.l * c.t)) AS qty_pcs
         FROM (
@@ -1110,13 +1529,24 @@ class C_Logistik extends CI_Controller
                 a.tgl_exp,
                 a.nominal_p,
                 a.jtempo,
+                a.note_faktur,
                 a.satuan,
                 a.status
         ) x
         JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
         JOIN tb_customer d ON d.kd_customer = x.kd_customer
+        JOIN tb_do bd ON bd.kd_do = x.kd_do
+        LEFT JOIN tb_log_confirm_sales lcs
+            ON lcs.id = (
+                SELECT l2.id
+                FROM tb_log_confirm_sales l2
+                WHERE l2.kd_do = bd.kd_do
+                ORDER BY l2.confirm_at DESC, l2.id DESC
+                LIMIT 1
+            )
+        LEFT JOIN tbso_faktur_penjualan fp ON fp.no_faktur = x.kd_faktur
         ORDER BY
-            d.nama_customer ASC,
+            x.norut ASC,
             x.kd_faktur ASC,
             c.nama_barang ASC;", array($kd_do));
 
@@ -1140,19 +1570,46 @@ class C_Logistik extends CI_Controller
             b.regional,
             b.nolambung,
             b.driver,
+            b.tgl_pengiriman,
+            COALESCE(plat.noplat, b.nolambung) AS noplat,
+            plat.nm_truk,
+            COALESCE(driver.nama_driver, b.driver) AS nama_driver,
             COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * m.berat)/1000000,2) AS total_tonase_faktur,
                 ROUND(SUM(a.qty * m.kubikasi),2) AS total_kubikasi,
+            COUNT(DISTINCT a.kd_customer) AS total_customer,
+            COUNT(DISTINCT a.kd_faktur) AS total_faktur,
             COUNT(DISTINCT a.kd_customer) AS totalfaktur
             FROM tb_detail_do a
             JOIN tb_do b
                 ON b.kd_do = a.kd_do
             JOIN tb_master_barang_all m
                 ON m.kd_barang = a.kd_barang
+            LEFT JOIN tb_op_plat plat
+                ON plat.id = b.nolambung
+            LEFT JOIN tb_op_driver driver
+                ON driver.kd_driver = b.driver
             WHERE b.kd_do = '$kd_do'
-            GROUP BY b.id,b.kd_do,b.regional,b.nolambung,b.driver;
+            GROUP BY b.id,b.kd_do,b.regional,b.nolambung,b.driver,b.tgl_pengiriman,plat.noplat,plat.nm_truk,driver.nama_driver;
         ");
-        $query2 = $this->db->where('kd_do', $kd_do)->get('tb_do');
+        $query2 = $this->db->query("
+            SELECT
+                a.*,
+                lcs.action AS sales_confirm_status,
+                lcs.confirm_by AS sales_confirm_by,
+                lcs.confirm_at AS sales_confirm_at,
+                lcs.note AS sales_confirm_note
+            FROM tb_do a
+            LEFT JOIN tb_log_confirm_sales lcs
+                ON lcs.id = (
+                    SELECT l2.id
+                    FROM tb_log_confirm_sales l2
+                    WHERE l2.kd_do = a.kd_do
+                    ORDER BY l2.confirm_at DESC, l2.id DESC
+                    LIMIT 1
+                )
+            WHERE a.kd_do = ?
+        ", [$kd_do]);
         $query3 = $this->db->where('kd_do', $kd_do)->get('tb_detail_do');
 
         $data['page_title']     = 'KARISMA - LOGISTIK';
@@ -1165,10 +1622,55 @@ class C_Logistik extends CI_Controller
 
         $data['driver']         = $this->M_Logistik->getalldriver();
         $data['truck']          = $this->M_Logistik->getallplat();
+        $data['rute_options']   = $this->M_Logistik->get_rute_do_options();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/body_detaildo.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function update_urutan_faktur_do()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $kd_do = trim($this->input->post('kd_do'));
+        $urutan = $this->input->post('urutan');
+
+        if ($kd_do === '' || !is_array($urutan) || empty($urutan)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data urutan faktur tidak lengkap']);
+            exit;
+        }
+
+        $urutan = array_values(array_unique(array_filter(array_map('trim', $urutan))));
+        if (empty($urutan)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data faktur tidak valid']);
+            exit;
+        }
+
+        $existing = $this->db->select('kd_faktur')
+            ->distinct()
+            ->where('kd_do', $kd_do)
+            ->get('tb_detail_do')
+            ->result_array();
+
+        $existing_faktur = array_column($existing, 'kd_faktur');
+        sort($existing_faktur);
+        $posted_faktur = $urutan;
+        sort($posted_faktur);
+
+        if ($existing_faktur !== $posted_faktur) {
+            echo json_encode(['msg' => 'error', 'message' => 'Ada faktur yang tidak ditemukan pada DO ini']);
+            exit;
+        }
+
+        $updated = $this->M_Logistik->update_urutan_faktur_do($kd_do, $urutan);
+
+        echo json_encode([
+            'msg' => $updated ? 'success' : 'error',
+            'message' => $updated ? 'Urutan faktur berhasil disimpan' : 'Gagal menyimpan urutan faktur'
+        ]);
+        exit;
     }
 
     public function edited_rute_do()
@@ -1176,6 +1678,12 @@ class C_Logistik extends CI_Controller
         $id         = $this->input->post('id');
         $kd_do      = $this->input->post('kddo');
         $regional   = $this->input->post('regional');
+
+        if (!$this->M_Logistik->get_rute_do($regional)) {
+            $this->session->set_flashdata('error', 'Rute tidak valid atau belum memiliki tipe LK/KK.');
+            redirect('detail_do/' . $kd_do);
+            return;
+        }
 
         $edit   = array(
             'regional'  => $regional
@@ -1245,15 +1753,19 @@ class C_Logistik extends CI_Controller
             exit;
         }
 
-        // STATUS 2 = Menunggu Konfirmasi Sales (bukan langsung on delivery)
+        $do_before_rekam = $this->db
+            ->select('status')
+            ->where('kd_do', $kd)
+            ->limit(1)
+            ->get('tb_do')
+            ->row();
+
+        // Rekam DO yang sudah Siap Loading menjadi On Delivery.
         $dataupdated_do = [
             'nolambung'             => $nolambung,
             'driver'                => $driver,
             'tgl_pengiriman'        => $tgldeliv,
-            'status'                => 2,                // ← status 2, bukan 3
-            'sales_confirm_status'  => 'pending',        // ← tandai menunggu konfirmasi
-            'sales_confirm_by'      => null,
-            'sales_confirm_at'      => null,
+            'status'                => 5,
         ];
 
         $dataupdateddetail_do = [
@@ -1265,12 +1777,11 @@ class C_Logistik extends CI_Controller
         $datalog = [
             'kd_do'      => $kd,
             'tgl_input'  => date('d/m/Y'),
-            'keterangan' => "POST - FAKTUR - MENUNGGU KONFIRMASI SALES",
+            'keterangan' => "REKAM ORDER - ON DELIVERY",
             'inputer'    => $this->session->userdata('nama')
         ];
 
         $insert_batch   = [];
-        $ledger_rows    = [];
         $kd_faktur_list = [];
 
         foreach ($getdetail as $det) {
@@ -1287,13 +1798,6 @@ class C_Logistik extends CI_Controller
             ];
 
             $kd_faktur_list[] = $det->kd_faktur;
-
-            $ledger_rows[] = [
-                'kd_barang' => $det->kd_barang,
-                'no_lot'    => $det->no_lot,
-                'tgl_exp'   => $det->tgl_exp,
-                'qty'       => $det->qty,
-            ];
         }
 
         $kd_faktur_list = array_unique($kd_faktur_list);
@@ -1303,15 +1807,13 @@ class C_Logistik extends CI_Controller
         $this->M_Logistik->insertlog_do($datalog);
         $this->M_Logistik->update_checker_done($kd, $dataupdated_do);
         $this->M_Logistik->update_checker_detail_done($kd, 1, $dataupdateddetail_do);
-        foreach ($kd_faktur_list as $fk) {
-            $this->M_Logistik->sync_so_status_by_faktur($fk, 'in_progress');
+        $this->M_Logistik->sync_faktur_status_by_do($kd, 'selesai_do');
+
+        if ($do_before_rekam && (string)$do_before_rekam->status === '3') {
+            $this->M_Checker->sync_do_activity($kd, 'cetak_do', $this->session->userdata('nama'));
         }
 
-        if (!empty($ledger_rows)) {
-            $this->M_Logistik->finalize_ledger_do($ledger_rows, $kd, $kd_faktur_list);
-        }
-
-        echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam, menunggu konfirmasi Sales.']);
+        echo json_encode(['msg' => 'success', 'message' => 'DO berhasil direkam menjadi On Delivery.']);
         exit;
     }
 
@@ -1357,19 +1859,10 @@ class C_Logistik extends CI_Controller
                     'inputer'    => $confirm_by
                 ];
                 $this->M_Logistik->insertlog_do($datalog);
+                $this->M_Checker->sync_do_activity($kd_do, 'siap_loading', $confirm_by);
 
-                $faktur_list = $this->db
-                    ->select('kd_faktur')
-                    ->distinct()
-                    ->where('kd_do', $kd_do)
-                    ->get('tb_detail_do')
-                    ->result_array();
-
-                foreach ($faktur_list as $fk) {
-                    $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'done');
-                }
-
-                $accountingResults = $this->post_accounting_sales_invoice_for_do($kd_do, $faktur_list);
+                // Update status faktur sesuai status DO.
+                $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'selesai_do');
             }
 
             echo json_encode([
@@ -1437,16 +1930,7 @@ class C_Logistik extends CI_Controller
             $this->M_Logistik->insertlog_do($datalog);
             $this->M_Logistik->updated_repost_do($kd_do, $repostdo);
 
-            $faktur_list = $this->db
-                ->select('kd_faktur')
-                ->distinct()
-                ->where('kd_do', $kd_do)
-                ->get('tb_detail_do')
-                ->result_array();
-
-            foreach ($faktur_list as $fk) {
-                $this->M_Logistik->sync_so_status_by_faktur($fk['kd_faktur'], 'draft');
-            }
+            $this->M_Logistik->sync_faktur_status_by_do($kd_do, 'draft');
         } else {
             echo json_encode(['msg' => 'error', 'message' => 'Gagal update status']);
         }
@@ -1493,19 +1977,63 @@ class C_Logistik extends CI_Controller
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdfaktur']       = $kdfaktur;
         $data['list_faktur']    = $this->M_Logistik->get_list_by_rute();
+        $data['do_summary']     = $this->M_Logistik->get_do_tonase_kubikasi_summary($kdfaktur);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/list_faktur_by_rute.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function insertfromdraft($kddo, $kdfaktur)
+    public function insertfromdraft($kddo = null, $kdfaktur = null)
+    {
+        $kddo = $kddo !== null ? rawurldecode($kddo) : trim((string)$this->input->get('kddo', true));
+        $kdfaktur = $kdfaktur !== null ? rawurldecode($kdfaktur) : trim((string)$this->input->get('kd_faktur', true));
+
+        if ($kddo === '' || $kdfaktur === '') {
+            show_404();
+            return;
+        }
+
+        $this->_insert_faktur_to_do($kddo, $kdfaktur);
+        redirect('list_faktur/' . $kddo);
+    }
+
+    public function insertfromdraft_batch()
+    {
+        $kddo = trim((string)$this->input->post('kddo', true));
+        $fakturs = $this->input->post('kd_faktur', true);
+
+        if ($kddo === '' || empty($fakturs) || !is_array($fakturs)) {
+            $this->session->set_flashdata('warning', 'Pilih minimal 1 faktur terlebih dahulu.');
+            redirect($kddo !== '' ? 'list_faktur/' . $kddo : 'logistik');
+            return;
+        }
+
+        $success = 0;
+        foreach (array_unique($fakturs) as $kd_faktur) {
+            $kd_faktur = trim((string)$kd_faktur);
+            if ($kd_faktur !== '' && $this->_insert_faktur_to_do($kddo, $kd_faktur)) {
+                $success++;
+            }
+        }
+
+        if ($success > 0) {
+            $this->session->set_flashdata('success', $success . ' faktur berhasil ditambahkan ke DO.');
+        } else {
+            $this->session->set_flashdata('warning', 'Tidak ada faktur yang berhasil ditambahkan.');
+        }
+
+        redirect('list_faktur/' . $kddo);
+    }
+
+    private function _insert_faktur_to_do($kddo, $kdfaktur)
     {
         date_default_timezone_set("Asia/Jakarta");
         $get_pre_do = $this->M_Logistik->get_do_cust($kdfaktur);
         $getdetail  = $this->M_Logistik->get_do_cust_byfaktur($kdfaktur);
 
         $now = date("Y-m-d H:i:s");
+        $inserted = false;
 
         if ($get_pre_do) {
             $data_tmp_det_do = [];
@@ -1531,6 +2059,7 @@ class C_Logistik extends CI_Controller
                         'no_lot'        => $det->no_lot,
                         'tgl_exp'       => $det->tgl_exp,
                         'norut'         => 0,
+                        'note_faktur'   => $det->note_faktur ?? '',
                         'dt_status'     => 1,
                         'status'        => 1,
                         'create_at'     => $now
@@ -1538,6 +2067,7 @@ class C_Logistik extends CI_Controller
                 }
                 if (!empty($data_tmp_det_do)) {
                     $this->M_Logistik->insert_fakturfrom_draft_batch($data_tmp_det_do);
+                    $inserted = true;
                 }
                 $update_pre_do = array(
                     'data_sts' => '3'
@@ -1545,7 +2075,7 @@ class C_Logistik extends CI_Controller
                 $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
             }
         }
-        redirect('list_faktur/' . $kddo);
+        return $inserted;
     }
 
     public function print_do($kd_do)
@@ -1608,7 +2138,7 @@ class C_Logistik extends CI_Controller
         ) x
         LEFT JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
         LEFT JOIN tb_customer d ON d.kd_customer = x.kd_customer
-        ORDER BY d.nama_customer ASC, x.kd_faktur ASC, c.nama_barang ASC", [$kd_do]);
+        ORDER BY x.norut ASC, x.kd_faktur ASC, c.nama_barang ASC", [$kd_do]);
 
         $querysts = $this->db->query("SELECT
             b.kd_do,
@@ -1690,7 +2220,7 @@ class C_Logistik extends CI_Controller
                 JOIN tb_customer d ON d.kd_customer = a.kd_customer
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_barang , a.no_lot
-                ORDER BY d.nama_customer ASC
+                ORDER BY MIN(a.norut) ASC, a.kd_faktur ASC, c.nm_barang ASC
             ", array($kd_do));
 
         $querytc = $this->db->query("SELECT 
@@ -1702,7 +2232,7 @@ class C_Logistik extends CI_Controller
                 JOIN tb_do b ON b.kd_do = a.kd_do
                 WHERE b.kd_do = '$kd_do'
                 GROUP BY a.kd_faktur
-                ORDER BY d.nama_customer ASC
+                ORDER BY a.norut ASC, a.kd_faktur ASC
             ", array($kd_do));
 
         $querysts = $this->db->query("SELECT
@@ -1710,6 +2240,9 @@ class C_Logistik extends CI_Controller
                 b.regional,
                 b.nolambung,
                 b.driver,
+                COALESCE(plat.noplat, b.nolambung) AS noplat,
+                plat.nm_truk,
+                COALESCE(driver.nama_driver, b.driver) AS nama_driver,
                 b.tgl_pengiriman,
                 COUNT(DISTINCT a.kd_barang) AS total_barang,
                 ROUND(SUM(a.qty * c.berat)/1000,2) AS total_tonase_faktur,
@@ -1719,10 +2252,12 @@ class C_Logistik extends CI_Controller
                 tb_detail_do a
             JOIN tb_do b ON b.kd_do = a.kd_do
             JOIN tb_master_barang c ON c.kode_barang = a.kd_barang
+            LEFT JOIN tb_op_plat plat ON plat.id = b.nolambung
+            LEFT JOIN tb_op_driver driver ON driver.kd_driver = b.driver
             WHERE
                 b.kd_do = '$kd_do'
             GROUP BY
-                b.kd_do, b.regional, b.nolambung, b.driver
+                b.kd_do, b.regional, b.nolambung, b.driver, b.tgl_pengiriman, plat.noplat, plat.nm_truk, driver.nama_driver
             ")->result();
 
         $data['page_title']  = 'KARISMA - LOGISTIK';
@@ -1780,8 +2315,16 @@ class C_Logistik extends CI_Controller
         echo json_encode($data);
     }
 
-    public function insert_tmp($kd, $action)
+    public function insert_tmp($kd = null, $action = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        $action = $action !== null ? $action : trim((string)$this->input->get('action', true));
+
+        if ($kd === '' || $action === '') {
+            show_404();
+            return;
+        }
+
         switch ($action) {
 
             case 'formdetail':
@@ -1814,6 +2357,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                             );
                             $this->M_Logistik->insert_tmp_detdo($tmp_det_do);
@@ -1832,7 +2376,7 @@ class C_Logistik extends CI_Controller
 
                     $this->M_Logistik->insert_tmp_do($datainsert);
                     $this->M_Logistik->update_sts_pre_do($kdfaktur, $update_pre_do);
-                    redirect('detail_fk/' . $kd);
+                    redirect('detail_fk?kd_faktur=' . rawurlencode($kd));
                 }
                 break;
 
@@ -1866,6 +2410,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                                 'create_at'     => $now
                             );
@@ -1922,6 +2467,7 @@ class C_Logistik extends CI_Controller
                                 'tgl_exp'       => $det->tgl_exp,
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'barang_sts'    => $det->barang_sts,
                                 'create_at'     => $now
                             );
@@ -1939,7 +2485,7 @@ class C_Logistik extends CI_Controller
                     }
                 }
 
-                redirect('detail_fk_pnd/' . $kdfaktur);
+                redirect('detail_fk_pnd/' . rawurlencode($kdfaktur));
                 break;
 
             case 'formonsite':
@@ -1976,6 +2522,7 @@ class C_Logistik extends CI_Controller
                                 'norut'         => '0',
                                 'nominal_p'     => $det->nominal_p,
                                 'jtempo'        => $det->jtempo,
+                                'note_faktur'   => $det->note_faktur ?? '',
                                 'dt_status'     => '1',
                                 'status'        => '4',
                                 'input_at'      => $todaydo,
@@ -2024,16 +2571,24 @@ class C_Logistik extends CI_Controller
     public function get_faktur()
     {
         $id = $this->input->post('kdfaktur');
-        $this->db->select('a.nama_barang as nama_barang,a.qty as qty,a.satuan as satuan');
-        $this->db->from('tb_pre_do a');
-        $this->db->where('a.kd_faktur', $id);
+        $this->db->select('a.nama_barang AS nama_barang, a.qty AS qty, a.satuan AS satuan');
+        $this->db->from('tbso_faktur_detail a');
+        $this->db->where('a.no_faktur', $id);
         $query = $this->db->get()->row();
 
         echo json_encode($query);
     }
 
-    public function revert_do($kd, $action)
+    public function revert_do($kd = null, $action = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        $action = $action !== null ? $action : trim((string)$this->input->get('action', true));
+
+        if ($kd === '' || $action === '') {
+            show_404();
+            return;
+        }
+
         switch ($action) {
             case 'revertdetail':
                 $update_pre_do = [
@@ -2100,6 +2655,11 @@ class C_Logistik extends CI_Controller
             exit;
         }
 
+        if (!$this->M_Logistik->get_rute_do($kota)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Rute tidak valid atau belum memiliki tipe LK/KK']);
+            exit;
+        }
+
         $tmpdetail = $this->M_Logistik->get_tmp_dokd($kd_do);
 
         $datado = array(
@@ -2151,13 +2711,12 @@ class C_Logistik extends CI_Controller
                 $update_ids[] = $tmp->id_pre_do;
             }
 
-            // Update status SO di tbso_sales_order
             $kd_faktur_list = array_unique(array_column(
                 array_map(function($t){ return ['kd_faktur' => $t->kd_faktur]; }, $tmpdetail),
                 'kd_faktur'
             ));
             foreach ($kd_faktur_list as $fk) {
-                $this->M_Logistik->update_sts_pre_do($fk, ['data_sts' => '3']);
+                $this->M_Logistik->update_sts_pre_do($fk, ['data_sts' => '2']);
             }
 
             $this->M_Logistik->deletetmp_detdo($kd_do);
@@ -2194,8 +2753,14 @@ class C_Logistik extends CI_Controller
         }
     }
 
-    public function detail_fk($kd)
+    public function detail_fk($kd = null)
     {
+        $kd = $kd !== null ? rawurldecode($kd) : trim((string)$this->input->get('kd_faktur', true));
+        if ($kd === '') {
+            show_404();
+            return;
+        }
+
         if (substr($kd, -3) === 'PND') {
             $kd_bersih = substr($kd, 0, -3);
         } else {

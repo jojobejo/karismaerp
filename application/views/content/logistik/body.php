@@ -34,53 +34,21 @@
                         <!-- ✅ ACTION BUTTONS -->
                         <div class="row">
                             <div class="col-auto">
-                                <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#muploadlog">
-                                    <i class="fas fa-upload mr-1"></i>Update Data DO
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="https://10.10.10.12/zahirdigital/keuangan/export_do.php" class="btn btn-info mb-2">
-                                    <i class="fas fa-sync mr-1"></i>Ambil Data Penjualan (TODAY)
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="#" class="btn btn-primary mb-2" data-toggle="modal" data-target="#updatecs">
-                                    <i class="fas fa-user-edit mr-1"></i>Update Customer
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('faktur_on_site') ?>" class="btn btn-success mb-2">
-                                    <i class="fas fa-store mr-1"></i>Faktur Cash / On Site
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('master_barang') ?>" class="btn btn-info mb-2">
-                                    <i class="fas fa-box mr-1"></i>Master Barang
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('master_customer') ?>" class="btn btn-primary mb-2">
-                                    <i class="fas fa-users mr-1"></i>Master Customer
-                                </a>
-                            </div>
-                            <div class="col-auto">
                                 <a href="<?= base_url('create_do') ?>" class="btn btn-success mb-2">
                                     <i class="fas fa-plus mr-1"></i>Add Delivery Order
                                 </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('faktur_bintang') ?>" class="btn btn-info mb-2">
-                                    <i class="fas fa-star mr-1"></i>Faktur Bintang
+                                <a href="<?= base_url('checker') ?>" class="btn btn-warning mb-2">
+                                    <i class="fas fa-warehouse mr-1"></i>Activity Warehouse
                                 </a>
                             </div>
                             <div class="col-auto">
-                                <a href="<?= base_url('view_faktur_not_list') ?>" class="btn btn-warning mb-2">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i>Faktur Barang Belum Terdaftar
-                                </a>
-                            </div>
-                            <div class="col-auto">
-                                <a href="<?= base_url('tonase_report') ?>" class="btn btn-primary mb-2">
-                                    <i class="fas fa-weight mr-1"></i>Tonase Rekap
+                                <a href="<?= base_url('logistik/so_siap_loading') ?>" class="btn btn-primary mb-2">
+                                    <i class="fas fa-clipboard-check mr-1"></i>SO Siap Loading
+                                    <?php if (!empty($total_so_siap_loading)): ?>
+                                        <span class="badge badge-light ml-1"><?= (int)$total_so_siap_loading ?></span>
+                                    <?php endif; ?>
                                 </a>
                             </div>
                         </div>
@@ -105,6 +73,7 @@
                                 </h3>
                             </div>
                             <div class="card-body">
+                                <?php $listdo = isset($listdo) && is_array($listdo) ? $listdo : []; ?>
 
                                 <!-- ✅ FILTER ROW -->
                                 <div class="row mb-3">
@@ -112,11 +81,9 @@
                                         <label class="text-muted" style="font-size:12px; font-weight:600;">Filter Status</label>
                                         <select id="filterStatus" class="form-control form-control-sm">
                                             <option value="">— Semua Status —</option>
-                                            <option value="1">Draft</option>
-                                            <option value="2_pending">Menunggu Konfirmasi</option>
-                                            <option value="2_belum_siap">Belum Siap Loading</option>
-                                            <option value="3">On Delivery</option>
-                                            <option value="4">On Site</option>
+                                            <option value="3">Proses DO</option>
+                                            <option value="4">Is Loading</option>
+                                            <option value="5">On Delivery</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2 col-sm-6 mb-2">
@@ -167,33 +134,27 @@
                                             $status  = $i->status;
                                             $confirm = $i->sales_confirm_status ?? null;
 
+                                            //  blok if status
                                             if ($status == '1') {
-                                                $datasts     = '<span class="badge badge-warning">Draft</span>';
-                                                $statusCode  = '1';
+                                                $datasts    = '<span class="badge badge-warning">Draft</span>';
+                                                $statusCode = '1';
                                                 $confirmCode = '';
                                             } elseif ($status == '2') {
-                                                if ($confirm === 'pending' || $confirm === null) {
-                                                    $datasts    = '<span class="badge badge-info">Menunggu Konfirmasi</span>
-                                                                   <br><small class="text-danger"><i class="fas fa-exclamation-circle"></i> Sales belum konfirmasi</small>';
-                                                    $statusCode  = '2';
-                                                    $confirmCode = 'pending';
-                                                } elseif ($confirm === 'belum_siap') {
-                                                    $datasts    = '<span class="badge badge-danger">Belum Siap Loading</span>
-                                                                   <br><small class="text-muted">Dikonfirmasi oleh: ' . htmlspecialchars($i->sales_confirm_by ?? '-') . '</small>';
-                                                    $statusCode  = '2';
-                                                    $confirmCode = 'belum_siap';
-                                                } else {
-                                                    $datasts     = '<span class="badge badge-info">Menunggu Konfirmasi</span>';
-                                                    $statusCode  = '2';
-                                                    $confirmCode = 'pending';
-                                                }
+                                                $datasts    = '<span class="badge badge-info">Menunggu Konfirmasi</span>';
+                                                            // <br><small class="text-danger"><i class="fas fa-exclamation-circle"></i> Sales belum konfirmasi</small>';
+                                                $statusCode = '2';
+                                                $confirmCode = '';
                                             } elseif ($status == '3') {
-                                                $datasts     = '<span class="badge badge-success">On Delivery</span>';
-                                                $statusCode  = '3';
+                                                $datasts    = '<span class="badge badge-success">Proses DO</span>';
+                                                $statusCode = '3';
                                                 $confirmCode = '';
                                             } elseif ($status == '4') {
-                                                $datasts     = '<span class="badge badge-success">On Site</span>';
-                                                $statusCode  = '4';
+                                                $datasts    = '<span class="badge badge-primary">Is Loading</span>';
+                                                $statusCode = '4';
+                                                $confirmCode = '';
+                                            } elseif ($status == '5') {
+                                                $datasts    = '<span class="badge badge-dark">On Delivery</span>';
+                                                $statusCode = '5';
                                                 $confirmCode = '';
                                             }
                                         ?>
@@ -223,6 +184,18 @@
                                                     </td>
                                                 <?php elseif ($i->status == '3') : ?>
                                                     <td>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                <?php elseif ($i->status == '4') : ?>
+                                                    <td>
+                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                <?php elseif ($i->status == '5') : ?>
+                                                    <td>
                                                         <div class="row no-gutters">
                                                             <div class="col pr-1">
                                                                 <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
@@ -235,12 +208,6 @@
                                                                 </a>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                <?php elseif ($i->status == '4') : ?>
-                                                    <td>
-                                                        <a href="<?= base_url('detail_do/') . $i->kddo ?>" class="btn btn-sm btn-info btn-block">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
                                                     </td>
                                                 <?php endif; ?>
                                             </tr>
@@ -314,11 +281,11 @@
 
                 // Filter status
                 if (sts) {
-                    if (sts === '2_pending'    && !(rowStatus === '2' && rowConfirm === 'pending'))    return false;
-                    if (sts === '2_belum_siap' && !(rowStatus === '2' && rowConfirm === 'belum_siap')) return false;
                     if (sts === '1' && rowStatus !== '1') return false;
+                    if (sts === '2' && rowStatus !== '2') return false;
                     if (sts === '3' && rowStatus !== '3') return false;
                     if (sts === '4' && rowStatus !== '4') return false;
+                    if (sts === '5' && rowStatus !== '5') return false;
                 }
 
                 // Filter rute
