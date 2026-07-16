@@ -84,8 +84,8 @@
 
                         .lpb-list-item {
                             border: 1px solid #e2e8f0;
-                            border-radius: 16px;
-                            padding: 14px 16px;
+                            border-radius: 10px;
+                            padding: 8px 10px;
                             cursor: pointer;
                             transition: all 0.18s ease;
                             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
@@ -105,20 +105,37 @@
 
                         .lpb-list-meta {
                             display: flex;
-                            gap: 8px;
+                            align-items: center;
+                            gap: 5px;
                             flex-wrap: wrap;
-                            margin-top: 8px;
+                            margin-top: 5px;
+                        }
+
+                        .lpb-list-meta .badge {
+                            display: inline-flex;
+                            align-items: center;
+                            padding: 3px 7px;
+                            font-size: 10px;
+                        }
+
+                        .lpb-list-badges {
+                            display: flex;
+                            align-items: flex-start;
+                            justify-content: flex-end;
+                            gap: 5px;
+                            flex-wrap: wrap;
+                            margin-left: 8px;
                         }
 
                         .lpb-chip {
                             display: inline-flex;
                             align-items: center;
-                            gap: 6px;
+                            gap: 5px;
                             background: #eef1ff;
                             color: #243cff;
                             border-radius: 999px;
-                            padding: 4px 10px;
-                            font-size: 12px;
+                            padding: 2px 7px;
+                            font-size: 10px;
                             font-weight: 700;
                         }
 
@@ -177,6 +194,12 @@
                             color: #fff;
                             border-color: #243cff;
                             vertical-align: middle;
+                            white-space: nowrap;
+                        }
+
+                        .lpb-table th,
+                        .lpb-table td {
+                            white-space: nowrap;
                         }
 
                         .lpb-table tfoot th {
@@ -184,6 +207,20 @@
                             border-color: #dbe4ff;
                             color: #0f172a;
                             vertical-align: middle;
+                        }
+
+                        .lpb-table-actions {
+                            display: flex;
+                            justify-content: flex-end;
+                            align-items: center;
+                            gap: 8px;
+                            flex-wrap: wrap;
+                            margin-top: 12px;
+                            width: 100%;
+                        }
+
+                        .lpb-table-actions .btn {
+                            min-width: 132px;
                         }
 
                         #modalHistoryLpb .table th,
@@ -254,7 +291,7 @@
                     <?php endif; ?>
 
                     <div class="row">
-                        <div class="col-lg-4 mb-4">
+                        <div class="col-lg-3 mb-4">
                             <div class="lpb-panel h-100">
                                 <div class="lpb-panel-header">
                                     <div>
@@ -280,13 +317,13 @@
                                     </div>
 
                                     <div id="lpbListWrap" style="display:none;">
-                                        <div id="lpbListContainer" class="d-flex flex-column" style="gap:12px;"></div>
+                                        <div id="lpbListContainer" class="d-flex flex-column" style="gap:6px;"></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-lg-8 mb-4">
+                        <div class="col-lg-9 mb-4">
                             <div class="lpb-panel h-100">
                                 <div class="lpb-panel-header">
                                     <div>
@@ -335,6 +372,12 @@
                                                 </thead>
                                                 <tbody></tbody>
                                             </table>
+                                        </div>
+                                        <div class="lpb-table-actions" id="lpbPurchasingVerifyActions" style="display:none;">
+                                            <span class="text-muted small" id="lpbBulkVerifyInfo"></span>
+                                            <button type="button" class="btn btn-success btn-sm" id="btnBulkAcceptLpbPrice">
+                                                <i class="fas fa-save mr-1"></i> Rekam
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -576,12 +619,15 @@
             var selectedIdLpb = 0;
             var selectedHeader = null;
             var selectedDetailRows = [];
+            var selectedPurchasingRows = [];
             var detailViewMode = 'lpb';
+            var purchasingEditMode = false;
             var isSubmittingAdjustment = false;
             var isSubmittingInvoice = false;
             var isSubmittingJenisLpb = false;
             var isSubmittingLpbPrice = false;
             var isAcceptingLpbPrice = false;
+            var isBulkAcceptingLpbPrice = false;
 
             function escHtml(value) {
                 return $('<div>').text(value == null ? '' : value).html();
@@ -724,9 +770,6 @@
                     '<span class="badge badge-danger"><i class="fas fa-exclamation-circle mr-1"></i>Tidak ada invoice</span>';
                 var jenisDitentukan = !!row.jenis_lpb;
                 var jenisLpb = jenisDitentukan ? row.jenis_lpb : 'Jenis LPB belum ditentukan';
-                var jenisBadge = jenisDitentukan ?
-                    '<span class="badge badge-primary"><i class="fas fa-tag mr-1"></i>' + escHtml(jenisLpb) + '</span>' :
-                    '<span class="badge badge-warning"><i class="fas fa-exclamation-circle mr-1"></i>Jenis LPB belum ditentukan</span>';
                 var statusInfo = lpbStatusInfo(row.status_lpb);
                 var statusBadge = '<span class="badge ' + statusInfo.badge + '"><i class="fas fa-tasks mr-1"></i>' + escHtml(statusInfo.label) + '</span>';
                 var nomorLpb = row.nomor_lpb ? row.nomor_lpb : 'Nomor LPB belum dibuat';
@@ -738,14 +781,11 @@
                     '<div class="d-flex justify-content-between align-items-start">' +
                     '<div>' +
                     '<div class="font-weight-bold text-dark">' + escHtml(nomorLpb) + '</div>' +
-                    '<div class="text-muted small">Invoice: ' + escHtml(invoice) + '</div>' +
-                    '<div class="text-muted small">Jenis LPB: ' + escHtml(jenisLpb) + '</div>' +
                     '</div>' +
-                    invoiceBadge +
+                    '<div class="lpb-list-badges">' + statusBadge + '</div>' +
                     '</div>' +
-                    '<div class="mt-2">' + statusBadge + '</div>' +
-                    '<div class="mt-2">' + jenisBadge + '</div>' +
                     '<div class="lpb-list-meta">' +
+                    invoiceBadge +
                     '<span class="lpb-chip"><i class="fas fa-tags"></i> ' + escHtml(jenisLpb) + '</span>' +
                     '<span class="lpb-chip green"><i class="fas fa-warehouse"></i> ' + escHtml(gudang) + '</span>' +
                     '<span class="lpb-chip slate"><i class="fas fa-clock"></i> ' + escHtml(formatDateTimeId(row.input_at)) + '</span>' +
@@ -754,7 +794,8 @@
                     '</div>';
             }
 
-            function renderList(rows) {
+            function renderList(rows, options) {
+                options = options || {};
                 var container = $('#lpbListContainer');
                 container.empty();
 
@@ -778,6 +819,10 @@
 
                 var targetId = selectedIdLpb || rows[0].id_lpb;
                 selectListItem(targetId);
+                if (options.skipDetailReload) {
+                    return;
+                }
+
                 loadDetail(targetId);
             }
 
@@ -786,6 +831,7 @@
                 selectedHeader = null;
                 selectedDetailRows = [];
                 detailViewMode = 'lpb';
+                purchasingEditMode = false;
                 updateDetailViewButton();
                 $('#selectedLpbText').text('Belum ada LPB dipilih');
                 $('#lpbDetailLoading').hide();
@@ -793,6 +839,8 @@
                 $('#lpbDetailEmpty').show();
                 $('#lpbDetailHeaderGrid').empty();
                 $('#lpbDetailTable tbody').empty();
+                selectedPurchasingRows = [];
+                updateBulkAcceptButton();
             }
 
             function selectListItem(idLpb) {
@@ -899,6 +947,9 @@
             }
 
             function renderDetailTable(rows) {
+                selectedPurchasingRows = [];
+                purchasingEditMode = false;
+                updateBulkAcceptButton();
                 setDetailTableHead([{
                         label: 'No',
                         className: 'text-center'
@@ -978,7 +1029,8 @@
                 });
             }
 
-            function loadList() {
+            function loadList(options) {
+                options = options || {};
                 $('#lpbListLoading').show();
                 $('#lpbListEmpty').hide();
                 $('#lpbListWrap').hide();
@@ -1000,7 +1052,7 @@
                         }
 
                         allRows = res.rows || [];
-                        renderList(allRows);
+                        renderList(allRows, options);
                         applySearch();
                     },
                     error: function() {
@@ -1054,6 +1106,7 @@
                         }
 
                         detailViewMode = 'purchasing';
+                        purchasingEditMode = false;
                         updateDetailViewButton();
                         renderPurchasingHeader(res.header || {});
                         renderPurchasingTable(res.rows || []);
@@ -1080,7 +1133,11 @@
             }
 
             function renderPurchasingTable(rows) {
-                setDetailTableHead([{
+                selectedPurchasingRows = rows || [];
+                var acceptableRows = getBulkAcceptableRows();
+                var allVerified = selectedPurchasingRows.length > 0 && acceptableRows.length === 0;
+                var showActionColumn = !allVerified || purchasingEditMode;
+                var columns = [{
                         label: 'No',
                         className: 'text-center'
                     },
@@ -1112,34 +1169,43 @@
                     {
                         label: 'Harga Satuan',
                         className: 'text-right'
-                    },
-                    {
-                        label: 'Verifikasi',
-                        className: 'text-center'
-                    },
-                    {
+                    }
+                ];
+
+                if (showActionColumn) {
+                    columns.push({
                         label: '#',
                         className: 'text-center'
-                    }
-                ]);
+                    });
+                }
+
+                setDetailTableHead(columns);
 
                 var tbody = $('#lpbDetailTable tbody');
                 tbody.empty();
 
                 if (!rows || rows.length === 0) {
-                    tbody.html('<tr><td colspan="11" class="text-center text-muted">Data purchasing untuk LPB ini belum tersedia.</td></tr>');
+                    tbody.html('<tr><td colspan="' + (showActionColumn ? 10 : 9) + '" class="text-center text-muted">Data purchasing untuk LPB ini belum tersedia.</td></tr>');
+                    updateBulkAcceptButton();
                     return;
                 }
 
                 $.each(rows, function(index, row) {
                     var hargaSatuanAktif = row.harga_satuan || row.harga_satuan_exclude || 0;
                     var totalHargaAktif = row.total_harga || row.total_harga_exclude || 0;
-                    var hargaVerified = parseInt(row.harga_terverifikasi || 0, 10) === 1;
-                    var acceptButton = hargaVerified ?
-                        '<span class="badge badge-success">Accepted</span>' :
-                        '<button type="button" class="btn btn-outline-success btn-sm js-accept-lpb-price" title="Accept harga satuan ' + escHtml(formatRupiah(hargaSatuanAktif)) + '" data-id-detail="' + escHtml(row.id_detail_lpb || 0) + '">' +
-                        '<i class="fas fa-check mr-1"></i> Accept' +
-                        '</button>';
+                    var actionColumn = showActionColumn ? (
+                        '<td class="text-center">' +
+                        '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga LPB" ' +
+                        'data-id-detail="' + escHtml(row.id_detail_lpb || 0) + '" ' +
+                        'data-kd-barang="' + escHtml(row.kd_barang || '') + '" ' +
+                        'data-nama-barang="' + escHtml(row.nama_barang || '-') + '" ' +
+                        'data-qty="' + escHtml(row.qty_lpb || 0) + '" ' +
+                        'data-harga-satuan="' + escHtml(hargaSatuanAktif) + '" ' +
+                        'data-total-harga="' + escHtml(totalHargaAktif) + '">' +
+                        '<i class="fas fa-pencil-alt"></i>' +
+                        '</button>' +
+                        '</td>'
+                    ) : '';
 
                     tbody.append(
                         '<tr>' +
@@ -1152,29 +1218,105 @@
                         '<td class="text-right">' + escHtml(formatNumber(row.qty_lpb || 0)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
-                        '<td class="text-center">' + acceptButton + '</td>' +
-                        '<td class="text-center">' +
-                        '<button type="button" class="btn btn-success btn-sm js-open-lpb-price" title="Update harga LPB" ' +
-                        'data-id-detail="' + escHtml(row.id_detail_lpb || 0) + '" ' +
-                        'data-kd-barang="' + escHtml(row.kd_barang || '') + '" ' +
-                        'data-nama-barang="' + escHtml(row.nama_barang || '-') + '" ' +
-                        'data-qty="' + escHtml(row.qty_lpb || 0) + '" ' +
-                        'data-harga-satuan="' + escHtml(hargaSatuanAktif) + '" ' +
-                        'data-total-harga="' + escHtml(totalHargaAktif) + '">' +
-                        '<i class="fas fa-money-bill-wave"></i>' +
-                        '</button>' +
-                        '</td>' +
+                        actionColumn +
                         '</tr>'
                     );
                 });
+
+                updateBulkAcceptButton();
             }
 
             function showLpbDetailView() {
                 detailViewMode = 'lpb';
+                purchasingEditMode = false;
                 updateDetailViewButton();
+                selectedPurchasingRows = [];
+                updateBulkAcceptButton();
                 renderDetailHeader(selectedHeader || {});
                 renderDetailTable(selectedDetailRows || []);
                 $('#selectedLpbText').text('Nomor LPB: ' + ((selectedHeader || {}).nomor_lpb || 'belum dibuat'));
+            }
+
+            function getBulkAcceptableRows() {
+                return $.grep(selectedPurchasingRows || [], function(row) {
+                    var idDetail = parseInt(row.id_detail_lpb || 0, 10);
+                    var hargaVerified = parseInt(row.harga_terverifikasi || 0, 10) === 1;
+                    var hargaSatuanAktif = parseFloat(row.harga_satuan || row.harga_satuan_exclude || 0);
+                    var totalHargaAktif = parseFloat(row.total_harga || row.total_harga_exclude || 0);
+
+                    return idDetail > 0 && !hargaVerified && hargaSatuanAktif > 0 && totalHargaAktif > 0;
+                });
+            }
+
+            function updateBulkAcceptButton() {
+                if (detailViewMode !== 'purchasing' || !selectedPurchasingRows || selectedPurchasingRows.length === 0) {
+                    $('#lpbPurchasingVerifyActions').hide();
+                    return;
+                }
+
+                var rows = selectedPurchasingRows || [];
+                var acceptableRows = getBulkAcceptableRows();
+                var allVerified = rows.length > 0 && acceptableRows.length === 0;
+                var isEditButton = allVerified;
+
+                $('#lpbPurchasingVerifyActions').show();
+                $('#lpbBulkVerifyInfo').text('');
+                $('#btnBulkAcceptLpbPrice')
+                    .toggleClass('btn-success', !isEditButton)
+                    .toggleClass('btn-warning', isEditButton)
+                    .prop('disabled', (purchasingEditMode && allVerified) || (!isEditButton && acceptableRows.length === 0) || isBulkAcceptingLpbPrice)
+                    .html(isBulkAcceptingLpbPrice ? '<i class="fas fa-spinner fa-spin mr-1"></i> Rekam...' : (isEditButton ? '<i class="fas fa-pencil-alt mr-1"></i> Edit' : '<i class="fas fa-save mr-1"></i> Rekam'));
+            }
+
+            function bulkAcceptDisplayedLpbPrices() {
+                var rows = selectedPurchasingRows || [];
+                var acceptableRows = getBulkAcceptableRows();
+                var allVerified = rows.length > 0 && acceptableRows.length === 0;
+
+                if (allVerified && !purchasingEditMode) {
+                    purchasingEditMode = true;
+                    renderPurchasingTable(selectedPurchasingRows);
+                    return;
+                }
+
+                var ids = $.map(acceptableRows, function(row) {
+                    return parseInt(row.id_detail_lpb || 0, 10);
+                });
+
+                if (ids.length === 0 || isBulkAcceptingLpbPrice) {
+                    return;
+                }
+
+                isBulkAcceptingLpbPrice = true;
+                updateBulkAcceptButton();
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_bulk_accept_lpb_detail_price') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_detail_lpb: ids.join(',')
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Bulk verifikasi harga gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diverifikasi.', 'success');
+                        loadPurchasingDetailView();
+                        loadList({
+                            skipDetailReload: true
+                        });
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat bulk verifikasi harga.', 'error');
+                    },
+                    complete: function() {
+                        isBulkAcceptingLpbPrice = false;
+                        updateBulkAcceptButton();
+                    }
+                });
             }
 
             function openUpdateInvoiceModal(header) {
@@ -1352,7 +1494,9 @@
 
                         Swal.fire('Berhasil', res.message || 'Harga berhasil diverifikasi.', 'success');
                         loadPurchasingDetailView();
-                        loadList();
+                        loadList({
+                            skipDetailReload: true
+                        });
                     },
                     error: function() {
                         Swal.fire('Gagal', 'Terjadi kesalahan saat verifikasi harga.', 'error');
@@ -1361,6 +1505,10 @@
                         isAcceptingLpbPrice = false;
                     }
                 });
+            });
+
+            $('#btnBulkAcceptLpbPrice').on('click', function() {
+                bulkAcceptDisplayedLpbPrices();
             });
 
             $('#btnHistoryInvoiceAll').on('click', function() {

@@ -4369,6 +4369,15 @@ FROM (
         }
 
         foreach ($detailRows as $row) {
+            $hargaSatuan = (float) ($row['harga_satuan_kecil'] ?? 0);
+            if ($hargaSatuan <= 0) {
+                $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
+            }
+            $totalHarga = (float) ($row['total_harga'] ?? 0);
+            if ($totalHarga <= 0 && $hargaSatuan > 0) {
+                $totalHarga = (float) ($row['qty_diterima'] ?? 0) * $hargaSatuan;
+            }
+
             $detailInsert = [
                 'id_lpb'        => $idLpb,
                 'kd_barang'     => $row['kd_barang'],
@@ -4377,6 +4386,14 @@ FROM (
                 'expired_date'  => $row['expired_date'],
                 'input_at'      => date('Y-m-d H:i:s')
             ];
+
+            if ($this->db->field_exists('harga_satuan', 'tb_lpb_detail')) {
+                $detailInsert['harga_satuan'] = $hargaSatuan;
+            }
+
+            if ($this->db->field_exists('total_harga', 'tb_lpb_detail')) {
+                $detailInsert['total_harga'] = $totalHarga;
+            }
 
             $this->db->insert('tb_lpb_detail', $detailInsert);
             $idDetailLpb = $this->db->insert_id();

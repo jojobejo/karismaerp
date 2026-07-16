@@ -1169,6 +1169,56 @@ class C_Ics extends CI_Controller
         ]);
     }
 
+    public function ajax_bulk_accept_lpb_detail_price()
+    {
+        $rawIds = $this->input->post('id_detail_lpb');
+        $idList = is_array($rawIds) ? $rawIds : explode(',', (string) $rawIds);
+        $idList = array_values(array_unique(array_filter(array_map('intval', $idList), function ($id) {
+            return $id > 0;
+        })));
+
+        if (empty($idList)) {
+            $this->json_response(['status' => 'error', 'message' => 'Tidak ada detail LPB yang bisa diverifikasi.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        $savedRows = [];
+        foreach ($idList as $idDetailLpb) {
+            $saved = $this->M_Logistik->accept_lpb_detail_price([
+                'id_detail_lpb'  => $idDetailLpb,
+                'dilakukan_oleh' => $this->active_user_name()
+            ]);
+
+            if (!$saved) {
+                $this->db->trans_rollback();
+                $this->json_response([
+                    'status'  => 'error',
+                    'message' => 'Bulk verifikasi gagal. Detail LPB #' . $idDetailLpb . ' tidak valid atau belum memiliki harga.',
+                    'html'    => ''
+                ]);
+                return;
+            }
+
+            $savedRows[] = $saved;
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Bulk verifikasi harga detail LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => count($savedRows) . ' detail LPB berhasil diverifikasi.',
+            'rows'    => $savedRows,
+            'html'    => ''
+        ]);
+    }
+
     public function ajax_history_adjustment()
     {
         if ($this->reject_non_admin_po_ajax()) return;
