@@ -47,7 +47,7 @@
 
         /* TANDA TANGAN */
         .ttd-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .ttd-table td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #000; font-size: 10pt; vertical-align: top; }
+        .ttd-table td { text-align: center; padding: 8px 4px; border: 1px solid #000; font-size: 10pt; vertical-align: top; }
         .ttd-name { font-weight: bold; margin-top: 50px; font-size: 10pt; border-top: 1px solid #000; padding-top: 4px; }
 
         /* APPROVAL HISTORY */
@@ -213,22 +213,56 @@
             <td>
                 Mengetahui,<br>
                 <strong>Sales</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['nama_sales'] ?? '') ?></div>
+                <div style="height: 50px;"></div>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['nama_sales'] ?? '') ?></div>
             </td>
             <td>
                 Diverifikasi,<br>
                 <strong>Koor SC</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['koor_sc_by'] ?? '') ?></div>
+                <?php if (!empty($spr['koor_sc_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=VERIFIED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['koor_sc_by']) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['koor_sc_by'] ?? '') ?></div>
             </td>
             <td>
                 Dicek,<br>
-                <strong>Admin Stock</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['admin_stock_by'] ?? '') ?></div>
+                <strong>Adm Penjualan</strong>
+                <?php if (!empty($spr['admin_stock_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=CHECKED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['admin_stock_by']) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['admin_stock_by'] ?? '') ?></div>
             </td>
             <td>
                 Disetujui,<br>
                 <strong>Kadep SC</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['kadep_sc_by'] ?? '') ?></div>
+                <?php if (!empty($spr['kadep_sc_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=APPROVED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['kadep_sc_by']) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['kadep_sc_by'] ?? '') ?></div>
+            </td>
+            <?php if (!empty($spr['is_jagung'])): ?>
+            <td>
+                Verifikasi Jagung,<br>
+                <strong>Kadep UB</strong>
+                <?php if (!empty($spr['kadepub_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=VERIFIED_UB_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['kadepub_by']) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['kadepub_by'] ?? '') ?></div>
+            </td>
+            <?php endif; ?>
+            <td>
+                Diterima,<br>
+                <strong>Kios</strong>
+                <div style="height: 50px;"></div>
+                <div class="ttd-name" style="margin-top:0;">&nbsp;</div>
             </td>
         </tr>
     </table>
@@ -249,7 +283,7 @@
         <?php endif; ?>
         <?php if ($spr['admin_stock_by']): ?>
             <div class="approval-row">
-                <span class="arl">Admin Stock</span>
+                <span class="arl">Adm Penjualan</span>
                 <span><?= htmlspecialchars($spr['admin_stock_by']) ?> — <?= $spr['admin_stock_at'] ? date('d/m/Y H:i', strtotime($spr['admin_stock_at'])) : '-' ?>
                 <?= $spr['admin_stock_catatan'] ? '| ' . htmlspecialchars($spr['admin_stock_catatan']) : '' ?></span>
             </div>
