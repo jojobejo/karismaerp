@@ -1719,13 +1719,49 @@ class M_SalesOrder extends CI_Model
             'ppn_keluar'     => $jurnal_ppn_keluar,
             'created_at'     => date('Y-m-d H:i:s')
         ];
-        $this->db->insert('tbso_faktur_jurnal', $fj);
+        if ($this->db->table_exists('tbso_faktur_jurnal')) {
+            $this->db->insert('tbso_faktur_jurnal', $fj);
+        }
+
+        if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            $this->load->library('Accounting_source_service');
+            $journal = $this->accounting_source_service->post_sales_invoice(
+                $no_faktur,
+                '',
+                (int)($faktur_header['created_by_id'] ?? 0) ?: null,
+                false
+            );
+
+            if (empty($journal['success'])) {
+                $this->db->trans_rollback();
+                return [
+                    'errors' => [
+                        'Faktur batal disimpan karena jurnal otomatis gagal: '
+                        . ($journal['message'] ?? 'Posting jurnal gagal.')
+                    ],
+                ];
+            }
+        } else {
+            $this->db->trans_rollback();
+            return [
+                'errors' => [
+                    'Faktur batal disimpan karena schema jurnal accounting belum tersedia.'
+                ],
+            ];
+        }
 
         // ── Cek apakah semua outstanding = 0 → Completed ────────────
         $this->_cek_dan_complete_so($id_so);
 
         $this->db->trans_complete();
-        return $this->db->trans_status() ? $id_faktur : false;
+        if (!$this->db->trans_status()) {
+            return false;
+        }
+
+        return [
+            'id_faktur' => $id_faktur,
+            'journal' => $journal['data'] ?? null,
+        ];
     }
 
     /**

@@ -1692,6 +1692,7 @@ class C_SalesOrder extends CI_Controller
             'tempo'                 => $jtempo,
             'catatan'               => $post['catatan'] ?? null,
             'create_by'             => $this->_getUsername(),
+            'created_by_id'         => (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0),
         ];
 
         $result = $this->M_SalesOrder->buat_faktur($id_so, $faktur_header, $faktur_items);
@@ -1724,15 +1725,20 @@ class C_SalesOrder extends CI_Controller
                     . (int)$auto_do['total_faktur'] . '</b> faktur rute terkait.';
             }
 
+            $journal_message = '';
+            if (is_array($result) && !empty($result['journal']['sales_invoice']['nomor_jurnal'])) {
+                $journal_message = ' Jurnal <b>' . htmlspecialchars($result['journal']['sales_invoice']['nomor_jurnal']) . '</b> otomatis dibuat.';
+            }
+
             if (($so_fresh['status'] ?? '') === 'completed') {
                 $this->session->set_flashdata('success',
                     'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. '
                     . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.'
-                    . $auto_do_message);
+                    . $auto_do_message . $journal_message);
             } else {
                 $this->session->set_flashdata('success',
                     'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih memiliki barang yang belum terkirim.'
-                    . $auto_do_message);
+                    . $auto_do_message . $journal_message);
             }
 
             if ($this->_isAdminScOnlyUser()) {
