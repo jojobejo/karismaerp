@@ -60,6 +60,66 @@ class Accounting_service
         return $this->CI->db->get()->result();
     }
 
+    public function mapping_readiness()
+    {
+        $required = $this->required_mapping_specs();
+        $result = [
+            'ready' => false,
+            'required_count' => count($required),
+            'valid_count' => 0,
+            'missing' => [],
+            'invalid' => [],
+        ];
+
+        if (!$this->CI->db->table_exists('tbkeu_mapping_akun') || !$this->CI->db->table_exists('tbkeu_akun')) {
+            $result['missing'] = $required;
+            return $result;
+        }
+
+        foreach ($required as $spec) {
+            $this->CI->db->select('m.id_mapping, m.id_akun, a.kode_akun, a.nama_akun, a.tipe_akun, a.is_active');
+            $this->CI->db->from('tbkeu_mapping_akun m');
+            $this->CI->db->join('tbkeu_akun a', 'a.id_akun = m.id_akun', 'left');
+            $this->CI->db->where('m.posting_event', $spec['posting_event']);
+            $this->CI->db->where('m.account_role', $spec['account_role']);
+            $this->CI->db->where('m.entry_side', $spec['entry_side']);
+            $this->CI->db->where('m.is_active', 1);
+            if ($this->CI->db->field_exists('scope_type', 'tbkeu_mapping_akun')) {
+                $this->CI->db->where('m.scope_type', 'GLOBAL');
+                $this->CI->db->where('m.scope_key', '*');
+            }
+            $this->CI->db->order_by('m.priority', 'ASC');
+            $row = $this->CI->db->get()->row();
+
+            if (!$row) {
+                $result['missing'][] = $spec;
+                continue;
+            }
+
+            $isEligible = true;
+            if ($this->CI->db->field_exists('is_transaction_eligible', 'tbkeu_akun')) {
+                $account = $this->CI->db
+                    ->select('is_transaction_eligible')
+                    ->where('id_akun', (int)$row->id_akun)
+                    ->get('tbkeu_akun')
+                    ->row();
+                $isEligible = $account ? (int)$account->is_transaction_eligible === 1 : false;
+            }
+
+            if ($row->tipe_akun !== 'POSTING' || (int)$row->is_active !== 1 || !$isEligible) {
+                $spec['kode_akun'] = $row->kode_akun;
+                $spec['nama_akun'] = $row->nama_akun;
+                $result['invalid'][] = $spec;
+                continue;
+            }
+
+            $result['valid_count']++;
+        }
+
+        $result['ready'] = empty($result['missing']) && empty($result['invalid']);
+        return $result;
+    }
+
     public function exception_rows($status = 'OPEN', $limit = 100)
     {
         if (!$this->CI->db->table_exists('tbkeu_posting_exception')) {
@@ -945,7 +1005,7 @@ class Accounting_service
     public function reports($report, $dateFrom, $dateTo, $accountId = 0)
     {
         $report = strtolower(trim((string)$report));
-        if (!$this->schema_ready()) {
+        if (!$this->report_schema_ready()) {
             return [];
         }
 
@@ -978,6 +1038,37 @@ class Accounting_service
         }
 
         return [];
+    }
+
+    private function report_schema_ready()
+    {
+        foreach (['tbkeu_akun', 'tbkeu_klasifikasi_akun', 'tbkeu_jurnal', 'tbkeu_jurnal_detail'] as $table) {
+            if (!$this->CI->db->table_exists($table)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function required_mapping_specs()
+    {
+        return [
+            ['posting_event' => 'SALES_INVOICE', 'account_role' => 'ACCOUNT_RECEIVABLE', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'SALES_INVOICE', 'account_role' => 'SALES_REVENUE', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'SALES_INVOICE', 'account_role' => 'VAT_OUTPUT', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'GOODS_ISSUE', 'account_role' => 'COGS', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'GOODS_ISSUE', 'account_role' => 'INVENTORY', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'GOODS_RECEIPT', 'account_role' => 'INVENTORY', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'GOODS_RECEIPT', 'account_role' => 'GRNI', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'PURCHASE_INVOICE', 'account_role' => 'GRNI', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'PURCHASE_INVOICE', 'account_role' => 'VAT_INPUT', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'PURCHASE_INVOICE', 'account_role' => 'ACCOUNT_PAYABLE', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'CUSTOMER_PAYMENT', 'account_role' => 'CASH_BANK', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'CUSTOMER_PAYMENT', 'account_role' => 'ACCOUNT_RECEIVABLE', 'entry_side' => 'KREDIT'],
+            ['posting_event' => 'SUPPLIER_PAYMENT', 'account_role' => 'ACCOUNT_PAYABLE', 'entry_side' => 'DEBIT'],
+            ['posting_event' => 'SUPPLIER_PAYMENT', 'account_role' => 'CASH_BANK', 'entry_side' => 'KREDIT'],
+        ];
     }
 
     private function create_journal($payload, $userId = null, $postNow = false)
@@ -1712,7 +1803,7 @@ class Accounting_service
 
     private function report_by_statement($dateFrom, $dateTo, $statement)
     {
-        $this->CI->db->select('k.nama_klasifikasi, a.kode_akun, a.nama_akun, a.saldo_normal, COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit', false);
+        $this->CI->db->select('k.id_klasifikasi, k.kode_klasifikasi, k.nama_klasifikasi, k.alias_klasifikasi, k.saldo_normal AS klasifikasi_saldo_normal, k.urutan, a.kode_akun, a.nama_akun, a.saldo_normal, COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit', false);
         $this->CI->db->from('tbkeu_jurnal_detail d');
         $this->CI->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'inner');
         $this->CI->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'inner');

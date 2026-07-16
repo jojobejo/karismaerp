@@ -36,6 +36,7 @@ class C_Accounting extends CI_Controller
         $data['accounts'] = $this->posting_accounts();
         $data['events'] = $this->events;
         $data['mappings'] = $this->accounting_service->mapping_rows();
+        $data['mapping_readiness'] = $this->accounting_service->mapping_readiness();
         $data['exceptions'] = $this->accounting_service->exception_rows('OPEN', 20);
         $data['journals'] = $this->accounting_service->journal_rows(['limit' => 20]);
         $data['periods'] = $this->accounting_service->fiscal_period_rows('', 18);

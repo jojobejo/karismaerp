@@ -163,6 +163,8 @@ $route['penilaian_lingkungan']                      = 'hrd/C_Hrd/penilaian_lingk
 //DAILY STOCK AHMAD & PENDINGPO
 $route['keuangan']                                  = 'keuangan/C_Keuangan';
 $route['jurnal']                                    = 'keuangan/C_Keuangan/jurnal';
+$route['jurnal/neraca']                             = 'keuangan/C_Keuangan/jurnal_neraca';
+$route['jurnal/laba-rugi']                          = 'keuangan/C_Keuangan/jurnal_laba_rugi';
 $route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
 $route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
 $route['jurnal/account-journal']                    = 'keuangan/C_Keuangan/jurnal_account_journal';
@@ -176,6 +178,8 @@ $route['jurnal/master/(:any)/store']                = 'keuangan/C_Keuangan/jurna
 $route['jurnal/master/(:any)/update']               = 'keuangan/C_Keuangan/jurnal_master_update/$1';
 $route['jurnal/master/(:any)/delete']               = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
 $route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
+$route['keuangan/jurnal/neraca']                    = 'keuangan/C_Keuangan/jurnal_neraca';
+$route['keuangan/jurnal/laba-rugi']                 = 'keuangan/C_Keuangan/jurnal_laba_rugi';
 $route['keuangan/jurnal/list']                      = 'keuangan/C_Keuangan/jurnal_list';
 $route['keuangan/jurnal/detail']                    = 'keuangan/C_Keuangan/jurnal_detail';
 $route['keuangan/jurnal/account-journal']           = 'keuangan/C_Keuangan/jurnal_account_journal';

@@ -13,6 +13,7 @@ class C_Keuangan extends CI_Controller
         $this->load->model('M_Bufferstockglobal');
         $this->load->helper(array('form', 'url'));
         $this->load->library('upload');
+        $this->load->library('Accounting_service');
         $this->load->database();
     }
 
@@ -1127,6 +1128,235 @@ class C_Keuangan extends CI_Controller
         $this->load->view('content/keuangan/jurnal.php', $data);
         $this->load->view('partial/main/footergdg.php');
         $this->load->view('content/keuangan/ajax/ajax_jurnal.php', $data);
+    }
+
+    public function jurnal_neraca()
+    {
+        $this->jurnal_financial_report('neraca');
+    }
+
+    public function jurnal_laba_rugi()
+    {
+        $this->jurnal_financial_report('laba_rugi');
+    }
+
+    private function jurnal_financial_report($type)
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $type = $type === 'laba_rugi' ? 'laba_rugi' : 'neraca';
+        $dateTo = trim((string)$this->input->get('date_to', true));
+        $dateFrom = trim((string)$this->input->get('date_from', true));
+        if (!$this->valid_report_date($dateTo)) {
+            $dateTo = date('Y-m-d');
+        }
+        if (!$this->valid_report_date($dateFrom)) {
+            $dateFrom = $type === 'laba_rugi' ? date('Y-m-01', strtotime($dateTo)) : date('Y-01-01', strtotime($dateTo));
+        }
+
+        $schemaReady = $this->M_Keuangan->accounting_schema_ready() && $this->M_Keuangan->accounting_journal_schema_ready();
+        $rows = $schemaReady ? $this->accounting_service->reports($type, $dateFrom, $dateTo) : [];
+        $incomeRows = $schemaReady ? $this->accounting_service->reports('laba_rugi', $dateFrom, $dateTo) : [];
+        $prepared = $type === 'laba_rugi'
+            ? $this->prepare_income_statement($rows)
+            : $this->prepare_balance_sheet($rows, $incomeRows);
+
+        $data['page_title'] = $type === 'laba_rugi' ? 'KARISMA - LABA RUGI' : 'KARISMA - NERACA';
+        $data['report_type'] = $type;
+        $data['report_title'] = $type === 'laba_rugi' ? 'Laporan Laba Rugi' : 'Laporan Neraca';
+        $data['date_from'] = $dateFrom;
+        $data['date_to'] = $dateTo;
+        $data['schema_ready'] = $schemaReady;
+        $data['sections'] = $prepared['sections'];
+        $data['totals'] = $prepared['totals'];
+        $data['audit_notes'] = $prepared['audit_notes'];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_laporan.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    private function valid_report_date($date)
+    {
+        $date = trim((string)$date);
+        if ($date === '') {
+            return false;
+        }
+        $parsed = DateTime::createFromFormat('Y-m-d', $date);
+        return $parsed && $parsed->format('Y-m-d') === $date;
+    }
+
+    private function prepare_income_statement($rows)
+    {
+        $sections = $this->group_financial_rows($rows);
+        $totalRevenue = 0.0;
+        $totalCost = 0.0;
+        $totalOperatingExpense = 0.0;
+        $totalOtherRevenue = 0.0;
+        $totalOtherExpense = 0.0;
+
+        foreach ($sections as $section) {
+            $name = strtolower($section['name']);
+            $amount = (float)$section['total'];
+            if (strpos($name, 'atas pendapatan') !== false || strpos($name, 'hpp') !== false || strpos($name, 'cost of revenue') !== false) {
+                $totalCost += $amount;
+            } elseif (strpos($name, 'beban lain') !== false || strpos($name, 'non operasional') !== false || strpos($name, 'other expense') !== false) {
+                $totalOtherExpense += $amount;
+            } elseif (strpos($name, 'pendapatan lain') !== false || strpos($name, 'other revenue') !== false) {
+                $totalOtherRevenue += $amount;
+            } elseif (strpos($name, 'pendapatan') !== false || strpos($name, 'revenue') !== false) {
+                $totalRevenue += $amount;
+            } else {
+                $totalOperatingExpense += $amount;
+            }
+        }
+
+        $grossProfit = $totalRevenue - $totalCost;
+        $operatingProfit = $grossProfit - $totalOperatingExpense;
+        $netIncome = $operatingProfit + $totalOtherRevenue - $totalOtherExpense;
+
+        return [
+            'sections' => $sections,
+            'totals' => [
+                'total_revenue' => $totalRevenue,
+                'total_cost' => $totalCost,
+                'gross_profit' => $grossProfit,
+                'total_operating_expense' => $totalOperatingExpense,
+                'operating_profit' => $operatingProfit,
+                'total_other_revenue' => $totalOtherRevenue,
+                'total_other_expense' => $totalOtherExpense,
+                'net_income' => $netIncome,
+            ],
+            'audit_notes' => [
+                'Laporan membaca jurnal berstatus POSTED pada rentang periode yang dipilih.',
+                'Akun bersaldo normal KREDIT dihitung kredit dikurangi debit; akun DEBIT dihitung debit dikurangi kredit.',
+                'Laba bersih dihitung dari pendapatan dikurangi beban sesuai klasifikasi akun laba rugi.',
+            ],
+        ];
+    }
+
+    private function prepare_balance_sheet($balanceRows, $incomeRows)
+    {
+        $sections = $this->group_financial_rows($balanceRows);
+        $income = $this->prepare_income_statement($incomeRows);
+        $netIncome = (float)$income['totals']['net_income'];
+
+        $asset = 0.0;
+        $liability = 0.0;
+        $equity = 0.0;
+        $equityIndex = null;
+
+        foreach ($sections as $index => $section) {
+            $name = strtolower($section['name']);
+            $code = (string)($section['code'] ?? '');
+            $codePrefix = substr($code, 0, 1);
+            $amount = (float)$section['total'];
+            if ($codePrefix === '1' || strpos($name, 'harta') !== false || strpos($name, 'asset') !== false) {
+                $asset += $amount;
+            } elseif ($codePrefix === '2' || strpos($name, 'kewajiban') !== false || strpos($name, 'liabilit') !== false || strpos($name, 'hutang') !== false) {
+                $liability += $amount;
+            } elseif ($codePrefix === '3' || strpos($name, 'modal') !== false || strpos($name, 'equity') !== false || strpos($name, 'ekuitas') !== false) {
+                $equity += $amount;
+                $equityIndex = $index;
+            }
+        }
+
+        if ($equityIndex === null) {
+            $sections[] = [
+                'name' => 'Modal / Ekuitas',
+                'code' => '3',
+                'alias' => 'Equity',
+                'normal_balance' => 'KREDIT',
+                'rows' => [],
+                'debit' => 0.0,
+                'kredit' => 0.0,
+                'total' => 0.0,
+            ];
+            $equityIndex = count($sections) - 1;
+        }
+
+        $sections[$equityIndex]['rows'][] = [
+            'kode_akun' => '',
+            'nama_akun' => 'Laba/Rugi Berjalan',
+            'saldo_normal' => 'KREDIT',
+            'debit' => 0.0,
+            'kredit' => 0.0,
+            'amount' => $netIncome,
+            'is_summary' => true,
+        ];
+        $sections[$equityIndex]['total'] = (float)$sections[$equityIndex]['total'] + $netIncome;
+        $equity += $netIncome;
+
+        $liabilityEquity = $liability + $equity;
+        $difference = $asset - $liabilityEquity;
+
+        return [
+            'sections' => $sections,
+            'totals' => [
+                'asset' => $asset,
+                'liability' => $liability,
+                'equity' => $equity,
+                'liability_equity' => $liabilityEquity,
+                'difference' => $difference,
+                'net_income' => $netIncome,
+            ],
+            'audit_notes' => [
+                'Neraca membaca seluruh jurnal POSTED sampai tanggal akhir/cut-off.',
+                'Laba/Rugi Berjalan ditambahkan ke ekuitas agar persamaan Aset = Kewajiban + Ekuitas dapat diaudit sebelum closing.',
+                'Selisih neraca idealnya 0,00; jika tidak, periksa mapping klasifikasi, saldo normal, atau jurnal yang belum POSTED.',
+            ],
+        ];
+    }
+
+    private function group_financial_rows($rows)
+    {
+        $sections = [];
+        foreach ($rows as $row) {
+            $name = trim((string)($row->nama_klasifikasi ?? 'Tanpa Klasifikasi'));
+            if ($name === '') {
+                $name = 'Tanpa Klasifikasi';
+            }
+            if (!isset($sections[$name])) {
+                $sections[$name] = [
+                    'name' => $name,
+                    'code' => trim((string)($row->kode_klasifikasi ?? '')),
+                    'alias' => trim((string)($row->alias_klasifikasi ?? '')),
+                    'normal_balance' => strtoupper(trim((string)($row->klasifikasi_saldo_normal ?? $row->saldo_normal ?? ''))),
+                    'rows' => [],
+                    'debit' => 0.0,
+                    'kredit' => 0.0,
+                    'total' => 0.0,
+                ];
+            }
+
+            $debit = (float)($row->debit ?? 0);
+            $kredit = (float)($row->kredit ?? 0);
+            $amount = $this->financial_row_amount($row);
+            $sections[$name]['debit'] += $debit;
+            $sections[$name]['kredit'] += $kredit;
+            $sections[$name]['total'] += $amount;
+            $sections[$name]['rows'][] = [
+                'kode_akun' => trim((string)($row->kode_akun ?? '')),
+                'nama_akun' => trim((string)($row->nama_akun ?? '')),
+                'saldo_normal' => strtoupper(trim((string)($row->saldo_normal ?? ''))),
+                'debit' => $debit,
+                'kredit' => $kredit,
+                'amount' => $amount,
+                'is_summary' => false,
+            ];
+        }
+
+        return array_values($sections);
+    }
+
+    private function financial_row_amount($row)
+    {
+        $debit = (float)($row->debit ?? 0);
+        $kredit = (float)($row->kredit ?? 0);
+        $saldoNormal = strtoupper(trim((string)($row->saldo_normal ?? 'DEBIT')));
+        return $saldoNormal === 'KREDIT' ? ($kredit - $debit) : ($debit - $kredit);
     }
 
     public function jurnal_list()

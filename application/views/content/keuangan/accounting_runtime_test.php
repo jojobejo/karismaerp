@@ -3,6 +3,13 @@ $schemaReady = !empty($schema_ready);
 $accounts = isset($accounts) ? $accounts : [];
 $events = isset($events) ? $events : [];
 $mappings = isset($mappings) ? $mappings : [];
+$mappingReadiness = isset($mapping_readiness) && is_array($mapping_readiness) ? $mapping_readiness : [
+    'ready' => false,
+    'required_count' => 0,
+    'valid_count' => 0,
+    'missing' => [],
+    'invalid' => [],
+];
 $exceptions = isset($exceptions) ? $exceptions : [];
 $journals = isset($journals) ? $journals : [];
 $periods = isset($periods) ? $periods : [];
@@ -168,7 +175,21 @@ $accountingCsrf = isset($accounting_csrf) ? (string)$accounting_csrf : '';
                                     <div class="summary-line"><span>Schema</span><strong><?= $schemaReady ? 'READY' : 'BELUM' ?></strong></div>
                                     <div class="summary-line"><span>Akun posting eligible</span><strong><?= count($accounts) ?></strong></div>
                                     <div class="summary-line"><span>Mapping aktif</span><strong><?= count($mappings) ?></strong></div>
+                                    <div class="summary-line">
+                                        <span>Mapping wajib</span>
+                                        <strong><?= !empty($mappingReadiness['ready']) ? 'READY' : 'REVIEW' ?> (<?= (int)($mappingReadiness['valid_count'] ?? 0) ?>/<?= (int)($mappingReadiness['required_count'] ?? 0) ?>)</strong>
+                                    </div>
                                     <div class="summary-line"><span>Exception open</span><strong><?= count($exceptions) ?></strong></div>
+                                    <?php if (empty($mappingReadiness['ready'])) : ?>
+                                        <div class="mt-2 small-muted">
+                                            <?php foreach (array_slice($mappingReadiness['missing'] ?? [], 0, 5) as $row) : ?>
+                                                <div>Missing: <?= html_escape($row['posting_event'] . ' / ' . $row['account_role'] . ' / ' . $row['entry_side']) ?></div>
+                                            <?php endforeach; ?>
+                                            <?php foreach (array_slice($mappingReadiness['invalid'] ?? [], 0, 5) as $row) : ?>
+                                                <div>Invalid: <?= html_escape($row['posting_event'] . ' / ' . $row['account_role'] . ' / ' . ($row['kode_akun'] ?? '-')) ?></div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
