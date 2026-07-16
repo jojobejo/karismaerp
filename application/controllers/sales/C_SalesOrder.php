@@ -2641,7 +2641,7 @@ class C_SalesOrder extends CI_Controller
 
             $subtotal_before_disc = $hrg * $qty;
             $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
-            $total_harga          = $subtotal_after_disc   * (1 + $pajak / 100);
+            $total_harga          = $subtotal_after_disc;
 
             $items[] = [
                 'id_so_detail'         => $id_so_detail,

@@ -434,26 +434,28 @@ $back_label = $is_admin_sc_context ? 'Kembali ke Faktur Selesai' : 'Kembali ke S
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php
-                                    $total_nilai_faktur = 0;
-                                    $total_tax = 0;
-                                    $grand_total = 0;
-                                    $tax_rates = [];
-                                    foreach ($details as $i => $d):
-                                        $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
-                                        $qty_box = floor($d['qty'] / $isi);
-                                        $qty_pcs = fmod($d['qty'], $isi);
-                                        $nilai_faktur = (float)($d['subtotal_after_disc'] ?? 0);
-                                        if ($nilai_faktur <= 0) {
-                                            $nilai_faktur = (float)$d['qty'] * (float)$d['hrg_satuan'];
-                                            $nilai_faktur = $nilai_faktur * (1 - ((float)($d['disc'] ?? 0) / 100));
-                                        }
-                                        $tax_rate = (float)($d['pajak'] ?? 0);
-                                        $tax_value = $nilai_faktur * ($tax_rate / 100);
-                                        $total_nilai_faktur += $nilai_faktur;
-                                        $total_tax += $tax_value;
-                                        $total_harga = (float)($d['total_harga'] ?? 0);
-                                        $grand_total += $total_harga > 0 ? $total_harga : ($nilai_faktur + $tax_value);
+                                    <?php                                     $total_nilai_faktur = 0;
+                                     $total_tax = 0;
+                                     $grand_total = 0;
+                                     $tax_rates = [];
+                                     foreach ($details as $i => $d):
+                                         $isi     = max(1, (int)($d['isi_per_box'] ?? 1));
+                                         $qty_box = floor($d['qty'] / $isi);
+                                         $qty_pcs = fmod($d['qty'], $isi);
+                                         
+                                         $total_harga = (float)($d['total_harga'] ?? 0);
+                                         if ($total_harga <= 0) {
+                                             $total_harga = (float)$d['qty'] * (float)$d['hrg_satuan'];
+                                             $total_harga = $total_harga * (1 - ((float)($d['disc'] ?? 0) / 100));
+                                         }
+                                         
+                                         $tax_rate = (float)($d['pajak'] ?? 0);
+                                         $nilai_faktur = $total_harga / (1 + $tax_rate / 100);
+                                         $tax_value = $total_harga - $nilai_faktur;
+                                         
+                                         $total_nilai_faktur += $nilai_faktur;
+                                         $total_tax += $tax_value;
+                                         $grand_total += $total_harga;
                                         if ($tax_rate > 0) {
                                             $tax_rates[(string)$tax_rate] = $tax_rate;
                                         }

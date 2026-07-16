@@ -358,8 +358,7 @@ $format_payment = function($value) {
                                         $row_total_harga = (float)($d['total_harga'] ?? 0);
                                         if ($row_total_harga <= 0) {
                                             $row_subtotal = (float)($d['qty'] ?? 0) * (float)($d['hrg_satuan'] ?? 0);
-                                            $row_after_disc = $row_subtotal * (1 - ((float)($d['disc'] ?? 0) / 100));
-                                            $row_total_harga = $row_after_disc * (1 + ((float)($d['pajak'] ?? 0) / 100));
+                                            $row_total_harga = $row_subtotal * (1 - ((float)($d['disc'] ?? 0) / 100));
                                         }
                                     ?>
                                     <tr class="<?= $outstanding_item <= 0 ? 'table-success' : '' ?>">
@@ -472,21 +471,21 @@ $format_payment = function($value) {
                                     $grand_total = 0;
                                     $tax_rates = [];
                                     foreach ($items_faktur as $item_summary) {
-                                        $nilai_faktur = (float)($item_summary['subtotal_after_disc'] ?? 0);
-                                        if ($nilai_faktur <= 0) {
-                                            $nilai_faktur = (float)($item_summary['qty'] ?? 0) * (float)($item_summary['hrg_satuan'] ?? 0);
-                                            $nilai_faktur *= (1 - ((float)($item_summary['disc'] ?? 0) / 100));
-                                        }
-                                        $tax_rate = (float)($item_summary['pajak'] ?? 0);
-                                        $tax_value = $nilai_faktur * ($tax_rate / 100);
-                                        $total_harga = (float)($item_summary['total_harga'] ?? 0);
-
-                                        $total_nilai_faktur += $nilai_faktur;
-                                        $total_pajak += $tax_value;
-                                        $grand_total += $total_harga > 0 ? $total_harga : ($nilai_faktur + $tax_value);
-                                        if ($tax_rate > 0) {
-                                            $tax_rates[(string)$tax_rate] = $tax_rate;
-                                        }
+                                         $total_harga = (float)($item_summary['total_harga'] ?? 0);
+                                         if ($total_harga <= 0) {
+                                             $total_harga = (float)($item_summary['qty'] ?? 0) * (float)($item_summary['hrg_satuan'] ?? 0);
+                                             $total_harga *= (1 - ((float)($item_summary['disc'] ?? 0) / 100));
+                                         }
+                                         $tax_rate = (float)($item_summary['pajak'] ?? 0);
+                                         $nilai_faktur = $total_harga / (1 + $tax_rate / 100);
+                                         $tax_value = $total_harga - $nilai_faktur;
+ 
+                                         $total_nilai_faktur += $nilai_faktur;
+                                         $total_pajak += $tax_value;
+                                         $grand_total += $total_harga;
+                                         if ($tax_rate > 0) {
+                                             $tax_rates[(string)$tax_rate] = $tax_rate;
+                                         }
                                     }
                                     $tax_label = !empty($tax_rates)
                                         ? implode(', ', array_map(function($rate) { return number_format($rate, 0) . '%'; }, $tax_rates))

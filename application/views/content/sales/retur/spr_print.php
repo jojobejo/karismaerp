@@ -107,7 +107,7 @@
                     <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
                         SERVICE (Servis Barang)
                     <?php else: ?>
-                        RETUR (Potong Faktur)
+                        RETUR (Refund)
                     <?php endif; ?>
                 </strong>
             </td>
@@ -210,12 +210,6 @@
     <!-- TANDA TANGAN -->
     <table class="ttd-table">
         <tr>
-            <td>
-                Mengetahui,<br>
-                <strong>Sales</strong>
-                <div style="height: 50px;"></div>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['nama_sales'] ?? '') ?></div>
-            </td>
             <td>
                 Diverifikasi,<br>
                 <strong>Koor SC</strong>

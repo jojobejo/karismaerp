@@ -167,22 +167,6 @@
     <table class="ttd-table">
         <tr>
             <td>
-                Dibuat,<br>
-                <strong>ADMLPB2</strong>
-                <div style="height: 50px;"></div>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['create_by_retur'] ?? '') ?></div>
-            </td>
-            <td>
-                Dicek,<br>
-                <strong>Adm Penjualan</strong>
-                <?php if (!empty($retur['admin_stock_by_retur'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=CHECKED_<?= urlencode($retur['no_retur']) ?>_<?= urlencode($retur['admin_stock_by_retur']) ?>" alt="QR" style="height:40px;"></div>
-                <?php else: ?>
-                    <div style="height: 50px;"></div>
-                <?php endif; ?>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['admin_stock_by_retur'] ?? '') ?></div>
-            </td>
-            <td>
                 Persetujuan,<br>
                 <strong>Mng. ACC</strong>
                 <?php if (!empty($retur['mngacc_by_retur'])): ?>
@@ -218,15 +202,23 @@
             
             <td>
                 Persetujuan,<br>
-                <strong>Mng SE/Kadep SC</strong>
-                <?php 
-                $mngse_kadep = $retur['mngse_by_retur'] ?: $retur['kadepsc_by_retur'];
-                if (!empty($mngse_kadep)): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=APPROVED_<?= urlencode($retur['no_retur']) ?>_<?= urlencode($mngse_kadep) ?>" alt="QR" style="height:40px;"></div>
+                <strong>Mng SE</strong>
+                <?php if (!empty($retur['mngse_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=APPROVED_<?= urlencode($retur['no_retur']) ?>_<?= urlencode($retur['mngse_by_retur']) ?>" alt="QR" style="height:40px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($mngse_kadep ?? '') ?></div>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['mngse_by_retur'] ?? '') ?></div>
+            </td>
+            <td>
+                Persetujuan,<br>
+                <strong>Kadep SC</strong>
+                <?php if (!empty($retur['kadepsc_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=APPROVED_<?= urlencode($retur['no_retur']) ?>_<?= urlencode($retur['kadepsc_by_retur']) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['kadepsc_by_retur'] ?? '') ?></div>
             </td>
             <td>
                 Persetujuan,<br>

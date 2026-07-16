@@ -99,8 +99,17 @@ class C_pembayaran extends CI_Controller
 
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
-        $metode_pembayaran = strtolower(trim((string)$this->input->post('metode_pembayaran', true)));
-        if (!in_array($metode_pembayaran, ['cash', 'transfer', 'tempo', 'bg', 'retur'], true)) {
+        $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
+        $allowed_accounts = [
+            'Q Kas', 'A Kas', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
+            'Q Mandiri 143-00-8389898-9', 'Q BRI 300300', 'Q BRI 999300', 'Q Mandiri Giro 143 0029 298989',
+            'A BCA 1088', 'A BCA 3688', 'A BCA (Annelia)', 'A BCA (Yuanita)', 'A BCA (IB)', 'A BCA (DKS)',
+            'A BRI', 'A Mandiri', 'A Bukopin', 'A Danamon', 'A BCA 1588', 'A Mandiri 8181', 'A BRI 9305',
+            'A BCA (Yuanita Giro)', 'A BRI 8303', 'A BRI 4626-01-012498-53-4', 'A BRI 5305', 'A Deposito',
+            'Q Mandiri 8989', 'Q BRI 2567', 'Q BNI 0080', 'Q BRI 5534', 'Q CIMB Niaga', 'Q BRI 004575-56-6',
+            'Q BRI 555888-56-9', 'A BRI 8568', 'A CIMB 9100'
+        ];
+        if ($metode_pembayaran !== 'retur' && !in_array($metode_pembayaran, $allowed_accounts, true)) {
             $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }

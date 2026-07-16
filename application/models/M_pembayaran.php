@@ -10,6 +10,7 @@ class M_pembayaran extends CI_Model
         parent::__construct();
         $this->_rename_legacy_payment_table();
         $this->_ensure_payment_table();
+        $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur MODIFY COLUMN metode_pembayaran VARCHAR(100) NULL");
     }
 
     private function _rename_legacy_payment_table()
@@ -86,7 +87,7 @@ class M_pembayaran extends CI_Model
             ],
             'metode_pembayaran' => [
                 'type'       => 'VARCHAR',
-                'constraint' => 30,
+                'constraint' => 100,
                 'null'       => true,
             ],
             'tanggal_bg_cair' => [
