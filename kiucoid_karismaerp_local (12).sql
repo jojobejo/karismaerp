@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Waktu pembuatan: 15 Jul 2026 pada 10.59
+-- Waktu pembuatan: 16 Jul 2026 pada 11.03
 -- Versi server: 10.4.27-MariaDB
 -- Versi PHP: 7.4.33
 
@@ -16572,7 +16572,12 @@ INSERT INTO `tberp_stock_batch` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `expi
 (10061, 'ZZUMBU16', '2', '0', '1000-01-01', '0.000', '0.000', '2026-05-21 13:58:55', '2026-05-21 13:58:55'),
 (10062, 'ZZXBAN01', '2', '0', '1000-01-01', '10.000', '0.000', '2026-05-21 13:58:55', '2026-05-21 13:58:55'),
 (10063, 'ZZZENT01', '2', '0', '1000-01-01', '40.000', '0.000', '2026-05-21 13:58:55', '2026-05-21 13:58:55'),
-(10064, 'QPOLY08', '2', '115100', '2026-07-15', '50.000', '0.000', '2026-07-15 15:34:42', '2026-07-15 15:34:42');
+(10064, 'QPOLY08', '2', '115100', '2026-07-15', '50.000', '0.000', '2026-07-15 15:34:42', '2026-07-15 15:34:42'),
+(10065, 'QPOLY14', '2', '01011', '2026-07-16', '50.000', '0.000', '2026-07-16 11:20:09', '2026-07-16 11:20:09'),
+(10066, 'QALIK01', '2', '335123', '2030-07-16', '250.000', '0.000', '2026-07-16 14:13:32', '2026-07-16 14:13:32'),
+(10067, 'QAGIL02', '2', '501050', '2026-07-16', '100.000', '0.000', '2026-07-16 14:37:51', '2026-07-16 14:37:51'),
+(10068, 'QAGIL02', '2', '5874800', '2026-07-16', '100.000', '0.000', '2026-07-16 15:40:22', '2026-07-16 15:40:22'),
+(10069, 'QALIK01', '2', '0814020', '2026-07-16', '100.000', '0.000', '2026-07-16 15:40:22', '2026-07-16 15:40:22');
 
 -- --------------------------------------------------------
 
@@ -26918,7 +26923,12 @@ INSERT INTO `tberp_stock_ledger` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `exp
 (10296, 'QROUP01', '2', '2406101000', '2029-06-01', '200.000', 'RESERVE', 'SO/040726/0002', 'REPOST_FAKTUR_RESERVE', '2026-07-07 12:58:39'),
 (10297, 'QTINK01', '2', '20250730', '2028-07-01', '320.000', 'IN', 'SO/040726/0002', 'REPOST_FAKTUR', '2026-07-07 12:58:39'),
 (10298, 'QTINK01', '2', '20250730', '2028-07-01', '320.000', 'RESERVE', 'SO/040726/0002', 'REPOST_FAKTUR_RESERVE', '2026-07-07 12:58:39'),
-(10299, 'QPOLY08', '2', '115100', '2026-07-15', '50.000', 'IN', 'SKPO150726SURYA030001', 'PO_RECEIVED', '2026-07-15 15:34:42');
+(10299, 'QPOLY08', '2', '115100', '2026-07-15', '50.000', 'IN', 'SKPO150726SURYA030001', 'PO_RECEIVED', '2026-07-15 15:34:42'),
+(10300, 'QPOLY14', '2', '01011', '2026-07-16', '50.000', 'IN', 'SKPO150726SURYA030001', 'PO_RECEIVED', '2026-07-16 11:20:09'),
+(10301, 'QALIK01', '2', '335123', '2030-07-16', '250.000', 'IN', 'SKPO150726SYNGE010002', 'PO_RECEIVED', '2026-07-16 14:13:32'),
+(10302, 'QAGIL02', '2', '501050', '2026-07-16', '100.000', 'IN', 'SKPO150726SYNGE010002', 'PO_RECEIVED', '2026-07-16 14:37:51'),
+(10303, 'QAGIL02', '2', '5874800', '2026-07-16', '100.000', 'IN', 'SKPO150726SYNGE010002', 'PO_RECEIVED', '2026-07-16 15:40:22'),
+(10304, 'QALIK01', '2', '0814020', '2026-07-16', '100.000', 'IN', 'SKPO150726SYNGE010002', 'PO_RECEIVED', '2026-07-16 15:40:22');
 
 -- --------------------------------------------------------
 
@@ -28694,7 +28704,11 @@ CREATE TABLE `tbkeu_posting_exception` (
 
 INSERT INTO `tbkeu_posting_exception` (`id_exception`, `source_module`, `source_type`, `source_id`, `source_no`, `posting_event`, `error_code`, `error_message`, `payload_json`, `status`, `retry_count`, `occurrence_count`, `last_occurred_at`, `last_retry_at`, `id_jurnal`, `created_at`, `resolved_by`, `resolved_at`, `resolution_note`) VALUES
 (1, 'CLI_TEST', 'GOODS_RECEIPT', 'CLI-FAIL-20260713230155', 'CLI-FAIL-20260713230155', 'GOODS_RECEIPT', 'MINIMUM_TWO_LINES', 'Jurnal minimal memiliki dua baris.', '{\"tanggal_transaksi\":\"2026-07-13\",\"source_module\":\"CLI_TEST\",\"source_type\":\"GOODS_RECEIPT\",\"source_id\":\"CLI-FAIL-20260713230155\",\"source_no\":\"CLI-FAIL-20260713230155\",\"idempotency_key\":\"CLI-FAIL-20260713230155\",\"amount\":0,\"keterangan\":\"CLI dummy failed posting\",\"posting_event\":\"GOODS_RECEIPT\",\"journal_type\":\"AUTO\",\"status\":\"POSTED\",\"lines\":[]}', 'IGNORED', 0, 1, NULL, NULL, NULL, '2026-07-13 23:01:55', NULL, '2026-07-15 02:21:28', 'Historical CLI negative test; closed during accounting hardening UAT 2026-07-15'),
-(2, 'LOGISTIK', 'LPB_FINAL', '5', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-15\",\"keterangan\":\"LPB 5 \\/ PO Q001\\/KIU\\/VII\\/2026\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"5\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-5\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-15 15:34:42', NULL, NULL, '2026-07-15 15:34:42', NULL, NULL, NULL);
+(2, 'LOGISTIK', 'LPB_FINAL', '5', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-15\",\"keterangan\":\"LPB 5 \\/ PO Q001\\/KIU\\/VII\\/2026\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"5\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-5\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-15 15:34:42', NULL, NULL, '2026-07-15 15:34:42', NULL, NULL, NULL),
+(3, 'LOGISTIK', 'LPB_FINAL', '6', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-16\",\"keterangan\":\"LPB 6 \\/ PO Q001\\/KIU\\/VII\\/2026\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"6\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-6\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-16 11:20:09', NULL, NULL, '2026-07-16 11:20:09', NULL, NULL, NULL),
+(4, 'LOGISTIK', 'LPB_FINAL', '7', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-16\",\"keterangan\":\"LPB 7 \\/ PO Q001\\/KIU\\/VII\\/2026A\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"7\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-7\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-16 14:13:32', NULL, NULL, '2026-07-16 14:13:32', NULL, NULL, NULL),
+(5, 'LOGISTIK', 'LPB_FINAL', '8', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-16\",\"keterangan\":\"LPB 8 \\/ PO Q001\\/KIU\\/VII\\/2026A\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"8\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-8\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-16 14:37:51', NULL, NULL, '2026-07-16 14:37:51', NULL, NULL, NULL),
+(6, 'LOGISTIK', 'LPB_FINAL', '9', '-', 'GOODS_RECEIPT', 'LPB_COST_UNRESOLVED', 'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.', '{\"tanggal_transaksi\":\"2026-07-16\",\"keterangan\":\"LPB 9 \\/ PO Q001\\/KIU\\/VII\\/2026A\",\"source_module\":\"LOGISTIK\",\"source_type\":\"LPB_FINAL\",\"source_id\":\"9\",\"source_no\":\"-\",\"idempotency_key\":\"GOODS_RECEIPT-LPB-9\",\"scope_type\":\"WAREHOUSE\",\"scope_key\":\"2\",\"amount\":\"0\",\"tax\":\"0.0000\",\"cogs\":\"0.0000\",\"posting_event\":\"GOODS_RECEIPT\"}', 'OPEN', 0, 1, '2026-07-16 15:40:22', NULL, NULL, '2026-07-16 15:40:22', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -51322,6 +51336,142 @@ CREATE TABLE `tbq_review_q` (
   `inputer` varchar(25) NOT NULL,
   `create_at` datetime NOT NULL,
   `update_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbrp_activity_log`
+--
+
+CREATE TABLE `tbrp_activity_log` (
+  `id_log` int(10) UNSIGNED NOT NULL,
+  `no_referensi` varchar(50) NOT NULL,
+  `tipe_referensi` enum('spr','retur') NOT NULL,
+  `aksi` varchar(50) NOT NULL,
+  `status_awal` varchar(50) DEFAULT NULL,
+  `status_akhir` varchar(50) DEFAULT NULL,
+  `catatan` text DEFAULT NULL,
+  `user_by` varchar(150) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbrp_retur_penjualan_detail`
+--
+
+CREATE TABLE `tbrp_retur_penjualan_detail` (
+  `id_retur_detail` int(10) UNSIGNED NOT NULL,
+  `id_retur` int(10) UNSIGNED NOT NULL,
+  `id_spr_detail` int(10) UNSIGNED DEFAULT NULL,
+  `no_urut` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,
+  `nama_barang` varchar(250) DEFAULT NULL,
+  `satuan` varchar(50) DEFAULT NULL,
+  `no_faktur` varchar(80) DEFAULT NULL,
+  `no_batch` varchar(80) DEFAULT NULL,
+  `expired_date` date DEFAULT NULL,
+  `qty_retur` decimal(12,3) NOT NULL DEFAULT 0.000,
+  `harga_satuan` decimal(15,2) NOT NULL DEFAULT 0.00
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbrp_retur_penjualan_header`
+--
+
+CREATE TABLE `tbrp_retur_penjualan_header` (
+  `id_retur` int(10) UNSIGNED NOT NULL,
+  `no_retur` varchar(40) NOT NULL,
+  `tipe_retur` enum('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+  `id_spr` int(10) UNSIGNED NOT NULL,
+  `no_spr` varchar(30) NOT NULL,
+  `tanggal_retur` date NOT NULL,
+  `kd_customer` varchar(30) DEFAULT NULL,
+  `nama_customer` varchar(200) DEFAULT NULL,
+  `alamat` varchar(300) DEFAULT NULL,
+  `nama_sales` varchar(150) DEFAULT NULL,
+  `catatan_logistik` text DEFAULT NULL,
+  `status_retur` enum('menunggu_verifikasi','terverifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak') NOT NULL DEFAULT 'menunggu_verifikasi',
+  `admin_stock_by_retur` varchar(150) DEFAULT NULL,
+  `admin_stock_at_retur` datetime DEFAULT NULL,
+  `catatan_admin_stock` text DEFAULT NULL,
+  `collection_by` varchar(150) DEFAULT NULL,
+  `collection_at` datetime DEFAULT NULL,
+  `catatan_collection` text DEFAULT NULL,
+  `no_faktur_potong` varchar(500) DEFAULT NULL,
+  `kasir_by` varchar(150) DEFAULT NULL,
+  `kasir_at` datetime DEFAULT NULL,
+  `catatan_kasir` text DEFAULT NULL,
+  `create_by_retur` varchar(150) DEFAULT NULL,
+  `create_at_retur` datetime DEFAULT current_timestamp(),
+  `update_by_retur` varchar(150) DEFAULT NULL,
+  `update_at_retur` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbrp_spr_detail`
+--
+
+CREATE TABLE `tbrp_spr_detail` (
+  `id_spr_detail` int(10) UNSIGNED NOT NULL,
+  `id_spr` int(10) UNSIGNED NOT NULL,
+  `no_urut` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,
+  `nama_barang` varchar(250) DEFAULT NULL,
+  `no_faktur` varchar(80) DEFAULT NULL,
+  `no_batch` varchar(80) DEFAULT NULL,
+  `expired_date` date DEFAULT NULL,
+  `harga` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `qty` decimal(12,3) DEFAULT 0.000,
+  `alasan_brg_bermasalah` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_brg_bermasalah_opt` enum('','replace','not_replace') NOT NULL DEFAULT '',
+  `alasan_expired` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_expired_opt` enum('','replace','not_replace') NOT NULL DEFAULT '',
+  `alasan_tidak_laku` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_tes_market` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_bad_debt` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_harga_tidak_sesuai` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_spr_intern` tinyint(1) NOT NULL DEFAULT 0,
+  `alasan_lainlain` varchar(300) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Struktur dari tabel `tbrp_spr_header`
+--
+
+CREATE TABLE `tbrp_spr_header` (
+  `id_spr` int(10) UNSIGNED NOT NULL,
+  `no_spr` varchar(30) NOT NULL,
+  `tipe_retur` enum('biasa','replace','service') NOT NULL DEFAULT 'biasa',
+  `tanggal` date NOT NULL,
+  `kd_customer` varchar(30) DEFAULT NULL,
+  `nama_customer` varchar(200) DEFAULT NULL,
+  `alamat` varchar(300) DEFAULT NULL,
+  `nama_sales` varchar(150) DEFAULT NULL,
+  `catatan` text DEFAULT NULL,
+  `status` enum('draft','diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak') NOT NULL DEFAULT 'draft',
+  `koor_sc_by` varchar(150) DEFAULT NULL,
+  `koor_sc_at` datetime DEFAULT NULL,
+  `koor_sc_catatan` text DEFAULT NULL,
+  `admin_stock_by` varchar(150) DEFAULT NULL,
+  `admin_stock_at` datetime DEFAULT NULL,
+  `admin_stock_catatan` text DEFAULT NULL,
+  `kadep_sc_by` varchar(150) DEFAULT NULL,
+  `kadep_sc_at` datetime DEFAULT NULL,
+  `kadep_sc_catatan` text DEFAULT NULL,
+  `logistik_by` varchar(150) DEFAULT NULL,
+  `logistik_at` datetime DEFAULT NULL,
+  `logistik_catatan` text DEFAULT NULL,
+  `create_by` varchar(150) DEFAULT NULL,
+  `create_at` datetime DEFAULT current_timestamp(),
+  `update_by` varchar(150) DEFAULT NULL,
+  `update_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -135140,7 +135290,12 @@ INSERT INTO `tb_login_log` (`id`, `id_karyawan`, `username`, `ip_address`, `brow
 (289, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-14 08:26:19'),
 (290, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-14 08:26:27'),
 (291, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-14 17:45:58'),
-(292, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-15 08:59:12');
+(292, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-15 08:59:12'),
+(293, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-15 16:02:07'),
+(294, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-16 10:23:26'),
+(295, 46, 'admin', '10.10.10.44', NULL, NULL, NULL, '2026-07-16 10:33:56'),
+(296, 46, 'admin', '::1', NULL, NULL, NULL, '2026-07-16 11:00:48'),
+(297, 46, 'admin', '10.10.10.21', NULL, NULL, NULL, '2026-07-16 15:27:16');
 
 -- --------------------------------------------------------
 
@@ -137008,6 +137163,9 @@ CREATE TABLE `tb_lpb` (
   `tgl_sj` date NOT NULL,
   `no_po` varchar(100) DEFAULT NULL,
   `no_invoice` varchar(50) DEFAULT NULL,
+  `jenis_lpb` varchar(80) DEFAULT NULL,
+  `nomor_lpb` varchar(30) DEFAULT NULL,
+  `status_lpb` tinyint(1) NOT NULL DEFAULT 1,
   `gudang_id` int(11) DEFAULT NULL,
   `keterangan` text DEFAULT NULL,
   `input_at` datetime DEFAULT current_timestamp()
@@ -137017,12 +137175,16 @@ CREATE TABLE `tb_lpb` (
 -- Dumping data untuk tabel `tb_lpb`
 --
 
-INSERT INTO `tb_lpb` (`id_lpb`, `kd_po`, `nosj`, `tgl_sj`, `no_po`, `no_invoice`, `gudang_id`, `keterangan`, `input_at`) VALUES
-(1, 'MKPO030424AGRIC020003', '12345', '2026-05-18', '015/KIU/IV/2024', '4321', 2, 'barang datang', '2026-05-18 13:45:22'),
-(2, 'MKPO030424AGRIC020003', '12223', '2026-05-18', '015/KIU/IV/2024', '33221', 2, 'oke', '2026-05-18 13:50:28'),
-(3, 'MKPO030424AGRIC020003', '332211', '2026-03-12', '015/KIU/IV/2024', '12122', 6, 'oke', '2026-05-18 13:52:26'),
-(4, 'MKPO030424AGRIC020003', '111223', '2026-05-18', '015/KIU/IV/2024', '121231', 2, 'oke', '2026-05-18 13:54:18'),
-(5, 'SKPO150726SURYA030001', 'aaabbac', '2026-07-15', 'Q001/KIU/VII/2026', '-', 2, 'no', '2026-07-15 15:34:42');
+INSERT INTO `tb_lpb` (`id_lpb`, `kd_po`, `nosj`, `tgl_sj`, `no_po`, `no_invoice`, `jenis_lpb`, `nomor_lpb`, `status_lpb`, `gudang_id`, `keterangan`, `input_at`) VALUES
+(1, 'MKPO030424AGRIC020003', '12345', '2026-05-18', '015/KIU/IV/2024', '4321', 'LPB CP', '72600001', 3, 2, 'barang datang', '2026-05-18 13:45:22'),
+(2, 'MKPO030424AGRIC020003', '12223', '2026-05-18', '015/KIU/IV/2024', '33221', 'LPB CP', '72600002', 3, 2, 'oke', '2026-05-18 13:50:28'),
+(3, 'MKPO030424AGRIC020003', '332211', '2026-03-12', '015/KIU/IV/2024', '12122', 'LPB CP', '72600003', 3, 6, 'oke', '2026-05-18 13:52:26'),
+(4, 'MKPO030424AGRIC020003', '111223', '2026-05-18', '015/KIU/IV/2024', '121231', 'LPB CP', '72600004', 3, 2, 'oke', '2026-05-18 13:54:18'),
+(5, 'SKPO150726SURYA030001', 'aaabbac', '2026-07-15', 'Q001/KIU/VII/2026', '-', 'LPB CP', '72600005', 2, 2, 'no', '2026-07-15 15:34:42'),
+(6, 'SKPO150726SURYA030001', '01230123', '2026-07-16', 'Q001/KIU/VII/2026', 'INVOICE01', 'LPB CP', '72600006', 3, 2, 'sebagian', '2026-07-16 11:20:09'),
+(7, 'SKPO150726SYNGE010002', '01123001', '2026-07-16', 'Q001/KIU/VII/2026A', 'INVOICE00001', 'LPB CP', '72600007', 3, 2, 'Sebagian', '2026-07-16 14:13:32'),
+(8, 'SKPO150726SYNGE010002', '012010', '2026-07-16', 'Q001/KIU/VII/2026A', 'INVOICE00002', 'LPB Barang Non Pajak (A)', 'A72600001', 4, 2, '-', '2026-07-16 14:37:51'),
+(9, 'SKPO150726SYNGE010002', '0101500', '2026-07-16', 'Q001/KIU/VII/2026A', '-', NULL, NULL, 1, 2, '-', '2026-07-16 15:40:22');
 
 -- --------------------------------------------------------
 
@@ -137052,7 +137214,12 @@ INSERT INTO `tb_lpb_batch` (`id_batch`, `id_detail_lpb`, `no_lot`, `expired_date
 (7, 7, '1133', '2026-05-18', '1000.00'),
 (8, 8, '1133', '2026-06-01', '1000.00'),
 (9, 9, '1131', '2026-05-18', '1000.00'),
-(10, 10, '115100', '2026-07-15', '50.00');
+(10, 10, '115100', '2026-07-15', '50.00'),
+(11, 11, '01011', '2026-07-16', '50.00'),
+(12, 12, '335123', '2030-07-16', '250.00'),
+(13, 13, '501050', '2026-07-16', '100.00'),
+(14, 14, '5874800', '2026-07-16', '100.00'),
+(15, 15, '0814020', '2026-07-16', '100.00');
 
 -- --------------------------------------------------------
 
@@ -137067,24 +137234,37 @@ CREATE TABLE `tb_lpb_detail` (
   `qty_diterima` decimal(18,2) DEFAULT NULL,
   `no_lot` varchar(50) DEFAULT NULL,
   `expired_date` date DEFAULT NULL,
-  `input_at` datetime DEFAULT current_timestamp()
+  `input_at` datetime DEFAULT current_timestamp(),
+  `harga_satuan_sebelumnya` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `total_harga_sebelumnya` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `harga_satuan` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `total_harga` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `harga_update_by` varchar(100) DEFAULT NULL,
+  `harga_update_at` datetime DEFAULT NULL,
+  `harga_verified_by` varchar(100) DEFAULT NULL,
+  `harga_verified_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data untuk tabel `tb_lpb_detail`
 --
 
-INSERT INTO `tb_lpb_detail` (`id_detail_lpb`, `id_lpb`, `kd_barang`, `qty_diterima`, `no_lot`, `expired_date`, `input_at`) VALUES
-(1, 1, 'QBLAS02', '300.00', '1166', '2026-08-01', '2026-05-18 13:45:22'),
-(2, 1, 'QBLAS02', '300.00', '1155', '2026-08-01', '2026-05-18 13:45:22'),
-(3, 1, 'QBLAS02', '300.00', '1155', '2026-07-01', '2026-05-18 13:45:22'),
-(4, 1, 'QTHRO03', '500.00', '1144', '2026-05-18', '2026-05-18 13:45:22'),
-(5, 1, 'QSEVI02', '5000.00', '1133', '2026-05-18', '2026-05-18 13:45:22'),
-(6, 1, 'QMOSP02', '2000.00', '1122', '2026-05-18', '2026-05-18 13:45:22'),
-(7, 2, 'QSEVI02', '1000.00', '1133', '2026-05-18', '2026-05-18 13:50:28'),
-(8, 3, 'QSEVI02', '1000.00', '1133', '2026-06-01', '2026-05-18 13:52:26'),
-(9, 4, 'QSEVI02', '1000.00', '1131', '2026-05-18', '2026-05-18 13:54:18'),
-(10, 5, 'QPOLY08', '50.00', '115100', '2026-07-15', '2026-07-15 15:34:42');
+INSERT INTO `tb_lpb_detail` (`id_detail_lpb`, `id_lpb`, `kd_barang`, `qty_diterima`, `no_lot`, `expired_date`, `input_at`, `harga_satuan_sebelumnya`, `total_harga_sebelumnya`, `harga_satuan`, `total_harga`, `harga_update_by`, `harga_update_at`, `harga_verified_by`, `harga_verified_at`) VALUES
+(1, 1, 'QBLAS02', '300.00', '1166', '2026-08-01', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(2, 1, 'QBLAS02', '300.00', '1155', '2026-08-01', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(3, 1, 'QBLAS02', '300.00', '1155', '2026-07-01', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(4, 1, 'QTHRO03', '500.00', '1144', '2026-05-18', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(5, 1, 'QSEVI02', '5000.00', '1133', '2026-05-18', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(6, 1, 'QMOSP02', '2000.00', '1122', '2026-05-18', '2026-05-18 13:45:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(7, 2, 'QSEVI02', '1000.00', '1133', '2026-05-18', '2026-05-18 13:50:28', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(8, 3, 'QSEVI02', '1000.00', '1133', '2026-06-01', '2026-05-18 13:52:26', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(9, 4, 'QSEVI02', '1000.00', '1131', '2026-05-18', '2026-05-18 13:54:18', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(10, 5, 'QPOLY08', '50.00', '115100', '2026-07-15', '2026-07-15 15:34:42', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(11, 6, 'QPOLY14', '50.00', '01011', '2026-07-16', '2026-07-16 11:20:09', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(12, 7, 'QALIK01', '250.00', '335123', '2030-07-16', '2026-07-16 14:13:32', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(13, 8, 'QAGIL02', '100.00', '501050', '2026-07-16', '2026-07-16 14:37:51', '22522.5225', '2252252.2500', '22522.5225', '2252252.2500', 'admin', '2026-07-16 15:23:42', 'admin', '2026-07-16 15:23:42'),
+(14, 9, 'QAGIL02', '100.00', '5874800', '2026-07-16', '2026-07-16 15:40:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL),
+(15, 9, 'QALIK01', '100.00', '0814020', '2026-07-16', '2026-07-16 15:40:22', '0.0000', '0.0000', '0.0000', '0.0000', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -137108,7 +137288,10 @@ CREATE TABLE `tb_lpb_log` (
 
 INSERT INTO `tb_lpb_log` (`id_log`, `kd_po`, `no_invoice`, `action_type`, `keterangan`, `dilakukan_oleh`, `dilakukan_pada`) VALUES
 (1, 'NKPO221225BAYER010003', '5555', 'UPDATE_INVOICE', '1111', 'purchasing', '2026-05-20 00:52:15'),
-(2, 'SKPO220526NUFAR010001', 'INVOICE0001', 'UPDATE_INVOICE', '-', 'purchasing', '2026-05-22 09:28:02');
+(2, 'SKPO220526NUFAR010001', 'INVOICE0001', 'UPDATE_INVOICE', '-', 'purchasing', '2026-05-22 09:28:02'),
+(3, 'SKPO150726SURYA030001', 'INVOICE01', 'UPDATE_INVOICE', 'sebagian', 'admin', '2026-07-16 12:11:16'),
+(4, 'SKPO150726SYNGE010002', 'INVOICE00001', 'UPDATE_INVOICE', 'Sebagian', 'admin', '2026-07-16 14:27:30'),
+(5, 'SKPO150726SYNGE010002', 'INVOICE00002', 'UPDATE_INVOICE', '-', 'admin', '2026-07-16 14:38:45');
 
 -- --------------------------------------------------------
 
@@ -156108,6 +156291,9 @@ CREATE TABLE `tb_tmp_po_received` (
   `satuan` varchar(100) NOT NULL,
   `no_lot` varchar(100) DEFAULT NULL,
   `expired_date` date DEFAULT NULL,
+  `harga_satuan` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `harga_satuan_kecil` decimal(18,4) NOT NULL DEFAULT 0.0000,
+  `total_harga` decimal(18,4) NOT NULL DEFAULT 0.0000,
   `crete_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -158202,6 +158388,48 @@ ALTER TABLE `tbq_review_q`
   ADD PRIMARY KEY (`id_reviewq`);
 
 --
+-- Indeks untuk tabel `tbrp_activity_log`
+--
+ALTER TABLE `tbrp_activity_log`
+  ADD PRIMARY KEY (`id_log`),
+  ADD KEY `idx_no_referensi` (`no_referensi`),
+  ADD KEY `idx_tipe_referensi` (`tipe_referensi`),
+  ADD KEY `idx_aksi` (`aksi`),
+  ADD KEY `idx_user_by` (`user_by`);
+
+--
+-- Indeks untuk tabel `tbrp_retur_penjualan_detail`
+--
+ALTER TABLE `tbrp_retur_penjualan_detail`
+  ADD PRIMARY KEY (`id_retur_detail`),
+  ADD KEY `idx_id_retur` (`id_retur`);
+
+--
+-- Indeks untuk tabel `tbrp_retur_penjualan_header`
+--
+ALTER TABLE `tbrp_retur_penjualan_header`
+  ADD PRIMARY KEY (`id_retur`),
+  ADD UNIQUE KEY `uq_no_retur` (`no_retur`),
+  ADD KEY `idx_id_spr_retur` (`id_spr`),
+  ADD KEY `idx_status_retur` (`status_retur`);
+
+--
+-- Indeks untuk tabel `tbrp_spr_detail`
+--
+ALTER TABLE `tbrp_spr_detail`
+  ADD PRIMARY KEY (`id_spr_detail`),
+  ADD KEY `idx_id_spr` (`id_spr`);
+
+--
+-- Indeks untuk tabel `tbrp_spr_header`
+--
+ALTER TABLE `tbrp_spr_header`
+  ADD PRIMARY KEY (`id_spr`),
+  ADD UNIQUE KEY `uq_no_spr` (`no_spr`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_create_by` (`create_by`);
+
+--
 -- Indeks untuk tabel `tbsim_bobotkpi`
 --
 ALTER TABLE `tbsim_bobotkpi`
@@ -159282,13 +159510,13 @@ ALTER TABLE `tbar_whats`
 -- AUTO_INCREMENT untuk tabel `tberp_stock_batch`
 --
 ALTER TABLE `tberp_stock_batch`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10065;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10070;
 
 --
 -- AUTO_INCREMENT untuk tabel `tberp_stock_ledger`
 --
 ALTER TABLE `tberp_stock_ledger`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10300;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10305;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbhrd_environment_issues`
@@ -159432,7 +159660,7 @@ ALTER TABLE `tbkeu_periode_fiskal_log`
 -- AUTO_INCREMENT untuk tabel `tbkeu_posting_exception`
 --
 ALTER TABLE `tbkeu_posting_exception`
-  MODIFY `id_exception` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_exception` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_report_rule_akun`
@@ -159811,6 +160039,36 @@ ALTER TABLE `tbq_review_pic`
 --
 ALTER TABLE `tbq_review_q`
   MODIFY `id_reviewq` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbrp_activity_log`
+--
+ALTER TABLE `tbrp_activity_log`
+  MODIFY `id_log` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbrp_retur_penjualan_detail`
+--
+ALTER TABLE `tbrp_retur_penjualan_detail`
+  MODIFY `id_retur_detail` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbrp_retur_penjualan_header`
+--
+ALTER TABLE `tbrp_retur_penjualan_header`
+  MODIFY `id_retur` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbrp_spr_detail`
+--
+ALTER TABLE `tbrp_spr_detail`
+  MODIFY `id_spr_detail` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT untuk tabel `tbrp_spr_header`
+--
+ALTER TABLE `tbrp_spr_header`
+  MODIFY `id_spr` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbsim_bobotkpi`
@@ -160218,7 +160476,7 @@ ALTER TABLE `tb_loading_lk_bck`
 -- AUTO_INCREMENT untuk tabel `tb_login_log`
 --
 ALTER TABLE `tb_login_log`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=293;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=298;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_confirm_sales`
@@ -160248,25 +160506,25 @@ ALTER TABLE `tb_log_mutasi`
 -- AUTO_INCREMENT untuk tabel `tb_lpb`
 --
 ALTER TABLE `tb_lpb`
-  MODIFY `id_lpb` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id_lpb` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_batch`
 --
 ALTER TABLE `tb_lpb_batch`
-  MODIFY `id_batch` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_batch` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_detail`
 --
 ALTER TABLE `tb_lpb_detail`
-  MODIFY `id_detail_lpb` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id_detail_lpb` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_lpb_log`
 --
 ALTER TABLE `tb_lpb_log`
-  MODIFY `id_log` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_log` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_master_barang`
