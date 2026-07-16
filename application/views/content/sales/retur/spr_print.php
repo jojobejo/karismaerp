@@ -212,29 +212,29 @@
         <tr>
             <td>
                 Diverifikasi,<br>
-                <strong>Koor SC</strong>
-                <?php if (!empty($spr['koor_sc_by'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=VERIFIED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['koor_sc_by']) ?>" alt="QR" style="height:50px;"></div>
+                <strong>Manager SC</strong>
+                <?php if (!empty($spr['mngsc_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['mngsc_by'] . ', ' . ($spr['mngsc_at'] ? date('d/m/Y H:i', strtotime($spr['mngsc_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['koor_sc_by'] ?? '') ?></div>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['mngsc_by'] ?? '') ?></div>
             </td>
             <td>
                 Dicek,<br>
                 <strong>Adm Penjualan</strong>
-                <?php if (!empty($spr['admin_stock_by'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=CHECKED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['admin_stock_by']) ?>" alt="QR" style="height:50px;"></div>
+                <?php if (!empty($spr['admretur_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['admretur_by'] . ', ' . ($spr['admretur_at'] ? date('d/m/Y H:i', strtotime($spr['admretur_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['admin_stock_by'] ?? '') ?></div>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['admretur_by'] ?? '') ?></div>
             </td>
             <td>
                 Disetujui,<br>
                 <strong>Kadep SC</strong>
                 <?php if (!empty($spr['kadep_sc_by'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=APPROVED_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['kadep_sc_by']) ?>" alt="QR" style="height:50px;"></div>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['kadep_sc_by'] . ', ' . ($spr['kadep_sc_at'] ? date('d/m/Y H:i', strtotime($spr['kadep_sc_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>
@@ -245,7 +245,7 @@
                 Verifikasi Jagung,<br>
                 <strong>Kadep UB</strong>
                 <?php if (!empty($spr['kadepub_by'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=VERIFIED_UB_<?= urlencode($spr['no_spr']) ?>_<?= urlencode($spr['kadepub_by']) ?>" alt="QR" style="height:50px;"></div>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['kadepub_by'] . ', ' . ($spr['kadepub_at'] ? date('d/m/Y H:i', strtotime($spr['kadepub_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>
@@ -263,23 +263,23 @@
 
     <!-- APPROVAL HISTORY -->
     <?php
-    $has_history = $spr['koor_sc_by'] || $spr['admin_stock_by'] || $spr['kadep_sc_by'] || $spr['logistik_by'];
+    $has_history = $spr['mngsc_by'] || $spr['admretur_by'] || $spr['kadep_sc_by'] || $spr['logistik_by'];
     if ($has_history):
     ?>
     <div class="approval-section">
         <h4>Riwayat Approval</h4>
-        <?php if ($spr['koor_sc_by']): ?>
+        <?php if ($spr['mngsc_by']): ?>
             <div class="approval-row">
-                <span class="arl">Koor SC</span>
-                <span><?= htmlspecialchars($spr['koor_sc_by']) ?> — <?= $spr['koor_sc_at'] ? date('d/m/Y H:i', strtotime($spr['koor_sc_at'])) : '-' ?>
-                <?= $spr['koor_sc_catatan'] ? '| ' . htmlspecialchars($spr['koor_sc_catatan']) : '' ?></span>
+                <span class="arl">Manager SC</span>
+                <span><?= htmlspecialchars($spr['mngsc_by']) ?> — <?= $spr['mngsc_at'] ? date('d/m/Y H:i', strtotime($spr['mngsc_at'])) : '-' ?>
+                <?= $spr['mngsc_catatan'] ? '| ' . htmlspecialchars($spr['mngsc_catatan']) : '' ?></span>
             </div>
         <?php endif; ?>
-        <?php if ($spr['admin_stock_by']): ?>
+        <?php if ($spr['admretur_by']): ?>
             <div class="approval-row">
                 <span class="arl">Adm Penjualan</span>
-                <span><?= htmlspecialchars($spr['admin_stock_by']) ?> — <?= $spr['admin_stock_at'] ? date('d/m/Y H:i', strtotime($spr['admin_stock_at'])) : '-' ?>
-                <?= $spr['admin_stock_catatan'] ? '| ' . htmlspecialchars($spr['admin_stock_catatan']) : '' ?></span>
+                <span><?= htmlspecialchars($spr['admretur_by']) ?> — <?= $spr['admretur_at'] ? date('d/m/Y H:i', strtotime($spr['admretur_at'])) : '-' ?>
+                <?= $spr['admretur_catatan'] ? '| ' . htmlspecialchars($spr['admretur_catatan']) : '' ?></span>
             </div>
         <?php endif; ?>
         <?php if ($spr['kadep_sc_by']): ?>

@@ -32,8 +32,8 @@
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                 $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
-                $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
+                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                 $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
@@ -48,7 +48,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-2">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -88,11 +88,11 @@
                                         'edit_draft'          => ['info',    'Edit Draft SPR'],
                                         'edit_submit'         => ['success', 'SPR Diajukan Kembali'],
                                         'submit'              => ['success', 'SPR Diajukan'],
-                                        'edit_stock'          => ['warning', 'Edit SPR Admin Stock'],
-                                        'koor_verify'         => ['primary', 'Verifikasi Koor SC'],
-                                        'koor_reject'         => ['danger',  'Ditolak Koor SC'],
-                                        'admin_stock_check'   => ['primary', 'Dicek Admin Stock'],
-                                        'admin_stock_reject'  => ['danger',  'Ditolak Admin Stock'],
+                                        'edit_stock'          => ['warning', 'Edit SPR Admin Retur'],
+                                        'koor_verify'         => ['primary', 'Verifikasi Manager SC'],
+                                        'koor_reject'         => ['danger',  'Ditolak Manager SC'],
+                                        'admretur_check'   => ['primary', 'Dicek Admin Retur'],
+                                        'admretur_reject'  => ['danger',  'Ditolak Admin Retur'],
                                         'kadep_approve'       => ['success', 'Disetujui Kadep SC'],
                                         'kadep_reject'        => ['danger',  'Ditolak Kadep SC'],
                                         'logistik_process'    => ['success', 'Selesai di Logistik'],

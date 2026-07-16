@@ -207,7 +207,7 @@
                                 <button type="submit" name="submit_action" value="update" class="btn btn-primary mr-2" onclick="return confirm('Simpan perubahan Retur Penjualan ini?')">
                                     <i class="fas fa-save"></i> Simpan Perubahan
                                 </button>
-                                <button type="submit" name="submit_action" value="resubmit" class="btn btn-success" onclick="return confirm('Simpan perubahan dan ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                <button type="submit" name="submit_action" value="resubmit" class="btn btn-success" onclick="return confirm('Simpan perubahan dan ajukan kembali Retur Penjualan ini ke Admin Retur?')">
                                     <i class="fas fa-paper-plane"></i> Simpan & Ajukan Kembali
                                 </button>
                             <?php else: ?>

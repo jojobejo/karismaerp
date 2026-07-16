@@ -137,13 +137,13 @@ class Auth extends CI_Controller
             redirect('sales_order/admin_sc');
         } else if ($jobdesk == 'SC') {
             redirect('sales_order');
-        } else if ($jobdesk == 'KOORSC') {
+        } else if ($jobdesk == 'MANAGERSC') {
             redirect('retur_penjualan');
         } else if ($jobdesk == 'KADEPSC' || $jobdesk == 'KADEPUB') {
             redirect('retur_penjualan');
         } else if ($jobdesk == 'LOGISTIC') {
             redirect('retur_penjualan/logistik');
-        } else if ($jobdesk == 'ADMSTOCK') {
+        } else if ($jobdesk == 'ADMRETUR') {
             redirect('retur_penjualan/retur');
         } else if ($jobdesk == 'ADMPNJ') {
             redirect('retur_penjualan');

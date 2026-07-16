@@ -2496,7 +2496,7 @@ class C_SalesOrder extends CI_Controller
     {
         $details = [];
         if (empty($post['kd_barang']) || !is_array($post['kd_barang'])) return $details;
-        $allowed_harga_approval = ['direksi', 'koor sc', 'kadep keu & sc'];
+        $allowed_harga_approval = ['direksi', 'manager sc', 'kadep keu & sc'];
 
         foreach ($post['kd_barang'] as $i => $kd) {
             if (empty($kd)) continue;

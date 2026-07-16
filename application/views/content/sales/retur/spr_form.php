@@ -378,7 +378,7 @@
                                             <button type="submit" name="as_draft" value="0" class="btn btn-info mr-2">
                                                 <i class="fas fa-save"></i> Simpan Perubahan (Tetap Diverifikasi)
                                             </button>
-                                            <a href="<?= base_url('retur_penjualan/admin_stock_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
+                                            <a href="<?= base_url('retur_penjualan/admretur_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
                                                 <i class="fas fa-arrow-left"></i> Kembali ke Form Cek
                                             </a>
                                         <?php endif; ?>
@@ -389,7 +389,7 @@
                                             <i class="fas fa-save"></i> Simpan sebagai Draft
                                         </button>
                                         <button type="submit" name="as_draft" value="0" class="btn btn-danger mr-2" id="btnAjukan">
-                                            <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Koor SC
+                                            <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Manager SC
                                         </button>
                                         <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
                                             <i class="fas fa-arrow-left"></i> Batal
@@ -576,7 +576,7 @@ $(document).ready(function () {
             alert('Minimal isi 1 baris nama barang!');
             return;
         }
-        if (!confirm('Ajukan SPR ke Koor SC? Setelah diajukan tidak dapat diedit.')) {
+        if (!confirm('Ajukan SPR ke Manager SC? Setelah diajukan tidak dapat diedit.')) {
             e.preventDefault();
         }
     });

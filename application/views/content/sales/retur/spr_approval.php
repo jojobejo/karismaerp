@@ -1,5 +1,5 @@
 <!-- views/content/sales/retur/spr_approval.php -->
-<!-- Digunakan oleh: Koor SC, Admin Stock, Kadep SC, Logistik -->
+<!-- Digunakan oleh: Manager SC, Admin Retur, Kadep SC, Logistik -->
 <style>
     .table-detail-spr th { background: #f8f9fa; font-size: 14px; border: 1px solid #dee2e6; padding: 8px !important; }
     .table-detail-spr td { font-size: 14px; border: 1px solid #dee2e6; vertical-align: middle; padding: 8px !important; }
@@ -28,8 +28,8 @@
                     <div class="col-sm-6">
                         <?php
                         $role_labels = [
-                            'koor_sc'     => ['Koor SC', 'clipboard-check', 'warning'],
-                            'admin_stock' => ['Admin Penjualan', 'boxes', 'info'],
+                            'mngsc'     => ['Manager SC', 'clipboard-check', 'warning'],
+                            'admretur' => ['Admin Penjualan', 'boxes', 'info'],
                             'kadepub'     => ['Kadep Unit Bisnis', 'user-tie', 'success'],
                             'kadep_sc'    => ['Kadep SC', 'user-tie', 'primary'],
                             'logistik'    => ['Logistik', 'truck-loading', 'success'],
@@ -169,7 +169,7 @@
                                 <h3 class="card-title m-0">
                                     <i class="fas fa-<?= $rl[1] ?> mr-1"></i> Keputusan <?= $rl[0] ?>
                                 </h3>
-                                <?php if ($role === 'admin_stock'): ?>
+                                <?php if ($role === 'admretur'): ?>
                                     <a href="<?= base_url('retur_penjualan/edit/'.$spr['id_spr']) ?>" class="btn btn-sm btn-warning text-dark"><i class="fas fa-edit"></i> Edit Data</a>
                                 <?php endif; ?>
                             </div>

@@ -41,8 +41,8 @@
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                 $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
-                $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
+                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                 $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                 $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
@@ -63,7 +63,7 @@
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admin_stock || $is_collection || $is_kasir || $is_admlpb2 || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb2 || $is_mngacc || $is_mngse || $is_dirop || $is_dirut || $is_kadepub || $is_koor): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-primary active mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -100,10 +100,10 @@
                                         <option value="">-- Semua --</option>
                                         <?php
                                         $status_opts = [
-                                            'menunggu_verifikasi'    => 'Menunggu Admin Stock',
+                                            'menunggu_verifikasi'    => 'Menunggu Admin Retur',
                                             'retur_menunggu_kadepub' => 'Menunggu Kadep UB',
                                             'retur_menunggu_mngacc'  => 'Menunggu Manager Account',
-                                            'retur_menunggu_koorsc'  => 'Menunggu Koor SC',
+                                            'retur_menunggu_mngsc'  => 'Menunggu Manager SC',
                                             'retur_menunggu_mngse'   => 'Menunggu Manager SE',
                                             'retur_menunggu_kadepsc' => 'Menunggu Kadep SC',
                                             'retur_menunggu_dirop'   => 'Menunggu Dirop',
@@ -134,7 +134,7 @@
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Retur Penjualan</h3>
                         <div class="card-tools">
                             <?php 
-                            $is_approver = in_array($jobdesk, ['KOORSC', 'ADMINSC', 'ADMSTOCK', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB']);
+                            $is_approver = in_array($jobdesk, ['MANAGERSC', 'ADMINSC', 'ADMRETUR', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB']);
                             if ($is_approver): 
                             ?>
                                 <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
@@ -171,7 +171,7 @@
                                     <?php else: ?>
                                         <?php
                                         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                                        $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                                        $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                                         $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                                         $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
                                         $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
@@ -179,12 +179,12 @@
                                         $badge_map = [
                                             'retur_menunggu_kadepub' => ['info',     'Menunggu Kadep UB'],
                                             'retur_menunggu_mngacc'  => ['info',     'Menunggu Manager Account'],
-                                            'retur_menunggu_koorsc'  => ['info',     'Menunggu Koor SC'],
+                                            'retur_menunggu_mngsc'  => ['info',     'Menunggu Manager SC'],
                                             'retur_menunggu_mngse'   => ['info',     'Menunggu Manager SE'],
                                             'retur_menunggu_kadepsc' => ['info',     'Menunggu Kadep SC'],
                                             'retur_menunggu_dirop'   => ['info',     'Menunggu Dirop'],
                                             'retur_menunggu_dirut'   => ['info',     'Menunggu Dirut'],
-                                            'menunggu_verifikasi' => ['warning',  'Menunggu Admin Stock'],
+                                            'menunggu_verifikasi' => ['warning',  'Menunggu Admin Retur'],
                                             'menunggu_collection' => ['info',     'Menunggu Collection'],
                                             'menunggu_kasir'      => ['primary',  'Menunggu Kasir'],
                                             'selesai'             => ['success',  'Selesai'],
@@ -223,14 +223,14 @@
                                                    class="btn btn-sm btn-info" title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <?php if ($st === 'menunggu_verifikasi' && $is_admin_stock): ?>
+                                                <?php if ($st === 'menunggu_verifikasi' && $is_admretur): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/verifikasi/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-warning" title="Verifikasi">
                                                         <i class="fas fa-clipboard-check"></i> Verifikasi
                                                     </a>
                                                 <?php elseif (
                                                     ($st === 'retur_menunggu_mngacc' && $is_mngacc) ||
-                                                    ($st === 'retur_menunggu_koorsc' && $is_koor) ||
+                                                    ($st === 'retur_menunggu_mngsc' && $is_koor) ||
                                                     ($st === 'retur_menunggu_kadepub' && $is_kadepub) ||
                                                     ($st === 'retur_menunggu_mngse' && $is_mngse) ||
                                                     ($st === 'retur_menunggu_kadepsc' && $is_kadep) ||
@@ -258,7 +258,7 @@
                                                     </a>
                                                     <a href="<?= base_url('retur_penjualan/retur/submit/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-success" title="Ajukan Kembali"
-                                                       onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                                       onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Retur?')">
                                                         <i class="fas fa-paper-plane"></i>
                                                     </a>
                                                 <?php endif; ?>

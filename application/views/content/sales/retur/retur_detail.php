@@ -67,7 +67,7 @@ if (!function_exists('hitung_durasi')) {
             <div class="container-fluid">
                 <?php
                 $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
+                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
                 $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                 $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
                 $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
@@ -76,7 +76,7 @@ if (!function_exists('hitung_durasi')) {
                 $show_approval_card = false;
                 $approval_role_label = '';
 
-                $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
+                $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
                 $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                 $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
                 $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
@@ -108,12 +108,12 @@ if (!function_exists('hitung_durasi')) {
                                 $badge_map = [
                                     'retur_menunggu_kadepub' => ['info',    'Menunggu Kadep UB'],
                                     'retur_menunggu_mngacc'  => ['info',    'Menunggu Manager Account'],
-                                    'retur_menunggu_koorsc'  => ['info',    'Menunggu Koor SC'],
+                                    'retur_menunggu_mngsc'  => ['info',    'Menunggu Manager SC'],
                                     'retur_menunggu_mngse'   => ['info',    'Menunggu Manager SE'],
                                     'retur_menunggu_kadepsc' => ['info',    'Menunggu Kadep SC'],
                                     'retur_menunggu_dirop'   => ['info',    'Menunggu Dirop'],
                                     'retur_menunggu_dirut'   => ['info',    'Menunggu Dirut'],
-                                    'menunggu_verifikasi' => ['warning', 'Menunggu Admin Stock'],
+                                    'menunggu_verifikasi' => ['warning', 'Menunggu Admin Retur'],
                                     'menunggu_collection' => ['info',    'Menunggu Collection'],
                                     'menunggu_kasir'      => ['primary', 'Menunggu Kasir'],
                                     'selesai'             => ['success', 'Selesai'],
@@ -216,9 +216,9 @@ if (!function_exists('hitung_durasi')) {
                                 <?php endif; ?>
 
                                 <div class="mt-3 d-flex flex-wrap gap-2">
-                                    <?php if ($st === 'menunggu_verifikasi' && $is_admin_stock): ?>
+                                    <?php if ($st === 'menunggu_verifikasi' && $is_admretur): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/verifikasi/' . $retur['id_retur']) ?>" class="btn btn-warning mr-2">
-                                            <i class="fas fa-clipboard-check"></i> Verifikasi (Admin Stock)
+                                            <i class="fas fa-clipboard-check"></i> Verifikasi (Admin Retur)
                                         </a>
                                     <?php elseif ($st === 'menunggu_collection' && $is_collection): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/collection/' . $retur['id_retur']) ?>" class="btn btn-info mr-2">
@@ -233,12 +233,12 @@ if (!function_exists('hitung_durasi')) {
                                             <i class="fas fa-edit"></i> Edit Retur
                                         </a>
                                         <a href="<?= base_url('retur_penjualan/retur/submit/' . $retur['id_retur']) ?>" class="btn btn-success mr-2"
-                                           onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                           onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Retur?')">
                                             <i class="fas fa-paper-plane"></i> Ajukan Kembali
                                         </a>
                                     <?php elseif (
                                         ($st === 'retur_menunggu_mngacc' && $is_mngacc) ||
-                                        ($st === 'retur_menunggu_koorsc' && $is_koor) ||
+                                        ($st === 'retur_menunggu_mngsc' && $is_koor) ||
                                         ($st === 'retur_menunggu_kadepub' && $is_kadepub) ||
                                         ($st === 'retur_menunggu_mngse' && $is_mngse) ||
                                         ($st === 'retur_menunggu_kadepsc' && $is_kadep) ||
@@ -296,9 +296,9 @@ if (!function_exists('hitung_durasi')) {
                             <div class="card-body p-3">
                                 <?php
                                 $total_duration = '';
-                                $rejected_at_field = 'admin_stock_at_retur';
+                                $rejected_at_field = 'admretur_at_retur';
                                 if ($st === 'ditolak') {
-                                    foreach (['kadepub', 'mngacc', 'koorsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
+                                    foreach (['kadepub', 'mngacc', 'mngsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
                                         if (!empty($retur[$pfx . '_at_retur'])) {
                                             $rejected_at_field = $pfx . '_at_retur';
                                         }
@@ -323,37 +323,37 @@ if (!function_exists('hitung_durasi')) {
                                     [
                                         'label' => 'Dibuat ADMLPB2',
                                         'icon' => 'file-alt',
-                                        'done_statuses' => ['menunggu_verifikasi', 'retur_menunggu_mngacc', 'retur_menunggu_koorsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai', 'ditolak'],
+                                        'done_statuses' => ['menunggu_verifikasi', 'retur_menunggu_mngacc', 'retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai', 'ditolak'],
                                         'by' => $retur['create_by_retur'],
                                         'at' => $retur['create_at_retur'],
                                         'note' => $retur['catatan_logistik'] ?? null,
                                         'prev_at' => null
                                     ],
                                     [
-                                        'label' => 'Verifikasi Admin Stock',
+                                        'label' => 'Verifikasi Admin Retur',
                                         'icon' => 'clipboard-check',
-                                        'done_statuses' => ['retur_menunggu_mngacc', 'retur_menunggu_koorsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
-                                        'by' => $retur['admin_stock_by_retur'],
-                                        'at' => $retur['admin_stock_at_retur'],
-                                        'note' => $retur['catatan_admin_stock'] ?? null,
+                                        'done_statuses' => ['retur_menunggu_mngacc', 'retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'by' => $retur['admretur_by_retur'],
+                                        'at' => $retur['admretur_at_retur'],
+                                        'note' => $retur['catatan_admretur'] ?? null,
                                         'prev_at' => 'create_at_retur'
                                     ],
                                     [
                                         'label' => 'Persetujuan Manager Account',
                                         'icon' => 'user-check',
-                                        'done_statuses' => ['retur_menunggu_koorsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'done_statuses' => ['retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
                                         'by' => $retur['mngacc_by_retur'] ?? null,
                                         'at' => $retur['mngacc_at_retur'] ?? null,
                                         'note' => $retur['catatan_mngacc_retur'] ?? null,
-                                        'prev_at' => 'admin_stock_at_retur'
+                                        'prev_at' => 'admretur_at_retur'
                                     ],
                                     [
-                                        'label' => 'Persetujuan Koor SC',
+                                        'label' => 'Persetujuan Manager SC',
                                         'icon' => 'user-friends',
                                         'done_statuses' => ['retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
-                                        'by' => $retur['koorsc_by_retur'] ?? null,
-                                        'at' => $retur['koorsc_at_retur'] ?? null,
-                                        'note' => $retur['catatan_koorsc_retur'] ?? null,
+                                        'by' => $retur['mngsc_by_retur'] ?? null,
+                                        'at' => $retur['mngsc_at_retur'] ?? null,
+                                        'note' => $retur['catatan_mngsc_retur'] ?? null,
                                         'prev_at' => 'mngacc_at_retur'
                                     ],
                                 ];
@@ -366,11 +366,11 @@ if (!function_exists('hitung_durasi')) {
                                         'by' => $retur['kadepub_by_retur'] ?? null,
                                         'at' => $retur['kadepub_at_retur'] ?? null,
                                         'note' => $retur['catatan_kadepub_retur'] ?? null,
-                                        'prev_at' => 'koorsc_at_retur'
+                                        'prev_at' => 'mngsc_at_retur'
                                     ];
                                 }
 
-                                $prev_at_mngse = !empty($retur['is_jagung']) ? 'kadepub_at_retur' : 'koorsc_at_retur';
+                                $prev_at_mngse = !empty($retur['is_jagung']) ? 'kadepub_at_retur' : 'mngsc_at_retur';
 
                                 $steps_retur[] = [
                                     'label' => 'Persetujuan Manager SE',
@@ -436,12 +436,12 @@ if (!function_exists('hitung_durasi')) {
                                 $rejected_at = '';
                                 $rejected_note = '';
                                 if ($st === 'ditolak') {
-                                    if (!empty($retur['admin_stock_by_retur']) && strpos($retur['update_by_retur'], $retur['admin_stock_by_retur']) !== false) {
-                                        $rejected_by = $retur['admin_stock_by_retur'];
-                                        $rejected_at = $retur['admin_stock_at_retur'];
-                                        $rejected_note = $retur['catatan_admin_stock'];
+                                    if (!empty($retur['admretur_by_retur']) && strpos($retur['update_by_retur'], $retur['admretur_by_retur']) !== false) {
+                                        $rejected_by = $retur['admretur_by_retur'];
+                                        $rejected_at = $retur['admretur_at_retur'];
+                                        $rejected_note = $retur['catatan_admretur'];
                                     }
-                                    foreach (['kadepub', 'mngacc', 'koorsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
+                                    foreach (['kadepub', 'mngacc', 'mngsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
                                         if (!empty($retur[$pfx . '_by_retur']) && !empty($retur['catatan_' . $pfx . '_retur'])) {
                                             $rejected_by = $retur[$pfx . '_by_retur'];
                                             $rejected_at = $retur[$pfx . '_at_retur'];

@@ -8,8 +8,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
  *
  * Alur approval:
  *   SC (buat & submit SPR)
- *     → Koor SC (verifikasi / tolak)
- *       → Admin Stock (cek fisik / tolak)
+ *     → Manager SC (verifikasi / tolak)
+ *       → Admin Retur (cek fisik / tolak)
  *         → Kadep SC (setuju / tolak)
  *           → Logistik (proses / selesai)
  */
@@ -29,7 +29,7 @@ class C_ReturPenjualan extends CI_Controller
 
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'KOORSC', 'ADMSTOCK', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'];
+        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'];
         if (!in_array($jobdesk, $allowed_jobdesks)) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
@@ -72,13 +72,13 @@ class C_ReturPenjualan extends CI_Controller
     /** Koordinator SC */
     private function _isKoorSC()
     {
-        return $this->_isJobdesk(['KOORSC', 'ADMIN']);
+        return $this->_isJobdesk(['MANAGERSC', 'ADMIN']);
     }
 
-    /** Admin Stock */
+    /** Admin Retur */
     private function _isAdminStock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN']);
+        return $this->_isJobdesk(['ADMRETUR', 'ADMIN']);
     }
 
     /** Admin Penjualan */
@@ -115,7 +115,7 @@ class C_ReturPenjualan extends CI_Controller
     {
         $this->session->set_flashdata('error', $msg);
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        if ($jobdesk === 'ADMSTOCK') {
+        if ($jobdesk === 'ADMRETUR') {
             redirect('retur_penjualan/retur');
         } else {
             redirect('retur_penjualan');
@@ -130,8 +130,8 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user   = $this->_getUser();
         
-        // ADMSTOCK is not allowed to see SPR list anymore (separated to ADMPNJ)
-        if ($this->_isJobdesk(['ADMSTOCK']) && !$this->_isJobdesk(['ADMIN'])) {
+        // ADMRETUR is not allowed to see SPR list anymore (separated to ADMPNJ)
+        if ($this->_isJobdesk(['ADMRETUR']) && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan/retur');
             return;
         }
@@ -162,7 +162,7 @@ class C_ReturPenjualan extends CI_Controller
                 $allowed_statuses[] = 'diverifikasi_koor';
             }
             if ($this->_isKadepSC() || $this->_isKadepub()) {
-                $allowed_statuses[] = 'dicek_admin_stock';
+                $allowed_statuses[] = 'dicek_admretur';
             }
             if ($this->_isLogistik()) {
                 $allowed_statuses[] = 'disetujui_kadep';
@@ -204,7 +204,7 @@ class C_ReturPenjualan extends CI_Controller
         $user = $this->_getUser();
 
         // Cek akses: SC atau admin
-        if (!$this->_isSC() && !$this->_isJobdesk(['ADMIN','KOORSC','ADMINSC'])) {
+        if (!$this->_isSC() && !$this->_isJobdesk(['ADMIN','MANAGERSC','ADMINSC'])) {
             $this->_denyAccess('Hanya SC yang dapat membuat SPR.');
             return;
         }
@@ -286,14 +286,14 @@ class C_ReturPenjualan extends CI_Controller
 
         $msg = $as_draft
             ? "SPR <strong>{$no_spr}</strong> berhasil disimpan sebagai Draft."
-            : "SPR <strong>{$no_spr}</strong> berhasil diajukan dan menunggu verifikasi Koor SC.";
+            : "SPR <strong>{$no_spr}</strong> berhasil diajukan dan menunggu verifikasi Manager SC.";
 
         $this->session->set_flashdata('success', $msg);
         redirect('retur_penjualan/detail/' . $id_spr);
     }
 
     // ================================================================
-    // EDIT & UPDATE (Admin Stock)
+    // EDIT & UPDATE (Admin Retur)
     // ================================================================
 
     public function edit($id_spr)
@@ -361,7 +361,7 @@ class C_ReturPenjualan extends CI_Controller
         $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'edit_stock', $spr['status'], $spr['status'], $header['catatan'], $user['nama']);
 
         $this->session->set_flashdata('success', "Data SPR <strong>{$spr['no_spr']}</strong> berhasil diperbarui.");
-        redirect('retur_penjualan/admin_stock_cek/' . $id_spr);
+        redirect('retur_penjualan/admretur_cek/' . $id_spr);
     }
 
     /**
@@ -498,7 +498,7 @@ class C_ReturPenjualan extends CI_Controller
         // Record Log
         $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'submit', $spr['status'], 'diajukan', null, $user['nama']);
 
-        $this->session->set_flashdata('success', "SPR <strong>{$spr['no_spr']}</strong> berhasil diajukan ke Koor SC.");
+        $this->session->set_flashdata('success', "SPR <strong>{$spr['no_spr']}</strong> berhasil diajukan ke Manager SC.");
         redirect('retur_penjualan/detail/' . $id_spr);
     }
 
@@ -506,7 +506,7 @@ class C_ReturPenjualan extends CI_Controller
     // KOOR SC — Antrian verifikasi
     // ================================================================
 
-    public function koor_sc_verifikasi($id_spr)
+    public function mngsc_verifikasi($id_spr)
     {
         if (!$this->_isKoorSC()) {
             $this->_denyAccess();
@@ -520,20 +520,20 @@ class C_ReturPenjualan extends CI_Controller
             return;
         }
 
-        $data['page_title'] = 'KARISMA — Koor SC: Verifikasi ' . $spr['no_spr'];
+        $data['page_title'] = 'KARISMA — Manager SC: Verifikasi ' . $spr['no_spr'];
         $data['spr']        = $spr;
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
-        $data['role']       = 'koor_sc';
+        $data['role']       = 'mngsc';
         $data['back_url']   = base_url('retur_penjualan');
-        $data['action_url'] = base_url('retur_penjualan/koor_sc/simpan/' . $id_spr);
+        $data['action_url'] = base_url('retur_penjualan/mngsc/simpan/' . $id_spr);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/spr_approval.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function koor_sc_simpan($id_spr)
+    public function mngsc_simpan($id_spr)
     {
         if (!$this->_isKoorSC() || $this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan');
@@ -558,9 +558,9 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $this->M_ReturPenjualan->update_spr_status($id_spr, $new_status, [
-            'koor_sc_by'      => $user['nama'],
-            'koor_sc_at'      => date('Y-m-d H:i:s'),
-            'koor_sc_catatan' => $catatan,
+            'mngsc_by'      => $user['nama'],
+            'mngsc_at'      => date('Y-m-d H:i:s'),
+            'mngsc_catatan' => $catatan,
             'update_by'       => $user['nama'],
         ]);
 
@@ -569,8 +569,8 @@ class C_ReturPenjualan extends CI_Controller
 
         $msg = ($aksi === 'setuju')
             ? (!empty($spr['is_jagung'])
-                ? "SPR <strong>{$spr['no_spr']}</strong> disetujui Koor SC, lanjut ke Kadep Unit Bisnis (KADEPUB)."
-                : "SPR <strong>{$spr['no_spr']}</strong> disetujui Koor SC, lanjut ke Admin Penjualan.")
+                ? "SPR <strong>{$spr['no_spr']}</strong> disetujui Manager SC, lanjut ke Kadep Unit Bisnis (KADEPUB)."
+                : "SPR <strong>{$spr['no_spr']}</strong> disetujui Manager SC, lanjut ke Admin Penjualan.")
             : "SPR <strong>{$spr['no_spr']}</strong> ditolak.";
 
         $this->session->set_flashdata('success', $msg);
@@ -650,7 +650,7 @@ class C_ReturPenjualan extends CI_Controller
     // ADMIN STOCK — Antrian cek fisik
     // ================================================================
 
-    public function admin_stock_cek($id_spr)
+    public function admretur_cek($id_spr)
     {
         if (!$this->_isAdmpnj()) {
             $this->_denyAccess();
@@ -668,16 +668,16 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr']        = $spr;
         $data['spr_detail'] = $this->M_ReturPenjualan->get_spr_detail($id_spr);
         $data['user']       = $this->_getUser();
-        $data['role']       = 'admin_stock'; // keep as admin_stock for view logic compatibility
+        $data['role']       = 'admretur'; // keep as admretur for view logic compatibility
         $data['back_url']   = base_url('retur_penjualan');
-        $data['action_url'] = base_url('retur_penjualan/admin_stock/simpan/' . $id_spr);
+        $data['action_url'] = base_url('retur_penjualan/admretur/simpan/' . $id_spr);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/retur/spr_approval.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
-    public function admin_stock_simpan($id_spr)
+    public function admretur_simpan($id_spr)
     {
         if (!$this->_isAdmpnj() || $this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan');
@@ -695,17 +695,17 @@ class C_ReturPenjualan extends CI_Controller
             return;
         }
 
-        $new_status = ($aksi === 'setuju') ? 'dicek_admin_stock' : 'ditolak';
+        $new_status = ($aksi === 'setuju') ? 'dicek_admretur' : 'ditolak';
 
         $this->M_ReturPenjualan->update_spr_status($id_spr, $new_status, [
-            'admin_stock_by'      => $user['nama'],
-            'admin_stock_at'      => date('Y-m-d H:i:s'),
-            'admin_stock_catatan' => $catatan,
+            'admretur_by'      => $user['nama'],
+            'admretur_at'      => date('Y-m-d H:i:s'),
+            'admretur_catatan' => $catatan,
             'update_by'           => $user['nama'],
         ]);
 
         // Record Log
-        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', $aksi === 'setuju' ? 'admin_stock_check' : 'admin_stock_reject', $spr['status'], $new_status, $catatan, $user['nama']);
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', $aksi === 'setuju' ? 'admretur_check' : 'admretur_reject', $spr['status'], $new_status, $catatan, $user['nama']);
 
         $msg = ($aksi === 'setuju')
             ? "SPR <strong>{$spr['no_spr']}</strong> dicek Admin Penjualan, lanjut ke Kadep SC."
@@ -727,7 +727,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $spr = $this->M_ReturPenjualan->get_spr($id_spr);
-        if (!$spr || $spr['status'] !== 'dicek_admin_stock') {
+        if (!$spr || $spr['status'] !== 'dicek_admretur') {
             $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
             redirect('retur_penjualan');
             return;
@@ -758,7 +758,7 @@ class C_ReturPenjualan extends CI_Controller
         $user    = $this->_getUser();
         $spr     = $this->M_ReturPenjualan->get_spr($id_spr);
 
-        if (!$spr || $spr['status'] !== 'dicek_admin_stock') {
+        if (!$spr || $spr['status'] !== 'dicek_admretur') {
             $this->session->set_flashdata('error', 'SPR tidak valid.');
             redirect('retur_penjualan/kadep_sc');
             return;
@@ -841,11 +841,11 @@ class C_ReturPenjualan extends CI_Controller
             $role = 'admin';
             $role_label = 'Admin';
         } elseif ($this->_isKoorSC()) {
-            $role = 'koor_sc';
-            $role_label = 'Koor SC';
+            $role = 'mngsc';
+            $role_label = 'Manager SC';
         } elseif ($this->_isAdminStock()) {
-            $role = 'admin_stock';
-            $role_label = 'Admin Stock';
+            $role = 'admretur';
+            $role_label = 'Admin Retur';
         } elseif ($this->_isKadepSC()) {
             $role = 'kadep_sc';
             $role_label = 'Kadep SC';
@@ -952,7 +952,7 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user    = $this->_getUser();
         
-        // ADMPNJ is not allowed to see Retur list (separated to ADMSTOCK)
+        // ADMPNJ is not allowed to see Retur list (separated to ADMRETUR)
         if ($this->_isJobdesk(['ADMPNJ']) && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan');
             return;
@@ -976,7 +976,7 @@ class C_ReturPenjualan extends CI_Controller
         } elseif ($this->_isMngacc()) {
             if (empty($filter['status'])) $filter['status'] = 'retur_menunggu_mngacc';
         } elseif ($this->_isKoorSC()) {
-            if (empty($filter['status'])) $filter['status'] = 'retur_menunggu_koorsc';
+            if (empty($filter['status'])) $filter['status'] = 'retur_menunggu_mngsc';
         } elseif ($this->_isMngse()) {
             if (empty($filter['status'])) $filter['status'] = 'retur_menunggu_mngse';
         } elseif ($this->_isKadepSC()) {
@@ -1194,7 +1194,7 @@ class C_ReturPenjualan extends CI_Controller
         $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'logistik_process', $spr['status'], 'selesai', 'Retur Penjualan dibuat: ' . $no_retur, $user['nama']);
         $this->M_ReturPenjualan->record_log($no_retur, 'retur', 'retur_create', null, 'menunggu_verifikasi', $catatan_log, $user['nama']);
 
-        $this->session->set_flashdata('success', "Retur Penjualan <strong>{$no_retur}</strong> berhasil dibuat dan menunggu verifikasi Admin Stock.");
+        $this->session->set_flashdata('success', "Retur Penjualan <strong>{$no_retur}</strong> berhasil dibuat dan menunggu verifikasi Admin Retur.");
         redirect('retur_penjualan/retur/detail/' . $id_retur);
     }
 
@@ -1239,7 +1239,7 @@ class C_ReturPenjualan extends CI_Controller
         $allowed = false;
         if ($st === 'retur_menunggu_mngacc' && in_array($jobdesk, ['MANAGERACC', 'ADMIN'])) {
             $allowed = true;
-        } elseif ($st === 'retur_menunggu_koorsc' && in_array($jobdesk, ['KOORSC', 'ADMIN'])) {
+        } elseif ($st === 'retur_menunggu_mngsc' && in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
             $allowed = true;
         } elseif ($st === 'retur_menunggu_kadepub' && in_array($jobdesk, ['KADEPUB', 'ADMIN'])) {
             $allowed = true;
@@ -1273,11 +1273,11 @@ class C_ReturPenjualan extends CI_Controller
     // ADMIN STOCK — Verifikasi Retur Penjualan
     // ================================================================
 
-    /** Admin Stock: Form verifikasi Retur */
+    /** Admin Retur: Form verifikasi Retur */
     public function retur_verifikasi($id_retur)
     {
         if (!$this->_isAdminStock()) {
-            $this->_denyAccess('Hanya Admin Stock yang dapat memverifikasi Retur Penjualan.');
+            $this->_denyAccess('Hanya Admin Retur yang dapat memverifikasi Retur Penjualan.');
             return;
         }
 
@@ -1298,7 +1298,7 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    /** Admin Stock: Simpan keputusan verifikasi Retur */
+    /** Admin Retur: Simpan keputusan verifikasi Retur */
     public function retur_verifikasi_simpan($id_retur)
     {
         if (!$this->_isAdminStock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
@@ -1314,7 +1314,7 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $aksi         = $this->input->post('aksi');
-        $catatan      = $this->input->post('catatan_admin_stock');
+        $catatan      = $this->input->post('catatan_admretur');
         $user         = $this->_getUser();
         $id_retur_det = $this->input->post('id_retur_detail') ?: [];
         $qty_retur    = $this->input->post('qty_retur') ?: [];
@@ -1357,9 +1357,9 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $this->M_ReturPenjualan->update_retur_penjualan_status($id_retur, $new_status, [
-            'admin_stock_by_retur' => $user['nama'],
-            'admin_stock_at_retur' => date('Y-m-d H:i:s'),
-            'catatan_admin_stock'  => $catatan,
+            'admretur_by_retur' => $user['nama'],
+            'admretur_at_retur' => date('Y-m-d H:i:s'),
+            'catatan_admretur'  => $catatan,
             'update_by_retur'      => $user['nama'],
         ]);
 
@@ -1368,7 +1368,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $msg = ($aksi === 'setuju')
             ? "Retur <strong>{$retur['no_retur']}</strong> diverifikasi, lanjut ke {$next_label}."
-            : "Retur <strong>{$retur['no_retur']}</strong> ditolak oleh Admin Stock.";
+            : "Retur <strong>{$retur['no_retur']}</strong> ditolak oleh Admin Retur.";
 
         $this->session->set_flashdata('success', $msg);
         redirect('retur_penjualan/retur');
@@ -1388,7 +1388,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $retur = $this->M_ReturPenjualan->get_retur_penjualan($id_retur);
         if (!$retur || $retur['status_retur'] !== 'menunggu_collection') {
-            $this->session->set_flashdata('error', 'Retur tidak valid atau belum diverifikasi Admin Stock.');
+            $this->session->set_flashdata('error', 'Retur tidak valid atau belum diverifikasi Admin Retur.');
             redirect('retur_penjualan/retur');
             return;
         }
@@ -1593,9 +1593,9 @@ class C_ReturPenjualan extends CI_Controller
 
         if ($submit_action === 'resubmit') {
             $header['status_retur'] = 'menunggu_verifikasi';
-            $header['admin_stock_by_retur'] = null;
-            $header['admin_stock_at_retur'] = null;
-            $header['catatan_admin_stock'] = null;
+            $header['admretur_by_retur'] = null;
+            $header['admretur_at_retur'] = null;
+            $header['catatan_admretur'] = null;
         }
 
         $this->db->where('id_retur', $id_retur);
@@ -1632,15 +1632,15 @@ class C_ReturPenjualan extends CI_Controller
         $this->M_ReturPenjualan->update_retur_penjualan_status($id_retur, 'menunggu_verifikasi', [
             'update_by_retur' => $user['nama'],
             // Reset rejection info
-            'admin_stock_by_retur' => null,
-            'admin_stock_at_retur' => null,
-            'catatan_admin_stock' => null,
+            'admretur_by_retur' => null,
+            'admretur_at_retur' => null,
+            'catatan_admretur' => null,
         ]);
 
         // Record Log
         $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_submit', $retur['status_retur'], 'menunggu_verifikasi', null, $user['nama']);
 
-        $this->session->set_flashdata('success', "Retur Penjualan <strong>{$retur['no_retur']}</strong> berhasil diajukan kembali ke Admin Stock.");
+        $this->session->set_flashdata('success', "Retur Penjualan <strong>{$retur['no_retur']}</strong> berhasil diajukan kembali ke Admin Retur.");
         redirect('retur_penjualan/retur');
     }
 
@@ -1662,15 +1662,15 @@ class C_ReturPenjualan extends CI_Controller
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
         $pending_items = [];
         
-        // 1. Koor SC
-        if (in_array($jobdesk, ['KOORSC', 'ADMIN'])) {
+        // 1. Manager SC
+        if (in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diajukan'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
                     'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
                     'title' => 'Persetujuan SPR Baru',
                     'body' => 'SPR ' . $s['no_spr'] . ' menunggu verifikasi Anda.',
-                    'url' => base_url('retur_penjualan/koor_sc/verifikasi/' . $s['id_spr'])
+                    'url' => base_url('retur_penjualan/mngsc/verifikasi/' . $s['id_spr'])
                 ];
             }
         }
@@ -1688,15 +1688,15 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
         
-        // 2. Admin Stock
-        if (in_array($jobdesk, ['ADMSTOCK', 'ADMIN'])) {
+        // 2. Admin Retur
+        if (in_array($jobdesk, ['ADMRETUR', 'ADMIN'])) {
             $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'diverifikasi_koor'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
                     'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
-                    'title' => 'Pengecekan SPR (Admin Stock)',
+                    'title' => 'Pengecekan SPR (Admin Retur)',
                     'body' => 'SPR ' . $s['no_spr'] . ' menunggu pengecekan Anda.',
-                    'url' => base_url('retur_penjualan/admin_stock/cek/' . $s['id_spr'])
+                    'url' => base_url('retur_penjualan/admretur/cek/' . $s['id_spr'])
                 ];
             }
             
@@ -1704,7 +1704,7 @@ class C_ReturPenjualan extends CI_Controller
             foreach ($returs as $r) {
                 $pending_items[] = [
                     'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
-                    'title' => 'Verifikasi Retur (Admin Stock)',
+                    'title' => 'Verifikasi Retur (Admin Retur)',
                     'body' => 'Retur ' . $r['no_retur'] . ' menunggu verifikasi Anda.',
                     'url' => base_url('retur_penjualan/retur/verifikasi/' . $r['id_retur'])
                 ];
@@ -1713,7 +1713,7 @@ class C_ReturPenjualan extends CI_Controller
         
         // 3. Kadep SC
         if (in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
-            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'dicek_admin_stock'])->result_array();
+            $sprs = $this->db->get_where('tbrp_spr_header', ['status' => 'dicek_admretur'])->result_array();
             foreach ($sprs as $s) {
                 $pending_items[] = [
                     'id' => 'spr_' . $s['id_spr'] . '_' . $s['status'],
@@ -1791,13 +1791,13 @@ class C_ReturPenjualan extends CI_Controller
             }
         }
 
-        // 6.7. Koor SC (Retur)
-        if (in_array($jobdesk, ['KOORSC', 'ADMIN'])) {
-            $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_koorsc'])->result_array();
+        // 6.7. Manager SC (Retur)
+        if (in_array($jobdesk, ['MANAGERSC', 'ADMIN'])) {
+            $returs = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'retur_menunggu_mngsc'])->result_array();
             foreach ($returs as $r) {
                 $pending_items[] = [
                     'id' => 'retur_' . $r['id_retur'] . '_' . $r['status_retur'],
-                    'title' => 'Persetujuan Retur (Koor SC)',
+                    'title' => 'Persetujuan Retur (Manager SC)',
                     'body' => 'Retur ' . $r['no_retur'] . ' menunggu persetujuan Anda.',
                     'url' => base_url('retur_penjualan/retur/detail/' . $r['id_retur'])
                 ];
@@ -1883,7 +1883,7 @@ class C_ReturPenjualan extends CI_Controller
         // Map status to required role check and database column prefix
         $status_map = [
             'retur_menunggu_mngacc'   => ['role' => 'MANAGERACC',   'prefix' => 'mngacc',   'label' => 'Manager Account'],
-            'retur_menunggu_koorsc'   => ['role' => 'KOORSC',       'prefix' => 'koorsc',   'label' => 'Koor SC'],
+            'retur_menunggu_mngsc'   => ['role' => 'MANAGERSC',       'prefix' => 'mngsc',   'label' => 'Manager SC'],
             'retur_menunggu_kadepub'  => ['role' => 'KADEPUB',      'prefix' => 'kadepub',  'label' => 'Kadep UB'],
             'retur_menunggu_mngse'    => ['role' => 'MANAGERSE',    'prefix' => 'mngse',    'label' => 'Manager SE'],
             'retur_menunggu_kadepsc'  => ['role' => 'KADEPSC',      'prefix' => 'kadepsc',  'label' => 'Kadep SC'],
@@ -1912,8 +1912,8 @@ class C_ReturPenjualan extends CI_Controller
         if ($aksi === 'setuju') {
             $is_jagung = !empty($retur['is_jagung']);
             if ($st === 'retur_menunggu_mngacc') {
-                $new_status = 'retur_menunggu_koorsc';
-            } elseif ($st === 'retur_menunggu_koorsc') {
+                $new_status = 'retur_menunggu_mngsc';
+            } elseif ($st === 'retur_menunggu_mngsc') {
                 $new_status = $is_jagung ? 'retur_menunggu_kadepub' : 'retur_menunggu_mngse';
             } elseif ($st === 'retur_menunggu_kadepub') {
                 $new_status = 'retur_menunggu_mngse';

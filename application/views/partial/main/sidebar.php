@@ -429,7 +429,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'KOORSC', 'ADMINSC', 'KADEP'])) : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'MANAGERSC', 'ADMINSC', 'KADEP'])) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -464,7 +464,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMSTOCK', 'COLLECTION', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'])) : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMRETUR', 'COLLECTION', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'])) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">

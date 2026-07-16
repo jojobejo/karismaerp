@@ -24,7 +24,7 @@
                     <div class="col-sm-6">
                         <h1 class="m-0">
                             <i class="fas fa-boxes mr-2 text-info"></i>
-                            Admin Stock: Verifikasi <?= htmlspecialchars($retur['no_retur']) ?>
+                            Admin Retur: Verifikasi <?= htmlspecialchars($retur['no_retur']) ?>
                         </h1>
                     </div>
                     <div class="col-sm-6">
@@ -188,7 +188,7 @@
                         <div class="card shadow border-info" style="border-width:2px !important;">
                             <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
                                 <h3 class="card-title m-0">
-                                    <i class="fas fa-boxes mr-1"></i> Keputusan Admin Stock
+                                    <i class="fas fa-boxes mr-1"></i> Keputusan Admin Retur
                                 </h3>
                                 <button type="button" id="btn-edit-lock" class="btn btn-sm btn-warning text-dark">
                                     <i class="fas fa-edit"></i> Edit Data
@@ -219,7 +219,7 @@
                                             Catatan / Alasan
                                             <small class="text-muted font-weight-normal">(wajib jika ditolak)</small>
                                         </label>
-                                        <textarea class="form-control" name="catatan_admin_stock" id="catatanInput" rows="4"
+                                        <textarea class="form-control" name="catatan_admretur" id="catatanInput" rows="4"
                                                   placeholder="Tulis catatan atau alasan keputusan..."></textarea>
                                     </div>
 
