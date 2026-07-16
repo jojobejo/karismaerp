@@ -14,7 +14,10 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
     .jurnal-page .page-home-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #1788b8; color: #fff; }
     .jurnal-page .page-title { font-size: 30px; font-weight: 700; color: #34495e; margin: 0; }
     .jurnal-page .support-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .jurnal-page .report-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .jurnal-page .support-card-btn { width: 100%; min-height: 116px; text-align: left; border: 1px solid #d9e2ec; border-radius: 6px; background: #fff; padding: 14px; color: #1f2d3d; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+    .jurnal-page .report-card-link { display: block; text-decoration: none; }
+    .jurnal-page .report-card-link .support-card-btn { display: block; }
     .jurnal-page .support-card-btn:hover, .jurnal-page .support-card-btn:focus { border-color: #1788b8; box-shadow: 0 10px 22px rgba(23, 136, 184, .12); transform: translateY(-2px); outline: none; }
     .jurnal-page .support-card-icon { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: #fff; background: #1788b8; margin-bottom: 10px; }
     .jurnal-page .support-card-title { display: block; font-weight: 800; font-size: 17px; }
@@ -56,6 +59,7 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
     .jurnal-page .master-row-meta { font-size: 13px; color: #68778a; }
     @media (max-width: 991.98px) {
         .jurnal-page .support-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .jurnal-page .report-card-grid { grid-template-columns: 1fr; }
         .jurnal-page .form-grid { grid-template-columns: 1fr; }
         .jurnal-page .journal-panel { margin-top: 14px; }
         .jurnal-page .master-modal-grid { grid-template-columns: 1fr; }
@@ -109,6 +113,23 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
                                 <span class="support-card-desc"><?= html_escape($card['description']) ?></span>
                             </button>
                         <?php endforeach; ?>
+                    </div>
+
+                    <div class="report-card-grid">
+                        <a href="<?= base_url('jurnal/neraca') ?>" class="report-card-link">
+                            <span class="support-card-btn">
+                                <span class="support-card-icon"><i class="fas fa-balance-scale"></i></span>
+                                <span class="support-card-title">Neraca</span>
+                                <span class="support-card-desc">Sajian aset, kewajiban, ekuitas, dan laba/rugi berjalan untuk audit posisi keuangan.</span>
+                            </span>
+                        </a>
+                        <a href="<?= base_url('jurnal/laba-rugi') ?>" class="report-card-link">
+                            <span class="support-card-btn">
+                                <span class="support-card-icon"><i class="fas fa-chart-line"></i></span>
+                                <span class="support-card-title">Laba Rugi</span>
+                                <span class="support-card-desc">Sajian pendapatan, beban, laba kotor, laba operasional, dan laba bersih periode.</span>
+                            </span>
+                        </a>
                     </div>
 
                     <div class="row">
