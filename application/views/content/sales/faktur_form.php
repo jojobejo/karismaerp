@@ -90,6 +90,7 @@ $faktur_back_url = $is_admin_sc_context
 
             <form action="<?= base_url('sales_order/simpan_faktur/' . $so['id_so']) ?>" method="post"
                   id="formFaktur">
+                <input type="hidden" name="tax_mode" value="<?= htmlspecialchars($tax_mode ?? 'non_pajak') ?>">
 
                 <div class="row">
                     <!-- Kolom kiri: header faktur -->

@@ -1699,7 +1699,32 @@ class C_SalesOrder extends CI_Controller
 
         if (is_array($result) && isset($result['errors'])) {
             $this->session->set_flashdata('error', implode('<br>', $result['errors']));
-            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
+            $tax_mode = $this->input->post('tax_mode', true) ?: 'non_pajak';
+            $item_params = [];
+            if (!empty($post['id_so_detail']) && is_array($post['id_so_detail'])) {
+                foreach ($post['id_so_detail'] as $i => $id_so_detail) {
+                    $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+                    if (isset($post['qty_box_input'][$i]) || isset($post['qty_pcs_input'][$i])) {
+                        $qty_box_input = (float)($post['qty_box_input'][$i] ?? 0);
+                        $qty_pcs_input = (float)($post['qty_pcs_input'][$i] ?? 0);
+                        $qty = ($qty_box_input * $isi_per_box) + $qty_pcs_input;
+                    } else {
+                        $qty_input   = isset($post['qty_input'][$i])
+                            ? (float)$post['qty_input'][$i]
+                            : (float)($post['qty_faktur'][$i] ?? 0);
+                        $qty_mode    = strtolower(trim($post['qty_mode'][$i] ?? 'pcs'));
+                        $qty         = $qty_mode === 'box' ? ($qty_input * $isi_per_box) : $qty_input;
+                    }
+                    if ($qty > 0) {
+                        $item_params[] = 'item[]=' . $id_so_detail;
+                    }
+                }
+            }
+            $query_str = '?tax_mode=' . rawurlencode($tax_mode);
+            if (!empty($item_params)) {
+                $query_str .= '&' . implode('&', $item_params);
+            }
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so . $query_str);
             return;
         }
 

@@ -823,12 +823,21 @@
                     } else {
                         rows.forEach(function(r) {
                             const isDebit = parseFloat(r.debit || 0) > 0;
+                            let desc = r.keterangan || '';
+                            if (desc.indexOf('Faktur penjualan') !== -1) {
+                                desc = '-';
+                            } else if (!desc) {
+                                desc = header.keterangan || '-';
+                                if (desc.indexOf('Faktur penjualan') !== -1) {
+                                    desc = '-';
+                                }
+                            }
                             html += '<tr>' +
                                 '<td>' + escapeHtml(r.kode_rekening_display || r.kode_akun || '-') + '</td>' +
                                 '<td>' + escapeHtml(r.nama_akun || '-') + '</td>' +
                                 '<td class="text-right">' + (isDebit ? escapeHtml(formatMoney(r.debit)) : '') + '</td>' +
                                 '<td class="text-right">' + (!isDebit ? escapeHtml(formatMoney(r.kredit)) : '') + '</td>' +
-                                '<td>' + escapeHtml(r.keterangan || header.keterangan || '-') + '</td>' +
+                                '<td>' + escapeHtml(desc) + '</td>' +
                                 '</tr>';
                         });
                     }

@@ -343,7 +343,7 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
         </div>
 
         <div class="modal fade" id="modalSalesJournal" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <div class="modal-body">
                         <div class="zahir-detail-head">
