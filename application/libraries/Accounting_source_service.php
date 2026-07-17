@@ -38,20 +38,31 @@ class Accounting_source_service
 
         $totals = $this->CI->db->query(
             "SELECT COUNT(*) AS line_count,
-                    COALESCE(SUM(subtotal_after_disc), 0) AS amount,
-                    COALESCE(SUM(total_harga - subtotal_after_disc), 0) AS tax,
+                    COALESCE(SUM(subtotal_after_disc), 0) AS total_amount,
+                    COALESCE(MAX(pajak), 0) AS tax_rate,
                     COALESCE(SUM(qty * hrg_pokok), 0) AS cogs
              FROM tbso_faktur_detail
              WHERE id_faktur = ? AND no_faktur = ?",
             [(int)$header->id_faktur, $noFaktur]
         )->row();
-        if (!$totals || (int)$totals->line_count < 1 || bccomp((string)$totals->amount, '0', 4) <= 0) {
+        if (!$totals || (int)$totals->line_count < 1 || bccomp((string)$totals->total_amount, '0', 4) <= 0) {
             return $this->record_failure('SALES_INVOICE', [
                 'source_module' => 'SALES',
                 'source_type' => 'FAKTUR_PENJUALAN',
                 'source_id' => $noFaktur,
                 'source_no' => $noFaktur,
             ], 'Detail atau nilai faktur final belum valid.', ['SOURCE_AMOUNT_INVALID']);
+        }
+
+        $taxRate = (float)$totals->tax_rate;
+        $totalAmount = (float)$totals->total_amount;
+        if ($taxRate > 0) {
+            $divFactor = 1 + ($taxRate / 100);
+            $amount = round($totalAmount / $divFactor, 4);
+            $tax = round($totalAmount - $amount, 4);
+        } else {
+            $amount = $totalAmount;
+            $tax = 0.0000;
         }
 
         $base = [
@@ -66,11 +77,17 @@ class Accounting_source_service
             'keterangan' => 'Faktur penjualan ' . $noFaktur . ($kdDo !== '' ? ' / DO ' . $kdDo : ''),
         ];
 
+        $is_pajak = $this->CI->db->query(
+            "SELECT COUNT(*) AS count FROM tbso_faktur_detail WHERE id_faktur = ? AND kd_barang LIKE 'Q%'",
+            [(int)$header->id_faktur]
+        )->row()->count > 0;
+
         $invoice = $this->CI->accounting_service->post_auto('SALES_INVOICE', $base + [
             'idempotency_key' => 'SALES_INVOICE-FAKTUR-' . $noFaktur,
-            'amount' => $totals->amount,
-            'tax' => $totals->tax,
+            'amount' => $amount,
+            'tax' => $tax,
             'cogs' => '0.0000',
+            'is_pajak' => $is_pajak,
         ], $userId);
         if (!$invoice['success']) {
             return $invoice;

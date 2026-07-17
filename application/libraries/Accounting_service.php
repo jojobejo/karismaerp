@@ -1528,6 +1528,23 @@ class Accounting_service
 
     private function resolve_mapping($payload, $role, $side)
     {
+        $is_pajak = !empty($payload['is_pajak'])
+            || (isset($payload['tax_mode']) && $payload['tax_mode'] === 'pajak')
+            || (isset($payload['tax']) && (float)$payload['tax'] > 0);
+
+        if ($role === 'SALES_REVENUE') {
+            if ($is_pajak) {
+                return 307; // Q Penjualan BKP (410-11)
+            } else {
+                return 308; // Q Penjualan BKPS (410-12)
+            }
+        }
+        if ($role === 'VAT_OUTPUT') {
+            if ($is_pajak) {
+                return 280; // Q PPN K (210-24)
+            }
+        }
+
         $sourceModule = strtoupper(trim((string)($payload['source_module'] ?? '')));
         $sourceType = strtoupper(trim((string)($payload['source_type'] ?? '')));
         $event = strtoupper(trim((string)($payload['posting_event'] ?? '')));
