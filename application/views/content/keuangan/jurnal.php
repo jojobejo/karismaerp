@@ -57,6 +57,17 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
     .jurnal-page .master-row:hover, .jurnal-page .master-row.active { border-color: #1788b8; background: #edf8fc; }
     .jurnal-page .master-row-title { font-weight: 800; color: #1788b8; }
     .jurnal-page .master-row-meta { font-size: 13px; color: #68778a; }
+    .jurnal-page .sales-journal-panel { background: #fff; border: 1px solid #d9e2ec; border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
+    .jurnal-page .sales-journal-toolbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e6edf5; }
+    .jurnal-page .sales-journal-search { width: min(360px, 100%); }
+    .jurnal-page .zahir-table { width: 100%; margin: 0; }
+    .jurnal-page .zahir-table th { background: #1788b8; color: #fff; border-color: #1788b8; white-space: nowrap; }
+    .jurnal-page .zahir-table td { vertical-align: middle; background: #f1f3f5; border-top: 6px solid #fff; }
+    .jurnal-page .zahir-table tr:hover td { background: #d8eef8; cursor: pointer; }
+    .jurnal-page .zahir-table .money-cell { font-weight: 700; }
+    .jurnal-page .zahir-detail-head { display: flex; gap: 22px; align-items: center; font-size: 18px; font-weight: 800; color: #020617; border-bottom: 1px solid #111827; padding-bottom: 8px; margin-bottom: 8px; }
+    .jurnal-page .zahir-detail-table td { border: 0; padding: 7px 8px; background: #f1f3f5; }
+    .jurnal-page .zahir-total-row { border-top: 1px solid #111827; margin-top: 8px; padding-top: 8px; font-weight: 800; }
     @media (max-width: 991.98px) {
         .jurnal-page .support-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .jurnal-page .report-card-grid { grid-template-columns: 1fr; }
@@ -64,6 +75,7 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
         .jurnal-page .journal-panel { margin-top: 14px; }
         .jurnal-page .master-modal-grid { grid-template-columns: 1fr; }
         .jurnal-page .list-toolbar { grid-template-columns: 1fr; }
+        .jurnal-page .sales-journal-toolbar { align-items: stretch; flex-direction: column; }
     }
 </style>
 
@@ -104,6 +116,34 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
                             Jalankan SQL `docs/database/accounting_jurnal_master_options_20260713.sql` agar Saldo Normal dan Tipe Kontrol dapat dikelola via CRUD.
                         </div>
                     <?php endif; ?>
+
+                    <div class="sales-journal-panel">
+                        <div class="panel-heading">
+                            <span>Daftar Jurnal Penjualan</span>
+                            <small id="salesJournalCount">0 data</small>
+                        </div>
+                        <div class="sales-journal-toolbar">
+                            <div class="text-muted">Klik baris untuk melihat jurnal debit/kredit.</div>
+                            <input type="text" class="form-control sales-journal-search" id="salesJournalSearch" placeholder="Search referensi, SO, pelanggan">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table zahir-table">
+                                <thead>
+                                    <tr>
+                                        <th>Referensi</th>
+                                        <th>Tanggal</th>
+                                        <th>No SO</th>
+                                        <th>Pelanggan</th>
+                                        <th>Kurs</th>
+                                        <th class="text-right">Nilai</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesJournalRows">
+                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal penjualan...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                     <div class="support-card-grid">
                         <?php foreach ($supportCards as $card) : ?>
@@ -318,6 +358,38 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
                                 </div>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="modalSalesJournal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-body">
+                        <div class="zahir-detail-head">
+                            <span id="salesJournalRef">SJ</span>
+                            <span id="salesJournalDate">-</span>
+                            <span id="salesJournalTitle">Penjualan</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm zahir-detail-table">
+                                <tbody id="salesJournalDetailRows">
+                                    <tr><td class="text-muted">Memuat detail jurnal...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="row zahir-total-row">
+                            <div class="col-sm-6">Total Debit = <span id="salesJournalDebit">Rp 0</span></div>
+                            <div class="col-sm-6 text-sm-right">Total Kredit = <span id="salesJournalKredit">Rp 0</span></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="text-muted">Diinput oleh : <span id="salesJournalUser">-</span></div>
+                            <div>
+                                <button type="button" class="btn btn-jurnal-primary mr-2" onclick="window.print()">Print</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

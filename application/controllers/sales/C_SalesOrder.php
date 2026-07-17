@@ -1692,13 +1692,39 @@ class C_SalesOrder extends CI_Controller
             'tempo'                 => $jtempo,
             'catatan'               => $post['catatan'] ?? null,
             'create_by'             => $this->_getUsername(),
+            'created_by_id'         => (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0),
         ];
 
         $result = $this->M_SalesOrder->buat_faktur($id_so, $faktur_header, $faktur_items);
 
         if (is_array($result) && isset($result['errors'])) {
             $this->session->set_flashdata('error', implode('<br>', $result['errors']));
-            redirect('sales_order/admin_sc/form_faktur/' . $id_so);
+            $tax_mode = $this->input->post('tax_mode', true) ?: 'non_pajak';
+            $item_params = [];
+            if (!empty($post['id_so_detail']) && is_array($post['id_so_detail'])) {
+                foreach ($post['id_so_detail'] as $i => $id_so_detail) {
+                    $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+                    if (isset($post['qty_box_input'][$i]) || isset($post['qty_pcs_input'][$i])) {
+                        $qty_box_input = (float)($post['qty_box_input'][$i] ?? 0);
+                        $qty_pcs_input = (float)($post['qty_pcs_input'][$i] ?? 0);
+                        $qty = ($qty_box_input * $isi_per_box) + $qty_pcs_input;
+                    } else {
+                        $qty_input   = isset($post['qty_input'][$i])
+                            ? (float)$post['qty_input'][$i]
+                            : (float)($post['qty_faktur'][$i] ?? 0);
+                        $qty_mode    = strtolower(trim($post['qty_mode'][$i] ?? 'pcs'));
+                        $qty         = $qty_mode === 'box' ? ($qty_input * $isi_per_box) : $qty_input;
+                    }
+                    if ($qty > 0) {
+                        $item_params[] = 'item[]=' . $id_so_detail;
+                    }
+                }
+            }
+            $query_str = '?tax_mode=' . rawurlencode($tax_mode);
+            if (!empty($item_params)) {
+                $query_str .= '&' . implode('&', $item_params);
+            }
+            redirect('sales_order/admin_sc/form_faktur/' . $id_so . $query_str);
             return;
         }
 
@@ -1724,15 +1750,20 @@ class C_SalesOrder extends CI_Controller
                     . (int)$auto_do['total_faktur'] . '</b> faktur rute terkait.';
             }
 
+            $journal_message = '';
+            if (is_array($result) && !empty($result['journal']['sales_invoice']['nomor_jurnal'])) {
+                $journal_message = ' Jurnal <b>' . htmlspecialchars($result['journal']['sales_invoice']['nomor_jurnal']) . '</b> otomatis dibuat.';
+            }
+
             if (($so_fresh['status'] ?? '') === 'completed') {
                 $this->session->set_flashdata('success',
                     'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. '
                     . 'Seluruh item pada SO <b>' . $so['no_so'] . '</b> sudah terpenuhi. Status SO: <b>Completed</b>.'
-                    . $auto_do_message);
+                    . $auto_do_message . $journal_message);
             } else {
                 $this->session->set_flashdata('success',
                     'Faktur <b>' . $no_faktur . '</b> berhasil dibuat. SO masih memiliki barang yang belum terkirim.'
-                    . $auto_do_message);
+                    . $auto_do_message . $journal_message);
             }
 
             if ($this->_isAdminScOnlyUser()) {
@@ -2496,7 +2527,7 @@ class C_SalesOrder extends CI_Controller
     {
         $details = [];
         if (empty($post['kd_barang']) || !is_array($post['kd_barang'])) return $details;
-        $allowed_harga_approval = ['direksi', 'koor sc', 'kadep keu & sc'];
+        $allowed_harga_approval = ['direksi', 'manager sc', 'kadep keu & sc'];
 
         foreach ($post['kd_barang'] as $i => $kd) {
             if (empty($kd)) continue;
@@ -2641,7 +2672,7 @@ class C_SalesOrder extends CI_Controller
 
             $subtotal_before_disc = $hrg * $qty;
             $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
-            $total_harga          = $subtotal_after_disc   * (1 + $pajak / 100);
+            $total_harga          = $subtotal_after_disc;
 
             $items[] = [
                 'id_so_detail'         => $id_so_detail,

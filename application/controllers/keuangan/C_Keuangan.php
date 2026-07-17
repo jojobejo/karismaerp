@@ -1533,6 +1533,43 @@ class C_Keuangan extends CI_Controller
         ]);
     }
 
+    public function jurnal_sales_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        if (!$this->M_Keuangan->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal penjualan berhasil dimuat.', [
+            'rows' => $this->M_Keuangan->accounting_sales_journal_rows($search, 150),
+        ]);
+    }
+
+    public function jurnal_sales_detail()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_jurnal', true);
+        $detail = $id > 0 ? $this->M_Keuangan->accounting_sales_journal_detail($id) : null;
+        if (!$detail) {
+            return $this->accounting_ajax_response(false, 'Jurnal penjualan tidak ditemukan.', null, [
+                'code' => 'JOURNAL_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Detail jurnal penjualan berhasil dimuat.', $detail);
+    }
+
     public function jurnal_store()
     {
         if (!$this->require_jurnal_access(true)) {

@@ -65,6 +65,25 @@ if (!function_exists('hitung_durasi')) {
 
         <section class="content">
             <div class="container-fluid">
+                <?php
+                $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+                $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
+                $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
+                $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
+                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
+                $st = $retur['status_retur'];
+
+                $show_approval_card = false;
+                $approval_role_label = '';
+
+                $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
+                $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
+                $is_mngacc      = in_array($jobdesk, ['MANAGERACC','ADMIN']);
+                $is_mngse       = in_array($jobdesk, ['MANAGERSE','ADMIN']);
+                $is_dirop       = in_array($jobdesk, ['DIREKTUROP','ADMIN']);
+                $is_dirut       = in_array($jobdesk, ['DIREKTURUTAMA','ADMIN']);
+                $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                ?>
 
                 <?php foreach (['success' => 'success', 'error' => 'danger'] as $k => $c): ?>
                     <?php if ($msg = $this->session->flashdata($k)): ?>
@@ -87,7 +106,14 @@ if (!function_exists('hitung_durasi')) {
                                 </div>
                                 <?php
                                 $badge_map = [
-                                    'menunggu_verifikasi' => ['warning', 'Menunggu Admin Stock'],
+                                    'retur_menunggu_kadepub' => ['info',    'Menunggu Kadep UB'],
+                                    'retur_menunggu_mngacc'  => ['info',    'Menunggu Manager Account'],
+                                    'retur_menunggu_mngsc'  => ['info',    'Menunggu Manager SC'],
+                                    'retur_menunggu_mngse'   => ['info',    'Menunggu Manager SE'],
+                                    'retur_menunggu_kadepsc' => ['info',    'Menunggu Kadep SC'],
+                                    'retur_menunggu_dirop'   => ['info',    'Menunggu Dirop'],
+                                    'retur_menunggu_dirut'   => ['info',    'Menunggu Dirut'],
+                                    'menunggu_verifikasi' => ['warning', 'Menunggu Admin Retur'],
                                     'menunggu_collection' => ['info',    'Menunggu Collection'],
                                     'menunggu_kasir'      => ['primary', 'Menunggu Kasir'],
                                     'selesai'             => ['success', 'Selesai'],
@@ -189,18 +215,10 @@ if (!function_exists('hitung_durasi')) {
                                     <div class="mt-2 small text-info"><strong>No. Faktur Potong:</strong> <?= htmlspecialchars($retur['no_faktur_potong']) ?></div>
                                 <?php endif; ?>
 
-                                <?php
-                                $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-                                $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
-                                $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
-                                $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
-                                $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
-                                $st = $retur['status_retur'];
-                                ?>
                                 <div class="mt-3 d-flex flex-wrap gap-2">
-                                    <?php if ($st === 'menunggu_verifikasi' && $is_admin_stock): ?>
+                                    <?php if ($st === 'menunggu_verifikasi' && $is_admretur): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/verifikasi/' . $retur['id_retur']) ?>" class="btn btn-warning mr-2">
-                                            <i class="fas fa-clipboard-check"></i> Verifikasi (Admin Stock)
+                                            <i class="fas fa-clipboard-check"></i> Verifikasi (Admin Retur)
                                         </a>
                                     <?php elseif ($st === 'menunggu_collection' && $is_collection): ?>
                                         <a href="<?= base_url('retur_penjualan/retur/collection/' . $retur['id_retur']) ?>" class="btn btn-info mr-2">
@@ -215,8 +233,20 @@ if (!function_exists('hitung_durasi')) {
                                             <i class="fas fa-edit"></i> Edit Retur
                                         </a>
                                         <a href="<?= base_url('retur_penjualan/retur/submit/' . $retur['id_retur']) ?>" class="btn btn-success mr-2"
-                                           onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Stock?')">
+                                           onclick="return confirm('Ajukan kembali Retur Penjualan ini ke Admin Retur?')">
                                             <i class="fas fa-paper-plane"></i> Ajukan Kembali
+                                        </a>
+                                    <?php elseif (
+                                        ($st === 'retur_menunggu_mngacc' && $is_mngacc) ||
+                                        ($st === 'retur_menunggu_mngsc' && $is_koor) ||
+                                        ($st === 'retur_menunggu_kadepub' && $is_kadepub) ||
+                                        ($st === 'retur_menunggu_mngse' && $is_mngse) ||
+                                        ($st === 'retur_menunggu_kadepsc' && $is_kadep) ||
+                                        ($st === 'retur_menunggu_dirop' && $is_dirop) ||
+                                        ($st === 'retur_menunggu_dirut' && $is_dirut)
+                                    ): ?>
+                                        <a href="<?= base_url('retur_penjualan/retur/approve/' . $retur['id_retur']) ?>" class="btn btn-warning mr-2">
+                                            <i class="fas fa-check-circle"></i> Persetujuan Retur
                                         </a>
                                     <?php endif; ?>
                                     <a href="<?= base_url('retur_penjualan/retur/print/' . $retur['id_retur']) ?>" target="_blank" class="btn btn-secondary mr-2">
@@ -232,18 +262,53 @@ if (!function_exists('hitung_durasi')) {
 
                     <!-- TIMELINE SIDEBAR -->
                     <div class="col-lg-4">
+                        <?php if ($show_approval_card): ?>
+                            <div class="card shadow border-warning mb-3">
+                                <div class="card-header bg-warning text-dark py-2">
+                                    <h3 class="card-title font-weight-bold" style="font-size:1.05rem;"><i class="fas fa-check-circle mr-1"></i> Persetujuan Retur</h3>
+                                </div>
+                                <div class="card-body p-3">
+                                    <div class="alert alert-warning py-1 px-2 small mb-2">
+                                        Menunggu persetujuan Anda sebagai <strong><?= $approval_role_label ?></strong>.
+                                    </div>
+                                    <form action="<?= base_url('retur_penjualan/retur/approve_simpan/' . $retur['id_retur']) ?>" method="post">
+                                        <div class="form-group mb-2">
+                                            <label class="small font-weight-bold mb-1">Catatan / Rekomendasi</label>
+                                            <textarea class="form-control form-control-sm" name="catatan" rows="3" placeholder="Masukkan catatan..."></textarea>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <button type="submit" name="aksi" value="tolak" class="btn btn-danger btn-sm px-3" onclick="return confirm('Tolak Retur Penjualan ini?')">
+                                                <i class="fas fa-times mr-1"></i> Tolak
+                                            </button>
+                                            <button type="submit" name="aksi" value="setuju" class="btn btn-success btn-sm px-3" onclick="return confirm('Setujui Retur Penjualan ini?')">
+                                                <i class="fas fa-check mr-1"></i> Setuju
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
                         <div class="card shadow">
                             <div class="card-header bg-dark text-white py-2">
                                 <h3 class="card-title"><i class="fas fa-tasks mr-1"></i> Status Proses Retur</h3>
                             </div>
                             <div class="card-body p-3">
                                 <?php
-                                $st = $retur['status_retur'];
                                 $total_duration = '';
+                                $rejected_at_field = 'admretur_at_retur';
+                                if ($st === 'ditolak') {
+                                    foreach (['kadepub', 'mngacc', 'mngsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
+                                        if (!empty($retur[$pfx . '_at_retur'])) {
+                                            $rejected_at_field = $pfx . '_at_retur';
+                                        }
+                                    }
+                                }
+
                                 if ($st === 'selesai' && !empty($retur['kasir_at'])) {
                                     $total_duration = 'Total Waktu (Selesai): <strong>' . hitung_durasi($retur['create_at_retur'], $retur['kasir_at']) . '</strong>';
-                                } elseif ($st === 'ditolak' && !empty($retur['admin_stock_at_retur'])) {
-                                    $total_duration = 'Total Waktu (Sampai Ditolak): <strong>' . hitung_durasi($retur['create_at_retur'], $retur['admin_stock_at_retur']) . '</strong>';
+                                } elseif ($st === 'ditolak' && !empty($retur[$rejected_at_field])) {
+                                    $total_duration = 'Total Waktu (Sampai Ditolak): <strong>' . hitung_durasi($retur['create_at_retur'], $retur[$rejected_at_field]) . '</strong>';
                                 } else {
                                     $total_duration = 'Total Waktu (Berjalan): <strong>' . hitung_durasi($retur['create_at_retur'], date('Y-m-d H:i:s')) . '</strong>';
                                 }
@@ -255,11 +320,135 @@ if (!function_exists('hitung_durasi')) {
                                 <?php endif; ?>
                                 <?php
                                 $steps_retur = [
-                                    ['label' => 'Dibuat ADMLPB2',   'icon' => 'file-alt',       'done_statuses' => ['menunggu_verifikasi','menunggu_collection','menunggu_kasir','selesai','ditolak'], 'by' => $retur['create_by_retur'],     'at' => $retur['create_at_retur'],     'note' => $retur['catatan_logistik'] ?? null, 'prev_at'=>null],
-                                    ['label' => 'Verifikasi Admin Stock','icon' => 'clipboard-check','done_statuses' => ['menunggu_collection','menunggu_kasir','selesai'],                             'by' => $retur['admin_stock_by_retur'],'at' => $retur['admin_stock_at_retur'],'note' => $retur['catatan_admin_stock'] ?? null, 'prev_at'=>'create_at_retur'],
-                                    ['label' => 'Proses Collection', 'icon' => 'handshake',      'done_statuses' => ['menunggu_kasir','selesai'],                                                       'by' => $retur['collection_by'] ?? null,'at' => $retur['collection_at'] ?? null,'note' => $retur['catatan_collection'] ?? null, 'prev_at'=>'admin_stock_at_retur'],
-                                    ['label' => 'Kasir Selesai',    'icon' => 'cash-register',  'done_statuses' => ['selesai'],                                                                        'by' => $retur['kasir_by'] ?? null,    'at' => $retur['kasir_at'] ?? null,    'note' => $retur['catatan_kasir'] ?? null, 'prev_at'=>'collection_at'],
+                                    [
+                                        'label' => 'Dibuat ADMLPB2',
+                                        'icon' => 'file-alt',
+                                        'done_statuses' => ['menunggu_verifikasi', 'retur_menunggu_mngacc', 'retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai', 'ditolak'],
+                                        'by' => $retur['create_by_retur'],
+                                        'at' => $retur['create_at_retur'],
+                                        'note' => $retur['catatan_logistik'] ?? null,
+                                        'prev_at' => null
+                                    ],
+                                    [
+                                        'label' => 'Verifikasi Admin Retur',
+                                        'icon' => 'clipboard-check',
+                                        'done_statuses' => ['retur_menunggu_mngacc', 'retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'by' => $retur['admretur_by_retur'],
+                                        'at' => $retur['admretur_at_retur'],
+                                        'note' => $retur['catatan_admretur'] ?? null,
+                                        'prev_at' => 'create_at_retur'
+                                    ],
+                                    [
+                                        'label' => 'Persetujuan Manager Account',
+                                        'icon' => 'user-check',
+                                        'done_statuses' => ['retur_menunggu_mngsc', 'retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'by' => $retur['mngacc_by_retur'] ?? null,
+                                        'at' => $retur['mngacc_at_retur'] ?? null,
+                                        'note' => $retur['catatan_mngacc_retur'] ?? null,
+                                        'prev_at' => 'admretur_at_retur'
+                                    ],
+                                    [
+                                        'label' => 'Persetujuan Manager SC',
+                                        'icon' => 'user-friends',
+                                        'done_statuses' => ['retur_menunggu_kadepub', 'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'by' => $retur['mngsc_by_retur'] ?? null,
+                                        'at' => $retur['mngsc_at_retur'] ?? null,
+                                        'note' => $retur['catatan_mngsc_retur'] ?? null,
+                                        'prev_at' => 'mngacc_at_retur'
+                                    ],
                                 ];
+
+                                if (!empty($retur['is_jagung'])) {
+                                    $steps_retur[] = [
+                                        'label' => 'Persetujuan Kadep UB',
+                                        'icon' => 'user-shield',
+                                        'done_statuses' => ['retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                        'by' => $retur['kadepub_by_retur'] ?? null,
+                                        'at' => $retur['kadepub_at_retur'] ?? null,
+                                        'note' => $retur['catatan_kadepub_retur'] ?? null,
+                                        'prev_at' => 'mngsc_at_retur'
+                                    ];
+                                }
+
+                                $prev_at_mngse = !empty($retur['is_jagung']) ? 'kadepub_at_retur' : 'mngsc_at_retur';
+
+                                $steps_retur[] = [
+                                    'label' => 'Persetujuan Manager SE',
+                                    'icon' => 'user-tag',
+                                    'done_statuses' => ['retur_menunggu_kadepsc', 'retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                    'by' => $retur['mngse_by_retur'] ?? null,
+                                    'at' => $retur['mngse_at_retur'] ?? null,
+                                    'note' => $retur['catatan_mngse_retur'] ?? null,
+                                    'prev_at' => $prev_at_mngse
+                                ];
+
+                                $steps_retur[] = [
+                                    'label' => 'Persetujuan Kadep SC',
+                                    'icon' => 'user-tie',
+                                    'done_statuses' => ['retur_menunggu_dirop', 'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                    'by' => $retur['kadepsc_by_retur'] ?? null,
+                                    'at' => $retur['kadepsc_at_retur'] ?? null,
+                                    'note' => $retur['catatan_kadepsc_retur'] ?? null,
+                                    'prev_at' => 'mngse_at_retur'
+                                ];
+
+                                $steps_retur[] = [
+                                    'label' => 'Persetujuan Direktur Operasional',
+                                    'icon' => 'user-cog',
+                                    'done_statuses' => ['retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                    'by' => $retur['dirop_by_retur'] ?? null,
+                                    'at' => $retur['dirop_at_retur'] ?? null,
+                                    'note' => $retur['catatan_dirop_retur'] ?? null,
+                                    'prev_at' => 'kadepsc_at_retur'
+                                ];
+
+                                $steps_retur[] = [
+                                    'label' => 'Persetujuan Direktur Utama',
+                                    'icon' => 'user-check',
+                                    'done_statuses' => ['menunggu_collection', 'menunggu_kasir', 'selesai'],
+                                    'by' => $retur['dirut_by_retur'] ?? null,
+                                    'at' => $retur['dirut_at_retur'] ?? null,
+                                    'note' => $retur['catatan_dirut_retur'] ?? null,
+                                    'prev_at' => 'dirop_at_retur'
+                                ];
+
+                                $steps_retur[] = [
+                                    'label' => 'Proses Collection',
+                                    'icon' => 'handshake',
+                                    'done_statuses' => ['menunggu_kasir', 'selesai'],
+                                    'by' => $retur['collection_by'] ?? null,
+                                    'at' => $retur['collection_at'] ?? null,
+                                    'note' => $retur['catatan_collection'] ?? null,
+                                    'prev_at' => 'dirut_at_retur'
+                                ];
+
+                                $steps_retur[] = [
+                                    'label' => 'Kasir Selesai',
+                                    'icon' => 'cash-register',
+                                    'done_statuses' => ['selesai'],
+                                    'by' => $retur['kasir_by'] ?? null,
+                                    'at' => $retur['kasir_at'] ?? null,
+                                    'note' => $retur['catatan_kasir'] ?? null,
+                                    'prev_at' => 'collection_at'
+                                ];
+
+                                $rejected_by = '';
+                                $rejected_at = '';
+                                $rejected_note = '';
+                                if ($st === 'ditolak') {
+                                    if (!empty($retur['admretur_by_retur']) && strpos($retur['update_by_retur'], $retur['admretur_by_retur']) !== false) {
+                                        $rejected_by = $retur['admretur_by_retur'];
+                                        $rejected_at = $retur['admretur_at_retur'];
+                                        $rejected_note = $retur['catatan_admretur'];
+                                    }
+                                    foreach (['kadepub', 'mngacc', 'mngsc', 'mngse', 'kadepsc', 'dirop', 'dirut'] as $pfx) {
+                                        if (!empty($retur[$pfx . '_by_retur']) && !empty($retur['catatan_' . $pfx . '_retur'])) {
+                                            $rejected_by = $retur[$pfx . '_by_retur'];
+                                            $rejected_at = $retur[$pfx . '_at_retur'];
+                                            $rejected_note = $retur['catatan_' . $pfx . '_retur'];
+                                        }
+                                    }
+                                }
                                 ?>
                                 <div class="timeline-retur">
                                     <?php foreach ($steps_retur as $step):
@@ -299,14 +488,14 @@ if (!function_exists('hitung_durasi')) {
                                     <div class="alert alert-danger py-2 small mt-2">
                                         <i class="fas fa-times-circle mr-1"></i>
                                         <strong>Retur Ditolak.</strong>
-                                        <?php if (!empty($retur['admin_stock_by_retur'])): ?>
-                                            <br>Ditolak oleh: <strong><?= htmlspecialchars($retur['admin_stock_by_retur']) ?></strong>
-                                            <?php if (!empty($retur['admin_stock_at_retur'])): ?>
-                                                &mdash; <?= date('d/m/Y H:i', strtotime($retur['admin_stock_at_retur'])) ?>
+                                        <?php if (!empty($rejected_by)): ?>
+                                            <br>Ditolak oleh: <strong><?= htmlspecialchars($rejected_by) ?></strong>
+                                            <?php if (!empty($rejected_at)): ?>
+                                                &mdash; <?= date('d/m/Y H:i', strtotime($rejected_at)) ?>
                                             <?php endif; ?>
                                         <?php endif; ?>
-                                        <?php if ($retur['catatan_admin_stock']): ?>
-                                            <br>Catatan: <em>"<?= htmlspecialchars($retur['catatan_admin_stock']) ?>"</em>
+                                        <?php if ($rejected_note): ?>
+                                            <br>Catatan: <em>"<?= htmlspecialchars($rejected_note) ?>"</em>
                                         <?php endif; ?>
                                     </div>
                                 <?php endif; ?>

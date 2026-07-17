@@ -624,13 +624,8 @@ class M_SalesOrder extends CI_Model
                 id_faktur,
                 COUNT(*) AS total_barang,
                 COALESCE(SUM(qty), 0) AS total_qty,
-                COALESCE(SUM(subtotal_after_disc), 0) AS total_nilai_faktur,
-                COALESCE(SUM(
-                    CASE
-                        WHEN subtotal_after_disc > 0 THEN subtotal_after_disc * (COALESCE(pajak, 0) / 100)
-                        ELSE (qty * hrg_satuan * (1 - (COALESCE(disc, 0) / 100))) * (COALESCE(pajak, 0) / 100)
-                    END
-                ), 0) AS total_pajak,
+                COALESCE(SUM(total_harga / (1 + COALESCE(pajak, 0) / 100)), 0) AS total_nilai_faktur,
+                COALESCE(SUM(total_harga - (total_harga / (1 + COALESCE(pajak, 0) / 100))), 0) AS total_pajak,
                 COALESCE(SUM(total_harga), 0) AS grand_total
             FROM tbso_faktur_detail
             GROUP BY id_faktur
@@ -1007,7 +1002,7 @@ class M_SalesOrder extends CI_Model
         $this->db->set('hrg_satuan', $harga);
         $this->db->set('subtotal_before_disc', 'qty * ' . $harga, false);
         $this->db->set('subtotal_after_disc', '(qty * ' . $harga . ') * (1 - (' . $disc . ' / 100))', false);
-        $this->db->set('total_harga', '((qty * ' . $harga . ') * (1 - (' . $disc . ' / 100))) * (1 + (' . $pajak . ' / 100))', false);
+        $this->db->set('total_harga', '((qty * ' . $harga . ') * (1 - (' . $disc . ' / 100)))', false);
         if ($this->db->field_exists('update_by', 'tbso_sales_order_detail')) {
             $this->db->set('update_by', $update_by);
         }
@@ -1700,7 +1695,7 @@ class M_SalesOrder extends CI_Model
             $this->db->set('pajak', (float)($item['pajak'] ?? 0));
             $this->db->set('subtotal_before_disc', 'qty * ' . (float)($item['hrg_satuan'] ?? 0), false);
             $this->db->set('subtotal_after_disc', '(qty * ' . (float)($item['hrg_satuan'] ?? 0) . ') * (1 - (' . (float)($item['disc'] ?? 0) . ' / 100))', false);
-            $this->db->set('total_harga', '((qty * ' . (float)($item['hrg_satuan'] ?? 0) . ') * (1 - (' . (float)($item['disc'] ?? 0) . ' / 100))) * (1 + (' . (float)($item['pajak'] ?? 0) . ' / 100))', false);
+            $this->db->set('total_harga', '((qty * ' . (float)($item['hrg_satuan'] ?? 0) . ') * (1 - (' . (float)($item['disc'] ?? 0) . ' / 100)))', false);
             $this->db->update('tbso_sales_order_detail');
         }
 
@@ -1724,13 +1719,49 @@ class M_SalesOrder extends CI_Model
             'ppn_keluar'     => $jurnal_ppn_keluar,
             'created_at'     => date('Y-m-d H:i:s')
         ];
-        $this->db->insert('tbso_faktur_jurnal', $fj);
+        if ($this->db->table_exists('tbso_faktur_jurnal')) {
+            $this->db->insert('tbso_faktur_jurnal', $fj);
+        }
+
+        if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            $this->load->library('Accounting_source_service');
+            $journal = $this->accounting_source_service->post_sales_invoice(
+                $no_faktur,
+                '',
+                (int)($faktur_header['created_by_id'] ?? 0) ?: null,
+                false
+            );
+
+            if (empty($journal['success'])) {
+                $this->db->trans_rollback();
+                return [
+                    'errors' => [
+                        'Faktur batal disimpan karena jurnal otomatis gagal: '
+                        . ($journal['message'] ?? 'Posting jurnal gagal.')
+                    ],
+                ];
+            }
+        } else {
+            $this->db->trans_rollback();
+            return [
+                'errors' => [
+                    'Faktur batal disimpan karena schema jurnal accounting belum tersedia.'
+                ],
+            ];
+        }
 
         // ── Cek apakah semua outstanding = 0 → Completed ────────────
         $this->_cek_dan_complete_so($id_so);
 
         $this->db->trans_complete();
-        return $this->db->trans_status() ? $id_faktur : false;
+        if (!$this->db->trans_status()) {
+            return false;
+        }
+
+        return [
+            'id_faktur' => $id_faktur,
+            'journal' => $journal['data'] ?? null,
+        ];
     }
 
     /**
@@ -2345,8 +2376,7 @@ class M_SalesOrder extends CI_Model
                     $subtotal_before_disc = $qty_allocated * (float)$pd['hrg_satuan'];
                     $subtotal_after_disc  = $subtotal_before_disc * (1 - ((float)($pd['disc'] ?? 0) / 100));
                     $tax_rate             = (float)($pd['pajak'] ?? 0);
-                    $tax_value            = $subtotal_after_disc * ($tax_rate / 100);
-                    $total_harga          = $subtotal_after_disc + $tax_value;
+                    $total_harga          = $subtotal_after_disc;
 
                     $fd = [
                         'id_faktur'            => $child_id_faktur,

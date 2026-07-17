@@ -22,16 +22,22 @@
     }
     .table-retur th {
         background: #f8f9fa;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 600;
         vertical-align: middle;
         border: 1px solid #dee2e6;
         text-align: center;
+        padding: 8px !important;
     }
     .table-retur td {
-        font-size: 12px;
+        font-size: 14px;
         vertical-align: middle;
         border: 1px solid #dee2e6;
+        padding: 6px 8px !important;
+    }
+    .table-retur .form-control {
+        font-size: 14px;
+        height: 34px;
     }
     .keterangan-cell {
         min-width: 260px;
@@ -79,18 +85,18 @@
     /* Select2 di dalam tabel */
     .select2-container { width: 100% !important; }
     .select2-container .select2-selection--single {
-        height: 31px;
-        font-size: 12px;
+        height: 34px;
+        font-size: 14px;
         border: 1px solid #ced4da;
         border-radius: 3px;
     }
     .select2-container .select2-selection--single .select2-selection__rendered {
-        line-height: 29px;
+        line-height: 32px;
         padding-left: 8px;
-        font-size: 12px;
+        font-size: 14px;
     }
     .select2-container .select2-selection--single .select2-selection__arrow {
-        height: 29px;
+        height: 32px;
     }
 </style>
 
@@ -156,38 +162,44 @@
                         </div>
 
                         <div class="card-body">
-                            <!-- INFO HEADER -->
-                            <div class="row mb-3">
-                                <div class="col-md-3">
-                                    <label class="form-label-sm">Tanggal <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control form-control-sm" name="tanggal"
-                                           id="tanggal" value="<?= $is_edit ? $spr['tanggal'] : date('Y-m-d') ?>" required>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label-sm">Tipe Retur <span class="text-danger">*</span></label>
-                                    <select class="form-control form-control-sm" name="tipe_retur" id="tipe_retur" required>
-                                        <option value="biasa" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'biasa') ? 'selected' : '' ?>>Retur (Refund/Potong Faktur)</option>
-                                        <option value="replace" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'replace') ? 'selected' : '' ?>>Replace (Ganti Barang)</option>
-                                        <option value="service" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'service') ? 'selected' : '' ?>>Service (Servis Barang)</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
-                                    <select class="form-control form-control-sm" name="kd_customer" id="kd_customer" required>
-                                        <option value="">-- Pilih Customer --</option>
-                                        <?php foreach ($customers as $c): ?>
-                                            <option value="<?= htmlspecialchars($c['kd_customer']) ?>"
-                                                    <?= ($is_edit && $spr['kd_customer'] == $c['kd_customer']) ? 'selected' : '' ?>
-                                                    data-nama="<?= htmlspecialchars($c['nama_customer']) ?>"
-                                                    data-alamat="<?= htmlspecialchars($c['alamat_kios'] ?? '') ?>"
-                                                    data-sales="<?= htmlspecialchars($c['nama_sales'] ?? '') ?>">
-                                                <?= htmlspecialchars($c['kd_customer'] . ' - ' . $c['nama_customer']) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
-                                </div>
-                            </div>
+                             <!-- INFO HEADER -->
+                             <div class="row mb-3">
+                                 <div class="col-md-3">
+                                     <label class="form-label-sm">Tanggal <span class="text-danger">*</span></label>
+                                     <input type="date" class="form-control form-control-sm" name="tanggal"
+                                            id="tanggal" value="<?= $is_edit ? $spr['tanggal'] : date('Y-m-d') ?>" required>
+                                 </div>
+                                 <div class="col-md-3">
+                                     <label class="form-label-sm">Tipe Retur <span class="text-danger">*</span></label>
+                                     <select class="form-control form-control-sm" name="tipe_retur" id="tipe_retur" required>
+                                         <option value="biasa" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'biasa') ? 'selected' : '' ?>>Retur (Refund/Potong Faktur)</option>
+                                         <option value="replace" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'replace') ? 'selected' : '' ?>>Replace (Ganti Barang)</option>
+                                         <option value="service" <?= ($is_edit && ($spr['tipe_retur'] ?? 'biasa') === 'service') ? 'selected' : '' ?>>Service (Servis Barang)</option>
+                                     </select>
+                                 </div>
+                                 <div class="col-md-2 d-flex align-items-center" style="margin-top: 24px;">
+                                     <div class="custom-control custom-checkbox">
+                                         <input type="checkbox" class="custom-control-input" name="is_jagung" id="is_jagung" value="1" <?= ($is_edit && !empty($spr['is_jagung'])) ? 'checked' : '' ?>>
+                                         <label class="custom-control-label font-weight-bold text-success" for="is_jagung">Barang Jagung</label>
+                                     </div>
+                                 </div>
+                                 <div class="col-md-4">
+                                     <label class="form-label-sm">Nama Customer <span class="text-danger">*</span></label>
+                                     <select class="form-control form-control-sm" name="kd_customer" id="kd_customer" required>
+                                         <option value="">-- Pilih Customer --</option>
+                                         <?php foreach ($customers as $c): ?>
+                                             <option value="<?= htmlspecialchars($c['kd_customer']) ?>"
+                                                     <?= ($is_edit && $spr['kd_customer'] == $c['kd_customer']) ? 'selected' : '' ?>
+                                                     data-nama="<?= htmlspecialchars($c['nama_customer']) ?>"
+                                                     data-alamat="<?= htmlspecialchars($c['alamat_kios'] ?? '') ?>"
+                                                     data-sales="<?= htmlspecialchars($c['nama_sales'] ?? '') ?>">
+                                                 <?= htmlspecialchars($c['kd_customer'] . ' - ' . $c['nama_customer']) ?>
+                                             </option>
+                                         <?php endforeach; ?>
+                                     </select>
+                                     <input type="hidden" name="nama_customer" id="nama_customer" value="<?= $is_edit ? htmlspecialchars($spr['nama_customer']) : '' ?>">
+                                 </div>
+                             </div>
                             <div class="row mb-3">
                                 <div class="col-md-8">
                                     <label class="form-label-sm">Alamat</label>
@@ -366,7 +378,7 @@
                                             <button type="submit" name="as_draft" value="0" class="btn btn-info mr-2">
                                                 <i class="fas fa-save"></i> Simpan Perubahan (Tetap Diverifikasi)
                                             </button>
-                                            <a href="<?= base_url('retur_penjualan/admin_stock_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
+                                            <a href="<?= base_url('retur_penjualan/admretur_cek/' . $spr['id_spr']) ?>" class="btn btn-light">
                                                 <i class="fas fa-arrow-left"></i> Kembali ke Form Cek
                                             </a>
                                         <?php endif; ?>
@@ -377,7 +389,7 @@
                                             <i class="fas fa-save"></i> Simpan sebagai Draft
                                         </button>
                                         <button type="submit" name="as_draft" value="0" class="btn btn-danger mr-2" id="btnAjukan">
-                                            <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Koor SC
+                                            <i class="fas fa-paper-plane"></i> Simpan & Ajukan ke Manager SC
                                         </button>
                                         <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-light">
                                             <i class="fas fa-arrow-left"></i> Batal
@@ -564,7 +576,7 @@ $(document).ready(function () {
             alert('Minimal isi 1 baris nama barang!');
             return;
         }
-        if (!confirm('Ajukan SPR ke Koor SC? Setelah diajukan tidak dapat diedit.')) {
+        if (!confirm('Ajukan SPR ke Manager SC? Setelah diajukan tidak dapat diedit.')) {
             e.preventDefault();
         }
     });

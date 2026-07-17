@@ -2,16 +2,33 @@
 <?php
 $pending_bg = $pending_bg ?? null;
 $is_bg_cair_mode = !empty($pending_bg);
-$metode_options = [
-    'cash' => 'Cash',
-    'transfer' => 'Transfer',
-    'bg' => 'BG',
-    'retur' => 'Saldo Retur',
+$allowed_names = [
+    'Q Kas', 'A Kas', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
+    'Q Mandiri 143-00-8389898-9', 'Q BRI 300300', 'Q BRI 999300', 'Q Mandiri Giro 143 0029 298989',
+    'A BCA 1088', 'A BCA 3688', 'A BCA (Annelia)', 'A BCA (Yuanita)', 'A BCA (IB)', 'A BCA (DKS)',
+    'A BRI', 'A Mandiri', 'A Bukopin', 'A Danamon', 'A BCA 1588', 'A Mandiri 8181', 'A BRI 9305',
+    'A BCA (Yuanita Giro)', 'A BRI 8303', 'A BRI 4626-01-012498-53-4', 'A BRI 5305', 'A Deposito',
+    'Q Mandiri 8989', 'Q BRI 2567', 'Q BNI 0080', 'Q BRI 5534', 'Q CIMB Niaga', 'Q BRI 004575-56-6',
+    'Q BRI 555888-56-9', 'A BRI 8568', 'A CIMB 9100'
 ];
-$default_metode = strtolower((string)($faktur['cara_pembayaran'] ?? ''));
-if (!isset($metode_options[$default_metode])) {
-    $default_metode = 'cash';
+$db_accounts = $this->db->select('nama_akun')
+    ->where_in('nama_akun', $allowed_names)
+    ->get('tbkeu_akun')
+    ->result_array();
+
+$metode_options = [];
+if (!empty($db_accounts)) {
+    foreach ($db_accounts as $acc) {
+        $metode_options[$acc['nama_akun']] = $acc['nama_akun'];
+    }
+} else {
+    foreach ($allowed_names as $name) {
+        $metode_options[$name] = $name;
+    }
 }
+$metode_options['retur'] = 'Saldo Retur';
+
+$default_metode = '';
 ?>
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -55,6 +72,52 @@ if (!isset($metode_options[$default_metode])) {
                         <i class="fas fa-arrow-left mr-1"></i>Kembali ke Detail Customer
                     </a>
                 </div>
+
+                <?php if (!empty($linked_returs)): ?>
+                    <div class="alert alert-info shadow-sm border-info mb-4" style="background-color: #e8f4fd; color: #0c5460; border-left: 5px solid #17a2b8;">
+                        <h5 class="font-weight-bold mb-2"><i class="fas fa-info-circle mr-2"></i>Informasi Pemotongan Retur dari Collection</h5>
+                        <p class="mb-2">Collection telah menentukan bahwa Faktur ini dapat dipotong menggunakan Retur Penjualan berikut:</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-2 bg-white text-dark small" style="border-radius: 4px; overflow: hidden;">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>No. Retur</th>
+                                        <th>Tipe Retur</th>
+                                        <th>Tanggal Retur</th>
+                                        <th>Status Retur</th>
+                                        <th class="text-right">Nominal Retur</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($linked_returs as $ret): ?>
+                                        <tr>
+                                            <td>
+                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['no_retur']) ?>" class="font-weight-bold" target="_blank">
+                                                    <?= htmlspecialchars($ret['no_retur']) ?> <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
+                                                </a>
+                                            </td>
+                                            <td><span class="badge badge-secondary"><?= htmlspecialchars(ucfirst($ret['tipe_retur'])) ?></span></td>
+                                            <td><?= date('d/m/Y', strtotime($ret['tanggal_retur'])) ?></td>
+                                            <td>
+                                                <?php
+                                                $lbl = $ret['status_retur'];
+                                                if ($lbl === 'menunggu_collection') $lbl = 'Menunggu Collection';
+                                                elseif ($lbl === 'menunggu_kasir') $lbl = 'Menunggu Kasir (Serah Terima)';
+                                                elseif ($lbl === 'selesai') $lbl = 'Selesai';
+                                                ?>
+                                                <span class="badge badge-info"><?= htmlspecialchars($lbl) ?></span>
+                                            </td>
+                                            <td class="text-right font-weight-bold text-success">Rp <?= number_format((float)$ret['total_retur'], 0, ',', '.') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <span class="small text-muted font-italic">
+                            <i class="fas fa-lightbulb mr-1"></i> Tips: Silakan pilih metode pembayaran <strong>Saldo Retur</strong> di form sebelah kanan untuk memotong tagihan menggunakan retur di atas.
+                        </span>
+                    </div>
+                <?php endif; ?>
 
                 <div class="row">
                     <div class="col-md-5">

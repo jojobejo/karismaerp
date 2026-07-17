@@ -16,7 +16,7 @@ class Accounting_source_service
         $this->CI->load->library('Accounting_service');
     }
 
-    public function post_sales_invoice($noFaktur, $kdDo = '', $userId = null)
+    public function post_sales_invoice($noFaktur, $kdDo = '', $userId = null, $postGoodsIssue = true)
     {
         $noFaktur = trim((string)$noFaktur);
         if ($noFaktur === '') {
@@ -74,6 +74,15 @@ class Accounting_source_service
         ], $userId);
         if (!$invoice['success']) {
             return $invoice;
+        }
+
+        if (!$postGoodsIssue) {
+            return [
+                'success' => true,
+                'message' => 'Jurnal faktur penjualan berhasil diposting.',
+                'data' => ['sales_invoice' => $invoice['data'], 'goods_issue' => null],
+                'errors' => [],
+            ];
         }
 
         $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [

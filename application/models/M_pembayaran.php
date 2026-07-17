@@ -10,6 +10,7 @@ class M_pembayaran extends CI_Model
         parent::__construct();
         $this->_rename_legacy_payment_table();
         $this->_ensure_payment_table();
+        $this->db->query("ALTER TABLE tbkeu_pembayaran_faktur MODIFY COLUMN metode_pembayaran VARCHAR(100) NULL");
     }
 
     private function _rename_legacy_payment_table()
@@ -86,7 +87,7 @@ class M_pembayaran extends CI_Model
             ],
             'metode_pembayaran' => [
                 'type'       => 'VARCHAR',
-                'constraint' => 30,
+                'constraint' => 100,
                 'null'       => true,
             ],
             'tanggal_bg_cair' => [
@@ -338,12 +339,12 @@ class M_pembayaran extends CI_Model
      */
     public function get_customer_saldo_retur($kd_customer)
     {
-        // 1. Get total completed returns (only for tipe 'biasa')
+        // 1. Get total completed / active returns after Dirut approval (only for tipe 'biasa')
         $this->db->select('SUM(d.qty_retur * d.harga_satuan) AS total_retur');
         $this->db->from('tbrp_retur_penjualan_header h');
         $this->db->join('tbrp_retur_penjualan_detail d', 'd.id_retur = h.id_retur');
         $this->db->where('h.kd_customer', $kd_customer);
-        $this->db->where('h.status_retur', 'selesai');
+        $this->db->where_in('h.status_retur', ['menunggu_collection', 'menunggu_kasir', 'selesai']);
         $this->db->where('h.tipe_retur', 'biasa');
         $total_retur = (float)$this->db->get()->row()->total_retur;
 

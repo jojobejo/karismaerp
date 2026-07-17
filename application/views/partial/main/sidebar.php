@@ -267,6 +267,14 @@
             </a>
           </li>
 
+          <!-- Surat Pengajuan Retur (SPR) -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('retur_penjualan') ?>" class="nav-link">
+              <i class="nav-icon fas fa-file-invoice"></i>
+              <p>Surat Pengajuan Retur</p>
+            </a>
+          </li>
+
           <!-- Logout -->
           <li class="nav-item">
             <a href="<?php echo base_url('logout') ?>" class="nav-link">
@@ -418,6 +426,91 @@
                 </p>
               </a>
             </li>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'MANAGERSC', 'ADMINSC', 'KADEP'])) : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('retur_penjualan') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice"></i>
+                <p>
+                  Daftar SPR
+                </p>
+              </a>
+            </li>
+            <?php if ($this->session->userdata('jobdesk') !== 'ADMPNJ') : ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-undo-alt"></i>
+                <p>
+                  Retur Penjualan
+                </p>
+              </a>
+            </li>
+            <?php endif; ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMRETUR', 'COLLECTION', 'KASIR', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA'])) : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-undo-alt"></i>
+                <p>
+                  Retur Penjualan
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+      </div>
+    <?php elseif ($this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') == 'ADMLPB2') : ?>
+      <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('retur_penjualan/admlpb2') ?>" class="nav-link">
+                <i class="nav-icon fas fa-truck-loading"></i>
+                <p>
+                  SPR Siap Retur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('logout') ?>" class="nav-link">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <p>
+                  Log Out
+                </p>
+              </a>
+            </li>
+          </ul>
         </nav>
         <!-- /.sidebar-menu -->
       </div>

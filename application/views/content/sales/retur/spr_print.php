@@ -47,7 +47,7 @@
 
         /* TANDA TANGAN */
         .ttd-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .ttd-table td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #000; font-size: 10pt; vertical-align: top; }
+        .ttd-table td { text-align: center; padding: 8px 4px; border: 1px solid #000; font-size: 10pt; vertical-align: top; }
         .ttd-name { font-weight: bold; margin-top: 50px; font-size: 10pt; border-top: 1px solid #000; padding-top: 4px; }
 
         /* APPROVAL HISTORY */
@@ -107,7 +107,7 @@
                     <?php elseif (($spr['tipe_retur'] ?? 'biasa') === 'service'): ?>
                         SERVICE (Servis Barang)
                     <?php else: ?>
-                        RETUR (Potong Faktur)
+                        RETUR (Refund)
                     <?php endif; ?>
                 </strong>
             </td>
@@ -211,47 +211,75 @@
     <table class="ttd-table">
         <tr>
             <td>
-                Mengetahui,<br>
-                <strong>Sales</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['nama_sales'] ?? '') ?></div>
-            </td>
-            <td>
                 Diverifikasi,<br>
-                <strong>Koor SC</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['koor_sc_by'] ?? '') ?></div>
+                <strong>Manager SC</strong>
+                <?php if (!empty($spr['mngsc_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['mngsc_by'] . ', ' . ($spr['mngsc_at'] ? date('d/m/Y H:i', strtotime($spr['mngsc_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['mngsc_by'] ?? '') ?></div>
             </td>
             <td>
                 Dicek,<br>
-                <strong>Admin Stock</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['admin_stock_by'] ?? '') ?></div>
+                <strong>Adm Penjualan</strong>
+                <?php if (!empty($spr['admretur_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['admretur_by'] . ', ' . ($spr['admretur_at'] ? date('d/m/Y H:i', strtotime($spr['admretur_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['admretur_by'] ?? '') ?></div>
             </td>
             <td>
                 Disetujui,<br>
                 <strong>Kadep SC</strong>
-                <div class="ttd-name"><?= htmlspecialchars($spr['kadep_sc_by'] ?? '') ?></div>
+                <?php if (!empty($spr['kadep_sc_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['kadep_sc_by'] . ', ' . ($spr['kadep_sc_at'] ? date('d/m/Y H:i', strtotime($spr['kadep_sc_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['kadep_sc_by'] ?? '') ?></div>
+            </td>
+            <?php if (!empty($spr['is_jagung'])): ?>
+            <td>
+                Verifikasi Jagung,<br>
+                <strong>Kadep UB</strong>
+                <?php if (!empty($spr['kadepub_by'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=<?= urlencode('Sudah di Approve, ' . $spr['no_spr'] . ', ' . $spr['kadepub_by'] . ', ' . ($spr['kadepub_at'] ? date('d/m/Y H:i', strtotime($spr['kadepub_at'])) : '')) ?>" alt="QR" style="height:50px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($spr['kadepub_by'] ?? '') ?></div>
+            </td>
+            <?php endif; ?>
+            <td>
+                Diterima,<br>
+                <strong>Kios</strong>
+                <div style="height: 50px;"></div>
+                <div class="ttd-name" style="margin-top:0;">&nbsp;</div>
             </td>
         </tr>
     </table>
 
     <!-- APPROVAL HISTORY -->
     <?php
-    $has_history = $spr['koor_sc_by'] || $spr['admin_stock_by'] || $spr['kadep_sc_by'] || $spr['logistik_by'];
+    $has_history = $spr['mngsc_by'] || $spr['admretur_by'] || $spr['kadep_sc_by'] || $spr['logistik_by'];
     if ($has_history):
     ?>
     <div class="approval-section">
         <h4>Riwayat Approval</h4>
-        <?php if ($spr['koor_sc_by']): ?>
+        <?php if ($spr['mngsc_by']): ?>
             <div class="approval-row">
-                <span class="arl">Koor SC</span>
-                <span><?= htmlspecialchars($spr['koor_sc_by']) ?> — <?= $spr['koor_sc_at'] ? date('d/m/Y H:i', strtotime($spr['koor_sc_at'])) : '-' ?>
-                <?= $spr['koor_sc_catatan'] ? '| ' . htmlspecialchars($spr['koor_sc_catatan']) : '' ?></span>
+                <span class="arl">Manager SC</span>
+                <span><?= htmlspecialchars($spr['mngsc_by']) ?> — <?= $spr['mngsc_at'] ? date('d/m/Y H:i', strtotime($spr['mngsc_at'])) : '-' ?>
+                <?= $spr['mngsc_catatan'] ? '| ' . htmlspecialchars($spr['mngsc_catatan']) : '' ?></span>
             </div>
         <?php endif; ?>
-        <?php if ($spr['admin_stock_by']): ?>
+        <?php if ($spr['admretur_by']): ?>
             <div class="approval-row">
-                <span class="arl">Admin Stock</span>
-                <span><?= htmlspecialchars($spr['admin_stock_by']) ?> — <?= $spr['admin_stock_at'] ? date('d/m/Y H:i', strtotime($spr['admin_stock_at'])) : '-' ?>
-                <?= $spr['admin_stock_catatan'] ? '| ' . htmlspecialchars($spr['admin_stock_catatan']) : '' ?></span>
+                <span class="arl">Adm Penjualan</span>
+                <span><?= htmlspecialchars($spr['admretur_by']) ?> — <?= $spr['admretur_at'] ? date('d/m/Y H:i', strtotime($spr['admretur_at'])) : '-' ?>
+                <?= $spr['admretur_catatan'] ? '| ' . htmlspecialchars($spr['admretur_catatan']) : '' ?></span>
             </div>
         <?php endif; ?>
         <?php if ($spr['kadep_sc_by']): ?>

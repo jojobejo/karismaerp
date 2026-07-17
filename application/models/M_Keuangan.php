@@ -1087,6 +1087,79 @@ class M_Keuangan extends CI_Model
         return $this->db->get()->result();
     }
 
+    public function accounting_sales_journal_rows($search = '', $limit = 100)
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            j.source_no AS referensi,
+            j.source_id AS no_faktur,
+            j.keterangan,
+            j.total_debit AS nilai,
+            j.status,
+            COALESCE(f.no_so, '') AS no_so,
+            COALESCE(f.customer_name, '') AS pelanggan,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id', 'left');
+        $this->db->where('j.source_module', 'SALES');
+        $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
+        $this->db->where('j.posting_event', 'SALES_INVOICE');
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('j.source_no', $search);
+            $this->db->or_like('j.nomor_jurnal', $search);
+            $this->db->or_like('f.no_so', $search);
+            $this->db->or_like('f.customer_name', $search);
+            $this->db->group_end();
+        }
+        $this->db->order_by('j.tanggal_transaksi', 'DESC');
+        $this->db->order_by('j.id_jurnal', 'DESC');
+        $this->db->limit((int)$limit > 0 ? (int)$limit : 100);
+
+        return $this->db->get()->result();
+    }
+
+    public function accounting_sales_journal_detail($idJurnal)
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return null;
+        }
+
+        $this->db->select("
+            j.*,
+            COALESCE(f.no_so, '') AS no_so,
+            COALESCE(f.customer_name, '') AS pelanggan,
+            COALESCE(f.create_by, '') AS created_by_name,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbso_faktur_penjualan f', 'f.no_faktur = j.source_id', 'left');
+        $this->db->where('j.id_jurnal', (int)$idJurnal);
+        $journal = $this->db->get()->row();
+        if (!$journal) {
+            return null;
+        }
+
+        $this->db->select("d.*, a.kode_akun, a.nama_akun, COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display", false);
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+        $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
+        $this->db->where('d.id_jurnal', (int)$idJurnal);
+        $this->db->order_by('d.nomor_baris', 'ASC');
+
+        return [
+            'journal' => $journal,
+            'details' => $this->db->get()->result(),
+        ];
+    }
+
     public function accounting_account_by_id($id)
     {
         if (!$this->accounting_schema_ready()) {

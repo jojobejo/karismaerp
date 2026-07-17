@@ -73,14 +73,16 @@
                     <?php
                     $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
                     $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
-                    $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','ADMIN']);
-                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                    $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
+                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN']);
+                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                     $is_logistik = in_array($jobdesk, ['LOGISTIK','LOGISTIC','LOGISTICS','ADMIN']);
                     $is_collection  = in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN']);
                     $is_kasir       = in_array($jobdesk, ['KASIR','ADMIN']);
                     $is_admlpb2     = in_array($jobdesk, ['ADMLPB2','LOGISTIK','ADMIN']);
-                    $is_approval    = $is_koor || $is_admin_stock || $is_kadep;
+                    $is_admpnj      = in_array($jobdesk, ['ADMPNJ','ADMIN']);
+                    $is_kadepub     = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                    $is_approval    = $is_koor || $is_admpnj || $is_kadep || $is_kadepub;
                     ?>
                     <div class="col-auto">
                         <?php if ($is_sc || $is_koor): ?>
@@ -89,13 +91,13 @@
                             </a>
                         <?php endif; ?>
                         
-                        <?php if ($is_admin_stock || $is_logistik): ?>
+                        <?php if ($is_admpnj || $is_logistik || $is_sc || $is_koor || $is_kadep): ?>
                             <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger active mr-1">
                                 <i class="fas fa-file-invoice"></i> Daftar SPR
                             </a>
                         <?php endif; ?>
 
-                        <?php if ($is_admin_stock || $is_collection || $is_kasir): ?>
+                        <?php if ($is_admretur || $is_collection || $is_kasir || $is_admlpb2 || $is_koor || $is_kadep || $is_kadepub || in_array($jobdesk, ['MANAGERACC','MANAGERSE','DIREKTUROP','DIREKTURUTAMA'])): ?>
                             <a href="<?= base_url('retur_penjualan/retur') ?>" class="btn btn-outline-primary mr-1">
                                 <i class="fas fa-undo-alt"></i> Daftar Retur Penjualan
                             </a>
@@ -136,8 +138,8 @@
                                         $status_opts = [
                                             'draft'               => 'Draft',
                                             'diajukan'            => 'Diajukan',
-                                            'diverifikasi_koor'   => 'Verifikasi Koor SC',
-                                            'dicek_admin_stock'   => 'Dicek Admin Stock',
+                                            'diverifikasi_koor'   => 'Verifikasi Manager SC',
+                                            'dicek_admretur'   => 'Dicek Admin Retur',
                                             'disetujui_kadep'     => 'Disetujui Kadep',
                                             'selesai'             => 'Selesai',
                                             'ditolak'             => 'Ditolak',
@@ -199,8 +201,9 @@
                                         $badge_map = [
                                             'draft'               => ['secondary', 'Draft'],
                                             'diajukan'            => ['warning',   'Diajukan'],
+                                            'menunggu_kadepub'    => ['warning',   'Wait Kadep UB'],
                                             'diverifikasi_koor'   => ['info',      'Verif. Koor'],
-                                            'dicek_admin_stock'   => ['primary',   'Cek Stock'],
+                                            'dicek_admretur'   => ['primary',   'Cek Penjualan'],
                                             'disetujui_kadep'     => ['indigo',    'Acc Kadep'],
                                             'selesai'             => ['success',   'Selesai'],
                                             'ditolak'             => ['danger',    'Ditolak'],
@@ -210,8 +213,9 @@
                                         $progress_map = [
                                             'draft'               => 0,
                                             'diajukan'            => 20,
+                                            'menunggu_kadepub'    => 30,
                                             'diverifikasi_koor'   => 40,
-                                            'dicek_admin_stock'   => 60,
+                                            'dicek_admretur'   => 60,
                                             'disetujui_kadep'     => 80,
                                             'selesai'             => 100,
                                             'ditolak'             => 0,
@@ -272,16 +276,21 @@
                                                 $tindak_icon = '';
                                                 $tindak_class = '';
                                                 if ($st === 'diajukan' && $is_koor) {
-                                                    $tindak_url = base_url('retur_penjualan/koor_sc/verifikasi/' . $row['id_spr']);
+                                                    $tindak_url = base_url('retur_penjualan/mngsc/verifikasi/' . $row['id_spr']);
                                                     $tindak_label = 'Verifikasi';
                                                     $tindak_icon = 'clipboard-check';
                                                     $tindak_class = 'warning';
-                                                } elseif ($st === 'diverifikasi_koor' && $is_admin_stock) {
-                                                    $tindak_url = base_url('retur_penjualan/admin_stock/cek/' . $row['id_spr']);
-                                                    $tindak_label = 'Cek Stock';
+                                                } elseif ($st === 'menunggu_kadepub' && $is_kadepub) {
+                                                    $tindak_url = base_url('retur_penjualan/kadepub/verifikasi/' . $row['id_spr']);
+                                                    $tindak_label = 'Verifikasi Jagung';
+                                                    $tindak_icon = 'clipboard-check';
+                                                    $tindak_class = 'success';
+                                                } elseif ($st === 'diverifikasi_koor' && $is_admpnj) {
+                                                    $tindak_url = base_url('retur_penjualan/admretur/cek/' . $row['id_spr']);
+                                                    $tindak_label = 'Cek SPR';
                                                     $tindak_icon = 'boxes';
                                                     $tindak_class = 'info';
-                                                } elseif ($st === 'dicek_admin_stock' && $is_kadep) {
+                                                } elseif ($st === 'dicek_admretur' && $is_kadep) {
                                                     $tindak_url = base_url('retur_penjualan/kadep_sc/approve/' . $row['id_spr']);
                                                     $tindak_label = 'Approve';
                                                     $tindak_icon = 'user-tie';
@@ -310,7 +319,7 @@
                                                  <?php endif; ?>
                                                  <?php if (in_array($st, ['draft', 'ditolak'], true) && $row['create_by'] === ($user['nama'] ?? '')): ?>
                                                      <a href="<?= base_url('retur_penjualan/submit/' . $row['id_spr']) ?>"
-                                                        class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Koor SC"
+                                                        class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Manager SC"
                                                         data-nospr="<?= htmlspecialchars($row['no_spr']) ?>">
                                                          <i class="fas fa-paper-plane"></i>
                                                      </a>
@@ -360,7 +369,7 @@ $(document).ready(function () {
         e.preventDefault();
         var url    = $(this).attr('href');
         var noSpr  = $(this).data('nospr');
-        if (confirm('Ajukan SPR ' + noSpr + ' ke Koor SC? Setelah diajukan tidak dapat diubah.')) {
+        if (confirm('Ajukan SPR ' + noSpr + ' ke Manager SC? Setelah diajukan tidak dapat diubah.')) {
             window.location.href = url;
         }
     });

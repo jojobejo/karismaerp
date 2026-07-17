@@ -90,7 +90,74 @@ class Auth extends CI_Controller
         $this->M_Auth->update_last_login($key->id, $auth_source);
         $this->M_Auth->log_login($key, 'success', 'Login berhasil');
 
-        redirect('dashboard');
+        // Redirect based on jobdesk
+        if ($jobdesk == 'LOGISTIK') {
+            redirect('logistik');
+        } else if ($jobdesk == 'ADMINICS') {
+            redirect('ics/ics_diffrent');
+        } else if ($jobdesk == 'ADMINKEU') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'KIUKEU') {
+            redirect('keuangan/pembayaran');
+        } else if ($jobdesk == 'ADMINPURCHASING') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'DIREKTUR') {
+            redirect('dashboard');
+        } else if ($jobdesk == 'ADMINGA') {
+            redirect('schedule_direktur');
+        } else if ($jobdesk == 'ADMINKEUTC') {
+            redirect('keuangan');
+        } else if ($jobdesk == 'STOCKOPNAME') {
+            redirect('stockopname');
+        } else if ($jobdesk == 'ADMIN') {
+            redirect('extravaganza');
+        } else if ($jobdesk == 'SALESONLINE') {
+            redirect('stock');
+        } else if ($jobdesk == 'SALESCOUNTER') {
+            redirect('sales_report');
+        } else if ($jobdesk == 'SALES') {
+            redirect('kiu_katalog');
+        } else if ($jobdesk == 'DISTRIBUSI') {
+            redirect('logistik/distibusi');
+        } else if ($jobdesk == 'ADMINLOGLPB') {
+            redirect('ics/icspo');
+        } else if ($jobdesk == 'ADMLOG') {
+            redirect('checker');
+        } else if ($jobdesk == 'CHECKER') {
+            redirect('checker');
+        } else if ($jobdesk == 'MANAGERWH') {
+            redirect('checker');
+        } else if ($jobdesk == 'SALESCK') {
+            redirect('checker');
+        } else if ($jobdesk == 'DIREKTURCK') {
+            redirect('checker/dashboard'); 
+        } else if ($jobdesk == 'MANAGERCK') {
+            redirect('checker');
+        } else if ($jobdesk == 'ADMINSC') {
+            redirect('sales_order/admin_sc');
+        } else if ($jobdesk == 'SC') {
+            redirect('sales_order');
+        } else if ($jobdesk == 'MANAGERSC') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'KADEPSC' || $jobdesk == 'KADEPUB') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'LOGISTIC') {
+            redirect('retur_penjualan/logistik');
+        } else if ($jobdesk == 'ADMRETUR') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'ADMPNJ') {
+            redirect('retur_penjualan');
+        } else if ($jobdesk == 'ADMLPB2') {
+            redirect('retur_penjualan/admlpb2');
+        } else if ($jobdesk == 'COLLECTION' || $jobdesk == 'KOLEKTOR') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'KASIR') {
+            redirect('retur_penjualan/retur');
+        } else if ($jobdesk == 'MANAGERACC' || $jobdesk == 'MANAGERSE' || $jobdesk == 'DIREKTUROP' || $jobdesk == 'DIREKTURUTAMA') {
+            redirect('retur_penjualan/retur');
+        } else {
+            redirect('dashboard');
+        }
     }
 
     function logout()

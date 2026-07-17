@@ -90,6 +90,7 @@ $faktur_back_url = $is_admin_sc_context
 
             <form action="<?= base_url('sales_order/simpan_faktur/' . $so['id_so']) ?>" method="post"
                   id="formFaktur">
+                <input type="hidden" name="tax_mode" value="<?= htmlspecialchars($tax_mode ?? 'non_pajak') ?>">
 
                 <div class="row">
                     <!-- Kolom kiri: header faktur -->
@@ -447,28 +448,27 @@ $(document).ready(function () {
 
             const sub    = qty * harga;
             const afterD = sub  * (1 - disc / 100);
-            const tax    = afterD * (pajak / 100);
-            const total  = afterD + tax;
 
-            totalNilaiFaktur += afterD;
-            totalTax += tax;
-            grandTotalHarga += total;
+            grandTotalHarga += afterD;
 
             $('[data-row="' + row + '"].subtotal').text(
-                'Rp ' + total.toLocaleString('id-ID', { minimumFractionDigits: 0 })
+                'Rp ' + afterD.toLocaleString('id-ID', { minimumFractionDigits: 0 })
             );
         });
 
-        $('#totalNilaiFaktur').text('Rp ' + totalNilaiFaktur.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-        $('#totalTax').text('Rp ' + totalTax.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-        $('#grandTotalHarga').text('Rp ' + grandTotalHarga.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-
-        // Hitung Jurnal
         const taxRate = parseFloat('<?= $tax_rate ?? 0 ?>') || 0;
         const divFactor = 1 + (taxRate / 100);
-        
-        const jurnalPiutang = Math.round(totalNilaiFaktur);
-        const jurnalPenjualan = Math.round(jurnalPiutang / divFactor);
+
+        totalNilaiFaktur = grandTotalHarga / divFactor;
+        totalTax = grandTotalHarga - totalNilaiFaktur;
+
+        $('#totalNilaiFaktur').text('Rp ' + Math.round(totalNilaiFaktur).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+        $('#totalTax').text('Rp ' + Math.round(totalTax).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+        $('#grandTotalHarga').text('Rp ' + Math.round(grandTotalHarga).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
+
+        // Hitung Jurnal
+        const jurnalPiutang = Math.round(grandTotalHarga);
+        const jurnalPenjualan = Math.round(totalNilaiFaktur);
         const jurnalPpnKeluar = jurnalPiutang - jurnalPenjualan;
 
         $('#jurnalPiutangDagang').text('Rp ' + jurnalPiutang.toLocaleString('id-ID', { minimumFractionDigits: 0 }));

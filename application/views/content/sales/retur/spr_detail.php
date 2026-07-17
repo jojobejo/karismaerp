@@ -164,8 +164,9 @@ if (!function_exists('hitung_durasi')) {
                                     $badge_map = [
                                         'draft'               => ['secondary','Draft'],
                                         'diajukan'            => ['warning','Diajukan'],
-                                        'diverifikasi_koor'   => ['info','Verif. Koor SC'],
-                                        'dicek_admin_stock'   => ['primary','Cek Admin Stock'],
+                                        'menunggu_kadepub'    => ['warning','Menunggu Kadep UB'],
+                                        'diverifikasi_koor'   => ['info','Verif. Manager SC'],
+                                        'dicek_admretur'   => ['primary','Cek Admin Penjualan'],
                                         'disetujui_kadep'     => ['success','Disetujui Kadep'],
                                         'selesai'             => ['success','Selesai'],
                                         'ditolak'             => ['danger','Ditolak'],
@@ -173,6 +174,9 @@ if (!function_exists('hitung_durasi')) {
                                     $bm = $badge_map[$spr['status']] ?? ['secondary',$spr['status']];
                                     ?>
                                     <span class="badge badge-<?= $bm[0] ?> px-3 py-2" style="font-size:12px;"><?= $bm[1] ?></span>
+                                    <?php if (!empty($spr['is_jagung'])): ?>
+                                        <span class="badge badge-success px-2 py-2 ml-1" style="font-size:12px;"><i class="fas fa-seedling"></i> Jagung</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -288,15 +292,17 @@ if (!function_exists('hitung_durasi')) {
                                     <?php if ($spr['status'] === 'draft' && $spr['create_by'] === ($user['nama'] ?? '')): ?>
                                         <a href="<?= base_url('retur_penjualan/submit/' . $spr['id_spr']) ?>"
                                            class="btn btn-warning mr-2"
-                                           onclick="return confirm('Ajukan SPR ini ke Koor SC?')">
-                                            <i class="fas fa-paper-plane"></i> Ajukan ke Koor SC
+                                           onclick="return confirm('Ajukan SPR ini ke Manager SC?')">
+                                            <i class="fas fa-paper-plane"></i> Ajukan ke Manager SC
                                         </a>
                                     <?php endif; ?>
                                     <?php
                                     $jobdesk = strtoupper((string)($user['jobdesk'] ?? $this->session->userdata('jobdesk') ?? ''));
-                                    $is_koor = in_array($jobdesk, ['KOORSC','ADMINSC','ADMIN']);
-                                    $is_admin_stock = in_array($jobdesk, ['ADMSTOCK','ADMINSTOCK','LOGISTIK','ADMIN']);
-                                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER']);
+                                    $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
+                                    $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','LOGISTIK','ADMIN']);
+                                    $is_admpnj = in_array($jobdesk, ['ADMPNJ','ADMIN']);
+                                    $is_kadepub = in_array($jobdesk, ['KADEPUB','ADMIN']);
+                                    $is_kadep = in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB']);
                                     $is_logistik = in_array($jobdesk, ['LOGISTIK','ADMIN']);
 
                                     $tindak_url = '';
@@ -306,16 +312,21 @@ if (!function_exists('hitung_durasi')) {
                                     $st = $spr['status'];
 
                                     if ($st === 'diajukan' && $is_koor) {
-                                        $tindak_url = base_url('retur_penjualan/koor_sc/verifikasi/' . $spr['id_spr']);
+                                        $tindak_url = base_url('retur_penjualan/mngsc/verifikasi/' . $spr['id_spr']);
                                         $tindak_label = 'Verifikasi SPR';
                                         $tindak_icon = 'clipboard-check';
                                         $tindak_class = 'warning';
-                                    } elseif ($st === 'diverifikasi_koor' && $is_admin_stock) {
-                                        $tindak_url = base_url('retur_penjualan/admin_stock/cek/' . $spr['id_spr']);
-                                        $tindak_label = 'Cek Stock';
+                                    } elseif ($st === 'menunggu_kadepub' && $is_kadepub) {
+                                        $tindak_url = base_url('retur_penjualan/kadepub/verifikasi/' . $spr['id_spr']);
+                                        $tindak_label = 'Verifikasi Jagung';
+                                        $tindak_icon = 'clipboard-check';
+                                        $tindak_class = 'success';
+                                    } elseif ($st === 'diverifikasi_koor' && $is_admpnj) {
+                                        $tindak_url = base_url('retur_penjualan/admretur/cek/' . $spr['id_spr']);
+                                        $tindak_label = 'Cek SPR';
                                         $tindak_icon = 'boxes';
                                         $tindak_class = 'info';
-                                    } elseif ($st === 'dicek_admin_stock' && $is_kadep) {
+                                    } elseif ($st === 'dicek_admretur' && $is_kadep) {
                                         $tindak_url = base_url('retur_penjualan/kadep_sc/approve/' . $spr['id_spr']);
                                         $tindak_label = 'Approve SPR';
                                         $tindak_icon = 'user-tie';
@@ -381,7 +392,7 @@ if (!function_exists('hitung_durasi')) {
                                 if ($spr['status'] === 'selesai' && !empty($spr['logistik_at'])) {
                                     $total_duration = 'Total Waktu (Selesai): <strong>' . hitung_durasi($spr['create_at'], $spr['logistik_at']) . '</strong>';
                                 } elseif ($spr['status'] === 'ditolak') {
-                                    $rejection_at = $spr['kadep_sc_at'] ?: ($spr['admin_stock_at'] ?: ($spr['koor_sc_at'] ?: null));
+                                    $rejection_at = $spr['kadep_sc_at'] ?: ($spr['admretur_at'] ?: ($spr['mngsc_at'] ?: null));
                                     if ($rejection_at) {
                                         $total_duration = 'Total Waktu (Sampai Ditolak): <strong>' . hitung_durasi($spr['create_at'], $rejection_at) . '</strong>';
                                     }
@@ -396,12 +407,20 @@ if (!function_exists('hitung_durasi')) {
                                 <?php endif; ?>
                                 <?php
                                 $steps = [
-                                    ['key'=>'draft',             'label'=>'Dibuat SC',        'icon'=>'user-edit',   'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diajukan','diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai','ditolak'], 'prev_at'=>null],
-                                    ['key'=>'diajukan',          'label'=>'Verifikasi Koor SC','icon'=>'clipboard-check','by_field'=>'koor_sc_by','at_field'=>'koor_sc_at',   'note_field'=>'koor_sc_catatan', 'done_statuses'=>['diverifikasi_koor','dicek_admin_stock','disetujui_kadep','selesai'], 'prev_at'=>'create_at'],
-                                    ['key'=>'diverifikasi_koor', 'label'=>'Cek Admin Stock',  'icon'=>'boxes',       'by_field'=>'admin_stock_by','at_field'=>'admin_stock_at','note_field'=>'admin_stock_catatan','done_statuses'=>['dicek_admin_stock','disetujui_kadep','selesai'], 'prev_at'=>'koor_sc_at'],
-                                    ['key'=>'dicek_admin_stock', 'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['disetujui_kadep','selesai'], 'prev_at'=>'admin_stock_at'],
-                                    ['key'=>'disetujui_kadep',   'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai'], 'prev_at'=>'kadep_sc_at'],
+                                    ['key'=>'draft',             'label'=>'Dibuat SC',        'icon'=>'user-edit',   'by_field'=>'create_by',     'at_field'=>'create_at',     'note_field'=>null,              'done_statuses'=>['diajukan','menunggu_kadepub','diverifikasi_koor','dicek_admretur','disetujui_kadep','selesai','ditolak'], 'prev_at'=>null],
+                                    ['key'=>'diajukan',          'label'=>'Verifikasi Manager SC','icon'=>'clipboard-check','by_field'=>'mngsc_by','at_field'=>'mngsc_at',   'note_field'=>'mngsc_catatan', 'done_statuses'=>['menunggu_kadepub','diverifikasi_koor','dicek_admretur','disetujui_kadep','selesai'], 'prev_at'=>'create_at'],
                                 ];
+
+                                if (!empty($spr['is_jagung'])) {
+                                    $steps[] = ['key'=>'menunggu_kadepub', 'label'=>'Verifikasi Kadep UB', 'icon'=>'user-tie', 'by_field'=>'kadepub_by', 'at_field'=>'kadepub_at', 'note_field'=>'kadepub_catatan', 'done_statuses'=>['diverifikasi_koor','dicek_admretur','disetujui_kadep','selesai'], 'prev_at'=>'mngsc_at'];
+                                }
+
+                                $steps = array_merge($steps, [
+                                    ['key'=>'diverifikasi_koor', 'label'=>'Cek Admin Penjualan',  'icon'=>'boxes',       'by_field'=>'admretur_by','at_field'=>'admretur_at','note_field'=>'admretur_catatan','done_statuses'=>['dicek_admretur','disetujui_kadep','selesai'], 'prev_at'=> (!empty($spr['is_jagung']) ? 'kadepub_at' : 'mngsc_at')],
+                                    ['key'=>'dicek_admretur', 'label'=>'Acc Kadep SC',     'icon'=>'user-tie',    'by_field'=>'kadep_sc_by',   'at_field'=>'kadep_sc_at',   'note_field'=>'kadep_sc_catatan','done_statuses'=>['disetujui_kadep','selesai'], 'prev_at'=>'admretur_at'],
+                                    ['key'=>'disetujui_kadep',   'label'=>'Selesai (Logistik)','icon'=>'truck-loading','by_field'=>'logistik_by', 'at_field'=>'logistik_at',  'note_field'=>'logistik_catatan','done_statuses'=>['selesai'], 'prev_at'=>'kadep_sc_at'],
+                                ]);
+
                                 $cur = $spr['status'];
                                 foreach ($steps as $step):
                                     $is_done    = in_array($cur, $step['done_statuses']);
@@ -461,14 +480,18 @@ if (!function_exists('hitung_durasi')) {
                                              $rejected_by = $spr['kadep_sc_by'];
                                              $rejected_at = $spr['kadep_sc_at'];
                                              $rejected_note = $spr['kadep_sc_catatan'];
-                                         } elseif (!empty($spr['admin_stock_by'])) {
-                                             $rejected_by = $spr['admin_stock_by'];
-                                             $rejected_at = $spr['admin_stock_at'];
-                                             $rejected_note = $spr['admin_stock_catatan'];
-                                         } elseif (!empty($spr['koor_sc_by'])) {
-                                             $rejected_by = $spr['koor_sc_by'];
-                                             $rejected_at = $spr['koor_sc_at'];
-                                             $rejected_note = $spr['koor_sc_catatan'];
+                                         } elseif (!empty($spr['admretur_by'])) {
+                                             $rejected_by = $spr['admretur_by'];
+                                             $rejected_at = $spr['admretur_at'];
+                                             $rejected_note = $spr['admretur_catatan'];
+                                         } elseif (!empty($spr['kadepub_by'])) {
+                                             $rejected_by = $spr['kadepub_by'];
+                                             $rejected_at = $spr['kadepub_at'];
+                                             $rejected_note = $spr['kadepub_catatan'];
+                                         } elseif (!empty($spr['mngsc_by'])) {
+                                             $rejected_by = $spr['mngsc_by'];
+                                             $rejected_at = $spr['mngsc_at'];
+                                             $rejected_note = $spr['mngsc_catatan'];
                                          }
                                          
                                          if ($rejected_by) {

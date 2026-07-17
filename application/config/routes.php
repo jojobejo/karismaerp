@@ -173,6 +173,8 @@ $route['jurnal/laba-rugi']                          = 'keuangan/C_Keuangan/jurna
 $route['jurnal/list']                               = 'keuangan/C_Keuangan/jurnal_list';
 $route['jurnal/detail']                             = 'keuangan/C_Keuangan/jurnal_detail';
 $route['jurnal/account-journal']                    = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['jurnal/sales-list']                         = 'keuangan/C_Keuangan/jurnal_sales_list';
+$route['jurnal/sales-detail']                       = 'keuangan/C_Keuangan/jurnal_sales_detail';
 $route['jurnal/store']                              = 'keuangan/C_Keuangan/jurnal_store';
 $route['jurnal/update']                             = 'keuangan/C_Keuangan/jurnal_update';
 $route['jurnal/deactivate']                         = 'keuangan/C_Keuangan/jurnal_deactivate';
@@ -188,6 +190,8 @@ $route['keuangan/jurnal/laba-rugi']                 = 'keuangan/C_Keuangan/jurna
 $route['keuangan/jurnal/list']                      = 'keuangan/C_Keuangan/jurnal_list';
 $route['keuangan/jurnal/detail']                    = 'keuangan/C_Keuangan/jurnal_detail';
 $route['keuangan/jurnal/account-journal']           = 'keuangan/C_Keuangan/jurnal_account_journal';
+$route['keuangan/jurnal/sales-list']                = 'keuangan/C_Keuangan/jurnal_sales_list';
+$route['keuangan/jurnal/sales-detail']              = 'keuangan/C_Keuangan/jurnal_sales_detail';
 $route['keuangan/jurnal/store']                     = 'keuangan/C_Keuangan/jurnal_store';
 $route['keuangan/jurnal/update']                    = 'keuangan/C_Keuangan/jurnal_update';
 $route['keuangan/jurnal/deactivate']                = 'keuangan/C_Keuangan/jurnal_deactivate';
@@ -680,6 +684,9 @@ $route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPen
 // Koor SC
 $route['retur_penjualan/koor_sc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/koor_sc_verifikasi/$1';
 $route['retur_penjualan/koor_sc/simpan/(:any)']              = 'sales/C_ReturPenjualan/koor_sc_simpan/$1';
+// Kadep UB (Jagung)
+$route['retur_penjualan/kadepub/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/kadepub_verifikasi/$1';
+$route['retur_penjualan/kadepub/simpan/(:any)']              = 'sales/C_ReturPenjualan/kadepub_simpan/$1';
 // Admin Stock
 $route['retur_penjualan/admin_stock/cek/(:any)']             = 'sales/C_ReturPenjualan/admin_stock_cek/$1';
 $route['retur_penjualan/admin_stock/simpan/(:any)']          = 'sales/C_ReturPenjualan/admin_stock_simpan/$1';
@@ -702,6 +709,8 @@ $route['retur_penjualan/retur/submit/(:any)']                = 'sales/C_ReturPen
 // ---- Retur Penjualan ----
 $route['retur_penjualan/retur']                              = 'sales/C_ReturPenjualan/retur_list';
 $route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPenjualan/retur_detail/$1';
+$route['retur_penjualan/retur/approve/(:any)']               = 'sales/C_ReturPenjualan/retur_approve/$1';
+$route['retur_penjualan/retur/approve_simpan/(:any)']        = 'sales/C_ReturPenjualan/retur_approve_simpan/$1';
 $route['retur_penjualan/retur/print/(:any)']                 = 'sales/C_ReturPenjualan/retur_print/$1';
 // Admin Stock
 $route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';

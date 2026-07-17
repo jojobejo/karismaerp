@@ -1498,9 +1498,19 @@ class Accounting_service
             }
 
             $idAkun = $this->resolve_mapping($payload, $spec[0], $spec[1]);
+            $roleLabel = [
+                'ACCOUNT_RECEIVABLE' => 'Piutang',
+                'SALES_REVENUE' => 'Pendapatan',
+                'VAT_OUTPUT' => 'PPN Keluaran',
+                'INVENTORY' => 'Persediaan',
+                'COGS' => 'HPP',
+                'CASH_BANK' => 'Kas/Bank',
+                'ACCOUNT_PAYABLE' => 'Hutang',
+                'SALES_RETURN' => 'Retur Penjualan',
+            ][$spec[0]] ?? $spec[0];
             $lines[] = [
                 'id_akun' => $idAkun,
-                'keterangan' => $description . ' - ' . $spec[0],
+                'keterangan' => $description . ' - ' . $roleLabel,
                 'debit' => $spec[1] === 'DEBIT' ? $spec[2] : 0,
                 'kredit' => $spec[1] === 'KREDIT' ? $spec[2] : 0,
                 'id_customer' => (int)($payload['id_customer'] ?? 0),
@@ -1576,16 +1586,23 @@ class Accounting_service
     private function generate_journal_number($type, $date)
     {
         $type = strtoupper(trim((string)$type));
-        $period = date('Ym', strtotime($date));
-        $prefix = $type . '-' . $period . '-';
+        if ($type === 'AUTO') {
+            $period = 'ALL';
+            $prefix = 'B25';
+        } else {
+            $period = date('Ym', strtotime($date));
+            $prefix = $type . '-' . $period . '-';
+        }
+
+        $defaultInitial = $type === 'AUTO' ? -1 : 0;
 
         // create_journal() selalu membuka transaction sebelum method ini.
         // Counter row dikunci agar dua request paralel tidak memperoleh nomor sama.
         $this->CI->db->query(
             'INSERT INTO tbkeu_nomor_dokumen (kode_jenis_jurnal, periode_yyyymm, last_number, updated_at)
-             VALUES (?, ?, 0, NOW())
+             VALUES (?, ?, ?, NOW())
              ON DUPLICATE KEY UPDATE updated_at = updated_at',
-            [$type, $period]
+            [$type, $period, $defaultInitial]
         );
 
         $counter = $this->CI->db->query(
@@ -1606,6 +1623,9 @@ class Accounting_service
                 'updated_at' => date('Y-m-d H:i:s'),
             ]);
 
+        if ($type === 'AUTO') {
+            return $prefix . sprintf('%07d', $next);
+        }
         return $prefix . sprintf('%05d', $next);
     }
 

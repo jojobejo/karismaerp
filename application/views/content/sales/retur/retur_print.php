@@ -35,8 +35,8 @@
 
         /* TANDA TANGAN */
         .ttd-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        .ttd-table td { width: 25%; text-align: center; padding: 8px 4px; border: 1px solid #000; font-size: 10pt; vertical-align: top; }
-        .ttd-name { font-weight: bold; margin-top: 50px; font-size: 10pt; border-top: 1px solid #000; padding-top: 4px; }
+        .ttd-table td { text-align: center; padding: 4px 2px; border: 1px solid #000; font-size: 9pt; vertical-align: top; }
+        .ttd-name { font-weight: bold; margin-top: 50px; font-size: 8.5pt; border-top: 1px solid #000; padding-top: 4px; line-height: 1.1; }
 
         /* APPROVAL HISTORY */
         .approval-section { margin-top: 12px; }
@@ -167,40 +167,113 @@
     <table class="ttd-table">
         <tr>
             <td>
-                Dibuat Oleh,<br>
+                Dibuat,<br>
                 <strong>ADMLPB2</strong>
-                <div class="ttd-name"><?= htmlspecialchars($retur['create_by_retur'] ?? '') ?></div>
+                <div style="height: 50px;"></div>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['create_by_retur'] ?? '') ?></div>
             </td>
             <td>
-                Diverifikasi,<br>
-                <strong>Admin Stock</strong>
-                <div class="ttd-name"><?= htmlspecialchars($retur['admin_stock_by_retur'] ?? '') ?></div>
+                Dicek,<br>
+                <strong>Adm Penjualan</strong>
+                <?php if (!empty($retur['admretur_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['admretur_by_retur'] . ', ' . ($retur['admretur_at_retur'] ? date('d/m/Y H:i', strtotime($retur['admretur_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['admretur_by_retur'] ?? '') ?></div>
             </td>
             <td>
-                Proses Piutang,<br>
-                <strong>Collection</strong>
-                <div class="ttd-name"><?= htmlspecialchars($retur['collection_by'] ?? '') ?></div>
+                Persetujuan,<br>
+                <strong>Mng. ACC</strong>
+                <?php if (!empty($retur['mngacc_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['mngacc_by_retur'] . ', ' . ($retur['mngacc_at_retur'] ? date('d/m/Y H:i', strtotime($retur['mngacc_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['mngacc_by_retur'] ?? '') ?></div>
             </td>
             <td>
-                Selesai,<br>
-                <strong>Kasir</strong>
-                <div class="ttd-name"><?= htmlspecialchars($retur['kasir_by'] ?? '') ?></div>
+                Persetujuan,<br>
+                <strong>Manager SC</strong>
+                <?php if (!empty($retur['mngsc_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['mngsc_by_retur'] . ', ' . ($retur['mngsc_at_retur'] ? date('d/m/Y H:i', strtotime($retur['mngsc_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['mngsc_by_retur'] ?? '') ?></div>
+            </td>
+            
+            <?php if (!empty($retur['is_jagung'])): ?>
+            <td>
+                Persetujuan,<br>
+                <strong>Kadep UB</strong>
+                <?php if (!empty($retur['kadepub_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['kadepub_by_retur'] . ', ' . ($retur['kadepub_at_retur'] ? date('d/m/Y H:i', strtotime($retur['kadepub_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['kadepub_by_retur'] ?? '') ?></div>
+            </td>
+            <?php endif; ?>
+            
+            <td>
+                Persetujuan,<br>
+                <strong>Mng SE/Kadep SC</strong>
+                <?php 
+                $mngse_kadep = $retur['mngse_by_retur'] ?: $retur['kadepsc_by_retur'];
+                $mngse_kadep_at = $retur['mngse_at_retur'] ?: $retur['kadepsc_at_retur'];
+                if (!empty($mngse_kadep)): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $mngse_kadep . ', ' . ($mngse_kadep_at ? date('d/m/Y H:i', strtotime($mngse_kadep_at)) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['mngse_by_retur'] ?? '') ?></div>
+            </td>
+            <td>
+                Persetujuan,<br>
+                <strong>Kadep SC</strong>
+                <?php if (!empty($retur['kadepsc_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=APPROVED_<?= urlencode($retur['no_retur']) ?>_<?= urlencode($retur['kadepsc_by_retur']) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['kadepsc_by_retur'] ?? '') ?></div>
+            </td>
+            <td>
+                Persetujuan,<br>
+                <strong>Dir. OP</strong>
+                <?php if (!empty($retur['dirop_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['dirop_by_retur'] . ', ' . ($retur['dirop_at_retur'] ? date('d/m/Y H:i', strtotime($retur['dirop_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['dirop_by_retur'] ?? '') ?></div>
+            </td>
+            <td>
+                Persetujuan,<br>
+                <strong>Dir. UT</strong>
+                <?php if (!empty($retur['dirut_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['dirut_by_retur'] . ', ' . ($retur['dirut_at_retur'] ? date('d/m/Y H:i', strtotime($retur['dirut_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <?php else: ?>
+                    <div style="height: 50px;"></div>
+                <?php endif; ?>
+                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['dirut_by_retur'] ?? '') ?></div>
             </td>
         </tr>
     </table>
 
     <!-- APPROVAL HISTORY -->
     <?php
-    $has_history = $retur['admin_stock_by_retur'] || $retur['collection_by'] || $retur['kasir_by'];
+    $has_history = $retur['admretur_by_retur'] || $retur['collection_by'] || $retur['kasir_by'];
     if ($has_history):
     ?>
     <div class="approval-section">
         <h4>Riwayat Approval Proses Retur</h4>
-        <?php if ($retur['admin_stock_by_retur']): ?>
+        <?php if ($retur['admretur_by_retur']): ?>
             <div class="approval-row">
-                <span class="arl">Admin Stock</span>
-                <span><?= htmlspecialchars($retur['admin_stock_by_retur']) ?> — <?= $retur['admin_stock_at_retur'] ? date('d/m/Y H:i', strtotime($retur['admin_stock_at_retur'])) : '-' ?>
-                <?= $retur['catatan_admin_stock'] ? '| ' . htmlspecialchars($retur['catatan_admin_stock']) : '' ?></span>
+                <span class="arl">Admin Retur</span>
+                <span><?= htmlspecialchars($retur['admretur_by_retur']) ?> — <?= $retur['admretur_at_retur'] ? date('d/m/Y H:i', strtotime($retur['admretur_at_retur'])) : '-' ?>
+                <?= $retur['catatan_admretur'] ? '| ' . htmlspecialchars($retur['catatan_admretur']) : '' ?></span>
             </div>
         <?php endif; ?>
         <?php if ($retur['collection_by']): ?>
