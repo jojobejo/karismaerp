@@ -35,7 +35,7 @@ Modul `master_barang` sekarang membaca dan menulis ke tabel `tbpo_barang`.
 - Tidak ada penambahan tabel.
 - Tidak ada alter column.
 - Tidak ada index baru.
-- Penambahan tab `Kode Akun dan HPP` hanya tampilan read-only; belum ada kolom baru di `tbpo_barang`.
+- Tab `Kode Akun dan HPP` sudah memiliki kolom penyimpanan pada `tbpo_barang` melalui migration `docs/database/master_barang_persediaan_akun_hpp_20260717.sql`.
 
 ## Validasi Data
 - `kode_barang` divalidasi unik di level aplikasi saat proses simpan dan update.

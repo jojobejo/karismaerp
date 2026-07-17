@@ -5,6 +5,54 @@ defined('BASEPATH') or exit('No direct script access allowed');
  */
 class M_Keuangan extends CI_Model
 {
+    private $masterBarangHasKelompokDagang = null;
+    private $masterKelompokDagangTableExists = null;
+    private $masterBarangFieldExists = [];
+
+    private function master_barang_has_kelompok_dagang()
+    {
+        if ($this->masterBarangHasKelompokDagang === null) {
+            $this->masterBarangHasKelompokDagang = $this->db->field_exists('kelompok_dagang', 'tbpo_barang');
+        }
+
+        return $this->masterBarangHasKelompokDagang;
+    }
+
+    private function master_kelompok_dagang_table_exists()
+    {
+        if ($this->masterKelompokDagangTableExists === null) {
+            $this->masterKelompokDagangTableExists = $this->db->table_exists('tbkeu_kelompok_dagang');
+        }
+
+        return $this->masterKelompokDagangTableExists;
+    }
+
+    private function master_barang_field_exists($field)
+    {
+        if (!isset($this->masterBarangFieldExists[$field])) {
+            $this->masterBarangFieldExists[$field] = $this->db->field_exists($field, 'tbpo_barang');
+        }
+
+        return $this->masterBarangFieldExists[$field];
+    }
+
+    private function master_barang_tf_select($field, $default)
+    {
+        if ($this->master_barang_field_exists($field)) {
+            return "COALESCE(a.`{$field}`, '{$default}') AS {$field}";
+        }
+
+        return "'{$default}' AS {$field}";
+    }
+
+    private function master_barang_text_select($field, $default = '')
+    {
+        if ($this->master_barang_field_exists($field)) {
+            return "COALESCE(a.`{$field}`, '{$default}') AS {$field}";
+        }
+
+        return "'{$default}' AS {$field}";
+    }
 
     // function daily_stock()
     // {
@@ -359,12 +407,33 @@ class M_Keuangan extends CI_Model
 
     private function master_barang_base_query($search = '')
     {
+        $hasKelompokDagangColumn = $this->master_barang_has_kelompok_dagang();
+        $hasKelompokDagangMaster = $this->master_kelompok_dagang_table_exists();
+
+        if ($hasKelompokDagangColumn && $hasKelompokDagangMaster) {
+            $kelompokDagangSelect = "
+                COALESCE(a.kelompok_dagang, '') AS kelompok_dagang,
+                COALESCE(kd.DESKRIPSI, a.kelompok_dagang, '') AS kelompok_dagang_label,
+            ";
+        } elseif ($hasKelompokDagangColumn) {
+            $kelompokDagangSelect = "
+                COALESCE(a.kelompok_dagang, '') AS kelompok_dagang,
+                COALESCE(a.kelompok_dagang, '') AS kelompok_dagang_label,
+            ";
+        } else {
+            $kelompokDagangSelect = "
+                '' AS kelompok_dagang,
+                '' AS kelompok_dagang_label,
+            ";
+        }
+
         $this->db->select("
             a.id_barang,
             a.kode_barang,
             a.kd_suplier,
             a.nama_barang,
             COALESCE(a.satuan, '') AS satuan,
+            {$kelompokDagangSelect}
             COALESCE(a.kelompok_barang, '') AS kelompok_barang,
             COALESCE(a.kategori_barang, '') AS kategori_barang,
             COALESCE(a.bhn_aktif, '') AS bahan_aktif,
@@ -379,16 +448,37 @@ class M_Keuangan extends CI_Model
             COALESCE(a.kemasan, 0) AS kemasan,
             COALESCE(a.is_lot, 'F') AS is_lot,
             COALESCE(a.is_active, 'T') AS is_active,
+            " . $this->master_barang_tf_select('is_inventori', 'T') . ",
+            " . $this->master_barang_tf_select('is_beli', 'T') . ",
+            " . $this->master_barang_tf_select('is_jual', 'T') . ",
+            " . $this->master_barang_tf_select('hpp_average', 'T') . ",
+            " . $this->master_barang_tf_select('hpp_fifo', 'F') . ",
+            " . $this->master_barang_tf_select('hpp_lifo', 'F') . ",
+            " . $this->master_barang_text_select('kode_akun_harga_pokok', '51030') . ",
+            " . $this->master_barang_text_select('kode_akun_penjualan', '41032') . ",
+            " . $this->master_barang_text_select('kode_akun_persediaan', '14030') . ",
+            " . $this->master_barang_text_select('kode_akun_pengiriman_beli', '51032') . ",
+            " . $this->master_barang_text_select('kode_akun_pengiriman_jual', '64030') . ",
+            " . $this->master_barang_text_select('kode_akun_retur_penjualan', '41034') . ",
             COALESCE(s.nama_suplier, '') AS nama_suplier
         ", false);
         $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tb_suplier GROUP BY kd_suplier)';
         $this->db->from('tbpo_barang a');
         $this->db->join($supplierSubquery . ' s', 's.kd_suplier = a.kd_suplier', 'left', false);
+        if ($hasKelompokDagangColumn && $hasKelompokDagangMaster) {
+            $this->db->join('tbkeu_kelompok_dagang kd', 'CAST(kd.NOINDEX AS CHAR) = a.kelompok_dagang', 'left', false);
+        }
 
         if ($search !== '') {
             $this->db->group_start();
             $this->db->like('a.kode_barang', $search);
             $this->db->or_like('a.nama_barang', $search);
+            if ($hasKelompokDagangColumn) {
+                $this->db->or_like('a.kelompok_dagang', $search);
+            }
+            if ($hasKelompokDagangColumn && $hasKelompokDagangMaster) {
+                $this->db->or_like('kd.DESKRIPSI', $search);
+            }
             $this->db->or_like('a.kelompok_barang', $search);
             $this->db->or_like('a.kategori_barang', $search);
             $this->db->or_like('a.merk_barang', $search);
@@ -399,7 +489,7 @@ class M_Keuangan extends CI_Model
 
     private function build_master_barang_payload($input)
     {
-        return [
+        $data = [
             'kode_barang'      => $input['kode_barang'],
             'kd_suplier'       => $input['kd_suplier'],
             'nama_barang'      => $input['nama_barang'],
@@ -419,6 +509,107 @@ class M_Keuangan extends CI_Model
             'is_active'        => $input['is_active'],
             'is_lot'           => $input['is_lot'],
         ];
+
+        if ($this->master_barang_has_kelompok_dagang()) {
+            $data['kelompok_dagang'] = $input['kelompok_dagang'];
+        }
+
+        foreach ([
+            'is_inventori',
+            'is_beli',
+            'is_jual',
+            'hpp_average',
+            'hpp_fifo',
+            'hpp_lifo',
+            'kode_akun_harga_pokok',
+            'kode_akun_penjualan',
+            'kode_akun_persediaan',
+            'kode_akun_pengiriman_beli',
+            'kode_akun_pengiriman_jual',
+            'kode_akun_retur_penjualan',
+        ] as $field) {
+            if ($this->master_barang_field_exists($field)) {
+                $data[$field] = $input[$field];
+            }
+        }
+
+        return $data;
+    }
+
+    public function master_barang_kelompok_dagang_options()
+    {
+        if (!$this->master_kelompok_dagang_table_exists()) {
+            return [];
+        }
+
+        return $this->db->select('
+                NOINDEX AS noindex,
+                DESKRIPSI AS deskripsi,
+                KODESALES AS kode_sales,
+                KODEINVENTORI AS kode_inventori,
+                KODEHARGAPOKOK AS kode_harga_pokok,
+                KODEPENGIRIMANBELI AS kode_pengiriman_beli,
+                KODEPENGIRIMANJUAL AS kode_pengiriman_jual
+            ', false)
+            ->from('tbkeu_kelompok_dagang')
+            ->order_by('NOINDEX', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function master_barang_kelompok_dagang_exists($noindex)
+    {
+        if (!$this->master_kelompok_dagang_table_exists()) {
+            return true;
+        }
+
+        if (!preg_match('/^[0-9]+$/', (string)$noindex)) {
+            return false;
+        }
+
+        return $this->db->where('NOINDEX', (int)$noindex)
+            ->from('tbkeu_kelompok_dagang')
+            ->count_all_results() > 0;
+    }
+
+    public function master_barang_akun_options()
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return [];
+        }
+
+        $this->db->select('kode_akun, nama_akun');
+        $this->db->from('tbkeu_akun');
+        if ($this->db->field_exists('is_active', 'tbkeu_akun')) {
+            $this->db->where('is_active', 1);
+        }
+        if ($this->db->field_exists('tipe_akun', 'tbkeu_akun')) {
+            $this->db->where('tipe_akun', 'POSTING');
+        }
+        $this->db->order_by('kode_akun', 'ASC');
+        return $this->db->get()->result();
+    }
+
+    public function master_barang_akun_exists($kodeAkun)
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return true;
+        }
+
+        if (trim((string)$kodeAkun) === '') {
+            return true;
+        }
+
+        $this->db->from('tbkeu_akun');
+        $this->db->where('kode_akun', $kodeAkun);
+        if ($this->db->field_exists('is_active', 'tbkeu_akun')) {
+            $this->db->where('is_active', 1);
+        }
+        if ($this->db->field_exists('tipe_akun', 'tbkeu_akun')) {
+            $this->db->where('tipe_akun', 'POSTING');
+        }
+
+        return $this->db->count_all_results() > 0;
     }
 
     public function master_barang_all($search = '', $limit = 100, $offset = 0)

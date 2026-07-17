@@ -34,8 +34,90 @@
             };
         }
 
+        function escapeHtml(value) {
+            return $('<div>').text(value === null || typeof value === 'undefined' ? '' : value).html();
+        }
+
         function formatText(value) {
-            return value ? value : '-';
+            return value ? escapeHtml(value) : '-';
+        }
+
+        function setKelompokDagangValue(value, label) {
+            const normalizedValue = value === null || typeof value === 'undefined' ? '' : String(value);
+            const $select = $('#kelompok_dagang');
+
+            if (normalizedValue !== '') {
+                const optionExists = $select.find('option').filter(function() {
+                    return $(this).val() === normalizedValue;
+                }).length > 0;
+
+                if (!optionExists) {
+                    $select.append($('<option>', {
+                        value: normalizedValue,
+                        text: label || normalizedValue
+                    }));
+                }
+            }
+
+            $select.val(normalizedValue);
+        }
+
+        function updateKodeAkunDesc($select) {
+            const $option = $select.find('option:selected');
+            const target = $select.data('desc-target');
+            const kode = $select.val() || '';
+            const nama = $option.data('nama') || '';
+            $(target).text(kode ? (nama || '-') : '-');
+        }
+
+        function setKodeAkunValue(selector, value) {
+            const normalizedValue = value === null || typeof value === 'undefined' ? '' : String(value);
+            const $select = $(selector);
+
+            if (normalizedValue !== '') {
+                const optionExists = $select.find('option').filter(function() {
+                    return $(this).val() === normalizedValue;
+                }).length > 0;
+
+                if (!optionExists) {
+                    $select.append($('<option>', {
+                        value: normalizedValue,
+                        text: normalizedValue
+                    }));
+                }
+            }
+
+            $select.val(normalizedValue);
+            updateKodeAkunDesc($select);
+        }
+
+        function setSifatCheckbox(selector, value) {
+            $(selector).prop('checked', (value || 'T') === 'F');
+        }
+
+        function setHppMethod(row) {
+            const methods = {
+                '#hpp_average': (row.hpp_average || 'T') === 'T',
+                '#hpp_fifo': (row.hpp_fifo || 'F') === 'T',
+                '#hpp_lifo': (row.hpp_lifo || 'F') === 'T'
+            };
+            const selected = Object.keys(methods).filter(function(selector) {
+                return methods[selector];
+            });
+
+            $('.hpp-method-check').prop('checked', false);
+            if (selected.length === 1) {
+                $(selected[0]).prop('checked', true);
+                return;
+            }
+
+            $('#hpp_average').prop('checked', true);
+        }
+
+        function resetKodeAkunDefaults() {
+            $('.kode-akun-select').each(function() {
+                setKodeAkunValue(this, $(this).data('default') || '');
+            });
         }
 
         function setFormReadOnlyState() {
@@ -46,6 +128,14 @@
                 '#is_lot',
                 '#status_active',
                 '#is_active',
+                '#kelompok_dagang',
+                '#is_inventori',
+                '#is_beli',
+                '#is_jual',
+                '#hpp_average',
+                '#hpp_fifo',
+                '#hpp_lifo',
+                '.kode-akun-select',
                 '#kelompok_barang',
                 '#kategori_barang',
                 '#bahan_aktif',
@@ -67,6 +157,15 @@
             $('#tab-informasi-link').tab('show');
             $('#tab-gambar img').attr('src', defaultImage);
             setStatusBarang(true);
+            setSifatCheckbox('#is_inventori', 'T');
+            setSifatCheckbox('#is_beli', 'T');
+            setSifatCheckbox('#is_jual', 'T');
+            setHppMethod({
+                hpp_average: 'T',
+                hpp_fifo: 'F',
+                hpp_lifo: 'F'
+            });
+            resetKodeAkunDefaults();
             setFormReadOnlyState();
         }
 
@@ -76,6 +175,7 @@
             $('#kode_barang').val(row.kode_barang || '');
             $('#nama_barang').val(row.nama_barang || '');
             $('#satuan').val(row.satuan || '');
+            setKelompokDagangValue(row.kelompok_dagang || '', row.kelompok_dagang_label || '');
             $('#kelompok_barang').val(row.kelompok_barang || '');
             $('#kategori_barang').val(row.kategori_barang || '');
             $('#bahan_aktif').val(row.bahan_aktif || '');
@@ -91,6 +191,16 @@
             $('#kemasan').val(row.kemasan || 0);
             $('#is_lot').prop('checked', (row.is_lot || 'F') === 'T');
             setStatusBarang((row.is_active || 'T') !== 'F');
+            setSifatCheckbox('#is_inventori', row.is_inventori || 'T');
+            setSifatCheckbox('#is_beli', row.is_beli || 'T');
+            setSifatCheckbox('#is_jual', row.is_jual || 'T');
+            setHppMethod(row);
+            setKodeAkunValue('#kode_akun_harga_pokok', row.kode_akun_harga_pokok || '51030');
+            setKodeAkunValue('#kode_akun_penjualan', row.kode_akun_penjualan || '41032');
+            setKodeAkunValue('#kode_akun_persediaan', row.kode_akun_persediaan || '14030');
+            setKodeAkunValue('#kode_akun_pengiriman_beli', row.kode_akun_pengiriman_beli || '51032');
+            setKodeAkunValue('#kode_akun_pengiriman_jual', row.kode_akun_pengiriman_jual || '64030');
+            setKodeAkunValue('#kode_akun_retur_penjualan', row.kode_akun_retur_penjualan || '41034');
             setFormReadOnlyState();
         }
 
@@ -106,13 +216,14 @@
             items.forEach(function(item) {
                 const activeClass = parseInt(item.id, 10) === currentId ? ' active' : '';
                 const inactiveBadge = item.is_active === 'F' ? ' <span class="badge badge-secondary">Nonaktif</span>' : '';
+                const kelompokLabel = item.kelompok_dagang_label ? ' &bull; ' + formatText(item.kelompok_dagang_label) : '';
                 html += '' +
                     '<div class="master-list-item' + activeClass + '" data-id="' + item.id + '">' +
                     '  <div class="master-list-thumb"><img src="' + defaultImage + '" alt="Barang"></div>' +
                     '  <div class="master-list-meta">' +
                     '    <div class="master-list-code">' + formatText(item.kode_barang) + inactiveBadge + '</div>' +
                     '    <div class="master-list-name">' + formatText(item.nama_barang) + '</div>' +
-                    '    <div class="master-list-supplier">' + formatText(item.nama_suplier) + '</div>' +
+                    '    <div class="master-list-supplier">' + formatText(item.nama_suplier) + kelompokLabel + '</div>' +
                     '  </div>' +
                     '</div>';
             });
@@ -223,6 +334,21 @@
             setStatusBarang(!$(this).is(':checked'));
         });
 
+        $('.hpp-method-check').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('.hpp-method-check').not(this).prop('checked', false);
+                return;
+            }
+
+            if ($('.hpp-method-check:checked').length === 0) {
+                $(this).prop('checked', true);
+            }
+        });
+
+        $('.kode-akun-select').on('change', function() {
+            updateKodeAkunDesc($(this));
+        });
+
         $('#formMasterBarangModern').on('submit', function(e) {
             e.preventDefault();
 
@@ -248,6 +374,7 @@
                     kd_suplier: $('#kd_suplier').val(),
                     nama_barang: $('#nama_barang').val(),
                     satuan: $('#satuan').val(),
+                    kelompok_dagang: $('#kelompok_dagang').val(),
                     kelompok_barang: $('#kelompok_barang').val(),
                     kategori_barang: $('#kategori_barang').val(),
                     bahan_aktif: $('#bahan_aktif').val(),
@@ -261,7 +388,19 @@
                     isi: $('#isi').val(),
                     kemasan: $('#kemasan').val(),
                     is_lot: $('#is_lot').is(':checked') ? 'T' : 'F',
-                    is_active: $('#status_active').is(':checked') ? 'T' : 'F'
+                    is_active: $('#status_active').is(':checked') ? 'T' : 'F',
+                    is_inventori: $('#is_inventori').is(':checked') ? 'F' : 'T',
+                    is_beli: $('#is_beli').is(':checked') ? 'F' : 'T',
+                    is_jual: $('#is_jual').is(':checked') ? 'F' : 'T',
+                    hpp_average: $('#hpp_average').is(':checked') ? 'T' : 'F',
+                    hpp_fifo: $('#hpp_fifo').is(':checked') ? 'T' : 'F',
+                    hpp_lifo: $('#hpp_lifo').is(':checked') ? 'T' : 'F',
+                    kode_akun_harga_pokok: $('#kode_akun_harga_pokok').val(),
+                    kode_akun_penjualan: $('#kode_akun_penjualan').val(),
+                    kode_akun_persediaan: $('#kode_akun_persediaan').val(),
+                    kode_akun_pengiriman_beli: $('#kode_akun_pengiriman_beli').val(),
+                    kode_akun_pengiriman_jual: $('#kode_akun_pengiriman_jual').val(),
+                    kode_akun_retur_penjualan: $('#kode_akun_retur_penjualan').val()
                 },
                 success: function(resp) {
                     if (!resp.status) {
@@ -283,6 +422,7 @@
         });
 
         setFormReadOnlyState();
+        resetKodeAkunDefaults();
         loadList('');
     });
 </script>
