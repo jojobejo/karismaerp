@@ -241,6 +241,7 @@
                                         <th class="text-center">Kode Barang</th>
                                         <th class="text-center">Nama Barang</th>
                                         <th class="text-center">Qty Order</th>
+                                        <th class="text-center">Qty Sisa</th>
                                         <th class="text-center">Qty Diterima</th>
                                         <th class="text-center">Status</th>
                                         <th class="text-center">Draft Temp</th>
@@ -255,6 +256,7 @@
                                                 <td><?= htmlspecialchars($row['kd_barang'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
                                                 <td class="text-center"><?= number_format((float) ($row['qty_kecil'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil_sisa'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-center"><?= number_format((float) ($row['qty_kecil_diterima'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-center">
                                                     <?php
@@ -284,7 +286,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">
+                                            <td colspan="9" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -517,7 +519,7 @@
                 ],
                 columnDefs: [{
                     orderable: false,
-                    targets: [5, 6, 7]
+                    targets: [6, 7, 8]
                 }],
                 language: {
                     search: "Cari:",

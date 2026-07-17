@@ -351,6 +351,11 @@ $dashboardUrl = base_url('dashboard/');
         background: #e9ecef;
     }
 
+    .master-barang-page .kode-akun-input-wrap select {
+        padding-right: 24px;
+        text-align-last: right;
+    }
+
     .master-barang-page .kode-akun-lookup {
         position: absolute;
         right: 5px;
@@ -455,8 +460,20 @@ $dashboardUrl = base_url('dashboard/');
                                         <label for="nama_barang">Deskripsi :</label>
                                         <input type="text" class="form-control" id="nama_barang" name="nama_barang" style="grid-column: span 3;">
 
-                                        <label for="kelompok_barang">Kelompok Barang :</label>
-                                        <input type="text" class="form-control" id="kelompok_barang" name="kelompok_barang">
+                                        <label for="kelompok_dagang">Kelompok Dagang :</label>
+                                        <select class="form-control" id="kelompok_dagang" name="kelompok_dagang">
+                                            <option value="">Pilih Kelompok Dagang</option>
+                                            <?php foreach (($kelompok_dagang_options ?? []) as $kelompok) : ?>
+                                                <option
+                                                    value="<?= html_escape($kelompok->noindex) ?>"
+                                                    data-kode-sales="<?= html_escape($kelompok->kode_sales) ?>"
+                                                    data-kode-inventori="<?= html_escape($kelompok->kode_inventori) ?>"
+                                                    data-kode-harga-pokok="<?= html_escape($kelompok->kode_harga_pokok) ?>"
+                                                    data-kode-pengiriman-beli="<?= html_escape($kelompok->kode_pengiriman_beli) ?>"
+                                                    data-kode-pengiriman-jual="<?= html_escape($kelompok->kode_pengiriman_jual) ?>"
+                                                ><?= html_escape($kelompok->deskripsi) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
 
                                         <label>Status Barang :</label>
                                         <div class="status-barang-control">
@@ -496,6 +513,9 @@ $dashboardUrl = base_url('dashboard/');
                                                 <label for="bahan_aktif">Bahan Aktif :</label>
                                                 <input type="text" class="form-control" id="bahan_aktif" name="bahan_aktif">
 
+                                                <label for="kelompok_barang">Kelompok Barang :</label>
+                                                <input type="text" class="form-control" id="kelompok_barang" name="kelompok_barang">
+
                                                 <label for="merk_barang">Merk Barang :</label>
                                                 <input type="text" class="form-control" id="merk_barang" name="merk_barang">
 
@@ -523,15 +543,15 @@ $dashboardUrl = base_url('dashboard/');
                                                 <div class="kode-akun-side">
                                                     <div class="kode-akun-box">
                                                         <div class="kode-akun-box-title">Sifat</div>
-                                                        <label class="kode-akun-check"><input type="checkbox" checked disabled> Disimpan</label>
-                                                        <label class="kode-akun-check"><input type="checkbox" checked disabled> Dibeli</label>
-                                                        <label class="kode-akun-check"><input type="checkbox" checked disabled> Dijual</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" id="is_inventori" name="is_inventori" value="F"> Disimpan</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" id="is_beli" name="is_beli" value="F"> Dibeli</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" id="is_jual" name="is_jual" value="F"> Dijual</label>
                                                     </div>
                                                     <div class="kode-akun-box">
                                                         <div class="kode-akun-box-title">Harga Pokok</div>
-                                                        <label class="kode-akun-check"><input type="checkbox" checked disabled> Average</label>
-                                                        <label class="kode-akun-check"><input type="checkbox" disabled> FIFO</label>
-                                                        <label class="kode-akun-check"><input type="checkbox" disabled> LIFO</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" class="hpp-method-check" id="hpp_average" name="hpp_average" value="T" checked> Average</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" class="hpp-method-check" id="hpp_fifo" name="hpp_fifo" value="T"> FIFO</label>
+                                                        <label class="kode-akun-check"><input type="checkbox" class="hpp-method-check" id="hpp_lifo" name="hpp_lifo" value="T"> LIFO</label>
                                                     </div>
                                                 </div>
 
@@ -539,22 +559,31 @@ $dashboardUrl = base_url('dashboard/');
                                                     <div class="kode-akun-main-title">Kode Akun</div>
                                                     <?php
                                                     $kodeAkunRows = [
-                                                        ['Harga Pokok', '51030', 'Harga Pokok Penjualan # 3'],
-                                                        ['Penjualan', '41032', 'A Penjualan Barang Dagangan'],
-                                                        ['Persediaan', '14030', 'Persediaan # 3'],
-                                                        ['Pengiriman Beli', '51032', 'A Biaya Ongkos Angkut Pembelian'],
-                                                        ['Pengiriman Jual', '64030', 'A Biaya Ongkos Angkut Penjualan'],
-                                                        ['Retur Penjualan', '41034', 'A Retur Penjualan'],
+                                                        ['Harga Pokok', 'kode_akun_harga_pokok', '51030'],
+                                                        ['Penjualan', 'kode_akun_penjualan', '41032'],
+                                                        ['Persediaan', 'kode_akun_persediaan', '14030'],
+                                                        ['Pengiriman Beli', 'kode_akun_pengiriman_beli', '51032'],
+                                                        ['Pengiriman Jual', 'kode_akun_pengiriman_jual', '64030'],
+                                                        ['Retur Penjualan', 'kode_akun_retur_penjualan', '41034'],
                                                     ];
                                                     ?>
                                                     <?php foreach ($kodeAkunRows as $akunRow) : ?>
                                                         <div class="kode-akun-row">
                                                             <label><?= html_escape($akunRow[0]) ?> :</label>
                                                             <div class="kode-akun-input-wrap">
-                                                                <input type="text" class="form-control form-control-sm" value="<?= html_escape($akunRow[1]) ?>" readonly>
+                                                                <select class="form-control form-control-sm kode-akun-select" id="<?= html_escape($akunRow[1]) ?>" name="<?= html_escape($akunRow[1]) ?>" data-default="<?= html_escape($akunRow[2]) ?>" data-desc-target="#<?= html_escape($akunRow[1]) ?>_desc">
+                                                                    <option value="">Pilih</option>
+                                                                    <?php foreach (($akun_options ?? []) as $akunOption) : ?>
+                                                                        <option
+                                                                            value="<?= html_escape($akunOption->kode_akun) ?>"
+                                                                            data-nama="<?= html_escape($akunOption->nama_akun) ?>"
+                                                                            <?= (string)$akunOption->kode_akun === (string)$akunRow[2] ? 'selected' : '' ?>
+                                                                        ><?= html_escape($akunOption->kode_akun) ?></option>
+                                                                    <?php endforeach; ?>
+                                                                </select>
                                                                 <span class="kode-akun-lookup"><i class="fas fa-table"></i></span>
                                                             </div>
-                                                            <div class="kode-akun-desc"><?= html_escape($akunRow[2]) ?></div>
+                                                            <div class="kode-akun-desc" id="<?= html_escape($akunRow[1]) ?>_desc">-</div>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>

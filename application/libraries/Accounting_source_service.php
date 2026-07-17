@@ -101,15 +101,39 @@ class Accounting_source_service
 
         $totals = $this->CI->db->query(
             "SELECT COUNT(*) AS line_count,
-                    SUM(CASE WHEN COALESCE(NULLIF(adj.harga_satuan,0), NULLIF(po.hrg_satuan,0)) IS NULL THEN 1 ELSE 0 END) AS unresolved_count,
-                    COALESCE(SUM(d.qty_diterima * COALESCE(NULLIF(adj.harga_satuan,0), NULLIF(po.hrg_satuan,0), 0)),0) AS amount
-             FROM tb_lpb_detail d
-             LEFT JOIN tb_pre_po_invoice_adjustment adj
-               ON adj.kd_po = ? AND adj.kd_barang = d.kd_barang
-             LEFT JOIN tb_pre_po po
-               ON po.kd_po = ? AND po.kd_barang = d.kd_barang
-             WHERE d.id_lpb = ?",
-            [(string)$header->kd_po, (string)$header->kd_po, $idLpb]
+                    SUM(CASE WHEN d.harga_verified_at IS NULL THEN 1 ELSE 0 END) AS unverified_count,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(
+                                NULLIF(d.harga_satuan, 0),
+                                NULLIF(pp.harga_satuan_kecil_exclude, 0),
+                                NULLIF(pp.harga_satuan_exclude, 0)
+                            ) IS NULL THEN 1
+                            ELSE 0
+                        END
+                    ) AS unresolved_count,
+                    COALESCE(
+                        SUM(
+                            COALESCE(
+                                NULLIF(d.total_harga, 0),
+                                d.qty_diterima * COALESCE(
+                                    NULLIF(d.harga_satuan, 0),
+                                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
+                                    NULLIF(pp.harga_satuan_exclude, 0),
+                                    0
+                                )
+                            )
+                        ),
+                        0
+                    ) AS amount
+             FROM tb_lpb h
+             INNER JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+             LEFT JOIN tbpo_detail_po pp
+               ON pp.no_po = h.no_po
+              AND pp.kd_po = h.kd_po
+              AND pp.kd_barang = d.kd_barang
+             WHERE h.id_lpb = ?",
+            [$idLpb]
         )->row();
 
         $payload = [
@@ -131,8 +155,17 @@ class Accounting_source_service
             return $this->record_failure(
                 'GOODS_RECEIPT',
                 $payload,
-                'Harga perolehan LPB belum tersedia untuk seluruh detail. Isi invoice adjustment/PO sebelum retry.',
+                'Harga perolehan LPB belum tersedia untuk seluruh detail. Lengkapi harga dari PO/detail LPB sebelum retry.',
                 ['LPB_COST_UNRESOLVED']
+            );
+        }
+
+        if ((int)$totals->unverified_count > 0) {
+            return $this->record_failure(
+                'GOODS_RECEIPT',
+                $payload,
+                'Harga detail LPB belum diverifikasi seluruhnya. Verifikasi harga LPB, lalu retry posting.',
+                ['LPB_PRICE_UNVERIFIED']
             );
         }
 

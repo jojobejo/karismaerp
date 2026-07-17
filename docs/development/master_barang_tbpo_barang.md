@@ -66,4 +66,4 @@ Route `master_barang` dan alias `purchase/listBarang` sekarang memakai sumber da
 - Daftar supplier utama diambil dari `tb_suplier`.
 - Preview tab `Gambar` masih memakai placeholder logo Karisma karena `tbpo_barang` belum memiliki field file gambar.
 - Validasi duplikasi `kode_barang` dilakukan saat tambah dan edit.
-- Tab `Kode Akun dan HPP` masih read-only karena `tbpo_barang` belum memiliki field penyimpanan kode akun.
+- Tab `Kode Akun dan HPP` sudah dilanjutkan menjadi input Sifat, Harga Pokok, dan Kode Akun pada development `docs/development/master_barang_persediaan_akun_hpp_20260717.md`.

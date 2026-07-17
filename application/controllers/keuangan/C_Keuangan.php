@@ -601,7 +601,10 @@ class C_Keuangan extends CI_Controller
     public function master_barang()
     {
         $data['page_title']         = 'KARISMA';
+        $data['gudangid']           = 0;
         $data['supplier_options']   = $this->M_Keuangan->master_barang_supplier_options();
+        $data['kelompok_dagang_options'] = $this->M_Keuangan->master_barang_kelompok_dagang_options();
+        $data['akun_options']       = $this->M_Keuangan->master_barang_akun_options();
         $data['master_barang_access'] = [
             'jobdesk' => (string)$this->session->userdata('jobdesk'),
             'lv' => (int)$this->session->userdata('lv'),
@@ -633,6 +636,7 @@ class C_Keuangan extends CI_Controller
             'satuan'      => trim((string)$this->input->post('satuan', true)),
             'stock_minimum' => (int)$this->input->post('stock_minimum', true),
             'merk_barang' => trim((string)$this->input->post('merk_barang', true)),
+            'kelompok_dagang' => trim((string)$this->input->post('kelompok_dagang', true)),
             'kelompok_barang' => trim((string)$this->input->post('kelompok_barang', true)),
             'kategori_barang' => trim((string)$this->input->post('kategori_barang', true)),
             'produk_fokus' => trim((string)$this->input->post('produk_fokus', true)),
@@ -644,6 +648,18 @@ class C_Keuangan extends CI_Controller
             'kemasan'     => (float)$this->input->post('kemasan', true),
             'is_active'   => $this->input->post('is_active', true) === 'F' ? 'F' : 'T',
             'is_lot'      => $this->input->post('is_lot', true) === 'T' ? 'T' : 'F',
+            'is_inventori' => $this->input->post('is_inventori', true) === 'F' ? 'F' : 'T',
+            'is_beli'      => $this->input->post('is_beli', true) === 'F' ? 'F' : 'T',
+            'is_jual'      => $this->input->post('is_jual', true) === 'F' ? 'F' : 'T',
+            'hpp_average'  => $this->input->post('hpp_average', true) === 'T' ? 'T' : 'F',
+            'hpp_fifo'     => $this->input->post('hpp_fifo', true) === 'T' ? 'T' : 'F',
+            'hpp_lifo'     => $this->input->post('hpp_lifo', true) === 'T' ? 'T' : 'F',
+            'kode_akun_harga_pokok' => trim((string)$this->input->post('kode_akun_harga_pokok', true)),
+            'kode_akun_penjualan' => trim((string)$this->input->post('kode_akun_penjualan', true)),
+            'kode_akun_persediaan' => trim((string)$this->input->post('kode_akun_persediaan', true)),
+            'kode_akun_pengiriman_beli' => trim((string)$this->input->post('kode_akun_pengiriman_beli', true)),
+            'kode_akun_pengiriman_jual' => trim((string)$this->input->post('kode_akun_pengiriman_jual', true)),
+            'kode_akun_retur_penjualan' => trim((string)$this->input->post('kode_akun_retur_penjualan', true)),
         ];
     }
 
@@ -658,6 +674,45 @@ class C_Keuangan extends CI_Controller
     private function can_edit_info_lain_master_barang()
     {
         return $this->can_full_edit_master_barang() || (string)$this->session->userdata('jobdesk') === 'LOGISTIK';
+    }
+
+    private function validate_master_barang_kelompok_dagang($payload)
+    {
+        if ($payload['kelompok_dagang'] === '') {
+            return true;
+        }
+
+        return $this->M_Keuangan->master_barang_kelompok_dagang_exists($payload['kelompok_dagang']);
+    }
+
+    private function validate_master_barang_hpp($payload)
+    {
+        $checked = 0;
+        foreach (['hpp_average', 'hpp_fifo', 'hpp_lifo'] as $field) {
+            if ($payload[$field] === 'T') {
+                $checked++;
+            }
+        }
+
+        return $checked === 1;
+    }
+
+    private function validate_master_barang_akun($payload)
+    {
+        foreach ([
+            'kode_akun_harga_pokok' => 'Harga Pokok',
+            'kode_akun_penjualan' => 'Penjualan',
+            'kode_akun_persediaan' => 'Persediaan',
+            'kode_akun_pengiriman_beli' => 'Pengiriman Beli',
+            'kode_akun_pengiriman_jual' => 'Pengiriman Jual',
+            'kode_akun_retur_penjualan' => 'Retur Penjualan',
+        ] as $field => $label) {
+            if (!$this->M_Keuangan->master_barang_akun_exists($payload[$field])) {
+                return $label;
+            }
+        }
+
+        return true;
     }
 
     public function master_barang_list()
@@ -678,6 +733,8 @@ class C_Keuangan extends CI_Controller
                 'nama_barang' => $row->nama_barang,
                 'nama_suplier' => $row->nama_suplier,
                 'satuan'      => $row->satuan,
+                'kelompok_dagang' => $row->kelompok_dagang,
+                'kelompok_dagang_label' => $row->kelompok_dagang_label,
                 'is_active'   => $row->is_active,
                 'is_lot'      => $row->is_lot,
             ];
@@ -732,6 +789,28 @@ class C_Keuangan extends CI_Controller
             ], 422);
         }
 
+        if (!$this->validate_master_barang_kelompok_dagang($payload)) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kelompok dagang tidak valid.',
+            ], 422);
+        }
+
+        if (!$this->validate_master_barang_hpp($payload)) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Harga Pokok wajib memilih tepat satu metode: Average, FIFO, atau LIFO.',
+            ], 422);
+        }
+
+        $invalidAkun = $this->validate_master_barang_akun($payload);
+        if ($invalidAkun !== true) {
+            return $this->response_json([
+                'status' => false,
+                'message' => 'Kode akun ' . $invalidAkun . ' tidak valid.',
+            ], 422);
+        }
+
         if ($this->M_Keuangan->master_barang_by_kode($payload['kode_barang'])) {
             return $this->response_json([
                 'status' => false,
@@ -770,6 +849,28 @@ class C_Keuangan extends CI_Controller
                 return $this->response_json([
                     'status' => false,
                     'message' => 'Kode barang, nama barang, dan supplier utama wajib diisi.',
+                ], 422);
+            }
+
+            if (!$this->validate_master_barang_kelompok_dagang($payload)) {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kelompok dagang tidak valid.',
+                ], 422);
+            }
+
+            if (!$this->validate_master_barang_hpp($payload)) {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Harga Pokok wajib memilih tepat satu metode: Average, FIFO, atau LIFO.',
+                ], 422);
+            }
+
+            $invalidAkun = $this->validate_master_barang_akun($payload);
+            if ($invalidAkun !== true) {
+                return $this->response_json([
+                    'status' => false,
+                    'message' => 'Kode akun ' . $invalidAkun . ' tidak valid.',
                 ], 422);
             }
 
