@@ -313,7 +313,17 @@ class M_pembayaran extends CI_Model
 
     public function insert_payment($data)
     {
-        return $this->db->insert($this->payment_table, $data);
+        $this->db->trans_start();
+        $this->db->insert($this->payment_table, $data);
+        $id_pembayaran = $this->db->insert_id();
+
+        if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            $this->load->model('M_Journal');
+            $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
     }
 
     public function get_payment($id_pembayaran)
