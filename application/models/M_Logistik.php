@@ -4040,6 +4040,136 @@ FROM (
         return $this->db->query($sql, $params)->result_array();
     }
 
+    public function get_lpb_purchasing_view($date1 = null, $date2 = null)
+    {
+        $tanggalInvoiceSelect = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? "COALESCE(DATE_FORMAT(h.tanggal_invoice, '%Y-%m-%d'), CASE WHEN COALESCE(NULLIF(TRIM(h.no_invoice), ''), '-') = '-' THEN '-' ELSE COALESCE(DATE_FORMAT(invlog.tanggal_invoice, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') END) AS tanggal_invoice"
+            : "CASE
+                    WHEN COALESCE(NULLIF(TRIM(h.no_invoice), ''), '-') = '-' THEN '-'
+                    ELSE COALESCE(DATE_FORMAT(invlog.tanggal_invoice, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-')
+                END AS tanggal_invoice";
+        $kodeFakturSelect = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.kode_faktur_pajak), ''), '-') AS kode_faktur_pajak"
+            : "'-' AS kode_faktur_pajak";
+        $tanggalFakturSelect = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? "COALESCE(DATE_FORMAT(h.tanggal_faktur_pajak, '%Y-%m-%d'), '-') AS tgl_faktur"
+            : "'-' AS tgl_faktur";
+        $tanggalInvoiceGroup = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? ",
+                h.tanggal_invoice"
+            : "";
+        $kodeFakturGroup = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.kode_faktur_pajak"
+            : "";
+        $tanggalFakturGroup = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.tanggal_faktur_pajak"
+            : "";
+        $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
+            ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
+            : "'' AS jenis_lpb";
+        $nomorLpbSelect = $this->db->field_exists('nomor_lpb', 'tb_lpb')
+            ? "COALESCE(NULLIF(h.nomor_lpb, ''), CONCAT('LPB-', h.id_lpb)) AS nomor_lpb"
+            : "CONCAT('LPB-', h.id_lpb) AS nomor_lpb";
+        $jenisLpbGroup = $this->db->field_exists('jenis_lpb', 'tb_lpb')
+            ? ",
+                h.jenis_lpb"
+            : "";
+        $nomorLpbGroup = $this->db->field_exists('nomor_lpb', 'tb_lpb')
+            ? ",
+                h.nomor_lpb"
+            : "";
+
+        $sql = "SELECT
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                {$nomorLpbSelect},
+                {$jenisLpbSelect},
+                h.nosj,
+                h.tgl_sj,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-') AS nama_suplier,
+                COALESCE(NULLIF(TRIM(p.kd_suplier), ''), '') AS kd_suplier,
+                CASE
+                    WHEN COALESCE(ds.total_detail, 0) <= 0 THEN 0
+                    ELSE ROUND((COALESCE(ds.total_verified, 0) / ds.total_detail) * 100, 2)
+                END AS progress_persen,
+                COALESCE(ds.total_detail, 0) AS total_detail,
+                COALESCE(ds.total_verified, 0) AS total_verified,
+                CASE
+                    WHEN COALESCE(ds.total_detail, 0) <= 0 THEN 'belum'
+                    WHEN COALESCE(ds.total_verified, 0) <= 0 THEN 'belum'
+                    WHEN COALESCE(ds.total_verified, 0) < ds.total_detail THEN 'partial'
+                    ELSE 'done'
+                END AS progress_status,
+                h.no_invoice,
+                {$tanggalInvoiceSelect},
+                {$kodeFakturSelect},
+                {$tanggalFakturSelect},
+                h.input_at
+            FROM tb_lpb h
+            LEFT JOIN tbpo_po p
+                ON p.kd_po = h.kd_po
+            LEFT JOIN tbpo_suplier s
+                ON s.kd_suplier = p.kd_suplier
+            LEFT JOIN (
+                SELECT
+                    id_lpb,
+                    COUNT(id_detail_lpb) AS total_detail,
+                    SUM(CASE WHEN harga_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS total_verified
+                FROM tb_lpb_detail
+                GROUP BY id_lpb
+            ) ds
+                ON ds.id_lpb = h.id_lpb
+            LEFT JOIN (
+                SELECT
+                    kd_po,
+                    no_invoice,
+                    MAX(dilakukan_pada) AS tanggal_invoice
+                FROM tb_lpb_log
+                WHERE COALESCE(NULLIF(TRIM(no_invoice), ''), '-') <> '-'
+                GROUP BY kd_po, no_invoice
+            ) invlog
+                ON invlog.kd_po = h.kd_po
+                AND invlog.no_invoice = h.no_invoice
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!empty($date1) && !empty($date2)) {
+            $date1_formatted = date('Y-m-d', strtotime($date1));
+            $date2_formatted = date('Y-m-d', strtotime($date2));
+
+            $sql .= " AND DATE(h.input_at) BETWEEN ? AND ?";
+            $params[] = $date1_formatted;
+            $params[] = $date2_formatted;
+        }
+
+        $sql .= "
+            GROUP BY
+                h.id_lpb,
+                h.kd_po,
+                h.no_po,
+                h.nosj,
+                h.tgl_sj,
+                s.nama_suplier,
+                p.kd_suplier,
+                ds.total_detail,
+                ds.total_verified,
+                h.no_invoice,
+                invlog.tanggal_invoice,
+                h.input_at
+                {$tanggalInvoiceGroup}
+                {$kodeFakturGroup}
+                {$tanggalFakturGroup}
+                {$jenisLpbGroup}
+                {$nomorLpbGroup}
+            ORDER BY h.input_at DESC, h.id_lpb DESC";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function get_barang_by_po()
     {
         while (ob_get_level()) ob_end_clean();
@@ -4175,6 +4305,27 @@ FROM (
 
     public function get_lpb_records_by_kd_po($kd_po)
     {
+        $tanggalInvoiceSelect = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? "h.tanggal_invoice"
+            : "NULL AS tanggal_invoice";
+        $kodeFakturSelect = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? "h.kode_faktur_pajak"
+            : "NULL AS kode_faktur_pajak";
+        $tanggalFakturSelect = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? "h.tanggal_faktur_pajak"
+            : "NULL AS tanggal_faktur_pajak";
+        $tanggalInvoiceGroup = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? ",
+                h.tanggal_invoice"
+            : "";
+        $kodeFakturGroup = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.kode_faktur_pajak"
+            : "";
+        $tanggalFakturGroup = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.tanggal_faktur_pajak"
+            : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
             : "'' AS jenis_lpb";
@@ -4204,6 +4355,9 @@ FROM (
                 h.tgl_sj,
                 h.no_po,
                 h.no_invoice,
+                {$tanggalInvoiceSelect},
+                {$kodeFakturSelect},
+                {$tanggalFakturSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -4229,6 +4383,9 @@ FROM (
                 g.nama_gudang,
                 h.keterangan,
                 h.input_at
+                {$tanggalInvoiceGroup}
+                {$kodeFakturGroup}
+                {$tanggalFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -4239,6 +4396,27 @@ FROM (
 
     public function get_lpb_record_header($id_lpb)
     {
+        $tanggalInvoiceSelect = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? "h.tanggal_invoice"
+            : "NULL AS tanggal_invoice";
+        $kodeFakturSelect = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? "h.kode_faktur_pajak"
+            : "NULL AS kode_faktur_pajak";
+        $tanggalFakturSelect = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? "h.tanggal_faktur_pajak"
+            : "NULL AS tanggal_faktur_pajak";
+        $tanggalInvoiceGroup = $this->db->field_exists('tanggal_invoice', 'tb_lpb')
+            ? ",
+                h.tanggal_invoice"
+            : "";
+        $kodeFakturGroup = $this->db->field_exists('kode_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.kode_faktur_pajak"
+            : "";
+        $tanggalFakturGroup = $this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')
+            ? ",
+                h.tanggal_faktur_pajak"
+            : "";
         $jenisLpbSelect = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? "NULLIF(TRIM(h.jenis_lpb), '') AS jenis_lpb"
             : "'' AS jenis_lpb";
@@ -4268,6 +4446,9 @@ FROM (
                 h.nosj,
                 h.tgl_sj,
                 h.no_invoice,
+                {$tanggalInvoiceSelect},
+                {$kodeFakturSelect},
+                {$tanggalFakturSelect},
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
@@ -4293,6 +4474,9 @@ FROM (
                 g.nama_gudang,
                 h.keterangan,
                 h.input_at
+                {$tanggalInvoiceGroup}
+                {$kodeFakturGroup}
+                {$tanggalFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
@@ -4308,6 +4492,10 @@ FROM (
                 d.id_lpb,
                 d.kd_barang,
                 COALESCE(mb.nama_barang, '-') AS nama_barang,
+                CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
+                    ELSE COALESCE(pp.qty, 0)
+                END AS qty_order,
                 d.qty_diterima,
                 d.no_lot,
                 d.expired_date,
@@ -4317,7 +4505,14 @@ FROM (
                 COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0) AS harga_satuan,
                 COALESCE(NULLIF(d.total_harga, 0), d.qty_diterima * COALESCE(NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0), 0) AS total_harga,
                 d.harga_verified_at,
-                d.harga_verified_by
+                d.harga_verified_by,
+                CASE
+                    WHEN d.harga_verified_at IS NOT NULL
+                        AND COALESCE(d.harga_satuan, 0) > 0
+                        AND COALESCE(d.total_harga, 0) > 0
+                    THEN 1
+                    ELSE 0
+                END AS harga_terverifikasi
             FROM tb_lpb_detail d
             INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
             LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = d.kd_barang
@@ -5218,10 +5413,11 @@ FROM (
 
         $updateData = [
             'no_invoice' => $payload['no_invoice'],
-            'nosj'       => $payload['nosj'],
-            'tgl_sj'     => $this->_normalizeDate($payload['tgl_sj']),
-            'keterangan' => $payload['keterangan']
         ];
+
+        if ($this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
+            $updateData['tanggal_invoice'] = $this->_normalizeDate($payload['tanggal_invoice'] ?? '');
+        }
 
         $updated = $this->db
             ->where('id_lpb', (int) $payload['id_lpb'])
@@ -5235,7 +5431,7 @@ FROM (
             'kd_po'          => $row['kd_po'],
             'no_invoice'     => $payload['no_invoice'],
             'action_type'    => 'UPDATE_INVOICE',
-            'keterangan'     => $payload['keterangan'],
+            'keterangan'     => 'Update invoice LPB' . (!empty($payload['tanggal_invoice']) ? ' tanggal terbit ' . $payload['tanggal_invoice'] : ''),
             'dilakukan_oleh' => $payload['dilakukan_oleh'],
             'dilakukan_pada' => date('Y-m-d H:i:s')
         ]);
@@ -5249,6 +5445,97 @@ FROM (
         }
 
         return $this->update_pre_po_status_by_kd_po($row['kd_po'], 2);
+    }
+
+    public function update_faktur_pajak_lpb($payload)
+    {
+        $row = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->limit(1)
+            ->get('tb_lpb')
+            ->row_array();
+
+        if (!$row) {
+            return FALSE;
+        }
+
+        $updateData = [];
+
+        if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+            $updateData['kode_faktur_pajak'] = $payload['kode_faktur_pajak'];
+        }
+
+        if ($this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
+            $updateData['tanggal_faktur_pajak'] = $this->_normalizeDate($payload['tanggal_faktur_pajak'] ?? '');
+        }
+
+        if (empty($updateData)) {
+            return FALSE;
+        }
+
+        $updated = $this->db
+            ->where('id_lpb', (int) $payload['id_lpb'])
+            ->update('tb_lpb', $updateData);
+
+        if (!$updated) {
+            return FALSE;
+        }
+
+        $logged = $this->db->insert('tb_lpb_log', [
+            'kd_po'          => $row['kd_po'],
+            'no_invoice'     => $row['no_invoice'] ?? '',
+            'action_type'    => 'UPDATE_INVOICE',
+            'keterangan'     => 'Update faktur pajak ' . $payload['kode_faktur_pajak'],
+            'dilakukan_oleh' => $payload['dilakukan_oleh'],
+            'dilakukan_pada' => date('Y-m-d H:i:s')
+        ]);
+
+        if (!$logged) {
+            return FALSE;
+        }
+
+        return $this->recalculate_lpb_status((int) $payload['id_lpb']);
+    }
+
+    public function ensure_lpb_invoice_faktur_columns()
+    {
+        if (!$this->db->table_exists('tb_lpb')) {
+            return FALSE;
+        }
+
+        $this->load->dbforge();
+        $fields = [];
+
+        if (!$this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
+            $fields['tanggal_invoice'] = [
+                'type' => 'DATE',
+                'null' => TRUE,
+                'after' => 'no_invoice'
+            ];
+        }
+
+        if (!$this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+            $fields['kode_faktur_pajak'] = [
+                'type' => 'VARCHAR',
+                'constraint' => 100,
+                'null' => TRUE,
+                'after' => 'tanggal_invoice'
+            ];
+        }
+
+        if (!$this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
+            $fields['tanggal_faktur_pajak'] = [
+                'type' => 'DATE',
+                'null' => TRUE,
+                'after' => 'kode_faktur_pajak'
+            ];
+        }
+
+        if (!empty($fields) && !$this->dbforge->add_column('tb_lpb', $fields)) {
+            return FALSE;
+        }
+
+        return TRUE;
     }
 
     private function _normalizeDate($raw)

@@ -585,6 +585,7 @@ class C_Ics extends CI_Controller
         $data['lpb']        = $isAdminPo
             ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
             : $this->M_Logistik->get_lpb($date1, $date2);
+        $data['lpb_purchasing'] = $this->M_Logistik->get_lpb_purchasing_view($date1, $date2);
         $data['date1']      = $date1;
         $data['date2']      = $date2;
         $data['sync_api_url'] = base_url('sync_pre_po_erp');
@@ -615,6 +616,7 @@ class C_Ics extends CI_Controller
             ->order_by('nama_gudang', 'ASC')
             ->get('tb_gudang')
             ->result_array();
+        $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $data['detail']     = $this->M_Logistik->detail_po_received($nopo, $kdsuplier);
         $data['kd_po']      = !empty($data['detail'][0]['kd_po']) ? $data['detail'][0]['kd_po'] : '';
 
@@ -639,6 +641,7 @@ class C_Ics extends CI_Controller
         $data['kd_suplier'] = $kd_suplier;
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
+        $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
@@ -786,7 +789,13 @@ class C_Ics extends CI_Controller
             'nomor_lpb'   => $header['nomor_lpb'] ?? '',
             'no_po'       => $header['no_po'] ?? '',
             'jenis_lpb'   => $header['jenis_lpb'] ?? '',
-            'no_invoice'  => $header['no_invoice'] ?? ''
+            'status_lpb'  => $header['status_lpb'] ?? 1,
+            'nosj'        => $header['nosj'] ?? '',
+            'tgl_sj'      => $header['tgl_sj'] ?? '',
+            'no_invoice'  => $header['no_invoice'] ?? '',
+            'tanggal_invoice' => $header['tanggal_invoice'] ?? '',
+            'kode_faktur_pajak' => $header['kode_faktur_pajak'] ?? '',
+            'tanggal_faktur_pajak' => $header['tanggal_faktur_pajak'] ?? ''
         ];
     }
 
@@ -1281,22 +1290,19 @@ class C_Ics extends CI_Controller
     {
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
         $no_invoice = trim((string) $this->input->post('no_invoice', TRUE));
-        $nosj = trim((string) $this->input->post('nosj', TRUE));
-        $tgl_sj = trim((string) $this->input->post('tgl_sj', TRUE));
-        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+        $tanggal_invoice = trim((string) $this->input->post('tanggal_invoice', TRUE));
 
-        if ($id_lpb <= 0 || $no_invoice === '' || $nosj === '' || $tgl_sj === '') {
+        if ($id_lpb <= 0 || $no_invoice === '' || $tanggal_invoice === '') {
             $this->json_response(['status' => 'error', 'message' => 'Data invoice belum lengkap.', 'html' => '']);
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_invoice_lpb([
             'id_lpb'         => $id_lpb,
             'no_invoice'     => $no_invoice,
-            'nosj'           => $nosj,
-            'tgl_sj'         => $tgl_sj,
-            'keterangan'     => $keterangan,
+            'tanggal_invoice' => $tanggal_invoice,
             'dilakukan_oleh' => $this->active_user_name()
         ]);
 
@@ -1311,6 +1317,40 @@ class C_Ics extends CI_Controller
             'status'  => 'success',
             'message' => 'Invoice LPB berhasil diperbarui.',
             'html'    => ''
+        ]);
+    }
+
+    public function ajax_update_faktur_pajak()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $kode_faktur_pajak = trim((string) $this->input->post('kode_faktur_pajak', TRUE));
+        $tanggal_faktur_pajak = trim((string) $this->input->post('tanggal_faktur_pajak', TRUE));
+
+        if ($id_lpb <= 0 || $kode_faktur_pajak === '' || $tanggal_faktur_pajak === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Data faktur pajak belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_faktur_pajak_lpb([
+            'id_lpb' => $id_lpb,
+            'kode_faktur_pajak' => $kode_faktur_pajak,
+            'tanggal_faktur_pajak' => $tanggal_faktur_pajak,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update faktur pajak gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status' => 'success',
+            'message' => 'Faktur pajak berhasil diperbarui.',
+            'html' => ''
         ]);
     }
 
@@ -1344,6 +1384,29 @@ class C_Ics extends CI_Controller
             'jenis_lpb' => $saved['jenis_lpb'] ?? $jenis_lpb,
             'nomor_lpb' => $saved['nomor_lpb'] ?? '',
             'html'      => ''
+        ]);
+    }
+
+    public function ajax_generate_lpb_number()
+    {
+        $jenis_lpb = trim((string) $this->input->get('jenis_lpb', TRUE));
+
+        if ($jenis_lpb === '') {
+            $this->json_response([
+                'status'  => 'error',
+                'message' => 'Jenis PO / LPB wajib dipilih.',
+                'nomor_lpb' => ''
+            ]);
+            return;
+        }
+
+        $jenis_lpb = $this->M_Logistik->normalize_lpb_type($jenis_lpb);
+        $nomor_lpb = $this->M_Logistik->generate_lpb_number($jenis_lpb);
+
+        $this->json_response([
+            'status'    => 'success',
+            'jenis_lpb' => $jenis_lpb,
+            'nomor_lpb' => $nomor_lpb
         ]);
     }
 
@@ -1663,6 +1726,15 @@ class C_Ics extends CI_Controller
                 'status'  => 'error',
                 'step'    => 'validate_header',
                 'message' => 'Nomor invoice wajib diisi.'
+            ]);
+            return;
+        }
+
+        if ($payload['jenis_lpb'] === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_header',
+                'message' => 'Jenis PO / LPB wajib dipilih.'
             ]);
             return;
         }

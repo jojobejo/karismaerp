@@ -303,7 +303,7 @@
                                 </div>
                                 <div class="lpb-panel-body">
                                     <div class="form-group">
-                                        <input type="text" class="form-control" id="lpbSearchInput" placeholder="Cari invoice / jenis LPB / gudang / keterangan">
+                                        <input type="text" class="form-control" id="lpbSearchInput" placeholder="Cari invoice / faktur pajak / jenis LPB / nomor SJ">
                                     </div>
 
                                     <div id="lpbListLoading" class="lpb-loading-state">
@@ -330,14 +330,11 @@
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
                                     </div>
                                     <div class="d-flex align-items-center" style="gap:10px;">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnPurchasingPo">
-                                            <i class="fas fa-shopping-cart mr-1"></i> Purchasing
-                                        </button>
                                         <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
                                             <i class="fas fa-file-invoice mr-1"></i> Update Invoice
                                         </button>
-                                        <button type="button" class="btn btn-outline-warning btn-sm" id="btnUpdateJenisPo">
-                                            <i class="fas fa-cog mr-1"></i> Setting Jenis PO
+                                        <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
+                                            <i class="fas fa-receipt mr-1"></i> Update Faktur
                                         </button>
                                         <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
                                             <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
@@ -363,11 +360,15 @@
                                             <table class="table table-bordered table-hover lpb-table" id="lpbDetailTable">
                                                 <thead>
                                                     <tr>
-                                                        <th class="text-center">No</th>
                                                         <th>Kode Barang</th>
                                                         <th>Nama Barang</th>
                                                         <th>No Lot</th>
                                                         <th class="text-center">Expired Date</th>
+                                                        <th class="text-right">Qty Order</th>
+                                                        <th class="text-right">Qty LPB</th>
+                                                        <th class="text-right">Total Harga</th>
+                                                        <th class="text-right">Harga Satuan</th>
+                                                        <th class="text-center">#</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -488,23 +489,45 @@
                         <label>No Invoice</label>
                         <input type="text" class="form-control" id="invoiceNo" name="no_invoice" required>
                     </div>
-                    <div class="form-group">
-                        <label>No Surat Jalan</label>
-                        <input type="text" class="form-control" id="invoiceNosj" name="nosj" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Tanggal Surat Jalan</label>
-                        <input type="date" class="form-control" id="invoiceTglSj" name="tgl_sj" required>
-                    </div>
                     <div class="form-group mb-0">
-                        <label>Keterangan</label>
-                        <textarea class="form-control" id="invoiceKeterangan" name="keterangan" rows="3"></textarea>
+                        <label>Tanggal Terbit Invoice</label>
+                        <input type="date" class="form-control" id="invoiceTanggalTerbit" name="tanggal_invoice" required>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmitInvoice">
                         <i class="fas fa-save mr-1"></i> Simpan Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpdateFaktur" tabindex="-1" role="dialog" aria-labelledby="modalUpdateFakturLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <form id="formUpdateFaktur" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalUpdateFakturLabel">Update Faktur Pajak</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="fakturIdLpb" name="id_lpb">
+                    <div class="form-group">
+                        <label>Kode Faktur Pajak</label>
+                        <input type="text" class="form-control" id="fakturKodePajak" name="kode_faktur_pajak" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Tanggal Terbit Faktur Pajak</label>
+                        <input type="date" class="form-control" id="fakturTanggalTerbit" name="tanggal_faktur_pajak" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info" id="btnSubmitFaktur">
+                        <i class="fas fa-save mr-1"></i> Simpan Faktur
                     </button>
                 </div>
             </form>
@@ -624,6 +647,7 @@
             var purchasingEditMode = false;
             var isSubmittingAdjustment = false;
             var isSubmittingInvoice = false;
+            var isSubmittingFaktur = false;
             var isSubmittingJenisLpb = false;
             var isSubmittingLpbPrice = false;
             var isAcceptingLpbPrice = false;
@@ -773,11 +797,11 @@
                 var statusInfo = lpbStatusInfo(row.status_lpb);
                 var statusBadge = '<span class="badge ' + statusInfo.badge + '"><i class="fas fa-tasks mr-1"></i>' + escHtml(statusInfo.label) + '</span>';
                 var nomorLpb = row.nomor_lpb ? row.nomor_lpb : 'Nomor LPB belum dibuat';
-                var gudang = row.nama_gudang ? row.nama_gudang : '-';
-                var keterangan = row.keterangan ? row.keterangan : 'Tidak ada keterangan';
+                var kodeFaktur = row.kode_faktur_pajak ? row.kode_faktur_pajak : 'Faktur pajak belum ada';
+                var nomorSj = row.nosj ? row.nosj : 'SJ belum ada';
 
                 return '' +
-                    '<div class="lpb-list-item js-lpb-item" data-id="' + escHtml(row.id_lpb) + '" data-search="' + escHtml((nomorLpb + ' ' + invoice + ' ' + jenisLpb + ' status ' + (row.status_lpb || 1) + ' ' + gudang + ' ' + keterangan).toLowerCase()) + '">' +
+                    '<div class="lpb-list-item js-lpb-item" data-id="' + escHtml(row.id_lpb) + '" data-search="' + escHtml((nomorLpb + ' ' + invoice + ' ' + kodeFaktur + ' ' + jenisLpb + ' status ' + (row.status_lpb || 1) + ' ' + nomorSj).toLowerCase()) + '">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                     '<div>' +
                     '<div class="font-weight-bold text-dark">' + escHtml(nomorLpb) + '</div>' +
@@ -787,10 +811,10 @@
                     '<div class="lpb-list-meta">' +
                     invoiceBadge +
                     '<span class="lpb-chip"><i class="fas fa-tags"></i> ' + escHtml(jenisLpb) + '</span>' +
-                    '<span class="lpb-chip green"><i class="fas fa-warehouse"></i> ' + escHtml(gudang) + '</span>' +
+                    '<span class="lpb-chip green"><i class="fas fa-receipt"></i> ' + escHtml(kodeFaktur) + '</span>' +
                     '<span class="lpb-chip slate"><i class="fas fa-clock"></i> ' + escHtml(formatDateTimeId(row.input_at)) + '</span>' +
                     '</div>' +
-                    '<div class="text-muted small mt-2">' + escHtml(keterangan) + '</div>' +
+                    '<div class="text-muted small mt-2">' + escHtml(nomorSj) + ' | ' + escHtml(formatDateId(row.tgl_sj)) + '</div>' +
                     '</div>';
             }
 
@@ -850,18 +874,7 @@
             }
 
             function updateDetailViewButton() {
-                if (detailViewMode === 'purchasing') {
-                    $('#btnPurchasingPo')
-                        .removeClass('btn-outline-primary')
-                        .addClass('btn-primary')
-                        .html('<i class="fas fa-receipt mr-1"></i> Data LPB');
-                    return;
-                }
-
-                $('#btnPurchasingPo')
-                    .removeClass('btn-primary')
-                    .addClass('btn-outline-primary')
-                    .html('<i class="fas fa-shopping-cart mr-1"></i> Purchasing');
+                return;
             }
 
             function setDetailTableHead(columns) {
@@ -898,12 +911,16 @@
                         value: header.no_invoice || '-'
                     },
                     {
-                        label: 'Gudang',
-                        value: header.nama_gudang || '-'
+                        label: 'Tgl Terbit Invoice',
+                        value: formatDateId(header.tanggal_invoice)
                     },
                     {
-                        label: 'Keterangan',
-                        value: header.keterangan || '-'
+                        label: 'Faktur Pajak',
+                        value: header.kode_faktur_pajak || '-'
+                    },
+                    {
+                        label: 'Tanggal Terbit Faktur',
+                        value: formatDateId(header.tanggal_faktur_pajak)
                     }
                 ];
 
@@ -919,75 +936,26 @@
             }
 
             function renderPurchasingHeader(header) {
-                var html = '';
-                var nomorJenisLpb = (header.nomor_lpb || 'Nomor LPB belum dibuat') + ' / ' + (header.jenis_lpb || 'Jenis LPB belum ditentukan');
-                var boxes = [{
-                        label: 'No PO',
-                        value: header.no_po || '-'
-                    },
-                    {
-                        label: 'Nomor / Jenis LPB',
-                        value: nomorJenisLpb
-                    },
-                    {
-                        label: 'No Invoice',
-                        value: header.no_invoice || '-'
-                    }
-                ];
-
-                $.each(boxes, function(_, box) {
-                    html += '' +
-                        '<div class="lpb-detail-box">' +
-                        '<div class="label">' + escHtml(box.label) + '</div>' +
-                        '<div class="value">' + escHtml(box.value) + '</div>' +
-                        '</div>';
-                });
-
-                $('#lpbDetailHeaderGrid').html(html);
+                renderDetailHeader(header || {});
             }
 
             function renderDetailTable(rows) {
-                selectedPurchasingRows = [];
-                purchasingEditMode = false;
-                updateBulkAcceptButton();
-                setDetailTableHead([{
-                        label: 'No',
-                        className: 'text-center'
-                    },
-                    {
-                        label: 'Kode Barang'
-                    },
-                    {
-                        label: 'Nama Barang'
-                    },
-                    {
-                        label: 'No Lot'
-                    },
-                    {
-                        label: 'Expired Date',
-                        className: 'text-center'
-                    }
-                ]);
-
-                var tbody = $('#lpbDetailTable tbody');
-                tbody.empty();
-
-                if (!rows || rows.length === 0) {
-                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Detail LPB kosong.</td></tr>');
-                    return;
-                }
-
-                $.each(rows, function(index, row) {
-                    tbody.append(
-                        '<tr>' +
-                        '<td class="text-center">' + (index + 1) + '</td>' +
-                        '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
-                        '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
-                        '<td>' + escHtml(row.no_lot || '-') + '</td>' +
-                        '<td class="text-center">' + escHtml(formatDateId(row.expired_date)) + '</td>' +
-                        '</tr>'
-                    );
+                selectedPurchasingRows = $.map(rows || [], function(row) {
+                    return {
+                        id_detail_lpb: row.id_detail_lpb || 0,
+                        kd_barang: row.kd_barang || '',
+                        nama_barang: row.nama_barang || '-',
+                        no_lot: row.no_lot || '-',
+                        expired_date: formatDateId(row.expired_date),
+                        qty_order: row.qty_order || 0,
+                        qty_lpb: row.qty_diterima || 0,
+                        total_harga: row.total_harga || 0,
+                        harga_satuan: row.harga_satuan || 0,
+                        harga_terverifikasi: row.harga_terverifikasi || 0
+                    };
                 });
+                purchasingEditMode = false;
+                renderPurchasingTable(selectedPurchasingRows);
             }
 
             function loadDetail(idLpb) {
@@ -1136,12 +1104,7 @@
                 selectedPurchasingRows = rows || [];
                 var acceptableRows = getBulkAcceptableRows();
                 var allVerified = selectedPurchasingRows.length > 0 && acceptableRows.length === 0;
-                var showActionColumn = !allVerified || purchasingEditMode;
                 var columns = [{
-                        label: 'No',
-                        className: 'text-center'
-                    },
-                    {
                         label: 'Kode Barang'
                     },
                     {
@@ -1155,7 +1118,7 @@
                         className: 'text-center'
                     },
                     {
-                        label: 'Qty Sisa',
+                        label: 'Qty Order',
                         className: 'text-right'
                     },
                     {
@@ -1169,15 +1132,12 @@
                     {
                         label: 'Harga Satuan',
                         className: 'text-right'
-                    }
-                ];
-
-                if (showActionColumn) {
-                    columns.push({
+                    },
+                    {
                         label: '#',
                         className: 'text-center'
-                    });
-                }
+                    }
+                ];
 
                 setDetailTableHead(columns);
 
@@ -1185,7 +1145,7 @@
                 tbody.empty();
 
                 if (!rows || rows.length === 0) {
-                    tbody.html('<tr><td colspan="' + (showActionColumn ? 10 : 9) + '" class="text-center text-muted">Data purchasing untuk LPB ini belum tersedia.</td></tr>');
+                    tbody.html('<tr><td colspan="9" class="text-center text-muted">Detail LPB kosong.</td></tr>');
                     updateBulkAcceptButton();
                     return;
                 }
@@ -1193,7 +1153,10 @@
                 $.each(rows, function(index, row) {
                     var hargaSatuanAktif = row.harga_satuan || row.harga_satuan_exclude || 0;
                     var totalHargaAktif = row.total_harga || row.total_harga_exclude || 0;
-                    var actionColumn = showActionColumn ? (
+                    var hargaVerified = parseInt(row.harga_terverifikasi || 0, 10) === 1;
+                    var actionColumn = (hargaVerified && !purchasingEditMode) ? (
+                        '<td class="text-center"><span class="badge badge-success">Accepted</span></td>'
+                    ) : (
                         '<td class="text-center">' +
                         '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga LPB" ' +
                         'data-id-detail="' + escHtml(row.id_detail_lpb || 0) + '" ' +
@@ -1205,16 +1168,15 @@
                         '<i class="fas fa-pencil-alt"></i>' +
                         '</button>' +
                         '</td>'
-                    ) : '';
+                    );
 
                     tbody.append(
                         '<tr>' +
-                        '<td class="text-center">' + (index + 1) + '</td>' +
                         '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
                         '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
-                        '<td class="text-right">' + escHtml(formatNumber(row.qty_sisa || 0)) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatNumber(row.qty_order || 0)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatNumber(row.qty_lpb || 0)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
@@ -1249,7 +1211,7 @@
             }
 
             function updateBulkAcceptButton() {
-                if (detailViewMode !== 'purchasing' || !selectedPurchasingRows || selectedPurchasingRows.length === 0) {
+                if (!selectedPurchasingRows || selectedPurchasingRows.length === 0) {
                     $('#lpbPurchasingVerifyActions').hide();
                     return;
                 }
@@ -1304,7 +1266,7 @@
                         }
 
                         Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diverifikasi.', 'success');
-                        loadPurchasingDetailView();
+                        loadDetail(selectedIdLpb);
                         loadList({
                             skipDetailReload: true
                         });
@@ -1330,10 +1292,23 @@
 
                 $('#invoiceIdLpb').val(activeId);
                 $('#invoiceNo').val(hasInvoice(activeHeader.no_invoice) ? activeHeader.no_invoice : '');
-                $('#invoiceNosj').val(activeHeader.nosj || '');
-                $('#invoiceTglSj').val(activeHeader.tgl_sj || '');
-                $('#invoiceKeterangan').val(activeHeader.keterangan || '');
+                $('#invoiceTanggalTerbit').val(activeHeader.tanggal_invoice || '');
                 $('#modalUpdateInvoice').modal('show');
+            }
+
+            function openUpdateFakturModal(header) {
+                var activeHeader = header || selectedHeader;
+                var activeId = activeHeader ? (activeHeader.id_lpb || selectedIdLpb) : selectedIdLpb;
+
+                if (!activeId || !activeHeader) {
+                    Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update faktur pajaknya terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                $('#fakturIdLpb').val(activeId);
+                $('#fakturKodePajak').val(activeHeader.kode_faktur_pajak || '');
+                $('#fakturTanggalTerbit').val(activeHeader.tanggal_faktur_pajak || '');
+                $('#modalUpdateFaktur').modal('show');
             }
 
             function updateJenisLpbFormatInfo() {
@@ -1493,7 +1468,7 @@
                         }
 
                         Swal.fire('Berhasil', res.message || 'Harga berhasil diverifikasi.', 'success');
-                        loadPurchasingDetailView();
+                        loadDetail(selectedIdLpb);
                         loadList({
                             skipDetailReload: true
                         });
@@ -1622,12 +1597,12 @@
                 loadPrePoAdjustment();
             });
 
-            $('#btnPurchasingPo').on('click', function() {
-                togglePurchasingView();
-            });
-
             $('#btnUpdateInvoice').on('click', function() {
                 openUpdateInvoiceModal();
+            });
+
+            $('#btnUpdateFaktur').on('click', function() {
+                openUpdateFakturModal();
             });
 
             $('#btnUpdateJenisPo').on('click', function() {
@@ -1651,9 +1626,7 @@
                     data: {
                         id_lpb: $('#invoiceIdLpb').val(),
                         no_invoice: $('#invoiceNo').val(),
-                        nosj: $('#invoiceNosj').val(),
-                        tgl_sj: $('#invoiceTglSj').val(),
-                        keterangan: $('#invoiceKeterangan').val()
+                        tanggal_invoice: $('#invoiceTanggalTerbit').val()
                     },
                     success: function(res) {
                         if (res.status !== 'success') {
@@ -1675,6 +1648,49 @@
                     complete: function() {
                         isSubmittingInvoice = false;
                         $('#btnSubmitInvoice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Invoice');
+                    }
+                });
+            });
+
+            $('#formUpdateFaktur').on('submit', function(e) {
+                e.preventDefault();
+
+                if (isSubmittingFaktur) {
+                    return;
+                }
+
+                isSubmittingFaktur = true;
+                $('#btnSubmitFaktur').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_update_faktur_pajak') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: $('#fakturIdLpb').val(),
+                        kode_faktur_pajak: $('#fakturKodePajak').val(),
+                        tanggal_faktur_pajak: $('#fakturTanggalTerbit').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Update faktur pajak gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalUpdateFaktur').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'Faktur pajak berhasil diperbarui.', 'success');
+                        loadList();
+                        if (selectedIdLpb) {
+                            loadDetail(selectedIdLpb);
+                        }
+                        loadPrePoAdjustment();
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan faktur pajak.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingFaktur = false;
+                        $('#btnSubmitFaktur').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Faktur');
                     }
                 });
             });
@@ -1751,7 +1767,7 @@
                         $('#modalUpdateLpbPrice').modal('hide');
                         Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diperbarui.', 'success');
                         if (selectedIdLpb) {
-                            loadPurchasingDetailView();
+                            loadDetail(selectedIdLpb);
                         }
                     },
                     error: function() {

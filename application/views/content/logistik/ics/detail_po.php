@@ -130,9 +130,62 @@
                         .draft-header-box {
                             border: 1px solid #dbe4ff;
                             border-radius: 16px;
-                            padding: 18px;
+                            padding: 12px 14px;
                             background: linear-gradient(180deg, #f5f7ff 0%, #ffffff 100%);
-                            margin-bottom: 18px;
+                            margin-bottom: 14px;
+                        }
+
+                        .draft-header-row {
+                            margin-left: -5px;
+                            margin-right: -5px;
+                        }
+
+                        .draft-header-row > [class*="col-"] {
+                            padding-left: 5px;
+                            padding-right: 5px;
+                        }
+
+                        .draft-header-field {
+                            margin-bottom: 8px;
+                        }
+
+                        .draft-header-field label {
+                            margin-bottom: 4px;
+                            white-space: nowrap;
+                        }
+
+                        @media (min-width: 992px) {
+                            .draft-header-row {
+                                flex-wrap: nowrap;
+                            }
+
+                            .draft-header-col {
+                                flex: 0 0 auto;
+                            }
+
+                            .draft-header-col-lpb {
+                                width: 13%;
+                            }
+
+                            .draft-header-col-sj {
+                                width: 12%;
+                            }
+
+                            .draft-header-col-date {
+                                width: 13%;
+                            }
+
+                            .draft-header-col-type {
+                                width: 18%;
+                            }
+
+                            .draft-header-col-gudang {
+                                width: 19%;
+                            }
+
+                            .draft-header-col-note {
+                                width: 25%;
+                            }
                         }
 
                         .draft-summary-stat {
@@ -304,25 +357,37 @@
                         </div>
                         <div class="card-body">
                             <div class="draft-header-box">
-                                <div class="row" id="pre_po_data">
-                                    <div class="col-lg-3 col-md-6 mb-3" id="pre_po_date">
-                                        <label class="font-weight-bold">Nomor SJ</label>
-                                        <input type="text" class="form-control" id="final_nosj" placeholder="Input nomor SJ">
+                                <div class="row draft-header-row" id="pre_po_data">
+                                    <div class="col-lg draft-header-col draft-header-col-lpb col-md-6 draft-header-field">
+                                        <label class="font-weight-bold">Nomor LPB</label>
+                                        <input type="text" class="form-control bg-light" id="final_nomor_lpb" placeholder="Auto" readonly>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-sj col-md-6 draft-header-field" id="pre_po_date">
+                                        <label class="font-weight-bold">Nomor SJ</label>
+                                        <input type="text" class="form-control" id="final_nosj" placeholder="No SJ">
+                                    </div>
+                                    <div class="col-lg draft-header-col draft-header-col-date col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Tanggal SJ</label>
                                         <input type="date" class="form-control" id="final_tgl_sj">
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
+                                    <div class="col-lg-3 col-md-6 draft-header-field" hidden>
                                         <label class="font-weight-bold">Nomor PO</label>
                                         <input type="text" class="form-control" id="final_no_po" value="<?= htmlspecialchars($no_po) ?>" readonly>
                                         <input type="hidden" id="final_kd_po" value="<?= htmlspecialchars($kd_po ?? '') ?>">
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
+                                    <div class="col-lg-3 col-md-6 draft-header-field" hidden>
                                         <label class="font-weight-bold">Invoice <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="final_invoice" value="-" readonly>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-type col-md-6 draft-header-field">
+                                        <label class="font-weight-bold">Jenis PO <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="final_jenis_lpb">
+                                            <?php foreach (($lpb_type_options ?? []) as $typeKey => $typeInfo) : ?>
+                                                <option value="<?= htmlspecialchars($typeKey, ENT_QUOTES) ?>"><?= htmlspecialchars($typeInfo['label'] ?? $typeKey) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-lg draft-header-col draft-header-col-gudang col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Gudang <span class="text-danger">*</span></label>
                                         <select class="form-control" id="final_gudang_id">
                                             <option value="">-- Pilih Gudang --</option>
@@ -331,9 +396,9 @@
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-note col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Keterangan</label>
-                                        <input type="text" class="form-control" id="final_keterangan" placeholder="Catatan penerimaan">
+                                        <input type="text" class="form-control" id="final_keterangan" placeholder="Catatan">
                                     </div>
                                 </div>
 
@@ -501,11 +566,14 @@
                 qty_kecil_sisa: 0
             };
             var isSubmittingFinal = false;
+            var lpbNumberRequestSeq = 0;
             var defaultFinalForm = {
                 no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
+                nomor_lpb: '',
                 nosj: '',
                 tgl_sj: '',
                 no_invoice: '-',
+                jenis_lpb: 'LPB CP',
                 gudang_id: '',
                 keterangan: ''
             };
@@ -694,11 +762,17 @@
 
             function resetFinalForm() {
                 $('#final_no_po').val(defaultFinalForm.no_po);
+                $('#final_nomor_lpb').val(defaultFinalForm.nomor_lpb);
                 $('#final_nosj').val(defaultFinalForm.nosj);
                 $('#final_tgl_sj').val(defaultFinalForm.tgl_sj);
                 $('#final_invoice').val(defaultFinalForm.no_invoice);
+                $('#final_jenis_lpb').val(defaultFinalForm.jenis_lpb);
+                if (!$('#final_jenis_lpb').val()) {
+                    $('#final_jenis_lpb').prop('selectedIndex', 0);
+                }
                 $('#final_gudang_id').val(defaultFinalForm.gudang_id);
                 $('#final_keterangan').val(defaultFinalForm.keterangan);
+                refreshGeneratedLpbNumber();
             }
 
             function handleAjaxError(xhr, fallbackMessage) {
@@ -709,6 +783,44 @@
                 }
 
                 Swal.fire('Gagal', message, 'error');
+            }
+
+            function refreshGeneratedLpbNumber() {
+                var jenisLpb = $('#final_jenis_lpb').val();
+                var requestSeq = ++lpbNumberRequestSeq;
+
+                if (!jenisLpb) {
+                    $('#final_nomor_lpb').val('');
+                    return;
+                }
+
+                $('#final_nomor_lpb').val('Memuat...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_generate_lpb_number') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        jenis_lpb: jenisLpb
+                    },
+                    success: function(res) {
+                        if (requestSeq !== lpbNumberRequestSeq) {
+                            return;
+                        }
+
+                        if (res.status !== 'success') {
+                            $('#final_nomor_lpb').val('');
+                            return;
+                        }
+
+                        $('#final_nomor_lpb').val(res.nomor_lpb || '');
+                    },
+                    error: function() {
+                        if (requestSeq === lpbNumberRequestSeq) {
+                            $('#final_nomor_lpb').val('');
+                        }
+                    }
+                });
             }
 
             function reloadSummaryTable() {
@@ -794,6 +906,10 @@
             $('#btnResetFinalForm').on('click', function() {
                 resetFinalForm();
                 Swal.fire('Reset Form', 'Field header draft berhasil dikosongkan.', 'success');
+            });
+
+            $('#final_jenis_lpb').on('change', function() {
+                refreshGeneratedLpbNumber();
             });
 
             $(document).on('click', '.js-delete-summary-row', function() {
@@ -925,12 +1041,19 @@
                 var invoice = '-';
                 var nomorSj = $.trim($('#final_nosj').val());
                 var tanggalSj = $('#final_tgl_sj').val();
+                var jenisLpb = $('#final_jenis_lpb').val();
                 var gudangId = $('#final_gudang_id').val();
                 var keterangan = $.trim($('#final_keterangan').val());
 
                 if (!invoice) {
                     Swal.fire('Validasi', 'Nomor invoice wajib diisi.', 'warning');
                     $('#final_invoice').focus();
+                    return;
+                }
+
+                if (!jenisLpb) {
+                    Swal.fire('Validasi', 'Silakan pilih jenis PO / LPB.', 'warning');
+                    $('#final_jenis_lpb').focus();
                     return;
                 }
 
@@ -956,6 +1079,7 @@
                         nosj: nomorSj,
                         tgl_sj: tanggalSj,
                         no_invoice: invoice,
+                        jenis_lpb: jenisLpb,
                         gudang_id: gudangId,
                         keterangan: keterangan
                     },

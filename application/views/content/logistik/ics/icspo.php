@@ -281,6 +281,21 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                     </div>
                                 <?php endif; ?>
 
+                                <ul class="nav nav-tabs mb-3" id="poPanelTabs" role="tablist">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" id="logistik-tab" data-toggle="tab" href="#logistik-panel" role="tab" aria-controls="logistik-panel" aria-selected="true">
+                                            <i class="fas fa-warehouse mr-1"></i> Logistik
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" id="purchasing-tab" data-toggle="tab" href="#purchasing-panel" role="tab" aria-controls="purchasing-panel" aria-selected="false">
+                                            <i class="fas fa-shopping-cart mr-1"></i> Purchasing
+                                        </a>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content" id="poPanelTabsContent">
+                                    <div class="tab-pane fade show active" id="logistik-panel" role="tabpanel" aria-labelledby="logistik-tab">
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
@@ -407,6 +422,88 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                         </tbody>
                                     </table>
                                 </div>
+                                    </div>
+
+                                    <div class="tab-pane fade" id="purchasing-panel" role="tabpanel" aria-labelledby="purchasing-tab">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-hover" id="idtb_ics_po_purchasing">
+                                                <thead class="thead-dark text-center">
+                                                    <tr>
+                                                        <th>No PO</th>
+                                                        <th>No LPB</th>
+                                                        <th>Jenis PO</th>
+                                                        <th>Nomor SJ</th>
+                                                        <th>Tanggal SJ</th>
+                                                        <th>Nama Suplier</th>
+                                                        <th class="text-center">Progress</th>
+                                                        <th>Invoice</th>
+                                                        <th>Tanggal Invoice</th>
+                                                        <th>tgl_faktur</th>
+                                                        <th class="text-center" style="width:90px;">#</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php if (!empty($lpb_purchasing)) : ?>
+                                                        <?php foreach ($lpb_purchasing as $row) :
+                                                            $progressRaw = (float) ($row['progress_persen'] ?? 0);
+                                                            $progress = max(0, min(100, $progressRaw));
+                                                            $progressText = rtrim(rtrim(number_format($progress, 2, '.', ''), '0'), '.');
+                                                            $progressStatus = strtolower(trim((string) ($row['progress_status'] ?? 'belum')));
+                                                            $totalVerified = (int) ($row['total_verified'] ?? 0);
+                                                            $totalDetail = (int) ($row['total_detail'] ?? 0);
+
+                                                            if ($progressStatus === 'done') {
+                                                                $rowClass = 'table-success';
+                                                                $progressClass = 'is-success';
+                                                            } elseif ($progressStatus === 'partial') {
+                                                                $rowClass = 'table-warning';
+                                                                $progressClass = 'is-warning';
+                                                            } else {
+                                                                $rowClass = '';
+                                                                $progressClass = 'is-danger';
+                                                            }
+                                                        ?>
+                                                        <tr class="<?= $rowClass ?>">
+                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                            <td><?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['jenis_lpb'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['tgl_sj'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
+                                                            <td>
+                                                                <div class="po-progress-wrap">
+                                                                    <div class="po-progress-label">
+                                                                        <span><?= $progressText ?>%</span>
+                                                                        <span><?= $totalVerified ?> / <?= $totalDetail ?></span>
+                                                                    </div>
+                                                                    <div class="po-progress-track">
+                                                                        <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
+                                                                    </div>
+                                                                    <div class="po-progress-note">Verifikasi harga</div>
+                                                                </div>
+                                                            </td>
+                                                            <td><?= htmlspecialchars($row['no_invoice'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['tanggal_invoice'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['tgl_faktur'] ?? '-') ?></td>
+                                                            <td class="text-center">
+                                                                <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
+                                                                    <i class="fas fa-list"></i>
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                        <?php endforeach; ?>
+                                                    <?php else : ?>
+                                                        <tr>
+                                                            <td colspan="11" class="text-center text-muted">
+                                                                <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
+                                                            </td>
+                                                        </tr>
+                                                    <?php endif; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -441,6 +538,32 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                     info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
                     zeroRecords: 'Tidak ada data ditemukan',
                     emptyTable: 'Belum ada data LPB',
+                    paginate: {
+                        first: 'Pertama',
+                        last: 'Terakhir',
+                        next: 'Berikutnya',
+                        previous: 'Sebelumnya'
+                    }
+                }
+            });
+
+            $('#idtb_ics_po_purchasing').DataTable({
+                responsive: true,
+                autoWidth: false,
+                pageLength: 25,
+                order: [
+                    [8, 'desc']
+                ],
+                columnDefs: [{
+                    orderable: false,
+                    targets: -1
+                }],
+                language: {
+                    search: 'Cari:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ - _END_ dari _TOTAL_ data',
+                    zeroRecords: 'Tidak ada data ditemukan',
+                    emptyTable: 'Belum ada data purchasing',
                     paginate: {
                         first: 'Pertama',
                         last: 'Terakhir',
