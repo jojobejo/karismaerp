@@ -4085,6 +4085,7 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                COALESCE(DATE_FORMAT(p.tgl_transaksi, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_po,
                 {$nomorLpbSelect},
                 {$jenisLpbSelect},
                 h.nosj,
@@ -4151,6 +4152,7 @@ FROM (
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                p.tgl_transaksi,
                 h.nosj,
                 h.tgl_sj,
                 s.nama_suplier,
@@ -5135,6 +5137,7 @@ FROM (
                 pp.kd_suplier,
                 pp.kd_po,
                 pp.kd_barang,
+                pp.satuan,
                 CASE
                     WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
                     ELSE pp.qty

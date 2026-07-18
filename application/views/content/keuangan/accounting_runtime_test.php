@@ -12,7 +12,6 @@ $mappingReadiness = isset($mapping_readiness) && is_array($mapping_readiness) ? 
 ];
 $exceptions = isset($exceptions) ? $exceptions : [];
 $journals = isset($journals) ? $journals : [];
-$periods = isset($periods) ? $periods : [];
 $payments = isset($payments) ? $payments : [];
 $openingBalances = isset($opening_balances) ? $opening_balances : [];
 $dummySources = isset($dummy_sources) ? $dummy_sources : [];
@@ -194,43 +193,6 @@ $accountingCsrf = isset($accounting_csrf) ? (string)$accounting_csrf : '';
                             </div>
 
                             <div class="panel">
-                                <div class="panel-head"><span>Periode Fiskal</span></div>
-                                <div class="panel-body">
-                                    <form id="periodForm">
-                                        <div class="form-row-grid mb-2">
-                                            <input type="text" class="form-control" name="kode_periode" placeholder="2026-07" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                            <input type="text" class="form-control" name="nama_periode" placeholder="Juli 2026" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                            <input type="date" class="form-control" name="tanggal_mulai" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                            <input type="date" class="form-control" name="tanggal_selesai" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                        </div>
-                                        <div class="input-group mb-2">
-                                            <input type="text" class="form-control" name="reason" placeholder="Alasan/approval open" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                            <div class="input-group-append">
-                                                <button type="submit" class="btn btn-acct" <?= !$schemaReady ? 'disabled' : '' ?>><i class="fas fa-lock-open mr-1"></i> Open</button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                    <div class="scroll-box">
-                                        <table class="table table-sm" id="periodTable">
-                                            <thead><tr><th>Periode</th><th>Status</th><th></th></tr></thead>
-                                            <tbody>
-                                                <?php foreach ($periods as $period) : ?>
-                                                    <tr>
-                                                        <td><?= html_escape($period->kode_periode) ?></td>
-                                                        <td><?= html_escape($period->status) ?></td>
-                                                        <td class="text-right">
-                                                            <button type="button" class="btn btn-xs btn-outline-warning btn-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="CLOSE">Close</button>
-                                                            <button type="button" class="btn btn-xs btn-outline-primary btn-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="REOPEN">Reopen</button>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="panel">
                                 <div class="panel-head"><span>Pembayaran dan Alokasi</span></div>
                                 <div class="panel-body">
                                     <form id="paymentForm">
@@ -391,8 +353,6 @@ $(function() {
         journals: "<?= base_url('accounting/journals') ?>",
         exceptions: "<?= base_url('accounting/exceptions') ?>",
         exceptionAction: "<?= base_url('accounting/exception-action') ?>",
-        periodStore: "<?= base_url('accounting/period-store') ?>",
-        periodAction: "<?= base_url('accounting/period-action') ?>",
         paymentStore: "<?= base_url('accounting/payment-store') ?>",
         openingStore: "<?= base_url('accounting/opening-balance-store') ?>",
         openingMigrate: "<?= base_url('accounting/opening-balance-migrate') ?>",
@@ -618,21 +578,6 @@ $(function() {
     });
 
     $('#btnRefreshJournals').on('click', refreshJournals);
-
-    $('#periodForm').on('submit', function(e) {
-        e.preventDefault();
-        postForm(endpoints.periodStore, $(this).serialize(), function() { location.reload(); });
-    });
-
-    $('#periodTable').on('click', '.btn-period-action', function() {
-        const reason = prompt('Alasan approval ' + $(this).data('action') + ':');
-        if (!reason) return;
-        postForm(endpoints.periodAction, {
-            id_periode: $(this).data('id'),
-            action: $(this).data('action'),
-            reason: reason
-        }, function() { location.reload(); });
-    });
 
     $('#btnAddAllocation').on('click', addAllocation);
     $('#allocationTable').on('click', '.btn-remove-allocation', function() { $(this).closest('tr').remove(); });

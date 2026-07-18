@@ -572,6 +572,9 @@ class C_Ics extends CI_Controller
         $date2 = $this->input->post('date2');
         $this->load->model('Api/M_Api', 'apiPo');
         $isAdminPo = $this->is_admin_po_jobdesk();
+        $lpbPanelMode = $this->resolve_ics_po_panel_mode();
+        $showLogistikPanel = $lpbPanelMode !== 'purchasing';
+        $showPurchasingPanel = $lpbPanelMode !== 'logistik';
         $username = strtolower(trim((string) $this->session->userdata('username')));
         $canSyncPo = (
             ($this->session->userdata('lv') == '1' && strtoupper(trim((string) $this->session->userdata('jobdesk'))) !== 'ADMINICS')
@@ -582,10 +585,17 @@ class C_Ics extends CI_Controller
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['is_admin_po'] = $isAdminPo;
         $data['can_sync_po'] = $canSyncPo;
-        $data['lpb']        = $isAdminPo
-            ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
-            : $this->M_Logistik->get_lpb($date1, $date2);
-        $data['lpb_purchasing'] = $this->M_Logistik->get_lpb_purchasing_view($date1, $date2);
+        $data['lpb_panel_mode'] = $lpbPanelMode;
+        $data['show_logistik_panel'] = $showLogistikPanel;
+        $data['show_purchasing_panel'] = $showPurchasingPanel;
+        $data['lpb']        = $showLogistikPanel
+            ? ($isAdminPo
+                ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
+                : $this->M_Logistik->get_lpb($date1, $date2))
+            : [];
+        $data['lpb_purchasing'] = $showPurchasingPanel
+            ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2)
+            : [];
         $data['date1']      = $date1;
         $data['date2']      = $date2;
         $data['sync_api_url'] = base_url('sync_pre_po_erp');
@@ -610,7 +620,6 @@ class C_Ics extends CI_Controller
         $data['page_title'] = 'KARISMA - Detail PO';
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
-        $data['list_satuan'] = $this->db->order_by('nm_satuan', 'ASC')->get('tb_satuan')->result_array();
         $data['list_gudang'] = $this->db
             ->select('id_gudang, nama_gudang')
             ->order_by('nama_gudang', 'ASC')
@@ -640,6 +649,7 @@ class C_Ics extends CI_Controller
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
+        $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
 
@@ -757,10 +767,28 @@ class C_Ics extends CI_Controller
 
     private function is_admin_po_jobdesk()
     {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         $username = strtolower(trim((string) $this->session->userdata('username')));
 
-        return $jobdesk === 'ADMIN PO' || $username === 'admpo';
+        return strpos($departemen, 'PURCHASING') !== FALSE || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO'], TRUE) || $username === 'admpo';
+    }
+
+    private function resolve_ics_po_panel_mode()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        if (strpos($departemen, 'PURCHASING') !== FALSE || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO'], TRUE) || $username === 'admpo') {
+            return 'purchasing';
+        }
+
+        if (strpos($departemen, 'LOGISTIK') !== FALSE || in_array($jobdesk, ['LOGISTIK', 'ADMINLOGLPB', 'ADMLPB2', 'ADMINICS'], TRUE)) {
+            return 'logistik';
+        }
+
+        return 'both';
     }
 
     private function reject_non_admin_po_ajax()
@@ -1288,6 +1316,10 @@ class C_Ics extends CI_Controller
 
     public function ajax_update_invoice()
     {
+        if ($this->reject_non_admin_po_ajax()) {
+            return;
+        }
+
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
         $no_invoice = trim((string) $this->input->post('no_invoice', TRUE));
         $tanggal_invoice = trim((string) $this->input->post('tanggal_invoice', TRUE));
@@ -1322,6 +1354,10 @@ class C_Ics extends CI_Controller
 
     public function ajax_update_faktur_pajak()
     {
+        if ($this->reject_non_admin_po_ajax()) {
+            return;
+        }
+
         $id_lpb = (int) $this->input->post('id_lpb', TRUE);
         $kode_faktur_pajak = trim((string) $this->input->post('kode_faktur_pajak', TRUE));
         $tanggal_faktur_pajak = trim((string) $this->input->post('tanggal_faktur_pajak', TRUE));
@@ -1586,6 +1622,31 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $poSatuan = trim((string) ($qtyInfo['satuan'] ?? ''));
+
+        if ($poSatuan === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'step'    => 'validate_satuan',
+                'message' => 'Satuan pada data PO belum tersedia untuk barang ini.'
+            ]);
+            return;
+        }
+
+        foreach ($insertRows as &$insertRow) {
+            if (strcasecmp(trim((string) $insertRow['satuan']), $poSatuan) !== 0) {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_satuan',
+                    'message' => 'Satuan draft harus sesuai dengan satuan pada data PO (' . $poSatuan . ').'
+                ]);
+                return;
+            }
+
+            $insertRow['satuan'] = $poSatuan;
+        }
+        unset($insertRow);
+
         $priceInfo = $this->M_Logistik->get_po_exclude_price_by_item(
             $qtyInfo['no_po'] ?? '',
             $payload['kd_barang'],
@@ -1616,7 +1677,7 @@ class C_Ics extends CI_Controller
             echo json_encode([
                 'status'  => 'error',
                 'step'    => 'validate_qty',
-                'message' => 'Total qty draft melebihi qty kecil sisa PO.',
+                'message' => 'Total qty draft melebihi Qty Sisa PO.',
                 'debug'   => [
                     'qty_kecil_sisa' => (float) $qtyInfo['qty_kecil_sisa'],
                     'total_draft' => $totalQty,
@@ -1778,7 +1839,7 @@ class C_Ics extends CI_Controller
                 echo json_encode([
                     'status'  => 'error',
                     'step'    => 'validate_qty',
-                    'message' => 'Ada qty draft yang melebihi qty kecil sisa PO.',
+                    'message' => 'Ada qty draft yang melebihi Qty Sisa PO.',
                     'debug'   => [
                         'kd_po'       => $kdPo,
                         'kd_barang'   => $kdBarang,

@@ -604,6 +604,7 @@ class C_Keuangan extends CI_Controller
         $data['gudangid']           = 0;
         $data['supplier_options']   = $this->M_Keuangan->master_barang_supplier_options();
         $data['kelompok_dagang_options'] = $this->M_Keuangan->master_barang_kelompok_dagang_options();
+        $data['kelompok_barang_filter_options'] = $data['kelompok_dagang_options'];
         $data['akun_options']       = $this->M_Keuangan->master_barang_akun_options();
         $data['master_barang_access'] = [
             'jobdesk' => (string)$this->session->userdata('jobdesk'),
@@ -718,12 +719,13 @@ class C_Keuangan extends CI_Controller
     public function master_barang_list()
     {
         $search = trim((string)$this->input->post('search', true));
+        $kelompokDagang = trim((string)$this->input->post('kelompok_barang', true));
         $limit = (int)$this->input->post('limit', true);
         if ($limit <= 0) {
             $limit = 100;
         }
 
-        $rows = $this->M_Keuangan->master_barang_all($search, $limit, 0);
+        $rows = $this->M_Keuangan->master_barang_all($search, $kelompokDagang, $limit, 0);
         $data = [];
 
         foreach ($rows as $row) {
@@ -743,7 +745,7 @@ class C_Keuangan extends CI_Controller
         $this->response_json([
             'status'   => true,
             'total'    => $this->M_Keuangan->master_barang_count_all(),
-            'filtered' => $this->M_Keuangan->master_barang_count_filtered($search),
+            'filtered' => $this->M_Keuangan->master_barang_count_filtered($search, $kelompokDagang),
             'data'     => $data,
         ]);
     }
@@ -1224,6 +1226,7 @@ class C_Keuangan extends CI_Controller
         $data['tipe_kontrol_options'] = $this->M_Keuangan->accounting_tipe_kontrol_options();
         $data['support_cards'] = $this->accounting_support_cards();
         $data['summary'] = $this->M_Keuangan->accounting_account_summary();
+        $data['fiscal_periods'] = $data['schema_ready'] ? $this->accounting_service->fiscal_period_rows('', 18) : [];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/jurnal.php', $data);
@@ -1552,6 +1555,25 @@ class C_Keuangan extends CI_Controller
         ]);
     }
 
+    public function jurnal_purchase_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        if (!$this->M_Keuangan->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal pembelian berhasil dimuat.', [
+            'rows' => $this->M_Keuangan->accounting_purchase_journal_rows($search, 150),
+        ]);
+    }
+
     public function jurnal_sales_detail()
     {
         if (!$this->require_jurnal_access(true)) {
@@ -1568,6 +1590,70 @@ class C_Keuangan extends CI_Controller
         }
 
         return $this->accounting_ajax_response(true, 'Detail jurnal penjualan berhasil dimuat.', $detail);
+    }
+
+    public function jurnal_purchase_detail()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $id = (int)$this->input->post('id_jurnal', true);
+        $detail = $id > 0 ? $this->M_Keuangan->accounting_purchase_journal_detail($id) : null;
+        if (!$detail) {
+            return $this->accounting_ajax_response(false, 'Jurnal pembelian tidak ditemukan.', null, [
+                'code' => 'JOURNAL_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Detail jurnal pembelian berhasil dimuat.', $detail);
+    }
+
+    public function jurnal_period_store()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->save_fiscal_period([
+            'id_periode' => (int)$this->input->post('id_periode', true),
+            'kode_periode' => trim((string)$this->input->post('kode_periode', true)),
+            'nama_periode' => trim((string)$this->input->post('nama_periode', true)),
+            'tanggal_mulai' => trim((string)$this->input->post('tanggal_mulai', true)),
+            'tanggal_selesai' => trim((string)$this->input->post('tanggal_selesai', true)),
+            'reason' => trim((string)$this->input->post('reason', true)),
+        ], (int)$this->session->userdata('id') ?: null);
+
+        return $this->accounting_ajax_response(
+            (bool)$result['success'],
+            $result['message'],
+            $result['data'],
+            $result['errors'],
+            $result['success'] ? 201 : 422
+        );
+    }
+
+    public function jurnal_period_action()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $result = $this->accounting_service->change_fiscal_period_status(
+            (int)$this->input->post('id_periode', true),
+            trim((string)$this->input->post('action', true)),
+            trim((string)$this->input->post('reason', true)),
+            (int)$this->session->userdata('id') ?: null
+        );
+
+        return $this->accounting_ajax_response(
+            (bool)$result['success'],
+            $result['message'],
+            $result['data'],
+            $result['errors'],
+            $result['success'] ? 200 : 422
+        );
     }
 
     public function jurnal_store()

@@ -1,3 +1,7 @@
+<?php
+$lpbRecordViewMode = $lpb_record_view_mode ?? (!empty($is_admin_po) ? 'purchasing' : 'logistik');
+$showLpbListPanel = $lpbRecordViewMode === 'logistik';
+?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
         <?php $this->load->view('partial/main/navbar') ?>
@@ -127,6 +131,18 @@
                             margin-left: 8px;
                         }
 
+                        @media (min-width: 992px) {
+                            .lpb-list-column {
+                                flex: 0 0 22%;
+                                max-width: 22%;
+                            }
+
+                            .lpb-detail-column {
+                                flex: 0 0 78%;
+                                max-width: 78%;
+                            }
+                        }
+
                         .lpb-chip {
                             display: inline-flex;
                             align-items: center;
@@ -237,8 +253,8 @@
 
                     <div class="row mb-3">
                         <div class="col-auto">
-                            <a href="<?= !empty($is_admin_po) ? base_url('ics/icspo') : base_url('ics/detail_po?no_po=' . urlencode($no_po ?? '') . '&kd_suplier=' . urlencode($kd_suplier ?? '')) ?>" class="btn btn-primary">
-                                <i class="fas fa-arrow-left mr-1"></i> Kembali ke Detail PO
+                            <a href="<?= $showLpbListPanel ? base_url('ics/detail_po?no_po=' . urlencode($no_po ?? '') . '&kd_suplier=' . urlencode($kd_suplier ?? '')) : base_url('ics/icspo') ?>" class="btn btn-primary">
+                                <i class="fas fa-arrow-left mr-1"></i> <?= $showLpbListPanel ? 'Kembali ke Detail PO' : 'Kembali ke Data PO' ?>
                             </a>
                         </div>
                     </div>
@@ -246,52 +262,43 @@
                     <div class="lpb-hero mb-4">
                         <div class="row align-items-center">
                             <div class="col-lg-8">
+                                <?php if ($showLpbListPanel) : ?>
                                 <h3 class="mb-1 font-weight-bold">Record Semua Data LPB</h3>
+                                <?php else : ?>
+                                <h3 class="mb-1 font-weight-bold">Nomor PO</h3>
+                                <div class="h3 font-weight-bold mb-1"><?= htmlspecialchars($no_po ?? '-') ?></div>
+                                <div class="small">PO Komersil : <?= htmlspecialchars($kd_po ?? '-') ?></div>
+                                <?php endif; ?>
                             </div>
                             <div class="col-lg-4 text-lg-right mt-3 mt-lg-0">
                                 <button type="button" class="btn btn-success mb-2" id="btnPrintAllLpb">
                                     <i class="fas fa-print mr-1"></i> Cetak Semua Faktur LPB
                                 </button>
+                                <?php if ($showLpbListPanel) : ?>
                                 <br>
                                 <div class="h3 font-weight-bold mb-1"><?= htmlspecialchars($no_po ?? '-') ?></div>
                                 <div class="small">No PO: <?= htmlspecialchars($kd_po ?? '-') ?></div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
 
-                    <?php if (!empty($is_admin_po)) : ?>
-                    <div class="lpb-panel mb-4" id="prePoAdjustmentPanel">
-                        <div class="lpb-panel-header">
-                            <div>
-                                <h3 class="card-title mb-0 font-weight-bold">LPB Invoice & Adjustment Harga</h3>
-                            </div>
-                            <div class="d-flex align-items-center" style="gap:8px; flex-wrap:wrap;">
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnHistoryInvoiceAll">
-                                    <i class="fas fa-file-invoice mr-1"></i> History Invoice
-                                </button>
-                                <button type="button" class="btn btn-outline-success btn-sm" id="btnHistoryDiskonAll">
-                                    <i class="fas fa-tags mr-1"></i> History Diskon
-                                </button>
-                                <button type="button" class="btn btn-outline-warning btn-sm" id="btnHistoryAdjustmentAll">
-                                    <i class="fas fa-history mr-1"></i> History Adjustment
-                                </button>
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnReloadPrePoAdjustment">
-                                    <i class="fas fa-sync-alt mr-1"></i> Refresh
-                                </button>
-                            </div>
+                    <?php if (!$showLpbListPanel) : ?>
+                    <div class="d-none" aria-hidden="true">
+                        <input type="text" id="lpbSearchInput" value="">
+                        <div id="lpbListLoading"></div>
+                        <div id="lpbListEmpty"></div>
+                        <div id="lpbListWrap">
+                            <div id="lpbListContainer"></div>
                         </div>
-                        <div class="lpb-panel-body">
-                            <div id="prePoAdjustmentLoading" class="lpb-loading-state">
-                                <i class="fas fa-spinner fa-spin fa-2x text-primary mb-2"></i>
-                                <div>Memuat data PRE PO...</div>
-                            </div>
-                            <div id="prePoAdjustmentContainer" style="display:none;"></div>
-                        </div>
+                        <div id="prePoAdjustmentLoading"></div>
+                        <div id="prePoAdjustmentContainer"></div>
                     </div>
                     <?php endif; ?>
 
                     <div class="row">
-                        <div class="col-lg-3 mb-4">
+                        <?php if ($showLpbListPanel) : ?>
+                        <div class="col-lg-3 lpb-list-column mb-4">
                             <div class="lpb-panel h-100">
                                 <div class="lpb-panel-header">
                                     <div>
@@ -322,20 +329,23 @@
                                 </div>
                             </div>
                         </div>
+                        <?php endif; ?>
 
-                        <div class="col-lg-9 mb-4">
+                        <div class="<?= $showLpbListPanel ? 'col-lg-9 lpb-detail-column' : 'col-lg-12' ?> mb-4">
                             <div class="lpb-panel h-100">
                                 <div class="lpb-panel-header">
                                     <div>
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
                                     </div>
                                     <div class="d-flex align-items-center" style="gap:10px;">
+                                        <?php if (!$showLpbListPanel) : ?>
                                         <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
                                             <i class="fas fa-file-invoice mr-1"></i> Update Invoice
                                         </button>
                                         <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
                                             <i class="fas fa-receipt mr-1"></i> Update Faktur
                                         </button>
+                                        <?php endif; ?>
                                         <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
                                             <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
                                         </button>
@@ -350,7 +360,7 @@
 
                                     <div id="lpbDetailEmpty" class="lpb-empty-state">
                                         <i class="fas fa-receipt fa-2x mb-2"></i>
-                                        <div>Pilih salah satu LPB di panel kiri untuk melihat detailnya.</div>
+                                        <div><?= $showLpbListPanel ? 'Pilih salah satu LPB di panel kiri untuk melihat detailnya.' : 'Detail LPB akan tampil otomatis setelah data LPB dimuat.' ?></div>
                                     </div>
 
                                     <div id="lpbDetailWrap" style="display:none;">
@@ -364,11 +374,16 @@
                                                         <th>Nama Barang</th>
                                                         <th>No Lot</th>
                                                         <th class="text-center">Expired Date</th>
+                                                        <?php if ($showLpbListPanel) : ?>
+                                                        <th class="text-right">Qty Order</th>
+                                                        <th class="text-right">Qty LPB</th>
+                                                        <?php else : ?>
                                                         <th class="text-right">Qty Order</th>
                                                         <th class="text-right">Qty LPB</th>
                                                         <th class="text-right">Total Harga</th>
                                                         <th class="text-right">Harga Satuan</th>
                                                         <th class="text-center">#</th>
+                                                        <?php endif; ?>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -638,6 +653,8 @@
         $(function() {
             var kdPo = '<?= htmlspecialchars($kd_po ?? '', ENT_QUOTES) ?>';
             var canManagePoInvoice = <?= !empty($is_admin_po) ? 'true' : 'false' ?>;
+            var showLpbListPanel = <?= $showLpbListPanel ? 'true' : 'false' ?>;
+            var showPrePoAdjustmentPanel = false;
             var allRows = [];
             var selectedIdLpb = 0;
             var selectedHeader = null;
@@ -721,7 +738,7 @@
             }
 
             function loadPrePoAdjustment() {
-                if (!canManagePoInvoice) {
+                if (!canManagePoInvoice || !showPrePoAdjustmentPanel) {
                     return;
                 }
 
@@ -752,6 +769,10 @@
             }
 
             function refreshPrePoAdjustmentHtml(html) {
+                if (!showPrePoAdjustmentPanel) {
+                    return;
+                }
+
                 if (html) {
                     $('#prePoAdjustmentContainer').html(html).show();
                     $('#prePoAdjustmentLoading').hide();
@@ -940,6 +961,56 @@
             }
 
             function renderDetailTable(rows) {
+                if (showLpbListPanel) {
+                    setDetailTableHead([{
+                            label: 'Kode Barang'
+                        },
+                        {
+                            label: 'Nama Barang'
+                        },
+                        {
+                            label: 'No Lot'
+                        },
+                        {
+                            label: 'Expired Date',
+                            className: 'text-center'
+                        },
+                        {
+                            label: 'Qty Order',
+                            className: 'text-right'
+                        },
+                        {
+                            label: 'Qty LPB',
+                            className: 'text-right'
+                        }
+                    ]);
+
+                    var logistikTbody = $('#lpbDetailTable tbody');
+                    logistikTbody.empty();
+                    selectedPurchasingRows = [];
+                    $('#lpbPurchasingVerifyActions').hide();
+
+                    if (!rows || rows.length === 0) {
+                        logistikTbody.html('<tr><td colspan="6" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                        return;
+                    }
+
+                    $.each(rows, function(index, row) {
+                        logistikTbody.append(
+                            '<tr>' +
+                            '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
+                            '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
+                            '<td>' + escHtml(row.no_lot || '-') + '</td>' +
+                            '<td class="text-center">' + escHtml(formatDateId(row.expired_date)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatNumber(row.qty_order || 0)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatNumber(row.qty_diterima || row.qty_lpb || 0)) + '</td>' +
+                            '</tr>'
+                        );
+                    });
+
+                    return;
+                }
+
                 selectedPurchasingRows = $.map(rows || [], function(row) {
                     return {
                         id_detail_lpb: row.id_detail_lpb || 0,
@@ -1788,7 +1859,7 @@
                 printAllLpb();
             });
 
-            if (canManagePoInvoice) {
+            if (canManagePoInvoice && showPrePoAdjustmentPanel) {
                 loadPrePoAdjustment();
             }
             loadList();

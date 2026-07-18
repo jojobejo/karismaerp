@@ -7,6 +7,14 @@ $lastSyncSkipped = isset($last_sync['skipped']) ? (int) $last_sync['skipped'] : 
 $isAdminPo = !empty($is_admin_po);
 $canSyncPo = !empty($can_sync_po);
 $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS';
+$showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel);
+$showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
+$showPanelTabs = $showLogistikPanel && $showPurchasingPanel;
+$logistikPanelClass = $showPanelTabs ? 'tab-pane fade show active' : '';
+$purchasingPanelClass = $showPanelTabs ? 'tab-pane fade' : '';
+$panelTitle = $showPurchasingPanel && !$showLogistikPanel
+    ? 'Data LPB Purchasing'
+    : ($isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)');
 ?>
 <style>
     .sync-summary-card {
@@ -120,6 +128,34 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
         font-size: 10px;
         color: #6c757d;
     }
+
+    .lpb-status-actions {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .lpb-status-actions .btn {
+        width: 31px;
+        height: 31px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .lpb-filter-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .lpb-filter-toolbar .btn {
+        min-width: 94px;
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -162,7 +198,7 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                     <div class="card">
                         <div class="card-header bg-primary text-white">
                             <h3 class="card-title">
-                                <i class="fas fa-plus-circle mr-2"></i> <?= $isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)' ?>
+                                <i class="fas fa-plus-circle mr-2"></i> <?= $panelTitle ?>
                             </h3>
                             <?php if ($canSyncPo) : ?>
                                 <div class="sync-meta text-md-right">
@@ -281,6 +317,7 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                     </div>
                                 <?php endif; ?>
 
+                                <?php if ($showPanelTabs) : ?>
                                 <ul class="nav nav-tabs mb-3" id="poPanelTabs" role="tablist">
                                     <li class="nav-item">
                                         <a class="nav-link active" id="logistik-tab" data-toggle="tab" href="#logistik-panel" role="tab" aria-controls="logistik-panel" aria-selected="true">
@@ -293,9 +330,11 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                         </a>
                                     </li>
                                 </ul>
+                                <?php endif; ?>
 
                                 <div class="tab-content" id="poPanelTabsContent">
-                                    <div class="tab-pane fade show active" id="logistik-panel" role="tabpanel" aria-labelledby="logistik-tab">
+                                    <?php if ($showLogistikPanel) : ?>
+                                    <div class="<?= $logistikPanelClass ?>" id="logistik-panel" role="tabpanel" aria-labelledby="logistik-tab">
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
@@ -423,68 +462,83 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                     </table>
                                 </div>
                                     </div>
+                                    <?php endif; ?>
 
-                                    <div class="tab-pane fade" id="purchasing-panel" role="tabpanel" aria-labelledby="purchasing-tab">
+                                    <?php if ($showPurchasingPanel) : ?>
+                                    <div class="<?= $purchasingPanelClass ?>" id="purchasing-panel" role="tabpanel" aria-labelledby="purchasing-tab">
+                                        <div class="lpb-filter-toolbar mb-3" id="purchasingStatusFilter">
+                                            <button type="button" class="btn btn-primary btn-sm active" data-filter="all">
+                                                Semua
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="invoice">
+                                                <i class="fas fa-file-invoice mr-1"></i> Belum Invoice
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="pajak">
+                                                <i class="fas fa-percent mr-1"></i> Belum Pajak
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="uang">
+                                                <i class="fas fa-money-bill-wave mr-1"></i> Belum Uang
+                                            </button>
+                                        </div>
                                         <div class="table-responsive">
                                             <table class="table table-bordered table-hover" id="idtb_ics_po_purchasing">
                                                 <thead class="thead-dark text-center">
                                                     <tr>
+                                                        <th>Tgl PO</th>
                                                         <th>No PO</th>
                                                         <th>No LPB</th>
                                                         <th>Jenis PO</th>
                                                         <th>Nomor SJ</th>
                                                         <th>Tanggal SJ</th>
                                                         <th>Nama Suplier</th>
-                                                        <th class="text-center">Progress</th>
                                                         <th>Invoice</th>
-                                                        <th>Tanggal Invoice</th>
-                                                        <th>tgl_faktur</th>
+                                                        <th>Tgl Invoice</th>
+                                                        <th>Faktur Pajak</th>
+                                                        <th>Tgl Faktur</th>
+                                                        <th class="text-center">Status</th>
                                                         <th class="text-center" style="width:90px;">#</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     <?php if (!empty($lpb_purchasing)) : ?>
                                                         <?php foreach ($lpb_purchasing as $row) :
-                                                            $progressRaw = (float) ($row['progress_persen'] ?? 0);
-                                                            $progress = max(0, min(100, $progressRaw));
-                                                            $progressText = rtrim(rtrim(number_format($progress, 2, '.', ''), '0'), '.');
                                                             $progressStatus = strtolower(trim((string) ($row['progress_status'] ?? 'belum')));
                                                             $totalVerified = (int) ($row['total_verified'] ?? 0);
                                                             $totalDetail = (int) ($row['total_detail'] ?? 0);
-
-                                                            if ($progressStatus === 'done') {
-                                                                $rowClass = 'table-success';
-                                                                $progressClass = 'is-success';
-                                                            } elseif ($progressStatus === 'partial') {
-                                                                $rowClass = 'table-warning';
-                                                                $progressClass = 'is-warning';
-                                                            } else {
-                                                                $rowClass = '';
-                                                                $progressClass = 'is-danger';
-                                                            }
+                                                            $invoiceValue = trim((string) ($row['no_invoice'] ?? ''));
+                                                            $fakturValue = trim((string) ($row['kode_faktur_pajak'] ?? ''));
+                                                            $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
+                                                            $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
+                                                            $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
+                                                            $invoiceBtnClass = $hasInvoice ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $fakturBtnClass = $hasFaktur ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                         ?>
-                                                        <tr class="<?= $rowClass ?>">
+                                                        <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>">
+                                                            <td><?= htmlspecialchars($row['tgl_po'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                             <td><?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['jenis_lpb'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['tgl_sj'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
-                                                            <td>
-                                                                <div class="po-progress-wrap">
-                                                                    <div class="po-progress-label">
-                                                                        <span><?= $progressText ?>%</span>
-                                                                        <span><?= $totalVerified ?> / <?= $totalDetail ?></span>
-                                                                    </div>
-                                                                    <div class="po-progress-track">
-                                                                        <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
-                                                                    </div>
-                                                                    <div class="po-progress-note">Verifikasi harga</div>
-                                                                </div>
-                                                            </td>
                                                             <td><?= htmlspecialchars($row['no_invoice'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['tanggal_invoice'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['kode_faktur_pajak'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['tgl_faktur'] ?? '-') ?></td>
+                                                            <td class="text-center">
+                                                                <div class="lpb-status-actions">
+                                                                    <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="Invoice">
+                                                                        <i class="fas fa-file-invoice"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="Faktur Pajak">
+                                                                        <i class="fas fa-percent"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="Verifikasi Harga">
+                                                                        <i class="fas fa-money-bill-wave"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
                                                             <td class="text-center">
                                                                 <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
                                                                     <i class="fas fa-list"></i>
@@ -494,7 +548,7 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                                         <?php endforeach; ?>
                                                     <?php else : ?>
                                                         <tr>
-                                                            <td colspan="11" class="text-center text-muted">
+                                                            <td colspan="13" class="text-center text-muted">
                                                                 <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
                                                             </td>
                                                         </tr>
@@ -503,6 +557,7 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                                             </table>
                                         </div>
                                     </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -521,6 +576,7 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
 
     <script>
         $(document).ready(function() {
+            <?php if ($showLogistikPanel) : ?>
             $('#idtb_ics_po').DataTable({
                 responsive: true,
                 autoWidth: false,
@@ -546,13 +602,43 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                     }
                 }
             });
+            <?php endif; ?>
 
-            $('#idtb_ics_po_purchasing').DataTable({
+            <?php if ($showPurchasingPanel) : ?>
+            var purchasingStatusFilter = 'all';
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (!settings.nTable || settings.nTable.id !== 'idtb_ics_po_purchasing') {
+                    return true;
+                }
+
+                if (purchasingStatusFilter === 'all') {
+                    return true;
+                }
+
+                var $row = $(settings.aoData[dataIndex].nTr);
+
+                if (purchasingStatusFilter === 'invoice') {
+                    return String($row.data('has-invoice')) === '0';
+                }
+
+                if (purchasingStatusFilter === 'pajak') {
+                    return String($row.data('has-faktur')) === '0';
+                }
+
+                if (purchasingStatusFilter === 'uang') {
+                    return String($row.data('is-verified')) === '0';
+                }
+
+                return true;
+            });
+
+            var purchasingTable = $('#idtb_ics_po_purchasing').DataTable({
                 responsive: true,
                 autoWidth: false,
                 pageLength: 25,
                 order: [
-                    [8, 'desc']
+                    [0, 'desc']
                 ],
                 columnDefs: [{
                     orderable: false,
@@ -572,6 +658,18 @@ $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this-
                     }
                 }
             });
+
+            $('#purchasingStatusFilter').on('click', 'button[data-filter]', function() {
+                purchasingStatusFilter = $(this).data('filter') || 'all';
+                $('#purchasingStatusFilter button[data-filter]')
+                    .removeClass('btn-primary active')
+                    .addClass('btn-outline-secondary');
+                $(this)
+                    .removeClass('btn-outline-secondary')
+                    .addClass('btn-primary active');
+                purchasingTable.draw();
+            });
+            <?php endif; ?>
 
             function escapeHtml(text) {
                 return $('<div>').text(text === null || text === undefined ? '' : text).html();

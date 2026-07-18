@@ -110,7 +110,7 @@ class Auth extends CI_Controller
         } else if ($jobdesk == 'STOCKOPNAME') {
             redirect('stockopname');
         } else if ($jobdesk == 'ADMIN') {
-            redirect('extravaganza');
+            redirect('dashboard');
         } else if ($jobdesk == 'SALESONLINE') {
             redirect('stock');
         } else if ($jobdesk == 'SALESCOUNTER') {
@@ -130,7 +130,7 @@ class Auth extends CI_Controller
         } else if ($jobdesk == 'SALESCK') {
             redirect('checker');
         } else if ($jobdesk == 'DIREKTURCK') {
-            redirect('checker/dashboard'); 
+            redirect('checker/dashboard');
         } else if ($jobdesk == 'MANAGERCK') {
             redirect('checker');
         } else if ($jobdesk == 'ADMINSC') {

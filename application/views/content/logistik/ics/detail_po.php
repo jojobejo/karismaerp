@@ -494,7 +494,7 @@
                                     <input type="text" class="form-control" id="tmp_display_kd_barang" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="font-weight-bold">Qty Kecil Sisa</label>
+                                    <label class="font-weight-bold">Qty Sisa</label>
                                     <input type="text" class="form-control" id="tmp_qty_sisa" readonly>
                                 </div>
                             </div>
@@ -552,10 +552,6 @@
 
     <script>
         $(function() {
-            var listSatuan = <?= json_encode(array_values(array_map(function ($item) {
-                                    return $item['nm_satuan'];
-                                }, $list_satuan ?? []))) ?>;
-
             var currentItem = {
                 kd_po: '',
                 kd_suplier: '',
@@ -615,19 +611,8 @@
                 }).format(parseFloat(value) || 0);
             }
 
-            function buildSatuanOptions(selectedValue) {
-                var html = '<option value="">-- Pilih Satuan --</option>';
-
-                $.each(listSatuan, function(_, item) {
-                    var selected = item === selectedValue ? 'selected' : '';
-                    html += '<option value="' + escHtml(item) + '" ' + selected + '>' + escHtml(item) + '</option>';
-                });
-
-                return html;
-            }
-
             function buildRow(rowData) {
-                var selectedSatuan = rowData && rowData.satuan ? rowData.satuan : currentItem.satuan_default;
+                var selectedSatuan = currentItem.satuan_default || '';
                 var qtyValue = rowData && rowData.qty_diterima ? rowData.qty_diterima : '';
                 var noLotValue = rowData && rowData.no_lot ? rowData.no_lot : '';
                 var expiredValue = rowData && rowData.expired_date ? rowData.expired_date : '';
@@ -636,7 +621,7 @@
                     '<tr>' +
                     '<td><input type="text" class="form-control form-control-sm bg-light js-kd-barang-row" value="' + escHtml(currentItem.kd_barang) + '" readonly></td>' +
                     '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm js-qty-row" value="' + escHtml(qtyValue) + '" placeholder="0"></td>' +
-                    '<td><select class="form-control form-control-sm js-satuan-row">' + buildSatuanOptions(selectedSatuan) + '</select></td>' +
+                    '<td><input type="text" class="form-control form-control-sm bg-light js-satuan-row" value="' + escHtml(selectedSatuan) + '" readonly></td>' +
                     '<td><input type="text" class="form-control form-control-sm js-lot-row" value="' + escHtml(noLotValue) + '" placeholder="Nomor lot"></td>' +
                     '<td><input type="date" class="form-control form-control-sm js-exp-row" value="' + escHtml(expiredValue) + '"></td>' +
                     '<td class="text-center"><button type="button" class="btn btn-sm btn-danger js-hapus-row"><i class="fas fa-trash"></i></button></td>' +
@@ -677,7 +662,7 @@
                 $('#tmp_no_po').val(item.no_po);
                 $('#tmp_display_kd_barang').val(item.kd_barang);
                 $('#tmp_nama_barang').text(item.nama_barang || '-');
-                $('#tmp_qty_sisa').val(formatNumber(item.qty_kecil_sisa) + ' pcs');
+                $('#tmp_qty_sisa').val(formatNumber(item.qty_kecil_sisa) + ' ' + (item.satuan_default || ''));
             }
 
             function renderModalRows(rows) {
@@ -988,7 +973,7 @@
                 if (totalQty > currentItem.qty_kecil_sisa) {
                     Swal.fire(
                         'Qty Melebihi Sisa',
-                        'Total qty draft (' + totalQty + ' pcs) melebihi qty kecil sisa barang (' + currentItem.qty_kecil_sisa + ' pcs).',
+                        'Total qty draft (' + formatNumber(totalQty) + ' ' + (currentItem.satuan_default || '') + ') melebihi Qty Sisa barang (' + formatNumber(currentItem.qty_kecil_sisa) + ' ' + (currentItem.satuan_default || '') + ').',
                         'warning'
                     );
                     return;
