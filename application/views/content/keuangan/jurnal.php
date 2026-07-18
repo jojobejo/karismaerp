@@ -117,33 +117,7 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
                         </div>
                     <?php endif; ?>
 
-                    <div class="sales-journal-panel">
-                        <div class="panel-heading">
-                            <span>Daftar Jurnal Penjualan</span>
-                            <small id="salesJournalCount">0 data</small>
-                        </div>
-                        <div class="sales-journal-toolbar">
-                            <div class="text-muted">Klik baris untuk melihat jurnal debit/kredit.</div>
-                            <input type="text" class="form-control sales-journal-search" id="salesJournalSearch" placeholder="Search referensi, SO, pelanggan">
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table zahir-table">
-                                <thead>
-                                    <tr>
-                                        <th>Referensi</th>
-                                        <th>Tanggal</th>
-                                        <th>No SO</th>
-                                        <th>Pelanggan</th>
-                                        <th>Kurs</th>
-                                        <th class="text-right">Nilai</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="salesJournalRows">
-                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal penjualan...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+
 
                     <div class="support-card-grid">
                         <?php foreach ($supportCards as $card) : ?>

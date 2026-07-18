@@ -1501,6 +1501,10 @@ class C_ReturPenjualan extends CI_Controller
             'update_by_retur'=> $user['nama'],
         ]);
 
+        // Post Journal for Sales Return automatically
+        $this->load->model('M_Journal');
+        $this->M_Journal->post_jurnal_retur_penjualan($id_retur);
+
         // Record Log
         $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_kasir', $retur['status_retur'], 'selesai', $catatan_kasir, $user['nama']);
 

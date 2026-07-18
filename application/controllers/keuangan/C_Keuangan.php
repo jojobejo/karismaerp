@@ -1231,6 +1231,76 @@ class C_Keuangan extends CI_Controller
         $this->load->view('content/keuangan/ajax/ajax_jurnal.php', $data);
     }
 
+    public function jurnal_penjualan()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL PENJUALAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_penjualan.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function jurnal_pembayaran()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL PEMBAYARAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_pembayaran.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function jurnal_retur_penjualan()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL RETUR PENJUALAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_retur_penjualan.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function menu_pembelian()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - MENU PEMBELIAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/menu_pembelian.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function menu_penjualan()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - MENU PENJUALAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/menu_penjualan.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
     public function jurnal_neraca()
     {
         $this->jurnal_financial_report('neraca');
@@ -1551,6 +1621,46 @@ class C_Keuangan extends CI_Controller
         $search = trim((string)$this->input->post('search', true));
         return $this->accounting_ajax_response(true, 'Daftar jurnal penjualan berhasil dimuat.', [
             'rows' => $this->M_Journal->accounting_sales_journal_rows($search, 150),
+        ]);
+    }
+
+    public function jurnal_payment_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal pembayaran berhasil dimuat.', [
+            'rows' => $this->M_Journal->accounting_payment_journal_rows($search, 150),
+        ]);
+    }
+
+    public function jurnal_retur_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal retur berhasil dimuat.', [
+            'rows' => $this->M_Journal->accounting_retur_journal_rows($search, 150),
         ]);
     }
 

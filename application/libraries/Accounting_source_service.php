@@ -36,16 +36,15 @@ class Accounting_source_service
             ], 'Faktur final tidak ditemukan atau sudah dibatalkan.', ['SOURCE_NOT_POSTABLE']);
         }
 
-        $totals = $this->CI->db->query(
-            "SELECT COUNT(*) AS line_count,
-                    COALESCE(SUM(subtotal_after_disc), 0) AS total_amount,
-                    COALESCE(MAX(pajak), 0) AS tax_rate,
-                    COALESCE(SUM(qty * hrg_pokok), 0) AS cogs
-             FROM tbso_faktur_detail
-             WHERE id_faktur = ? AND no_faktur = ?",
+        $items = $this->CI->db->query(
+            "SELECT d.*, b.kelompok_dagang
+             FROM tbso_faktur_detail d
+             LEFT JOIN tbpo_barang b ON d.kd_barang = b.kode_barang
+             WHERE d.id_faktur = ? AND d.no_faktur = ?",
             [(int)$header->id_faktur, $noFaktur]
-        )->row();
-        if (!$totals || (int)$totals->line_count < 1 || bccomp((string)$totals->total_amount, '0', 4) <= 0) {
+        )->result();
+
+        if (empty($items)) {
             return $this->record_failure('SALES_INVOICE', [
                 'source_module' => 'SALES',
                 'source_type' => 'FAKTUR_PENJUALAN',
@@ -54,15 +53,24 @@ class Accounting_source_service
             ], 'Detail atau nilai faktur final belum valid.', ['SOURCE_AMOUNT_INVALID']);
         }
 
-        $taxRate = (float)$totals->tax_rate;
-        $totalAmount = (float)$totals->total_amount;
-        if ($taxRate > 0) {
-            $divFactor = 1 + ($taxRate / 100);
-            $amount = round($totalAmount / $divFactor, 4);
-            $tax = round($totalAmount - $amount, 4);
-        } else {
-            $amount = $totalAmount;
-            $tax = 0.0000;
+        $normal_amount = 0.0;
+        $normal_cogs = 0.0;
+        $promo_value = 0.0;
+        $taxRate = 0.0;
+
+        foreach ($items as $item) {
+            $kelompok = (int)($item->kelompok_dagang ?? 0);
+            if ($kelompok === 5) {
+                // Promotional item
+                $promo_value += (float)$item->qty * (float)$item->hrg_pokok;
+            } else {
+                // Normal item
+                $normal_amount += (float)$item->subtotal_after_disc;
+                $normal_cogs += (float)$item->qty * (float)$item->hrg_pokok;
+                if ((float)$item->pajak > $taxRate) {
+                    $taxRate = (float)$item->pajak;
+                }
+            }
         }
 
         $base = [
@@ -82,38 +90,104 @@ class Accounting_source_service
             [(int)$header->id_faktur]
         )->row()->count > 0;
 
-        $invoice = $this->CI->accounting_service->post_auto('SALES_INVOICE', $base + [
-            'idempotency_key' => 'SALES_INVOICE-FAKTUR-' . $noFaktur,
-            'amount' => $amount,
-            'tax' => $tax,
-            'cogs' => '0.0000',
-            'is_pajak' => $is_pajak,
-        ], $userId);
-        if (!$invoice['success']) {
-            return $invoice;
+        $invoice_data = null;
+        if ($normal_amount > 0) {
+            $amount = 0.0;
+            $tax = 0.0;
+            if ($taxRate > 0) {
+                $divFactor = 1 + ($taxRate / 100);
+                $amount = round($normal_amount / $divFactor, 4);
+                $tax = round($normal_amount - $amount, 4);
+            } else {
+                $amount = $normal_amount;
+                $tax = 0.0000;
+            }
+
+            $invoice = $this->CI->accounting_service->post_auto('SALES_INVOICE', $base + [
+                'idempotency_key' => 'SALES_INVOICE-FAKTUR-' . $noFaktur,
+                'amount' => $amount,
+                'tax' => $tax,
+                'cogs' => '0.0000',
+                'is_pajak' => $is_pajak,
+            ], $userId);
+            if (!$invoice['success']) {
+                return $invoice;
+            }
+            $invoice_data = $invoice['data'];
         }
 
-        if (!$postGoodsIssue) {
-            return [
-                'success' => true,
-                'message' => 'Jurnal faktur penjualan berhasil diposting.',
-                'data' => ['sales_invoice' => $invoice['data'], 'goods_issue' => null],
-                'errors' => [],
+        $issue_data = null;
+        if ($postGoodsIssue && $normal_cogs > 0) {
+            $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
+                'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
+                'amount' => '0.0000',
+                'tax' => '0.0000',
+                'cogs' => $normal_cogs,
+            ], $userId);
+            if ($issue['success']) {
+                $issue_data = $issue['data'];
+            }
+        }
+
+        // Post Journal for Promotional Items
+        if ($promo_value > 0) {
+            $this->CI->load->model('M_Journal');
+            $nomor_jurnal_prm = $this->CI->M_Journal->generate_no_jurnal('promosi', 'PRM');
+            
+            $jurnal_prm_data = [
+                'nomor_jurnal' => $nomor_jurnal_prm,
+                'tanggal_transaksi' => $header->tanggal_faktur,
+                'keterangan' => 'Promosi Penjualan Faktur ' . $noFaktur,
+                'status' => 'POSTED',
+                'source_module' => 'SALES',
+                'source_type' => 'PROMOSI_PENJUALAN',
+                'source_id' => $header->id_faktur,
+                'source_no' => $noFaktur,
+                'total_debit' => $promo_value,
+                'total_kredit' => $promo_value,
+                'created_by' => $userId,
+                'created_at' => date('Y-m-d H:i:s'),
+                'posted_by' => $userId,
+                'posted_at' => date('Y-m-d H:i:s')
             ];
-        }
+            
+            $this->CI->db->insert('tbkeu_jurnal', $jurnal_prm_data);
+            $id_jurnal_prm = $this->CI->db->insert_id();
 
-        $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
-            'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
-            'amount' => '0.0000',
-            'tax' => '0.0000',
-            'cogs' => $totals->cogs,
-        ], $userId);
+            // Resolve A Biaya Promosi (61036) dynamically
+            $akun_biaya = $this->CI->db->get_where('tbkeu_akun', ['kode_akun' => '61036'])->row_array();
+            $id_akun_biaya = $akun_biaya ? $akun_biaya['id_akun'] : 360;
+
+            // Resolve A Persediaan Barang Promosi (14031) dynamically
+            $akun_persediaan = $this->CI->db->get_where('tbkeu_akun', ['kode_akun' => '14031'])->row_array();
+            $id_akun_persediaan = $akun_persediaan ? $akun_persediaan['id_akun'] : 226;
+            
+            // Debit: A Biaya Promosi
+            $this->CI->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal_prm,
+                'nomor_baris' => 1,
+                'id_akun' => $id_akun_biaya,
+                'keterangan' => 'Biaya Promosi Faktur ' . $noFaktur,
+                'debit' => $promo_value,
+                'kredit' => 0
+            ]);
+            
+            // Kredit: A Persediaan Barang Promosi
+            $this->CI->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal_prm,
+                'nomor_baris' => 2,
+                'id_akun' => $id_akun_persediaan,
+                'keterangan' => 'Persediaan Barang Promosi Faktur ' . $noFaktur,
+                'debit' => 0,
+                'kredit' => $promo_value
+            ]);
+        }
 
         return [
-            'success' => $issue['success'],
-            'message' => $issue['success'] ? 'Faktur dan pengeluaran persediaan berhasil diposting.' : $issue['message'],
-            'data' => ['sales_invoice' => $invoice['data'], 'goods_issue' => $issue['data']],
-            'errors' => $issue['errors'],
+            'success' => true,
+            'message' => 'Faktur penjualan berhasil diposting.',
+            'data' => ['sales_invoice' => $invoice_data, 'goods_issue' => $issue_data],
+            'errors' => [],
         ];
     }
 

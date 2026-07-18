@@ -313,32 +313,7 @@ $default_metode = '';
                             </form>
                         </div>
 
-                        <!-- Card Jurnal -->
-                        <div class="card card-outline card-info mt-3" id="cardJurnal">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-calculator mr-1"></i>
-                                    Prediksi Jurnal
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-bordered table-sm mb-0" style="background-color: #fdfdfd;">
-                                    <tbody>
-                                        <tr>
-                                            <td colspan="2" class="bg-light text-center"><small class="text-muted">No. Referensi: <strong id="jurnalRef">-</strong></small></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="pl-2 py-2" style="font-weight: 500;" id="jurnalDebitAkun">-</td>
-                                            <td class="text-right pr-2 py-2" id="jurnalDebitNilai" style="font-weight: bold;">Rp 0</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="pl-4 py-2" style="font-weight: 500; font-style: italic;" id="jurnalKreditAkun">Piutang Usaha</td>
-                                            <td class="text-right pr-2 py-2" id="jurnalKreditNilai" style="font-weight: bold;">Rp 0</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <!-- Card Jurnal removed as requested -->
                     </div>
                 </div>
             </div>
@@ -420,10 +395,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var formattedAmount = 'Rp ' + amount.toLocaleString('id-ID', { minimumFractionDigits: 0 });
         
-        document.getElementById('jurnalRef').textContent = refPrefix + ' (Auto Generate)';
-        document.getElementById('jurnalDebitAkun').textContent = debitAkun;
-        document.getElementById('jurnalDebitNilai').textContent = formattedAmount;
-        document.getElementById('jurnalKreditNilai').textContent = formattedAmount;
+        var refEl = document.getElementById('jurnalRef');
+        if (refEl) refEl.textContent = refPrefix + ' (Auto Generate)';
+        
+        var debitAkunEl = document.getElementById('jurnalDebitAkun');
+        if (debitAkunEl) debitAkunEl.textContent = debitAkun;
+        
+        var debitNilaiEl = document.getElementById('jurnalDebitNilai');
+        if (debitNilaiEl) debitNilaiEl.textContent = formattedAmount;
+        
+        var kreditNilaiEl = document.getElementById('jurnalKreditNilai');
+        if (kreditNilaiEl) kreditNilaiEl.textContent = formattedAmount;
     }
 
     metode.addEventListener('change', handleMetodeChange);
