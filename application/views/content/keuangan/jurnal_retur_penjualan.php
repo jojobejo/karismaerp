@@ -244,17 +244,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 var html = '';
                 if (!rows.length) {
-                    html = '<tr><td colspan="5" class="text-center text-muted">Detail jurnal tidak ditemukan.</td></tr>';
+                    html = '<tr><td colspan="4" class="text-center text-muted">Detail jurnal tidak ditemukan.</td></tr>';
                 } else {
                     rows.forEach(function(r) {
                         var isDebit = parseFloat(r.debit || 0) > 0;
-                        var desc = r.keterangan || '';
                         html += '<tr>' +
                             '<td>' + escapeHtml(r.kode_rekening_display || r.kode_akun || '-') + '</td>' +
                             '<td>' + escapeHtml(r.nama_akun || '-') + '</td>' +
                             '<td class="text-right">' + (isDebit ? escapeHtml(formatMoney(r.debit)) : '') + '</td>' +
                             '<td class="text-right">' + (!isDebit ? escapeHtml(formatMoney(r.kredit)) : '') + '</td>' +
-                            '<td>' + escapeHtml(desc) + '</td>' +
                             '</tr>';
                     });
                 }
