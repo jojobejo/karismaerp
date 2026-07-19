@@ -652,6 +652,7 @@ class C_Ics extends CI_Controller
         $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->M_Logistik->ensure_lpb_workflow_columns();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
@@ -709,7 +710,8 @@ class C_Ics extends CI_Controller
         echo json_encode([
             'status' => 'success',
             'header' => $header,
-            'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+            'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb),
+            'logs'   => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
         ]);
     }
 
@@ -1118,6 +1120,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->submit_adjustment([
             'kd_po'              => $kd_po,
@@ -1154,6 +1157,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_lpb_detail_price([
             'id_detail_lpb'      => $idDetailLpb,
@@ -1185,6 +1189,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->accept_lpb_detail_price([
             'id_detail_lpb'  => $idDetailLpb,
@@ -1330,6 +1335,7 @@ class C_Ics extends CI_Controller
         }
 
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_invoice_lpb([
             'id_lpb'         => $id_lpb,
@@ -1368,6 +1374,7 @@ class C_Ics extends CI_Controller
         }
 
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_faktur_pajak_lpb([
             'id_lpb' => $id_lpb,
@@ -1400,6 +1407,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_lpb_type([
             'id_lpb'         => $id_lpb,
@@ -1420,6 +1428,211 @@ class C_Ics extends CI_Controller
             'jenis_lpb' => $saved['jenis_lpb'] ?? $jenis_lpb,
             'nomor_lpb' => $saved['nomor_lpb'] ?? '',
             'html'      => ''
+        ]);
+    }
+
+    public function ajax_unpost_lpb()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+
+        if ($id_lpb <= 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak valid.', 'html' => '']);
+            return;
+        }
+
+        if ($keterangan === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Keterangan UNPOST wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_status($id_lpb, 0, $this->active_user_name(), $keterangan);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'UNPOST LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'LPB berhasil di-UNPOST.',
+            'html'    => ''
+        ]);
+    }
+
+    public function ajax_post_lpb()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+
+        if ($id_lpb <= 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak valid.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_status($id_lpb, 1, $this->active_user_name(), 'LPB direkam ulang menjadi POST.');
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Rekam LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'LPB berhasil direkam menjadi POST.',
+            'html'    => ''
+        ]);
+    }
+
+    public function ajax_update_lpb_identity()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $nomor_lpb = trim((string) $this->input->post('nomor_lpb', TRUE));
+        $jenis_lpb = trim((string) $this->input->post('jenis_lpb', TRUE));
+
+        if ($id_lpb <= 0 || $nomor_lpb === '' || $jenis_lpb === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Nomor dan jenis LPB wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+        if (empty($header)) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update nomor dan jenis LPB hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_identity([
+            'id_lpb'         => $id_lpb,
+            'nomor_lpb'      => $nomor_lpb,
+            'jenis_lpb'      => $jenis_lpb,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update nomor dan jenis LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'    => 'success',
+            'message'   => 'Nomor dan jenis LPB berhasil diperbarui.',
+            'nomor_lpb' => $saved['nomor_lpb'] ?? $nomor_lpb,
+            'jenis_lpb' => $saved['jenis_lpb'] ?? $jenis_lpb,
+            'html'      => ''
+        ]);
+    }
+
+    public function ajax_update_lpb_sj()
+    {
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $nosj = trim((string) $this->input->post('nosj', TRUE));
+        $tgl_sj = trim((string) $this->input->post('tgl_sj', TRUE));
+
+        if ($id_lpb <= 0 || $nosj === '' || $tgl_sj === '') {
+            $this->json_response(['status' => 'error', 'message' => 'Nomor SJ dan tanggal SJ wajib diisi.', 'html' => '']);
+            return;
+        }
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+        if (empty($header)) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update SJ hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_sj([
+            'id_lpb'         => $id_lpb,
+            'nosj'           => $nosj,
+            'tgl_sj'         => $tgl_sj,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update nomor SJ dan tanggal SJ gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Nomor SJ dan tanggal SJ berhasil diperbarui.',
+            'html'    => ''
+        ]);
+    }
+
+    public function ajax_update_lpb_detail_receipt()
+    {
+        $idDetailLpb = (int) $this->input->post('id_detail_lpb', TRUE);
+        $noLot = trim((string) $this->input->post('no_lot', TRUE));
+        $expiredDate = trim((string) $this->input->post('expired_date', TRUE));
+        $qtyDiterima = (float) $this->input->post('qty_diterima', TRUE);
+
+        if ($idDetailLpb <= 0 || $qtyDiterima <= 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Data detail LPB belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $detail = $this->db
+            ->select('h.status_lpb')
+            ->from('tb_lpb_detail d')
+            ->join('tb_lpb h', 'h.id_lpb = d.id_lpb', 'inner')
+            ->where('d.id_detail_lpb', $idDetailLpb)
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        if (empty($detail)) {
+            $this->json_response(['status' => 'error', 'message' => 'Detail LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+        if ((int) ($detail['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update detail LPB hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_detail_receipt([
+            'id_detail_lpb'  => $idDetailLpb,
+            'no_lot'         => $noLot,
+            'expired_date'   => $expiredDate,
+            'qty_diterima'   => $qtyDiterima,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (!$saved || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Update detail LPB gagal disimpan.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Detail LPB berhasil diperbarui.',
+            'row'     => $saved,
+            'html'    => ''
         ]);
     }
 
@@ -1581,36 +1794,6 @@ class C_Ics extends CI_Controller
         $insertRows = [];
         $totalQty = 0;
 
-        foreach ($rows as $row) {
-            $qty = (float) ($row['qty_diterima'] ?? 0);
-            $satuan = trim((string) ($row['satuan'] ?? ''));
-            $noLot = trim((string) ($row['no_lot'] ?? ''));
-            $expiredDate = trim((string) ($row['expired_date'] ?? ''));
-
-            if ($qty <= 0) {
-                continue;
-            }
-
-            if ($satuan === '') {
-                echo json_encode([
-                    'status'  => 'error',
-                    'message' => 'Satuan wajib dipilih untuk setiap baris yang diisi.'
-                ]);
-                return;
-            }
-
-            $totalQty += $qty;
-            $insertRows[] = [
-                'kd_po'         => $payload['kd_po'],
-                'kd_suplier'    => $payload['kd_suplier'],
-                'kd_barang'     => $payload['kd_barang'],
-                'qty_diterima'  => $qty,
-                'satuan'        => $satuan,
-                'no_lot'        => ($noLot !== '') ? $noLot : null,
-                'expired_date'  => ($expiredDate !== '') ? $expiredDate : null
-            ];
-        }
-
         $qtyInfo = $this->M_Logistik->get_po_remaining_qty_by_item($payload['kd_po'], $payload['kd_barang']);
 
         if (!$qtyInfo) {
@@ -1623,6 +1806,11 @@ class C_Ics extends CI_Controller
         }
 
         $poSatuan = trim((string) ($qtyInfo['satuan'] ?? ''));
+        $dimensiBr = (float) ($qtyInfo['dimensi_br'] ?? 1);
+
+        if ($dimensiBr <= 0) {
+            $dimensiBr = 1;
+        }
 
         if ($poSatuan === '') {
             echo json_encode([
@@ -1631,6 +1819,37 @@ class C_Ics extends CI_Controller
                 'message' => 'Satuan pada data PO belum tersedia untuk barang ini.'
             ]);
             return;
+        }
+
+        foreach ($rows as $row) {
+            $qtyBesar = (float) ($row['qty_diterima'] ?? 0);
+            $satuan = trim((string) ($row['satuan'] ?? ''));
+            $noLot = trim((string) ($row['no_lot'] ?? ''));
+            $expiredDate = trim((string) ($row['expired_date'] ?? ''));
+
+            if ($qtyBesar <= 0) {
+                continue;
+            }
+
+            if ($satuan === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'message' => 'Satuan wajib dipilih untuk setiap baris yang diisi.'
+                ]);
+                return;
+            }
+
+            $qtyKecil = $qtyBesar * $dimensiBr;
+            $totalQty += $qtyKecil;
+            $insertRows[] = [
+                'kd_po'         => $payload['kd_po'],
+                'kd_suplier'    => $payload['kd_suplier'],
+                'kd_barang'     => $payload['kd_barang'],
+                'qty_diterima'  => $qtyKecil,
+                'satuan'        => $satuan,
+                'no_lot'        => ($noLot !== '') ? $noLot : null,
+                'expired_date'  => ($expiredDate !== '') ? $expiredDate : null
+            ];
         }
 
         foreach ($insertRows as &$insertRow) {
@@ -1770,7 +1989,8 @@ class C_Ics extends CI_Controller
             'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
             'jenis_lpb'   => trim((string) $this->input->post('jenis_lpb', TRUE)),
             'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
-            'keterangan'  => trim((string) $this->input->post('keterangan', TRUE))
+            'keterangan'  => trim((string) $this->input->post('keterangan', TRUE)),
+            'dilakukan_oleh' => $this->active_user_name()
         ];
 
         if ($payload['no_po'] === '' || $payload['kd_suplier'] === '') {
@@ -1867,6 +2087,7 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
         $idLpb = $this->M_Logistik->create_lpb_from_tmp($payload, $tmpRows);
 

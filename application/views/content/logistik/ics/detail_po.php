@@ -86,7 +86,7 @@
                         .table thead.thead-emerald th {
                             background: #243cff;
                             color: #fff;
-                            border-color: #243cff;
+                            border: 1px solid #dbe4ff !important;
                         }
 
                         .draft-shell {
@@ -250,6 +250,11 @@
                     $totalOrder = 0;
                     $totalReceived = 0;
                     $totalLpbRecord = 0;
+                    $formatQtyPo = static function ($value, $maxDecimals = 0) {
+                        $number = (float) $value;
+                        $decimals = $maxDecimals > 0 && abs($number - round($number)) > 0.00001 ? $maxDecimals : 0;
+                        return number_format($number, $decimals, ',', '.');
+                    };
                     foreach ($detail as $row) {
                         $totalOrder += (float) ($row['qty_kecil'] ?? 0);
                         $totalReceived += (float) ($row['qty_kecil_diterima'] ?? 0);
@@ -290,15 +295,19 @@
                             <table class="table table-bordered table-hover" id="tabelDetailPo">
                                 <thead class="thead-emerald">
                                     <tr>
-                                        <th class="text-center">No</th>
-                                        <th class="text-center">Kode Barang</th>
-                                        <th class="text-center">Nama Barang</th>
-                                        <th class="text-center">Qty Order</th>
-                                        <th class="text-center">Qty Sisa</th>
-                                        <th class="text-center">Qty Diterima</th>
-                                        <th class="text-center">Status</th>
-                                        <th class="text-center">Draft Temp</th>
-                                        <th class="text-center">#</th>
+                                        <th class="text-center align-middle" rowspan="2">No</th>
+                                        <th class="text-center align-middle" rowspan="2">Kode Barang</th>
+                                        <th class="text-center align-middle" rowspan="2">Nama Barang</th>
+                                        <th class="text-center align-middle" rowspan="2">Satuan</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty Order</th>
+                                        <th class="text-center" colspan="2">Qty Diterima</th>
+                                        <th class="text-center align-middle" rowspan="2">Status</th>
+                                        <th class="text-center align-middle" rowspan="2">Draft Temp</th>
+                                        <th class="text-center align-middle" rowspan="2">#</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-center">Satuan Besar</th>
+                                        <th class="text-center">Satuan Kecil</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -308,9 +317,10 @@
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td><?= htmlspecialchars($row['kd_barang'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil_sisa'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil_diterima'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= htmlspecialchars($row['satuan'] ?? '-') ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_besar'] ?? 0) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_diterima'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_kecil_diterima'] ?? 0) ?></td>
                                                 <td class="text-center">
                                                     <?php
                                                     $statusBarang = strtoupper((string) ($row['status_barang'] ?? 'BELUM'));
@@ -331,7 +341,7 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
+                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-sisa-besar="<?= htmlspecialchars((string) ($row['qty_sisa'] ?? 0)) ?>" data-sisa-kecil="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-dimensi="<?= htmlspecialchars((string) ($row['dimensi_br'] ?? 1)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
                                                 </td>
@@ -339,7 +349,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">
+                                            <td colspan="10" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -485,17 +495,34 @@
                             <input type="hidden" name="kd_barang" id="tmp_kd_barang">
 
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="font-weight-bold">No PO</label>
                                     <input type="text" class="form-control" id="tmp_no_po" readonly>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="font-weight-bold">Kode Barang</label>
                                     <input type="text" class="form-control" id="tmp_display_kd_barang" readonly>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="font-weight-bold">Qty Sisa</label>
-                                    <input type="text" class="form-control" id="tmp_qty_sisa" readonly>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2 mb-md-0">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Qty Besar</span>
+                                                </div>
+                                                <input type="text" class="form-control" id="tmp_qty_sisa_besar" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Qty Kecil</span>
+                                                </div>
+                                                <input type="text" class="form-control" id="tmp_qty_sisa_kecil" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -559,7 +586,9 @@
                 nama_barang: '',
                 no_po: '',
                 satuan_default: '',
-                qty_kecil_sisa: 0
+                qty_sisa: 0,
+                qty_kecil_sisa: 0,
+                dimensi_br: 1
             };
             var isSubmittingFinal = false;
             var lpbNumberRequestSeq = 0;
@@ -583,7 +612,7 @@
                 ],
                 columnDefs: [{
                     orderable: false,
-                    targets: [6, 7, 8]
+                    targets: [8, 9]
                 }],
                 language: {
                     search: "Cari:",
@@ -611,9 +640,23 @@
                 }).format(parseFloat(value) || 0);
             }
 
+            function formatInputNumber(value) {
+                if (value === null || typeof value === 'undefined' || value === '') {
+                    return '';
+                }
+
+                var number = parseFloat(value) || 0;
+
+                if (Math.abs(number - Math.round(number)) < 0.00001) {
+                    return String(Math.round(number));
+                }
+
+                return String(parseFloat(number.toFixed(2)));
+            }
+
             function buildRow(rowData) {
                 var selectedSatuan = currentItem.satuan_default || '';
-                var qtyValue = rowData && rowData.qty_diterima ? rowData.qty_diterima : '';
+                var qtyValue = rowData && rowData.qty_diterima ? formatInputNumber(rowData.qty_diterima) : '';
                 var noLotValue = rowData && rowData.no_lot ? rowData.no_lot : '';
                 var expiredValue = rowData && rowData.expired_date ? rowData.expired_date : '';
 
@@ -662,7 +705,8 @@
                 $('#tmp_no_po').val(item.no_po);
                 $('#tmp_display_kd_barang').val(item.kd_barang);
                 $('#tmp_nama_barang').text(item.nama_barang || '-');
-                $('#tmp_qty_sisa').val(formatNumber(item.qty_kecil_sisa) + ' ' + (item.satuan_default || ''));
+                $('#tmp_qty_sisa_besar').val(formatNumber(item.qty_sisa) + ' ' + (item.satuan_default || ''));
+                $('#tmp_qty_sisa_kecil').val(formatNumber(item.qty_kecil_sisa));
             }
 
             function renderModalRows(rows) {
@@ -695,7 +739,7 @@
                         '<td class="text-center">' + (index + 1) + '</td>' +
                         '<td>' + escHtml(row.kd_barang) + '</td>' +
                         '<td>' + escHtml(row.nama_barang) + '</td>' +
-                        '<td class="text-center">' + escHtml(row.qty_diterima) + '</td>' +
+                        '<td class="text-center">' + formatNumber(row.qty_diterima) + '</td>' +
                         '<td class="text-center">' + escHtml(row.satuan) + '</td>' +
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
@@ -840,7 +884,9 @@
                     nama_barang: $(this).data('nama-barang') || '',
                     no_po: $(this).data('no-po') || '',
                     satuan_default: $(this).data('satuan') || '',
-                    qty_kecil_sisa: parseFloat($(this).data('sisa')) || 0
+                    qty_sisa: parseFloat($(this).data('sisa-besar')) || 0,
+                    qty_kecil_sisa: parseFloat($(this).data('sisa-kecil')) || parseFloat($(this).data('sisa')) || 0,
+                    dimensi_br: parseFloat($(this).data('dimensi')) || 1
                 };
 
                 fillModalHeader(currentItem);
@@ -970,10 +1016,12 @@
                     return;
                 }
 
-                if (totalQty > currentItem.qty_kecil_sisa) {
+                var totalQtyKecil = totalQty * (currentItem.dimensi_br || 1);
+
+                if (totalQtyKecil > currentItem.qty_kecil_sisa + 0.00001) {
                     Swal.fire(
                         'Qty Melebihi Sisa',
-                        'Total qty draft (' + formatNumber(totalQty) + ' ' + (currentItem.satuan_default || '') + ') melebihi Qty Sisa barang (' + formatNumber(currentItem.qty_kecil_sisa) + ' ' + (currentItem.satuan_default || '') + ').',
+                        'Total qty draft (' + formatNumber(totalQty) + ' || ' + formatNumber(totalQtyKecil) + ') melebihi Qty Sisa barang (' + formatNumber(currentItem.qty_sisa) + ' || ' + formatNumber(currentItem.qty_kecil_sisa) + ').',
                         'warning'
                     );
                     return;

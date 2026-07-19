@@ -82,6 +82,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             flex-wrap: wrap;
                         }
 
+                        .lpb-panel-title {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            flex-wrap: wrap;
+                        }
+
                         .lpb-panel-body {
                             padding: 18px 20px 20px;
                         }
@@ -239,6 +246,41 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             min-width: 132px;
                         }
 
+                        .lpb-workflow-actions {
+                            margin-left: auto;
+                        }
+
+                        .lpb-workflow-actions .btn {
+                            min-width: auto;
+                        }
+
+                        .lpb-post-actions {
+                            justify-content: flex-end;
+                            border-top: 1px solid #e2e8f0;
+                            padding-top: 12px;
+                        }
+
+                        .lpb-post-actions .btn-workflow-main {
+                            min-width: 104px;
+                        }
+
+                        .lpb-activity-log {
+                            border-top: 1px solid #e2e8f0;
+                            margin-top: 14px;
+                            padding-top: 14px;
+                        }
+
+                        .lpb-activity-log .table th,
+                        .lpb-activity-log .table td {
+                            white-space: nowrap;
+                            vertical-align: middle;
+                        }
+
+                        .lpb-activity-log .activity-note {
+                            min-width: 280px;
+                            white-space: normal;
+                        }
+
                         #modalHistoryLpb .table th,
                         #modalHistoryLpb .table td {
                             white-space: nowrap;
@@ -334,10 +376,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         <div class="<?= $showLpbListPanel ? 'col-lg-9 lpb-detail-column' : 'col-lg-12' ?> mb-4">
                             <div class="lpb-panel h-100">
                                 <div class="lpb-panel-header">
-                                    <div>
+                                    <div class="lpb-panel-title">
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
+                                        <span class="badge badge-secondary" id="selectedLpbStatusBadge" style="display:none;">-</span>
                                     </div>
-                                    <div class="d-flex align-items-center" style="gap:10px;">
+                                    <div class="d-flex align-items-center flex-wrap lpb-workflow-actions" id="lpbWorkflowActions" style="gap:8px; display:none;">
                                         <?php if (!$showLpbListPanel) : ?>
                                         <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
                                             <i class="fas fa-file-invoice mr-1"></i> Update Invoice
@@ -345,11 +388,25 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                         <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
                                             <i class="fas fa-receipt mr-1"></i> Update Faktur
                                         </button>
-                                        <?php endif; ?>
                                         <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
                                             <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
                                         </button>
-                                        <div class="text-muted small" id="selectedLpbText">Belum ada LPB dipilih</div>
+                                        <?php endif; ?>
+                                        <?php if ($showLpbListPanel) : ?>
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnUpdateLpbIdentity">
+                                            <i class="fas fa-edit mr-1"></i> Update Nomor & Jenis LPB
+                                        </button>
+                                        <button type="button" class="btn btn-info btn-sm" id="btnUpdateLpbSj">
+                                            <i class="fas fa-truck-loading mr-1"></i> Update SJ
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
+                                            <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
+                                        </button>
+                                        <button type="button" class="btn btn-primary btn-sm" id="btnToggleLpbLog" title="Tampilkan log aktivitas">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <?php endif; ?>
+                                        <div class="text-muted small d-none" id="selectedLpbText">Belum ada LPB dipilih</div>
                                     </div>
                                 </div>
                                 <div class="lpb-panel-body">
@@ -370,6 +427,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                             <table class="table table-bordered table-hover lpb-table" id="lpbDetailTable">
                                                 <thead>
                                                     <tr>
+                                                        <?php if ($showLpbListPanel) : ?>
+                                                        <th class="text-center">#</th>
+                                                        <?php endif; ?>
                                                         <th>Kode Barang</th>
                                                         <th>Nama Barang</th>
                                                         <th>No Lot</th>
@@ -389,11 +449,43 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                                 <tbody></tbody>
                                             </table>
                                         </div>
+                                        <?php if ($showLpbListPanel) : ?>
+                                        <div class="lpb-table-actions lpb-post-actions" id="lpbPostActions" style="display:none;">
+                                            <button type="button" class="btn btn-danger btn-sm btn-workflow-main" id="btnUnpostLpb">
+                                                <i class="fas fa-undo mr-1"></i> UNPOST
+                                            </button>
+                                            <button type="button" class="btn btn-success btn-sm btn-workflow-main" id="btnPostLpb">
+                                                <i class="fas fa-save mr-1"></i> Rekam
+                                            </button>
+                                        </div>
+                                        <?php endif; ?>
                                         <div class="lpb-table-actions" id="lpbPurchasingVerifyActions" style="display:none;">
                                             <span class="text-muted small" id="lpbBulkVerifyInfo"></span>
                                             <button type="button" class="btn btn-success btn-sm" id="btnBulkAcceptLpbPrice">
                                                 <i class="fas fa-save mr-1"></i> Rekam
                                             </button>
+                                        </div>
+                                        <div class="lpb-activity-log" id="lpbActivityLogWrap" style="display:none;">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="font-weight-bold mb-0">Log Aktivitas LPB</h6>
+                                                <span class="badge badge-light" id="lpbActivityLogCount">0 aktivitas</span>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Waktu</th>
+                                                            <th>User</th>
+                                                            <th>Aktivitas</th>
+                                                            <th>Status</th>
+                                                            <th>Keterangan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="lpbActivityLogBody">
+                                                        <tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -553,13 +645,17 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
         <div class="modal-dialog" role="document">
             <form id="formUpdateJenisLpb" class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalUpdateJenisLpbLabel">Edit Jenis PO / LPB</h5>
+                    <h5 class="modal-title" id="modalUpdateJenisLpbLabel">Update Nomor dan Jenis LPB</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="jenisIdLpb" name="id_lpb">
+                    <div class="form-group">
+                        <label>Nomor LPB</label>
+                        <input type="text" class="form-control" id="jenisNomorLpb" name="nomor_lpb" required>
+                    </div>
                     <div class="form-group">
                         <label>Jenis LPB</label>
                         <select class="form-control" id="jenisLpbSelect" name="jenis_lpb" required>
@@ -570,10 +666,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="form-group" id="jenisNomorLpbCurrentGroup">
-                        <label>Nomor LPB Saat Ini</label>
-                        <input type="text" class="form-control" id="jenisNomorLpbCurrent" readonly>
-                    </div>
                     <div class="alert alert-info mb-0" id="jenisLpbFormatInfo">
                         Format mengikuti bulan, tahun, dan urutan berdasarkan jenis yang dipilih.
                     </div>
@@ -581,7 +673,75 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmitJenisLpb">
-                        <i class="fas fa-save mr-1"></i> Simpan Jenis PO
+                        <i class="fas fa-save mr-1"></i> Simpan LPB
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpdateLpbSj" tabindex="-1" role="dialog" aria-labelledby="modalUpdateLpbSjLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <form id="formUpdateLpbSj" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalUpdateLpbSjLabel">Update Nomor SJ dan Tanggal SJ</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="sjIdLpb" name="id_lpb">
+                    <div class="form-group">
+                        <label>Nomor Surat Jalan</label>
+                        <input type="text" class="form-control" id="sjNomor" name="nosj" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Tanggal Surat Jalan</label>
+                        <input type="date" class="form-control" id="sjTanggal" name="tgl_sj" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info" id="btnSubmitLpbSj">
+                        <i class="fas fa-save mr-1"></i> Simpan SJ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalUpdateLpbDetailReceipt" tabindex="-1" role="dialog" aria-labelledby="modalUpdateLpbDetailReceiptLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <form id="formUpdateLpbDetailReceipt" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalUpdateLpbDetailReceiptLabel">Edit Detail LPB</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="detailReceiptIdDetail" name="id_detail_lpb">
+                    <div class="form-group">
+                        <label>Barang</label>
+                        <input type="text" class="form-control" id="detailReceiptBarang" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>No Lot</label>
+                        <input type="text" class="form-control" id="detailReceiptNoLot" name="no_lot" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Expired Date</label>
+                        <input type="date" class="form-control" id="detailReceiptExpiredDate" name="expired_date" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Qty Diterima</label>
+                        <input type="number" min="0.0001" step="0.0001" class="form-control" id="detailReceiptQty" name="qty_diterima" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btnSubmitLpbDetailReceipt">
+                        <i class="fas fa-save mr-1"></i> Simpan Detail
                     </button>
                 </div>
             </form>
@@ -660,18 +820,27 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             var selectedHeader = null;
             var selectedDetailRows = [];
             var selectedPurchasingRows = [];
+            var selectedActivityLogs = [];
             var detailViewMode = 'lpb';
             var purchasingEditMode = false;
+            var isActivityLogVisible = false;
             var isSubmittingAdjustment = false;
             var isSubmittingInvoice = false;
             var isSubmittingFaktur = false;
             var isSubmittingJenisLpb = false;
             var isSubmittingLpbPrice = false;
+            var isSubmittingLpbSj = false;
+            var isSubmittingLpbDetailReceipt = false;
+            var isChangingLpbStatus = false;
             var isAcceptingLpbPrice = false;
             var isBulkAcceptingLpbPrice = false;
 
             function escHtml(value) {
                 return $('<div>').text(value == null ? '' : value).html();
+            }
+
+            function escAttr(value) {
+                return escHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
             }
 
             function formatNumber(value) {
@@ -714,27 +883,22 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             }
 
             function lpbStatusInfo(status) {
-                var code = parseInt(status, 10) || 1;
-                var map = {
-                    1: {
-                        label: 'S1 Draft',
-                        badge: 'badge-danger'
-                    },
-                    2: {
-                        label: 'S2 Nomor Ada',
+                var code = parseInt(status, 10);
+                if (code === 0) {
+                    return {
+                        label: 'UNPOST',
                         badge: 'badge-warning'
-                    },
-                    3: {
-                        label: 'S3 Invoice Ada',
-                        badge: 'badge-info'
-                    },
-                    4: {
-                        label: 'S4 Siap Jurnal',
-                        badge: 'badge-success'
-                    }
-                };
+                    };
+                }
 
-                return map[code] || map[1];
+                return {
+                    label: 'POST',
+                    badge: 'badge-success'
+                };
+            }
+
+            function isSelectedLpbUnpost() {
+                return parseInt((selectedHeader || {}).status_lpb, 10) === 0;
             }
 
             function loadPrePoAdjustment() {
@@ -822,7 +986,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var nomorSj = row.nosj ? row.nosj : 'SJ belum ada';
 
                 return '' +
-                    '<div class="lpb-list-item js-lpb-item" data-id="' + escHtml(row.id_lpb) + '" data-search="' + escHtml((nomorLpb + ' ' + invoice + ' ' + kodeFaktur + ' ' + jenisLpb + ' status ' + (row.status_lpb || 1) + ' ' + nomorSj).toLowerCase()) + '">' +
+                    '<div class="lpb-list-item js-lpb-item" data-id="' + escAttr(row.id_lpb) + '" data-search="' + escAttr((nomorLpb + ' ' + invoice + ' ' + kodeFaktur + ' ' + jenisLpb + ' status ' + (row.status_lpb == null ? 1 : row.status_lpb) + ' ' + nomorSj).toLowerCase()) + '">' +
                     '<div class="d-flex justify-content-between align-items-start">' +
                     '<div>' +
                     '<div class="font-weight-bold text-dark">' + escHtml(nomorLpb) + '</div>' +
@@ -875,10 +1039,16 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 selectedIdLpb = 0;
                 selectedHeader = null;
                 selectedDetailRows = [];
+                selectedActivityLogs = [];
                 detailViewMode = 'lpb';
                 purchasingEditMode = false;
+                isActivityLogVisible = false;
                 updateDetailViewButton();
+                updateWorkflowActions();
+                updateActivityLogVisibility();
+                renderActivityLogs([]);
                 $('#selectedLpbText').text('Belum ada LPB dipilih');
+                $('#selectedLpbStatusBadge').hide().text('-').removeClass('badge-success badge-warning badge-danger badge-info').addClass('badge-secondary');
                 $('#lpbDetailLoading').hide();
                 $('#lpbDetailWrap').hide();
                 $('#lpbDetailEmpty').show();
@@ -911,13 +1081,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var html = '';
                 var nomorJenisLpb = (header.nomor_lpb || 'Nomor LPB belum dibuat') + ' / ' + (header.jenis_lpb || 'Jenis LPB belum ditentukan');
                 var statusInfo = lpbStatusInfo(header.status_lpb);
+                $('#selectedLpbStatusBadge')
+                    .removeClass('badge-secondary badge-success badge-warning badge-danger badge-info')
+                    .addClass(statusInfo.badge)
+                    .text(statusInfo.label)
+                    .show();
                 var boxes = [{
                         label: 'Nomor / Jenis LPB',
                         value: nomorJenisLpb
-                    },
-                    {
-                        label: 'Status LPB',
-                        value: statusInfo.label
                     },
                     {
                         label: 'Nomor SJ',
@@ -934,14 +1105,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     {
                         label: 'Tgl Terbit Invoice',
                         value: formatDateId(header.tanggal_invoice)
-                    },
-                    {
-                        label: 'Faktur Pajak',
-                        value: header.kode_faktur_pajak || '-'
-                    },
-                    {
-                        label: 'Tanggal Terbit Faktur',
-                        value: formatDateId(header.tanggal_faktur_pajak)
                     }
                 ];
 
@@ -960,9 +1123,71 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 renderDetailHeader(header || {});
             }
 
+            function updateWorkflowActions() {
+                if (!selectedHeader || !selectedIdLpb) {
+                    $('#lpbWorkflowActions').hide();
+                    $('#lpbPostActions').hide();
+                    return;
+                }
+
+                $('#lpbWorkflowActions').show();
+
+                if (!showLpbListPanel || detailViewMode !== 'lpb') {
+                    $('#lpbPostActions').hide();
+                    return;
+                }
+
+                var isUnpost = isSelectedLpbUnpost();
+                $('#lpbPostActions').show();
+                $('#btnUnpostLpb').toggle(!isUnpost).prop('disabled', isChangingLpbStatus);
+                $('#btnPostLpb').toggle(isUnpost).prop('disabled', isChangingLpbStatus);
+                $('#btnUpdateLpbIdentity').toggle(isUnpost);
+                $('#btnUpdateLpbSj').toggle(isUnpost);
+            }
+
+            function updateActivityLogVisibility() {
+                $('#lpbActivityLogWrap').toggle(isActivityLogVisible && !!selectedIdLpb);
+                $('#btnToggleLpbLog')
+                    .toggleClass('btn-primary', !isActivityLogVisible)
+                    .toggleClass('btn-info', isActivityLogVisible)
+                    .attr('title', isActivityLogVisible ? 'Sembunyikan log aktivitas' : 'Tampilkan log aktivitas')
+                    .html(isActivityLogVisible ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>');
+            }
+
+            function renderActivityLogs(rows) {
+                rows = rows || [];
+                var tbody = $('#lpbActivityLogBody');
+                tbody.empty();
+                $('#lpbActivityLogCount').text(formatNumber(rows.length) + ' aktivitas');
+
+                if (rows.length === 0) {
+                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>');
+                    return;
+                }
+
+                $.each(rows, function(_, row) {
+                    var beforeStatus = row.status_before || '';
+                    var afterStatus = row.status_after || '';
+                    var statusText = beforeStatus || afterStatus ? (beforeStatus ? beforeStatus + ' -> ' + afterStatus : afterStatus) : '-';
+                    tbody.append(
+                        '<tr>' +
+                        '<td>' + escHtml(formatDateTimeId(row.dilakukan_pada)) + '</td>' +
+                        '<td>' + escHtml(row.dilakukan_oleh || '-') + '</td>' +
+                        '<td><span class="badge badge-light">' + escHtml(row.action_type || '-') + '</span></td>' +
+                        '<td>' + escHtml(statusText) + '</td>' +
+                        '<td class="activity-note">' + escHtml(row.keterangan || '-') + '</td>' +
+                        '</tr>'
+                    );
+                });
+            }
+
             function renderDetailTable(rows) {
                 if (showLpbListPanel) {
                     setDetailTableHead([{
+                            label: '#',
+                            className: 'text-center'
+                        },
+                        {
                             label: 'Kode Barang'
                         },
                         {
@@ -991,13 +1216,25 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     $('#lpbPurchasingVerifyActions').hide();
 
                     if (!rows || rows.length === 0) {
-                        logistikTbody.html('<tr><td colspan="6" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                        logistikTbody.html('<tr><td colspan="7" class="text-center text-muted">Detail LPB kosong.</td></tr>');
                         return;
                     }
 
                     $.each(rows, function(index, row) {
+                        var editDisabled = isSelectedLpbUnpost() ? '' : ' disabled';
                         logistikTbody.append(
                             '<tr>' +
+                            '<td class="text-center">' +
+                            '<button type="button" class="btn btn-warning btn-sm js-open-lpb-detail-receipt" title="Edit detail LPB" ' +
+                            'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                            'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                            'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                            'data-no-lot="' + escAttr(row.no_lot || '') + '" ' +
+                            'data-expired-date="' + escAttr(row.expired_date || '') + '" ' +
+                            'data-qty="' + escAttr(row.qty_diterima || row.qty_lpb || 0) + '"' + editDisabled + '>' +
+                            '<i class="fas fa-pencil-alt"></i>' +
+                            '</button>' +
+                            '</td>' +
                             '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
                             '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
                             '<td>' + escHtml(row.no_lot || '-') + '</td>' +
@@ -1056,7 +1293,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                         selectedHeader = res.header || {};
                         selectedDetailRows = res.rows || [];
+                        selectedActivityLogs = res.logs || [];
                         showLpbDetailView();
+                        renderActivityLogs(selectedActivityLogs);
+                        updateActivityLogVisibility();
                         $('#lpbDetailLoading').hide();
                         $('#lpbDetailEmpty').hide();
                         $('#lpbDetailWrap').show();
@@ -1146,7 +1386,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                         detailViewMode = 'purchasing';
                         purchasingEditMode = false;
+                        isActivityLogVisible = false;
                         updateDetailViewButton();
+                        updateWorkflowActions();
+                        updateActivityLogVisibility();
                         renderPurchasingHeader(res.header || {});
                         renderPurchasingTable(res.rows || []);
                         $('#selectedLpbText').text('Purchasing LPB: ' + ((selectedHeader || {}).nomor_lpb || 'belum dibuat'));
@@ -1230,12 +1473,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     ) : (
                         '<td class="text-center">' +
                         '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga LPB" ' +
-                        'data-id-detail="' + escHtml(row.id_detail_lpb || 0) + '" ' +
-                        'data-kd-barang="' + escHtml(row.kd_barang || '') + '" ' +
-                        'data-nama-barang="' + escHtml(row.nama_barang || '-') + '" ' +
-                        'data-qty="' + escHtml(row.qty_lpb || 0) + '" ' +
-                        'data-harga-satuan="' + escHtml(hargaSatuanAktif) + '" ' +
-                        'data-total-harga="' + escHtml(totalHargaAktif) + '">' +
+                        'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                        'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                        'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                        'data-qty="' + escAttr(row.qty_lpb || 0) + '" ' +
+                        'data-harga-satuan="' + escAttr(hargaSatuanAktif) + '" ' +
+                        'data-total-harga="' + escAttr(totalHargaAktif) + '">' +
                         '<i class="fas fa-pencil-alt"></i>' +
                         '</button>' +
                         '</td>'
@@ -1267,6 +1510,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 updateBulkAcceptButton();
                 renderDetailHeader(selectedHeader || {});
                 renderDetailTable(selectedDetailRows || []);
+                updateWorkflowActions();
+                updateActivityLogVisibility();
                 $('#selectedLpbText').text('Nomor LPB: ' + ((selectedHeader || {}).nomor_lpb || 'belum dibuat'));
             }
 
@@ -1401,20 +1646,47 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 $('#jenisIdLpb').val(activeId);
+                $('#jenisNomorLpb').val(activeHeader.nomor_lpb || '');
                 $('#jenisLpbSelect').val(activeHeader.jenis_lpb || 'LPB CP');
                 if (!$('#jenisLpbSelect').val()) {
                     $('#jenisLpbSelect').val('LPB CP');
                 }
-                var currentNomorLpb = $.trim(activeHeader.nomor_lpb || '');
-                if (currentNomorLpb !== '') {
-                    $('#jenisNomorLpbCurrentGroup').show();
-                    $('#jenisNomorLpbCurrent').val(currentNomorLpb);
-                } else {
-                    $('#jenisNomorLpbCurrentGroup').hide();
-                    $('#jenisNomorLpbCurrent').val('');
-                }
                 updateJenisLpbFormatInfo();
                 $('#modalUpdateJenisLpb').modal('show');
+            }
+
+            function openUpdateLpbSjModal(header) {
+                var activeHeader = header || selectedHeader;
+                var activeId = activeHeader ? (activeHeader.id_lpb || selectedIdLpb) : selectedIdLpb;
+
+                if (!activeId || !activeHeader) {
+                    Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update SJ terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                $('#sjIdLpb').val(activeId);
+                $('#sjNomor').val(activeHeader.nosj || '');
+                $('#sjTanggal').val(activeHeader.tgl_sj || '');
+                $('#modalUpdateLpbSj').modal('show');
+            }
+
+            function openUpdateLpbDetailReceiptModal(btn) {
+                var idDetail = btn.data('id-detail') || 0;
+                if (!idDetail) {
+                    Swal.fire('Validasi', 'Detail LPB tidak valid.', 'warning');
+                    return;
+                }
+                if (!isSelectedLpbUnpost()) {
+                    Swal.fire('Validasi', 'Detail LPB hanya bisa diedit saat status UNPOST.', 'warning');
+                    return;
+                }
+
+                $('#detailReceiptIdDetail').val(idDetail);
+                $('#detailReceiptBarang').val((btn.attr('data-kd-barang') || '') + ' - ' + (btn.attr('data-nama-barang') || '-'));
+                $('#detailReceiptNoLot').val(btn.attr('data-no-lot') || '');
+                $('#detailReceiptExpiredDate').val(btn.attr('data-expired-date') || '');
+                $('#detailReceiptQty').val(btn.attr('data-qty') || 0);
+                $('#modalUpdateLpbDetailReceipt').modal('show');
             }
 
             function openUpdateLpbPriceModal(btn) {
@@ -1512,6 +1784,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             $(document).on('click', '.js-open-lpb-price', function() {
                 openUpdateLpbPriceModal($(this));
+            });
+
+            $(document).on('click', '.js-open-lpb-detail-receipt', function() {
+                openUpdateLpbDetailReceiptModal($(this));
             });
 
             $(document).on('click', '.js-accept-lpb-price', function() {
@@ -1680,6 +1956,94 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 openUpdateJenisLpbModal();
             });
 
+            $('#btnUpdateLpbIdentity').on('click', function() {
+                openUpdateJenisLpbModal();
+            });
+
+            $('#btnUpdateLpbSj').on('click', function() {
+                openUpdateLpbSjModal();
+            });
+
+            $('#btnToggleLpbLog').on('click', function() {
+                if (!selectedIdLpb) {
+                    return;
+                }
+
+                isActivityLogVisible = !isActivityLogVisible;
+                updateActivityLogVisibility();
+            });
+
+            function changeLpbStatus(url, successMessage, extraData) {
+                if (!selectedIdLpb || isChangingLpbStatus) {
+                    return;
+                }
+
+                isChangingLpbStatus = true;
+                updateWorkflowActions();
+                var payload = $.extend({
+                    id_lpb: selectedIdLpb
+                }, extraData || {});
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: payload,
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Status LPB gagal diperbarui.', 'error');
+                            return;
+                        }
+
+                        Swal.fire('Berhasil', res.message || successMessage, 'success');
+                        loadList({
+                            skipDetailReload: true
+                        });
+                        loadDetail(selectedIdLpb);
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat memperbarui status LPB.', 'error');
+                    },
+                    complete: function() {
+                        isChangingLpbStatus = false;
+                        updateWorkflowActions();
+                    }
+                });
+            }
+
+            $('#btnUnpostLpb').on('click', function() {
+                Swal.fire({
+                    title: 'UNPOST LPB?',
+                    text: 'Data LPB akan dibuka untuk pembaruan.',
+                    icon: 'warning',
+                    input: 'textarea',
+                    inputLabel: 'Keterangan',
+                    inputPlaceholder: 'Tulis alasan UNPOST LPB',
+                    inputAttributes: {
+                        'aria-label': 'Keterangan UNPOST LPB'
+                    },
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, UNPOST',
+                    cancelButtonText: 'Batal',
+                    inputValidator: function(value) {
+                        if (!$.trim(value || '')) {
+                            return 'Keterangan UNPOST wajib diisi.';
+                        }
+                        return null;
+                    }
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        changeLpbStatus('<?= base_url('ics/ajax_unpost_lpb') ?>', 'LPB berhasil di-UNPOST.', {
+                            keterangan: result.value
+                        });
+                    }
+                });
+            });
+
+            $('#btnPostLpb').on('click', function() {
+                changeLpbStatus('<?= base_url('ics/ajax_post_lpb') ?>', 'LPB berhasil direkam menjadi POST.');
+            });
+
             $('#formUpdateInvoice').on('submit', function(e) {
                 e.preventDefault();
 
@@ -1781,32 +2145,120 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#btnSubmitJenisLpb').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
 
                 $.ajax({
-                    url: '<?= base_url('ics/ajax_update_lpb_type') ?>',
+                    url: '<?= base_url('ics/ajax_update_lpb_identity') ?>',
                     type: 'POST',
                     dataType: 'json',
                     data: {
                         id_lpb: $('#jenisIdLpb').val(),
+                        nomor_lpb: $('#jenisNomorLpb').val(),
                         jenis_lpb: $('#jenisLpbSelect').val()
                     },
                     success: function(res) {
                         if (res.status !== 'success') {
-                            Swal.fire('Gagal', res.message || 'Update jenis LPB gagal disimpan.', 'error');
+                            Swal.fire('Gagal', res.message || 'Update nomor dan jenis LPB gagal disimpan.', 'error');
                             return;
                         }
 
                         $('#modalUpdateJenisLpb').modal('hide');
-                        Swal.fire('Berhasil', (res.message || 'Jenis LPB berhasil diperbarui.') + (res.nomor_lpb ? ' Nomor LPB: ' + res.nomor_lpb : ''), 'success');
+                        Swal.fire('Berhasil', (res.message || 'Nomor dan jenis LPB berhasil diperbarui.') + (res.nomor_lpb ? ' Nomor LPB: ' + res.nomor_lpb : ''), 'success');
                         loadList();
                         if (selectedIdLpb) {
                             loadDetail(selectedIdLpb);
                         }
                     },
                     error: function() {
-                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan jenis LPB.', 'error');
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan nomor dan jenis LPB.', 'error');
                     },
                     complete: function() {
                         isSubmittingJenisLpb = false;
-                        $('#btnSubmitJenisLpb').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Jenis PO');
+                        $('#btnSubmitJenisLpb').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan LPB');
+                    }
+                });
+            });
+
+            $('#formUpdateLpbSj').on('submit', function(e) {
+                e.preventDefault();
+
+                if (isSubmittingLpbSj) {
+                    return;
+                }
+
+                isSubmittingLpbSj = true;
+                $('#btnSubmitLpbSj').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_update_lpb_sj') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: $('#sjIdLpb').val(),
+                        nosj: $('#sjNomor').val(),
+                        tgl_sj: $('#sjTanggal').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Update SJ gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalUpdateLpbSj').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'Nomor SJ dan tanggal SJ berhasil diperbarui.', 'success');
+                        loadList();
+                        if (selectedIdLpb) {
+                            loadDetail(selectedIdLpb);
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan SJ LPB.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingLpbSj = false;
+                        $('#btnSubmitLpbSj').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan SJ');
+                    }
+                });
+            });
+
+            $('#formUpdateLpbDetailReceipt').on('submit', function(e) {
+                e.preventDefault();
+
+                if (isSubmittingLpbDetailReceipt) {
+                    return;
+                }
+
+                isSubmittingLpbDetailReceipt = true;
+                $('#btnSubmitLpbDetailReceipt').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_update_lpb_detail_receipt') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_detail_lpb: $('#detailReceiptIdDetail').val(),
+                        no_lot: $('#detailReceiptNoLot').val(),
+                        expired_date: $('#detailReceiptExpiredDate').val(),
+                        qty_diterima: $('#detailReceiptQty').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Update detail LPB gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalUpdateLpbDetailReceipt').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'Detail LPB berhasil diperbarui.', 'success');
+                        loadList({
+                            skipDetailReload: true
+                        });
+                        if (selectedIdLpb) {
+                            loadDetail(selectedIdLpb);
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan detail LPB.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingLpbDetailReceipt = false;
+                        $('#btnSubmitLpbDetailReceipt').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Detail');
                     }
                 });
             });
