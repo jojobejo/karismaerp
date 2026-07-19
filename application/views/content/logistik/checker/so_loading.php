@@ -101,7 +101,7 @@
                         <?php else: ?>
                             <div class="route-grid">
                                 <?php foreach ($routes as $route): ?>
-                                    <a href="<?= base_url('checker/so_loading/detail/' . rawurlencode($route['kd_rute'])) ?>" class="route-card">
+                                    <a href="<?= base_url('checker/so_loading/detail/' . rawurlencode($route['kd_rute']) . '?date=' . $route['tgl_transaksi']) ?>" class="route-card">
                                         <div class="route-code"><?= htmlspecialchars($route['kd_rute']) ?></div>
                                         <div class="route-name" title="<?= htmlspecialchars($route['nama_rute']) ?>">
                                             <?= htmlspecialchars($route['nama_rute']) ?>

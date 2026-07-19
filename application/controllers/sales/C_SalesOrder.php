@@ -748,9 +748,14 @@ class C_SalesOrder extends CI_Controller
         foreach ($all_ready_so as $row) {
             $rute = trim((string)($row['kd_rute'] ?: ($row['customer_kd_rute'] ?? '')));
             if ($rute === '') $rute = '-';
-            if (!isset($route_summary[$rute])) {
-                $route_summary[$rute] = [
+            
+            $tgl_transaksi = substr((string)($row['tanggal_transaksi'] ?? date('Y-m-d')), 0, 10);
+            $group_key = $rute . '||' . $tgl_transaksi;
+
+            if (!isset($route_summary[$group_key])) {
+                $route_summary[$group_key] = [
                     'kd_rute'                    => $rute,
+                    'tgl_transaksi'              => $tgl_transaksi,
                     'total_so'                   => 0,
                     'total_sudah_faktur'         => 0,
                     'total_belum_faktur'         => 0,
@@ -761,18 +766,18 @@ class C_SalesOrder extends CI_Controller
                 ];
             }
 
-            $route_summary[$rute]['total_so']++;
+            $route_summary[$group_key]['total_so']++;
             if ((int)($row['jumlah_faktur'] ?? 0) > 0) {
-                $route_summary[$rute]['total_sudah_faktur']++;
+                $route_summary[$group_key]['total_sudah_faktur']++;
             } else {
-                $route_summary[$rute]['total_belum_faktur']++;
+                $route_summary[$group_key]['total_belum_faktur']++;
             }
-            $route_summary[$rute]['total_qty_siap_faktur']    += (float)($row['total_qty_siap_faktur'] ?? 0);
-            $route_summary[$rute]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
-            $route_summary[$rute]['total_item_ditolak']       += (int)($row['jumlah_item_ditolak'] ?? 0);
+            $route_summary[$group_key]['total_qty_siap_faktur']    += (float)($row['total_qty_siap_faktur'] ?? 0);
+            $route_summary[$group_key]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
+            $route_summary[$group_key]['total_item_ditolak']       += (int)($row['jumlah_item_ditolak'] ?? 0);
             $updated_at = (string)($row['update_at'] ?? $row['create_at'] ?? '');
-            if ($updated_at > $route_summary[$rute]['latest_update_at']) {
-                $route_summary[$rute]['latest_update_at'] = $updated_at;
+            if ($updated_at > $route_summary[$group_key]['latest_update_at']) {
+                $route_summary[$group_key]['latest_update_at'] = $updated_at;
             }
         }
         uasort($route_summary, function($a, $b) {
