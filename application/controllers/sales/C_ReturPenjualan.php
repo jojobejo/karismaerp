@@ -880,6 +880,70 @@ class C_ReturPenjualan extends CI_Controller
         $this->load->view('content/sales/retur/spr_history.php', $data);
         $this->load->view('partial/main/footer.php');
     }
+
+    public function retur_history()
+    {
+        $user = $this->_getUser();
+        $role = strtolower((string)$this->session->userdata('role'));
+        
+        $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
+        $role_label = 'Riwayat';
+        
+        if (in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','ADMIN'])) {
+            $role_label = 'Admin Retur';
+            $role = 'admretur';
+        } elseif (in_array($jobdesk, ['MANAGERACC','ADMIN'])) {
+            $role_label = 'Manager Account';
+            $role = 'mngacc';
+        } elseif (in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN'])) {
+            $role_label = 'Manager SC';
+            $role = 'mngsc';
+        } elseif (in_array($jobdesk, ['KADEPUB','ADMIN'])) {
+            $role_label = 'Kadep UB';
+            $role = 'kadepub';
+        } elseif (in_array($jobdesk, ['MANAGERSE','ADMIN'])) {
+            $role_label = 'Manager SE';
+            $role = 'mngse';
+        } elseif (in_array($jobdesk, ['KADEPSC','KADEP','ADMIN','MANAGER','KADEPUB'])) {
+            $role_label = 'Kadep SC';
+            $role = 'kadep_sc';
+        } elseif (in_array($jobdesk, ['DIREKTUROP','ADMIN'])) {
+            $role_label = 'Direktur Operasional';
+            $role = 'dirop';
+        } elseif (in_array($jobdesk, ['DIREKTURUTAMA','ADMIN'])) {
+            $role_label = 'Direktur Utama';
+            $role = 'dirut';
+        } elseif (in_array($jobdesk, ['COLLECTION','KOLEKTOR','ADMIN'])) {
+            $role_label = 'Collection';
+            $role = 'collection';
+        } elseif (in_array($jobdesk, ['KASIR','ADMIN'])) {
+            $role_label = 'Kasir';
+            $role = 'kasir';
+        }
+
+        if ($this->_isJobdesk(['ADMIN'])) {
+            $role = 'admin';
+            $role_label = 'Admin';
+        }
+
+        $filter = [
+            'date1'  => $this->input->get('date1', true),
+            'date2'  => $this->input->get('date2', true),
+            'status' => $this->input->get('status', true),
+        ];
+
+        $data['page_title'] = 'KARISMA — Riwayat Persetujuan Retur';
+        $data['role_label'] = $role_label;
+        $data['role']       = $role;
+        $data['filter']     = $filter;
+        
+        $this->load->model('M_ReturPenjualan');
+        $data['retur_list'] = $this->M_ReturPenjualan->get_retur_approval_history($user['nama'], $role, $filter);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/retur_history.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
     // ================================================================
     // ADMLPB2 — Daftar SPR yang disetujui Kadep (buat Retur)
     // ================================================================

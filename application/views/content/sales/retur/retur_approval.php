@@ -1,4 +1,21 @@
-<?php /* views/content/sales/retur/retur_approval.php */ ?>
+<?php /* views/content/sales/retur/retur_approval.php */
+if (!function_exists('hitung_durasi')) {
+    function hitung_durasi($from, $to) {
+        if (empty($from) || empty($to)) return null;
+        $t1 = new DateTime($from);
+        $t2 = new DateTime($to);
+        $diff = $t1->diff($t2);
+        
+        $parts = [];
+        if ($diff->d > 0) $parts[] = $diff->d . ' hari';
+        if ($diff->h > 0) $parts[] = $diff->h . ' jam';
+        if ($diff->i > 0) $parts[] = $diff->i . ' menit';
+        if ($diff->s > 0 && empty($parts)) $parts[] = $diff->s . ' detik';
+        
+        return empty($parts) ? '0 menit' : implode(' ', $parts);
+    }
+}
+?>
 <style>
     .table-detail-spr th { background: #f8f9fa; font-size: 14px; border: 1px solid #dee2e6; padding: 8px !important; }
     .table-detail-spr td { font-size: 14px; border: 1px solid #dee2e6; vertical-align: middle; padding: 8px !important; }
@@ -6,6 +23,21 @@
         background:#fff8f8; border:1px solid #f5c6cb; border-radius:4px;
         padding:10px 14px; font-size:12px; color:#721c24;
     }
+    .timeline-retur { border-left: 3px solid #dee2e6; padding-left: 16px; margin-left: 8px; }
+    .timeline-retur .tl-step { margin-bottom: 16px; position: relative; }
+    .timeline-retur .tl-step::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #dee2e6;
+        position: absolute;
+        left: -23px;
+        top: 3px;
+    }
+    .timeline-retur .tl-step.done::before   { background: #28a745; }
+    .timeline-retur .tl-step.active::before { background: #ffc107; }
+    .timeline-retur .tl-step.reject::before { background: #dc3545; }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">

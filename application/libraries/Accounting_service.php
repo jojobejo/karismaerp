@@ -1533,10 +1533,10 @@ class Accounting_service
             || (isset($payload['tax']) && (float)$payload['tax'] > 0);
 
         if ($role === 'SALES_REVENUE') {
-            if ($is_pajak) {
-                return 307; // Q Penjualan BKP (410-11)
-            } else {
+            if (!empty($payload['is_bkps'])) {
                 return 308; // Q Penjualan BKPS (410-12)
+            } else {
+                return 307; // Q Penjualan BKP (410-11)
             }
         }
         if ($role === 'VAT_OUTPUT') {

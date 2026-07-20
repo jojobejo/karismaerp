@@ -3,7 +3,7 @@
 $pending_bg = $pending_bg ?? null;
 $is_bg_cair_mode = !empty($pending_bg);
 $allowed_names = [
-    'Q Kas', 'A Kas', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
+    'Q Kas', 'A Kas', 'Bank', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
     'Q Mandiri 143-00-8389898-9', 'Q BRI 300300', 'Q BRI 999300', 'Q Mandiri Giro 143 0029 298989',
     'A BCA 1088', 'A BCA 3688', 'A BCA (Annelia)', 'A BCA (Yuanita)', 'A BCA (IB)', 'A BCA (DKS)',
     'A BRI', 'A Mandiri', 'A Bukopin', 'A Danamon', 'A BCA 1588', 'A Mandiri 8181', 'A BRI 9305',
@@ -139,12 +139,16 @@ $default_metode = '';
                                         <td class="text-muted">Customer</td>
                                         <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                     </tr>
-                                    <?php if (!empty($faktur['nama_barang']) && $faktur['nama_barang'] !== '-'): ?>
-                                    <tr>
-                                        <td class="text-muted">Barang</td>
-                                        <td><small class="text-muted d-block text-wrap" style="max-width: 250px; line-height: 1.2;"><?= htmlspecialchars($faktur['nama_barang']) ?></small></td>
-                                    </tr>
-                                    <?php endif; ?>
+                                     <?php if (!empty($faktur['nama_barang']) && $faktur['nama_barang'] !== '-'): ?>
+                                     <tr>
+                                         <td class="text-muted">Barang</td>
+                                         <td>
+                                             <button type="button" class="btn btn-xs btn-outline-info" id="btnLihatDetailFaktur" data-id-faktur="<?= $faktur['id_faktur'] ?>">
+                                                 <i class="fas fa-eye mr-1"></i>Lihat Detail
+                                             </button>
+                                         </td>
+                                     </tr>
+                                     <?php endif; ?>
                                     <tr>
                                         <td class="text-muted">Cara Pembayaran</td>
                                         <td><span class="badge badge-info"><?= htmlspecialchars(ucfirst($faktur['cara_pembayaran'] ?: '-')) ?></span></td>
@@ -325,8 +329,143 @@ $default_metode = '';
         All rights reserved.
     </footer>
 </div>
+
+<!-- Modal Detail Faktur -->
+<div class="modal fade" id="modalDetailFaktur" tabindex="-1" role="dialog" aria-labelledby="modalDetailFakturLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalDetailFakturLabel">
+                    <i class="fas fa-file-invoice mr-2"></i>Detail Faktur Penjualan
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td width="35%" class="text-muted">No. Faktur</td>
+                                <td><strong id="modalNoFaktur">-</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tanggal</td>
+                                <td id="modalTanggalFaktur">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td width="35%" class="text-muted">Customer</td>
+                                <td id="modalCustomerName">-</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Rute</td>
+                                <td id="modalCustomerRute">-</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm table-striped">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Nama Barang</th>
+                                <th>Lot / Exp</th>
+                                <th class="text-right">Qty</th>
+                                <th class="text-right">Harga Satuan</th>
+                                <th class="text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalDetailFakturTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // AJAX Faktur Detail Modal
+    var btnLihat = document.getElementById('btnLihatDetailFaktur');
+    if (btnLihat) {
+        btnLihat.addEventListener('click', function() {
+            var idFaktur = this.getAttribute('data-id-faktur');
+            if (!idFaktur) return;
+
+            // Clear table
+            $('#modalDetailFakturTableBody').html('<tr><td colspan="5" class="text-center text-muted"><i class="fas fa-spinner fa-spin mr-1"></i>Memuat data...</td></tr>');
+            
+            // Show modal
+            $('#modalDetailFaktur').modal('show');
+
+            $.ajax({
+                url: '<?= base_url("sales_order/admin_sc/get_faktur_detail_info_json") ?>',
+                type: 'GET',
+                dataType: 'JSON',
+                data: { id_faktur: idFaktur },
+                success: function(response) {
+                    if (response && response.status) {
+                        var faktur = response.faktur;
+                        var items = response.items;
+
+                        $('#modalNoFaktur').text(faktur.no_faktur);
+                        var tgl = faktur.tanggal_faktur ? new Date(faktur.tanggal_faktur).toLocaleDateString('id-ID') : '-';
+                        $('#modalTanggalFaktur').text(tgl);
+                        $('#modalCustomerName').text(faktur.customer_name);
+                        $('#modalCustomerRute').text(faktur.kd_rute || '-');
+
+                        var html = '';
+                        var grandTotal = 0;
+                        if (items && items.length > 0) {
+                            items.forEach(function(item) {
+                                var sub = parseFloat(item.total_harga || item.subtotal_after_disc || 0);
+                                grandTotal += sub;
+                                
+                                var lot = item.no_lot ? 'Lot: ' + item.no_lot : '';
+                                var exp = item.expired_date ? 'Exp: ' + item.expired_date : '';
+                                var lotExp = [lot, exp].filter(Boolean).join('<br>');
+
+                                html += '<tr>' +
+                                    '<td><strong>' + item.nama_barang + '</strong><br><small class="text-muted">' + item.kd_barang + '</small></td>' +
+                                    '<td><small>' + (lotExp || '-') + '</small></td>' +
+                                    '<td class="text-right">' + parseFloat(item.qty).toLocaleString('id-ID') + ' ' + (item.satuan || 'pcs') + '</td>' +
+                                    '<td class="text-right">Rp ' + parseFloat(item.hrg_satuan || 0).toLocaleString('id-ID') + '</td>' +
+                                    '<td class="text-right">Rp ' + sub.toLocaleString('id-ID') + '</td>' +
+                                    '</tr>';
+                            });
+                            
+                            // Add total row
+                            html += '<tr class="font-weight-bold bg-light">' +
+                                '<td colspan="4" class="text-right">Total Faktur:</td>' +
+                                '<td class="text-right text-success">Rp ' + grandTotal.toLocaleString('id-ID') + '</td>' +
+                                '</tr>';
+                        } else {
+                            html = '<tr><td colspan="5" class="text-center text-muted">Tidak ada detail item.</td></tr>';
+                        }
+                        $('#modalDetailFakturTableBody').html(html);
+                    } else {
+                        $('#modalDetailFakturTableBody').html('<tr><td colspan="5" class="text-center text-danger">' + (response.message || 'Gagal memuat data.') + '</td></tr>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#modalDetailFakturTableBody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan koneksi: ' + error + '</td></tr>');
+                }
+            });
+        });
+    }
+
     var metode = document.getElementById('metode_pembayaran');
     var bgGroup = document.getElementById('tanggal_bg_cair_group');
     var returGroup = document.getElementById('saldo_retur_group');

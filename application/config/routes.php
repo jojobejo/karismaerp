@@ -678,6 +678,7 @@ $route['sales_order/confirm_loading']               = 'sales/C_SalesOrder/confir
 $route['sales_order/confirm_rute_loading']          = 'sales/C_SalesOrder/confirm_rute_loading';
 $route['sales_order/admin_sc/repost_faktur_item']   = 'sales/C_SalesOrder/repost_faktur_item';
 $route['sales_order/admin_sc/get_faktur_detail_json'] = 'sales/C_SalesOrder/get_faktur_detail_json';
+$route['sales_order/admin_sc/get_faktur_detail_info_json'] = 'sales/C_SalesOrder/get_faktur_detail_info_json';
 $route['sales_order/split_faktur/(:any)']           = 'sales/C_SalesOrder/split_faktur/$1';
 $route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpan_split_faktur/$1';
 $route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
@@ -724,6 +725,7 @@ $route['retur_penjualan/retur/detail/(:any)']                = 'sales/C_ReturPen
 $route['retur_penjualan/retur/approve/(:any)']               = 'sales/C_ReturPenjualan/retur_approve/$1';
 $route['retur_penjualan/retur/approve_simpan/(:any)']        = 'sales/C_ReturPenjualan/retur_approve_simpan/$1';
 $route['retur_penjualan/retur/print/(:any)']                 = 'sales/C_ReturPenjualan/retur_print/$1';
+$route['retur_penjualan/retur/history']                       = 'sales/C_ReturPenjualan/retur_history';
 // Admin Stock
 $route['retur_penjualan/retur/verifikasi/(:any)']            = 'sales/C_ReturPenjualan/retur_verifikasi/$1';
 $route['retur_penjualan/retur/verifikasi_simpan/(:any)']     = 'sales/C_ReturPenjualan/retur_verifikasi_simpan/$1';

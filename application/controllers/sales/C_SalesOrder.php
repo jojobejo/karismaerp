@@ -1588,10 +1588,23 @@ class C_SalesOrder extends CI_Controller
             return $tax_mode === 'pajak' ? $is_pajak_item : !$is_pajak_item;
         });
 
+        $kelompok_filter = strtolower(trim($this->input->get('kelompok_filter', true) ?? ''));
+        if ($kelompok_filter === 'bkps') {
+            $items_outstanding = array_filter($items_outstanding, function($d) {
+                $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
+                return strpos($desc, 'BKPS') !== false;
+            });
+        } elseif ($kelompok_filter === 'bkp') {
+            $items_outstanding = array_filter($items_outstanding, function($d) {
+                $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
+                return strpos($desc, 'BKPS') === false;
+            });
+        }
+
         if (empty($items_outstanding)) {
             $message = !empty($selected_items)
                 ? 'Item yang dipilih tidak valid, sudah difakturkan seluruhnya, atau tidak sesuai jenis faktur ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . '.'
-                : 'Tidak ada barang ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . ' yang siap difakturkan.';
+                : 'Tidak ada barang ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . ' dengan kategori kelompok dagang tersebut yang siap difakturkan.';
             $this->session->set_flashdata('error', $message);
             redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
             return;
@@ -2950,6 +2963,42 @@ class C_SalesOrder extends CI_Controller
         }
 
         echo json_encode(['status' => true, 'items' => $items]);
+        exit;
+    }
+
+    public function get_faktur_detail_info_json()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $id_faktur = (int)$this->input->get('id_faktur');
+        if ($id_faktur <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID tidak valid']);
+            exit;
+        }
+
+        $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        if (!$faktur) {
+            echo json_encode(['status' => false, 'message' => 'Faktur tidak ditemukan']);
+            exit;
+        }
+
+        $this->load->model('M_SalesOrder');
+        $items = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+
+        foreach ($items as &$item) {
+            if (!empty($item['expired_date']) && $item['expired_date'] !== '0000-00-00') {
+                $item['expired_date'] = date('d/m/Y', strtotime($item['expired_date']));
+            } else {
+                $item['expired_date'] = null;
+            }
+        }
+
+        echo json_encode([
+            'status' => true,
+            'faktur' => $faktur,
+            'items' => $items
+        ]);
         exit;
     }
 

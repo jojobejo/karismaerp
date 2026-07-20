@@ -124,21 +124,31 @@
                 </div>
 
                 <form action="<?= base_url('sales_order/admin_sc/form_faktur/' . $so['id_so']) ?>" method="get" id="formPilihFaktur">
+                    <input type="hidden" name="kelompok_filter" id="kelompokFilter" value="bkp">
                     <div class="card card-outline card-success">
                         <div class="card-header">
                             <h3 class="card-title">
                                 <i class="fas fa-list-ul mr-1"></i> Barang Terverifikasi
                             </h3>
                             <div class="card-tools">
-                                <div class="form-inline">
+                                <div class="form-inline d-flex align-items-center">
                                     <label class="mr-2 mb-0 small font-weight-bold">Jenis Faktur</label>
                                     <input type="hidden" name="tax_mode" id="taxMode" value="pajak">
-                                    <div class="tax-choice-group" role="group" aria-label="Jenis Faktur">
+                                    <div class="tax-choice-group mr-3" role="group" aria-label="Jenis Faktur">
                                         <button type="button" class="tax-choice-btn active" data-tax-mode="pajak">
                                             Pajak
                                         </button>
                                         <button type="button" class="tax-choice-btn" data-tax-mode="non_pajak">
                                             Non Pajak
+                                        </button>
+                                    </div>
+                                    <label class="mr-2 mb-0 small font-weight-bold">Kelompok Barang</label>
+                                    <div class="tax-choice-group" role="group" aria-label="Kelompok Barang">
+                                        <button type="button" class="tax-choice-btn active" data-kelompok-mode="bkp">
+                                            BKP
+                                        </button>
+                                        <button type="button" class="tax-choice-btn" data-kelompok-mode="bkps">
+                                            BKPS
                                         </button>
                                     </div>
                                 </div>
@@ -162,13 +172,19 @@
                                         $kd_barang = trim((string)($detail['kd_barang'] ?? ''));
                                         $is_pajak_item = strtoupper(substr($kd_barang, 0, 1)) === 'Q';
                                         $item_tax_mode = $is_pajak_item ? 'pajak' : 'non_pajak';
+                                        $desc = strtoupper(trim((string)($detail['kelompok_dagang_deskripsi'] ?? '')));
+                                        $is_bkps = (strpos($desc, 'BKPS') !== false);
+                                        $item_kelompok = $is_bkps ? 'bkps' : 'bkp';
                                     ?>
-                                        <tr data-tax-mode="<?= $item_tax_mode ?>">
+                                        <tr data-tax-mode="<?= $item_tax_mode ?>" data-kelompok-mode="<?= $item_kelompok ?>">
                                             <td>
                                                 <strong><?= htmlspecialchars($detail['nama_barang']) ?></strong>
                                                 <br><small class="text-muted"><?= htmlspecialchars($kd_barang) ?></small>
                                                 <br><span class="tax-badge <?= $is_pajak_item ? 'tax-badge-pajak' : 'tax-badge-non' ?>">
                                                     <?= $is_pajak_item ? 'Pajak 11%' : 'Non Pajak' ?>
+                                                </span>
+                                                <span class="tax-badge" style="color: #fff; background-color: <?= $is_bkps ? '#f0ad4e' : '#17a2b8' ?>;">
+                                                    <?= $is_bkps ? 'BKPS' : 'BKP' ?>
                                                 </span>
                                             </td>
                                             <td>
@@ -221,40 +237,60 @@ $(document).ready(function () {
         return $('#taxMode').val() || 'pajak';
     }
 
-    function applyTaxMode(mode) {
-        mode = mode === 'pajak' ? 'pajak' : 'non_pajak';
-        $('#taxMode').val(mode);
-        $('.tax-choice-btn')
+    function activeKelompokFilter() {
+        return $('#kelompokFilter').val() || 'bkp';
+    }
+
+    function applyFilters() {
+        var taxMode = activeTaxMode();
+        var kelompokFilter = activeKelompokFilter();
+
+        // Update button states
+        $('.tax-choice-btn[data-tax-mode]')
             .removeClass('active')
-            .filter('[data-tax-mode="' + mode + '"]')
+            .filter('[data-tax-mode="' + taxMode + '"]')
             .addClass('active');
 
-        $('tbody tr[data-tax-mode]').each(function () {
-            var match = $(this).data('tax-mode') === mode;
-            $(this).toggleClass('tax-hidden', !match);
+        $('.tax-choice-btn[data-kelompok-mode]')
+            .removeClass('active')
+            .filter('[data-kelompok-mode="' + kelompokFilter + '"]')
+            .addClass('active');
+
+        $('tbody tr[data-tax-mode][data-kelompok-mode]').each(function () {
+            var matchTax = $(this).data('tax-mode') === taxMode;
+            var matchKelompok = $(this).data('kelompok-mode') === kelompokFilter;
+            $(this).toggleClass('tax-hidden', !(matchTax && matchKelompok));
         });
 
         updateButton();
     }
 
     function updateButton() {
-        var mode = activeTaxMode();
-        var total = $('tbody tr[data-tax-mode="' + mode + '"]').length;
+        var taxMode = activeTaxMode();
+        var kelompokFilter = activeKelompokFilter();
+        var total = $('tbody tr[data-tax-mode="' + taxMode + '"][data-kelompok-mode="' + kelompokFilter + '"]').length;
         $('#btnLanjutFaktur').prop('disabled', total < 1);
     }
 
-    $('.tax-choice-btn').on('click', function () {
-        applyTaxMode($(this).data('tax-mode'));
+    $('.tax-choice-btn[data-tax-mode]').on('click', function () {
+        $('#taxMode').val($(this).data('tax-mode'));
+        applyFilters();
+    });
+
+    $('.tax-choice-btn[data-kelompok-mode]').on('click', function () {
+        $('#kelompokFilter').val($(this).data('kelompok-mode'));
+        applyFilters();
     });
 
     $('#formPilihFaktur').on('submit', function (e) {
-        var mode = activeTaxMode();
-        if ($('tbody tr[data-tax-mode="' + mode + '"]').length < 1) {
+        var taxMode = activeTaxMode();
+        var kelompokFilter = activeKelompokFilter();
+        if ($('tbody tr[data-tax-mode="' + taxMode + '"][data-kelompok-mode="' + kelompokFilter + '"]').length < 1) {
             e.preventDefault();
-            alert('Tidak ada barang untuk jenis faktur yang dipilih.');
+            alert('Tidak ada barang untuk jenis faktur dan kelompok barang yang dipilih.');
         }
     });
 
-    applyTaxMode($('#taxMode').val());
+    applyFilters();
 });
 </script>

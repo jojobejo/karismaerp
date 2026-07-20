@@ -58,6 +58,7 @@ class Accounting_source_service
         $promo_value = 0.0;
         $taxRate = 0.0;
 
+        $is_bkps = false;
         foreach ($items as $item) {
             $kelompok = (int)($item->kelompok_dagang ?? 0);
             if ($kelompok === 5) {
@@ -69,6 +70,16 @@ class Accounting_source_service
                 $normal_cogs += (float)$item->qty * (float)$item->hrg_pokok;
                 if ((float)$item->pajak > $taxRate) {
                     $taxRate = (float)$item->pajak;
+                }
+            }
+
+            if ($kelompok > 0) {
+                $group = $this->CI->db->get_where('tbkeu_kelompok_dagang', ['NOINDEX' => $kelompok])->row();
+                if ($group) {
+                    $desc = strtoupper(trim($group->DESKRIPSI));
+                    if (strpos($desc, 'BKPS') !== false) {
+                        $is_bkps = true;
+                    }
                 }
             }
         }
@@ -109,6 +120,7 @@ class Accounting_source_service
                 'tax' => $tax,
                 'cogs' => '0.0000',
                 'is_pajak' => $is_pajak,
+                'is_bkps' => $is_bkps,
             ], $userId);
             if (!$invoice['success']) {
                 return $invoice;
