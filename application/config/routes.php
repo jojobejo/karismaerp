@@ -377,6 +377,7 @@ $route['po_selesai']                                = 'logistik/C_Ics/po_selesai
 $route['riwayat_barang_masuk']                      = 'logistik/C_Ics/riwayat_barang_masuk';
 $route['get_lpb']                                   = 'logistik/C_Ics/get_lpb';
 $route['ics/detail_po']                             = 'logistik/C_Ics/detail_po';
+$route['ics/ajax_get_detail_po_rows']               = 'logistik/C_Ics/ajax_get_detail_po_rows';
 $route['ics/detail_record_lpb']                     = 'logistik/C_Ics/detail_record_lpb';
 $route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
 $route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';
@@ -401,6 +402,7 @@ $route['ics/ajax_generate_lpb_number']              = 'logistik/C_Ics/ajax_gener
 $route['ics/ajax_get_tmp_po_received_item']         = 'logistik/C_Ics/ajax_get_tmp_po_received_item';
 $route['ics/ajax_get_tmp_po_received_summary']      = 'logistik/C_Ics/ajax_get_tmp_po_received_summary';
 $route['ics/ajax_save_tmp_po_received']             = 'logistik/C_Ics/ajax_save_tmp_po_received';
+$route['ics/ajax_delete_tmp_po_received_row']       = 'logistik/C_Ics/ajax_delete_tmp_po_received_row';
 $route['ics/ajax_finalize_tmp_po_received']         = 'logistik/C_Ics/ajax_finalize_tmp_po_received';
 $route['ics/barangpic']                             = 'logistik/C_Ics/pic_barang';
 $route['ics/barangpic/(:any)']                      = 'logistik/C_Ics/pic_barang/$1';
@@ -436,6 +438,7 @@ $route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';
 $route['ics/mutasi_barang/input']                   = 'logistik/C_Ics/input_mutasi_barang';
+$route['ics/mutasi_barang/list_barang']             = 'logistik/C_Ics/list_barang_mutasi';
 
 $route['ics/ajax_barang_select2']                   = 'logistik/C_Ics/ajax_barang_select2';
 $route['ics/ajax_expired_by_barang']                = 'logistik/C_Ics/ajax_expired_by_barang';
@@ -445,9 +448,13 @@ $route['ics/ajax_exp_by_gudang_barang']             = 'logistik/C_Ics/ajax_exp_b
 $route['ics/ajax_get_qty_gudang']                   = 'logistik/C_Ics/ajax_get_qty_gudang';
 $route['ics/ajax_list_barang_mutasi_gudang']        = 'logistik/C_Ics/ajax_list_barang_mutasi_gudang';
 $route['ics/ajax_lot_tmp_mutasi']                   = 'logistik/C_Ics/ajax_lot_tmp_mutasi';
+$route['ics/ajax_mutasi_lot_select2']               = 'logistik/C_Ics/ajax_mutasi_lot_select2';
+$route['ics/ajax_mutasi_exp_select2']               = 'logistik/C_Ics/ajax_mutasi_exp_select2';
+$route['ics/ajax_mutasi_lot_qty']                   = 'logistik/C_Ics/ajax_mutasi_lot_qty';
 $route['ics/ajax_add_tmp_mutasi']                   = 'logistik/C_Ics/ajax_add_tmp_mutasi';
 $route['ics/ajax_list_tmp_mutasi']                  = 'logistik/C_Ics/ajax_list_tmp_mutasi';
 $route['ics/ajax_update_tmp_mutasi']                = 'logistik/C_Ics/ajax_update_tmp_mutasi';
+$route['ics/ajax_update_tmp_mutasi_field']          = 'logistik/C_Ics/ajax_update_tmp_mutasi_field';
 $route['ics/ajax_delete_tmp_mutasi']                = 'logistik/C_Ics/ajax_delete_tmp_mutasi';
 $route['ics/ajax_rekam_mutasi']                     = 'logistik/C_Ics/ajax_rekam_mutasi';
 

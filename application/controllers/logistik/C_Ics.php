@@ -633,6 +633,29 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function ajax_get_detail_po_rows()
+    {
+        while (ob_get_level()) ob_end_clean();
+
+        $no_po      = trim((string) $this->input->get('no_po', TRUE));
+        $kd_suplier = trim((string) $this->input->get('kd_suplier', TRUE));
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($no_po === '' || $kd_suplier === '') {
+            echo json_encode([
+                'status'  => 'error',
+                'message' => 'Parameter no_po dan kd_suplier wajib diisi.'
+            ]);
+            return;
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'rows'   => $this->M_Logistik->detail_po_received(urldecode($no_po), urldecode($kd_suplier))
+        ]);
+    }
+
     public function detail_record_lpb()
     {
         $kd_po = urldecode((string) $this->input->get('kd_po'));
@@ -746,7 +769,8 @@ class C_Ics extends CI_Controller
             'status'  => 'success',
             'message' => 'Data purchasing berhasil dimuat.',
             'header'  => $this->build_purchasing_lpb_summary($header, $rows),
-            'rows'    => $rows
+            'rows'    => $rows,
+            'logs'    => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
         ]);
     }
 
@@ -1157,6 +1181,26 @@ class C_Ics extends CI_Controller
         }
 
         $this->M_Logistik->ensure_lpb_workflow_columns();
+
+        $detail = $this->db
+            ->select('h.status_lpb')
+            ->from('tb_lpb_detail d')
+            ->join('tb_lpb h', 'h.id_lpb = d.id_lpb', 'inner')
+            ->where('d.id_detail_lpb', $idDetailLpb)
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        if (!$detail) {
+            $this->json_response(['status' => 'error', 'message' => 'Detail LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+
+        if ((int) ($detail['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update harga detail LPB hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_lpb_detail_price([
             'id_detail_lpb'      => $idDetailLpb,
@@ -1223,9 +1267,11 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $this->M_Logistik->ensure_lpb_workflow_columns();
         $this->db->trans_begin();
 
         $savedRows = [];
+        $idLpb = 0;
         foreach ($idList as $idDetailLpb) {
             $saved = $this->M_Logistik->accept_lpb_detail_price([
                 'id_detail_lpb'  => $idDetailLpb,
@@ -1242,7 +1288,27 @@ class C_Ics extends CI_Controller
                 return;
             }
 
+            $currentIdLpb = (int) ($saved['id_lpb'] ?? 0);
+            if ($idLpb <= 0) {
+                $idLpb = $currentIdLpb;
+            } elseif ($currentIdLpb !== $idLpb) {
+                $this->db->trans_rollback();
+                $this->json_response([
+                    'status'  => 'error',
+                    'message' => 'Bulk verifikasi gagal. Detail LPB harus berasal dari LPB yang sama.',
+                    'html'    => ''
+                ]);
+                return;
+            }
+
             $savedRows[] = $saved;
+        }
+
+        $posted = $this->M_Logistik->update_lpb_status($idLpb, 1, $this->active_user_name(), 'LPB direkam menjadi POST setelah verifikasi harga detail.');
+        if (!$posted) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => 'error', 'message' => 'Verifikasi harga berhasil, tetapi Rekam LPB menjadi POST gagal disimpan.', 'html' => '']);
+            return;
         }
 
         if ($this->db->trans_status() === FALSE) {
@@ -1254,8 +1320,9 @@ class C_Ics extends CI_Controller
         $this->db->trans_commit();
         $this->json_response([
             'status'  => 'success',
-            'message' => count($savedRows) . ' detail LPB berhasil diverifikasi.',
+            'message' => count($savedRows) . ' detail LPB berhasil diverifikasi dan LPB direkam menjadi POST.',
             'rows'    => $savedRows,
+            'header'  => $posted,
             'html'    => ''
         ]);
     }
@@ -1335,6 +1402,18 @@ class C_Ics extends CI_Controller
 
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
         $this->M_Logistik->ensure_lpb_workflow_columns();
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+        if (!$header) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_invoice_lpb([
             'id_lpb'         => $id_lpb,
@@ -1374,6 +1453,18 @@ class C_Ics extends CI_Controller
 
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
         $this->M_Logistik->ensure_lpb_workflow_columns();
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+        if (!$header) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Update faktur pajak hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_faktur_pajak_lpb([
             'id_lpb' => $id_lpb,
@@ -1941,6 +2032,12 @@ class C_Ics extends CI_Controller
         header('Content-Type: application/json; charset=utf-8');
 
         $idTmpReceived = (int) $this->input->post('id_tmp_recieved', TRUE);
+        if ($idTmpReceived <= 0) {
+            $idTmpReceived = (int) $this->input->post('id_tmp_received', TRUE);
+        }
+        if ($idTmpReceived <= 0) {
+            $idTmpReceived = (int) $this->input->post('id', TRUE);
+        }
         $noPo = trim((string) $this->input->post('no_po', TRUE));
         $kdSuplier = trim((string) $this->input->post('kd_suplier', TRUE));
 
@@ -2986,26 +3083,48 @@ class C_Ics extends CI_Controller
     public function ajax_filter_mutasi()
     {
         $data = $this->M_Ics->filter_mutasi(
-            $this->input->post('gudang'),
-            $this->input->post('daterange'),
-            $this->input->post('status')
+            $this->input->get_post('gudang'),
+            $this->input->get_post('daterange') ?: $this->input->get_post('tanggal'),
+            $this->input->get_post('status')
         );
 
         foreach ($data as $fm) {
+            $status = (string) $fm->status;
+            if ($status === 'POSTED') {
+                $badge = "<span class='badge badge-success'><i class='fas fa-check-circle'></i> POSTED</span>";
+                $actions = "
+                    <button class='btn btn-sm btn-info btn-detail' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-eye'></i></button>
+                    <button class='btn btn-sm btn-warning btn-unpost' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-undo'></i></button>
+                    <button class='btn btn-sm btn-danger btn-delete' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-ban'></i></button>
+                ";
+            } elseif ($status === 'UNPOST') {
+                $badge = "<span class='badge badge-info'><i class='fas fa-clock'></i> UNPOST</span>";
+                $actions = "
+                    <button class='btn btn-sm btn-info btn-detail' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-eye'></i></button>
+                    <button class='btn btn-sm btn-danger btn-delete' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-ban'></i></button>
+                ";
+            } elseif ($status === 'HOLD') {
+                $badge = "<span class='badge badge-warning'><i class='fas fa-pause'></i> HOLD</span>";
+                $actions = "
+                    <button class='btn btn-sm btn-info btn-detail' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-eye'></i></button>
+                    <button class='btn btn-sm btn-success btn-rollback' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-thumbs-up'></i></button>
+                    <button class='btn btn-sm btn-danger btn-delete' data-id='" . html_escape($fm->noreff) . "'><i class='fas fa-ban'></i></button>
+                ";
+            } else {
+                $badge = "<span class='badge badge-danger'><i class='fas fa-undo'></i> " . html_escape($status) . "</span>";
+                $actions = '';
+            }
+
             echo "<tr>
-            <td>{$fm->tgl_transaksi}</td>
-            <td>{$fm->noreff}</td>
-            <td>{$fm->gudang_a}</td>
-            <td>{$fm->gudang_b}</td>
-            <td>{$fm->keterangan}</td>
-            <td>{$fm->nm_karyawan}</td>
-            <td>{$fm->status}</td>
-            <td>
-                <button class='btn btn-sm btn-warning btn-edit' data-id='{$fm->id}'>Edit</button>
-                <button class='btn btn-sm btn-danger btn-rollback' data-id='{$fm->id}' data-ref='{$fm->noreff}'>Rollback</button>
-                <button class='btn btn-sm btn-secondary btn-unpost' data-id='{$fm->id}'>Unpost</button>
-            </td>
-        </tr>";
+                <td>" . html_escape($fm->tgl_transaksi) . "</td>
+                <td>" . html_escape($fm->noreff) . "</td>
+                <td>" . html_escape($fm->gudang_a) . "</td>
+                <td>" . html_escape($fm->gudang_b) . "</td>
+                <td>" . html_escape($fm->keterangan) . "</td>
+                <td>" . html_escape($fm->nm_karyawan) . "</td>
+                <td>{$badge}</td>
+                <td class='text-center'>{$actions}</td>
+            </tr>";
         }
     }
 
@@ -3075,10 +3194,30 @@ class C_Ics extends CI_Controller
         $data['ref_mutasi'] = $this->M_Ics->generate_noreff();
         $data['gudang']     = $this->M_Ics->get_gudang();
         $data['gudang_aktif'] = 2;
+        $data['gudang_tujuan_aktif'] = (int) $this->input->get('tujuangdg', true);
+        $data['satuan_options'] = $this->M_Ics->get_mutasi_satuan_options();
 
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/input_mutasi_barang.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function list_barang_mutasi()
+    {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
+        $idGudang = (int) $this->input->get('fromgdg', true);
+        if (!$idGudang) {
+            $idGudang = 2;
+        }
+
+        $data['page_title']    = 'KARISMA - LOGISTIK';
+        $data['gudang_asal']   = $idGudang;
+        $data['gudang_tujuan'] = (int) $this->input->get('tujuangdg', true);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/list_barang_mutasi.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -3191,6 +3330,11 @@ class C_Ics extends CI_Controller
     {
         $id        = $this->input->get('id', true);
         $id_gudang = $this->input->get('id_gudang', true);
+        $search    = trim((string) $this->input->get('term', true));
+        $page      = max(1, (int) $this->input->get('page', true));
+        $perPage   = (int) $this->input->get('per_page', true);
+        $perPage   = ($perPage > 0 && $perPage <= 50) ? $perPage : 10;
+        $offset    = ($page - 1) * $perPage;
         $user      = $this->session->userdata('nik');
 
         if (!$id || !$id_gudang || !$user) {
@@ -3205,16 +3349,93 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $totalRows = $this->M_Ics->count_mutasi_lot_options(
+            $id_gudang,
+            (string) $tmp->kode_barang_system,
+            (string) $tmp->nama_barang,
+            $search
+        );
+        $totalPages = max(1, (int) ceil($totalRows / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $offset = ($page - 1) * $perPage;
+        }
+
         $data = $this->M_Ics->get_mutasi_lot_options(
             $id_gudang,
             (string) $tmp->kode_barang_system,
-            (string) $tmp->nama_barang
+            (string) $tmp->nama_barang,
+            $search,
+            $perPage,
+            $offset
         );
 
         echo json_encode([
             'status' => true,
             'item'   => $tmp,
-            'data'   => $data
+            'data'   => $data,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_rows' => $totalRows,
+                'total_pages' => $totalPages
+            ]
+        ]);
+    }
+
+    public function ajax_mutasi_lot_select2()
+    {
+        $idGudang = $this->input->get('id_gudang', true);
+        $kodeSystem = trim((string) $this->input->get('kode_barang_system', true));
+        $namaBarang = trim((string) $this->input->get('nama_barang', true));
+        $search = trim((string) $this->input->get('term', true));
+
+        $rows = $this->M_Ics->get_mutasi_lot_select2($idGudang, $kodeSystem, $namaBarang, $search);
+        $result = [];
+        foreach ($rows as $row) {
+            $result[] = [
+                'id' => $row->no_lot,
+                'text' => $row->no_lot,
+                'qty_gudang' => (int) $row->qty_gudang
+            ];
+        }
+
+        echo json_encode(['results' => $result]);
+    }
+
+    public function ajax_mutasi_exp_select2()
+    {
+        $idGudang = $this->input->get('id_gudang', true);
+        $kodeSystem = trim((string) $this->input->get('kode_barang_system', true));
+        $namaBarang = trim((string) $this->input->get('nama_barang', true));
+        $noLot = trim((string) $this->input->get('no_lot', true));
+        $search = trim((string) $this->input->get('term', true));
+
+        $rows = $this->M_Ics->get_mutasi_exp_select2($idGudang, $kodeSystem, $namaBarang, $noLot, $search);
+        $result = [];
+        foreach ($rows as $row) {
+            $result[] = [
+                'id' => $row->exp_date,
+                'text' => $row->exp_date,
+                'qty_gudang' => (int) $row->qty_gudang
+            ];
+        }
+
+        echo json_encode(['results' => $result]);
+    }
+
+    public function ajax_mutasi_lot_qty()
+    {
+        $idGudang = $this->input->get('id_gudang', true);
+        $kodeSystem = trim((string) $this->input->get('kode_barang_system', true));
+        $namaBarang = trim((string) $this->input->get('nama_barang', true));
+        $noLot = trim((string) $this->input->get('no_lot', true));
+        $expDate = trim((string) $this->input->get('exp_date', true));
+
+        $qty = $this->M_Ics->get_mutasi_lot_qty($idGudang, $kodeSystem, $namaBarang, $noLot, $expDate);
+        echo json_encode([
+            'status' => true,
+            'qty_gudang' => (int) $qty
         ]);
     }
 
@@ -3253,9 +3474,24 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        if (!empty($data['gudang_asal']) && !empty($data['no_lot']) && !empty($data['exp_date'])) {
+            $qtyGudang = $this->M_Ics->get_mutasi_lot_qty(
+                $data['gudang_asal'],
+                (string) ($data['kode_barang_system'] ?? ''),
+                (string) $data['nama_barang'],
+                (string) $data['no_lot'],
+                (string) $data['exp_date']
+            );
+
+            if ($data['qty'] > $qtyGudang) {
+                echo json_encode(['status' => false, 'msg' => 'Qty yang diminta melebihi stok database']);
+                return;
+            }
+        }
+
         $this->M_Ics->insert_tmp_mutasi($data);
 
-        echo json_encode(['status' => true]);
+        echo json_encode(['status' => true, 'id' => $this->db->insert_id()]);
     }
 
     public function ajax_list_tmp_mutasi()
@@ -3325,6 +3561,76 @@ class C_Ics extends CI_Controller
         echo json_encode(['status' => true, 'msg' => 'Update sukses']);
     }
 
+    public function ajax_update_tmp_mutasi_field()
+    {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
+        $id        = $this->input->post('id');
+        $field     = trim((string) $this->input->post('field', true));
+        $value     = $this->input->post('value', true);
+        $id_gudang = $this->input->post('id_gudang');
+        $user      = $this->session->userdata('nik');
+
+        if (!$id || !$user || !in_array($field, ['qty', 'satuan_id'], true)) {
+            echo json_encode(['status' => false, 'msg' => 'Data update tidak valid']);
+            return;
+        }
+
+        $tmp = $this->M_Ics->get_tmp_mutasi_item($id, $user);
+        if (!$tmp) {
+            echo json_encode(['status' => false, 'msg' => 'Data temporary tidak ditemukan']);
+            return;
+        }
+
+        if (!$id_gudang && !empty($tmp->gudang_asal)) {
+            $id_gudang = $tmp->gudang_asal;
+        }
+
+        if ($field === 'qty') {
+            $qty = (int) $value;
+            if ($qty <= 0) {
+                echo json_encode(['status' => false, 'msg' => 'Jumlah harus lebih dari 0']);
+                return;
+            }
+
+            if ($id_gudang) {
+                if (trim((string) $tmp->no_lot) !== '' && trim((string) $tmp->exp_date) !== '') {
+                    $qtyGudang = $this->M_Ics->get_mutasi_lot_qty(
+                        $id_gudang,
+                        (string) $tmp->kode_barang_system,
+                        (string) $tmp->nama_barang,
+                        (string) $tmp->no_lot,
+                        (string) $tmp->exp_date
+                    );
+                } else {
+                    $qtyGudang = $this->M_Ics->get_mutasi_item_total_qty(
+                        $id_gudang,
+                        (string) $tmp->kode_barang_system,
+                        (string) $tmp->nama_barang
+                    );
+                }
+
+                if ($qty > $qtyGudang) {
+                    echo json_encode(['status' => false, 'msg' => 'Jumlah melebihi stok database']);
+                    return;
+                }
+            }
+
+            $this->M_Ics->update_tmp_mutasi($id, $user, ['qty' => $qty]);
+            echo json_encode(['status' => true, 'msg' => 'Jumlah berhasil diperbarui']);
+            return;
+        }
+
+        $satuanId = (int) $value;
+        if ($satuanId <= 0 || !$this->M_Ics->is_mutasi_satuan_exists($satuanId)) {
+            echo json_encode(['status' => false, 'msg' => 'Satuan tidak valid']);
+            return;
+        }
+
+        $this->M_Ics->update_tmp_mutasi($id, $user, ['satuan_id' => $satuanId]);
+        echo json_encode(['status' => true, 'msg' => 'Satuan berhasil diperbarui']);
+    }
+
 
     public function ajax_delete_tmp_mutasi()
     {
@@ -3356,6 +3662,11 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        if ((string) $post['fromgdg'] === (string) $post['tujuangdg']) {
+            echo json_encode(['status' => false, 'msg' => 'Dari Gudang dan Ke Gudang tidak boleh sama']);
+            return;
+        }
+
         $tmp = $this->M_Ics->get_tmp_mutasi_by_user($user);
         if (!$tmp) {
             echo json_encode(['status' => false, 'msg' => 'Data mutasi kosong']);
@@ -3365,6 +3676,22 @@ class C_Ics extends CI_Controller
         foreach ($tmp as $t) {
             if (trim((string) $t->exp_date) === '' || trim((string) $t->no_lot) === '') {
                 echo json_encode(['status' => false, 'msg' => 'Plot No Lot dan Expired Date semua barang terlebih dahulu']);
+                return;
+            }
+
+            $qtyGudang = $this->M_Ics->get_mutasi_lot_qty(
+                $post['fromgdg'],
+                (string) $t->kode_barang_system,
+                (string) $t->nama_barang,
+                (string) $t->no_lot,
+                (string) $t->exp_date
+            );
+
+            if ((int) $t->qty > $qtyGudang) {
+                echo json_encode([
+                    'status' => false,
+                    'msg' => 'Qty ' . $t->nama_barang . ' lot ' . $t->no_lot . ' melebihi stok database'
+                ]);
                 return;
             }
         }
@@ -3481,7 +3808,8 @@ class C_Ics extends CI_Controller
             'msg'    => $IS_HOLD
                 ? 'Mutasi berhasil direkam sebagai HOLD'
                 : 'Mutasi berhasil direkam',
-            'noreff' => $post['nofresnsi']
+            'noreff' => $post['nofresnsi'],
+            'new_ref' => $this->M_Ics->generate_noreff()
         ]);
     }
 

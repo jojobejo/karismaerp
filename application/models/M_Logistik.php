@@ -4250,16 +4250,74 @@ FROM (
         return $this->db->get()->result_array();
     }
 
-    public function detail_po_received($nopo, $kdsup)
+    private function po_barang_conversion_join($alias = 'pb')
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(a.qty_kecil, 0) > 0 AND COALESCE(a.qty, 0) > 0
-                        THEN a.qty_kecil / a.qty
+        return "(SELECT kode_barang, MAX(NULLIF(isi, 0)) AS isi, MAX(NULLIF(kemasan, 0)) AS kemasan
+                FROM tbpo_barang
+                GROUP BY kode_barang) {$alias}";
+    }
+
+    private function po_conversion_factor_expr($detailAlias = 'pp', $barangAlias = 'pb')
+    {
+        $unitKeyExpr = $this->po_unit_key_expr($detailAlias);
+        $storedFactorExpr = "(CASE
+                    WHEN COALESCE({$detailAlias}.qty_kecil, 0) > 0 AND COALESCE({$detailAlias}.qty, 0) > 0
+                        THEN {$detailAlias}.qty_kecil / {$detailAlias}.qty
                     ELSE 1
                 END)";
-        $qtyOrderKecilExpr = "(COALESCE(a.qty, 0) * {$dimensiExpr})";
+        $isiExpr = "COALESCE(NULLIF({$barangAlias}.isi, 0), NULLIF({$detailAlias}.isi, 0), 0)";
+        $kemasanExpr = "COALESCE(NULLIF({$barangAlias}.kemasan, 0), NULLIF({$detailAlias}.kemasan, 0), 0)";
+
+        return "(CASE
+                    WHEN {$unitKeyExpr} = 'box'
+                        THEN CASE WHEN {$isiExpr} > 0 THEN {$isiExpr} ELSE {$storedFactorExpr} END
+                    WHEN {$unitKeyExpr} IN ('ltr', 'kg')
+                        THEN CASE WHEN {$kemasanExpr} > 0 THEN 1000 / {$kemasanExpr} ELSE {$storedFactorExpr} END
+                    ELSE 1
+                END)";
+    }
+
+    private function po_unit_key_expr($detailAlias = 'pp')
+    {
+        $satuanExpr = "LOWER(TRIM(COALESCE({$detailAlias}.satuan, '')))";
+
+        return "(CASE
+                    WHEN {$satuanExpr} = 'box' THEN 'box'
+                    WHEN {$satuanExpr} IN ('kg', 'kgs', 'kilogram') THEN 'kg'
+                    WHEN {$satuanExpr} IN ('ltr', 'lt', 'liter', 'litre', 'l') THEN 'ltr'
+                    WHEN {$satuanExpr} IN ('pcs', 'pc', 'piece') THEN 'pcs'
+                    ELSE 'pcs'
+                END)";
+    }
+
+    private function po_unit_qty_expr($qtyKecilExpr, $factorExpr, $detailAlias, $unit)
+    {
+        $unit = strtolower($unit);
+        $unitKeyExpr = $this->po_unit_key_expr($detailAlias);
+
+        return "(CASE
+                    WHEN {$unitKeyExpr} = '{$unit}'
+                        THEN CASE WHEN {$factorExpr} > 0 THEN {$qtyKecilExpr} / {$factorExpr} ELSE {$qtyKecilExpr} END
+                    ELSE 0
+                END)";
+    }
+
+    public function detail_po_received($nopo, $kdsup)
+    {
+        $dimensiExpr = $this->po_conversion_factor_expr('a', 'pb');
+        $isiExpr = "COALESCE(NULLIF(pb.isi, 0), NULLIF(a.isi, 0), 0)";
+        $kemasanExpr = "COALESCE(NULLIF(pb.kemasan, 0), NULLIF(a.kemasan, 0), 0)";
+        $qtyOrderKecilExpr = "(CASE
+                    WHEN COALESCE(a.qty_kecil, 0) > 0 THEN COALESCE(a.qty_kecil, 0)
+                    ELSE COALESCE(a.qty, 0) * {$dimensiExpr}
+                END)";
+        $qtyOrderBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN COALESCE(a.qty, 0) * {$isiExpr} ELSE 0 END)";
+        $qtyOrderKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $qtyDiterimaKecilExpr = "COALESCE(r.qty_diterima, 0)";
+        $qtyInKecilExpr = "(COALESCE(r.qty_diterima, 0) + COALESCE(tmp.qty_in, 0))";
+        $qtyDiterimaBaseExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
+        $qtyDiterimaBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN {$qtyDiterimaBaseExpr} * {$isiExpr} ELSE 0 END)";
+        $qtyDiterimaKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
 
         $sql = "SELECT 
                 a.id_det_po AS id,
@@ -4271,6 +4329,10 @@ FROM (
                 {$qtyOrderKecilExpr} AS qty_kecil,
                 a.qty AS qty_besar,
                 a.satuan,
+                {$qtyOrderKecilExpr} AS qty_order_pcs,
+                {$qtyOrderBoxExpr} AS qty_order_box,
+                {$qtyOrderKemasanExpr} AS qty_order_kg,
+                {$qtyOrderKemasanExpr} AS qty_order_ltr,
                 a.hrg_satuan,
                 a.hrg_total AS harga_total,
                 CASE
@@ -4279,6 +4341,11 @@ FROM (
                     ELSE COALESCE(r.qty_diterima, 0)
                 END AS qty_diterima,
                 COALESCE(r.qty_diterima, 0) AS qty_kecil_diterima,
+                {$qtyDiterimaKecilExpr} AS qty_diterima_pcs,
+                {$qtyDiterimaBoxExpr} AS qty_diterima_box,
+                {$qtyDiterimaKemasanExpr} AS qty_diterima_kg,
+                {$qtyDiterimaKemasanExpr} AS qty_diterima_ltr,
+                {$qtyInKecilExpr} AS qty_in,
                 CASE
                     WHEN {$dimensiExpr} > 0
                     THEN GREATEST(({$qtyOrderKecilExpr} - COALESCE(r.qty_diterima, 0)) / {$dimensiExpr}, 0)
@@ -4296,9 +4363,8 @@ FROM (
             FROM tbpo_detail_po a
             LEFT JOIN tb_master_barang_all b 
                 ON b.kd_barang = a.kd_barang
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = a.kd_barang
-                AND pb.kd_suplier = a.kd_suplier
             LEFT JOIN (
                 SELECT 
                     h.no_po,
@@ -4313,6 +4379,18 @@ FROM (
                 ON r.no_po = a.no_po
                 AND r.kd_po = a.kd_po
                 AND r.kd_barang = a.kd_barang
+            LEFT JOIN (
+                SELECT
+                    kd_po,
+                    kd_suplier,
+                    kd_barang,
+                    SUM(qty_diterima) AS qty_in
+                FROM tb_tmp_po_received
+                GROUP BY kd_po, kd_suplier, kd_barang
+            ) tmp
+                ON tmp.kd_po = a.kd_po
+                AND tmp.kd_suplier = a.kd_suplier
+                AND tmp.kd_barang = a.kd_barang
             WHERE a.no_po = ?
                 AND a.kd_suplier = ?";
 
@@ -4503,6 +4581,18 @@ FROM (
 
     public function get_lpb_record_detail_rows($id_lpb)
     {
+        $qtyLpbExpr = "COALESCE(d.qty_diterima, 0)";
+        $isiExpr = "COALESCE(NULLIF(pb.isi, 0), NULLIF(pp.isi, 0), 0)";
+        $kemasanExpr = "COALESCE(NULLIF(pb.kemasan, 0), NULLIF(pp.kemasan, 0), 0)";
+        $qtyLpbBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN {$qtyLpbExpr} / {$isiExpr} ELSE 0 END)";
+        $qtyLpbKgLtrExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyLpbExpr} * ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $hargaSatuanExcludeExpr = "COALESCE(
+                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
+                    NULLIF(pp.harga_satuan_exclude, 0),
+                    NULLIF(d.harga_satuan, 0),
+                    0
+                )";
+
         $sql = "SELECT
                 d.id_detail_lpb,
                 d.id_lpb,
@@ -4515,11 +4605,17 @@ FROM (
                 d.qty_diterima,
                 d.no_lot,
                 d.expired_date,
+                {$qtyLpbExpr} AS qty_in,
+                {$qtyLpbBoxExpr} AS qty_satuan_box,
+                {$qtyLpbKgLtrExpr} AS qty_satuan_kg_ltr,
+                {$qtyLpbExpr} AS qty_satuan_pcs,
                 d.input_at,
                 COALESCE(d.harga_satuan_sebelumnya, 0) AS harga_satuan_sebelumnya,
                 COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
-                COALESCE(NULLIF(d.harga_satuan, 0), NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0) AS harga_satuan,
-                COALESCE(NULLIF(d.total_harga, 0), d.qty_diterima * COALESCE(NULLIF(pp.harga_satuan_kecil_exclude, 0), NULLIF(pp.harga_satuan_exclude, 0), 0), 0) AS total_harga,
+                {$hargaSatuanExcludeExpr} AS harga_satuan,
+                {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
+                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga,
+                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga_exclude,
                 d.harga_verified_at,
                 d.harga_verified_by,
                 CASE
@@ -4536,6 +4632,8 @@ FROM (
                 ON pp.no_po = h.no_po
                 AND pp.kd_po = h.kd_po
                 AND pp.kd_barang = d.kd_barang
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
+                ON pb.kode_barang = pp.kd_barang
             WHERE d.id_lpb = ?
             ORDER BY d.id_detail_lpb ASC";
 
@@ -4673,6 +4771,10 @@ FROM (
             return FALSE;
         }
 
+        if ((int) ($row['status_lpb'] ?? 1) !== 0) {
+            return FALSE;
+        }
+
         $hargaSatuanAktif = (float) ($row['harga_satuan_aktif'] ?? 0);
         $totalHargaAktif = (float) ($row['total_harga_aktif'] ?? 0);
 
@@ -4784,6 +4886,18 @@ FROM (
 
     public function get_purchasing_lpb_detail_rows($id_lpb)
     {
+        $qtyLpbExpr = "COALESCE(d.qty_diterima, 0)";
+        $isiExpr = "COALESCE(NULLIF(pb.isi, 0), NULLIF(pp.isi, 0), 0)";
+        $kemasanExpr = "COALESCE(NULLIF(pb.kemasan, 0), NULLIF(pp.kemasan, 0), 0)";
+        $qtyLpbBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN {$qtyLpbExpr} / {$isiExpr} ELSE 0 END)";
+        $qtyLpbKgLtrExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyLpbExpr} * ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $hargaSatuanExcludeExpr = "COALESCE(
+                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
+                    NULLIF(pp.harga_satuan_exclude, 0),
+                    NULLIF(d.harga_satuan, 0),
+                    0
+                )";
+
         $sql = "SELECT
                 d.id_detail_lpb,
                 d.kd_barang,
@@ -4794,40 +4908,25 @@ FROM (
                     WHEN d.expired_date = '0000-00-00' THEN '-'
                     ELSE DATE_FORMAT(d.expired_date, '%d/%m/%Y')
                 END AS expired_date,
+                {$qtyLpbExpr} AS qty_in,
+                {$qtyLpbBoxExpr} AS qty_satuan_box,
+                {$qtyLpbKgLtrExpr} AS qty_satuan_kg_ltr,
+                {$qtyLpbExpr} AS qty_satuan_pcs,
                 CASE
                     WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
                     ELSE COALESCE(pp.qty, 0)
                 END AS qty_order,
-                COALESCE(d.qty_diterima, 0) AS qty_lpb,
+                {$qtyLpbExpr} AS qty_lpb,
                 GREATEST(
                     (CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE COALESCE(pp.qty, 0) END) - COALESCE(rcv.qty_diterima, 0),
                     0
                 ) AS qty_sisa,
-                COALESCE(
-                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
-                    NULLIF(pp.harga_satuan_exclude, 0),
-                    0
-                ) AS harga_satuan_exclude,
-                COALESCE(d.qty_diterima, 0) * COALESCE(
-                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
-                    NULLIF(pp.harga_satuan_exclude, 0),
-                    0
-                ) AS total_harga_exclude,
-                COALESCE(
-                    NULLIF(d.harga_satuan, 0),
-                    NULLIF(pp.harga_satuan_kecil_exclude, 0),
-                    NULLIF(pp.harga_satuan_exclude, 0),
-                    0
-                ) AS harga_satuan,
-                COALESCE(
-                    NULLIF(d.total_harga, 0),
-                    COALESCE(d.qty_diterima, 0) * COALESCE(
-                        NULLIF(pp.harga_satuan_kecil_exclude, 0),
-                        NULLIF(pp.harga_satuan_exclude, 0),
-                        0
-                    ),
-                    0
-                ) AS total_harga,
+                {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
+                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga_exclude,
+                {$hargaSatuanExcludeExpr} AS harga_satuan,
+                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga,
+                COALESCE(d.harga_satuan_sebelumnya, 0) AS harga_satuan_sebelumnya,
+                COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
                 d.harga_verified_at,
                 d.harga_verified_by,
                 CASE
@@ -4844,6 +4943,8 @@ FROM (
                 ON pp.no_po = h.no_po
                 AND pp.kd_po = h.kd_po
                 AND pp.kd_barang = d.kd_barang
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
+                ON pb.kode_barang = pp.kd_barang
             LEFT JOIN tb_master_barang_all mb
                 ON mb.kd_barang = d.kd_barang
             LEFT JOIN (
@@ -5052,16 +5153,12 @@ FROM (
 
     public function get_tmp_po_received_item($kd_po, $kd_barang)
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(pp.qty_kecil, 0) > 0 AND COALESCE(pp.qty, 0) > 0
-                        THEN pp.qty_kecil / pp.qty
-                    ELSE 1
-                END)";
+        $this->normalize_tmp_po_received_ids(['kd_po' => $kd_po, 'kd_barang' => $kd_barang]);
+        $dimensiExpr = $this->po_conversion_factor_expr('pp', 'pb');
 
         $sql = "SELECT
                 t.id_tmp_recieved,
+                t.id_tmp_recieved AS id_tmp_received,
                 t.kd_po,
                 t.kd_suplier,
                 t.kd_barang,
@@ -5082,9 +5179,8 @@ FROM (
                 ON pp.kd_po = t.kd_po
                 AND pp.kd_barang = t.kd_barang
                 AND pp.kd_suplier = t.kd_suplier
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
-                AND pb.kd_suplier = t.kd_suplier
             WHERE t.kd_po = ?
                 AND t.kd_barang = ?
             ORDER BY t.id_tmp_recieved ASC";
@@ -5102,7 +5198,122 @@ FROM (
             return TRUE;
         }
 
+        $rows = $this->assign_tmp_po_received_ids($rows);
+
         return $this->db->insert_batch('tb_tmp_po_received', $rows);
+    }
+
+    private function next_tmp_po_received_id()
+    {
+        $row = $this->db
+            ->select('COALESCE(MAX(id_tmp_recieved), 0) + 1 AS next_id', false)
+            ->get('tb_tmp_po_received')
+            ->row_array();
+
+        return max(1, (int) ($row['next_id'] ?? 1));
+    }
+
+    private function assign_tmp_po_received_ids(array $rows, $forceNewIds = false)
+    {
+        $nextId = $this->next_tmp_po_received_id();
+
+        foreach ($rows as &$row) {
+            $currentId = (int) ($row['id_tmp_recieved'] ?? 0);
+            if ($forceNewIds || $currentId <= 0) {
+                $row['id_tmp_recieved'] = $nextId++;
+            }
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function normalize_tmp_po_received_ids(array $filters)
+    {
+        $this->db->select('t.*');
+        $this->db->from('tb_tmp_po_received t');
+
+        if (!empty($filters['no_po'])) {
+            $this->db->join(
+                'tbpo_detail_po pp',
+                'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+                'inner'
+            );
+            $this->db->where('pp.no_po', $filters['no_po']);
+        }
+
+        if (!empty($filters['kd_suplier'])) {
+            $this->db->where('t.kd_suplier', $filters['kd_suplier']);
+        }
+
+        if (!empty($filters['kd_po'])) {
+            $this->db->where('t.kd_po', $filters['kd_po']);
+        }
+
+        if (!empty($filters['kd_barang'])) {
+            $this->db->where('t.kd_barang', $filters['kd_barang']);
+        }
+
+        $rows = $this->db->order_by('t.kd_barang', 'ASC')->order_by('t.id_tmp_recieved', 'ASC')->get()->result_array();
+
+        if (empty($rows)) {
+            return TRUE;
+        }
+
+        $hasInvalidId = FALSE;
+        foreach ($rows as $row) {
+            if ((int) ($row['id_tmp_recieved'] ?? 0) <= 0) {
+                $hasInvalidId = TRUE;
+                break;
+            }
+        }
+
+        if (!$hasInvalidId) {
+            return TRUE;
+        }
+
+        $this->db->trans_begin();
+
+        if (!empty($filters['no_po'])) {
+            $sql = "DELETE t
+                    FROM tb_tmp_po_received t
+                    INNER JOIN tbpo_detail_po pp
+                        ON pp.kd_po = t.kd_po
+                        AND pp.kd_barang = t.kd_barang
+                        AND pp.kd_suplier = t.kd_suplier
+                    WHERE pp.no_po = ?";
+            $params = [$filters['no_po']];
+
+            if (!empty($filters['kd_suplier'])) {
+                $sql .= " AND t.kd_suplier = ?";
+                $params[] = $filters['kd_suplier'];
+            }
+
+            $this->db->query($sql, $params);
+        } else {
+            if (!empty($filters['kd_suplier'])) {
+                $this->db->where('kd_suplier', $filters['kd_suplier']);
+            }
+            if (!empty($filters['kd_po'])) {
+                $this->db->where('kd_po', $filters['kd_po']);
+            }
+            if (!empty($filters['kd_barang'])) {
+                $this->db->where('kd_barang', $filters['kd_barang']);
+            }
+            $this->db->delete('tb_tmp_po_received');
+        }
+
+        $rows = $this->assign_tmp_po_received_ids($rows, TRUE);
+        $this->db->insert_batch('tb_tmp_po_received', $rows);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            return FALSE;
+        }
+
+        $this->db->trans_commit();
+
+        return TRUE;
     }
 
     public function get_po_exclude_price_by_item($no_po, $kd_barang, $kd_suplier = '', $kd_po = '')
@@ -5134,16 +5345,12 @@ FROM (
 
     public function get_tmp_po_received_summary($no_po, $kd_suplier)
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(pp.qty_kecil, 0) > 0 AND COALESCE(pp.qty, 0) > 0
-                        THEN pp.qty_kecil / pp.qty
-                    ELSE 1
-                END)";
+        $this->normalize_tmp_po_received_ids(['no_po' => $no_po, 'kd_suplier' => $kd_suplier]);
+        $dimensiExpr = $this->po_conversion_factor_expr('pp', 'pb');
 
         $sql = "SELECT
                 t.id_tmp_recieved,
+                t.id_tmp_recieved AS id_tmp_received,
                 t.kd_po,
                 t.kd_barang,
                 COALESCE(NULLIF(pp.nama_barang, ''), mb.nama_barang, '-') AS nama_barang,
@@ -5166,9 +5373,8 @@ FROM (
                 AND pp.kd_suplier = t.kd_suplier
             LEFT JOIN tb_master_barang_all mb
                 ON mb.kd_barang = t.kd_barang
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
-                AND pb.kd_suplier = t.kd_suplier
             WHERE pp.no_po = ?
                 AND t.kd_suplier = ?
             ORDER BY t.kd_barang ASC, t.id_tmp_recieved ASC";
@@ -5178,16 +5384,12 @@ FROM (
 
     public function get_tmp_po_received_summary_by_item($kd_po, $kd_barang)
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(pp.qty_kecil, 0) > 0 AND COALESCE(pp.qty, 0) > 0
-                        THEN pp.qty_kecil / pp.qty
-                    ELSE 1
-                END)";
+        $this->normalize_tmp_po_received_ids(['kd_po' => $kd_po, 'kd_barang' => $kd_barang]);
+        $dimensiExpr = $this->po_conversion_factor_expr('pp', 'pb');
 
         $sql = "SELECT
                 t.id_tmp_recieved,
+                t.id_tmp_recieved AS id_tmp_received,
                 t.kd_po,
                 t.kd_barang,
                 COALESCE(NULLIF(pp.nama_barang, ''), mb.nama_barang, '-') AS nama_barang,
@@ -5210,9 +5412,8 @@ FROM (
                 AND pp.kd_suplier = t.kd_suplier
             LEFT JOIN tb_master_barang_all mb
                 ON mb.kd_barang = t.kd_barang
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
-                AND pb.kd_suplier = t.kd_suplier
             WHERE t.kd_po = ?
                 AND t.kd_barang = ?
             ORDER BY t.id_tmp_recieved ASC";
@@ -5257,14 +5458,11 @@ FROM (
 
     public function get_po_remaining_qty($no_po, $kd_suplier)
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(pp.qty_kecil, 0) > 0 AND COALESCE(pp.qty, 0) > 0
-                        THEN pp.qty_kecil / pp.qty
-                    ELSE 1
+        $dimensiExpr = $this->po_conversion_factor_expr('pp', 'pb');
+        $qtyOrderKecilExpr = "(CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN COALESCE(pp.qty_kecil, 0)
+                    ELSE COALESCE(pp.qty, 0) * {$dimensiExpr}
                 END)";
-        $qtyOrderKecilExpr = "(COALESCE(pp.qty, 0) * {$dimensiExpr})";
 
         $sql = "SELECT
                 pp.kd_po,
@@ -5279,9 +5477,8 @@ FROM (
                 GREATEST({$qtyOrderKecilExpr} - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa,
                 {$dimensiExpr} AS dimensi_br
             FROM tbpo_detail_po pp
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
-                AND pb.kd_suplier = pp.kd_suplier
             LEFT JOIN (
                 SELECT
                     h.no_po,
@@ -5302,14 +5499,11 @@ FROM (
 
     public function get_po_remaining_qty_by_item($kd_po, $kd_barang)
     {
-        $dimensiExpr = "(CASE
-                    WHEN COALESCE(pb.panjang, 0) > 0 AND COALESCE(pb.lebar, 0) > 0 AND COALESCE(pb.tinggi, 0) > 0
-                        THEN COALESCE(pb.panjang, 0) * COALESCE(pb.lebar, 0) * COALESCE(pb.tinggi, 0)
-                    WHEN COALESCE(pp.qty_kecil, 0) > 0 AND COALESCE(pp.qty, 0) > 0
-                        THEN pp.qty_kecil / pp.qty
-                    ELSE 1
+        $dimensiExpr = $this->po_conversion_factor_expr('pp', 'pb');
+        $qtyOrderKecilExpr = "(CASE
+                    WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN COALESCE(pp.qty_kecil, 0)
+                    ELSE COALESCE(pp.qty, 0) * {$dimensiExpr}
                 END)";
-        $qtyOrderKecilExpr = "(COALESCE(pp.qty, 0) * {$dimensiExpr})";
 
         $sql = "SELECT
                 pp.no_po,
@@ -5327,9 +5521,8 @@ FROM (
                 GREATEST({$qtyOrderKecilExpr} - COALESCE(rcv.qty_diterima, 0), 0) AS qty_kecil_sisa,
                 {$dimensiExpr} AS dimensi_br
             FROM tbpo_detail_po pp
-            LEFT JOIN tbpo_barang pb
+            LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
-                AND pb.kd_suplier = pp.kd_suplier
             LEFT JOIN (
                 SELECT
                     h.no_po,

@@ -215,13 +215,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         .lpb-table thead th {
                             background: #243cff;
                             color: #fff;
-                            border-color: #243cff;
+                            border: 1px solid #1726b8;
                             vertical-align: middle;
                             white-space: nowrap;
                         }
 
                         .lpb-table th,
                         .lpb-table td {
+                            border: 1px solid #cbd5e1;
                             white-space: nowrap;
                         }
 
@@ -388,6 +389,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                         <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
                                             <i class="fas fa-receipt mr-1"></i> Update Faktur
                                         </button>
+                                        <button type="button" class="btn btn-info btn-sm" id="btnToggleLpbLog" title="Tampilkan log aktivitas detail PO">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
                                         <button type="button" class="btn btn-outline-success btn-sm" id="btnPrintSelectedLpb">
                                             <i class="fas fa-print mr-1"></i> Cetak Faktur LPB
                                         </button>
@@ -428,22 +432,24 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                                 <thead>
                                                     <tr>
                                                         <?php if ($showLpbListPanel) : ?>
-                                                        <th class="text-center">#</th>
+                                                        <th class="text-center" rowspan="2">#</th>
                                                         <?php endif; ?>
-                                                        <th>Kode Barang</th>
-                                                        <th>Nama Barang</th>
-                                                        <th>No Lot</th>
-                                                        <th class="text-center">Expired Date</th>
-                                                        <?php if ($showLpbListPanel) : ?>
-                                                        <th class="text-right">Qty Order</th>
-                                                        <th class="text-right">Qty LPB</th>
-                                                        <?php else : ?>
-                                                        <th class="text-right">Qty Order</th>
-                                                        <th class="text-right">Qty LPB</th>
-                                                        <th class="text-right">Total Harga</th>
-                                                        <th class="text-right">Harga Satuan</th>
-                                                        <th class="text-center">#</th>
+                                                        <th rowspan="2">Kode Barang</th>
+                                                        <th rowspan="2">Nama Barang</th>
+                                                        <th class="text-center" rowspan="2">No Lot</th>
+                                                        <th class="text-center" rowspan="2">Expired Date</th>
+                                                        <th class="text-center" rowspan="2">Qty In</th>
+                                                        <th class="text-center" colspan="3">Qty Satuan</th>
+                                                        <?php if (!$showLpbListPanel) : ?>
+                                                        <th class="text-right" rowspan="2">Harga Satuan</th>
+                                                        <th class="text-right" rowspan="2">Total Harga</th>
+                                                        <th class="text-center" rowspan="2">#</th>
                                                         <?php endif; ?>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-center">BOX</th>
+                                                        <th class="text-center">Kg/Ltr</th>
+                                                        <th class="text-center">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -464,10 +470,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                             <button type="button" class="btn btn-success btn-sm" id="btnBulkAcceptLpbPrice">
                                                 <i class="fas fa-save mr-1"></i> Rekam
                                             </button>
+                                            <button type="button" class="btn btn-danger btn-sm" id="btnPurchasingUnpostLpb" style="display:none;">
+                                                <i class="fas fa-undo mr-1"></i> UNPOST
+                                            </button>
                                         </div>
                                         <div class="lpb-activity-log" id="lpbActivityLogWrap" style="display:none;">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <h6 class="font-weight-bold mb-0">Log Aktivitas LPB</h6>
+                                                <h6 class="font-weight-bold mb-0">Log Aktivitas Detail PO</h6>
                                                 <span class="badge badge-light" id="lpbActivityLogCount">0 aktivitas</span>
                                             </div>
                                             <div class="table-responsive">
@@ -760,7 +769,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 <div class="modal-body">
                     <input type="hidden" id="lpbPriceIdDetail" name="id_detail_lpb">
                     <div class="form-group">
-                        <label>Barang</label>
+                        <label>Kode Barang - Nama Barang</label>
                         <input type="text" class="form-control" id="lpbPriceBarang" readonly>
                     </div>
                     <div class="row">
@@ -795,8 +804,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             </div>
                         </div>
                     </div>
-                    <div class="alert alert-info mb-0">
-                        Harga yang tersimpan saat ini akan menjadi harga sebelumnya, dan harga baru akan menjadi harga aktif detail LPB.
+                    <div class="alert alert-warning mb-0">
+                        harga yang tersimpan saat ini dihapus.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -899,6 +908,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             function isSelectedLpbUnpost() {
                 return parseInt((selectedHeader || {}).status_lpb, 10) === 0;
+            }
+
+            function isSelectedLpbPost() {
+                return !!selectedHeader && !isSelectedLpbUnpost();
             }
 
             function loadPrePoAdjustment() {
@@ -1068,12 +1081,39 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 return;
             }
 
-            function setDetailTableHead(columns) {
+            function buildTh(label, className, attrs) {
+                return '<th' + (className ? ' class="' + className + '"' : '') + (attrs ? ' ' + attrs : '') + '>' + escHtml(label) + '</th>';
+            }
+
+            function setLpbDetailTableHead(options) {
+                options = options || {};
                 var html = '<tr>';
-                $.each(columns, function(_, col) {
-                    html += '<th' + (col.className ? ' class="' + col.className + '"' : '') + '>' + escHtml(col.label) + '</th>';
-                });
-                html += '</tr>';
+
+                if (options.actionLeft) {
+                    html += buildTh('#', 'text-center', 'rowspan="2"');
+                }
+
+                html += buildTh('Kode Barang', '', 'rowspan="2"') +
+                    buildTh('Nama Barang', '', 'rowspan="2"') +
+                    buildTh('No Lot', 'text-center', 'rowspan="2"') +
+                    buildTh('Expired Date', 'text-center', 'rowspan="2"') +
+                    buildTh('Qty In', 'text-center', 'rowspan="2"') +
+                    buildTh('Qty Satuan', 'text-center', 'colspan="3"');
+
+                if (options.priceColumns) {
+                    html += buildTh('Harga Satuan', 'text-right', 'rowspan="2"') +
+                        buildTh('Total Harga', 'text-right', 'rowspan="2"');
+                }
+
+                if (options.actionRight) {
+                    html += buildTh('#', 'text-center', 'rowspan="2"');
+                }
+
+                html += '</tr><tr>' +
+                    buildTh('BOX', 'text-center') +
+                    buildTh('Kg/Ltr', 'text-center') +
+                    buildTh('Pcs', 'text-center') +
+                    '</tr>';
                 $('#lpbDetailTable thead').html(html);
             }
 
@@ -1131,6 +1171,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 $('#lpbWorkflowActions').show();
+                var isPost = isSelectedLpbPost();
+                $('#btnUpdateInvoice')
+                    .prop('disabled', isPost)
+                    .attr('title', isPost ? 'Update invoice hanya bisa dilakukan saat status UNPOST' : 'Update Invoice');
+                $('#btnUpdateFaktur')
+                    .prop('disabled', isPost)
+                    .attr('title', isPost ? 'Update faktur hanya bisa dilakukan saat status UNPOST' : 'Update Faktur');
 
                 if (!showLpbListPanel || detailViewMode !== 'lpb') {
                     $('#lpbPostActions').hide();
@@ -1183,32 +1230,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             function renderDetailTable(rows) {
                 if (showLpbListPanel) {
-                    setDetailTableHead([{
-                            label: '#',
-                            className: 'text-center'
-                        },
-                        {
-                            label: 'Kode Barang'
-                        },
-                        {
-                            label: 'Nama Barang'
-                        },
-                        {
-                            label: 'No Lot'
-                        },
-                        {
-                            label: 'Expired Date',
-                            className: 'text-center'
-                        },
-                        {
-                            label: 'Qty Order',
-                            className: 'text-right'
-                        },
-                        {
-                            label: 'Qty LPB',
-                            className: 'text-right'
-                        }
-                    ]);
+                    var canEditDetail = isSelectedLpbUnpost();
+                    var logistikColCount = 8 + (canEditDetail ? 1 : 0);
+                    setLpbDetailTableHead({
+                        actionLeft: canEditDetail
+                    });
 
                     var logistikTbody = $('#lpbDetailTable tbody');
                     logistikTbody.empty();
@@ -1216,14 +1242,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     $('#lpbPurchasingVerifyActions').hide();
 
                     if (!rows || rows.length === 0) {
-                        logistikTbody.html('<tr><td colspan="7" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                        logistikTbody.html('<tr><td colspan="' + logistikColCount + '" class="text-center text-muted">Detail LPB kosong.</td></tr>');
                         return;
                     }
 
                     $.each(rows, function(index, row) {
-                        var editDisabled = isSelectedLpbUnpost() ? '' : ' disabled';
-                        logistikTbody.append(
-                            '<tr>' +
+                        var actionColumn = canEditDetail ? (
                             '<td class="text-center">' +
                             '<button type="button" class="btn btn-warning btn-sm js-open-lpb-detail-receipt" title="Edit detail LPB" ' +
                             'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
@@ -1231,16 +1255,23 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
                             'data-no-lot="' + escAttr(row.no_lot || '') + '" ' +
                             'data-expired-date="' + escAttr(row.expired_date || '') + '" ' +
-                            'data-qty="' + escAttr(row.qty_diterima || row.qty_lpb || 0) + '"' + editDisabled + '>' +
+                            'data-qty="' + escAttr(row.qty_diterima || row.qty_lpb || 0) + '">' +
                             '<i class="fas fa-pencil-alt"></i>' +
                             '</button>' +
-                            '</td>' +
+                            '</td>'
+                        ) : '';
+
+                        logistikTbody.append(
+                            '<tr>' +
+                            actionColumn +
                             '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
                             '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
-                            '<td>' + escHtml(row.no_lot || '-') + '</td>' +
+                            '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
                             '<td class="text-center">' + escHtml(formatDateId(row.expired_date)) + '</td>' +
-                            '<td class="text-right">' + escHtml(formatNumber(row.qty_order || 0)) + '</td>' +
-                            '<td class="text-right">' + escHtml(formatNumber(row.qty_diterima || row.qty_lpb || 0)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
+                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_pcs || row.qty_diterima || row.qty_lpb || 0)) + '</td>' +
                             '</tr>'
                         );
                     });
@@ -1255,10 +1286,17 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         nama_barang: row.nama_barang || '-',
                         no_lot: row.no_lot || '-',
                         expired_date: formatDateId(row.expired_date),
-                        qty_order: row.qty_order || 0,
+                        qty_in: row.qty_in || 0,
+                        qty_satuan_box: row.qty_satuan_box || 0,
+                        qty_satuan_kg_ltr: row.qty_satuan_kg_ltr || 0,
+                        qty_satuan_pcs: row.qty_satuan_pcs || row.qty_diterima || 0,
                         qty_lpb: row.qty_diterima || 0,
                         total_harga: row.total_harga || 0,
                         harga_satuan: row.harga_satuan || 0,
+                        total_harga_exclude: row.total_harga_exclude || row.total_harga || 0,
+                        harga_satuan_exclude: row.harga_satuan_exclude || row.harga_satuan || 0,
+                        harga_satuan_sebelumnya: row.harga_satuan_sebelumnya || 0,
+                        total_harga_sebelumnya: row.total_harga_sebelumnya || 0,
                         harga_terverifikasi: row.harga_terverifikasi || 0
                     };
                 });
@@ -1387,10 +1425,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         detailViewMode = 'purchasing';
                         purchasingEditMode = false;
                         isActivityLogVisible = false;
+                        selectedHeader = res.header || {};
+                        selectedActivityLogs = res.logs || [];
                         updateDetailViewButton();
                         updateWorkflowActions();
+                        renderActivityLogs(selectedActivityLogs);
                         updateActivityLogVisibility();
-                        renderPurchasingHeader(res.header || {});
+                        renderPurchasingHeader(selectedHeader);
                         renderPurchasingTable(res.rows || []);
                         $('#selectedLpbText').text('Purchasing LPB: ' + ((selectedHeader || {}).nomor_lpb || 'belum dibuat'));
                         $('#lpbDetailLoading').hide();
@@ -1416,61 +1457,26 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             function renderPurchasingTable(rows) {
                 selectedPurchasingRows = rows || [];
-                var acceptableRows = getBulkAcceptableRows();
-                var allVerified = selectedPurchasingRows.length > 0 && acceptableRows.length === 0;
-                var columns = [{
-                        label: 'Kode Barang'
-                    },
-                    {
-                        label: 'Nama Barang'
-                    },
-                    {
-                        label: 'No Lot'
-                    },
-                    {
-                        label: 'Expired Date',
-                        className: 'text-center'
-                    },
-                    {
-                        label: 'Qty Order',
-                        className: 'text-right'
-                    },
-                    {
-                        label: 'Qty LPB',
-                        className: 'text-right'
-                    },
-                    {
-                        label: 'Total Harga',
-                        className: 'text-right'
-                    },
-                    {
-                        label: 'Harga Satuan',
-                        className: 'text-right'
-                    },
-                    {
-                        label: '#',
-                        className: 'text-center'
-                    }
-                ];
-
-                setDetailTableHead(columns);
+                var canEditPrice = isSelectedLpbUnpost();
+                var colCount = 10 + (canEditPrice ? 1 : 0);
+                setLpbDetailTableHead({
+                    priceColumns: true,
+                    actionRight: canEditPrice
+                });
 
                 var tbody = $('#lpbDetailTable tbody');
                 tbody.empty();
 
                 if (!rows || rows.length === 0) {
-                    tbody.html('<tr><td colspan="9" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                    tbody.html('<tr><td colspan="' + colCount + '" class="text-center text-muted">Detail LPB kosong.</td></tr>');
                     updateBulkAcceptButton();
                     return;
                 }
 
                 $.each(rows, function(index, row) {
-                    var hargaSatuanAktif = row.harga_satuan || row.harga_satuan_exclude || 0;
-                    var totalHargaAktif = row.total_harga || row.total_harga_exclude || 0;
-                    var hargaVerified = parseInt(row.harga_terverifikasi || 0, 10) === 1;
-                    var actionColumn = (hargaVerified && !purchasingEditMode) ? (
-                        '<td class="text-center"><span class="badge badge-success">Accepted</span></td>'
-                    ) : (
+                    var hargaSatuanAktif = row.harga_satuan_exclude || row.harga_satuan || 0;
+                    var totalHargaAktif = row.total_harga_exclude || row.total_harga || 0;
+                    var actionColumn = canEditPrice ? (
                         '<td class="text-center">' +
                         '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga LPB" ' +
                         'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
@@ -1482,18 +1488,20 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         '<i class="fas fa-pencil-alt"></i>' +
                         '</button>' +
                         '</td>'
-                    );
+                    ) : '';
 
                     tbody.append(
                         '<tr>' +
                         '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
                         '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
-                        '<td>' + escHtml(row.no_lot || '-') + '</td>' +
+                        '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
-                        '<td class="text-right">' + escHtml(formatNumber(row.qty_order || 0)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatNumber(row.qty_lpb || 0)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
+                        '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
+                        '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
+                        '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
+                        '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_pcs || row.qty_lpb || 0)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
                         actionColumn +
                         '</tr>'
                     );
@@ -1519,8 +1527,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 return $.grep(selectedPurchasingRows || [], function(row) {
                     var idDetail = parseInt(row.id_detail_lpb || 0, 10);
                     var hargaVerified = parseInt(row.harga_terverifikasi || 0, 10) === 1;
-                    var hargaSatuanAktif = parseFloat(row.harga_satuan || row.harga_satuan_exclude || 0);
-                    var totalHargaAktif = parseFloat(row.total_harga || row.total_harga_exclude || 0);
+                    var hargaSatuanAktif = parseFloat(row.harga_satuan_exclude || row.harga_satuan || 0);
+                    var totalHargaAktif = parseFloat(row.total_harga_exclude || row.total_harga || 0);
 
                     return idDetail > 0 && !hargaVerified && hargaSatuanAktif > 0 && totalHargaAktif > 0;
                 });
@@ -1535,15 +1543,19 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var rows = selectedPurchasingRows || [];
                 var acceptableRows = getBulkAcceptableRows();
                 var allVerified = rows.length > 0 && acceptableRows.length === 0;
-                var isEditButton = allVerified;
+                var isPost = isSelectedLpbPost();
 
                 $('#lpbPurchasingVerifyActions').show();
-                $('#lpbBulkVerifyInfo').text('');
+                $('#lpbBulkVerifyInfo').text(isPost ? 'LPB sudah berstatus POST.' : '');
                 $('#btnBulkAcceptLpbPrice')
-                    .toggleClass('btn-success', !isEditButton)
-                    .toggleClass('btn-warning', isEditButton)
-                    .prop('disabled', (purchasingEditMode && allVerified) || (!isEditButton && acceptableRows.length === 0) || isBulkAcceptingLpbPrice)
-                    .html(isBulkAcceptingLpbPrice ? '<i class="fas fa-spinner fa-spin mr-1"></i> Rekam...' : (isEditButton ? '<i class="fas fa-pencil-alt mr-1"></i> Edit' : '<i class="fas fa-save mr-1"></i> Rekam'));
+                    .removeClass('btn-warning btn-danger')
+                    .addClass('btn-success')
+                    .prop('disabled', isPost || (!allVerified && acceptableRows.length === 0) || isBulkAcceptingLpbPrice || isChangingLpbStatus)
+                    .html(isBulkAcceptingLpbPrice || isChangingLpbStatus ? '<i class="fas fa-spinner fa-spin mr-1"></i> Rekam...' : '<i class="fas fa-save mr-1"></i> Rekam');
+                $('#btnPurchasingUnpostLpb')
+                    .toggle(isPost)
+                    .prop('disabled', !isPost || isChangingLpbStatus)
+                    .html(isChangingLpbStatus && isPost ? '<i class="fas fa-spinner fa-spin mr-1"></i> UNPOST...' : '<i class="fas fa-undo mr-1"></i> UNPOST');
             }
 
             function bulkAcceptDisplayedLpbPrices() {
@@ -1551,9 +1563,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var acceptableRows = getBulkAcceptableRows();
                 var allVerified = rows.length > 0 && acceptableRows.length === 0;
 
-                if (allVerified && !purchasingEditMode) {
-                    purchasingEditMode = true;
-                    renderPurchasingTable(selectedPurchasingRows);
+                if (allVerified) {
+                    if (isSelectedLpbUnpost()) {
+                        changeLpbStatus('<?= base_url('ics/ajax_post_lpb') ?>', 'LPB berhasil direkam menjadi POST.');
+                        return;
+                    }
+
+                    Swal.fire('Info', 'LPB sudah berstatus POST.', 'info');
                     return;
                 }
 
@@ -1582,7 +1598,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         }
 
                         Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diverifikasi.', 'success');
-                        loadDetail(selectedIdLpb);
+                        if (detailViewMode === 'purchasing') {
+                            loadPurchasingDetailView();
+                        } else {
+                            loadDetail(selectedIdLpb);
+                        }
                         loadList({
                             skipDetailReload: true
                         });
@@ -1606,6 +1626,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
+                if (parseInt(activeHeader.status_lpb || 1, 10) !== 0) {
+                    Swal.fire('Validasi', 'Update invoice hanya bisa dilakukan saat status UNPOST.', 'warning');
+                    return;
+                }
+
                 $('#invoiceIdLpb').val(activeId);
                 $('#invoiceNo').val(hasInvoice(activeHeader.no_invoice) ? activeHeader.no_invoice : '');
                 $('#invoiceTanggalTerbit').val(activeHeader.tanggal_invoice || '');
@@ -1618,6 +1643,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 if (!activeId || !activeHeader) {
                     Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update faktur pajaknya terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                if (parseInt(activeHeader.status_lpb || 1, 10) !== 0) {
+                    Swal.fire('Validasi', 'Update faktur pajak hanya bisa dilakukan saat status UNPOST.', 'warning');
                     return;
                 }
 
@@ -1978,8 +2008,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
+                var previousDetailMode = detailViewMode;
                 isChangingLpbStatus = true;
                 updateWorkflowActions();
+                updateBulkAcceptButton();
                 var payload = $.extend({
                     id_lpb: selectedIdLpb
                 }, extraData || {});
@@ -1999,7 +2031,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         loadList({
                             skipDetailReload: true
                         });
-                        loadDetail(selectedIdLpb);
+                        if (previousDetailMode === 'purchasing') {
+                            loadPurchasingDetailView();
+                        } else {
+                            loadDetail(selectedIdLpb);
+                        }
                     },
                     error: function() {
                         Swal.fire('Gagal', 'Terjadi kesalahan saat memperbarui status LPB.', 'error');
@@ -2007,11 +2043,16 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     complete: function() {
                         isChangingLpbStatus = false;
                         updateWorkflowActions();
+                        updateBulkAcceptButton();
                     }
                 });
             }
 
-            $('#btnUnpostLpb').on('click', function() {
+            function promptUnpostLpb() {
+                if (!selectedIdLpb) {
+                    return;
+                }
+
                 Swal.fire({
                     title: 'UNPOST LPB?',
                     text: 'Data LPB akan dibuka untuk pembaruan.',
@@ -2038,10 +2079,18 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         });
                     }
                 });
+            }
+
+            $('#btnUnpostLpb').on('click', function() {
+                promptUnpostLpb();
             });
 
             $('#btnPostLpb').on('click', function() {
                 changeLpbStatus('<?= base_url('ics/ajax_post_lpb') ?>', 'LPB berhasil direkam menjadi POST.');
+            });
+
+            $('#btnPurchasingUnpostLpb').on('click', function() {
+                promptUnpostLpb();
             });
 
             $('#formUpdateInvoice').on('submit', function(e) {
@@ -2271,6 +2320,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 isSubmittingLpbPrice = true;
+                var previousDetailMode = detailViewMode;
                 $('#btnSubmitLpbPrice').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
 
                 $.ajax({
@@ -2290,7 +2340,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         $('#modalUpdateLpbPrice').modal('hide');
                         Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diperbarui.', 'success');
                         if (selectedIdLpb) {
-                            loadDetail(selectedIdLpb);
+                            if (previousDetailMode === 'purchasing') {
+                                loadPurchasingDetailView();
+                            } else {
+                                loadDetail(selectedIdLpb);
+                            }
                         }
                     },
                     error: function() {

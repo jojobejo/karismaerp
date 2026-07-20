@@ -298,30 +298,45 @@
                                         <th class="text-center align-middle" rowspan="2">No</th>
                                         <th class="text-center align-middle" rowspan="2">Kode Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Nama Barang</th>
-                                        <th class="text-center align-middle" rowspan="2">Satuan</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Order</th>
-                                        <th class="text-center" colspan="2">Qty Diterima</th>
+                                        <th class="text-center" colspan="4">Qty Order</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty In</th>
+                                        <th class="text-center" colspan="4">Qty Diterima</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
                                         <th class="text-center align-middle" rowspan="2">Status</th>
                                         <th class="text-center align-middle" rowspan="2">Draft Temp</th>
                                         <th class="text-center align-middle" rowspan="2">#</th>
                                     </tr>
                                     <tr>
-                                        <th class="text-center">Satuan Besar</th>
-                                        <th class="text-center">Satuan Kecil</th>
+                                        <th class="text-center">Pcs</th>
+                                        <th class="text-center">Box</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-center">Box</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (!empty($detail)) : ?>
                                         <?php foreach ($detail as $i => $row) : ?>
-                                            <tr id="po-row-<?= htmlspecialchars($row['kd_po'] ?? '') ?>-<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
+                                            <tr id="po-row-<?= htmlspecialchars($row['kd_po'] ?? '') ?>-<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td><?= htmlspecialchars($row['kd_barang'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
-                                                <td class="text-center"><?= htmlspecialchars($row['satuan'] ?? '-') ?></td>
-                                                <td class="text-center"><?= $formatQtyPo($row['qty_besar'] ?? 0) ?></td>
-                                                <td class="text-center"><?= $formatQtyPo($row['qty_diterima'] ?? 0, 2) ?></td>
-                                                <td class="text-center"><?= $formatQtyPo($row['qty_kecil_diterima'] ?? 0) ?></td>
-                                                <td class="text-center">
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_kecil'] ?? 0) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_pcs'] ?? 0) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_ltr'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
+                                                <td class="text-center js-qty-diterima-pcs"><?= $formatQtyPo($row['qty_diterima_pcs'] ?? 0) ?></td>
+                                                <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-ltr"><?= $formatQtyPo($row['qty_diterima_ltr'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
+                                                <td class="text-center js-status-cell">
                                                     <?php
                                                     $statusBarang = strtoupper((string) ($row['status_barang'] ?? 'BELUM'));
                                                     $badgeClass = 'secondary';
@@ -333,7 +348,7 @@
                                                         $badgeClass = 'danger';
                                                     }
                                                     ?>
-                                                    <span class="badge badge-<?= $badgeClass ?> px-3 py-2"><?= htmlspecialchars($statusBarang) ?></span>
+                                                    <span class="badge badge-<?= $badgeClass ?> px-3 py-2 js-status-badge"><?= htmlspecialchars($statusBarang) ?></span>
                                                 </td>
                                                 <td class="text-center">
                                                     <span class="badge badge-soft js-draft-badge" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
@@ -349,7 +364,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="10" class="text-center text-muted">
+                                            <td colspan="17" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -603,7 +618,7 @@
                 keterangan: ''
             };
 
-            $('#tabelDetailPo').DataTable({
+            var detailPoTable = $('#tabelDetailPo').DataTable({
                 responsive: true,
                 autoWidth: false,
                 pageLength: 25,
@@ -612,7 +627,7 @@
                 ],
                 columnDefs: [{
                     orderable: false,
-                    targets: [8, 9]
+                    targets: [15, 16]
                 }],
                 language: {
                     search: "Cari:",
@@ -631,6 +646,101 @@
 
             function escHtml(str) {
                 return $('<div>').text(str || '').html();
+            }
+
+            function getStatusBadgeClass(status) {
+                status = (status || 'BELUM').toString().toUpperCase();
+
+                if (status === 'FULL') {
+                    return 'success';
+                }
+
+                if (status === 'PARTIAL') {
+                    return 'warning';
+                }
+
+                if (status === 'BELUM') {
+                    return 'danger';
+                }
+
+                return 'secondary';
+            }
+
+            function findDetailPoRow(kdPo, kdBarang) {
+                var matchedRow = $();
+
+                $('#tabelDetailPo tbody tr').each(function() {
+                    var row = $(this);
+
+                    if ((row.attr('data-kd-po') || '') == (kdPo || '') &&
+                        (row.attr('data-kd-barang') || '') == (kdBarang || '')) {
+                        matchedRow = row;
+                        return false;
+                    }
+                });
+
+                return matchedRow;
+            }
+
+            function applyDetailPoRows(rows) {
+                $.each(rows || [], function(_, row) {
+                    var detailRow = findDetailPoRow(row.kd_po, row.kd_barang);
+
+                    if (!detailRow.length) {
+                        return;
+                    }
+
+                    var statusBarang = (row.status_barang || 'BELUM').toString().toUpperCase();
+                    var badgeClass = getStatusBadgeClass(statusBarang);
+
+                    detailRow.find('.js-qty-in').text(formatNumber(row.qty_in));
+                    detailRow.find('.js-qty-diterima-pcs').text(formatNumber(row.qty_diterima_pcs));
+                    detailRow.find('.js-qty-diterima-box').text(formatNumber(row.qty_diterima_box));
+                    detailRow.find('.js-qty-diterima-kg').text(formatNumber(row.qty_diterima_kg));
+                    detailRow.find('.js-qty-diterima-ltr').text(formatNumber(row.qty_diterima_ltr));
+                    detailRow.find('.js-qty-sisa').text(formatNumber(row.qty_kecil_sisa));
+                    detailRow.find('.js-status-badge')
+                        .attr('class', 'badge badge-' + badgeClass + ' px-3 py-2 js-status-badge')
+                        .text(statusBarang);
+
+                    detailRow.find('.js-open-modal')
+                        .attr('data-sisa', row.qty_kecil_sisa || 0)
+                        .attr('data-sisa-besar', row.qty_sisa || 0)
+                        .attr('data-sisa-kecil', row.qty_kecil_sisa || 0)
+                        .data('sisa', row.qty_kecil_sisa || 0)
+                        .data('sisa-besar', row.qty_sisa || 0)
+                        .data('sisa-kecil', row.qty_kecil_sisa || 0);
+
+                    if (currentItem.kd_po == row.kd_po && currentItem.kd_barang == row.kd_barang) {
+                        currentItem.qty_sisa = parseFloat(row.qty_sisa) || 0;
+                        currentItem.qty_kecil_sisa = parseFloat(row.qty_kecil_sisa) || 0;
+
+                        if ($('#modalTmpPoReceived').hasClass('show')) {
+                            fillModalHeader(currentItem);
+                        }
+                    }
+                });
+
+                detailPoTable.rows().invalidate('dom').draw(false);
+            }
+
+            function reloadDetailPoRows() {
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_get_detail_po_rows') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
+                        kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>'
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            return;
+                        }
+
+                        applyDetailPoRows(res.rows || []);
+                    }
+                });
             }
 
             function formatNumber(value) {
@@ -734,6 +844,7 @@
                 }
 
                 $.each(rows, function(index, row) {
+                    var idTmpReceived = row.id_tmp_recieved || row.id_tmp_received || row.id || '';
                     tbody.append(
                         '<tr>' +
                         '<td class="text-center">' + (index + 1) + '</td>' +
@@ -744,7 +855,7 @@
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
                         '<td class="text-center">' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger js-delete-summary-row" data-id="' + escHtml(row.id_tmp_recieved) + '" title="Hapus baris draft">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger js-delete-summary-row" data-id="' + escHtml(idTmpReceived) + '" title="Hapus baris draft">' +
                         '<i class="fas fa-trash"></i>' +
                         '</button>' +
                         '</td>' +
@@ -869,6 +980,7 @@
 
                         renderSummaryTable(res.rows || []);
                         updateDraftBadges(res.rows || []);
+                        reloadDetailPoRows();
                     },
                     error: function() {
                         Swal.fire('Gagal', 'Server tidak merespons saat memuat draft temporary.', 'error');
@@ -944,7 +1056,7 @@
             });
 
             $(document).on('click', '.js-delete-summary-row', function() {
-                var idTmpReceived = parseInt($(this).data('id'), 10) || 0;
+                var idTmpReceived = parseInt($(this).attr('data-id'), 10) || 0;
 
                 if (!idTmpReceived) {
                     Swal.fire('Gagal', 'ID draft tidak valid.', 'error');
@@ -969,6 +1081,7 @@
                         dataType: 'json',
                         data: {
                             id_tmp_recieved: idTmpReceived,
+                            id_tmp_received: idTmpReceived,
                             no_po: $('#final_no_po').val(),
                             kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>'
                         },

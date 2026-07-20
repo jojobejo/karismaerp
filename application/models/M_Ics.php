@@ -6,7 +6,7 @@ class M_Ics extends CI_Model
 {
     private function karyawan_nik_match_sql($karyawanColumn = 'd.nik', $inputerColumn = 'a.inputer')
     {
-        return "{$karyawanColumn} = {$inputerColumn} COLLATE utf8mb4_unicode_ci";
+        return "{$karyawanColumn} COLLATE utf8mb4_unicode_ci = {$inputerColumn} COLLATE utf8mb4_unicode_ci";
     }
 
     private function pick_value(array $row, array $keys)
@@ -2472,13 +2472,59 @@ LEFT JOIN tb_customer c
             ) mb
                 ON mb.kode_barang_system = stock.kode_barang_system
                 OR ((stock.kode_barang_system IS NULL OR stock.kode_barang_system = '') AND mb.kd_barang = stock.kode_barang_zahir)
-            LEFT JOIN tb_satuan s ON LOWER(s.nm_satuan) = LOWER(COALESCE(NULLIF(mb.satuan, ''), 'Pcs'))
+            LEFT JOIN tbpo_satuan s ON LOWER(s.nm_satuan) = LOWER(COALESCE(NULLIF(mb.satuan, ''), 'Pcs'))
             ORDER BY stock.nama_barang ASC
             LIMIT {$offset}, {$limit}
         ", $params)->result();
     }
 
-    public function get_mutasi_lot_options($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '')
+    public function count_mutasi_lot_options($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '')
+    {
+        if (!$id_gudang) {
+            return 0;
+        }
+
+        $params = [$id_gudang, $id_gudang];
+        $whereItem = '';
+        if ($kode_barang_system !== '') {
+            $whereItem = " AND sa.kode_barang_system = ? ";
+            $params[] = $kode_barang_system;
+        } elseif ($nama_barang !== '') {
+            $whereItem = " AND sa.nama_barang = ? ";
+            $params[] = $nama_barang;
+        } else {
+            return 0;
+        }
+
+        $whereSearch = '';
+        if ($search !== '') {
+            $whereSearch = " AND (sa.nolot LIKE ? OR sa.exp_date LIKE ?) ";
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+        }
+
+        $row = $this->db->query("
+            SELECT COUNT(*) AS total_rows
+            FROM (
+                SELECT
+                    COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
+                    sa.exp_date,
+                    COALESCE(SUM(sa.qty), 0) AS qty_gudang
+                FROM tb_saldo_awal sa
+                LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
+                WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                    {$whereItem}
+                    {$whereSearch}
+                GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-'), sa.exp_date
+                HAVING qty_gudang > 0
+            ) lot_stock
+        ", $params)->row();
+
+        return $row ? (int) $row->total_rows : 0;
+    }
+
+    public function get_mutasi_lot_options($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '', $limit = 0, $offset = 0)
     {
         if (!$id_gudang) {
             return [];
@@ -2504,6 +2550,13 @@ LEFT JOIN tb_customer c
             $params[] = $like;
         }
 
+        $limitSql = '';
+        if ((int) $limit > 0) {
+            $limit = max(1, (int) $limit);
+            $offset = max(0, (int) $offset);
+            $limitSql = " LIMIT {$offset}, {$limit}";
+        }
+
         return $this->db->query("
             SELECT
                 COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
@@ -2517,6 +2570,92 @@ LEFT JOIN tb_customer c
             GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-'), sa.exp_date
             HAVING qty_gudang > 0
             ORDER BY sa.exp_date ASC, no_lot ASC
+            {$limitSql}
+        ", $params)->result();
+    }
+
+    public function get_mutasi_lot_select2($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '', $limit = 20)
+    {
+        if (!$id_gudang) {
+            return [];
+        }
+
+        $params = [$id_gudang, $id_gudang];
+        $whereItem = '';
+        if ($kode_barang_system !== '') {
+            $whereItem = " AND sa.kode_barang_system = ? ";
+            $params[] = $kode_barang_system;
+        } elseif ($nama_barang !== '') {
+            $whereItem = " AND sa.nama_barang = ? ";
+            $params[] = $nama_barang;
+        } else {
+            return [];
+        }
+
+        $whereSearch = '';
+        if ($search !== '') {
+            $whereSearch = " AND COALESCE(NULLIF(sa.nolot, ''), '-') LIKE ? ";
+            $params[] = '%' . $search . '%';
+        }
+
+        $limit = max(1, min(50, (int) $limit));
+
+        return $this->db->query("
+            SELECT
+                COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
+                COALESCE(SUM(sa.qty), 0) AS qty_gudang
+            FROM tb_saldo_awal sa
+            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
+            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                {$whereItem}
+                {$whereSearch}
+            GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-')
+            HAVING qty_gudang > 0
+            ORDER BY no_lot ASC
+            LIMIT {$limit}
+        ", $params)->result();
+    }
+
+    public function get_mutasi_exp_select2($id_gudang, $kode_barang_system = '', $nama_barang = '', $no_lot = '', $search = '', $limit = 20)
+    {
+        if (!$id_gudang || $no_lot === '') {
+            return [];
+        }
+
+        $params = [$id_gudang, $id_gudang, $no_lot];
+        $whereItem = '';
+        if ($kode_barang_system !== '') {
+            $whereItem = " AND sa.kode_barang_system = ? ";
+            $params[] = $kode_barang_system;
+        } elseif ($nama_barang !== '') {
+            $whereItem = " AND sa.nama_barang = ? ";
+            $params[] = $nama_barang;
+        } else {
+            return [];
+        }
+
+        $whereSearch = '';
+        if ($search !== '') {
+            $whereSearch = " AND sa.exp_date LIKE ? ";
+            $params[] = '%' . $search . '%';
+        }
+
+        $limit = max(1, min(50, (int) $limit));
+
+        return $this->db->query("
+            SELECT
+                sa.exp_date,
+                COALESCE(SUM(sa.qty), 0) AS qty_gudang
+            FROM tb_saldo_awal sa
+            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
+            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                AND COALESCE(NULLIF(sa.nolot, ''), '-') = ?
+                {$whereItem}
+                {$whereSearch}
+            GROUP BY sa.exp_date
+            HAVING qty_gudang > 0
+            ORDER BY sa.exp_date ASC
+            LIMIT {$limit}
         ", $params)->result();
     }
 
@@ -2546,6 +2685,62 @@ LEFT JOIN tb_customer c
         ", $params)->row();
 
         return $row ? (int) $row->qty_gudang : 0;
+    }
+
+    public function get_mutasi_item_total_qty($id_gudang, $kode_barang_system = '', $nama_barang = '')
+    {
+        if (!$id_gudang) {
+            return 0;
+        }
+
+        $params = [$id_gudang, $id_gudang];
+        $whereItem = '';
+
+        if ($kode_barang_system !== '') {
+            $whereItem = " AND sa.kode_barang_system = ? ";
+            $params[] = $kode_barang_system;
+        } elseif ($nama_barang !== '') {
+            $whereItem = " AND sa.nama_barang = ? ";
+            $params[] = $nama_barang;
+        } else {
+            return 0;
+        }
+
+        $row = $this->db->query("
+            SELECT COALESCE(SUM(sa.qty), 0) AS qty_gudang
+            FROM tb_saldo_awal sa
+            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
+            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                {$whereItem}
+        ", $params)->row();
+
+        return $row ? (int) $row->qty_gudang : 0;
+    }
+
+    public function get_mutasi_satuan_options()
+    {
+        if (!$this->db->table_exists('tbpo_satuan')) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id_satuan, nm_satuan')
+            ->from('tbpo_satuan')
+            ->order_by('nm_satuan', 'ASC')
+            ->get()
+            ->result();
+    }
+
+    public function is_mutasi_satuan_exists($id_satuan)
+    {
+        if (!$this->db->table_exists('tbpo_satuan')) {
+            return FALSE;
+        }
+
+        return $this->db
+            ->where('id_satuan', (int) $id_satuan)
+            ->limit(1)
+            ->count_all_results('tbpo_satuan') > 0;
     }
 
     public function insert_tmp_mutasi($data)
@@ -2700,7 +2895,7 @@ LEFT JOIN tb_customer c
             ON b.nama_barang = a.nama_barang
             OR (" . ($this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi') ? "b.kode_barang_system = a.kode_barang_system" : "1 = 0") . ")
             OR (" . ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi') ? "b.kd_barang = a.kode_barang" : "1 = 0") . ")
-        LEFT JOIN tb_satuan s ON s.id_satuan = a.satuan_id
+        LEFT JOIN tbpo_satuan s ON s.id_satuan = a.satuan_id
         WHERE a.user_inputer = ?
         GROUP BY a.id
         ORDER BY a.id ASC";
@@ -2805,9 +3000,20 @@ LEFT JOIN tb_customer c
         a.status,
         d.nm_karyawan
         FROM tb_mutasi a
+        JOIN (
+            SELECT noreff, MAX(id) AS id
+            FROM tb_mutasi
+            GROUP BY noreff
+        ) latest_mutasi ON latest_mutasi.id = a.id
         JOIN tb_gudang b ON b.id_gudang = a.gudang_asal
         JOIN tb_gudang c ON c.id_gudang = a.gudang_mutasi
-        JOIN tb_karyawan d ON " . $this->karyawan_nik_match_sql() . "
+        LEFT JOIN (
+            SELECT nik, MIN(nm_karyawan) AS nm_karyawan
+            FROM tb_karyawan
+            WHERE nik IS NOT NULL AND nik <> ''
+            GROUP BY nik
+        ) d ON " . $this->karyawan_nik_match_sql() . "
+        ORDER BY a.tgl_transaksi DESC, a.id DESC
         ";
         return $this->db->query($sql)->result();
     }
@@ -2821,9 +3027,10 @@ LEFT JOIN tb_customer c
         d.nm_karyawan
     ");
         $this->db->from('tb_mutasi a');
+        $this->db->join('(SELECT noreff, MAX(id) AS id FROM tb_mutasi GROUP BY noreff) latest_mutasi', 'latest_mutasi.id = a.id', 'inner', false);
         $this->db->join('tb_gudang b', 'b.id_gudang=a.gudang_asal');
         $this->db->join('tb_gudang c', 'c.id_gudang=a.gudang_mutasi');
-        $this->db->join('tb_karyawan d', $this->karyawan_nik_match_sql());
+        $this->db->join("(SELECT nik, MIN(nm_karyawan) AS nm_karyawan FROM tb_karyawan WHERE nik IS NOT NULL AND nik <> '' GROUP BY nik) d", $this->karyawan_nik_match_sql(), 'left', false);
 
         if ($gudang) $this->db->where('a.gudang_asal', $gudang);
         if ($status) $this->db->where('a.status', $status);
@@ -2833,6 +3040,9 @@ LEFT JOIN tb_customer c
             $this->db->where('a.tgl_transaksi >=', date('Y-m-d', strtotime($start)));
             $this->db->where('a.tgl_transaksi <=', date('Y-m-d', strtotime($end)));
         }
+
+        $this->db->order_by('a.tgl_transaksi', 'DESC');
+        $this->db->order_by('a.id', 'DESC');
 
         return $this->db->get()->result();
     }
