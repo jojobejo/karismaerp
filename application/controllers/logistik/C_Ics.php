@@ -1,4 +1,3 @@
-<!-- ini file controller saya controller/logistik/C_ics.php -->
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
@@ -3069,6 +3068,8 @@ class C_Ics extends CI_Controller
 
     public function input_mutasi_barang()
     {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['tanggal']    = date('Y-m-d');
         $data['ref_mutasi'] = $this->M_Ics->generate_noreff();
@@ -3143,18 +3144,112 @@ class C_Ics extends CI_Controller
         echo json_encode(['qty' => (int) $qty]);
     }
 
+    public function ajax_list_barang_mutasi_gudang()
+    {
+        $id_gudang = $this->input->get('id_gudang', true);
+        $search    = trim((string) $this->input->get('term', true));
+        $page      = max(1, (int) $this->input->get('page', true));
+        $perPage   = (int) $this->input->get('per_page', true);
+        $perPage   = ($perPage > 0 && $perPage <= 50) ? $perPage : 10;
+        $offset    = ($page - 1) * $perPage;
+
+        if (!$id_gudang) {
+            echo json_encode([
+                'status' => true,
+                'data' => [],
+                'pagination' => [
+                    'page' => 1,
+                    'per_page' => $perPage,
+                    'total_rows' => 0,
+                    'total_pages' => 1
+                ]
+            ]);
+            return;
+        }
+
+        $this->M_Ics->ensure_mutasi_barang_schema();
+        $totalRows = $this->M_Ics->count_barang_mutasi_by_gudang($id_gudang, $search);
+        $totalPages = max(1, (int) ceil($totalRows / $perPage));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+            $offset = ($page - 1) * $perPage;
+        }
+
+        echo json_encode([
+            'status' => true,
+            'data' => $this->M_Ics->get_barang_mutasi_by_gudang($id_gudang, $search, $perPage, $offset),
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_rows' => $totalRows,
+                'total_pages' => $totalPages
+            ]
+        ]);
+    }
+
+    public function ajax_lot_tmp_mutasi()
+    {
+        $id        = $this->input->get('id', true);
+        $id_gudang = $this->input->get('id_gudang', true);
+        $user      = $this->session->userdata('nik');
+
+        if (!$id || !$id_gudang || !$user) {
+            echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
+            return;
+        }
+
+        $this->M_Ics->ensure_mutasi_barang_schema();
+        $tmp = $this->M_Ics->get_tmp_mutasi_item($id, $user);
+        if (!$tmp) {
+            echo json_encode(['status' => false, 'msg' => 'Data temporary tidak ditemukan']);
+            return;
+        }
+
+        $data = $this->M_Ics->get_mutasi_lot_options(
+            $id_gudang,
+            (string) $tmp->kode_barang_system,
+            (string) $tmp->nama_barang
+        );
+
+        echo json_encode([
+            'status' => true,
+            'item'   => $tmp,
+            'data'   => $data
+        ]);
+    }
+
     public function ajax_add_tmp_mutasi()
     {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
+        $qty = (int) $this->input->post('qty');
         $data = [
-            'nama_barang'  => $this->input->post('nama_barang'),
-            'exp_date'     => $this->input->post('exp_date'),
-            'qty'          => (int)$this->input->post('qty'),
-            'satuan_id'    => $this->input->post('satuan_id'),
+            'nama_barang'  => $this->input->post('nama_barang', true),
+            'exp_date'     => (string) $this->input->post('exp_date', true),
+            'qty'          => $qty,
+            'satuan_id'    => (int) $this->input->post('satuan_id'),
             'user_inputer' => $this->session->userdata('nik')
         ];
 
-        if (!$data['nama_barang'] || !$data['exp_date'] || $data['qty'] <= 0) {
+        if ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi')) {
+            $data['kode_barang'] = $this->input->post('kode_barang', true);
+        }
+        if ($this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi')) {
+            $data['kode_barang_system'] = $this->input->post('kode_barang_system', true);
+        }
+        if ($this->db->field_exists('no_lot', 'tb_tmp_mutasi')) {
+            $data['no_lot'] = (string) $this->input->post('no_lot', true);
+        }
+        if ($this->db->field_exists('gudang_asal', 'tb_tmp_mutasi')) {
+            $data['gudang_asal'] = (int) $this->input->post('gudang_asal');
+        }
+
+        if (!$data['nama_barang'] || $data['qty'] <= 0) {
             echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
+            return;
+        }
+        if ($this->db->field_exists('gudang_asal', 'tb_tmp_mutasi') && empty($data['gudang_asal'])) {
+            echo json_encode(['status' => false, 'msg' => 'Dari Gudang wajib dipilih']);
             return;
         }
 
@@ -3173,22 +3268,58 @@ class C_Ics extends CI_Controller
 
     public function ajax_update_tmp_mutasi()
     {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
         $id   = $this->input->post('id');
         $user = $this->session->userdata('nik');
+        $id_gudang = $this->input->post('id_gudang');
+        $exp_date = trim((string) $this->input->post('exp_date', true));
+        $no_lot = trim((string) $this->input->post('no_lot', true));
+        $qty = (int) $this->input->post('qty');
 
         if (!$id || !$user) {
             echo json_encode(['status' => false, 'msg' => 'Data tidak valid']);
             return;
         }
 
+        if ($exp_date === '' || $no_lot === '' || $qty <= 0) {
+            echo json_encode(['status' => false, 'msg' => 'Expired Date, No Lot, dan Qty wajib diisi']);
+            return;
+        }
+
+        $tmp = $this->M_Ics->get_tmp_mutasi_item($id, $user);
+        if (!$tmp) {
+            echo json_encode(['status' => false, 'msg' => 'Data temporary tidak ditemukan']);
+            return;
+        }
+
+        if ($id_gudang) {
+            $qtyGudang = $this->M_Ics->get_mutasi_lot_qty(
+                $id_gudang,
+                (string) $tmp->kode_barang_system,
+                (string) $tmp->nama_barang,
+                $no_lot,
+                $exp_date
+            );
+            if ($qty > $qtyGudang) {
+                echo json_encode(['status' => false, 'msg' => 'Qty melebihi stok gudang']);
+                return;
+            }
+        }
+
+        $updateData = [
+            'exp_date'  => $exp_date,
+            'qty'       => $qty,
+            'satuan_id' => (int)$this->input->post('satuan_id')
+        ];
+        if ($this->db->field_exists('no_lot', 'tb_tmp_mutasi')) {
+            $updateData['no_lot'] = $no_lot;
+        }
+
         $this->M_Ics->update_tmp_mutasi(
             $id,
             $user,
-            [
-                'exp_date'  => $this->input->post('exp_date'),
-                'qty'       => (int)$this->input->post('qty'),
-                'satuan_id' => (int)$this->input->post('satuan_id')
-            ]
+            $updateData
         );
 
         echo json_encode(['status' => true, 'msg' => 'Update sukses']);
@@ -3206,6 +3337,8 @@ class C_Ics extends CI_Controller
 
     public function ajax_rekam_mutasi()
     {
+        $this->M_Ics->ensure_mutasi_barang_schema();
+
         $user = $this->session->userdata('nik');
         $post = $this->input->post();
 
@@ -3227,6 +3360,13 @@ class C_Ics extends CI_Controller
         if (!$tmp) {
             echo json_encode(['status' => false, 'msg' => 'Data mutasi kosong']);
             return;
+        }
+
+        foreach ($tmp as $t) {
+            if (trim((string) $t->exp_date) === '' || trim((string) $t->no_lot) === '') {
+                echo json_encode(['status' => false, 'msg' => 'Plot No Lot dan Expired Date semua barang terlebih dahulu']);
+                return;
+            }
         }
 
         $IS_HOLD = ($post['tujuangdg'] == '10');
@@ -3266,6 +3406,9 @@ class C_Ics extends CI_Controller
                     'input_by'      => $user,
                     'created_at'    => date('Y-m-d H:i:s')
                 ];
+                if ($this->db->field_exists('no_lot', 'tb_stock_hold')) {
+                    $hold[count($hold) - 1]['no_lot'] = $t->no_lot;
+                }
                 $detail[] = [
                     'noreff'        => $post['nofresnsi'],
                     'tgl_transaksi' => $post['tgl_transaksi'],
@@ -3281,6 +3424,9 @@ class C_Ics extends CI_Controller
                     'create_at'     => date('Y-m-d H:i:s'),
                     'last_action'   => 'CREATE'
                 ];
+                if ($this->db->field_exists('no_lot', 'tb_detail_mutasi')) {
+                    $detail[count($detail) - 1]['no_lot'] = $t->no_lot;
+                }
             }
             $this->db->insert_batch('tb_stock_hold', $hold);
             $this->db->insert_batch('tb_detail_mutasi', $detail);
@@ -3303,6 +3449,9 @@ class C_Ics extends CI_Controller
                     'create_at'     => date('Y-m-d H:i:s'),
                     'last_action'   => 'CREATE'
                 ];
+                if ($this->db->field_exists('no_lot', 'tb_detail_mutasi')) {
+                    $detail[count($detail) - 1]['no_lot'] = $t->no_lot;
+                }
             }
             $this->db->insert_batch('tb_detail_mutasi', $detail);
         }
