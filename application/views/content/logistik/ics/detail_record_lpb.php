@@ -247,6 +247,45 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             min-width: 132px;
                         }
 
+                        .lpb-grand-total-harga {
+                            display: flex;
+                            justify-content: flex-end;
+                            align-items: center;
+                            gap: 16px;
+                            flex-wrap: wrap;
+                            margin-top: 10px;
+                            padding: 12px 14px;
+                            border: 1px solid #dbe4ff;
+                            background: #f3f6ff;
+                            color: #0f172a;
+                            font-weight: 700;
+                        }
+
+                        .lpb-grand-total-harga .label {
+                            color: #475569;
+                            text-transform: uppercase;
+                            letter-spacing: 0.04em;
+                            font-size: 12px;
+                        }
+
+                        .lpb-grand-total-harga .value {
+                            min-width: 190px;
+                            text-align: right;
+                            font-size: 16px;
+                            font-weight: 800;
+                        }
+
+                        .lpb-split-invoice-row {
+                            border: 1px solid #dbe4ff;
+                            background: #f8fafc;
+                            padding: 10px;
+                            margin-bottom: 8px;
+                        }
+
+                        .lpb-split-table input[type="number"] {
+                            min-width: 120px;
+                        }
+
                         .lpb-workflow-actions {
                             margin-left: auto;
                         }
@@ -386,6 +425,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                         <button type="button" class="btn btn-primary btn-sm" id="btnUpdateInvoice">
                                             <i class="fas fa-file-invoice mr-1"></i> Update Invoice
                                         </button>
+                                        <button type="button" class="btn btn-warning btn-sm" id="btnSplitInvoice">
+                                            <i class="fas fa-code-branch mr-1"></i> Pecah Invoice
+                                        </button>
                                         <button type="button" class="btn btn-info btn-sm" id="btnUpdateFaktur">
                                             <i class="fas fa-receipt mr-1"></i> Update Faktur
                                         </button>
@@ -439,9 +481,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                                         <th class="text-center" rowspan="2">No Lot</th>
                                                         <th class="text-center" rowspan="2">Expired Date</th>
                                                         <th class="text-center" rowspan="2">Qty In</th>
-                                                        <th class="text-center" colspan="3">Qty Satuan</th>
+                                                        <th class="text-center" colspan="2">Qty Satuan</th>
                                                         <?php if (!$showLpbListPanel) : ?>
                                                         <th class="text-right" rowspan="2">Harga Satuan</th>
+                                                        <th class="text-right" rowspan="2">DPP</th>
+                                                        <th class="text-right" rowspan="2">DPP Nilai Lain</th>
+                                                        <th class="text-right" rowspan="2">PPN</th>
                                                         <th class="text-right" rowspan="2">Total Harga</th>
                                                         <th class="text-center" rowspan="2">#</th>
                                                         <?php endif; ?>
@@ -449,11 +494,16 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                                     <tr>
                                                         <th class="text-center">BOX</th>
                                                         <th class="text-center">Kg/Ltr</th>
-                                                        <th class="text-center">Pcs</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
                                             </table>
+                                        </div>
+                                        <div class="lpb-grand-total-harga" id="lpbGrandTotalHargaWrap" style="display:none;">
+                                            <span class="label">Total DPP</span>
+                                            <span class="value" id="lpbTotalDpp">Rp 0</span>
+                                            <span class="label">Grand Total Harga</span>
+                                            <span class="value" id="lpbGrandTotalHarga">Rp 0</span>
                                         </div>
                                         <?php if ($showLpbListPanel) : ?>
                                         <div class="lpb-table-actions lpb-post-actions" id="lpbPostActions" style="display:none;">
@@ -614,6 +664,46 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnSubmitInvoice">
                         <i class="fas fa-save mr-1"></i> Simpan Invoice
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalSplitInvoice" tabindex="-1" role="dialog" aria-labelledby="modalSplitInvoiceLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl" role="document">
+            <form id="formSplitInvoice" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalSplitInvoiceLabel">Pecah LPB Multiple Invoice</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="splitInvoiceIdLpb" name="id_lpb">
+                    <div class="alert alert-info">
+                        Invoice pertama tetap memakai LPB yang dipilih. Invoice berikutnya dibuat sebagai LPB baru dengan nomor LPB yang sama.
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2" style="gap:8px;">
+                        <h6 class="font-weight-bold mb-0">Daftar Invoice</h6>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSplitInvoice">
+                            <i class="fas fa-plus mr-1"></i> Tambah Invoice
+                        </button>
+                    </div>
+                    <div id="splitInvoiceRows"></div>
+                    <div class="table-responsive mt-3">
+                        <table class="table table-bordered lpb-table lpb-split-table mb-0" id="splitInvoiceAllocationTable">
+                            <thead></thead>
+                            <tbody></tbody>
+                            <tfoot></tfoot>
+                        </table>
+                    </div>
+                    <div class="small text-muted mt-2" id="splitInvoiceValidationInfo"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btnSubmitSplitInvoice">
+                        <i class="fas fa-save mr-1"></i> Simpan Split Invoice
                     </button>
                 </div>
             </form>
@@ -788,7 +878,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Qty LPB</label>
-                                <input type="number" class="form-control" id="lpbPriceQty" readonly>
+                                <input type="number" min="0.0001" step="0.0001" class="form-control" id="lpbPriceQty" name="qty_lpb" required>
+                                <input type="hidden" id="lpbPriceQtyMax">
+                                <input type="hidden" id="lpbPriceQtyOrder">
+                                <small class="form-text text-muted" id="lpbPriceQtyInfo"></small>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -805,13 +898,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         </div>
                     </div>
                     <div class="alert alert-warning mb-0">
-                        harga yang tersimpan saat ini dihapus.
+                        Harga dan Qty LPB yang tersimpan saat ini akan diperbarui. Jika total Qty LPB tidak balance dengan qty yang diterima, sistem akan memberi notifikasi.
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success" id="btnSubmitLpbPrice">
-                        <i class="fas fa-save mr-1"></i> Simpan Harga
+                        <i class="fas fa-save mr-1"></i> Simpan Harga & Qty
                     </button>
                 </div>
             </form>
@@ -835,6 +928,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             var isActivityLogVisible = false;
             var isSubmittingAdjustment = false;
             var isSubmittingInvoice = false;
+            var isSubmittingSplitInvoice = false;
             var isSubmittingFaktur = false;
             var isSubmittingJenisLpb = false;
             var isSubmittingLpbPrice = false;
@@ -971,6 +1065,21 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#lpbPriceTotalBaruText').val(formatRupiah(qty * hargaBaru));
             }
 
+            function validateLpbPriceQtyInput() {
+                var qty = parseFloat($('#lpbPriceQty').val()) || 0;
+                var qtyMax = parseFloat($('#lpbPriceQtyMax').val()) || 0;
+
+                if (qty <= 0) {
+                    return 'Qty LPB harus lebih dari 0.';
+                }
+
+                if (qtyMax > 0 && qty > qtyMax + 0.0001) {
+                    return 'Qty LPB tidak boleh melebihi maksimum ' + formatNumber(qtyMax) + ' untuk kode barang ini.';
+                }
+
+                return '';
+            }
+
             function updateStats(rows) {
                 var totalItem = 0;
                 var totalQty = 0;
@@ -1067,6 +1176,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#lpbDetailEmpty').show();
                 $('#lpbDetailHeaderGrid').empty();
                 $('#lpbDetailTable tbody').empty();
+                $('#lpbGrandTotalHargaWrap').hide();
+                $('#lpbTotalDpp').text(formatRupiah(0));
+                $('#lpbGrandTotalHarga').text(formatRupiah(0));
                 selectedPurchasingRows = [];
                 updateBulkAcceptButton();
             }
@@ -1098,10 +1210,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     buildTh('No Lot', 'text-center', 'rowspan="2"') +
                     buildTh('Expired Date', 'text-center', 'rowspan="2"') +
                     buildTh('Qty In', 'text-center', 'rowspan="2"') +
-                    buildTh('Qty Satuan', 'text-center', 'colspan="3"');
+                    buildTh('Qty Satuan', 'text-center', 'colspan="2"');
 
                 if (options.priceColumns) {
                     html += buildTh('Harga Satuan', 'text-right', 'rowspan="2"') +
+                        buildTh('DPP', 'text-right', 'rowspan="2"') +
+                        buildTh('DPP Nilai Lain', 'text-right', 'rowspan="2"') +
+                        buildTh('PPN', 'text-right', 'rowspan="2"') +
                         buildTh('Total Harga', 'text-right', 'rowspan="2"');
                 }
 
@@ -1112,7 +1227,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 html += '</tr><tr>' +
                     buildTh('BOX', 'text-center') +
                     buildTh('Kg/Ltr', 'text-center') +
-                    buildTh('Pcs', 'text-center') +
                     '</tr>';
                 $('#lpbDetailTable thead').html(html);
             }
@@ -1145,6 +1259,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     {
                         label: 'Tgl Terbit Invoice',
                         value: formatDateId(header.tanggal_invoice)
+                    },
+                    {
+                        label: 'Faktur Pajak',
+                        value: header.kode_faktur_pajak || '-'
+                    },
+                    {
+                        label: 'Tanggal Terbit Faktur',
+                        value: formatDateId(header.tanggal_faktur_pajak)
                     }
                 ];
 
@@ -1175,6 +1297,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#btnUpdateInvoice')
                     .prop('disabled', isPost)
                     .attr('title', isPost ? 'Update invoice hanya bisa dilakukan saat status UNPOST' : 'Update Invoice');
+                $('#btnSplitInvoice')
+                    .prop('disabled', isPost)
+                    .attr('title', isPost ? 'Pecah invoice hanya bisa dilakukan saat status UNPOST' : 'Pecah Invoice');
                 $('#btnUpdateFaktur')
                     .prop('disabled', isPost)
                     .attr('title', isPost ? 'Update faktur hanya bisa dilakukan saat status UNPOST' : 'Update Faktur');
@@ -1228,10 +1353,40 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 });
             }
 
+            function getActiveTotalHarga(row) {
+                var total = parseFloat(row.total_harga_display || row.total_harga_exclude || row.total_harga || 0);
+                return isNaN(total) ? 0 : total;
+            }
+
+            function getActiveDpp(row) {
+                var dpp = parseFloat(row.dpp || row.total_harga_exclude || row.total_harga || 0);
+                return isNaN(dpp) ? 0 : dpp;
+            }
+
+            function renderGrandTotalHarga(rows, shouldShow) {
+                if (!shouldShow || !rows || rows.length === 0) {
+                    $('#lpbGrandTotalHargaWrap').hide();
+                    $('#lpbTotalDpp').text(formatRupiah(0));
+                    $('#lpbGrandTotalHarga').text(formatRupiah(0));
+                    return;
+                }
+
+                var totalDpp = 0;
+                var grandTotal = 0;
+                $.each(rows, function(_, row) {
+                    totalDpp += getActiveDpp(row);
+                    grandTotal += getActiveTotalHarga(row);
+                });
+
+                $('#lpbTotalDpp').text(formatRupiah(totalDpp));
+                $('#lpbGrandTotalHarga').text(formatRupiah(grandTotal));
+                $('#lpbGrandTotalHargaWrap').show();
+            }
+
             function renderDetailTable(rows) {
                 if (showLpbListPanel) {
                     var canEditDetail = isSelectedLpbUnpost();
-                    var logistikColCount = 8 + (canEditDetail ? 1 : 0);
+                    var logistikColCount = 7 + (canEditDetail ? 1 : 0);
                     setLpbDetailTableHead({
                         actionLeft: canEditDetail
                     });
@@ -1240,6 +1395,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     logistikTbody.empty();
                     selectedPurchasingRows = [];
                     $('#lpbPurchasingVerifyActions').hide();
+                    renderGrandTotalHarga([], false);
 
                     if (!rows || rows.length === 0) {
                         logistikTbody.html('<tr><td colspan="' + logistikColCount + '" class="text-center text-muted">Detail LPB kosong.</td></tr>');
@@ -1271,7 +1427,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
                             '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
                             '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
-                            '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_pcs || row.qty_diterima || row.qty_lpb || 0)) + '</td>' +
                             '</tr>'
                         );
                     });
@@ -1291,8 +1446,15 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         qty_satuan_kg_ltr: row.qty_satuan_kg_ltr || 0,
                         qty_satuan_pcs: row.qty_satuan_pcs || row.qty_diterima || 0,
                         qty_lpb: row.qty_diterima || 0,
+                        qty_order: row.qty_order || 0,
+                        qty_sisa: row.qty_sisa || 0,
+                        qty_lpb_total: row.qty_lpb_total || 0,
                         total_harga: row.total_harga || 0,
+                        total_harga_display: row.total_harga_display || row.total_harga || 0,
                         harga_satuan: row.harga_satuan || 0,
+                        dpp: row.dpp || row.total_harga_exclude || row.total_harga || 0,
+                        dpp_nilai_lain: row.dpp_nilai_lain || 0,
+                        ppn: row.ppn || 0,
                         total_harga_exclude: row.total_harga_exclude || row.total_harga || 0,
                         harga_satuan_exclude: row.harga_satuan_exclude || row.harga_satuan || 0,
                         harga_satuan_sebelumnya: row.harga_satuan_sebelumnya || 0,
@@ -1458,7 +1620,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             function renderPurchasingTable(rows) {
                 selectedPurchasingRows = rows || [];
                 var canEditPrice = isSelectedLpbUnpost();
-                var colCount = 10 + (canEditPrice ? 1 : 0);
+                var colCount = 12 + (canEditPrice ? 1 : 0);
                 setLpbDetailTableHead({
                     priceColumns: true,
                     actionRight: canEditPrice
@@ -1469,22 +1631,30 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 if (!rows || rows.length === 0) {
                     tbody.html('<tr><td colspan="' + colCount + '" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                    renderGrandTotalHarga([], false);
                     updateBulkAcceptButton();
                     return;
                 }
 
                 $.each(rows, function(index, row) {
                     var hargaSatuanAktif = row.harga_satuan_exclude || row.harga_satuan || 0;
-                    var totalHargaAktif = row.total_harga_exclude || row.total_harga || 0;
+                    var dppAktif = row.dpp || row.total_harga_exclude || row.total_harga || 0;
+                    var dppNilaiLainAktif = row.dpp_nilai_lain || (dppAktif * (11 / 12));
+                    var ppnAktif = row.ppn || (dppNilaiLainAktif * (12 / 100));
+                    var totalHargaEdit = row.total_harga_exclude || row.total_harga || 0;
+                    var totalHargaAktif = row.total_harga_display || row.total_harga_exclude || row.total_harga || 0;
                     var actionColumn = canEditPrice ? (
                         '<td class="text-center">' +
-                        '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga LPB" ' +
+                        '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga dan Qty LPB" ' +
                         'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
                         'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
                         'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
                         'data-qty="' + escAttr(row.qty_lpb || 0) + '" ' +
+                        'data-qty-order="' + escAttr(row.qty_order || 0) + '" ' +
+                        'data-qty-sisa="' + escAttr(row.qty_sisa || 0) + '" ' +
+                        'data-qty-total="' + escAttr(row.qty_lpb_total || 0) + '" ' +
                         'data-harga-satuan="' + escAttr(hargaSatuanAktif) + '" ' +
-                        'data-total-harga="' + escAttr(totalHargaAktif) + '">' +
+                        'data-total-harga="' + escAttr(totalHargaEdit) + '">' +
                         '<i class="fas fa-pencil-alt"></i>' +
                         '</button>' +
                         '</td>'
@@ -1499,14 +1669,17 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
-                        '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_pcs || row.qty_lpb || 0)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatRupiah(dppAktif)) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatRupiah(dppNilaiLainAktif)) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatRupiah(ppnAktif)) + '</td>' +
                         '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
                         actionColumn +
                         '</tr>'
                     );
                 });
 
+                renderGrandTotalHarga(selectedPurchasingRows, true);
                 updateBulkAcceptButton();
             }
 
@@ -1637,6 +1810,326 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#modalUpdateInvoice').modal('show');
             }
 
+            function getSplitSourceRows() {
+                var rows = (detailViewMode === 'purchasing' && selectedPurchasingRows.length > 0) ? selectedPurchasingRows : selectedDetailRows;
+                return $.grep(rows || [], function(row) {
+                    return parseInt(row.id_detail_lpb || 0, 10) > 0 && getSplitRowQty(row) > 0;
+                });
+            }
+
+            function getSplitRowQty(row) {
+                return parseFloat(row.qty_in || row.qty_lpb || row.qty_diterima || 0) || 0;
+            }
+
+            function formatInputNumber(value) {
+                var number = parseFloat(value) || 0;
+                return parseFloat(number.toFixed(4)).toString();
+            }
+
+            function readSplitState() {
+                var invoices = [];
+                $('#splitInvoiceRows .js-split-invoice-row').each(function() {
+                    invoices.push({
+                        no_invoice: $(this).find('.js-split-no-invoice').val() || '',
+                        tanggal_invoice: $(this).find('.js-split-tanggal-invoice').val() || ''
+                    });
+                });
+
+                var allocations = {};
+                $('#splitInvoiceAllocationTable .js-split-qty').each(function() {
+                    var idDetail = parseInt($(this).data('detail-id'), 10) || 0;
+                    var index = parseInt($(this).data('index'), 10) || 0;
+                    if (!allocations[idDetail]) {
+                        allocations[idDetail] = {};
+                    }
+                    allocations[idDetail][index] = $(this).val();
+                });
+
+                return {
+                    invoices: invoices,
+                    allocations: allocations
+                };
+            }
+
+            function buildDefaultSplitState() {
+                var today = new Date().toISOString().slice(0, 10);
+                var invoiceDate = selectedHeader && selectedHeader.tanggal_invoice ? selectedHeader.tanggal_invoice : today;
+                var rows = getSplitSourceRows();
+                var allocations = {};
+
+                $.each(rows, function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb || 0, 10);
+                    var qty = getSplitRowQty(row);
+                    var firstQty = qty / 2;
+                    allocations[idDetail] = {
+                        0: formatInputNumber(firstQty),
+                        1: formatInputNumber(qty - firstQty)
+                    };
+                });
+
+                return {
+                    invoices: [{
+                            no_invoice: hasInvoice((selectedHeader || {}).no_invoice) ? selectedHeader.no_invoice : '',
+                            tanggal_invoice: invoiceDate
+                        },
+                        {
+                            no_invoice: '',
+                            tanggal_invoice: invoiceDate
+                        }
+                    ],
+                    allocations: allocations
+                };
+            }
+
+            function renderSplitInvoiceRows(state) {
+                var wrap = $('#splitInvoiceRows');
+                wrap.empty();
+
+                $.each(state.invoices, function(index, invoice) {
+                    var removeButton = state.invoices.length > 2 ?
+                        '<button type="button" class="btn btn-outline-danger btn-sm js-remove-split-invoice" data-index="' + index + '" title="Hapus invoice"><i class="fas fa-trash"></i></button>' :
+                        '';
+                    wrap.append(
+                        '<div class="lpb-split-invoice-row js-split-invoice-row" data-index="' + index + '">' +
+                        '<div class="row align-items-end">' +
+                        '<div class="col-md-2">' +
+                        '<label>Invoice</label>' +
+                        '<div class="font-weight-bold">Invoice ' + (index + 1) + '</div>' +
+                        '</div>' +
+                        '<div class="col-md-5">' +
+                        '<label>No Invoice</label>' +
+                        '<input type="text" class="form-control js-split-no-invoice" value="' + escAttr(invoice.no_invoice || '') + '" required>' +
+                        '</div>' +
+                        '<div class="col-md-4">' +
+                        '<label>Tanggal Invoice</label>' +
+                        '<input type="date" class="form-control js-split-tanggal-invoice" value="' + escAttr(invoice.tanggal_invoice || '') + '" required>' +
+                        '</div>' +
+                        '<div class="col-md-1 text-right">' + removeButton + '</div>' +
+                        '</div>' +
+                        '</div>'
+                    );
+                });
+            }
+
+            function renderSplitInvoiceAllocationTable(state) {
+                var rows = getSplitSourceRows();
+                var thead = $('#splitInvoiceAllocationTable thead');
+                var tbody = $('#splitInvoiceAllocationTable tbody');
+                var tfoot = $('#splitInvoiceAllocationTable tfoot');
+                var headerHtml = '<tr>' +
+                    '<th>Kode Barang</th>' +
+                    '<th>Nama Barang</th>' +
+                    '<th class="text-center">No Lot</th>' +
+                    '<th class="text-right">Qty LPB</th>';
+
+                $.each(state.invoices, function(index) {
+                    headerHtml += '<th class="text-right">Qty Invoice ' + (index + 1) + '</th>';
+                });
+                headerHtml += '<th class="text-right">Selisih</th></tr>';
+                thead.html(headerHtml);
+                tbody.empty();
+
+                if (rows.length === 0) {
+                    tbody.html('<tr><td colspan="' + (5 + state.invoices.length) + '" class="text-center text-muted">Detail LPB kosong.</td></tr>');
+                    tfoot.empty();
+                    return;
+                }
+
+                $.each(rows, function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb || 0, 10);
+                    var qty = getSplitRowQty(row);
+                    var rowHtml = '<tr data-detail-id="' + idDetail + '" data-source-qty="' + escAttr(qty) + '">' +
+                        '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
+                        '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
+                        '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
+                        '<td class="text-right js-source-qty">' + escHtml(formatNumber(qty)) + '</td>';
+
+                    $.each(state.invoices, function(index) {
+                        var value = state.allocations[idDetail] && state.allocations[idDetail][index] != null ?
+                            state.allocations[idDetail][index] :
+                            '0';
+                        rowHtml += '<td><input type="number" min="0" step="0.0001" class="form-control text-right js-split-qty" data-detail-id="' + idDetail + '" data-index="' + index + '" value="' + escAttr(value) + '"></td>';
+                    });
+
+                    rowHtml += '<td class="text-right js-split-diff">0</td></tr>';
+                    tbody.append(rowHtml);
+                });
+
+                var footerHtml = '<tr><th colspan="4" class="text-right">Total per Invoice</th>';
+                $.each(state.invoices, function(index) {
+                    footerHtml += '<th class="text-right js-split-invoice-total" data-index="' + index + '">0</th>';
+                });
+                footerHtml += '<th></th></tr>';
+                tfoot.html(footerHtml);
+                updateSplitInvoiceValidationInfo();
+            }
+
+            function renderSplitInvoiceModal(state) {
+                renderSplitInvoiceRows(state);
+                renderSplitInvoiceAllocationTable(state);
+            }
+
+            function addSplitInvoiceRow() {
+                var state = readSplitState();
+                var defaultDate = state.invoices.length > 0 ? state.invoices[0].tanggal_invoice : new Date().toISOString().slice(0, 10);
+                state.invoices.push({
+                    no_invoice: '',
+                    tanggal_invoice: defaultDate
+                });
+                renderSplitInvoiceModal(state);
+            }
+
+            function removeSplitInvoiceRow(index) {
+                var state = readSplitState();
+                if (state.invoices.length <= 2) {
+                    return;
+                }
+
+                state.invoices.splice(index, 1);
+                $.each(state.allocations, function(idDetail, rowAllocations) {
+                    var nextAllocations = {};
+                    $.each(state.invoices, function(newIndex, _invoice) {
+                        var oldIndex = newIndex >= index ? newIndex + 1 : newIndex;
+                        nextAllocations[newIndex] = rowAllocations[oldIndex] || '0';
+                    });
+                    state.allocations[idDetail] = nextAllocations;
+                });
+                renderSplitInvoiceModal(state);
+            }
+
+            function collectSplitPayload() {
+                var state = readSplitState();
+                var splits = $.map(state.invoices, function(invoice, index) {
+                    var details = [];
+                    $('#splitInvoiceAllocationTable .js-split-qty[data-index="' + index + '"]').each(function() {
+                        details.push({
+                            id_detail_lpb: parseInt($(this).data('detail-id'), 10) || 0,
+                            qty_diterima: parseFloat($(this).val()) || 0
+                        });
+                    });
+
+                    return {
+                        no_invoice: $.trim(invoice.no_invoice || ''),
+                        tanggal_invoice: $.trim(invoice.tanggal_invoice || ''),
+                        details: details
+                    };
+                });
+
+                return {
+                    id_lpb: selectedIdLpb,
+                    splits: splits
+                };
+            }
+
+            function validateSplitPayload(payload) {
+                var errors = [];
+                var invoiceKeys = {};
+                var invoiceTotals = [];
+
+                if (!payload.id_lpb) {
+                    errors.push('LPB belum dipilih.');
+                }
+                if (!payload.splits || payload.splits.length < 2) {
+                    errors.push('Minimal harus ada 2 invoice.');
+                }
+
+                $.each(payload.splits || [], function(index, split) {
+                    var invoice = $.trim(split.no_invoice || '');
+                    var tanggal = $.trim(split.tanggal_invoice || '');
+                    if (!invoice) {
+                        errors.push('No Invoice ' + (index + 1) + ' wajib diisi.');
+                    }
+                    if (!tanggal) {
+                        errors.push('Tanggal Invoice ' + (index + 1) + ' wajib diisi.');
+                    }
+                    var key = invoice.toUpperCase();
+                    if (key && invoiceKeys[key]) {
+                        errors.push('No invoice tidak boleh duplikat: ' + invoice + '.');
+                    }
+                    invoiceKeys[key] = true;
+                    invoiceTotals[index] = 0;
+                    $.each(split.details || [], function(_, detail) {
+                        invoiceTotals[index] += parseFloat(detail.qty_diterima || 0) || 0;
+                    });
+                    if (invoiceTotals[index] <= 0) {
+                        errors.push('Invoice ' + (index + 1) + ' harus memiliki qty barang.');
+                    }
+                });
+
+                $.each(getSplitSourceRows(), function(_, row) {
+                    var idDetail = parseInt(row.id_detail_lpb || 0, 10);
+                    var sourceQty = getSplitRowQty(row);
+                    var allocatedQty = 0;
+                    $.each(payload.splits || [], function(_, split) {
+                        $.each(split.details || [], function(_, detail) {
+                            if ((parseInt(detail.id_detail_lpb || 0, 10) || 0) === idDetail) {
+                                allocatedQty += parseFloat(detail.qty_diterima || 0) || 0;
+                            }
+                        });
+                    });
+                    if (Math.abs(allocatedQty - sourceQty) > 0.0001) {
+                        errors.push('Total qty split barang ' + (row.kd_barang || '-') + ' harus sama dengan qty LPB awal.');
+                    }
+                });
+
+                return errors;
+            }
+
+            function updateSplitInvoiceValidationInfo() {
+                var payload = collectSplitPayload();
+                var invoiceTotals = [];
+                $('#splitInvoiceAllocationTable .js-split-invoice-total').each(function() {
+                    invoiceTotals[parseInt($(this).data('index'), 10) || 0] = 0;
+                });
+
+                $('#splitInvoiceAllocationTable tbody tr[data-detail-id]').each(function() {
+                    var sourceQty = parseFloat($(this).data('source-qty')) || 0;
+                    var rowTotal = 0;
+                    $(this).find('.js-split-qty').each(function() {
+                        var index = parseInt($(this).data('index'), 10) || 0;
+                        var qty = parseFloat($(this).val()) || 0;
+                        rowTotal += qty;
+                        invoiceTotals[index] = (invoiceTotals[index] || 0) + qty;
+                    });
+                    var diff = sourceQty - rowTotal;
+                    $(this).find('.js-split-diff')
+                        .toggleClass('text-danger font-weight-bold', Math.abs(diff) > 0.0001)
+                        .text(formatNumber(diff));
+                });
+
+                $.each(invoiceTotals, function(index, total) {
+                    $('#splitInvoiceAllocationTable .js-split-invoice-total[data-index="' + index + '"]').text(formatNumber(total || 0));
+                });
+
+                var errors = validateSplitPayload(payload);
+                $('#splitInvoiceValidationInfo')
+                    .toggleClass('text-danger', errors.length > 0)
+                    .toggleClass('text-muted', errors.length === 0)
+                    .text(errors.length > 0 ? errors[0] : 'Total qty setiap barang sudah balance.');
+                return errors;
+            }
+
+            function openSplitInvoiceModal() {
+                if (!selectedIdLpb || !selectedHeader) {
+                    Swal.fire('Validasi', 'Silakan pilih LPB yang ingin dipecah terlebih dahulu.', 'warning');
+                    return;
+                }
+
+                if (!isSelectedLpbUnpost()) {
+                    Swal.fire('Validasi', 'Pecah invoice hanya bisa dilakukan saat status UNPOST.', 'warning');
+                    return;
+                }
+
+                if (getSplitSourceRows().length === 0) {
+                    Swal.fire('Validasi', 'Detail LPB belum tersedia untuk dipecah.', 'warning');
+                    return;
+                }
+
+                $('#splitInvoiceIdLpb').val(selectedIdLpb);
+                renderSplitInvoiceModal(buildDefaultSplitState());
+                $('#modalSplitInvoice').modal('show');
+            }
+
             function openUpdateFakturModal(header) {
                 var activeHeader = header || selectedHeader;
                 var activeId = activeHeader ? (activeHeader.id_lpb || selectedIdLpb) : selectedIdLpb;
@@ -1723,6 +2216,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var idDetail = btn.data('id-detail') || 0;
                 var kdBarang = btn.attr('data-kd-barang') || '';
                 var namaBarang = btn.attr('data-nama-barang') || '-';
+                var qtyLpb = parseFloat(btn.attr('data-qty')) || 0;
+                var qtySisa = parseFloat(btn.attr('data-qty-sisa')) || 0;
+                var qtyOrder = parseFloat(btn.attr('data-qty-order')) || 0;
+                var qtyTotal = parseFloat(btn.attr('data-qty-total')) || 0;
+                var hasQtySisa = typeof btn.attr('data-qty-sisa') !== 'undefined' && btn.attr('data-qty-sisa') !== '';
+                var qtyMax = qtyTotal > 0 ? qtyTotal : (hasQtySisa ? qtyLpb + qtySisa : 0);
                 var hargaSatuan = parseFloat(btn.attr('data-harga-satuan')) || 0;
                 var totalHarga = parseFloat(btn.attr('data-total-harga')) || 0;
 
@@ -1733,7 +2232,18 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 $('#lpbPriceIdDetail').val(idDetail);
                 $('#lpbPriceBarang').val(kdBarang + ' - ' + namaBarang);
-                $('#lpbPriceQty').val(btn.attr('data-qty') || 0);
+                $('#lpbPriceQty').val(formatInputNumber(qtyLpb));
+                $('#lpbPriceQtyMax').val(qtyMax > 0 ? formatInputNumber(qtyMax) : '');
+                $('#lpbPriceQtyOrder').val(qtyOrder > 0 ? formatInputNumber(qtyOrder) : '');
+                $('#lpbPriceQty').removeAttr('max');
+                if (qtyMax > 0) {
+                    $('#lpbPriceQty').attr('max', formatInputNumber(qtyMax));
+                    $('#lpbPriceQtyInfo').text('Maksimum Qty LPB untuk kode barang ini: ' + formatNumber(qtyMax) + '.');
+                } else if (qtyOrder > 0) {
+                    $('#lpbPriceQtyInfo').text('Qty diterima/order kode barang ini: ' + formatNumber(qtyOrder) + '.');
+                } else {
+                    $('#lpbPriceQtyInfo').text('Qty akan divalidasi ulang oleh server saat disimpan.');
+                }
                 $('#lpbPriceHargaSebelumnya').val(formatRupiah(hargaSatuan));
                 $('#lpbPriceTotalSebelumnya').val(formatRupiah(totalHarga));
                 $('#lpbPriceHargaBaru').val(hargaSatuan);
@@ -1906,7 +2416,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 updateAdjustmentTotal();
             });
 
-            $('#lpbPriceHargaBaru').on('input', function() {
+            $('#lpbPriceQty, #lpbPriceHargaBaru').on('input', function() {
                 updateLpbPriceTotal();
             });
 
@@ -2093,6 +2603,26 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 promptUnpostLpb();
             });
 
+            $('#btnSplitInvoice').on('click', function() {
+                openSplitInvoiceModal();
+            });
+
+            $('#btnAddSplitInvoice').on('click', function() {
+                addSplitInvoiceRow();
+            });
+
+            $('#splitInvoiceRows').on('click', '.js-remove-split-invoice', function() {
+                removeSplitInvoiceRow(parseInt($(this).data('index'), 10) || 0);
+            });
+
+            $('#splitInvoiceRows').on('input change', '.js-split-no-invoice, .js-split-tanggal-invoice', function() {
+                updateSplitInvoiceValidationInfo();
+            });
+
+            $('#splitInvoiceAllocationTable').on('input change', '.js-split-qty', function() {
+                updateSplitInvoiceValidationInfo();
+            });
+
             $('#formUpdateInvoice').on('submit', function(e) {
                 e.preventDefault();
 
@@ -2132,6 +2662,56 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     complete: function() {
                         isSubmittingInvoice = false;
                         $('#btnSubmitInvoice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Invoice');
+                    }
+                });
+            });
+
+            $('#formSplitInvoice').on('submit', function(e) {
+                e.preventDefault();
+
+                if (isSubmittingSplitInvoice) {
+                    return;
+                }
+
+                var payload = collectSplitPayload();
+                var errors = validateSplitPayload(payload);
+                if (errors.length > 0) {
+                    Swal.fire('Validasi', errors[0], 'warning');
+                    updateSplitInvoiceValidationInfo();
+                    return;
+                }
+
+                isSubmittingSplitInvoice = true;
+                $('#btnSubmitSplitInvoice').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_split_lpb_multiple_invoice') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_lpb: payload.id_lpb,
+                        splits: JSON.stringify(payload.splits)
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Pecah LPB multiple invoice gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalSplitInvoice').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'LPB berhasil dipecah menjadi multiple invoice.', 'success');
+                        loadList();
+                        if (selectedIdLpb) {
+                            loadPurchasingDetailView();
+                        }
+                        loadPrePoAdjustment();
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan split invoice.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingSplitInvoice = false;
+                        $('#btnSubmitSplitInvoice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Split Invoice');
                     }
                 });
             });
@@ -2319,6 +2899,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
+                var qtyMessage = validateLpbPriceQtyInput();
+                if (qtyMessage) {
+                    Swal.fire('Validasi Qty LPB', qtyMessage, 'warning');
+                    return;
+                }
+
                 isSubmittingLpbPrice = true;
                 var previousDetailMode = detailViewMode;
                 $('#btnSubmitLpbPrice').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
@@ -2329,6 +2915,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     dataType: 'json',
                     data: {
                         id_detail_lpb: $('#lpbPriceIdDetail').val(),
+                        qty_lpb: $('#lpbPriceQty').val(),
                         harga_satuan_baru: $('#lpbPriceHargaBaru').val()
                     },
                     success: function(res) {
@@ -2338,7 +2925,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         }
 
                         $('#modalUpdateLpbPrice').modal('hide');
-                        Swal.fire('Berhasil', res.message || 'Harga detail LPB berhasil diperbarui.', 'success');
+                        Swal.fire(res.warning ? 'Berhasil dengan Catatan' : 'Berhasil', res.message || 'Harga dan Qty LPB berhasil diperbarui.', res.warning ? 'warning' : 'success');
                         if (selectedIdLpb) {
                             if (previousDetailMode === 'purchasing') {
                                 loadPurchasingDetailView();
@@ -2352,7 +2939,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     },
                     complete: function() {
                         isSubmittingLpbPrice = false;
-                        $('#btnSubmitLpbPrice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Harga');
+                        $('#btnSubmitLpbPrice').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Harga & Qty');
                     }
                 });
             });

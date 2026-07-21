@@ -338,16 +338,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
-                                            <?php if ($isAdminPo) : ?>
-                                            <tr>
-                                                <th>No PO</th>
-                                                <th>Tgl Transaksi</th>
-                                                <th>Nama Supplier</th>
-                                                <th class="text-center">Progress</th>
-                                                <th class="text-center">Status</th>
-                                                <th class="text-center" style="width:90px;">#</th>
-                                            </tr>
-                                            <?php else : ?>
                                             <tr>
                                                 <th>No PO</th>
                                                 <th>Tgl Transaksi</th>
@@ -360,7 +350,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                 <th class="text-center">Status</th>
                                                 <th class="text-center" style="width:90px;">#</th>
                                             </tr>
-                                            <?php endif; ?>
                                         </thead>
                                         <tbody>
                                             <?php if (!empty($lpb)) : ?>
@@ -396,30 +385,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                         $badge = '<span class="badge badge-danger px-2 py-1"><i class="fas fa-times mr-1"></i> Belum</span>';
                                                     }
                                                 ?>
-                                                    <?php if ($isAdminPo) : ?>
-                                                    <tr class="<?= $rowClass ?>">
-                                                        <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
-                                                        <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
-                                                        <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
-                                                        <td>
-                                                            <div class="po-progress-wrap">
-                                                                <div class="po-progress-label">
-                                                                    <span><?= $progressText ?>%</span>
-                                                                    <span><?= htmlspecialchars(ucfirst($status)) ?></span>
-                                                                </div>
-                                                                <div class="po-progress-track">
-                                                                    <div class="po-progress-fill <?= $progressClass ?>" style="width: <?= $progress ?>%;"></div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td class="text-center"><?= $badge ?></td>
-                                                        <td class="text-center">
-                                                            <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm">
-                                                                <i class="fas fa-list"></i>
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                    <?php else : ?>
                                                     <tr class="<?= $rowClass ?>">
                                                         <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                         <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
@@ -449,11 +414,10 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                             </a>
                                                         </td>
                                                     </tr>
-                                                    <?php endif; ?>
                                                 <?php endforeach; ?>
                                             <?php else : ?>
                                                 <tr>
-                                                    <td colspan="<?= $isAdminPo ? 6 : 10 ?>" class="text-center text-muted">
+                                                    <td colspan="10" class="text-center text-muted">
                                                         <i class="fas fa-inbox mr-1"></i> Tidak ada data
                                                     </td>
                                                 </tr>
@@ -477,25 +441,20 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                 <i class="fas fa-percent mr-1"></i> Belum Pajak
                                             </button>
                                             <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="uang">
-                                                <i class="fas fa-money-bill-wave mr-1"></i> Belum Uang
+                                                <i class="fas fa-check-double mr-1"></i> Belum Afirmasi Harga
                                             </button>
                                         </div>
                                         <div class="table-responsive">
                                             <table class="table table-bordered table-hover" id="idtb_ics_po_purchasing">
                                                 <thead class="thead-dark text-center">
                                                     <tr>
-                                                        <th>Tgl PO</th>
-                                                        <th>No PO</th>
+                                                        <th>Tgl LPB</th>
                                                         <th>No LPB</th>
-                                                        <th>Jenis PO</th>
-                                                        <th>Nomor SJ</th>
-                                                        <th>Tanggal SJ</th>
-                                                        <th>Nama Suplier</th>
-                                                        <th>Invoice</th>
-                                                        <th>Tgl Invoice</th>
-                                                        <th>Faktur Pajak</th>
-                                                        <th>Tgl Faktur</th>
-                                                        <th class="text-center">Status</th>
+                                                        <th>No PO</th>
+                                                        <th>Nama Supplier</th>
+                                                        <th class="text-right">Grand Total LPB</th>
+                                                        <th class="text-center">LPB Status</th>
+                                                        <th class="text-center">Status Data</th>
                                                         <th class="text-center" style="width:90px;">#</th>
                                                     </tr>
                                                 </thead>
@@ -510,32 +469,37 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                             $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
                                                             $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
                                                             $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
+                                                            $rawStatusLpb = $row['status_lpb'] ?? null;
+                                                            if ($rawStatusLpb === null || $rawStatusLpb === '') {
+                                                                $lpbStatusBadge = '<span class="badge badge-secondary px-2 py-1"><i class="fas fa-edit mr-1"></i> DRAFT</span>';
+                                                            } elseif ((int) $rawStatusLpb === 0) {
+                                                                $lpbStatusBadge = '<span class="badge badge-warning px-2 py-1"><i class="fas fa-clock mr-1"></i> UNPOST</span>';
+                                                            } else {
+                                                                $lpbStatusBadge = '<span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> POST</span>';
+                                                            }
                                                             $invoiceBtnClass = $hasInvoice ? 'btn-success' : 'btn-light text-secondary border';
                                                             $fakturBtnClass = $hasFaktur ? 'btn-success' : 'btn-light text-secondary border';
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                         ?>
                                                         <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>">
-                                                            <td><?= htmlspecialchars($row['tgl_po'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                            <td><?= htmlspecialchars($row['tgl_lpb'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['jenis_lpb'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['tgl_sj'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                             <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['no_invoice'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['tanggal_invoice'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['kode_faktur_pajak'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['tgl_faktur'] ?? '-') ?></td>
+                                                            <td class="text-right"><?= 'Rp ' . number_format((float) ($row['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
+                                                            <td class="text-center">
+                                                                <?= $lpbStatusBadge ?>
+                                                            </td>
                                                             <td class="text-center">
                                                                 <div class="lpb-status-actions">
-                                                                    <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="Invoice">
+                                                                    <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= $hasInvoice ? 'Invoice sudah ada' : 'Invoice belum ada' ?>">
                                                                         <i class="fas fa-file-invoice"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="Faktur Pajak">
+                                                                    <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= $hasFaktur ? 'Pajak/Faktur sudah ada' : 'Pajak/Faktur belum ada' ?>">
                                                                         <i class="fas fa-percent"></i>
                                                                     </button>
-                                                                    <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="Verifikasi Harga">
-                                                                        <i class="fas fa-money-bill-wave"></i>
+                                                                    <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
+                                                                        <i class="fas fa-check-double"></i>
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -548,7 +512,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                         <?php endforeach; ?>
                                                     <?php else : ?>
                                                         <tr>
-                                                            <td colspan="13" class="text-center text-muted">
+                                                            <td colspan="8" class="text-center text-muted">
                                                                 <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
                                                             </td>
                                                         </tr>

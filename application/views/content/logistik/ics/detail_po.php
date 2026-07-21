@@ -299,23 +299,19 @@
                                         <th class="text-center align-middle" rowspan="2">Kode Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Nama Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Order</th>
-                                        <th class="text-center" colspan="4">Qty Order</th>
+                                        <th class="text-center" colspan="2">Qty Order</th>
                                         <th class="text-center align-middle" rowspan="2">Qty In</th>
-                                        <th class="text-center" colspan="4">Qty Diterima</th>
+                                        <th class="text-center" colspan="2">Qty Diterima</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
                                         <th class="text-center align-middle" rowspan="2">Status</th>
                                         <th class="text-center align-middle" rowspan="2">Draft Temp</th>
                                         <th class="text-center align-middle" rowspan="2">#</th>
                                     </tr>
                                     <tr>
-                                        <th class="text-center">Pcs</th>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg</th>
-                                        <th class="text-center">Ltr</th>
-                                        <th class="text-center">Qty</th>
+                                        <th class="text-center">Kg/Ltr</th>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg</th>
-                                        <th class="text-center">Ltr</th>
+                                        <th class="text-center">Kg/Ltr</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -326,15 +322,11 @@
                                                 <td><?= htmlspecialchars($row['kd_barang'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_kecil'] ?? 0) ?></td>
-                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_pcs'] ?? 0) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
-                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_ltr'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
-                                                <td class="text-center js-qty-diterima-pcs"><?= $formatQtyPo($row['qty_diterima_pcs'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
-                                                <td class="text-center js-qty-diterima-ltr"><?= $formatQtyPo($row['qty_diterima_ltr'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
                                                 <td class="text-center js-status-cell">
                                                     <?php
@@ -627,7 +619,7 @@
                 ],
                 columnDefs: [{
                     orderable: false,
-                    targets: [15, 16]
+                    targets: [11, 12]
                 }],
                 language: {
                     search: "Cari:",
@@ -694,10 +686,8 @@
                     var badgeClass = getStatusBadgeClass(statusBarang);
 
                     detailRow.find('.js-qty-in').text(formatNumber(row.qty_in));
-                    detailRow.find('.js-qty-diterima-pcs').text(formatNumber(row.qty_diterima_pcs));
                     detailRow.find('.js-qty-diterima-box').text(formatNumber(row.qty_diterima_box));
                     detailRow.find('.js-qty-diterima-kg').text(formatNumber(row.qty_diterima_kg));
-                    detailRow.find('.js-qty-diterima-ltr').text(formatNumber(row.qty_diterima_ltr));
                     detailRow.find('.js-qty-sisa').text(formatNumber(row.qty_kecil_sisa));
                     detailRow.find('.js-status-badge')
                         .attr('class', 'badge badge-' + badgeClass + ' px-3 py-2 js-status-badge')

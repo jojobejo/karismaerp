@@ -588,9 +588,7 @@ class C_Ics extends CI_Controller
         $data['show_logistik_panel'] = $showLogistikPanel;
         $data['show_purchasing_panel'] = $showPurchasingPanel;
         $data['lpb']        = $showLogistikPanel
-            ? ($isAdminPo
-                ? $this->M_Logistik->get_lpb_admin_po($date1, $date2)
-                : $this->M_Logistik->get_lpb($date1, $date2))
+            ? $this->M_Logistik->get_lpb($date1, $date2)
             : [];
         $data['lpb_purchasing'] = $showPurchasingPanel
             ? $this->M_Logistik->get_lpb_purchasing_view($date1, $date2)
@@ -795,8 +793,12 @@ class C_Ics extends CI_Controller
         $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
         $username = strtolower(trim((string) $this->session->userdata('username')));
+        $level = (string) $this->session->userdata('lv');
 
-        return strpos($departemen, 'PURCHASING') !== FALSE || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO'], TRUE) || $username === 'admpo';
+        return strpos($departemen, 'PURCHASING') !== FALSE
+            || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO', 'ADMIN'], TRUE)
+            || in_array($username, ['admpo', 'admin'], TRUE)
+            || $level === '1';
     }
 
     private function resolve_ics_po_panel_mode()
@@ -824,7 +826,7 @@ class C_Ics extends CI_Controller
 
         $this->json_response([
             'status'  => 'error',
-            'message' => 'Akses fitur ini hanya untuk ADMIN PO.',
+            'message' => 'Akses fitur ini hanya untuk ADMIN PO, Purchasing, atau Admin.',
             'html'    => ''
         ]);
 
@@ -1172,10 +1174,13 @@ class C_Ics extends CI_Controller
 
     public function ajax_update_lpb_detail_price()
     {
+        if ($this->reject_non_admin_po_ajax()) return;
+
         $idDetailLpb = (int) $this->input->post('id_detail_lpb', TRUE);
         $hargaSatuanBaru = (float) $this->input->post('harga_satuan_baru', TRUE);
+        $qtyLpbBaru = (float) $this->input->post('qty_lpb', TRUE);
 
-        if ($idDetailLpb <= 0 || $hargaSatuanBaru < 0) {
+        if ($idDetailLpb <= 0 || $hargaSatuanBaru < 0 || $qtyLpbBaru <= 0) {
             $this->json_response(['status' => 'error', 'message' => 'Data harga detail LPB belum lengkap.', 'html' => '']);
             return;
         }
@@ -1201,10 +1206,21 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $qtyValidation = $this->M_Logistik->validate_lpb_detail_qty_balance($idDetailLpb, $qtyLpbBaru);
+        if (empty($qtyValidation['valid'])) {
+            $this->json_response([
+                'status'  => 'error',
+                'message' => $qtyValidation['message'] ?? 'Qty LPB tidak balance dengan qty yang diterima.',
+                'html'    => ''
+            ]);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_lpb_detail_price([
             'id_detail_lpb'      => $idDetailLpb,
             'harga_satuan_baru'  => $hargaSatuanBaru,
+            'qty_lpb_baru'       => $qtyLpbBaru,
             'dilakukan_oleh'     => $this->active_user_name()
         ]);
 
@@ -1217,7 +1233,10 @@ class C_Ics extends CI_Controller
         $this->db->trans_commit();
         $this->json_response([
             'status'  => 'success',
-            'message' => 'Harga detail LPB berhasil diperbarui.',
+            'message' => !empty($qtyValidation['warning'])
+                ? 'Harga dan Qty LPB berhasil diperbarui. ' . $qtyValidation['warning']
+                : 'Harga dan Qty LPB berhasil diperbarui.',
+            'warning' => $qtyValidation['warning'] ?? '',
             'row'     => $saved,
             'html'    => ''
         ]);
@@ -1432,6 +1451,65 @@ class C_Ics extends CI_Controller
         $this->json_response([
             'status'  => 'success',
             'message' => 'Invoice LPB berhasil diperbarui.',
+            'html'    => ''
+        ]);
+    }
+
+    public function ajax_split_lpb_multiple_invoice()
+    {
+        if ($this->reject_non_admin_po_ajax()) {
+            return;
+        }
+
+        $id_lpb = (int) $this->input->post('id_lpb', TRUE);
+        $rawSplits = (string) $this->input->post('splits', FALSE);
+        $splits = json_decode($rawSplits, TRUE);
+
+        if ($id_lpb <= 0 || !is_array($splits)) {
+            $this->json_response(['status' => 'error', 'message' => 'Data split invoice belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        if (count($splits) < 2) {
+            $this->json_response(['status' => 'error', 'message' => 'Minimal harus ada 2 invoice untuk pecah LPB.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+
+        $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
+        if (!$header) {
+            $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Pecah invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->split_lpb_multiple_invoice([
+            'id_lpb'         => $id_lpb,
+            'splits'         => $splits,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (empty($saved['status']) || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $message = is_array($saved) && !empty($saved['message'])
+                ? $saved['message']
+                : 'Pecah LPB multiple invoice gagal disimpan.';
+            $this->json_response(['status' => 'error', 'message' => $message, 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'LPB berhasil dipecah menjadi multiple invoice.',
+            'id_lpb'  => $saved['id_lpb'] ?? [],
             'html'    => ''
         ]);
     }

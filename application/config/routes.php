@@ -391,6 +391,7 @@ $route['ics/ajax_history_adjustment']               = 'logistik/C_Ics/ajax_histo
 $route['ics/ajax_history_invoice']                  = 'logistik/C_Ics/ajax_history_invoice';
 $route['ics/ajax_history_diskon']                   = 'logistik/C_Ics/ajax_history_diskon';
 $route['ics/ajax_update_invoice']                   = 'logistik/C_Ics/ajax_update_invoice';
+$route['ics/ajax_split_lpb_multiple_invoice']       = 'logistik/C_Ics/ajax_split_lpb_multiple_invoice';
 $route['ics/ajax_update_faktur_pajak']              = 'logistik/C_Ics/ajax_update_faktur_pajak';
 $route['ics/ajax_update_lpb_type']                  = 'logistik/C_Ics/ajax_update_lpb_type';
 $route['ics/ajax_unpost_lpb']                       = 'logistik/C_Ics/ajax_unpost_lpb';

@@ -4072,6 +4072,9 @@ FROM (
         $nomorLpbSelect = $this->db->field_exists('nomor_lpb', 'tb_lpb')
             ? "COALESCE(NULLIF(h.nomor_lpb, ''), CONCAT('LPB-', h.id_lpb)) AS nomor_lpb"
             : "CONCAT('LPB-', h.id_lpb) AS nomor_lpb";
+        $statusLpbSelect = $this->db->field_exists('status_lpb', 'tb_lpb')
+            ? "h.status_lpb"
+            : "NULL AS status_lpb";
         $jenisLpbGroup = $this->db->field_exists('jenis_lpb', 'tb_lpb')
             ? ",
                 h.jenis_lpb"
@@ -4080,14 +4083,20 @@ FROM (
             ? ",
                 h.nomor_lpb"
             : "";
+        $statusLpbGroup = $this->db->field_exists('status_lpb', 'tb_lpb')
+            ? ",
+                h.status_lpb"
+            : "";
 
         $sql = "SELECT
                 h.id_lpb,
                 h.kd_po,
                 h.no_po,
+                COALESCE(DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_lpb,
                 COALESCE(DATE_FORMAT(p.tgl_transaksi, '%Y-%m-%d'), DATE_FORMAT(h.input_at, '%Y-%m-%d'), '-') AS tgl_po,
                 {$nomorLpbSelect},
                 {$jenisLpbSelect},
+                {$statusLpbSelect},
                 h.nosj,
                 h.tgl_sj,
                 COALESCE(NULLIF(TRIM(s.nama_suplier), ''), p.kd_suplier, '-') AS nama_suplier,
@@ -4098,6 +4107,7 @@ FROM (
                 END AS progress_persen,
                 COALESCE(ds.total_detail, 0) AS total_detail,
                 COALESCE(ds.total_verified, 0) AS total_verified,
+                COALESCE(ds.grand_total_lpb, 0) AS grand_total_lpb,
                 CASE
                     WHEN COALESCE(ds.total_detail, 0) <= 0 THEN 'belum'
                     WHEN COALESCE(ds.total_verified, 0) <= 0 THEN 'belum'
@@ -4118,7 +4128,8 @@ FROM (
                 SELECT
                     id_lpb,
                     COUNT(id_detail_lpb) AS total_detail,
-                    SUM(CASE WHEN harga_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS total_verified
+                    SUM(CASE WHEN harga_verified_at IS NOT NULL THEN 1 ELSE 0 END) AS total_verified,
+                    SUM(COALESCE(total_harga, 0)) AS grand_total_lpb
                 FROM tb_lpb_detail
                 GROUP BY id_lpb
             ) ds
@@ -4159,6 +4170,7 @@ FROM (
                 p.kd_suplier,
                 ds.total_detail,
                 ds.total_verified,
+                ds.grand_total_lpb,
                 h.no_invoice,
                 invlog.tanggal_invoice,
                 h.input_at
@@ -4167,6 +4179,7 @@ FROM (
                 {$tanggalFakturGroup}
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
+                {$statusLpbGroup}
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
         return $this->db->query($sql, $params)->result_array();
@@ -4592,7 +4605,18 @@ FROM (
                     NULLIF(d.harga_satuan, 0),
                     0
                 )";
-
+        $dppExpr = "({$qtyLpbExpr} * {$hargaSatuanExcludeExpr})";
+        $dppNilaiLainExpr = "({$dppExpr} * (11 / 12))";
+        $ppnExpr = "({$dppNilaiLainExpr} * (12 / 100))";
+        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
+        $totalHargaDisplayExpr = "(CASE
+                    WHEN {$ppnModeExpr} = 'include'
+                        AND COALESCE(pp.harga_satuan_kecil, 0) > 0
+                    THEN {$qtyLpbExpr} * COALESCE(pp.harga_satuan_kecil, 0)
+                    WHEN COALESCE(po.tax, 0) > 0
+                    THEN {$dppExpr} + ((COALESCE(po.tax, 0) / 100) * {$dppExpr})
+                    ELSE {$dppExpr}
+                END)";
         $sql = "SELECT
                 d.id_detail_lpb,
                 d.id_lpb,
@@ -4602,6 +4626,22 @@ FROM (
                     WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil
                     ELSE COALESCE(pp.qty, 0)
                 END AS qty_order,
+                GREATEST(
+                    (CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE COALESCE(pp.qty, 0) END) - COALESCE((
+                        SELECT SUM(d2.qty_diterima)
+                        FROM tb_lpb_detail d2
+                        INNER JOIN tb_lpb h2 ON h2.id_lpb = d2.id_lpb
+                        WHERE h2.no_po = h.no_po
+                            AND d2.kd_barang = d.kd_barang
+                    ), 0),
+                    0
+                ) AS qty_sisa,
+                COALESCE((
+                    SELECT SUM(d2.qty_diterima)
+                    FROM tb_lpb_detail d2
+                    WHERE d2.id_lpb = d.id_lpb
+                        AND d2.kd_barang = d.kd_barang
+                ), 0) AS qty_lpb_total,
                 d.qty_diterima,
                 d.no_lot,
                 d.expired_date,
@@ -4614,8 +4654,12 @@ FROM (
                 COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
                 {$hargaSatuanExcludeExpr} AS harga_satuan,
                 {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
-                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga,
-                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga_exclude,
+                {$dppExpr} AS dpp,
+                {$dppNilaiLainExpr} AS dpp_nilai_lain,
+                {$ppnExpr} AS ppn,
+                {$dppExpr} AS total_harga,
+                {$dppExpr} AS total_harga_exclude,
+                {$totalHargaDisplayExpr} AS total_harga_display,
                 d.harga_verified_at,
                 d.harga_verified_by,
                 CASE
@@ -4632,6 +4676,9 @@ FROM (
                 ON pp.no_po = h.no_po
                 AND pp.kd_po = h.kd_po
                 AND pp.kd_barang = d.kd_barang
+            LEFT JOIN tbpo_po po
+                ON po.no_po = h.no_po
+                AND po.kd_po = h.kd_po
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
             WHERE d.id_lpb = ?
@@ -4640,10 +4687,94 @@ FROM (
         return $this->db->query($sql, [$id_lpb])->result_array();
     }
 
+    public function validate_lpb_detail_qty_balance($idDetailLpb, $qtyLpbBaru)
+    {
+        $idDetailLpb = (int) $idDetailLpb;
+        $qtyLpbBaru = (float) $qtyLpbBaru;
+
+        if ($idDetailLpb <= 0 || $qtyLpbBaru <= 0) {
+            return [
+                'valid' => FALSE,
+                'message' => 'Qty LPB harus lebih dari 0.'
+            ];
+        }
+
+        $sql = "SELECT
+                d.id_detail_lpb,
+                d.id_lpb,
+                d.kd_barang,
+                COALESCE(d.qty_diterima, 0) AS qty_lama,
+                h.no_po,
+                h.kd_po,
+                COALESCE((
+                    SELECT SUM(d3.qty_diterima)
+                    FROM tb_lpb_detail d3
+                    WHERE d3.id_lpb = d.id_lpb
+                        AND d3.kd_barang = d.kd_barang
+                ), 0) AS qty_lpb_total,
+                COALESCE((
+                    SELECT SUM(d2.qty_diterima)
+                    FROM tb_lpb_detail d2
+                    WHERE d2.id_lpb = d.id_lpb
+                        AND d2.kd_barang = d.kd_barang
+                        AND d2.id_detail_lpb <> d.id_detail_lpb
+                ), 0) AS qty_lpb_lain
+            FROM tb_lpb_detail d
+            INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
+            WHERE d.id_detail_lpb = ?
+            LIMIT 1";
+
+        $row = $this->db->query($sql, [$idDetailLpb])->row_array();
+
+        if (!$row) {
+            return [
+                'valid' => FALSE,
+                'message' => 'Detail LPB tidak ditemukan.'
+            ];
+        }
+
+        $qtyTotal = (float) ($row['qty_lpb_total'] ?? 0);
+        if ($qtyTotal <= 0) {
+            return [
+                'valid' => FALSE,
+                'message' => 'Total LPB untuk kode barang ' . ($row['kd_barang'] ?? '-') . ' tidak ditemukan, Qty LPB tidak dapat divalidasi.'
+            ];
+        }
+
+        $qtyLpbLain = (float) ($row['qty_lpb_lain'] ?? 0);
+        $totalSetelahUpdate = $qtyLpbLain + $qtyLpbBaru;
+        $selisih = $qtyTotal - $totalSetelahUpdate;
+        $tolerance = 0.0001;
+
+        if ($qtyLpbBaru > ($qtyTotal + $tolerance) || $totalSetelahUpdate > ($qtyTotal + $tolerance)) {
+            return [
+                'valid' => FALSE,
+                'message' => 'Qty LPB tidak boleh melebihi total LPB berdasarkan kode barang ' . ($row['kd_barang'] ?? '-') . '. Total setelah update ' . $this->format_lpb_log_value($totalSetelahUpdate) . ', sedangkan total LPB/qty diterima ' . $this->format_lpb_log_value($qtyTotal) . '.'
+            ];
+        }
+
+        $warning = '';
+        if (abs($selisih) > $tolerance) {
+            $warning = 'Perhatian: Qty LPB barang ' . ($row['kd_barang'] ?? '-') . ' belum balance dengan qty diterima. Total setelah update ' . $this->format_lpb_log_value($totalSetelahUpdate) . ', total LPB/qty diterima ' . $this->format_lpb_log_value($qtyTotal) . ', selisih ' . $this->format_lpb_log_value($selisih) . '.';
+        }
+
+        return [
+            'valid' => TRUE,
+            'warning' => $warning,
+            'kd_barang' => $row['kd_barang'] ?? '',
+            'qty_lama' => (float) ($row['qty_lama'] ?? 0),
+            'qty_lpb_total' => $qtyTotal,
+            'qty_lpb_lain' => $qtyLpbLain,
+            'total_setelah_update' => $totalSetelahUpdate,
+            'selisih' => $selisih
+        ];
+    }
+
     public function update_lpb_detail_price($payload)
     {
         $idDetailLpb = (int) $payload['id_detail_lpb'];
         $hargaSatuanBaru = (float) $payload['harga_satuan_baru'];
+        $qtyLpbBaru = isset($payload['qty_lpb_baru']) ? (float) $payload['qty_lpb_baru'] : null;
 
         $sql = "SELECT
                 d.id_detail_lpb,
@@ -4673,6 +4804,9 @@ FROM (
         }
 
         $qty = (float) ($row['qty_diterima'] ?? 0);
+        if ($qtyLpbBaru !== null && $qtyLpbBaru > 0) {
+            $qty = $qtyLpbBaru;
+        }
         $hargaSatuanLama = (float) ($row['harga_satuan_aktif'] ?? 0);
         $totalHargaLama = (float) ($row['total_harga_aktif'] ?? 0);
         $totalHargaBaru = $qty * $hargaSatuanBaru;
@@ -4682,6 +4816,7 @@ FROM (
             ->update('tb_lpb_detail', [
                 'harga_satuan_sebelumnya' => $hargaSatuanLama,
                 'total_harga_sebelumnya'  => $totalHargaLama,
+                'qty_diterima'            => $qty,
                 'harga_satuan'            => $hargaSatuanBaru,
                 'total_harga'             => $totalHargaBaru,
                 'harga_update_by'         => $payload['dilakukan_oleh'],
@@ -4694,6 +4829,14 @@ FROM (
             return FALSE;
         }
 
+        if ($this->db->table_exists('tb_lpb_batch')) {
+            $this->db
+                ->where('id_detail_lpb', $idDetailLpb)
+                ->update('tb_lpb_batch', [
+                    'qty' => $qty
+                ]);
+        }
+
         if (!$this->insert_lpb_activity_log([
             'id_lpb'         => (int) $row['id_lpb'],
             'kd_po'          => $row['kd_po'] ?? '',
@@ -4704,22 +4847,27 @@ FROM (
             'data_before'    => [
                 'id_detail_lpb' => $idDetailLpb,
                 'kd_barang' => $row['kd_barang'],
+                'qty_diterima' => $row['qty_diterima'],
                 'harga_satuan' => $hargaSatuanLama,
                 'total_harga' => $totalHargaLama
             ],
             'data_after'     => [
                 'id_detail_lpb' => $idDetailLpb,
                 'kd_barang' => $row['kd_barang'],
+                'qty_diterima' => $qty,
                 'harga_satuan' => $hargaSatuanBaru,
                 'total_harga' => $totalHargaBaru
             ],
             'keterangan'     => $this->describe_lpb_changes('Update harga detail LPB barang ' . ($row['kd_barang'] ?? ''), [
+                'qty_diterima' => 'Qty LPB',
                 'harga_satuan' => 'Harga Satuan',
                 'total_harga' => 'Total Harga'
             ], [
+                'qty_diterima' => $row['qty_diterima'],
                 'harga_satuan' => $hargaSatuanLama,
                 'total_harga' => $totalHargaLama
             ], [
+                'qty_diterima' => $qty,
                 'harga_satuan' => $hargaSatuanBaru,
                 'total_harga' => $totalHargaBaru
             ]),
@@ -4897,6 +5045,18 @@ FROM (
                     NULLIF(d.harga_satuan, 0),
                     0
                 )";
+        $dppExpr = "({$qtyLpbExpr} * {$hargaSatuanExcludeExpr})";
+        $dppNilaiLainExpr = "({$dppExpr} * (11 / 12))";
+        $ppnExpr = "({$dppNilaiLainExpr} * (12 / 100))";
+        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
+        $totalHargaDisplayExpr = "(CASE
+                    WHEN {$ppnModeExpr} = 'include'
+                        AND COALESCE(pp.harga_satuan_kecil, 0) > 0
+                    THEN {$qtyLpbExpr} * COALESCE(pp.harga_satuan_kecil, 0)
+                    WHEN COALESCE(po.tax, 0) > 0
+                    THEN {$dppExpr} + ((COALESCE(po.tax, 0) / 100) * {$dppExpr})
+                    ELSE {$dppExpr}
+                END)";
 
         $sql = "SELECT
                 d.id_detail_lpb,
@@ -4921,10 +5081,20 @@ FROM (
                     (CASE WHEN COALESCE(pp.qty_kecil, 0) > 0 THEN pp.qty_kecil ELSE COALESCE(pp.qty, 0) END) - COALESCE(rcv.qty_diterima, 0),
                     0
                 ) AS qty_sisa,
+                COALESCE((
+                    SELECT SUM(d2.qty_diterima)
+                    FROM tb_lpb_detail d2
+                    WHERE d2.id_lpb = d.id_lpb
+                        AND d2.kd_barang = d.kd_barang
+                ), 0) AS qty_lpb_total,
                 {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
-                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga_exclude,
+                {$dppExpr} AS dpp,
+                {$dppNilaiLainExpr} AS dpp_nilai_lain,
+                {$ppnExpr} AS ppn,
+                {$dppExpr} AS total_harga_exclude,
                 {$hargaSatuanExcludeExpr} AS harga_satuan,
-                {$qtyLpbExpr} * {$hargaSatuanExcludeExpr} AS total_harga,
+                {$dppExpr} AS total_harga,
+                {$totalHargaDisplayExpr} AS total_harga_display,
                 COALESCE(d.harga_satuan_sebelumnya, 0) AS harga_satuan_sebelumnya,
                 COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
                 d.harga_verified_at,
@@ -4943,6 +5113,9 @@ FROM (
                 ON pp.no_po = h.no_po
                 AND pp.kd_po = h.kd_po
                 AND pp.kd_barang = d.kd_barang
+            LEFT JOIN tbpo_po po
+                ON po.no_po = h.no_po
+                AND po.kd_po = h.kd_po
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
             LEFT JOIN tb_master_barang_all mb
@@ -4971,37 +5144,37 @@ FROM (
                 'label' => 'LPB CP',
                 'prefix' => '',
                 'suffix' => '',
-                'example' => '72600001'
+                'example' => '2600001'
             ],
             'LPB Benih' => [
                 'label' => 'LPB Benih',
                 'prefix' => '',
                 'suffix' => 'B',
-                'example' => '72600001B'
+                'example' => '2600001B'
             ],
             'LPB Konsinyasi' => [
                 'label' => 'LPB Konsinyasi',
                 'prefix' => '',
                 'suffix' => 'K',
-                'example' => '72600002K'
+                'example' => '2600002K'
             ],
             'LPB Barang Non Pajak (A)' => [
                 'label' => 'LPB Barang Non Pajak (A)',
                 'prefix' => 'A',
                 'suffix' => '',
-                'example' => 'A72600001'
+                'example' => 'A2600001'
             ],
             'LPB Promosi' => [
                 'label' => 'LPB Promosi',
                 'prefix' => 'X',
                 'suffix' => '',
-                'example' => 'X72600001'
+                'example' => 'X2600001'
             ],
             'LPB Barang Pengganti Retur (RA)' => [
                 'label' => 'LPB Barang Pengganti Retur (RA)',
                 'prefix' => 'RA',
                 'suffix' => '',
-                'example' => 'RA72600001'
+                'example' => 'RA2600001'
             ]
         ];
     }
@@ -5022,7 +5195,8 @@ FROM (
 
         $jenisLpb = $this->normalize_lpb_type($jenisLpb);
         $format = $this->get_lpb_type_options()[$jenisLpb];
-        $period = date('n') . date('y');
+        $period = date('y');
+        $legacyPeriod = date('n') . date('y');
         $prefix = $format['prefix'];
         $suffix = $format['suffix'];
         $maxSequence = 0;
@@ -5058,11 +5232,19 @@ FROM (
                 $core = substr($core, 0, -strlen($suffix));
             }
 
-            if (substr($core, 0, strlen($period)) !== $period) {
+            if (substr($core, 0, strlen($period)) === $period) {
+                $sequenceText = substr($core, strlen($period));
+            } elseif (substr($core, 0, strlen($legacyPeriod)) === $legacyPeriod) {
+                $sequenceText = substr($core, strlen($legacyPeriod));
+            } else {
                 continue;
             }
 
-            $sequence = (int) substr($core, strlen($period));
+            if (!ctype_digit($sequenceText)) {
+                continue;
+            }
+
+            $sequence = (int) $sequenceText;
             if ($sequence > $maxSequence) {
                 $maxSequence = $sequence;
             }
@@ -5844,6 +6026,309 @@ FROM (
         }
 
         return $this->update_pre_po_status_by_kd_po($row['kd_po'], 2);
+    }
+
+    public function split_lpb_multiple_invoice($payload)
+    {
+        $idLpb = (int) ($payload['id_lpb'] ?? 0);
+        $splits = $payload['splits'] ?? [];
+        $dilakukanOleh = $payload['dilakukan_oleh'] ?? 'SYSTEM';
+        $tolerance = 0.0001;
+
+        if ($idLpb <= 0 || !is_array($splits) || count($splits) < 2) {
+            return ['status' => FALSE, 'message' => 'Data split invoice belum lengkap.'];
+        }
+
+        $header = $this->db
+            ->where('id_lpb', $idLpb)
+            ->limit(1)
+            ->get('tb_lpb')
+            ->row_array();
+
+        if (!$header) {
+            return ['status' => FALSE, 'message' => 'Data LPB tidak ditemukan.'];
+        }
+
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            return ['status' => FALSE, 'message' => 'Pecah invoice hanya bisa dilakukan saat status UNPOST.'];
+        }
+
+        $details = $this->db
+            ->where('id_lpb', $idLpb)
+            ->order_by('id_detail_lpb', 'ASC')
+            ->get('tb_lpb_detail')
+            ->result_array();
+
+        if (empty($details)) {
+            return ['status' => FALSE, 'message' => 'Detail LPB kosong.'];
+        }
+
+        $detailsById = [];
+        foreach ($details as $detail) {
+            $detailsById[(int) $detail['id_detail_lpb']] = $detail;
+        }
+
+        $normalizedSplits = [];
+        $usedInvoices = [];
+        foreach ($splits as $index => $split) {
+            if (!is_array($split)) {
+                return ['status' => FALSE, 'message' => 'Format split invoice tidak valid.'];
+            }
+
+            $noInvoice = trim((string) ($split['no_invoice'] ?? ''));
+            $tanggalInvoice = $this->_normalizeDate($split['tanggal_invoice'] ?? '');
+            if ($noInvoice === '' || $tanggalInvoice === null) {
+                return ['status' => FALSE, 'message' => 'No invoice dan tanggal invoice wajib diisi.'];
+            }
+
+            $invoiceKey = strtoupper($noInvoice);
+            if (isset($usedInvoices[$invoiceKey])) {
+                return ['status' => FALSE, 'message' => 'No invoice tidak boleh duplikat dalam satu split.'];
+            }
+            $usedInvoices[$invoiceKey] = TRUE;
+
+            $allocations = [];
+            $splitTotalQty = 0;
+            foreach (($split['details'] ?? []) as $allocation) {
+                if (!is_array($allocation)) {
+                    continue;
+                }
+
+                $idDetail = (int) ($allocation['id_detail_lpb'] ?? 0);
+                $qty = (float) ($allocation['qty_diterima'] ?? 0);
+                if ($idDetail <= 0 || !isset($detailsById[$idDetail])) {
+                    return ['status' => FALSE, 'message' => 'Detail LPB pada split tidak valid.'];
+                }
+                if ($qty < 0) {
+                    return ['status' => FALSE, 'message' => 'Qty split invoice tidak boleh minus.'];
+                }
+
+                $allocations[$idDetail] = $qty;
+                $splitTotalQty += $qty;
+            }
+
+            if ($splitTotalQty <= 0) {
+                return ['status' => FALSE, 'message' => 'Setiap invoice harus memiliki minimal satu qty barang.'];
+            }
+
+            $normalizedSplits[] = [
+                'no_invoice'       => $noInvoice,
+                'tanggal_invoice'  => $tanggalInvoice,
+                'allocations'      => $allocations,
+                'total_qty'        => $splitTotalQty
+            ];
+        }
+
+        foreach ($detailsById as $idDetail => $detail) {
+            $originalQty = (float) ($detail['qty_diterima'] ?? 0);
+            $allocatedQty = 0;
+            foreach ($normalizedSplits as $split) {
+                $allocatedQty += (float) ($split['allocations'][$idDetail] ?? 0);
+            }
+
+            if (abs($allocatedQty - $originalQty) > $tolerance) {
+                return [
+                    'status' => FALSE,
+                    'message' => 'Total qty split barang ' . ($detail['kd_barang'] ?? '') . ' harus sama dengan qty LPB awal.'
+                ];
+            }
+        }
+
+        $createdIds = [$idLpb];
+        $firstSplit = $normalizedSplits[0];
+        $this->db
+            ->where('id_lpb', $idLpb)
+            ->update('tb_lpb', [
+                'no_invoice'       => $firstSplit['no_invoice'],
+                'tanggal_invoice'  => $firstSplit['tanggal_invoice']
+            ]);
+
+        foreach ($detailsById as $idDetail => $detail) {
+            $qty = (float) ($firstSplit['allocations'][$idDetail] ?? 0);
+            if ($qty <= 0) {
+                if ($this->db->table_exists('tb_lpb_batch')) {
+                    $this->db->where('id_detail_lpb', $idDetail)->delete('tb_lpb_batch');
+                }
+                $this->db->where('id_detail_lpb', $idDetail)->delete('tb_lpb_detail');
+                continue;
+            }
+
+            $hargaSatuan = (float) ($detail['harga_satuan'] ?? 0);
+            $originalQty = (float) ($detail['qty_diterima'] ?? 0);
+            if ($hargaSatuan <= 0 && $originalQty > 0) {
+                $hargaSatuan = (float) ($detail['total_harga'] ?? 0) / $originalQty;
+            }
+            $updateDetail = [
+                'qty_diterima'       => $qty,
+                'total_harga'        => $qty * $hargaSatuan
+            ];
+            if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
+                $updateDetail['harga_verified_by'] = null;
+            }
+            if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
+                $updateDetail['harga_verified_at'] = null;
+            }
+
+            $this->db
+                ->where('id_detail_lpb', $idDetail)
+                ->update('tb_lpb_detail', $updateDetail);
+
+            $this->replace_lpb_detail_batch($idDetail, $detail, $qty);
+        }
+
+        $this->insert_lpb_activity_log([
+            'id_lpb'         => $idLpb,
+            'kd_po'          => $header['kd_po'] ?? '',
+            'no_invoice'     => $firstSplit['no_invoice'],
+            'action_type'    => 'SPLIT_LPB_MULTIPLE_INVOICE',
+            'status_before'  => $this->lpb_status_label($header['status_lpb'] ?? 1),
+            'status_after'   => $this->lpb_status_label($header['status_lpb'] ?? 1),
+            'data_before'    => [
+                'id_lpb' => $idLpb,
+                'no_invoice' => $header['no_invoice'] ?? '',
+                'details' => $details
+            ],
+            'data_after'     => [
+                'id_lpb' => $idLpb,
+                'no_invoice' => $firstSplit['no_invoice'],
+                'tanggal_invoice' => $firstSplit['tanggal_invoice'],
+                'total_qty' => $firstSplit['total_qty']
+            ],
+            'keterangan'     => 'LPB dipecah menjadi multiple invoice. Invoice pertama tetap pada LPB asal.',
+            'dilakukan_oleh' => $dilakukanOleh
+        ]);
+
+        for ($i = 1; $i < count($normalizedSplits); $i++) {
+            $split = $normalizedSplits[$i];
+            $newHeader = [
+                'kd_po'       => $header['kd_po'] ?? null,
+                'nosj'        => $header['nosj'] ?? '',
+                'tgl_sj'      => $this->_normalizeDate($header['tgl_sj'] ?? ''),
+                'no_po'       => $header['no_po'] ?? null,
+                'no_invoice'  => $split['no_invoice'],
+                'gudang_id'   => $header['gudang_id'] ?? null,
+                'keterangan'  => $header['keterangan'] ?? null,
+                'input_at'    => date('Y-m-d H:i:s')
+            ];
+
+            if ($this->db->field_exists('tanggal_invoice', 'tb_lpb')) {
+                $newHeader['tanggal_invoice'] = $split['tanggal_invoice'];
+            }
+            if ($this->db->field_exists('kode_faktur_pajak', 'tb_lpb')) {
+                $newHeader['kode_faktur_pajak'] = null;
+            }
+            if ($this->db->field_exists('tanggal_faktur_pajak', 'tb_lpb')) {
+                $newHeader['tanggal_faktur_pajak'] = null;
+            }
+            if ($this->db->field_exists('jenis_lpb', 'tb_lpb')) {
+                $newHeader['jenis_lpb'] = $header['jenis_lpb'] ?? null;
+            }
+            if ($this->db->field_exists('nomor_lpb', 'tb_lpb')) {
+                $newHeader['nomor_lpb'] = $header['nomor_lpb'] ?? null;
+            }
+            if ($this->db->field_exists('status_lpb', 'tb_lpb')) {
+                $newHeader['status_lpb'] = 0;
+            }
+
+            $this->db->insert('tb_lpb', $newHeader);
+            $newIdLpb = (int) $this->db->insert_id();
+            if ($newIdLpb <= 0) {
+                return ['status' => FALSE, 'message' => 'Header LPB hasil split gagal dibuat.'];
+            }
+
+            $createdIds[] = $newIdLpb;
+            foreach ($detailsById as $idDetail => $detail) {
+                $qty = (float) ($split['allocations'][$idDetail] ?? 0);
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $hargaSatuan = (float) ($detail['harga_satuan'] ?? 0);
+                $originalQty = (float) ($detail['qty_diterima'] ?? 0);
+                if ($hargaSatuan <= 0 && $originalQty > 0) {
+                    $hargaSatuan = (float) ($detail['total_harga'] ?? 0) / $originalQty;
+                }
+                $newDetail = [
+                    'id_lpb'          => $newIdLpb,
+                    'kd_barang'       => $detail['kd_barang'] ?? '',
+                    'qty_diterima'    => $qty,
+                    'no_lot'          => $detail['no_lot'] ?? '',
+                    'expired_date'    => $this->_normalizeDate($detail['expired_date'] ?? ''),
+                    'input_at'        => date('Y-m-d H:i:s')
+                ];
+
+                foreach (['harga_satuan_sebelumnya', 'total_harga_sebelumnya', 'harga_satuan'] as $field) {
+                    if ($this->db->field_exists($field, 'tb_lpb_detail')) {
+                        $newDetail[$field] = $detail[$field] ?? 0;
+                    }
+                }
+                if ($this->db->field_exists('total_harga', 'tb_lpb_detail')) {
+                    $newDetail['total_harga'] = $qty * $hargaSatuan;
+                }
+                if ($this->db->field_exists('harga_update_by', 'tb_lpb_detail')) {
+                    $newDetail['harga_update_by'] = $detail['harga_update_by'] ?? null;
+                }
+                if ($this->db->field_exists('harga_update_at', 'tb_lpb_detail')) {
+                    $newDetail['harga_update_at'] = $detail['harga_update_at'] ?? null;
+                }
+                if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
+                    $newDetail['harga_verified_by'] = null;
+                }
+                if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
+                    $newDetail['harga_verified_at'] = null;
+                }
+
+                $this->db->insert('tb_lpb_detail', $newDetail);
+                $newIdDetail = (int) $this->db->insert_id();
+                if ($newIdDetail <= 0) {
+                    return ['status' => FALSE, 'message' => 'Detail LPB hasil split gagal dibuat.'];
+                }
+
+                $this->replace_lpb_detail_batch($newIdDetail, $detail, $qty);
+            }
+
+            $this->insert_lpb_activity_log([
+                'id_lpb'         => $newIdLpb,
+                'kd_po'          => $newHeader['kd_po'] ?? '',
+                'no_invoice'     => $newHeader['no_invoice'] ?? '',
+                'action_type'    => 'CREATE_LPB_SPLIT_INVOICE',
+                'status_before'  => null,
+                'status_after'   => 'UNPOST',
+                'data_before'    => [
+                    'source_id_lpb' => $idLpb
+                ],
+                'data_after'     => [
+                    'id_lpb' => $newIdLpb,
+                    'nomor_lpb' => $newHeader['nomor_lpb'] ?? '',
+                    'no_invoice' => $newHeader['no_invoice'] ?? '',
+                    'tanggal_invoice' => $newHeader['tanggal_invoice'] ?? '',
+                    'total_qty' => $split['total_qty']
+                ],
+                'keterangan'     => 'LPB baru dibuat dari pecah multiple invoice LPB #' . $idLpb . '.',
+                'dilakukan_oleh' => $dilakukanOleh
+            ]);
+        }
+
+        return [
+            'status' => TRUE,
+            'id_lpb' => $createdIds
+        ];
+    }
+
+    private function replace_lpb_detail_batch($idDetailLpb, $detail, $qty)
+    {
+        if (!$this->db->table_exists('tb_lpb_batch')) {
+            return TRUE;
+        }
+
+        $this->db->where('id_detail_lpb', (int) $idDetailLpb)->delete('tb_lpb_batch');
+
+        return $this->db->insert('tb_lpb_batch', [
+            'id_detail_lpb' => (int) $idDetailLpb,
+            'no_lot'        => $detail['no_lot'] ?? '',
+            'expired_date'  => $this->_normalizeDate($detail['expired_date'] ?? ''),
+            'qty'           => (float) $qty
+        ]);
     }
 
     public function update_faktur_pajak_lpb($payload)
