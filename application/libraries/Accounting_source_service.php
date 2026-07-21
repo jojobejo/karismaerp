@@ -61,16 +61,17 @@ class Accounting_source_service
         $is_bkps = false;
         foreach ($items as $item) {
             $kelompok = (int)($item->kelompok_dagang ?? 0);
+            
+            // We now treat all items as normal items for SALES_INVOICE
+            $normal_amount += (float)$item->subtotal_after_disc;
+            $normal_cogs += (float)$item->qty * (float)$item->hrg_pokok;
+            if ((float)$item->pajak > $taxRate) {
+                $taxRate = (float)$item->pajak;
+            }
+
             if ($kelompok === 5) {
-                // Promotional item
+                // Keep promo_value for the legacy promo COGS journal if needed
                 $promo_value += (float)$item->qty * (float)$item->hrg_pokok;
-            } else {
-                // Normal item
-                $normal_amount += (float)$item->subtotal_after_disc;
-                $normal_cogs += (float)$item->qty * (float)$item->hrg_pokok;
-                if ((float)$item->pajak > $taxRate) {
-                    $taxRate = (float)$item->pajak;
-                }
             }
 
             if ($kelompok > 0) {
@@ -101,6 +102,16 @@ class Accounting_source_service
             [(int)$header->id_faktur]
         )->row()->count > 0;
 
+        $is_promosi = $this->CI->db->query(
+            "SELECT COUNT(*) AS count FROM tbso_faktur_detail WHERE id_faktur = ? AND kd_barang LIKE 'Z%'",
+            [(int)$header->id_faktur]
+        )->row()->count > 0;
+
+        $is_dagangan = $this->CI->db->query(
+            "SELECT COUNT(*) AS count FROM tbso_faktur_detail WHERE id_faktur = ? AND kd_barang LIKE 'A%'",
+            [(int)$header->id_faktur]
+        )->row()->count > 0;
+
         $invoice_data = null;
         if ($normal_amount > 0) {
             $amount = 0.0;
@@ -121,6 +132,8 @@ class Accounting_source_service
                 'cogs' => '0.0000',
                 'is_pajak' => $is_pajak,
                 'is_bkps' => $is_bkps,
+                'is_promosi' => $is_promosi,
+                'is_dagangan' => $is_dagangan,
             ], $userId);
             if (!$invoice['success']) {
                 return $invoice;
@@ -130,14 +143,20 @@ class Accounting_source_service
 
         $issue_data = null;
         if ($postGoodsIssue && $normal_cogs > 0) {
-            $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
-                'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
-                'amount' => '0.0000',
-                'tax' => '0.0000',
-                'cogs' => $normal_cogs,
-            ], $userId);
-            if ($issue['success']) {
-                $issue_data = $issue['data'];
+            // For Promosi (kelompok 5), it already has a manual journal at the end of this function.
+            // But wait! If we include it in normal_cogs, it will post a duplicate COGS journal!
+            // Let's exclude promo_value from normal_cogs for the standard GOODS_ISSUE
+            $standard_cogs = $normal_cogs - $promo_value;
+            if ($standard_cogs > 0) {
+                $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
+                    'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
+                    'amount' => '0.0000',
+                    'tax' => '0.0000',
+                    'cogs' => $standard_cogs,
+                ], $userId);
+                if ($issue['success']) {
+                    $issue_data = $issue['data'];
+                }
             }
         }
 

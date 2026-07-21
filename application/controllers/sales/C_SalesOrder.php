@@ -1566,10 +1566,13 @@ class C_SalesOrder extends CI_Controller
             $selected_items = $selected_items !== null && $selected_items !== '' ? [$selected_items] : [];
         }
         $selected_items = array_filter(array_map('intval', $selected_items));
-        $tax_mode = strtolower(trim($this->input->get('tax_mode', true) ?? 'non_pajak'));
-        if (!in_array($tax_mode, ['pajak', 'non_pajak'], true)) {
-            $tax_mode = 'non_pajak';
+
+        $kelompok_filter = strtolower(trim($this->input->get('kelompok_filter', true) ?? 'bkp'));
+        if (!in_array($kelompok_filter, ['promosi', 'dagangan', 'bkps', 'bkp'], true)) {
+            $kelompok_filter = 'bkp';
         }
+
+        $tax_mode = ($kelompok_filter === 'bkp') ? 'pajak' : 'non_pajak';
         $tax_rate = ($tax_mode === 'pajak') ? 11 : 0;
 
         // Filter hanya item yang sudah lolos verifikasi barang dan belum difakturkan.
@@ -1583,23 +1586,23 @@ class C_SalesOrder extends CI_Controller
             });
         }
 
-        $items_outstanding = array_filter($items_outstanding, function($d) use ($tax_mode) {
-            $is_pajak_item = strtoupper(substr(trim((string)($d['kd_barang'] ?? '')), 0, 1)) === 'Q';
-            return $tax_mode === 'pajak' ? $is_pajak_item : !$is_pajak_item;
-        });
+        $items_outstanding = array_filter($items_outstanding, function($d) use ($kelompok_filter) {
+            $kd_barang = trim((string)($d['kd_barang'] ?? ''));
+            $first_char = strtoupper(substr($kd_barang, 0, 1));
+            $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
+            $is_bkps = (strpos($desc, 'BKPS') !== false);
 
-        $kelompok_filter = strtolower(trim($this->input->get('kelompok_filter', true) ?? ''));
-        if ($kelompok_filter === 'bkps') {
-            $items_outstanding = array_filter($items_outstanding, function($d) {
-                $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
-                return strpos($desc, 'BKPS') !== false;
-            });
-        } elseif ($kelompok_filter === 'bkp') {
-            $items_outstanding = array_filter($items_outstanding, function($d) {
-                $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
-                return strpos($desc, 'BKPS') === false;
-            });
-        }
+            if ($kelompok_filter === 'promosi') {
+                return $first_char === 'Z';
+            } elseif ($kelompok_filter === 'dagangan') {
+                return $first_char === 'A';
+            } elseif ($kelompok_filter === 'bkps') {
+                return $first_char === 'Q' && $is_bkps;
+            } elseif ($kelompok_filter === 'bkp') {
+                return $first_char === 'Q' && !$is_bkps;
+            }
+            return false;
+        });
 
         if (empty($items_outstanding)) {
             $message = !empty($selected_items)
@@ -1658,6 +1661,43 @@ class C_SalesOrder extends CI_Controller
             $this->session->set_flashdata('error', 'Minimal 1 item harus dimasukkan ke faktur.');
             redirect('sales_order/admin_sc/form_faktur/' . $id_so);
             return;
+        }
+
+        $details = $this->M_SalesOrder->get_so_detail($id_so);
+        $details_map = [];
+        foreach ($details as $d) {
+            $details_map[(int)$d['id_so_detail']] = $d;
+        }
+
+        $first_category = null;
+        foreach ($faktur_items as $item) {
+            $so_det = $details_map[(int)$item['id_so_detail']] ?? null;
+            if (!$so_det) {
+                $this->session->set_flashdata('error', 'Item tidak valid.');
+                redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+                return;
+            }
+            $kd = trim((string)($so_det['kd_barang'] ?? ''));
+            $c = strtoupper(substr($kd, 0, 1));
+            $desc = strtoupper(trim((string)($so_det['kelompok_dagang_deskripsi'] ?? '')));
+            $is_bkps = (strpos($desc, 'BKPS') !== false);
+            
+            $cat = 'other';
+            if ($c === 'Z') {
+                $cat = 'promosi';
+            } elseif ($c === 'A') {
+                $cat = 'dagangan';
+            } elseif ($c === 'Q') {
+                $cat = $is_bkps ? 'bkps' : 'bkp';
+            }
+            
+            if ($first_category === null) {
+                $first_category = $cat;
+            } elseif ($first_category !== $cat) {
+                $this->session->set_flashdata('error', 'Tidak boleh menggabungkan barang dengan kategori yang berbeda dalam satu faktur.');
+                redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+                return;
+            }
         }
 
         // Validasi stok untuk qty yang akan difakturkan

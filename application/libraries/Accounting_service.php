@@ -1532,8 +1532,16 @@ class Accounting_service
             || (isset($payload['tax_mode']) && $payload['tax_mode'] === 'pajak')
             || (isset($payload['tax']) && (float)$payload['tax'] > 0);
 
+        if ($role === 'ACCOUNT_RECEIVABLE' && isset($payload['posting_event']) && $payload['posting_event'] === 'SALES_INVOICE') {
+            return 461; // 13099 Piutang Usaha
+        }
+
         if ($role === 'SALES_REVENUE') {
-            if (!empty($payload['is_bkps'])) {
+            if (!empty($payload['is_promosi'])) {
+                return 466; // 41036 A Penjualan Barang Promosi
+            } elseif (!empty($payload['is_dagangan'])) {
+                return 314; // 41032 A Penjualan Barang Dagangan
+            } elseif (!empty($payload['is_bkps'])) {
                 return 308; // Q Penjualan BKPS (410-12)
             } else {
                 return 307; // Q Penjualan BKP (410-11)
