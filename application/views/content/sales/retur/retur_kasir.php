@@ -130,6 +130,11 @@
                             <div class="alert alert-info py-2">
                                 <i class="fas fa-info-circle mr-1"></i>
                                 <strong>Dokumentasi Kasir:</strong> Surat Retur Penjualan ini telah disetujui sepenuhnya oleh Direktur Utama dan diproses oleh Collection. Klik tombol di bawah untuk menandai bahwa fisik surat retur telah diterima oleh Kasir untuk diarsipkan.
+                                <?php if (($retur['tipe_retur'] ?? 'biasa') === 'biasa'): ?>
+                                    Saldo customer dari retur ini akan masuk ke akun <strong>210-17 Q Hutang Non Dagang (Retur Penjualan yg blm dipot)</strong> dan jurnal otomatis akan dibuat.
+                                <?php else: ?>
+                                    Karena tipe retur adalah <strong><?= strtoupper($retur['tipe_retur']) ?></strong>, maka tidak ada jurnal otomatis yang dibuat.
+                                <?php endif; ?>
                             </div>
                             <div class="form-group mb-2">
                                 <label class="font-weight-bold">Total Nilai Retur yang Dicatat</label>

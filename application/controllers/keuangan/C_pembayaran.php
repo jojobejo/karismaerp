@@ -109,12 +109,12 @@ class C_pembayaran extends CI_Controller
             'Q Mandiri 8989', 'Q BRI 2567', 'Q BNI 0080', 'Q BRI 5534', 'Q CIMB Niaga', 'Q BRI 004575-56-6',
             'Q BRI 555888-56-9', 'A BRI 8568', 'A CIMB 9100'
         ];
-        if ($metode_pembayaran !== 'retur' && !in_array($metode_pembayaran, $allowed_accounts, true)) {
+        if ($metode_pembayaran !== 'Q Hutang Non Dagang' && !in_array($metode_pembayaran, $allowed_accounts, true)) {
             $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
-        if ($metode_pembayaran === 'retur') {
+        if ($metode_pembayaran === 'Q Hutang Non Dagang') {
             $saldo_retur = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
             if ($jumlah_pembayaran > $saldo_retur) {
                 $this->session->set_flashdata('error', 'Jumlah pembayaran retur (' . number_format($jumlah_pembayaran, 0, ',', '.') . ') melebihi saldo retur customer (' . number_format($saldo_retur, 0, ',', '.') . ').');

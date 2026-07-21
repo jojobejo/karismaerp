@@ -26,7 +26,7 @@ if (!empty($db_accounts)) {
         $metode_options[$name] = $name;
     }
 }
-$metode_options['retur'] = 'Saldo Retur';
+$metode_options['Q Hutang Non Dagang'] = 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)';
 
 $default_metode = '';
 ?>
@@ -258,7 +258,7 @@ $default_metode = '';
                                                  <?php foreach ($metode_options as $value => $label): ?>
                                                      <?php
                                                      $disabled_attr = '';
-                                                     if ($value === 'retur' && (float)$saldo_retur <= 0) {
+                                                     if ($value === 'Q Hutang Non Dagang' && (float)$saldo_retur <= 0) {
                                                          $disabled_attr = 'disabled';
                                                          $label .= ' (Tidak ada saldo)';
                                                      }
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Toggle Retur Group
         if (returGroup) {
-            var isRetur = val === 'retur';
+            var isRetur = val === 'Q Hutang Non Dagang';
             returGroup.style.display = isRetur ? '' : 'none';
             
             if (isRetur && jumlahInput) {
@@ -525,8 +525,8 @@ document.addEventListener('DOMContentLoaded', function() {
             debitAkun = val;
             if (val.toLowerCase() === 'q kas' || val.toLowerCase() === 'a kas') {
                 refPrefix = 'KM';
-            } else if (val.toLowerCase() === 'retur') {
-                debitAkun = 'Saldo Retur';
+            } else if (val === 'Q Hutang Non Dagang') {
+                debitAkun = 'Q Hutang Non Dagang';
             } else if (val.toLowerCase() === 'bg') {
                 debitAkun = 'BG / Cek';
             }
