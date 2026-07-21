@@ -47,6 +47,114 @@ class M_Stock extends CI_Model
         END";
     }
 
+    private function _splitBoxPcs($qty, $isi)
+    {
+        $qty = (float)$qty;
+        $isi = max(1, (int)$isi);
+
+        return [
+            'qty_box' => (int)floor($qty / $isi),
+            'qty_pcs' => (int)fmod($qty, $isi),
+        ];
+    }
+
+    private function _ledgerSnapshotSql($whereSql = '')
+    {
+        $physicalExpr = $this->_physicalQtyExpr('l');
+        $reservedExpr = $this->_reservedQtyExpr('l');
+
+        return "
+            SELECT
+                l.kd_barang,
+                l.gudang_id,
+                l.no_lot,
+                l.expired_date,
+                SUM({$physicalExpr}) AS ledger_qty_on_hand,
+                SUM({$reservedExpr}) AS ledger_qty_reserved,
+                MAX(l.id) AS last_ledger_id,
+                MAX(l.created_at) AS last_ledger_at
+            FROM tberp_stock_ledger l
+            {$whereSql}
+            GROUP BY l.kd_barang, l.gudang_id, l.no_lot, l.expired_date
+        ";
+    }
+
+    private function _ledgerSnapshotFilterSql($filters, &$params)
+    {
+        $where = [];
+
+        if (!empty($filters['kd_barang'])) {
+            $where[] = 'l.kd_barang = ?';
+            $params[] = $filters['kd_barang'];
+        }
+
+        if (!empty($filters['gudang_id'])) {
+            $where[] = 'l.gudang_id = ?';
+            $params[] = $filters['gudang_id'];
+        }
+
+        return $where ? 'WHERE ' . implode(' AND ', $where) : '';
+    }
+
+    private function _ledgerItemSql($filters, &$params, $forCount = false)
+    {
+        $snapshotParams = [];
+        $snapshotSql = $this->_ledgerSnapshotSql($this->_ledgerSnapshotFilterSql($filters, $snapshotParams));
+        $params = array_merge($params, $snapshotParams);
+        $isiExpr = $this->_isiExpr();
+
+        $where = ["(b.is_active = 'T' OR b.is_active IS NULL)"];
+        if (!empty($filters['search'])) {
+            $where[] = '(s.kd_barang LIKE ? OR b.nama_barang LIKE ?)';
+            $params[] = '%' . $filters['search'] . '%';
+            $params[] = '%' . $filters['search'] . '%';
+        }
+        $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        $select = $forCount ? 'COUNT(*) AS total' : "
+            x.kd_barang,
+            x.nama_barang,
+            x.satuan,
+            x.isi_per_box,
+            x.stock_minimum,
+            x.total_batch,
+            x.qty,
+            x.qty_reserved,
+            (x.qty - GREATEST(x.qty_reserved, 0)) AS qty_available,
+            x.nearest_expired_date,
+            x.last_ledger_at
+        ";
+
+        return "
+            SELECT {$select}
+            FROM (
+                SELECT
+                    s.kd_barang,
+                    COALESCE(b.nama_barang, s.kd_barang) AS nama_barang,
+                    b.satuan,
+                    {$isiExpr} AS isi_per_box,
+                    COALESCE(b.stock_minimum, 0) AS stock_minimum,
+                    COUNT(*) AS total_batch,
+                    COALESCE(SUM(s.ledger_qty_on_hand), 0) AS qty,
+                    COALESCE(SUM(s.ledger_qty_reserved), 0) AS qty_reserved,
+                    MIN(CASE WHEN s.ledger_qty_on_hand > 0 THEN NULLIF(s.expired_date, '0000-00-00') ELSE NULL END) AS nearest_expired_date,
+                    MAX(s.last_ledger_at) AS last_ledger_at
+                FROM ({$snapshotSql}) s
+                LEFT JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+                {$whereSql}
+                GROUP BY
+                    s.kd_barang,
+                    b.nama_barang,
+                    b.satuan,
+                    b.isi,
+                    b.panjang,
+                    b.lebar,
+                    b.tinggi,
+                    b.stock_minimum
+            ) x
+        ";
+    }
+
     private function _applyFilters($filters, $batchAlias = 'sb', $barangAlias = 'b')
     {
         if (!empty($filters['kd_barang'])) {
@@ -107,21 +215,34 @@ class M_Stock extends CI_Model
 
     public function get_summary($filters = [])
     {
-        $this->db->select("
-            COUNT(DISTINCT sb.kd_barang) AS total_sku,
-            COUNT(sb.id) AS total_batch,
-            COALESCE(SUM(sb.qty_on_hand), 0) AS qty_on_hand,
-            COALESCE(SUM(sb.qty_reserved), 0) AS qty_reserved,
-            COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_available,
-            SUM(CASE WHEN sb.qty_on_hand < 0 THEN 1 ELSE 0 END) AS negative_batch,
-            SUM(CASE WHEN sb.expired_date IS NOT NULL AND sb.expired_date < CURDATE() AND sb.qty_on_hand > 0 THEN 1 ELSE 0 END) AS expired_batch,
-            SUM(CASE WHEN sb.expired_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND sb.qty_on_hand > 0 THEN 1 ELSE 0 END) AS near_expired_batch,
-            SUM(CASE WHEN b.stock_minimum > 0 AND sb.qty_on_hand <= b.stock_minimum THEN 1 ELSE 0 END) AS low_stock_row
-        ", false);
-        $this->db->from('tberp_stock_batch sb');
-        $this->db->join('tbpo_barang b', 'b.kode_barang = sb.kd_barang', 'left');
-        $this->_applyFilters($filters);
-        $row = $this->db->get()->row_array();
+        $params = [];
+        $snapshotSql = $this->_ledgerSnapshotSql($this->_ledgerSnapshotFilterSql($filters, $params));
+
+        $where = ["(b.is_active = 'T' OR b.is_active IS NULL)"];
+        if (!empty($filters['search'])) {
+            $where[] = '(s.kd_barang LIKE ? OR b.nama_barang LIKE ?)';
+            $params[] = '%' . $filters['search'] . '%';
+            $params[] = '%' . $filters['search'] . '%';
+        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+        $sql = "
+            SELECT
+                COUNT(DISTINCT s.kd_barang) AS total_sku,
+                COUNT(*) AS total_batch,
+                COALESCE(SUM(s.ledger_qty_on_hand), 0) AS qty_on_hand,
+                COALESCE(SUM(s.ledger_qty_reserved), 0) AS qty_reserved,
+                COALESCE(SUM(s.ledger_qty_on_hand - GREATEST(s.ledger_qty_reserved, 0)), 0) AS qty_available,
+                SUM(CASE WHEN s.ledger_qty_on_hand < 0 THEN 1 ELSE 0 END) AS negative_batch,
+                SUM(CASE WHEN s.expired_date IS NOT NULL AND s.expired_date < CURDATE() AND s.ledger_qty_on_hand > 0 THEN 1 ELSE 0 END) AS expired_batch,
+                SUM(CASE WHEN s.expired_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND s.ledger_qty_on_hand > 0 THEN 1 ELSE 0 END) AS near_expired_batch,
+                SUM(CASE WHEN COALESCE(b.stock_minimum, 0) > 0 AND s.ledger_qty_on_hand <= b.stock_minimum THEN 1 ELSE 0 END) AS low_stock_row
+            FROM ({$snapshotSql}) s
+            LEFT JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+            {$whereSql}
+        ";
+
+        $row = $this->db->query($sql, $params)->row_array();
 
         return [
             'total_sku' => (int)($row['total_sku'] ?? 0),
@@ -138,26 +259,52 @@ class M_Stock extends CI_Model
 
     public function get_gudang_summary($filters = [])
     {
-        $this->db->select("
-            sb.gudang_id,
-            COALESCE(g.nama_gudang, CONCAT('Gudang ', sb.gudang_id)) AS nama_gudang,
-            COALESCE(g.tipe, '-') AS tipe_gudang,
-            COUNT(DISTINCT sb.kd_barang) AS total_sku,
-            COUNT(sb.id) AS total_batch,
-            COALESCE(SUM(sb.qty_on_hand), 0) AS qty_on_hand,
-            COALESCE(SUM(sb.qty_reserved), 0) AS qty_reserved,
-            COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS qty_available,
-            SUM(CASE WHEN sb.qty_on_hand < 0 THEN 1 ELSE 0 END) AS negative_batch,
-            SUM(CASE WHEN sb.expired_date IS NOT NULL AND sb.expired_date < CURDATE() AND sb.qty_on_hand > 0 THEN 1 ELSE 0 END) AS expired_batch,
-            SUM(CASE WHEN sb.expired_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND sb.qty_on_hand > 0 THEN 1 ELSE 0 END) AS near_expired_batch
-        ", false);
-        $this->db->from('tberp_stock_batch sb');
-        $this->db->join('tbpo_barang b', 'b.kode_barang = sb.kd_barang', 'left');
-        $this->db->join('tb_gudang g', 'g.id_gudang = sb.gudang_id', 'left');
-        $this->_applyFilters($filters);
-        $this->db->group_by(['sb.gudang_id', 'g.nama_gudang', 'g.tipe']);
-        $this->db->order_by('g.id_gudang', 'ASC');
-        $rows = $this->db->get()->result_array();
+        $params = [];
+        $snapshotSql = $this->_ledgerSnapshotSql($this->_ledgerSnapshotFilterSql($filters, $params));
+
+        $where = ["(b.is_active = 'T' OR b.is_active IS NULL)"];
+        if (!empty($filters['search'])) {
+            $where[] = '(s.kd_barang LIKE ? OR b.nama_barang LIKE ?)';
+            $params[] = '%' . $filters['search'] . '%';
+            $params[] = '%' . $filters['search'] . '%';
+        }
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+        $sql = "
+            SELECT
+                g.id_gudang AS gudang_id,
+                g.nama_gudang,
+                g.tipe AS tipe_gudang,
+                COALESCE(x.total_sku, 0) AS total_sku,
+                COALESCE(x.total_batch, 0) AS total_batch,
+                COALESCE(x.qty_on_hand, 0) AS qty_on_hand,
+                COALESCE(x.qty_reserved, 0) AS qty_reserved,
+                COALESCE(x.qty_available, 0) AS qty_available,
+                COALESCE(x.negative_batch, 0) AS negative_batch,
+                COALESCE(x.expired_batch, 0) AS expired_batch,
+                COALESCE(x.near_expired_batch, 0) AS near_expired_batch
+            FROM tb_gudang g
+            LEFT JOIN (
+                SELECT
+                    s.gudang_id,
+                    COUNT(DISTINCT s.kd_barang) AS total_sku,
+                    COUNT(*) AS total_batch,
+                    SUM(s.ledger_qty_on_hand) AS qty_on_hand,
+                    SUM(s.ledger_qty_reserved) AS qty_reserved,
+                    SUM(s.ledger_qty_on_hand - GREATEST(s.ledger_qty_reserved, 0)) AS qty_available,
+                    SUM(CASE WHEN s.ledger_qty_on_hand < 0 THEN 1 ELSE 0 END) AS negative_batch,
+                    SUM(CASE WHEN s.expired_date IS NOT NULL AND s.expired_date < CURDATE() AND s.ledger_qty_on_hand > 0 THEN 1 ELSE 0 END) AS expired_batch,
+                    SUM(CASE WHEN s.expired_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 90 DAY) AND s.ledger_qty_on_hand > 0 THEN 1 ELSE 0 END) AS near_expired_batch
+                FROM ({$snapshotSql}) s
+                LEFT JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+                {$whereSql}
+                GROUP BY s.gudang_id
+            ) x ON x.gudang_id = g.id_gudang
+            WHERE COALESCE(g.is_active, 1) = 1
+            ORDER BY g.id_gudang ASC
+        ";
+
+        $rows = $this->db->query($sql, $params)->result_array();
 
         foreach ($rows as &$row) {
             $row['total_sku'] = (int)($row['total_sku'] ?? 0);
@@ -248,48 +395,185 @@ class M_Stock extends CI_Model
 
     public function get_item_rows($filters = [])
     {
-        $isiExpr = $this->_isiExpr();
-        $this->db->select("
-            sb.kd_barang,
-            b.nama_barang,
-            b.satuan,
-            {$isiExpr} AS isi_per_box,
-            b.stock_minimum,
-            COUNT(sb.id) AS total_batch,
-            COALESCE(SUM(sb.qty_on_hand), 0) AS qty_on_hand,
-            COALESCE(SUM(sb.qty_reserved), 0) AS qty_reserved,
-            COALESCE(SUM(sb.qty_on_hand - COALESCE(sb.qty_reserved, 0)), 0) AS available_stock,
-            MIN(NULLIF(sb.expired_date, '0000-00-00')) AS nearest_expired_date,
-            MAX(sb.update_at) AS last_sync_at
-        ", false);
-        $this->db->from('tberp_stock_batch sb');
-        $this->db->join('tbpo_barang b', 'b.kode_barang = sb.kd_barang', 'left');
-        $this->_applyFilters($filters);
-        $this->db->group_by([
-            'sb.kd_barang',
-            'b.nama_barang',
-            'b.satuan',
-            'b.isi',
-            'b.panjang',
-            'b.lebar',
-            'b.tinggi',
-            'b.stock_minimum',
-        ]);
-        $this->db->order_by('b.nama_barang', 'ASC');
-        $rows = $this->db->get()->result_array();
+        $page = max(1, (int)($filters['page'] ?? 1));
+        $perPage = (int)($filters['per_page'] ?? 15);
+        $perPage = $perPage > 0 ? min($perPage, 100) : 15;
+        $offset = ($page - 1) * $perPage;
 
+        $countParams = [];
+        $countSql = $this->_ledgerItemSql($filters, $countParams, true);
+        $countRow = $this->db->query($countSql, $countParams)->row_array();
+        $totalRows = (int)($countRow['total'] ?? 0);
+
+        $params = [];
+        $sql = $this->_ledgerItemSql($filters, $params, false);
+        $sql .= " ORDER BY x.nama_barang ASC, x.kd_barang ASC LIMIT ?, ?";
+        $params[] = $offset;
+        $params[] = $perPage;
+
+        $rows = $this->db->query($sql, $params)->result_array();
         foreach ($rows as &$row) {
             $isi = max(1, (int)($row['isi_per_box'] ?? 1));
-            $available = (float)$row['available_stock'];
-            $row['qty_on_hand'] = $this->_jsonNumber($row['qty_on_hand']);
-            $row['qty_reserved'] = $this->_jsonNumber($row['qty_reserved']);
-            $row['available_stock'] = $this->_jsonNumber($available);
-            $row['available_box'] = (int)floor($available / $isi);
-            $row['available_ecer'] = (int)fmod($available, $isi);
+            $qty = (float)($row['qty'] ?? 0);
+            $split = $this->_splitBoxPcs($qty, $isi);
+            $row['qty'] = $this->_jsonNumber($qty);
+            $row['qty_on_hand'] = $row['qty'];
+            $row['qty_reserved'] = $this->_jsonNumber($row['qty_reserved'] ?? 0);
+            $row['available_stock'] = $this->_jsonNumber($row['qty_available'] ?? 0);
+            $row['available_box'] = $split['qty_box'];
+            $row['available_ecer'] = $split['qty_pcs'];
+            $row['qty_box'] = $split['qty_box'];
+            $row['qty_pcs'] = $split['qty_pcs'];
+        }
+        unset($row);
+
+        return [
+            'rows' => $rows,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_rows' => $totalRows,
+                'total_pages' => $perPage > 0 ? (int)ceil($totalRows / $perPage) : 1,
+            ],
+        ];
+    }
+
+    public function get_stock_item_detail($kdBarang, $gudangId = '')
+    {
+        $filters = ['kd_barang' => $kdBarang, 'per_page' => 1, 'page' => 1];
+        if ($gudangId !== '') {
+            $filters['gudang_id'] = $gudangId;
+        }
+
+        $itemResult = $this->get_item_rows($filters);
+        $item = $itemResult['rows'][0] ?? null;
+
+        $history = $this->get_ledger_rows([
+            'kd_barang' => $kdBarang,
+            'gudang_id' => $gudangId,
+            'limit' => 200,
+        ]);
+
+        return [
+            'item' => $item,
+            'gudang_id' => $gudangId,
+            'per_gudang' => $this->get_gudang_summary(['kd_barang' => $kdBarang]),
+            'lot_rows' => $this->get_stock_lot_rows($kdBarang, $gudangId),
+            'movement_summary' => $this->get_stock_movement_summary($kdBarang, $gudangId),
+            'ledger_history' => $history,
+            'adjustment_rows' => $this->get_ledger_rows([
+                'kd_barang' => $kdBarang,
+                'gudang_id' => $gudangId,
+                'tipe' => 'ADJIN',
+                'limit' => 100,
+            ]),
+            'adjustment_out_rows' => $this->get_ledger_rows([
+                'kd_barang' => $kdBarang,
+                'gudang_id' => $gudangId,
+                'tipe' => 'ADJOUT',
+                'limit' => 100,
+            ]),
+            'reservation_rows' => $this->get_stock_reservation_rows($kdBarang, $gudangId),
+            'reconciliation_rows' => $this->get_reconciliation([
+                'kd_barang' => $kdBarang,
+                'gudang_id' => $gudangId,
+                'limit' => 100,
+            ]),
+        ];
+    }
+
+    public function get_stock_lot_rows($kdBarang, $gudangId = '')
+    {
+        $params = [];
+        $filters = ['kd_barang' => $kdBarang];
+        if ($gudangId !== '') $filters['gudang_id'] = $gudangId;
+        $snapshotSql = $this->_ledgerSnapshotSql($this->_ledgerSnapshotFilterSql($filters, $params));
+        $isiExpr = $this->_isiExpr();
+
+        $sql = "
+            SELECT
+                s.kd_barang,
+                COALESCE(g.nama_gudang, CONCAT('Gudang ', s.gudang_id)) AS nama_gudang,
+                s.gudang_id,
+                s.no_lot,
+                s.expired_date,
+                {$isiExpr} AS isi_per_box,
+                s.ledger_qty_on_hand AS qty,
+                s.ledger_qty_reserved AS qty_reserved,
+                s.last_ledger_at
+            FROM ({$snapshotSql}) s
+            LEFT JOIN tbpo_barang b ON b.kode_barang = s.kd_barang
+            LEFT JOIN tb_gudang g ON g.id_gudang = s.gudang_id
+            ORDER BY g.id_gudang ASC, s.expired_date ASC, s.no_lot ASC
+        ";
+
+        $rows = $this->db->query($sql, $params)->result_array();
+        foreach ($rows as &$row) {
+            $split = $this->_splitBoxPcs($row['qty'] ?? 0, $row['isi_per_box'] ?? 1);
+            $row['qty'] = $this->_jsonNumber($row['qty'] ?? 0);
+            $row['qty_reserved'] = $this->_jsonNumber($row['qty_reserved'] ?? 0);
+            $row['qty_box'] = $split['qty_box'];
+            $row['qty_pcs'] = $split['qty_pcs'];
         }
         unset($row);
 
         return $rows;
+    }
+
+    public function get_stock_movement_summary($kdBarang, $gudangId = '')
+    {
+        $physicalExpr = $this->_physicalQtyExpr('l');
+        $reservedExpr = $this->_reservedQtyExpr('l');
+        $params = [$kdBarang];
+        $where = 'WHERE l.kd_barang = ?';
+        if ($gudangId !== '') {
+            $where .= ' AND l.gudang_id = ?';
+            $params[] = $gudangId;
+        }
+
+        $sql = "
+            SELECT
+                l.tipe,
+                COUNT(*) AS total_transaksi,
+                COALESCE(SUM(l.qty), 0) AS total_qty,
+                COALESCE(SUM({$physicalExpr}), 0) AS signed_physical_qty,
+                COALESCE(SUM({$reservedExpr}), 0) AS signed_reserved_qty,
+                MAX(l.created_at) AS last_at
+            FROM tberp_stock_ledger l
+            {$where}
+            GROUP BY l.tipe
+            ORDER BY FIELD(l.tipe, 'SALDO_AWAL','IN','OUT','RESERVE','RELEASE','ADJIN','ADJOUT','RJUAL','RBELI','MUTASI'), l.tipe
+        ";
+
+        $rows = $this->db->query($sql, $params)->result_array();
+        foreach ($rows as &$row) {
+            $row['total_transaksi'] = (int)($row['total_transaksi'] ?? 0);
+            $row['total_qty'] = $this->_jsonNumber($row['total_qty'] ?? 0);
+            $row['signed_physical_qty'] = $this->_jsonNumber($row['signed_physical_qty'] ?? 0);
+            $row['signed_reserved_qty'] = $this->_jsonNumber($row['signed_reserved_qty'] ?? 0);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    public function get_stock_reservation_rows($kdBarang, $gudangId = '')
+    {
+        $rows = [];
+        foreach (['RESERVE', 'RELEASE'] as $tipe) {
+            $rows = array_merge($rows, $this->get_ledger_rows([
+                'kd_barang' => $kdBarang,
+                'gudang_id' => $gudangId,
+                'tipe' => $tipe,
+                'limit' => 100,
+            ]));
+        }
+
+        usort($rows, function($a, $b) {
+            return strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? ''));
+        });
+
+        return array_slice($rows, 0, 100);
     }
 
     public function get_ledger_rows($filters = [])
@@ -333,27 +617,6 @@ class M_Stock extends CI_Model
         unset($row);
 
         return $rows;
-    }
-
-    private function _ledgerSnapshotSql($whereSql = '')
-    {
-        $physicalExpr = $this->_physicalQtyExpr('l');
-        $reservedExpr = $this->_reservedQtyExpr('l');
-
-        return "
-            SELECT
-                l.kd_barang,
-                l.gudang_id,
-                l.no_lot,
-                l.expired_date,
-                SUM({$physicalExpr}) AS ledger_qty_on_hand,
-                SUM({$reservedExpr}) AS ledger_qty_reserved,
-                MAX(l.id) AS last_ledger_id,
-                MAX(l.created_at) AS last_ledger_at
-            FROM tberp_stock_ledger l
-            {$whereSql}
-            GROUP BY l.kd_barang, l.gudang_id, l.no_lot, l.expired_date
-        ";
     }
 
     public function get_reconciliation($filters = [])

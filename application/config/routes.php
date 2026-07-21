@@ -271,6 +271,8 @@ $route['gudang/(:any)/suplier/(:any)']              = 'keuangan/C_Keuangan/stock
 
 // STOCK ONLINE GUDANG
 $route['stock']                                     = 'stock/C_Stock/index';
+$route['stock/detail']                              = 'stock/C_Stock/detail';
+$route['stock/detail/(:any)']                       = 'stock/C_Stock/detail/$1';
 $route['stock/summary']                             = 'stock/C_Stock/summary';
 $route['stock/gudangs']                             = 'stock/C_Stock/gudangs';
 $route['stock/available']                           = 'stock/C_Stock/available';
