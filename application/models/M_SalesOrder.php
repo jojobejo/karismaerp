@@ -1111,6 +1111,7 @@ class M_SalesOrder extends CI_Model
             'total_kubikasi'    => $header['total_kubikasi'],
             'status'            => 'draft',
             'catatan'           => $header['catatan'] ?? null,
+            'cara_pembayaran'   => $header['cara_pembayaran'] ?? 'cash',
             'create_by'         => $header['create_by'],
             'create_at'         => date('Y-m-d H:i:s'),
         ];
@@ -1239,6 +1240,7 @@ class M_SalesOrder extends CI_Model
             'total_tonase'      => $header['total_tonase'],
             'total_kubikasi'    => $header['total_kubikasi'],
             'catatan'           => $header['catatan'] ?? null,
+            'cara_pembayaran'   => $header['cara_pembayaran'] ?? 'cash',
             'update_by'         => $header['update_by'],
             'update_at'         => date('Y-m-d H:i:s'),
         ];

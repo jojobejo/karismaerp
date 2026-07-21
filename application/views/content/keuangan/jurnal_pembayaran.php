@@ -58,9 +58,8 @@ $schemaReady = !empty($schema_ready);
                                     <tr>
                                         <th>Referensi</th>
                                         <th>Tanggal</th>
-                                        <th>No Faktur</th>
-                                        <th>Penginput</th>
-                                        <th>Kurs</th>
+                                        <th>Pelanggan</th>
+                                        <th>Keterangan</th>
                                         <th class="text-right">Nilai</th>
                                     </tr>
                                 </thead>
@@ -187,9 +186,8 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<tr data-id="' + parseInt(row.id_jurnal, 10) + '">' +
                 '<td>' + escapeHtml(row.nomor_jurnal || '-') + '</td>' +
                 '<td>' + escapeHtml(formatDate(row.tanggal_transaksi)) + '</td>' +
-                '<td>' + escapeHtml(row.no_so || '-') + '</td>' +
                 '<td>' + escapeHtml(row.pelanggan || '-') + '</td>' +
-                '<td>IDR</td>' +
+                '<td>' + escapeHtml(row.keterangan || '-') + '</td>' +
                 '<td class="money-cell">' + escapeHtml(formatMoney(row.nilai)) + '</td>' +
                 '</tr>';
         });

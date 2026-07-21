@@ -37,7 +37,7 @@ class Accounting_source_service
         }
 
         $items = $this->CI->db->query(
-            "SELECT d.*, b.kelompok_dagang
+            "SELECT d.*, b.kelompok_dagang, b.kode_akun_penjualan, b.kode_akun_harga_pokok, b.kode_akun_persediaan
              FROM tbso_faktur_detail d
              LEFT JOIN tbpo_barang b ON d.kd_barang = b.kode_barang
              WHERE d.id_faktur = ? AND d.no_faktur = ?",
@@ -53,25 +53,68 @@ class Accounting_source_service
             ], 'Detail atau nilai faktur final belum valid.', ['SOURCE_AMOUNT_INVALID']);
         }
 
+        $kodes = [];
+        foreach ($items as $item) {
+            if (!empty($item->kode_akun_penjualan)) $kodes[] = $item->kode_akun_penjualan;
+            if (!empty($item->kode_akun_harga_pokok)) $kodes[] = $item->kode_akun_harga_pokok;
+            if (!empty($item->kode_akun_persediaan)) $kodes[] = $item->kode_akun_persediaan;
+        }
+        $akunMap = [];
+        if (!empty($kodes)) {
+            $akuns = $this->CI->db->where_in('kode_akun', array_unique($kodes))->get('tbkeu_akun')->result();
+            foreach ($akuns as $a) {
+                $akunMap[$a->kode_akun] = $a->id_akun;
+            }
+        }
+
         $normal_amount = 0.0;
         $normal_cogs = 0.0;
         $promo_value = 0.0;
         $taxRate = 0.0;
 
         $is_bkps = false;
+        $groupRev = [];
+        $groupCogs = [];
+        $groupInv = [];
+        $groupPromoCogs = [];
+        $groupPromoInv = [];
+
         foreach ($items as $item) {
             $kelompok = (int)($item->kelompok_dagang ?? 0);
             
-            // We now treat all items as normal items for SALES_INVOICE
-            $normal_amount += (float)$item->subtotal_after_disc;
-            $normal_cogs += (float)$item->qty * (float)$item->hrg_pokok;
+            $subtotal = (float)$item->subtotal_after_disc;
+            $cogs = (float)$item->qty * (float)$item->hrg_pokok;
+            
+            $normal_amount += $subtotal;
+            $normal_cogs += $cogs;
             if ((float)$item->pajak > $taxRate) {
                 $taxRate = (float)$item->pajak;
             }
 
             if ($kelompok === 5) {
-                // Keep promo_value for the legacy promo COGS journal if needed
-                $promo_value += (float)$item->qty * (float)$item->hrg_pokok;
+                $promo_value += $cogs;
+                
+                $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
+                if (!isset($groupPromoCogs[$id_cogs])) $groupPromoCogs[$id_cogs] = 0.0;
+                $groupPromoCogs[$id_cogs] += $cogs;
+                
+                $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
+                if (!isset($groupPromoInv[$id_inv])) $groupPromoInv[$id_inv] = 0.0;
+                $groupPromoInv[$id_inv] += $cogs;
+            }
+
+            $id_rev = isset($akunMap[$item->kode_akun_penjualan]) ? $akunMap[$item->kode_akun_penjualan] : 0;
+            if (!isset($groupRev[$id_rev])) $groupRev[$id_rev] = 0.0;
+            $groupRev[$id_rev] += $subtotal;
+
+            if ($kelompok !== 5) {
+                $id_cogs = isset($akunMap[$item->kode_akun_harga_pokok]) ? $akunMap[$item->kode_akun_harga_pokok] : 0;
+                if (!isset($groupCogs[$id_cogs])) $groupCogs[$id_cogs] = 0.0;
+                $groupCogs[$id_cogs] += $cogs;
+                
+                $id_inv = isset($akunMap[$item->kode_akun_persediaan]) ? $akunMap[$item->kode_akun_persediaan] : 0;
+                if (!isset($groupInv[$id_inv])) $groupInv[$id_inv] = 0.0;
+                $groupInv[$id_inv] += $cogs;
             }
 
             if ($kelompok > 0) {
@@ -116,14 +159,17 @@ class Accounting_source_service
         if ($normal_amount > 0) {
             $amount = 0.0;
             $tax = 0.0;
-            if ($taxRate > 0) {
-                $divFactor = 1 + ($taxRate / 100);
-                $amount = round($normal_amount / $divFactor, 4);
-                $tax = round($normal_amount - $amount, 4);
-            } else {
-                $amount = $normal_amount;
-                $tax = 0.0000;
+            $divFactor = ($taxRate > 0) ? 1 + ($taxRate / 100) : 1;
+            $sales_revenue_lines = [];
+            
+            foreach ($groupRev as $id_akun => $val) {
+                $line_amt = round($val / $divFactor, 4);
+                $amount += $line_amt;
+                if ($id_akun > 0) {
+                    $sales_revenue_lines[] = ['amount' => $line_amt, 'id_akun' => $id_akun];
+                }
             }
+            $tax = round($normal_amount - $amount, 4);
 
             $invoice = $this->CI->accounting_service->post_auto('SALES_INVOICE', $base + [
                 'idempotency_key' => 'SALES_INVOICE-FAKTUR-' . $noFaktur,
@@ -134,6 +180,7 @@ class Accounting_source_service
                 'is_bkps' => $is_bkps,
                 'is_promosi' => $is_promosi,
                 'is_dagangan' => $is_dagangan,
+                'sales_revenue_lines' => $sales_revenue_lines
             ], $userId);
             if (!$invoice['success']) {
                 return $invoice;
@@ -143,16 +190,24 @@ class Accounting_source_service
 
         $issue_data = null;
         if ($postGoodsIssue && $normal_cogs > 0) {
-            // For Promosi (kelompok 5), it already has a manual journal at the end of this function.
-            // But wait! If we include it in normal_cogs, it will post a duplicate COGS journal!
-            // Let's exclude promo_value from normal_cogs for the standard GOODS_ISSUE
             $standard_cogs = $normal_cogs - $promo_value;
             if ($standard_cogs > 0) {
+                $cogs_lines = [];
+                $inventory_lines = [];
+                foreach ($groupCogs as $id_akun => $val) {
+                    if ($id_akun > 0) $cogs_lines[] = ['amount' => $val, 'id_akun' => $id_akun];
+                }
+                foreach ($groupInv as $id_akun => $val) {
+                    if ($id_akun > 0) $inventory_lines[] = ['amount' => $val, 'id_akun' => $id_akun];
+                }
+
                 $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
                     'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
                     'amount' => '0.0000',
                     'tax' => '0.0000',
                     'cogs' => $standard_cogs,
+                    'cogs_lines' => $cogs_lines,
+                    'inventory_lines' => $inventory_lines
                 ], $userId);
                 if ($issue['success']) {
                     $issue_data = $issue['data'];
@@ -185,33 +240,33 @@ class Accounting_source_service
             $this->CI->db->insert('tbkeu_jurnal', $jurnal_prm_data);
             $id_jurnal_prm = $this->CI->db->insert_id();
 
-            // Resolve A Biaya Promosi (61036) dynamically
-            $akun_biaya = $this->CI->db->get_where('tbkeu_akun', ['kode_akun' => '61036'])->row_array();
-            $id_akun_biaya = $akun_biaya ? $akun_biaya['id_akun'] : 360;
-
-            // Resolve A Persediaan Barang Promosi (14031) dynamically
-            $akun_persediaan = $this->CI->db->get_where('tbkeu_akun', ['kode_akun' => '14031'])->row_array();
-            $id_akun_persediaan = $akun_persediaan ? $akun_persediaan['id_akun'] : 226;
+            $baris = 1;
             
-            // Debit: A Biaya Promosi
-            $this->CI->db->insert('tbkeu_jurnal_detail', [
-                'id_jurnal' => $id_jurnal_prm,
-                'nomor_baris' => 1,
-                'id_akun' => $id_akun_biaya,
-                'keterangan' => 'Biaya Promosi Faktur ' . $noFaktur,
-                'debit' => $promo_value,
-                'kredit' => 0
-            ]);
+            // Debit: Biaya Promosi
+            foreach ($groupPromoCogs as $id_akun => $val) {
+                $akun_biaya = ($id_akun > 0) ? $id_akun : 360; // fallback to 360
+                $this->CI->db->insert('tbkeu_jurnal_detail', [
+                    'id_jurnal' => $id_jurnal_prm,
+                    'nomor_baris' => $baris++,
+                    'id_akun' => $akun_biaya,
+                    'keterangan' => 'Biaya Promosi Faktur ' . $noFaktur,
+                    'debit' => $val,
+                    'kredit' => 0
+                ]);
+            }
             
-            // Kredit: A Persediaan Barang Promosi
-            $this->CI->db->insert('tbkeu_jurnal_detail', [
-                'id_jurnal' => $id_jurnal_prm,
-                'nomor_baris' => 2,
-                'id_akun' => $id_akun_persediaan,
-                'keterangan' => 'Persediaan Barang Promosi Faktur ' . $noFaktur,
-                'debit' => 0,
-                'kredit' => $promo_value
-            ]);
+            // Kredit: Persediaan Barang Promosi
+            foreach ($groupPromoInv as $id_akun => $val) {
+                $akun_persediaan = ($id_akun > 0) ? $id_akun : 226; // fallback to 226
+                $this->CI->db->insert('tbkeu_jurnal_detail', [
+                    'id_jurnal' => $id_jurnal_prm,
+                    'nomor_baris' => $baris++,
+                    'id_akun' => $akun_persediaan,
+                    'keterangan' => 'Persediaan Barang Promosi Faktur ' . $noFaktur,
+                    'debit' => 0,
+                    'kredit' => $val
+                ]);
+            }
         }
 
         return [

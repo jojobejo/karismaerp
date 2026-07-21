@@ -180,15 +180,14 @@ class M_Journal extends CI_Model
             j.tanggal_transaksi,
             j.source_no AS referensi,
             j.source_id AS id_pembayaran,
-            j.keterangan,
+            CONCAT('Penerimaan dari ', COALESCE(f.customer_name, '')) AS keterangan,
             j.total_debit AS nilai,
             j.status,
-            COALESCE(p.no_faktur, '') AS no_so,
-            COALESCE(p.create_by, '') AS pelanggan,
-            'IDR' AS kurs
+            COALESCE(f.customer_name, '') AS pelanggan
         ", false);
         $this->db->from('tbkeu_jurnal j');
         $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');
+        $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
         $this->db->where('j.source_module', 'KEUANGAN');
         $this->db->where('j.source_type', 'PEMBAYARAN_FAKTUR');
         
@@ -196,8 +195,8 @@ class M_Journal extends CI_Model
             $this->db->group_start();
             $this->db->like('j.source_no', $search);
             $this->db->or_like('j.nomor_jurnal', $search);
-            $this->db->or_like('p.no_faktur', $search);
-            $this->db->or_like('p.create_by', $search);
+            $this->db->or_like('f.customer_name', $search);
+            $this->db->or_like('j.keterangan', $search);
             $this->db->group_end();
         }
         $this->db->order_by('j.tanggal_transaksi', 'DESC');

@@ -1431,14 +1431,29 @@ class Accounting_service
         if ($event === 'SALES_INVOICE') {
             $lineSpecs = [
                 ['ACCOUNT_RECEIVABLE', 'DEBIT', $total],
-                ['SALES_REVENUE', 'KREDIT', $amount],
-                ['VAT_OUTPUT', 'KREDIT', $tax],
             ];
+            if (!empty($payload['sales_revenue_lines'])) {
+                foreach ($payload['sales_revenue_lines'] as $custom_line) {
+                    $lineSpecs[] = ['SALES_REVENUE', 'KREDIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+            } else {
+                $lineSpecs[] = ['SALES_REVENUE', 'KREDIT', $amount];
+            }
+            $lineSpecs[] = ['VAT_OUTPUT', 'KREDIT', $tax];
         } elseif ($event === 'GOODS_ISSUE') {
-            $lineSpecs = [
-                ['COGS', 'DEBIT', $cogs],
-                ['INVENTORY', 'KREDIT', $cogs],
-            ];
+            if (!empty($payload['cogs_lines']) && !empty($payload['inventory_lines'])) {
+                foreach ($payload['cogs_lines'] as $custom_line) {
+                    $lineSpecs[] = ['COGS', 'DEBIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+                foreach ($payload['inventory_lines'] as $custom_line) {
+                    $lineSpecs[] = ['INVENTORY', 'KREDIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+            } else {
+                $lineSpecs = [
+                    ['COGS', 'DEBIT', $cogs],
+                    ['INVENTORY', 'KREDIT', $cogs],
+                ];
+            }
         } elseif ($event === 'PURCHASE_INVOICE') {
             $lineSpecs = [
                 ['GRNI', 'DEBIT', $amount],
@@ -1497,7 +1512,11 @@ class Accounting_service
                 continue;
             }
 
-            $idAkun = $this->resolve_mapping($payload, $spec[0], $spec[1]);
+            if (isset($spec[3])) {
+                $idAkun = $spec[3];
+            } else {
+                $idAkun = $this->resolve_mapping($payload, $spec[0], $spec[1]);
+            }
             $roleLabel = [
                 'ACCOUNT_RECEIVABLE' => 'Piutang',
                 'SALES_REVENUE' => 'Pendapatan',
