@@ -363,39 +363,36 @@ class M_Journal extends CI_Model
             ?: $this->db->like('nama_akun', 'PPN Keluaran')->get('tbkeu_akun')->row_array();
         $id_akun_ppn = $akun_ppn ? $akun_ppn['id_akun'] : 280;
 
-        // 3. Q Retur Penjualan BKP (Debit)
-        $akun_retur_bkp = $this->db->get_where('tbkeu_akun', ['kode_akun' => '41014'])->row_array()
-            ?: $this->db->like('nama_akun', 'Retur Penjualan BKP')->get('tbkeu_akun')->row_array();
-        $id_akun_retur_bkp = $akun_retur_bkp ? $akun_retur_bkp['id_akun'] : 310;
-
-        // 4. Q Retur Penjualan BKPS (Debit)
-        $akun_retur_bkps = $this->db->get_where('tbkeu_akun', ['kode_akun' => '41015'])->row_array()
-            ?: $this->db->like('nama_akun', 'Retur Penjualan BKPS')->get('tbkeu_akun')->row_array();
-        $id_akun_retur_bkps = $akun_retur_bkps ? $akun_retur_bkps['id_akun'] : 311;
+        // Fetch all accounts for quick mapping
+        $akun_all = $this->db->get('tbkeu_akun')->result_array();
+        $akun_map = [];
+        foreach ($akun_all as $a) {
+            $akun_map[$a['kode_akun']] = $a['id_akun'];
+        }
 
         $line_num = 1;
         $total_debit = 0;
         $total_kredit = 0;
+        $grouped_retur = [];
+        $total_ppn = 0;
 
         foreach ($details as $d) {
             $item_val = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             if ($item_val <= 0) continue;
 
-            // Find product and check if BKP/BKPS from kelompok_dagang joined with tbkeu_kelompok_dagang
-            $this->db->select('g.KODERETUR, g.DESKRIPSI');
+            $this->db->select('b.kode_akun_retur_penjualan, g.DESKRIPSI');
             $this->db->from('tbpo_barang b');
             $this->db->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left');
             $this->db->where('b.nama_barang', $d['nama_barang']);
             $prod = $this->db->get()->row_array();
 
-            $acct_code = $prod ? trim($prod['KODERETUR']) : '';
+            $kode_akun_retur = $prod ? trim($prod['kode_akun_retur_penjualan']) : '';
             $desc = $prod ? strtoupper(trim($prod['DESKRIPSI'])) : '';
 
-            // Check if BKP (41014) or BKPS (41015)
-            $is_bkp = true;
-            if ($acct_code === '41015' || strpos($desc, 'BKPS') !== false) {
+            $is_bkp = false;
+            if (stripos($desc, 'BKPS') !== false) {
                 $is_bkp = false;
-            } elseif ($acct_code === '41014' || strpos($desc, 'BKP') !== false) {
+            } elseif (stripos($desc, 'BKP') !== false) {
                 $is_bkp = true;
             } else {
                 if (strpos(strtolower($d['nama_barang']), 'jasa') !== false) {
@@ -403,55 +400,66 @@ class M_Journal extends CI_Model
                 }
             }
 
+            // Tax calculation
+            $dpp = $item_val;
+            $ppn = 0;
             if ($is_bkp) {
-                // Taxable: value is split (DPP & PPN)
                 $dpp = round($item_val / 1.11, 2);
                 $ppn = round($item_val - $dpp, 2);
-
-                // Debit: Q Retur Penjualan BKP
-                $this->db->insert('tbkeu_jurnal_detail', [
-                    'id_jurnal' => $id_jurnal,
-                    'nomor_baris' => $line_num++,
-                    'id_akun' => $id_akun_retur_bkp,
-                    'keterangan' => 'Retur ' . $d['nama_barang'] . ' (BKP)',
-                    'debit' => $dpp,
-                    'kredit' => 0
-                ]);
-                $total_debit += $dpp;
-
-                // Debit: Q PPN K
-                $this->db->insert('tbkeu_jurnal_detail', [
-                    'id_jurnal' => $id_jurnal,
-                    'nomor_baris' => $line_num++,
-                    'id_akun' => $id_akun_ppn,
-                    'keterangan' => 'PPN Retur ' . $d['nama_barang'],
-                    'debit' => $ppn,
-                    'kredit' => 0
-                ]);
-                $total_debit += $ppn;
-            } else {
-                // Non-taxable: full value is BKPS
-                $this->db->insert('tbkeu_jurnal_detail', [
-                    'id_jurnal' => $id_jurnal,
-                    'nomor_baris' => $line_num++,
-                    'id_akun' => $id_akun_retur_bkps,
-                    'keterangan' => 'Retur ' . $d['nama_barang'] . ' (BKPS)',
-                    'debit' => $item_val,
-                    'kredit' => 0
-                ]);
-                $total_debit += $item_val;
             }
 
-            // Kredit: Piutang Usaha
+            // Resolve ID Akun
+            $id_akun_retur = isset($akun_map[$kode_akun_retur]) ? $akun_map[$kode_akun_retur] : 310; // fallback
+
+            if (!isset($grouped_retur[$id_akun_retur])) {
+                $grouped_retur[$id_akun_retur] = 0;
+            }
+            $grouped_retur[$id_akun_retur] += $dpp;
+            $total_ppn += $ppn;
+        }
+
+        // Insert Grouped Retur Lines (Debit)
+        foreach ($grouped_retur as $id_akun => $amount) {
+            if ($amount <= 0) continue;
+            
+            $akun_info = $this->db->get_where('tbkeu_akun', ['id_akun' => $id_akun])->row_array();
+            $nama_akun = $akun_info ? $akun_info['nama_akun'] : 'Retur Penjualan';
+
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal,
+                'nomor_baris' => $line_num++,
+                'id_akun' => $id_akun,
+                'keterangan' => 'Retur Penjualan (' . $nama_akun . ') - ' . $no_retur,
+                'debit' => $amount,
+                'kredit' => 0
+            ]);
+            $total_debit += $amount;
+        }
+
+        // Insert PPN (Debit)
+        if ($total_ppn > 0) {
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal,
+                'nomor_baris' => $line_num++,
+                'id_akun' => $id_akun_ppn,
+                'keterangan' => 'PPN Retur ' . $no_retur,
+                'debit' => $total_ppn,
+                'kredit' => 0
+            ]);
+            $total_debit += $total_ppn;
+        }
+
+        // Kredit: Piutang Usaha
+        if ($total_debit > 0) {
             $this->db->insert('tbkeu_jurnal_detail', [
                 'id_jurnal' => $id_jurnal,
                 'nomor_baris' => $line_num++,
                 'id_akun' => $id_akun_piutang,
                 'keterangan' => 'Potongan Piutang Retur ' . $no_retur,
                 'debit' => 0,
-                'kredit' => $item_val
+                'kredit' => $total_debit
             ]);
-            $total_kredit += $item_val;
+            $total_kredit += $total_debit;
         }
 
         // Adjust totals in header to match exact rounding
