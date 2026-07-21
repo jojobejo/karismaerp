@@ -86,7 +86,7 @@
                         .table thead.thead-emerald th {
                             background: #243cff;
                             color: #fff;
-                            border-color: #243cff;
+                            border: 1px solid #dbe4ff !important;
                         }
 
                         .draft-shell {
@@ -130,9 +130,62 @@
                         .draft-header-box {
                             border: 1px solid #dbe4ff;
                             border-radius: 16px;
-                            padding: 18px;
+                            padding: 12px 14px;
                             background: linear-gradient(180deg, #f5f7ff 0%, #ffffff 100%);
-                            margin-bottom: 18px;
+                            margin-bottom: 14px;
+                        }
+
+                        .draft-header-row {
+                            margin-left: -5px;
+                            margin-right: -5px;
+                        }
+
+                        .draft-header-row > [class*="col-"] {
+                            padding-left: 5px;
+                            padding-right: 5px;
+                        }
+
+                        .draft-header-field {
+                            margin-bottom: 8px;
+                        }
+
+                        .draft-header-field label {
+                            margin-bottom: 4px;
+                            white-space: nowrap;
+                        }
+
+                        @media (min-width: 992px) {
+                            .draft-header-row {
+                                flex-wrap: nowrap;
+                            }
+
+                            .draft-header-col {
+                                flex: 0 0 auto;
+                            }
+
+                            .draft-header-col-lpb {
+                                width: 13%;
+                            }
+
+                            .draft-header-col-sj {
+                                width: 12%;
+                            }
+
+                            .draft-header-col-date {
+                                width: 13%;
+                            }
+
+                            .draft-header-col-type {
+                                width: 18%;
+                            }
+
+                            .draft-header-col-gudang {
+                                width: 19%;
+                            }
+
+                            .draft-header-col-note {
+                                width: 25%;
+                            }
                         }
 
                         .draft-summary-stat {
@@ -197,6 +250,11 @@
                     $totalOrder = 0;
                     $totalReceived = 0;
                     $totalLpbRecord = 0;
+                    $formatQtyPo = static function ($value, $maxDecimals = 0) {
+                        $number = (float) $value;
+                        $decimals = $maxDecimals > 0 && abs($number - round($number)) > 0.00001 ? $maxDecimals : 0;
+                        return number_format($number, $decimals, ',', '.');
+                    };
                     foreach ($detail as $row) {
                         $totalOrder += (float) ($row['qty_kecil'] ?? 0);
                         $totalReceived += (float) ($row['qty_kecil_diterima'] ?? 0);
@@ -237,28 +295,40 @@
                             <table class="table table-bordered table-hover" id="tabelDetailPo">
                                 <thead class="thead-emerald">
                                     <tr>
-                                        <th class="text-center">No</th>
-                                        <th class="text-center">Kode Barang</th>
-                                        <th class="text-center">Nama Barang</th>
-                                        <th class="text-center">Qty Order</th>
-                                        <th class="text-center">Qty Sisa</th>
-                                        <th class="text-center">Qty Diterima</th>
-                                        <th class="text-center">Status</th>
-                                        <th class="text-center">Draft Temp</th>
-                                        <th class="text-center">#</th>
+                                        <th class="text-center align-middle" rowspan="2">No</th>
+                                        <th class="text-center align-middle" rowspan="2">Kode Barang</th>
+                                        <th class="text-center align-middle" rowspan="2">Nama Barang</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty Order</th>
+                                        <th class="text-center" colspan="2">Qty Order</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty In</th>
+                                        <th class="text-center" colspan="2">Qty Diterima</th>
+                                        <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
+                                        <th class="text-center align-middle" rowspan="2">Status</th>
+                                        <th class="text-center align-middle" rowspan="2">Draft Temp</th>
+                                        <th class="text-center align-middle" rowspan="2">#</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-center">Box</th>
+                                        <th class="text-center">Kg/Ltr</th>
+                                        <th class="text-center">Box</th>
+                                        <th class="text-center">Kg/Ltr</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (!empty($detail)) : ?>
                                         <?php foreach ($detail as $i => $row) : ?>
-                                            <tr id="po-row-<?= htmlspecialchars($row['kd_po'] ?? '') ?>-<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
+                                            <tr id="po-row-<?= htmlspecialchars($row['kd_po'] ?? '') ?>-<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
                                                 <td class="text-center"><?= $i + 1 ?></td>
                                                 <td><?= htmlspecialchars($row['kd_barang'] ?? '') ?></td>
                                                 <td><?= htmlspecialchars($row['nama_barang'] ?? '-') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil_sisa'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-center"><?= number_format((float) ($row['qty_kecil_diterima'] ?? 0), 0, ',', '.') ?></td>
-                                                <td class="text-center">
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_kecil'] ?? 0) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
+                                                <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
+                                                <td class="text-center js-status-cell">
                                                     <?php
                                                     $statusBarang = strtoupper((string) ($row['status_barang'] ?? 'BELUM'));
                                                     $badgeClass = 'secondary';
@@ -270,7 +340,7 @@
                                                         $badgeClass = 'danger';
                                                     }
                                                     ?>
-                                                    <span class="badge badge-<?= $badgeClass ?> px-3 py-2"><?= htmlspecialchars($statusBarang) ?></span>
+                                                    <span class="badge badge-<?= $badgeClass ?> px-3 py-2 js-status-badge"><?= htmlspecialchars($statusBarang) ?></span>
                                                 </td>
                                                 <td class="text-center">
                                                     <span class="badge badge-soft js-draft-badge" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
@@ -278,7 +348,7 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
+                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-sisa-besar="<?= htmlspecialchars((string) ($row['qty_sisa'] ?? 0)) ?>" data-sisa-kecil="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-dimensi="<?= htmlspecialchars((string) ($row['dimensi_br'] ?? 1)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
                                                 </td>
@@ -286,7 +356,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="9" class="text-center text-muted">
+                                            <td colspan="17" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -304,25 +374,37 @@
                         </div>
                         <div class="card-body">
                             <div class="draft-header-box">
-                                <div class="row" id="pre_po_data">
-                                    <div class="col-lg-3 col-md-6 mb-3" id="pre_po_date">
-                                        <label class="font-weight-bold">Nomor SJ</label>
-                                        <input type="text" class="form-control" id="final_nosj" placeholder="Input nomor SJ">
+                                <div class="row draft-header-row" id="pre_po_data">
+                                    <div class="col-lg draft-header-col draft-header-col-lpb col-md-6 draft-header-field">
+                                        <label class="font-weight-bold">Nomor LPB</label>
+                                        <input type="text" class="form-control bg-light" id="final_nomor_lpb" placeholder="Auto" readonly>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-sj col-md-6 draft-header-field" id="pre_po_date">
+                                        <label class="font-weight-bold">Nomor SJ</label>
+                                        <input type="text" class="form-control" id="final_nosj" placeholder="No SJ">
+                                    </div>
+                                    <div class="col-lg draft-header-col draft-header-col-date col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Tanggal SJ</label>
                                         <input type="date" class="form-control" id="final_tgl_sj">
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
+                                    <div class="col-lg-3 col-md-6 draft-header-field" hidden>
                                         <label class="font-weight-bold">Nomor PO</label>
                                         <input type="text" class="form-control" id="final_no_po" value="<?= htmlspecialchars($no_po) ?>" readonly>
                                         <input type="hidden" id="final_kd_po" value="<?= htmlspecialchars($kd_po ?? '') ?>">
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3" hidden>
+                                    <div class="col-lg-3 col-md-6 draft-header-field" hidden>
                                         <label class="font-weight-bold">Invoice <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="final_invoice" value="-" readonly>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-type col-md-6 draft-header-field">
+                                        <label class="font-weight-bold">Jenis PO <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="final_jenis_lpb">
+                                            <?php foreach (($lpb_type_options ?? []) as $typeKey => $typeInfo) : ?>
+                                                <option value="<?= htmlspecialchars($typeKey, ENT_QUOTES) ?>"><?= htmlspecialchars($typeInfo['label'] ?? $typeKey) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-lg draft-header-col draft-header-col-gudang col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Gudang <span class="text-danger">*</span></label>
                                         <select class="form-control" id="final_gudang_id">
                                             <option value="">-- Pilih Gudang --</option>
@@ -331,9 +413,9 @@
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
-                                    <div class="col-lg-3 col-md-6 mb-3">
+                                    <div class="col-lg draft-header-col draft-header-col-note col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Keterangan</label>
-                                        <input type="text" class="form-control" id="final_keterangan" placeholder="Catatan penerimaan">
+                                        <input type="text" class="form-control" id="final_keterangan" placeholder="Catatan">
                                     </div>
                                 </div>
 
@@ -420,17 +502,34 @@
                             <input type="hidden" name="kd_barang" id="tmp_kd_barang">
 
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="font-weight-bold">No PO</label>
                                     <input type="text" class="form-control" id="tmp_no_po" readonly>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="font-weight-bold">Kode Barang</label>
                                     <input type="text" class="form-control" id="tmp_display_kd_barang" readonly>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="font-weight-bold">Qty Kecil Sisa</label>
-                                    <input type="text" class="form-control" id="tmp_qty_sisa" readonly>
+                                <div class="col-md-6">
+                                    <label class="font-weight-bold">Qty Sisa</label>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2 mb-md-0">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Qty Besar</span>
+                                                </div>
+                                                <input type="text" class="form-control" id="tmp_qty_sisa_besar" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text">Qty Kecil</span>
+                                                </div>
+                                                <input type="text" class="form-control" id="tmp_qty_sisa_kecil" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -487,10 +586,6 @@
 
     <script>
         $(function() {
-            var listSatuan = <?= json_encode(array_values(array_map(function ($item) {
-                                    return $item['nm_satuan'];
-                                }, $list_satuan ?? []))) ?>;
-
             var currentItem = {
                 kd_po: '',
                 kd_suplier: '',
@@ -498,19 +593,24 @@
                 nama_barang: '',
                 no_po: '',
                 satuan_default: '',
-                qty_kecil_sisa: 0
+                qty_sisa: 0,
+                qty_kecil_sisa: 0,
+                dimensi_br: 1
             };
             var isSubmittingFinal = false;
+            var lpbNumberRequestSeq = 0;
             var defaultFinalForm = {
                 no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
+                nomor_lpb: '',
                 nosj: '',
                 tgl_sj: '',
                 no_invoice: '-',
+                jenis_lpb: 'LPB CP',
                 gudang_id: '',
                 keterangan: ''
             };
 
-            $('#tabelDetailPo').DataTable({
+            var detailPoTable = $('#tabelDetailPo').DataTable({
                 responsive: true,
                 autoWidth: false,
                 pageLength: 25,
@@ -519,7 +619,7 @@
                 ],
                 columnDefs: [{
                     orderable: false,
-                    targets: [6, 7, 8]
+                    targets: [11, 12]
                 }],
                 language: {
                     search: "Cari:",
@@ -540,6 +640,99 @@
                 return $('<div>').text(str || '').html();
             }
 
+            function getStatusBadgeClass(status) {
+                status = (status || 'BELUM').toString().toUpperCase();
+
+                if (status === 'FULL') {
+                    return 'success';
+                }
+
+                if (status === 'PARTIAL') {
+                    return 'warning';
+                }
+
+                if (status === 'BELUM') {
+                    return 'danger';
+                }
+
+                return 'secondary';
+            }
+
+            function findDetailPoRow(kdPo, kdBarang) {
+                var matchedRow = $();
+
+                $('#tabelDetailPo tbody tr').each(function() {
+                    var row = $(this);
+
+                    if ((row.attr('data-kd-po') || '') == (kdPo || '') &&
+                        (row.attr('data-kd-barang') || '') == (kdBarang || '')) {
+                        matchedRow = row;
+                        return false;
+                    }
+                });
+
+                return matchedRow;
+            }
+
+            function applyDetailPoRows(rows) {
+                $.each(rows || [], function(_, row) {
+                    var detailRow = findDetailPoRow(row.kd_po, row.kd_barang);
+
+                    if (!detailRow.length) {
+                        return;
+                    }
+
+                    var statusBarang = (row.status_barang || 'BELUM').toString().toUpperCase();
+                    var badgeClass = getStatusBadgeClass(statusBarang);
+
+                    detailRow.find('.js-qty-in').text(formatNumber(row.qty_in));
+                    detailRow.find('.js-qty-diterima-box').text(formatNumber(row.qty_diterima_box));
+                    detailRow.find('.js-qty-diterima-kg').text(formatNumber(row.qty_diterima_kg));
+                    detailRow.find('.js-qty-sisa').text(formatNumber(row.qty_kecil_sisa));
+                    detailRow.find('.js-status-badge')
+                        .attr('class', 'badge badge-' + badgeClass + ' px-3 py-2 js-status-badge')
+                        .text(statusBarang);
+
+                    detailRow.find('.js-open-modal')
+                        .attr('data-sisa', row.qty_kecil_sisa || 0)
+                        .attr('data-sisa-besar', row.qty_sisa || 0)
+                        .attr('data-sisa-kecil', row.qty_kecil_sisa || 0)
+                        .data('sisa', row.qty_kecil_sisa || 0)
+                        .data('sisa-besar', row.qty_sisa || 0)
+                        .data('sisa-kecil', row.qty_kecil_sisa || 0);
+
+                    if (currentItem.kd_po == row.kd_po && currentItem.kd_barang == row.kd_barang) {
+                        currentItem.qty_sisa = parseFloat(row.qty_sisa) || 0;
+                        currentItem.qty_kecil_sisa = parseFloat(row.qty_kecil_sisa) || 0;
+
+                        if ($('#modalTmpPoReceived').hasClass('show')) {
+                            fillModalHeader(currentItem);
+                        }
+                    }
+                });
+
+                detailPoTable.rows().invalidate('dom').draw(false);
+            }
+
+            function reloadDetailPoRows() {
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_get_detail_po_rows') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        no_po: '<?= htmlspecialchars($no_po, ENT_QUOTES) ?>',
+                        kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>'
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            return;
+                        }
+
+                        applyDetailPoRows(res.rows || []);
+                    }
+                });
+            }
+
             function formatNumber(value) {
                 return new Intl.NumberFormat('id-ID', {
                     minimumFractionDigits: 0,
@@ -547,20 +740,23 @@
                 }).format(parseFloat(value) || 0);
             }
 
-            function buildSatuanOptions(selectedValue) {
-                var html = '<option value="">-- Pilih Satuan --</option>';
+            function formatInputNumber(value) {
+                if (value === null || typeof value === 'undefined' || value === '') {
+                    return '';
+                }
 
-                $.each(listSatuan, function(_, item) {
-                    var selected = item === selectedValue ? 'selected' : '';
-                    html += '<option value="' + escHtml(item) + '" ' + selected + '>' + escHtml(item) + '</option>';
-                });
+                var number = parseFloat(value) || 0;
 
-                return html;
+                if (Math.abs(number - Math.round(number)) < 0.00001) {
+                    return String(Math.round(number));
+                }
+
+                return String(parseFloat(number.toFixed(2)));
             }
 
             function buildRow(rowData) {
-                var selectedSatuan = rowData && rowData.satuan ? rowData.satuan : currentItem.satuan_default;
-                var qtyValue = rowData && rowData.qty_diterima ? rowData.qty_diterima : '';
+                var selectedSatuan = currentItem.satuan_default || '';
+                var qtyValue = rowData && rowData.qty_diterima ? formatInputNumber(rowData.qty_diterima) : '';
                 var noLotValue = rowData && rowData.no_lot ? rowData.no_lot : '';
                 var expiredValue = rowData && rowData.expired_date ? rowData.expired_date : '';
 
@@ -568,7 +764,7 @@
                     '<tr>' +
                     '<td><input type="text" class="form-control form-control-sm bg-light js-kd-barang-row" value="' + escHtml(currentItem.kd_barang) + '" readonly></td>' +
                     '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm js-qty-row" value="' + escHtml(qtyValue) + '" placeholder="0"></td>' +
-                    '<td><select class="form-control form-control-sm js-satuan-row">' + buildSatuanOptions(selectedSatuan) + '</select></td>' +
+                    '<td><input type="text" class="form-control form-control-sm bg-light js-satuan-row" value="' + escHtml(selectedSatuan) + '" readonly></td>' +
                     '<td><input type="text" class="form-control form-control-sm js-lot-row" value="' + escHtml(noLotValue) + '" placeholder="Nomor lot"></td>' +
                     '<td><input type="date" class="form-control form-control-sm js-exp-row" value="' + escHtml(expiredValue) + '"></td>' +
                     '<td class="text-center"><button type="button" class="btn btn-sm btn-danger js-hapus-row"><i class="fas fa-trash"></i></button></td>' +
@@ -609,7 +805,8 @@
                 $('#tmp_no_po').val(item.no_po);
                 $('#tmp_display_kd_barang').val(item.kd_barang);
                 $('#tmp_nama_barang').text(item.nama_barang || '-');
-                $('#tmp_qty_sisa').val(formatNumber(item.qty_kecil_sisa) + ' pcs');
+                $('#tmp_qty_sisa_besar').val(formatNumber(item.qty_sisa) + ' ' + (item.satuan_default || ''));
+                $('#tmp_qty_sisa_kecil').val(formatNumber(item.qty_kecil_sisa));
             }
 
             function renderModalRows(rows) {
@@ -637,17 +834,18 @@
                 }
 
                 $.each(rows, function(index, row) {
+                    var idTmpReceived = row.id_tmp_recieved || row.id_tmp_received || row.id || '';
                     tbody.append(
                         '<tr>' +
                         '<td class="text-center">' + (index + 1) + '</td>' +
                         '<td>' + escHtml(row.kd_barang) + '</td>' +
                         '<td>' + escHtml(row.nama_barang) + '</td>' +
-                        '<td class="text-center">' + escHtml(row.qty_diterima) + '</td>' +
+                        '<td class="text-center">' + formatNumber(row.qty_diterima) + '</td>' +
                         '<td class="text-center">' + escHtml(row.satuan) + '</td>' +
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
                         '<td class="text-center">' +
-                        '<button type="button" class="btn btn-sm btn-outline-danger js-delete-summary-row" data-id="' + escHtml(row.id_tmp_recieved) + '" title="Hapus baris draft">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger js-delete-summary-row" data-id="' + escHtml(idTmpReceived) + '" title="Hapus baris draft">' +
                         '<i class="fas fa-trash"></i>' +
                         '</button>' +
                         '</td>' +
@@ -694,11 +892,17 @@
 
             function resetFinalForm() {
                 $('#final_no_po').val(defaultFinalForm.no_po);
+                $('#final_nomor_lpb').val(defaultFinalForm.nomor_lpb);
                 $('#final_nosj').val(defaultFinalForm.nosj);
                 $('#final_tgl_sj').val(defaultFinalForm.tgl_sj);
                 $('#final_invoice').val(defaultFinalForm.no_invoice);
+                $('#final_jenis_lpb').val(defaultFinalForm.jenis_lpb);
+                if (!$('#final_jenis_lpb').val()) {
+                    $('#final_jenis_lpb').prop('selectedIndex', 0);
+                }
                 $('#final_gudang_id').val(defaultFinalForm.gudang_id);
                 $('#final_keterangan').val(defaultFinalForm.keterangan);
+                refreshGeneratedLpbNumber();
             }
 
             function handleAjaxError(xhr, fallbackMessage) {
@@ -709,6 +913,44 @@
                 }
 
                 Swal.fire('Gagal', message, 'error');
+            }
+
+            function refreshGeneratedLpbNumber() {
+                var jenisLpb = $('#final_jenis_lpb').val();
+                var requestSeq = ++lpbNumberRequestSeq;
+
+                if (!jenisLpb) {
+                    $('#final_nomor_lpb').val('');
+                    return;
+                }
+
+                $('#final_nomor_lpb').val('Memuat...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_generate_lpb_number') ?>',
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        jenis_lpb: jenisLpb
+                    },
+                    success: function(res) {
+                        if (requestSeq !== lpbNumberRequestSeq) {
+                            return;
+                        }
+
+                        if (res.status !== 'success') {
+                            $('#final_nomor_lpb').val('');
+                            return;
+                        }
+
+                        $('#final_nomor_lpb').val(res.nomor_lpb || '');
+                    },
+                    error: function() {
+                        if (requestSeq === lpbNumberRequestSeq) {
+                            $('#final_nomor_lpb').val('');
+                        }
+                    }
+                });
             }
 
             function reloadSummaryTable() {
@@ -728,6 +970,7 @@
 
                         renderSummaryTable(res.rows || []);
                         updateDraftBadges(res.rows || []);
+                        reloadDetailPoRows();
                     },
                     error: function() {
                         Swal.fire('Gagal', 'Server tidak merespons saat memuat draft temporary.', 'error');
@@ -743,7 +986,9 @@
                     nama_barang: $(this).data('nama-barang') || '',
                     no_po: $(this).data('no-po') || '',
                     satuan_default: $(this).data('satuan') || '',
-                    qty_kecil_sisa: parseFloat($(this).data('sisa')) || 0
+                    qty_sisa: parseFloat($(this).data('sisa-besar')) || 0,
+                    qty_kecil_sisa: parseFloat($(this).data('sisa-kecil')) || parseFloat($(this).data('sisa')) || 0,
+                    dimensi_br: parseFloat($(this).data('dimensi')) || 1
                 };
 
                 fillModalHeader(currentItem);
@@ -796,8 +1041,12 @@
                 Swal.fire('Reset Form', 'Field header draft berhasil dikosongkan.', 'success');
             });
 
+            $('#final_jenis_lpb').on('change', function() {
+                refreshGeneratedLpbNumber();
+            });
+
             $(document).on('click', '.js-delete-summary-row', function() {
-                var idTmpReceived = parseInt($(this).data('id'), 10) || 0;
+                var idTmpReceived = parseInt($(this).attr('data-id'), 10) || 0;
 
                 if (!idTmpReceived) {
                     Swal.fire('Gagal', 'ID draft tidak valid.', 'error');
@@ -822,6 +1071,7 @@
                         dataType: 'json',
                         data: {
                             id_tmp_recieved: idTmpReceived,
+                            id_tmp_received: idTmpReceived,
                             no_po: $('#final_no_po').val(),
                             kd_suplier: '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>'
                         },
@@ -869,10 +1119,12 @@
                     return;
                 }
 
-                if (totalQty > currentItem.qty_kecil_sisa) {
+                var totalQtyKecil = totalQty * (currentItem.dimensi_br || 1);
+
+                if (totalQtyKecil > currentItem.qty_kecil_sisa + 0.00001) {
                     Swal.fire(
                         'Qty Melebihi Sisa',
-                        'Total qty draft (' + totalQty + ' pcs) melebihi qty kecil sisa barang (' + currentItem.qty_kecil_sisa + ' pcs).',
+                        'Total qty draft (' + formatNumber(totalQty) + ' || ' + formatNumber(totalQtyKecil) + ') melebihi Qty Sisa barang (' + formatNumber(currentItem.qty_sisa) + ' || ' + formatNumber(currentItem.qty_kecil_sisa) + ').',
                         'warning'
                     );
                     return;
@@ -925,12 +1177,19 @@
                 var invoice = '-';
                 var nomorSj = $.trim($('#final_nosj').val());
                 var tanggalSj = $('#final_tgl_sj').val();
+                var jenisLpb = $('#final_jenis_lpb').val();
                 var gudangId = $('#final_gudang_id').val();
                 var keterangan = $.trim($('#final_keterangan').val());
 
                 if (!invoice) {
                     Swal.fire('Validasi', 'Nomor invoice wajib diisi.', 'warning');
                     $('#final_invoice').focus();
+                    return;
+                }
+
+                if (!jenisLpb) {
+                    Swal.fire('Validasi', 'Silakan pilih jenis PO / LPB.', 'warning');
+                    $('#final_jenis_lpb').focus();
                     return;
                 }
 
@@ -956,6 +1215,7 @@
                         nosj: nomorSj,
                         tgl_sj: tanggalSj,
                         no_invoice: invoice,
+                        jenis_lpb: jenisLpb,
                         gudang_id: gudangId,
                         keterangan: keterangan
                     },

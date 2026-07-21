@@ -740,7 +740,52 @@
             });
         });
 
+        let purchaseJournalRows = [];
         let salesJournalRows = [];
+
+        function renderPurchaseJournalRows(rows) {
+            $('#purchaseJournalCount').text((rows || []).length + ' data');
+            if (!schemaReady) {
+                $('#purchaseJournalRows').html('<tr><td colspan="6" class="text-center text-muted">Schema jurnal belum tersedia.</td></tr>');
+                return;
+            }
+            if (!rows || !rows.length) {
+                $('#purchaseJournalRows').html('<tr><td colspan="6" class="text-center text-muted">Data jurnal pembelian tidak ditemukan.</td></tr>');
+                return;
+            }
+
+            let html = '';
+            rows.forEach(function(row) {
+                html += '<tr data-id="' + parseInt(row.id_jurnal, 10) + '">' +
+                    '<td>' + escapeHtml(row.referensi || row.nomor_lpb || row.nomor_jurnal || '-') + '</td>' +
+                    '<td>' + escapeHtml(formatDate(row.tanggal_transaksi)) + '</td>' +
+                    '<td>' + escapeHtml(row.no_po || '-') + '</td>' +
+                    '<td>' + escapeHtml(row.supplier || '-') + '</td>' +
+                    '<td>IDR</td>' +
+                    '<td class="money-cell">' + escapeHtml(formatMoney(row.nilai)) + '</td>' +
+                    '</tr>';
+            });
+            $('#purchaseJournalRows').html(html);
+        }
+
+        function loadPurchaseJournalList(searchValue) {
+            if (!schemaReady) {
+                return;
+            }
+            $.ajax({
+                url: endpointBase + '/purchase-list',
+                type: 'POST',
+                dataType: 'json',
+                data: { search: searchValue || '' },
+                success: function(resp) {
+                    if (!resp.success) {
+                        return;
+                    }
+                    purchaseJournalRows = (resp.data && resp.data.rows) ? resp.data.rows : [];
+                    renderPurchaseJournalRows(purchaseJournalRows);
+                }
+            });
+        }
 
         function renderSalesJournalRows(rows) {
             $('#salesJournalCount').text((rows || []).length + ' data');
@@ -790,11 +835,112 @@
             loadSalesJournalList($(this).val().trim());
         }, 300));
 
+        $('#purchaseJournalSearch').on('input', debounce(function() {
+            loadPurchaseJournalList($(this).val().trim());
+        }, 300));
+
+        $('#jurnalPeriodForm').on('submit', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: endpointBase + '/period-store',
+                type: 'POST',
+                dataType: 'json',
+                data: $(this).serialize(),
+                success: function(resp) {
+                    notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || '');
+                    if (resp.success) {
+                        location.reload();
+                    }
+                },
+                error: function(xhr) {
+                    notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal menyimpan periode fiskal.');
+                }
+            });
+        });
+
+        $('#jurnalPeriodTable').on('click', '.btn-jurnal-period-action', function() {
+            const action = $(this).data('action');
+            const reason = prompt('Alasan approval ' + action + ':');
+            if (!reason) {
+                return;
+            }
+            $.ajax({
+                url: endpointBase + '/period-action',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    id_periode: $(this).data('id'),
+                    action: action,
+                    reason: reason
+                },
+                success: function(resp) {
+                    notify(resp.success ? 'success' : 'error', resp.success ? 'Berhasil' : 'Gagal', resp.message || '');
+                    if (resp.success) {
+                        location.reload();
+                    }
+                },
+                error: function(xhr) {
+                    notify('error', 'Gagal', (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Gagal mengubah status periode fiskal.');
+                }
+            });
+        });
+
         $('#salesJournalRows').on('click', 'tr', function() {
             const id = $(this).data('id');
             if (!id) return;
             loadSalesJournalDetail(id);
         });
+
+        $('#purchaseJournalRows').on('click', 'tr', function() {
+            const id = $(this).data('id');
+            if (!id) return;
+            loadPurchaseJournalDetail(id);
+        });
+
+        function loadPurchaseJournalDetail(id) {
+            $.ajax({
+                url: endpointBase + '/purchase-detail',
+                type: 'POST',
+                dataType: 'json',
+                data: { id_jurnal: id },
+                success: function(resp) {
+                    if (!resp.success || !resp.data) {
+                        notify('warning', 'Perhatian', resp.message || 'Data jurnal tidak ditemukan.');
+                        return;
+                    }
+                    const header = resp.data.journal || {};
+                    const rows = resp.data.details || [];
+
+                    $('#salesJournalRef').text(header.kode_jenis_jurnal || 'PJ');
+                    $('#salesJournalDate').text(formatDate(header.tanggal_transaksi) || '-');
+                    $('#salesJournalTitle').text(header.keterangan || ('Pembelian, ' + (header.supplier || '-')));
+                    $('#salesJournalUser').text(header.created_by_name || '-');
+                    $('#salesJournalDebit').text(formatMoney(header.total_debit || 0));
+                    $('#salesJournalKredit').text(formatMoney(header.total_kredit || 0));
+
+                    let html = '';
+                    if (!rows.length) {
+                        html = '<tr><td colspan="5" class="text-center text-muted">Detail jurnal tidak ditemukan.</td></tr>';
+                    } else {
+                        rows.forEach(function(r) {
+                            const isDebit = parseFloat(r.debit || 0) > 0;
+                            html += '<tr>' +
+                                '<td>' + escapeHtml(r.nomor_dokumen || header.nomor_lpb || header.source_no || '-') + '</td>' +
+                                '<td>' + escapeHtml(r.kode_rekening_display || r.kode_akun || '-') + '</td>' +
+                                '<td>' + escapeHtml(r.nama_akun || r.keterangan || '-') + '</td>' +
+                                '<td class="text-right">' + (isDebit ? escapeHtml(formatMoney(r.debit)) : '') + '</td>' +
+                                '<td class="text-right">' + (!isDebit ? escapeHtml(formatMoney(r.kredit)) : '') + '</td>' +
+                                '</tr>';
+                        });
+                    }
+                    $('#salesJournalDetailRows').html(html);
+                    $('#modalSalesJournal').modal('show');
+                },
+                error: function(xhr) {
+                    notify('error', 'Gagal', 'Terjadi kesalahan saat memuat detail jurnal.');
+                }
+            });
+        }
 
         function loadSalesJournalDetail(id) {
             $.ajax({
@@ -853,6 +999,7 @@
         toggleManualJournal();
         renderParentOptions('');
         loadList('');
+        loadPurchaseJournalList('');
         loadSalesJournalList('');
     });
 </script>

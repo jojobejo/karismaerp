@@ -68,14 +68,37 @@ $dashboardUrl = base_url('dashboard/');
         border-bottom: 1px solid #eef2f7;
     }
 
-    .master-barang-page .search-box label {
-        font-weight: 700;
-        margin-right: 8px;
+    .master-barang-page .search-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
     }
 
-    .master-barang-page .search-box input {
-        width: calc(100% - 78px);
-        display: inline-block;
+    .master-barang-page .search-control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .master-barang-page .search-control-search {
+        flex: 1 1 190px;
+    }
+
+    .master-barang-page .search-control-filter {
+        flex: 1 1 170px;
+    }
+
+    .master-barang-page .search-box label {
+        font-weight: 700;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .master-barang-page .search-box input,
+    .master-barang-page .search-box select {
+        min-width: 0;
     }
 
     .master-barang-page .master-list {
@@ -428,8 +451,21 @@ $dashboardUrl = base_url('dashboard/');
                                     <small id="masterBarangCountLabel">0 data</small>
                                 </div>
                                 <div class="search-box">
-                                    <label for="masterBarangSearch">Search:</label>
-                                    <input type="text" id="masterBarangSearch" class="form-control" placeholder="Cari kode / nama / supplier">
+                                    <div class="search-controls">
+                                        <div class="search-control search-control-search">
+                                            <label for="masterBarangSearch">Search:</label>
+                                            <input type="text" id="masterBarangSearch" class="form-control" placeholder="Cari kode / nama / supplier">
+                                        </div>
+                                        <div class="search-control search-control-filter">
+                                            <label for="masterBarangKelompokFilter">Kelompok:</label>
+                                            <select id="masterBarangKelompokFilter" class="form-control">
+                                                <option value="">Semua</option>
+                                                <?php foreach (($kelompok_barang_filter_options ?? []) as $kelompokBarang) : ?>
+                                                    <option value="<?= html_escape($kelompokBarang->noindex) ?>"><?= html_escape($kelompokBarang->deskripsi) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="master-list" id="masterBarangList">
                                     <div class="empty-state">Memuat data master barang...</div>

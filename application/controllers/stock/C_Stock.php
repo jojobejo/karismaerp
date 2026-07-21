@@ -25,6 +25,8 @@ class C_Stock extends CI_Controller
             'search' => $this->input->get('search', true),
             'include_zero' => $this->input->get('include_zero', true) === '1',
             'limit' => $this->input->get('limit', true),
+            'page' => $this->input->get('page', true),
+            'per_page' => $this->input->get('per_page', true),
         ];
     }
 
@@ -88,13 +90,45 @@ class C_Stock extends CI_Controller
     public function items()
     {
         try {
+            $filters = $this->_filters();
+            if (empty($filters['per_page'])) {
+                $filters['per_page'] = 15;
+            }
+
             $this->_json([
                 'status' => 'ok',
-                'data' => $this->M_Stock->get_item_rows($this->_filters()),
+                'data' => $this->M_Stock->get_item_rows($filters),
             ]);
         } catch (Exception $e) {
             $this->_json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function detail($kdBarang = '')
+    {
+        $kdBarang = rawurldecode((string)$kdBarang);
+        if ($kdBarang === '') {
+            $kdBarang = (string)$this->input->get('kd_barang', true);
+        }
+
+        if ($kdBarang === '') {
+            show_404();
+        }
+
+        $gudangId = (string)$this->input->get('gudang_id', true);
+        $detail = $this->M_Stock->get_stock_item_detail($kdBarang, $gudangId);
+        if (empty($detail['item']) && empty($detail['ledger_history'])) {
+            show_404();
+        }
+
+        $data['page_title'] = 'KARISMA - Detail Stock';
+        $data['kd_barang'] = $kdBarang;
+        $data['gudang_id'] = $gudangId;
+        $data['detail'] = $detail;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/stock/stock_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 
     public function batches()

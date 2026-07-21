@@ -8,7 +8,8 @@
     $('#btnFilter').on('click', function() {
         $.get('<?= base_url("ics/ajax_filter_mutasi") ?>', {
             gudang: $('#filter_gudang').val(),
-            tanggal: $('#filter_tanggal').val()
+            tanggal: $('#filter_tanggal').val(),
+            status: $('#filter_status').val()
         }, function(html) {
             $('#mutasi_barang tbody').html(html);
         });

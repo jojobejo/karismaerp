@@ -31,6 +31,12 @@ Perubahan lanjutan pada data LPB:
 
 Keterangan: `7` = bulan, `26` = tahun, `00001` = nomor urut per jenis LPB.
 
+## Catatan Update 2026-07-21
+
+Format aktif setelah update `ics/detail_po` tidak lagi memakai angka bulan di depan nomor LPB. Format baru memakai tahun 2 digit + urutan 5 digit, misalnya `2600001`.
+
+Dokumentasi detail update ada di `docs/development/ics-detail-po-nomor-lpb-format-year-only-20260721.md` dan `docs/database/ics-detail-po-nomor-lpb-format-year-only-20260721.md`.
+
 ## File Aplikasi
 
 - `application/config/routes.php`

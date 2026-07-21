@@ -6,6 +6,7 @@ $klasifikasiOptions = isset($klasifikasi_options) ? $klasifikasi_options : [];
 $saldoNormalOptions = isset($saldo_normal_options) ? $saldo_normal_options : [];
 $tipeKontrolOptions = isset($tipe_kontrol_options) ? $tipe_kontrol_options : [];
 $supportCards = isset($support_cards) && is_array($support_cards) ? $support_cards : [];
+$fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
 ?>
 <style>
     .jurnal-page .content-header { padding: 6px .5rem 0; }
@@ -13,8 +14,9 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
     .jurnal-page .page-title-left { display: flex; align-items: center; gap: 10px; }
     .jurnal-page .page-home-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #1788b8; color: #fff; }
     .jurnal-page .page-title { font-size: 30px; font-weight: 700; color: #34495e; margin: 0; }
-    .jurnal-page .support-card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
-    .jurnal-page .report-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .jurnal-page .journal-command-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .72fr); gap: 12px; margin-bottom: 14px; align-items: stretch; }
+    .jurnal-page .support-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .jurnal-page .report-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .jurnal-page .support-card-btn { width: 100%; min-height: 116px; text-align: left; border: 1px solid #d9e2ec; border-radius: 6px; background: #fff; padding: 14px; color: #1f2d3d; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
     .jurnal-page .report-card-link { display: block; text-decoration: none; }
     .jurnal-page .report-card-link .support-card-btn { display: block; }
@@ -68,14 +70,24 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
     .jurnal-page .zahir-detail-head { display: flex; gap: 22px; align-items: center; font-size: 18px; font-weight: 800; color: #020617; border-bottom: 1px solid #111827; padding-bottom: 8px; margin-bottom: 8px; }
     .jurnal-page .zahir-detail-table td { border: 0; padding: 7px 8px; background: #f1f3f5; }
     .jurnal-page .zahir-total-row { border-top: 1px solid #111827; margin-top: 8px; padding-top: 8px; font-weight: 800; }
+    .jurnal-page .fiscal-panel { background: #fff; border: 1px solid #d9e2ec; border-radius: 4px; overflow: hidden; height: 100%; }
+    .jurnal-page .fiscal-form { padding: 12px 14px; border-bottom: 1px solid #eef2f7; background: #f8fafc; }
+    .jurnal-page .fiscal-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .jurnal-page .fiscal-reason-row { display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 8px; margin-top: 8px; }
+    .jurnal-page .fiscal-table-wrap { max-height: 265px; overflow: auto; }
+    .jurnal-page .fiscal-table { margin: 0; }
+    .jurnal-page .fiscal-table th { background: #1788b8; color: #fff; border-color: #1788b8; white-space: nowrap; }
+    .jurnal-page .fiscal-table td { vertical-align: middle; }
+    .jurnal-page .fiscal-action-cell { white-space: nowrap; text-align: right; }
     @media (max-width: 991.98px) {
-        .jurnal-page .support-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .jurnal-page .report-card-grid { grid-template-columns: 1fr; }
+        .jurnal-page .journal-command-grid { grid-template-columns: 1fr; }
+        .jurnal-page .support-card-grid, .jurnal-page .report-card-grid, .jurnal-page .fiscal-form-grid { grid-template-columns: 1fr; }
         .jurnal-page .form-grid { grid-template-columns: 1fr; }
         .jurnal-page .journal-panel { margin-top: 14px; }
         .jurnal-page .master-modal-grid { grid-template-columns: 1fr; }
         .jurnal-page .list-toolbar { grid-template-columns: 1fr; }
         .jurnal-page .sales-journal-toolbar { align-items: stretch; flex-direction: column; }
+        .jurnal-page .fiscal-reason-row { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -117,33 +129,144 @@ $supportCards = isset($support_cards) && is_array($support_cards) ? $support_car
                         </div>
                     <?php endif; ?>
 
-
-
-                    <div class="support-card-grid">
-                        <?php foreach ($supportCards as $card) : ?>
-                            <button type="button" class="support-card-btn btn-open-master" data-master="<?= html_escape($card['key']) ?>" <?= !$schemaReady ? 'disabled' : '' ?>>
-                                <span class="support-card-icon"><i class="<?= html_escape($card['icon']) ?>"></i></span>
-                                <span class="support-card-title"><?= html_escape($card['title']) ?></span>
-                                <span class="support-card-desc"><?= html_escape($card['description']) ?></span>
-                            </button>
-                        <?php endforeach; ?>
+                    <div class="sales-journal-panel">
+                        <div class="panel-heading">
+                            <span>Daftar Jurnal Pembelian</span>
+                            <small id="purchaseJournalCount">0 data</small>
+                        </div>
+                        <div class="sales-journal-toolbar">
+                            <div class="text-muted">Klik baris untuk melihat jurnal LPB dan PO.</div>
+                            <input type="text" class="form-control sales-journal-search" id="purchaseJournalSearch" placeholder="Search LPB, PO, supplier">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table zahir-table">
+                                <thead>
+                                    <tr>
+                                        <th>Referensi</th>
+                                        <th>Tanggal</th>
+                                        <th>No PO</th>
+                                        <th>Supplier</th>
+                                        <th>Kurs</th>
+                                        <th class="text-right">Nilai</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchaseJournalRows">
+                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal pembelian...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="report-card-grid">
-                        <a href="<?= base_url('jurnal/neraca') ?>" class="report-card-link">
-                            <span class="support-card-btn">
-                                <span class="support-card-icon"><i class="fas fa-balance-scale"></i></span>
-                                <span class="support-card-title">Neraca</span>
-                                <span class="support-card-desc">Sajian aset, kewajiban, ekuitas, dan laba/rugi berjalan untuk audit posisi keuangan.</span>
-                            </span>
-                        </a>
-                        <a href="<?= base_url('jurnal/laba-rugi') ?>" class="report-card-link">
-                            <span class="support-card-btn">
-                                <span class="support-card-icon"><i class="fas fa-chart-line"></i></span>
-                                <span class="support-card-title">Laba Rugi</span>
-                                <span class="support-card-desc">Sajian pendapatan, beban, laba kotor, laba operasional, dan laba bersih periode.</span>
-                            </span>
-                        </a>
+                    <div class="sales-journal-panel">
+                        <div class="panel-heading">
+                            <span>Daftar Jurnal Penjualan</span>
+                            <small id="salesJournalCount">0 data</small>
+                        </div>
+                        <div class="sales-journal-toolbar">
+                            <div class="text-muted">Klik baris untuk melihat jurnal debit/kredit.</div>
+                            <input type="text" class="form-control sales-journal-search" id="salesJournalSearch" placeholder="Search referensi, SO, pelanggan">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table zahir-table">
+                                <thead>
+                                    <tr>
+                                        <th>Referensi</th>
+                                        <th>Tanggal</th>
+                                        <th>No SO</th>
+                                        <th>Pelanggan</th>
+                                        <th>Kurs</th>
+                                        <th class="text-right">Nilai</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesJournalRows">
+                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal penjualan...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+                    <div class="journal-command-grid">
+                        <div>
+                            <div class="support-card-grid">
+                                <?php foreach ($supportCards as $card) : ?>
+                                    <button type="button" class="support-card-btn btn-open-master" data-master="<?= html_escape($card['key']) ?>" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        <span class="support-card-icon"><i class="<?= html_escape($card['icon']) ?>"></i></span>
+                                        <span class="support-card-title"><?= html_escape($card['title']) ?></span>
+                                        <span class="support-card-desc"><?= html_escape($card['description']) ?></span>
+                                    </button>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="report-card-grid mt-2">
+                                <a href="<?= base_url('jurnal/neraca') ?>" class="report-card-link">
+                                    <span class="support-card-btn">
+                                        <span class="support-card-icon"><i class="fas fa-balance-scale"></i></span>
+                                        <span class="support-card-title">Neraca</span>
+                                        <span class="support-card-desc">Sajian aset, kewajiban, ekuitas, dan laba/rugi berjalan untuk audit posisi keuangan.</span>
+                                    </span>
+                                </a>
+                                <a href="<?= base_url('jurnal/laba-rugi') ?>" class="report-card-link">
+                                    <span class="support-card-btn">
+                                        <span class="support-card-icon"><i class="fas fa-chart-line"></i></span>
+                                        <span class="support-card-title">Laba Rugi</span>
+                                        <span class="support-card-desc">Sajian pendapatan, beban, laba kotor, laba operasional, dan laba bersih periode.</span>
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="fiscal-panel">
+                            <div class="panel-heading">
+                                <span>Periode Fiskal</span>
+                                <small><?= count($fiscalPeriods) ?> data</small>
+                            </div>
+                            <div class="fiscal-form">
+                                <form id="jurnalPeriodForm">
+                                    <div class="fiscal-form-grid">
+                                        <input type="text" class="form-control" name="kode_periode" placeholder="2026-07" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        <input type="text" class="form-control" name="nama_periode" placeholder="Juli 2026" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        <input type="date" class="form-control" name="tanggal_mulai" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        <input type="date" class="form-control" name="tanggal_selesai" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                    </div>
+                                    <div class="fiscal-reason-row">
+                                        <input type="text" class="form-control" name="reason" placeholder="Alasan/approval open" <?= !$schemaReady ? 'disabled' : '' ?>>
+                                        <button type="submit" class="btn btn-jurnal-primary" <?= !$schemaReady ? 'disabled' : '' ?>>Open</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="fiscal-table-wrap">
+                                <table class="table table-sm fiscal-table" id="jurnalPeriodTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Periode</th>
+                                            <th>Rentang</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($fiscalPeriods)) : ?>
+                                            <tr><td colspan="4" class="text-center text-muted">Periode fiskal belum tersedia.</td></tr>
+                                        <?php endif; ?>
+                                        <?php foreach ($fiscalPeriods as $period) : ?>
+                                            <tr>
+                                                <td>
+                                                    <strong><?= html_escape($period->kode_periode) ?></strong><br>
+                                                    <small><?= html_escape($period->nama_periode) ?></small>
+                                                </td>
+                                                <td><?= html_escape($period->tanggal_mulai) ?> s/d <?= html_escape($period->tanggal_selesai) ?></td>
+                                                <td><span class="badge <?= $period->status === 'OPEN' ? 'badge-success' : 'badge-secondary' ?>"><?= html_escape($period->status) ?></span></td>
+                                                <td class="fiscal-action-cell">
+                                                    <button type="button" class="btn btn-xs btn-outline-warning btn-jurnal-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="CLOSE">Close</button>
+                                                    <button type="button" class="btn btn-xs btn-outline-primary btn-jurnal-period-action" data-id="<?= (int)$period->id_periode ?>" data-action="REOPEN">Reopen</button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">

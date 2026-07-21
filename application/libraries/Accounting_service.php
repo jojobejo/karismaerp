@@ -277,9 +277,12 @@ class Accounting_service
     {
         $event = strtoupper(trim((string)$event));
         $payload['posting_event'] = $event;
-        $payload['journal_type'] = 'AUTO';
+        $journalType = strtoupper(trim((string)($payload['journal_type'] ?? 'AUTO')));
+        $payload['journal_type'] = $journalType !== '' ? $journalType : 'AUTO';
         $payload['status'] = 'POSTED';
-        $payload['lines'] = $this->build_auto_lines($event, $payload);
+        if (empty($payload['lines']) || !is_array($payload['lines'])) {
+            $payload['lines'] = $this->build_auto_lines($event, $payload);
+        }
 
         $result = $this->create_journal($payload, $userId, true);
         if (!$result['success']) {

@@ -8,6 +8,7 @@
 
         let currentId = 0;
         let currentSearch = '';
+        let currentKelompokBarang = '';
         let currentRows = [];
 
         function notify(icon, title, text) {
@@ -259,13 +260,14 @@
             });
         }
 
-        function loadList(searchValue) {
+        function loadList(searchValue, kelompokBarangValue) {
             $.ajax({
                 url: endpointBase + "/list",
                 type: "POST",
                 dataType: "json",
                 data: {
                     search: searchValue || '',
+                    kelompok_barang: kelompokBarangValue || '',
                     limit: 150
                 },
                 success: function(resp) {
@@ -299,8 +301,13 @@
 
         $('#masterBarangSearch').on('input', debounce(function() {
             currentSearch = $(this).val().trim();
-            loadList(currentSearch);
+            loadList(currentSearch, currentKelompokBarang);
         }, 300));
+
+        $('#masterBarangKelompokFilter').on('change', function() {
+            currentKelompokBarang = $(this).val() || '';
+            loadList(currentSearch, currentKelompokBarang);
+        });
 
         $('#masterBarangList').on('click', '.master-list-item', function() {
             const id = parseInt($(this).data('id'), 10);
@@ -409,7 +416,7 @@
                     }
 
                     notify('success', 'Berhasil', resp.message || 'Data master barang berhasil disimpan.');
-                    loadList(currentSearch);
+                    loadList(currentSearch, currentKelompokBarang);
                 },
                 error: function(xhr) {
                     let message = 'Terjadi kesalahan pada server.';
@@ -423,6 +430,6 @@
 
         setFormReadOnlyState();
         resetKodeAkunDefaults();
-        loadList('');
+        loadList('', '');
     });
 </script>
