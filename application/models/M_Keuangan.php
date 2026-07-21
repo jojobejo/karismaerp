@@ -1183,6 +1183,43 @@ class M_Keuangan extends CI_Model
             return null;
         }
 
+        $this->db->select("
+            j.*,
+            COALESCE(f.no_so, '') AS no_so,
+            COALESCE(f.customer_name, '') AS pelanggan,
+            COALESCE(
+                NULLIF(k.nm_karyawan, ''),
+                NULLIF(u.nama_user, ''),
+                NULLIF(p.create_by, ''),
+                NULLIF(f.create_by, ''),
+                CASE WHEN j.created_by = 0 THEN '' ELSE CONCAT('User #', j.created_by) END,
+                'system'
+            ) AS created_by_name,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbso_faktur_penjualan f', '(j.source_module = "SALES" AND f.no_faktur = j.source_id) OR (j.source_module = "KEUANGAN" AND f.no_faktur = j.source_no)', 'left');
+        $this->db->join('tb_karyawan k', 'j.created_by = k.id', 'left');
+        $this->db->join('tb_user u', 'j.created_by = u.id', 'left');
+        $this->db->join('tbkeu_pembayaran_faktur p', 'j.source_module = "KEUANGAN" AND CAST(j.source_id AS UNSIGNED) = p.id_pembayaran', 'left');
+        $this->db->where('j.id_jurnal', (int)$idJurnal);
+        $journal = $this->db->get()->row();
+        if (!$journal) {
+            return null;
+        }
+
+        $this->db->select("d.*, a.kode_akun, a.nama_akun, COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display", false);
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+        $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
+        $this->db->where('d.id_jurnal', (int)$idJurnal);
+        $this->db->order_by('d.nomor_baris', 'ASC');
+
+        return [
+            'journal' => $journal,
+            'details' => $this->db->get()->result(),
+        ];
+    }
 
     public function accounting_purchase_journal_detail($idJurnal)
     {
