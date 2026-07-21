@@ -970,11 +970,11 @@
                         rows.forEach(function(r) {
                             const isDebit = parseFloat(r.debit || 0) > 0;
                             let desc = r.keterangan || '';
-                            if (desc.indexOf('Faktur penjualan') !== -1) {
+                            if (desc.indexOf('Faktur penjualan') !== -1 || desc.indexOf('Penerimaan ') !== -1 || desc.indexOf('Piutang Usaha Faktur') !== -1) {
                                 desc = '-';
                             } else if (!desc) {
                                 desc = header.keterangan || '-';
-                                if (desc.indexOf('Faktur penjualan') !== -1) {
+                                if (desc.indexOf('Faktur penjualan') !== -1 || desc.indexOf('Penerimaan ') !== -1 || desc.indexOf('Piutang Usaha Faktur') !== -1) {
                                     desc = '-';
                                 }
                             }

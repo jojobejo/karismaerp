@@ -28,10 +28,11 @@ class M_Dashboard extends CI_Model
                 'description' => 'Kontrol stok harian, master barang, dan laporan keuangan operasional.',
                 'menus' => array(
                     $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.'),
-                    $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Lihat daftar PO pending untuk tindak lanjut pembelian.'),
+                    $this->menu('Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul pembelian dan monitoring PO keuangan.'),
+                    $this->menu('Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul penjualan, jurnal penjualan, dan jurnal pembayaran.'),
                     $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
-                    $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'green', 'Kelola chart of accounts dan akun jurnal general ledger.'),
+                    $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'purple', 'Kelola chart of accounts dan akun jurnal general ledger.'),
                 ),
             ),
             'hrd' => array(

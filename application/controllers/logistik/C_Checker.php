@@ -1035,6 +1035,7 @@ class C_Checker extends CI_Controller
         $routes = $this->db->query("
             SELECT
                 COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') AS kd_rute,
+                DATE(so.tanggal_transaksi) AS tgl_transaksi,
                 COALESCE(r.keterangan, NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'Tanpa Rute') AS nama_rute,
                 COUNT(DISTINCT so.id_so) AS total_so
             FROM tbso_sales_order so
@@ -1054,7 +1055,8 @@ class C_Checker extends CI_Controller
                     AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
                     AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
             )
-            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE')
+            GROUP BY COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE'), DATE(so.tanggal_transaksi)
+            ORDER BY DATE(so.tanggal_transaksi) ASC, kd_rute ASC
         ")->result_array();
 
         $data['page_title'] = 'Checker Loading SO - Pilih Rute';
@@ -1076,6 +1078,14 @@ class C_Checker extends CI_Controller
         // Status SO: siap_faktur, partial, ATAU completed
         // checker_loaded: NULL/0 = belum dipilih, 1 = dimuat, 2 = tidak dimuat
         // Item dengan checker_loaded = 1 tidak ditampilkan karena sudah siap untuk DO
+        $tgl_transaksi = $this->input->get('date', true);
+        $date_filter = "";
+        $params = [$kd_rute];
+        if (!empty($tgl_transaksi)) {
+            $date_filter = "AND DATE(so.tanggal_transaksi) = ?";
+            $params[] = $tgl_transaksi;
+        }
+
         $items = $this->db->query("
             SELECT 
                 sod.*, 
@@ -1089,6 +1099,7 @@ class C_Checker extends CI_Controller
             LEFT JOIN tb_master_barang_all b ON b.kd_barang = sod.kd_barang
             WHERE so.status IN ('siap_faktur', 'partial', 'completed')
               AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+              $date_filter
               AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
               AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0 OR sod.checker_loaded = 2)
               AND NOT EXISTS (
@@ -1097,7 +1108,7 @@ class C_Checker extends CI_Controller
                   WHERE fp.id_so = so.id_so
               )
             ORDER BY so.no_so ASC, sod.id ASC
-        ", [$kd_rute])->result_array();
+        ", $params)->result_array();
 
         $data['page_title'] = 'Checker Loading SO - Detail Rute ' . $kd_rute;
         $data['kd_rute'] = $kd_rute;
@@ -1169,6 +1180,14 @@ class C_Checker extends CI_Controller
             exit;
         }
 
+        $tgl_transaksi = $this->input->post('date', true);
+        $date_filter = "";
+        $params = [$kd_rute];
+        if (!empty($tgl_transaksi)) {
+            $date_filter = "AND DATE(so.tanggal_transaksi) = ?";
+            $params[] = $tgl_transaksi;
+        }
+
         // Cek item belum dipilih sama sekali (0/null)
         $belum = $this->db->query("
             SELECT COUNT(*) AS total
@@ -1177,6 +1196,7 @@ class C_Checker extends CI_Controller
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             WHERE so.status IN ('siap_faktur', 'partial')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            $date_filter
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
                 SELECT 1 FROM tbso_faktur_penjualan fp
@@ -1184,7 +1204,7 @@ class C_Checker extends CI_Controller
                 WHERE fp.id_so = so.id_so
             )
             AND (sod.checker_loaded IS NULL OR sod.checker_loaded = 0)
-        ", [$kd_rute])->row_array();
+        ", $params)->row_array();
 
         if ((int)$belum['total'] > 0) {
             echo json_encode([
@@ -1202,6 +1222,7 @@ class C_Checker extends CI_Controller
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
             WHERE so.status IN ('siap_faktur', 'partial')
             AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
+            $date_filter
             AND COALESCE(sod.qty_siap_faktur, sod.qty) > 0
             AND NOT EXISTS (
                 SELECT 1 FROM tbso_faktur_penjualan fp
@@ -1209,7 +1230,7 @@ class C_Checker extends CI_Controller
                 WHERE fp.id_so = so.id_so
             )
             AND sod.checker_loaded = 2
-        ", [$kd_rute])->row_array();
+        ", $params)->row_array();
 
         $this->load->model('M_Logistik');
         $username = $this->session->userdata('username') ?? $this->session->userdata('nama') ?? 'system';

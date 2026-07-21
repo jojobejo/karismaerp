@@ -80,7 +80,7 @@ $faktur_back_url = $is_admin_sc_context
                 &mdash; Customer: <strong><?= htmlspecialchars($so['customer_name']) ?></strong>
                 Jenis faktur:
                 <strong>
-                    <?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (kode barang Q)' : 'Non Pajak (kode barang bukan Q)' ?>
+                    <?= (($tax_rate ?? 0) > 0) ? 'Pajak 11% (BKP / Kode Barang Q Non Benih)' : 'Non Pajak' ?>
                     <?php if (!empty($so['is_faktur_z'])): ?>
                         (Faktur Z)
                     <?php endif; ?>
@@ -294,36 +294,6 @@ $faktur_back_url = $is_admin_sc_context
                             </div>
                         </div>
 
-                        <!-- Card Jurnal -->
-                        <div class="card card-outline card-info mt-3">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-calculator mr-1"></i>
-                                    Perhitungan Jurnal
-                                </h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-bordered table-sm mb-0" style="background-color: #fdfdfd;">
-                                    <tbody>
-                                        <tr>
-                                            <td class="pl-2 py-2" style="font-weight: 500;">piutang dagang</td>
-                                            <td class="text-right pr-2 py-2" id="jurnalPiutangDagang" style="font-weight: bold;">Rp 0</td>
-                                            <input type="hidden" name="jurnal_piutang_dagang" id="inputJurnalPiutangDagang" value="0">
-                                        </tr>
-                                        <tr>
-                                            <td class="pl-2 py-2" style="font-weight: 500;">penjualan</td>
-                                            <td class="text-right pr-2 py-2" id="jurnalPenjualan" style="font-weight: bold;">Rp 0</td>
-                                            <input type="hidden" name="jurnal_penjualan" id="inputJurnalPenjualan" value="0">
-                                        </tr>
-                                        <tr>
-                                            <td class="pl-2 py-2" style="font-weight: 500;">ppn keluar</td>
-                                            <td class="text-right pr-2 py-2" id="jurnalPpnKeluar" style="font-weight: bold;">Rp 0</td>
-                                            <input type="hidden" name="jurnal_ppn_keluar" id="inputJurnalPpnKeluar" value="0">
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -465,19 +435,6 @@ $(document).ready(function () {
         $('#totalNilaiFaktur').text('Rp ' + Math.round(totalNilaiFaktur).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
         $('#totalTax').text('Rp ' + Math.round(totalTax).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
         $('#grandTotalHarga').text('Rp ' + Math.round(grandTotalHarga).toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-
-        // Hitung Jurnal
-        const jurnalPiutang = Math.round(grandTotalHarga);
-        const jurnalPenjualan = Math.round(totalNilaiFaktur);
-        const jurnalPpnKeluar = jurnalPiutang - jurnalPenjualan;
-
-        $('#jurnalPiutangDagang').text('Rp ' + jurnalPiutang.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-        $('#jurnalPenjualan').text('Rp ' + jurnalPenjualan.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-        $('#jurnalPpnKeluar').text('Rp ' + jurnalPpnKeluar.toLocaleString('id-ID', { minimumFractionDigits: 0 }));
-
-        $('#inputJurnalPiutangDagang').val(jurnalPiutang);
-        $('#inputJurnalPenjualan').val(jurnalPenjualan);
-        $('#inputJurnalPpnKeluar').val(jurnalPpnKeluar);
     }
 
     function formatRupiah(value) {

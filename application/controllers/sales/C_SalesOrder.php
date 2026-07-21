@@ -748,9 +748,14 @@ class C_SalesOrder extends CI_Controller
         foreach ($all_ready_so as $row) {
             $rute = trim((string)($row['kd_rute'] ?: ($row['customer_kd_rute'] ?? '')));
             if ($rute === '') $rute = '-';
-            if (!isset($route_summary[$rute])) {
-                $route_summary[$rute] = [
+            
+            $tgl_transaksi = substr((string)($row['tanggal_transaksi'] ?? date('Y-m-d')), 0, 10);
+            $group_key = $rute . '||' . $tgl_transaksi;
+
+            if (!isset($route_summary[$group_key])) {
+                $route_summary[$group_key] = [
                     'kd_rute'                    => $rute,
+                    'tgl_transaksi'              => $tgl_transaksi,
                     'total_so'                   => 0,
                     'total_sudah_faktur'         => 0,
                     'total_belum_faktur'         => 0,
@@ -761,18 +766,18 @@ class C_SalesOrder extends CI_Controller
                 ];
             }
 
-            $route_summary[$rute]['total_so']++;
+            $route_summary[$group_key]['total_so']++;
             if ((int)($row['jumlah_faktur'] ?? 0) > 0) {
-                $route_summary[$rute]['total_sudah_faktur']++;
+                $route_summary[$group_key]['total_sudah_faktur']++;
             } else {
-                $route_summary[$rute]['total_belum_faktur']++;
+                $route_summary[$group_key]['total_belum_faktur']++;
             }
-            $route_summary[$rute]['total_qty_siap_faktur']    += (float)($row['total_qty_siap_faktur'] ?? 0);
-            $route_summary[$rute]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
-            $route_summary[$rute]['total_item_ditolak']       += (int)($row['jumlah_item_ditolak'] ?? 0);
+            $route_summary[$group_key]['total_qty_siap_faktur']    += (float)($row['total_qty_siap_faktur'] ?? 0);
+            $route_summary[$group_key]['total_qty_tidak_terkirim'] += (float)($row['total_qty_tidak_terkirim'] ?? 0);
+            $route_summary[$group_key]['total_item_ditolak']       += (int)($row['jumlah_item_ditolak'] ?? 0);
             $updated_at = (string)($row['update_at'] ?? $row['create_at'] ?? '');
-            if ($updated_at > $route_summary[$rute]['latest_update_at']) {
-                $route_summary[$rute]['latest_update_at'] = $updated_at;
+            if ($updated_at > $route_summary[$group_key]['latest_update_at']) {
+                $route_summary[$group_key]['latest_update_at'] = $updated_at;
             }
         }
         uasort($route_summary, function($a, $b) {
@@ -1561,10 +1566,13 @@ class C_SalesOrder extends CI_Controller
             $selected_items = $selected_items !== null && $selected_items !== '' ? [$selected_items] : [];
         }
         $selected_items = array_filter(array_map('intval', $selected_items));
-        $tax_mode = strtolower(trim($this->input->get('tax_mode', true) ?? 'non_pajak'));
-        if (!in_array($tax_mode, ['pajak', 'non_pajak'], true)) {
-            $tax_mode = 'non_pajak';
+
+        $kelompok_filter = strtolower(trim($this->input->get('kelompok_filter', true) ?? 'bkp'));
+        if (!in_array($kelompok_filter, ['promosi', 'dagangan', 'bkps', 'bkp'], true)) {
+            $kelompok_filter = 'bkp';
         }
+
+        $tax_mode = ($kelompok_filter === 'bkp') ? 'pajak' : 'non_pajak';
         $tax_rate = ($tax_mode === 'pajak') ? 11 : 0;
 
         // Filter hanya item yang sudah lolos verifikasi barang dan belum difakturkan.
@@ -1578,15 +1586,28 @@ class C_SalesOrder extends CI_Controller
             });
         }
 
-        $items_outstanding = array_filter($items_outstanding, function($d) use ($tax_mode) {
-            $is_pajak_item = strtoupper(substr(trim((string)($d['kd_barang'] ?? '')), 0, 1)) === 'Q';
-            return $tax_mode === 'pajak' ? $is_pajak_item : !$is_pajak_item;
+        $items_outstanding = array_filter($items_outstanding, function($d) use ($kelompok_filter) {
+            $kd_barang = trim((string)($d['kd_barang'] ?? ''));
+            $first_char = strtoupper(substr($kd_barang, 0, 1));
+            $desc = strtoupper(trim((string)($d['kelompok_dagang_deskripsi'] ?? '')));
+            $is_bkps = (strpos($desc, 'BKPS') !== false);
+
+            if ($kelompok_filter === 'promosi') {
+                return $first_char === 'Z';
+            } elseif ($kelompok_filter === 'dagangan') {
+                return $first_char === 'A';
+            } elseif ($kelompok_filter === 'bkps') {
+                return $first_char === 'Q' && $is_bkps;
+            } elseif ($kelompok_filter === 'bkp') {
+                return $first_char === 'Q' && !$is_bkps;
+            }
+            return false;
         });
 
         if (empty($items_outstanding)) {
             $message = !empty($selected_items)
                 ? 'Item yang dipilih tidak valid, sudah difakturkan seluruhnya, atau tidak sesuai jenis faktur ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . '.'
-                : 'Tidak ada barang ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . ' yang siap difakturkan.';
+                : 'Tidak ada barang ' . ($tax_mode === 'pajak' ? 'Pajak (kode Q)' : 'Non Pajak (kode bukan Q)') . ' dengan kategori kelompok dagang tersebut yang siap difakturkan.';
             $this->session->set_flashdata('error', $message);
             redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
             return;
@@ -1640,6 +1661,43 @@ class C_SalesOrder extends CI_Controller
             $this->session->set_flashdata('error', 'Minimal 1 item harus dimasukkan ke faktur.');
             redirect('sales_order/admin_sc/form_faktur/' . $id_so);
             return;
+        }
+
+        $details = $this->M_SalesOrder->get_so_detail($id_so);
+        $details_map = [];
+        foreach ($details as $d) {
+            $details_map[(int)$d['id_so_detail']] = $d;
+        }
+
+        $first_category = null;
+        foreach ($faktur_items as $item) {
+            $so_det = $details_map[(int)$item['id_so_detail']] ?? null;
+            if (!$so_det) {
+                $this->session->set_flashdata('error', 'Item tidak valid.');
+                redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+                return;
+            }
+            $kd = trim((string)($so_det['kd_barang'] ?? ''));
+            $c = strtoupper(substr($kd, 0, 1));
+            $desc = strtoupper(trim((string)($so_det['kelompok_dagang_deskripsi'] ?? '')));
+            $is_bkps = (strpos($desc, 'BKPS') !== false);
+            
+            $cat = 'other';
+            if ($c === 'Z') {
+                $cat = 'promosi';
+            } elseif ($c === 'A') {
+                $cat = 'dagangan';
+            } elseif ($c === 'Q') {
+                $cat = $is_bkps ? 'bkps' : 'bkp';
+            }
+            
+            if ($first_category === null) {
+                $first_category = $cat;
+            } elseif ($first_category !== $cat) {
+                $this->session->set_flashdata('error', 'Tidak boleh menggabungkan barang dengan kategori yang berbeda dalam satu faktur.');
+                redirect('sales_order/admin_sc/pilih_barang/' . $id_so);
+                return;
+            }
         }
 
         // Validasi stok untuk qty yang akan difakturkan
@@ -2945,6 +3003,42 @@ class C_SalesOrder extends CI_Controller
         }
 
         echo json_encode(['status' => true, 'items' => $items]);
+        exit;
+    }
+
+    public function get_faktur_detail_info_json()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $id_faktur = (int)$this->input->get('id_faktur');
+        if ($id_faktur <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID tidak valid']);
+            exit;
+        }
+
+        $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        if (!$faktur) {
+            echo json_encode(['status' => false, 'message' => 'Faktur tidak ditemukan']);
+            exit;
+        }
+
+        $this->load->model('M_SalesOrder');
+        $items = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+
+        foreach ($items as &$item) {
+            if (!empty($item['expired_date']) && $item['expired_date'] !== '0000-00-00') {
+                $item['expired_date'] = date('d/m/Y', strtotime($item['expired_date']));
+            } else {
+                $item['expired_date'] = null;
+            }
+        }
+
+        echo json_encode([
+            'status' => true,
+            'faktur' => $faktur,
+            'items' => $items
+        ]);
         exit;
     }
 

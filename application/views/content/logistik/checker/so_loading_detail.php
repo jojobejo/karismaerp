@@ -291,7 +291,7 @@ $(document).ready(function() {
         $.ajax({
             url: '<?= base_url("checker/selesai_loading_rute") ?>',
             type: 'POST',
-            data: { kd_rute: kdRute },
+            data: { kd_rute: kdRute, date: '<?= $this->input->get("date", true) ?>' },
             dataType: 'JSON',
             success: function(response) {
                 if (response.status) {

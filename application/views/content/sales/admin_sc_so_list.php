@@ -208,7 +208,11 @@
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($route_summary as $row):
-                                        $rute_query = array_merge($active_query, ['rute' => $row['kd_rute']]);
+                                        $rute_query = array_merge($active_query, [
+                                            'rute'  => $row['kd_rute'],
+                                            'date1' => $row['tgl_transaksi'],
+                                            'date2' => $row['tgl_transaksi']
+                                        ]);
                                         $ada_ditolak = (int)($row['total_item_ditolak'] ?? 0) > 0;
                                     ?>
                                         <tr class="<?= $ada_ditolak ? 'row-ada-ditolak' : '' ?>">

@@ -814,4 +814,63 @@ class M_ReturPenjualan extends CI_Model
             ->get('tbrp_activity_log')
             ->result_array();
     }
+
+    public function get_retur_approval_history($username_or_name, $role, $filter = [])
+    {
+        $this->db->select('
+            r.*,
+            r.id_retur AS id_spr,
+            r.no_retur AS no_spr,
+            r.tanggal_retur AS tanggal,
+            r.status_retur AS status,
+            c.nama_customer AS nama_customer_master,
+            c.alamat_kios   AS alamat_master,
+            (SELECT COUNT(*) FROM tbrp_retur_penjualan_detail d WHERE d.id_retur = r.id_retur) AS jumlah_item
+        ');
+        $this->db->from('tbrp_retur_penjualan_header r');
+        $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
+
+        if ($role === 'admin') {
+            $this->db->where_in('r.status_retur', [
+                'retur_menunggu_kadepub', 'retur_menunggu_mngacc', 'retur_menunggu_mngsc',
+                'retur_menunggu_mngse', 'retur_menunggu_kadepsc', 'retur_menunggu_dirop',
+                'retur_menunggu_dirut', 'menunggu_collection', 'menunggu_kasir', 'selesai', 'ditolak'
+            ]);
+        } else {
+            $this->db->group_start();
+            if ($role === 'admretur') {
+                $this->db->where('r.admretur_by_retur', $username_or_name);
+            } elseif ($role === 'mngacc') {
+                $this->db->where('r.mngacc_by_retur', $username_or_name);
+            } elseif ($role === 'mngsc') {
+                $this->db->where('r.mngsc_by_retur', $username_or_name);
+            } elseif ($role === 'kadepub') {
+                $this->db->where('r.kadepub_by_retur', $username_or_name);
+            } elseif ($role === 'mngse') {
+                $this->db->where('r.mngse_by_retur', $username_or_name);
+            } elseif ($role === 'kadep_sc') {
+                $this->db->where('r.kadepsc_by_retur', $username_or_name);
+            } elseif ($role === 'dirop') {
+                $this->db->where('r.dirop_by_retur', $username_or_name);
+            } elseif ($role === 'dirut') {
+                $this->db->where('r.dirut_by_retur', $username_or_name);
+            } elseif ($role === 'collection') {
+                $this->db->where('r.collection_by', $username_or_name);
+            } elseif ($role === 'kasir') {
+                $this->db->where('r.kasir_by', $username_or_name);
+            } else {
+                $this->db->where('r.create_by_retur', $username_or_name);
+            }
+            $this->db->group_end();
+        }
+
+        if (!empty($filter['date1']))       $this->db->where('r.tanggal_retur >=', $filter['date1']);
+        if (!empty($filter['date2']))       $this->db->where('r.tanggal_retur <=', $filter['date2']);
+        if (!empty($filter['status']))      $this->db->where('r.status_retur', $filter['status']);
+
+        $this->db->order_by('r.tanggal_retur', 'DESC');
+        $this->db->order_by('r.id_retur',  'DESC');
+
+        return $this->db->get()->result_array();
+    }
 }

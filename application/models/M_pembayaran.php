@@ -313,7 +313,19 @@ class M_pembayaran extends CI_Model
 
     public function insert_payment($data)
     {
-        return $this->db->insert($this->payment_table, $data);
+        $this->db->trans_start();
+        $this->db->insert($this->payment_table, $data);
+        $id_pembayaran = $this->db->insert_id();
+
+        $is_pending_bg = (strtolower($data['metode_pembayaran'] ?? '') === 'bg' && ($data['status_bg'] ?? '') === 'pending');
+
+        if (!$is_pending_bg && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+            $this->load->model('M_Journal');
+            $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
+        }
+
+        $this->db->trans_complete();
+        return $this->db->trans_status();
     }
 
     public function get_payment($id_pembayaran)
@@ -327,11 +339,21 @@ class M_pembayaran extends CI_Model
     public function mark_bg_cair($id_pembayaran, $user)
     {
         $this->db->where('id_pembayaran', (int)$id_pembayaran);
-        return $this->db->update($this->payment_table, [
+        $success = $this->db->update($this->payment_table, [
             'status_bg'  => 'cair',
             'bg_cair_by' => $user,
             'bg_cair_at' => date('Y-m-d H:i:s'),
         ]);
+
+        if ($success) {
+            $payment = $this->get_payment($id_pembayaran);
+            if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
+            }
+        }
+
+        return $success;
     }
 
     /**

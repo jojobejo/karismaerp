@@ -124,21 +124,28 @@
                 </div>
 
                 <form action="<?= base_url('sales_order/admin_sc/form_faktur/' . $so['id_so']) ?>" method="get" id="formPilihFaktur">
+                    <input type="hidden" name="tax_mode" id="taxMode" value="pajak">
+                    <input type="hidden" name="kelompok_filter" id="kelompokFilter" value="bkp">
                     <div class="card card-outline card-success">
                         <div class="card-header">
                             <h3 class="card-title">
                                 <i class="fas fa-list-ul mr-1"></i> Barang Terverifikasi
                             </h3>
                             <div class="card-tools">
-                                <div class="form-inline">
-                                    <label class="mr-2 mb-0 small font-weight-bold">Jenis Faktur</label>
-                                    <input type="hidden" name="tax_mode" id="taxMode" value="pajak">
-                                    <div class="tax-choice-group" role="group" aria-label="Jenis Faktur">
-                                        <button type="button" class="tax-choice-btn active" data-tax-mode="pajak">
-                                            Pajak
+                                <div class="form-inline d-flex align-items-center">
+                                    <label class="mr-2 mb-0 small font-weight-bold">Pilih Kategori Faktur</label>
+                                    <div class="tax-choice-group" role="group" aria-label="Kategori Faktur">
+                                        <button type="button" class="tax-choice-btn active" data-kategori="bkp">
+                                            BKP (Pajak)
                                         </button>
-                                        <button type="button" class="tax-choice-btn" data-tax-mode="non_pajak">
-                                            Non Pajak
+                                        <button type="button" class="tax-choice-btn" data-kategori="bkps">
+                                            BKPS (Non Pajak)
+                                        </button>
+                                        <button type="button" class="tax-choice-btn" data-kategori="dagangan">
+                                            Dagangan (Non Pajak)
+                                        </button>
+                                        <button type="button" class="tax-choice-btn" data-kategori="promosi">
+                                            Promosi (Non Pajak)
                                         </button>
                                     </div>
                                 </div>
@@ -156,42 +163,73 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($details as $detail):
-                                        $available = (float)($detail['qty_available_faktur'] ?? 0);
-                                        $tidak = (float)($detail['qty_tidak_terkirim'] ?? 0);
-                                        $kd_barang = trim((string)($detail['kd_barang'] ?? ''));
-                                        $is_pajak_item = strtoupper(substr($kd_barang, 0, 1)) === 'Q';
-                                        $item_tax_mode = $is_pajak_item ? 'pajak' : 'non_pajak';
-                                    ?>
-                                        <tr data-tax-mode="<?= $item_tax_mode ?>">
-                                            <td>
-                                                <strong><?= htmlspecialchars($detail['nama_barang']) ?></strong>
-                                                <br><small class="text-muted"><?= htmlspecialchars($kd_barang) ?></small>
-                                                <br><span class="tax-badge <?= $is_pajak_item ? 'tax-badge-pajak' : 'tax-badge-non' ?>">
-                                                    <?= $is_pajak_item ? 'Pajak 11%' : 'Non Pajak' ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <small>
-                                                    <?php if (!empty($detail['no_lot'])): ?>
-                                                        Lot: <code><?= htmlspecialchars($detail['no_lot']) ?></code><br>
-                                                    <?php endif; ?>
-                                                    Exp: <?= !empty($detail['expired_date']) ? date('d/m/Y', strtotime($detail['expired_date'])) : '-' ?>
-                                                </small>
-                                            </td>
-                                            <td class="text-right font-weight-bold text-success">
-                                                <?= number_format($available, 2) ?>
-                                            </td>
-                                            <td class="text-right <?= $tidak > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
-                                                <?= number_format($tidak, 2) ?>
-                                            </td>
-                                            <td>
-                                                <?= !empty($detail['verifikasi_loading_note'])
-                                                    ? htmlspecialchars($detail['verifikasi_loading_note'])
-                                                    : '<span class="text-muted">-</span>' ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
+                                     <?php foreach ($details as $detail):
+                                         $available = (float)($detail['qty_available_faktur'] ?? 0);
+                                         $tidak = (float)($detail['qty_tidak_terkirim'] ?? 0);
+                                         $kd_barang = trim((string)($detail['kd_barang'] ?? ''));
+                                         $first_char = strtoupper(substr($kd_barang, 0, 1));
+                                         $desc = strtoupper(trim((string)($detail['kelompok_dagang_deskripsi'] ?? '')));
+                                         $is_bkps = (strpos($desc, 'BKPS') !== false);
+
+                                         $item_category = 'other';
+                                         $is_pajak_item = false;
+                                         if ($first_char === 'Z') {
+                                             $item_category = 'promosi';
+                                             $is_pajak_item = false;
+                                         } elseif ($first_char === 'A') {
+                                             $item_category = 'dagangan';
+                                             $is_pajak_item = false;
+                                         } elseif ($first_char === 'Q') {
+                                             if ($is_bkps) {
+                                                 $item_category = 'bkps';
+                                                 $is_pajak_item = false;
+                                             } else {
+                                                 $item_category = 'bkp';
+                                                 $is_pajak_item = true;
+                                             }
+                                         }
+                                         
+                                         $badge_color = '#17a2b8'; // default blue
+                                         if ($item_category === 'bkps') {
+                                             $badge_color = '#f0ad4e'; // yellow/orange
+                                         } elseif ($item_category === 'promosi') {
+                                             $badge_color = '#dc3545'; // red
+                                         } elseif ($item_category === 'dagangan') {
+                                             $badge_color = '#28a745'; // green
+                                         }
+                                     ?>
+                                         <tr data-kategori="<?= $item_category ?>">
+                                             <td>
+                                                 <strong><?= htmlspecialchars($detail['nama_barang']) ?></strong>
+                                                 <br><small class="text-muted"><?= htmlspecialchars($kd_barang) ?></small>
+                                                 <br><span class="tax-badge <?= $is_pajak_item ? 'tax-badge-pajak' : 'tax-badge-non' ?>">
+                                                     <?= $is_pajak_item ? 'Pajak 11%' : 'Non Pajak' ?>
+                                                 </span>
+                                                 <span class="tax-badge" style="color: #fff; background-color: <?= $badge_color ?>;">
+                                                     <?= strtoupper($item_category) ?>
+                                                 </span>
+                                             </td>
+                                             <td>
+                                                 <small>
+                                                     <?php if (!empty($detail['no_lot'])): ?>
+                                                         Lot: <code><?= htmlspecialchars($detail['no_lot']) ?></code><br>
+                                                     <?php endif; ?>
+                                                     Exp: <?= !empty($detail['expired_date']) ? date('d/m/Y', strtotime($detail['expired_date'])) : '-' ?>
+                                                 </small>
+                                             </td>
+                                             <td class="text-right font-weight-bold text-success">
+                                                 <?= number_format($available, 2) ?>
+                                             </td>
+                                             <td class="text-right <?= $tidak > 0 ? 'text-danger font-weight-bold' : 'text-muted' ?>">
+                                                 <?= number_format($tidak, 2) ?>
+                                             </td>
+                                             <td>
+                                                 <?= !empty($detail['verifikasi_loading_note'])
+                                                     ? htmlspecialchars($detail['verifikasi_loading_note'])
+                                                     : '<span class="text-muted">-</span>' ?>
+                                             </td>
+                                         </tr>
+                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -217,20 +255,21 @@
 
 <script>
 $(document).ready(function () {
-    function activeTaxMode() {
-        return $('#taxMode').val() || 'pajak';
+    function activeKategori() {
+        return $('#kelompokFilter').val() || 'bkp';
     }
 
-    function applyTaxMode(mode) {
-        mode = mode === 'pajak' ? 'pajak' : 'non_pajak';
-        $('#taxMode').val(mode);
-        $('.tax-choice-btn')
+    function applyFilters() {
+        var kategori = activeKategori();
+
+        // Update button states
+        $('.tax-choice-btn[data-kategori]')
             .removeClass('active')
-            .filter('[data-tax-mode="' + mode + '"]')
+            .filter('[data-kategori="' + kategori + '"]')
             .addClass('active');
 
-        $('tbody tr[data-tax-mode]').each(function () {
-            var match = $(this).data('tax-mode') === mode;
+        $('tbody tr[data-kategori]').each(function () {
+            var match = $(this).data('kategori') === kategori;
             $(this).toggleClass('tax-hidden', !match);
         });
 
@@ -238,23 +277,33 @@ $(document).ready(function () {
     }
 
     function updateButton() {
-        var mode = activeTaxMode();
-        var total = $('tbody tr[data-tax-mode="' + mode + '"]').length;
+        var kategori = activeKategori();
+        var total = $('tbody tr[data-kategori="' + kategori + '"]').length;
         $('#btnLanjutFaktur').prop('disabled', total < 1);
     }
 
-    $('.tax-choice-btn').on('click', function () {
-        applyTaxMode($(this).data('tax-mode'));
+    $('.tax-choice-btn[data-kategori]').on('click', function () {
+        var kat = $(this).data('kategori');
+        $('#kelompokFilter').val(kat);
+        
+        // Set taxMode automatically based on kategori
+        if (kat === 'bkp') {
+            $('#taxMode').val('pajak');
+        } else {
+            $('#taxMode').val('non_pajak');
+        }
+        
+        applyFilters();
     });
 
     $('#formPilihFaktur').on('submit', function (e) {
-        var mode = activeTaxMode();
-        if ($('tbody tr[data-tax-mode="' + mode + '"]').length < 1) {
+        var kategori = activeKategori();
+        if ($('tbody tr[data-kategori="' + kategori + '"]').length < 1) {
             e.preventDefault();
-            alert('Tidak ada barang untuk jenis faktur yang dipilih.');
+            alert('Tidak ada barang untuk kategori yang dipilih.');
         }
     });
 
-    applyTaxMode($('#taxMode').val());
+    applyFilters();
 });
 </script>

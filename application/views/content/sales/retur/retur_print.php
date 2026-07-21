@@ -167,22 +167,6 @@
     <table class="ttd-table">
         <tr>
             <td>
-                Dibuat,<br>
-                <strong>ADMLPB2</strong>
-                <div style="height: 50px;"></div>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['create_by_retur'] ?? '') ?></div>
-            </td>
-            <td>
-                Dicek,<br>
-                <strong>Adm Penjualan</strong>
-                <?php if (!empty($retur['admretur_by_retur'])): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['admretur_by_retur'] . ', ' . ($retur['admretur_at_retur'] ? date('d/m/Y H:i', strtotime($retur['admretur_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
-                <?php else: ?>
-                    <div style="height: 50px;"></div>
-                <?php endif; ?>
-                <div class="ttd-name" style="margin-top:0;"><?= htmlspecialchars($retur['admretur_by_retur'] ?? '') ?></div>
-            </td>
-            <td>
                 Persetujuan,<br>
                 <strong>Mng. ACC</strong>
                 <?php if (!empty($retur['mngacc_by_retur'])): ?>
@@ -218,12 +202,9 @@
             
             <td>
                 Persetujuan,<br>
-                <strong>Mng SE/Kadep SC</strong>
-                <?php 
-                $mngse_kadep = $retur['mngse_by_retur'] ?: $retur['kadepsc_by_retur'];
-                $mngse_kadep_at = $retur['mngse_at_retur'] ?: $retur['kadepsc_at_retur'];
-                if (!empty($mngse_kadep)): ?>
-                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $mngse_kadep . ', ' . ($mngse_kadep_at ? date('d/m/Y H:i', strtotime($mngse_kadep_at)) : '')) ?>" alt="QR" style="height:40px;"></div>
+                <strong>Mng SE</strong>
+                <?php if (!empty($retur['mngse_by_retur'])): ?>
+                    <div style="margin-top:4px;"><img src="https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=<?= urlencode('Sudah di Approve, ' . $retur['no_retur'] . ', ' . $retur['mngse_by_retur'] . ', ' . ($retur['mngse_at_retur'] ? date('d/m/Y H:i', strtotime($retur['mngse_at_retur'])) : '')) ?>" alt="QR" style="height:40px;"></div>
                 <?php else: ?>
                     <div style="height: 50px;"></div>
                 <?php endif; ?>

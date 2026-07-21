@@ -1434,14 +1434,29 @@ class Accounting_service
         if ($event === 'SALES_INVOICE') {
             $lineSpecs = [
                 ['ACCOUNT_RECEIVABLE', 'DEBIT', $total],
-                ['SALES_REVENUE', 'KREDIT', $amount],
-                ['VAT_OUTPUT', 'KREDIT', $tax],
             ];
+            if (!empty($payload['sales_revenue_lines'])) {
+                foreach ($payload['sales_revenue_lines'] as $custom_line) {
+                    $lineSpecs[] = ['SALES_REVENUE', 'KREDIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+            } else {
+                $lineSpecs[] = ['SALES_REVENUE', 'KREDIT', $amount];
+            }
+            $lineSpecs[] = ['VAT_OUTPUT', 'KREDIT', $tax];
         } elseif ($event === 'GOODS_ISSUE') {
-            $lineSpecs = [
-                ['COGS', 'DEBIT', $cogs],
-                ['INVENTORY', 'KREDIT', $cogs],
-            ];
+            if (!empty($payload['cogs_lines']) && !empty($payload['inventory_lines'])) {
+                foreach ($payload['cogs_lines'] as $custom_line) {
+                    $lineSpecs[] = ['COGS', 'DEBIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+                foreach ($payload['inventory_lines'] as $custom_line) {
+                    $lineSpecs[] = ['INVENTORY', 'KREDIT', $custom_line['amount'], $custom_line['id_akun']];
+                }
+            } else {
+                $lineSpecs = [
+                    ['COGS', 'DEBIT', $cogs],
+                    ['INVENTORY', 'KREDIT', $cogs],
+                ];
+            }
         } elseif ($event === 'PURCHASE_INVOICE') {
             $lineSpecs = [
                 ['GRNI', 'DEBIT', $amount],
@@ -1500,7 +1515,11 @@ class Accounting_service
                 continue;
             }
 
-            $idAkun = $this->resolve_mapping($payload, $spec[0], $spec[1]);
+            if (isset($spec[3])) {
+                $idAkun = $spec[3];
+            } else {
+                $idAkun = $this->resolve_mapping($payload, $spec[0], $spec[1]);
+            }
             $roleLabel = [
                 'ACCOUNT_RECEIVABLE' => 'Piutang',
                 'SALES_REVENUE' => 'Pendapatan',
@@ -1531,6 +1550,31 @@ class Accounting_service
 
     private function resolve_mapping($payload, $role, $side)
     {
+        $is_pajak = !empty($payload['is_pajak'])
+            || (isset($payload['tax_mode']) && $payload['tax_mode'] === 'pajak')
+            || (isset($payload['tax']) && (float)$payload['tax'] > 0);
+
+        if ($role === 'ACCOUNT_RECEIVABLE' && isset($payload['posting_event']) && $payload['posting_event'] === 'SALES_INVOICE') {
+            return 461; // 13099 Piutang Usaha
+        }
+
+        if ($role === 'SALES_REVENUE') {
+            if (!empty($payload['is_promosi'])) {
+                return 466; // 41036 A Penjualan Barang Promosi
+            } elseif (!empty($payload['is_dagangan'])) {
+                return 314; // 41032 A Penjualan Barang Dagangan
+            } elseif (!empty($payload['is_bkps'])) {
+                return 308; // Q Penjualan BKPS (410-12)
+            } else {
+                return 307; // Q Penjualan BKP (410-11)
+            }
+        }
+        if ($role === 'VAT_OUTPUT') {
+            if ($is_pajak) {
+                return 280; // Q PPN K (210-24)
+            }
+        }
+
         $sourceModule = strtoupper(trim((string)($payload['source_module'] ?? '')));
         $sourceType = strtoupper(trim((string)($payload['source_type'] ?? '')));
         $event = strtoupper(trim((string)($payload['posting_event'] ?? '')));

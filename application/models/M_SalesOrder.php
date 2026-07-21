@@ -1044,8 +1044,10 @@ class M_SalesOrder extends CI_Model
     {
         // Alias id → id_so_detail agar tidak perlu ubah controller/view
         $rows = $this->db
-            ->select('d.id AS id_so_detail, d.*')
+            ->select('d.id AS id_so_detail, d.*, b.kelompok_dagang, g.DESKRIPSI AS kelompok_dagang_deskripsi')
             ->from('tbso_sales_order_detail d')
+            ->join('tbpo_barang b', 'd.kd_barang = b.kode_barang', 'left')
+            ->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left')
             ->where('d.id_so', $id_so)
             ->get()
             ->result_array();
@@ -1109,6 +1111,7 @@ class M_SalesOrder extends CI_Model
             'total_kubikasi'    => $header['total_kubikasi'],
             'status'            => 'draft',
             'catatan'           => $header['catatan'] ?? null,
+            'cara_pembayaran'   => $header['cara_pembayaran'] ?? 'cash',
             'create_by'         => $header['create_by'],
             'create_at'         => date('Y-m-d H:i:s'),
         ];
@@ -1237,6 +1240,7 @@ class M_SalesOrder extends CI_Model
             'total_tonase'      => $header['total_tonase'],
             'total_kubikasi'    => $header['total_kubikasi'],
             'catatan'           => $header['catatan'] ?? null,
+            'cara_pembayaran'   => $header['cara_pembayaran'] ?? 'cash',
             'update_by'         => $header['update_by'],
             'update_at'         => date('Y-m-d H:i:s'),
         ];

@@ -134,10 +134,10 @@
                         <h3 class="card-title"><i class="fas fa-list mr-2"></i> Daftar Retur Penjualan</h3>
                         <div class="card-tools">
                             <?php 
-                            $is_approver = in_array($jobdesk, ['MANAGERSC', 'ADMINSC', 'ADMRETUR', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB']);
+                            $is_approver = in_array($jobdesk, ['MANAGERSC', 'ADMINSC', 'ADMRETUR', 'ADMINSTOCK', 'KADEPSC', 'KADEP', 'MANAGER', 'COLLECTION', 'KOLEKTOR', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA']);
                             if ($is_approver): 
                             ?>
-                                <a href="<?= base_url('retur_penjualan/history') ?>" class="btn btn-xs btn-outline-light mr-2">
+                                <a href="<?= base_url('retur_penjualan/retur/history') ?>" class="btn btn-xs btn-outline-light mr-2">
                                     <i class="fas fa-history"></i> Riwayat Persetujuan
                                 </a>
                             <?php endif; ?>
