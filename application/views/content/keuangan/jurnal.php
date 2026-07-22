@@ -129,61 +129,7 @@ $fiscalPeriods = isset($fiscal_periods) ? $fiscal_periods : [];
                         </div>
                     <?php endif; ?>
 
-                    <div class="sales-journal-panel">
-                        <div class="panel-heading">
-                            <span>Daftar Jurnal Pembelian</span>
-                            <small id="purchaseJournalCount">0 data</small>
-                        </div>
-                        <div class="sales-journal-toolbar">
-                            <div class="text-muted">Klik baris untuk melihat jurnal LPB dan PO.</div>
-                            <input type="text" class="form-control sales-journal-search" id="purchaseJournalSearch" placeholder="Search LPB, PO, supplier">
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table zahir-table">
-                                <thead>
-                                    <tr>
-                                        <th>Referensi</th>
-                                        <th>Tanggal</th>
-                                        <th>No PO</th>
-                                        <th>Supplier</th>
-                                        <th>Kurs</th>
-                                        <th class="text-right">Nilai</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="purchaseJournalRows">
-                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal pembelian...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
-                    <div class="sales-journal-panel">
-                        <div class="panel-heading">
-                            <span>Daftar Jurnal Penjualan</span>
-                            <small id="salesJournalCount">0 data</small>
-                        </div>
-                        <div class="sales-journal-toolbar">
-                            <div class="text-muted">Klik baris untuk melihat jurnal debit/kredit.</div>
-                            <input type="text" class="form-control sales-journal-search" id="salesJournalSearch" placeholder="Search referensi, SO, pelanggan">
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table zahir-table">
-                                <thead>
-                                    <tr>
-                                        <th>Referensi</th>
-                                        <th>Tanggal</th>
-                                        <th>No SO</th>
-                                        <th>Pelanggan</th>
-                                        <th>Kurs</th>
-                                        <th class="text-right">Nilai</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="salesJournalRows">
-                                    <tr><td colspan="6" class="text-center text-muted">Memuat jurnal penjualan...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
 
                     <div class="journal-command-grid">

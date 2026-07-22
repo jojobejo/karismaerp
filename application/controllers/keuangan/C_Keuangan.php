@@ -1234,6 +1234,20 @@ class C_Keuangan extends CI_Controller
         $this->load->view('content/keuangan/ajax/ajax_jurnal.php', $data);
     }
 
+    public function jurnal_pembelian()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL PEMBELIAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_pembelian.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
     public function jurnal_penjualan()
     {
         if (!$this->require_jurnal_access()) {
@@ -1624,6 +1638,38 @@ class C_Keuangan extends CI_Controller
         $search = trim((string)$this->input->post('search', true));
         return $this->accounting_ajax_response(true, 'Daftar jurnal penjualan berhasil dimuat.', [
             'rows' => $this->M_Journal->accounting_sales_journal_rows($search, 150),
+        ]);
+    }
+
+    public function jurnal_sales_report_data()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $start_date = trim((string)$this->input->post('start_date', true));
+        $end_date = trim((string)$this->input->post('end_date', true));
+
+        // Basic validation if dates are empty, maybe default to current month
+        if (empty($start_date)) {
+            $start_date = date('Y-m-01');
+        }
+        if (empty($end_date)) {
+            $end_date = date('Y-m-t');
+        }
+
+        return $this->accounting_ajax_response(true, 'Data laporan jurnal penjualan berhasil dimuat.', [
+            'data' => $this->M_Journal->accounting_sales_journal_report($start_date, $end_date),
+            'start_date' => $start_date,
+            'end_date' => $end_date
         ]);
     }
 
