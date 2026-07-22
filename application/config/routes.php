@@ -460,6 +460,18 @@ $route['ics/retur/pembelian/exp_select2']           = 'logistik/C_Ics/ajax_retur
 $route['ics/retur/pembelian/add_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_add_detail';
 $route['ics/retur/pembelian/list_detail']           = 'logistik/C_Ics/ajax_retur_pembelian_list_detail';
 $route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur_pembelian_delete_detail';
+$route['ics/retur/pembelian/lpb_select2']           = 'logistik/C_Ics/ajax_retur_pembelian_lpb_select2';
+$route['ics/retur/pembelian/lpb_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_lpb_detail';
+$route['ics/retur/pembelian/create_draft']          = 'logistik/C_Ics/ajax_retur_pembelian_create_draft';
+$route['ics/retur/pembelian/submit']                = 'logistik/C_Ics/ajax_retur_pembelian_submit';
+$route['ics/retur/pembelian/verify_purchasing']     = 'logistik/C_Ics/ajax_retur_pembelian_verify_purchasing';
+$route['ics/retur/pembelian/verify_accounting']     = 'logistik/C_Ics/ajax_retur_pembelian_verify_accounting';
+$route['ics/retur/pembelian/post']                  = 'logistik/C_Ics/ajax_retur_pembelian_post';
+$route['ics/retur/pembelian/void']                  = 'logistik/C_Ics/ajax_retur_pembelian_void';
+$route['ics/retur/pembelian/adjustment']            = 'logistik/C_Ics/retur_pembelian_adjustment';
+$route['ics/retur/pembelian/adjustment/lpb_select2'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_select2';
+$route['ics/retur/pembelian/adjustment/lpb_detail'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_detail';
+$route['ics/retur/pembelian/adjustment/post']       = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_post';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';

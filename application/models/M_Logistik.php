@@ -4087,6 +4087,28 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
+        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
+            : "'-' AS checker_name";
+        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
+            : "'' AS checker_by";
+        $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
+            ? "h.checker_at"
+            : "NULL AS checker_at";
+        $checkerGroup = "";
+        if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_name";
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_by";
+        }
+        if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_at";
+        }
 
         $sql = "SELECT
                 h.id_lpb,
@@ -4118,6 +4140,9 @@ FROM (
                 {$tanggalInvoiceSelect},
                 {$kodeFakturSelect},
                 {$tanggalFakturSelect},
+                {$checkerSelect},
+                {$checkerBySelect},
+                {$checkerAtSelect},
                 h.input_at
             FROM tb_lpb h
             LEFT JOIN tbpo_po p
@@ -4180,9 +4205,221 @@ FROM (
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
+                {$checkerGroup}
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
-        return $this->db->query($sql, $params)->result_array();
+        return $this->append_lpb_operational_alerts($this->db->query($sql, $params)->result_array());
+    }
+
+    private function default_lpb_operational_alert()
+    {
+        return [
+            'has_sales_transaction' => 0,
+            'sales_invoice_count' => 0,
+            'sales_qty_total' => 0,
+            'sales_invoice_sample' => '',
+            'latest_sales_at' => '',
+            'has_active_lpb_journal' => 0,
+            'lpb_journal_count' => 0,
+            'lpb_active_journal_count' => 0,
+            'lpb_journal_sample' => '',
+            'lpb_operational_warning' => ''
+        ];
+    }
+
+    private function append_lpb_operational_alerts(array $rows)
+    {
+        if (empty($rows)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id_lpb'] ?? 0);
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        if (empty($ids)) {
+            return $rows;
+        }
+
+        $salesMap = $this->get_lpb_sales_usage_summary_map(array_values($ids));
+        $journalMap = $this->get_lpb_goods_receipt_journal_summary_map(array_values($ids));
+
+        foreach ($rows as &$row) {
+            $id = (int) ($row['id_lpb'] ?? 0);
+            $alert = $this->default_lpb_operational_alert();
+
+            if (isset($salesMap[$id])) {
+                $alert = array_merge($alert, $salesMap[$id]);
+            }
+            if (isset($journalMap[$id])) {
+                $alert = array_merge($alert, $journalMap[$id]);
+            }
+
+            $warnings = [];
+            if ((int) $alert['has_sales_transaction'] === 1) {
+                $warnings[] = 'Sudah ada transaksi penjualan berdasarkan LPB ini.';
+            }
+            if ((int) $alert['has_active_lpb_journal'] === 1) {
+                $warnings[] = 'Jurnal pembelian LPB sudah POSTED; koreksi harga perlu kontrol jurnal.';
+            }
+            $alert['lpb_operational_warning'] = implode(' ', $warnings);
+
+            $row = array_merge($row, $alert);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function append_lpb_operational_alerts_to_row($row)
+    {
+        if (empty($row)) {
+            return $row;
+        }
+
+        $rows = $this->append_lpb_operational_alerts([$row]);
+        return $rows[0] ?? $row;
+    }
+
+    public function get_lpb_sales_usage_summary($idLpb)
+    {
+        $map = $this->get_lpb_sales_usage_summary_map([(int) $idLpb]);
+        return $map[(int) $idLpb] ?? $this->default_lpb_operational_alert();
+    }
+
+    private function get_lpb_sales_usage_summary_map(array $idLpbs)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $idLpbs), function ($id) {
+            return $id > 0;
+        })));
+
+        if (empty($ids) || !$this->db->table_exists('tb_lpb_detail') || !$this->db->table_exists('tbso_faktur_detail')) {
+            return [];
+        }
+
+        $idSql = implode(',', $ids);
+        $hasBatch = $this->db->table_exists('tb_lpb_batch');
+        $batchJoin = $hasBatch ? "LEFT JOIN tb_lpb_batch b ON b.id_detail_lpb = d.id_detail_lpb" : "";
+        $lotExpr = $hasBatch
+            ? "COALESCE(NULLIF(TRIM(b.no_lot), ''), NULLIF(TRIM(d.no_lot), ''), '')"
+            : "COALESCE(NULLIF(TRIM(d.no_lot), ''), '')";
+        $expiredExpr = $hasBatch
+            ? "COALESCE(NULLIF(b.expired_date, '0000-00-00'), NULLIF(d.expired_date, '0000-00-00'), '0000-00-00')"
+            : "COALESCE(NULLIF(d.expired_date, '0000-00-00'), '0000-00-00')";
+
+        $sql = "SELECT
+                    d.id_lpb,
+                    COUNT(DISTINCT fd.no_faktur) AS sales_invoice_count,
+                    COALESCE(SUM(fd.qty), 0) AS sales_qty_total,
+                    SUBSTRING_INDEX(GROUP_CONCAT(DISTINCT fd.no_faktur ORDER BY fd.create_at DESC SEPARATOR ', '), ', ', 5) AS sales_invoice_sample,
+                    MAX(fd.create_at) AS latest_sales_at
+                FROM tb_lpb_detail d
+                {$batchJoin}
+                INNER JOIN tbso_faktur_detail fd
+                    ON fd.kd_barang = d.kd_barang
+                    AND COALESCE(NULLIF(TRIM(fd.no_lot), ''), '') = {$lotExpr}
+                    AND COALESCE(NULLIF(fd.expired_date, '0000-00-00'), '0000-00-00') = {$expiredExpr}
+                WHERE d.id_lpb IN ({$idSql})
+                GROUP BY d.id_lpb";
+
+        $map = [];
+        foreach ($this->db->query($sql)->result_array() as $row) {
+            $id = (int) ($row['id_lpb'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $map[$id] = [
+                'has_sales_transaction' => ((int) ($row['sales_invoice_count'] ?? 0) > 0) ? 1 : 0,
+                'sales_invoice_count' => (int) ($row['sales_invoice_count'] ?? 0),
+                'sales_qty_total' => (float) ($row['sales_qty_total'] ?? 0),
+                'sales_invoice_sample' => (string) ($row['sales_invoice_sample'] ?? ''),
+                'latest_sales_at' => (string) ($row['latest_sales_at'] ?? '')
+            ];
+        }
+
+        return $map;
+    }
+
+    public function get_lpb_goods_receipt_journal_summary($idLpb)
+    {
+        $map = $this->get_lpb_goods_receipt_journal_summary_map([(int) $idLpb]);
+        return $map[(int) $idLpb] ?? $this->default_lpb_operational_alert();
+    }
+
+    private function get_lpb_goods_receipt_journal_summary_map(array $idLpbs)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $idLpbs), function ($id) {
+            return $id > 0;
+        })));
+
+        if (empty($ids) || !$this->db->table_exists('tbkeu_jurnal')) {
+            return [];
+        }
+
+        $idSql = implode(',', $ids);
+        $activeExpr = $this->db->field_exists('reversed_at', 'tbkeu_jurnal')
+            ? "CASE WHEN j.status = 'POSTED' AND j.reversed_at IS NULL THEN 1 ELSE 0 END"
+            : "CASE WHEN j.status = 'POSTED' THEN 1 ELSE 0 END";
+
+        $sql = "SELECT
+                    CAST(j.source_id AS UNSIGNED) AS id_lpb,
+                    COUNT(j.id_jurnal) AS lpb_journal_count,
+                    SUM({$activeExpr}) AS lpb_active_journal_count,
+                    SUBSTRING_INDEX(GROUP_CONCAT(j.nomor_jurnal ORDER BY j.id_jurnal DESC SEPARATOR ', '), ', ', 5) AS lpb_journal_sample
+                FROM tbkeu_jurnal j
+                WHERE j.source_module = 'LOGISTIK'
+                    AND j.source_type = 'LPB_FINAL'
+                    AND j.posting_event = 'GOODS_RECEIPT'
+                    AND CAST(j.source_id AS UNSIGNED) IN ({$idSql})
+                GROUP BY CAST(j.source_id AS UNSIGNED)";
+
+        $map = [];
+        foreach ($this->db->query($sql)->result_array() as $row) {
+            $id = (int) ($row['id_lpb'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $activeCount = (int) ($row['lpb_active_journal_count'] ?? 0);
+            $map[$id] = [
+                'has_active_lpb_journal' => $activeCount > 0 ? 1 : 0,
+                'lpb_journal_count' => (int) ($row['lpb_journal_count'] ?? 0),
+                'lpb_active_journal_count' => $activeCount,
+                'lpb_journal_sample' => (string) ($row['lpb_journal_sample'] ?? '')
+            ];
+        }
+
+        return $map;
+    }
+
+    private function lpb_price_change_blocker($idLpb)
+    {
+        $sales = $this->get_lpb_sales_usage_summary($idLpb);
+        if ((int) ($sales['has_sales_transaction'] ?? 0) === 1) {
+            return [
+                'blocked' => true,
+                'code' => 'LPB_ALREADY_SOLD',
+                'message' => 'Harga LPB tidak dapat diubah langsung karena sudah ada transaksi penjualan berdasarkan barang/lot/expired LPB ini. Gunakan workflow koreksi harga/jurnal agar HPP dan persediaan tetap terkendali.',
+                'data' => $sales
+            ];
+        }
+
+        $journal = $this->get_lpb_goods_receipt_journal_summary($idLpb);
+        if ((int) ($journal['has_active_lpb_journal'] ?? 0) === 1) {
+            return [
+                'blocked' => true,
+                'code' => 'LPB_ACTIVE_JOURNAL_EXISTS',
+                'message' => 'Harga LPB tidak dapat diubah langsung karena jurnal pembelian LPB sudah POSTED. Lakukan reversal/koreksi jurnal terlebih dahulu sebelum reinput harga.',
+                'data' => $journal
+            ];
+        }
+
+        return ['blocked' => false, 'code' => '', 'message' => '', 'data' => []];
     }
 
     public function get_barang_by_po()
@@ -4454,6 +4691,28 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
+        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
+            : "'-' AS checker_name";
+        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
+            : "'' AS checker_by";
+        $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
+            ? "h.checker_at"
+            : "NULL AS checker_at";
+        $checkerGroup = "";
+        if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_name";
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_by";
+        }
+        if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_at";
+        }
 
         $sql = "SELECT
                 h.id_lpb,
@@ -4468,6 +4727,9 @@ FROM (
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
+                {$checkerSelect},
+                {$checkerBySelect},
+                {$checkerAtSelect},
                 h.gudang_id,
                 COALESCE(g.nama_gudang, '-') AS nama_gudang,
                 h.keterangan,
@@ -4496,9 +4758,10 @@ FROM (
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
+                {$checkerGroup}
             ORDER BY h.input_at DESC, h.id_lpb DESC";
 
-        return $this->db->query($sql, [$kd_po])->result_array();
+        return $this->append_lpb_operational_alerts($this->db->query($sql, [$kd_po])->result_array());
     }
 
     public function get_lpb_record_header($id_lpb)
@@ -4545,6 +4808,28 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
+        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
+            : "'-' AS checker_name";
+        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
+            : "'' AS checker_by";
+        $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
+            ? "h.checker_at"
+            : "NULL AS checker_at";
+        $checkerGroup = "";
+        if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_name";
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_by";
+        }
+        if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+            $checkerGroup .= ",
+                h.checker_at";
+        }
 
         $sql = "SELECT
                 h.id_lpb,
@@ -4559,6 +4844,9 @@ FROM (
                 {$jenisLpbSelect},
                 {$nomorLpbSelect},
                 {$statusLpbSelect},
+                {$checkerSelect},
+                {$checkerBySelect},
+                {$checkerAtSelect},
                 h.gudang_id,
                 COALESCE(g.nama_gudang, '-') AS nama_gudang,
                 h.keterangan,
@@ -4587,9 +4875,10 @@ FROM (
                 {$jenisLpbGroup}
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
+                {$checkerGroup}
             LIMIT 1";
 
-        return $this->db->query($sql, [$id_lpb])->row_array();
+        return $this->append_lpb_operational_alerts_to_row($this->db->query($sql, [$id_lpb])->row_array());
     }
 
     public function get_lpb_record_detail_rows($id_lpb)
@@ -4801,6 +5090,16 @@ FROM (
 
         if (!$row) {
             return FALSE;
+        }
+
+        $blocker = $this->lpb_price_change_blocker((int) $row['id_lpb']);
+        if (!empty($blocker['blocked'])) {
+            return [
+                'status' => FALSE,
+                'message' => $blocker['message'],
+                'errors' => [$blocker['code']],
+                'data' => $blocker['data']
+            ];
         }
 
         $qty = (float) ($row['qty_diterima'] ?? 0);
@@ -6049,10 +6348,6 @@ FROM (
             return ['status' => FALSE, 'message' => 'Data LPB tidak ditemukan.'];
         }
 
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            return ['status' => FALSE, 'message' => 'Pecah invoice hanya bisa dilakukan saat status UNPOST.'];
-        }
-
         $details = $this->db
             ->where('id_lpb', $idLpb)
             ->order_by('id_detail_lpb', 'ASC')
@@ -6162,13 +6457,6 @@ FROM (
                 'qty_diterima'       => $qty,
                 'total_harga'        => $qty * $hargaSatuan
             ];
-            if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
-                $updateDetail['harga_verified_by'] = null;
-            }
-            if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
-                $updateDetail['harga_verified_at'] = null;
-            }
-
             $this->db
                 ->where('id_detail_lpb', $idDetail)
                 ->update('tb_lpb_detail', $updateDetail);
@@ -6227,7 +6515,16 @@ FROM (
                 $newHeader['nomor_lpb'] = $header['nomor_lpb'] ?? null;
             }
             if ($this->db->field_exists('status_lpb', 'tb_lpb')) {
-                $newHeader['status_lpb'] = 0;
+                $newHeader['status_lpb'] = (int) ($header['status_lpb'] ?? 1);
+            }
+            if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+                $newHeader['checker_name'] = $header['checker_name'] ?? null;
+            }
+            if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+                $newHeader['checker_by'] = $header['checker_by'] ?? null;
+            }
+            if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+                $newHeader['checker_at'] = $header['checker_at'] ?? null;
             }
 
             $this->db->insert('tb_lpb', $newHeader);
@@ -6272,10 +6569,10 @@ FROM (
                     $newDetail['harga_update_at'] = $detail['harga_update_at'] ?? null;
                 }
                 if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
-                    $newDetail['harga_verified_by'] = null;
+                    $newDetail['harga_verified_by'] = $detail['harga_verified_by'] ?? null;
                 }
                 if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
-                    $newDetail['harga_verified_at'] = null;
+                    $newDetail['harga_verified_at'] = $detail['harga_verified_at'] ?? null;
                 }
 
                 $this->db->insert('tb_lpb_detail', $newDetail);
@@ -6293,7 +6590,7 @@ FROM (
                 'no_invoice'     => $newHeader['no_invoice'] ?? '',
                 'action_type'    => 'CREATE_LPB_SPLIT_INVOICE',
                 'status_before'  => null,
-                'status_after'   => 'UNPOST',
+                'status_after'   => $this->lpb_status_label($newHeader['status_lpb'] ?? 1),
                 'data_before'    => [
                     'source_id_lpb' => $idLpb
                 ],
@@ -6302,10 +6599,13 @@ FROM (
                     'nomor_lpb' => $newHeader['nomor_lpb'] ?? '',
                     'no_invoice' => $newHeader['no_invoice'] ?? '',
                     'tanggal_invoice' => $newHeader['tanggal_invoice'] ?? '',
-                    'total_qty' => $split['total_qty']
+                    'total_qty' => $split['total_qty'],
+                    'checker_name' => $newHeader['checker_name'] ?? ''
                 ],
                 'keterangan'     => 'LPB baru dibuat dari pecah multiple invoice LPB #' . $idLpb . '.',
-                'dilakukan_oleh' => $dilakukanOleh
+                'dilakukan_oleh' => $dilakukanOleh,
+                'checker_name'   => $newHeader['checker_name'] ?? null,
+                'checker_by'     => $newHeader['checker_by'] ?? null
             ]);
         }
 
@@ -6463,6 +6763,44 @@ FROM (
             }
         }
 
+        if (!$this->db->field_exists('checker_name', 'tb_lpb')) {
+            if (!$this->dbforge->add_column('tb_lpb', [
+                'checker_name' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => TRUE,
+                    'after'      => $this->db->field_exists('keterangan', 'tb_lpb') ? 'keterangan' : 'gudang_id'
+                ]
+            ])) {
+                return FALSE;
+            }
+        }
+
+        if (!$this->db->field_exists('checker_by', 'tb_lpb')) {
+            if (!$this->dbforge->add_column('tb_lpb', [
+                'checker_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => TRUE,
+                    'after'      => 'checker_name'
+                ]
+            ])) {
+                return FALSE;
+            }
+        }
+
+        if (!$this->db->field_exists('checker_at', 'tb_lpb')) {
+            if (!$this->dbforge->add_column('tb_lpb', [
+                'checker_at' => [
+                    'type' => 'DATETIME',
+                    'null' => TRUE,
+                    'after' => 'checker_by'
+                ]
+            ])) {
+                return FALSE;
+            }
+        }
+
         if (!$this->db->table_exists('tb_lpb_log')) {
             return TRUE;
         }
@@ -6530,6 +6868,32 @@ FROM (
             }
         }
 
+        if (!$this->db->field_exists('checker_name', 'tb_lpb_log')) {
+            if (!$this->dbforge->add_column('tb_lpb_log', [
+                'checker_name' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => TRUE,
+                    'after'      => 'dilakukan_oleh'
+                ]
+            ])) {
+                return FALSE;
+            }
+        }
+
+        if (!$this->db->field_exists('checker_by', 'tb_lpb_log')) {
+            if (!$this->dbforge->add_column('tb_lpb_log', [
+                'checker_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => TRUE,
+                    'after'      => 'checker_name'
+                ]
+            ])) {
+                return FALSE;
+            }
+        }
+
         return TRUE;
     }
 
@@ -6579,6 +6943,38 @@ FROM (
             return TRUE;
         }
 
+        $checkerContext = [
+            'checker_name' => $payload['checker_name'] ?? null,
+            'checker_by' => $payload['checker_by'] ?? null
+        ];
+        $idLpbForContext = (int) ($payload['id_lpb'] ?? 0);
+        if ($idLpbForContext > 0
+            && ($checkerContext['checker_name'] === null || $checkerContext['checker_by'] === null)
+            && $this->db->table_exists('tb_lpb')
+            && ($this->db->field_exists('checker_name', 'tb_lpb') || $this->db->field_exists('checker_by', 'tb_lpb'))) {
+            $select = [];
+            if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+                $select[] = 'checker_name';
+            }
+            if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+                $select[] = 'checker_by';
+            }
+            $header = $this->db
+                ->select(implode(',', $select))
+                ->where('id_lpb', $idLpbForContext)
+                ->limit(1)
+                ->get('tb_lpb')
+                ->row_array();
+            if ($header) {
+                if ($checkerContext['checker_name'] === null && array_key_exists('checker_name', $header)) {
+                    $checkerContext['checker_name'] = $header['checker_name'];
+                }
+                if ($checkerContext['checker_by'] === null && array_key_exists('checker_by', $header)) {
+                    $checkerContext['checker_by'] = $header['checker_by'];
+                }
+            }
+        }
+
         $data = [
             'kd_po'          => $payload['kd_po'] ?? '',
             'no_invoice'     => $payload['no_invoice'] ?? '',
@@ -6602,6 +6998,12 @@ FROM (
         }
         if ($this->db->field_exists('data_after', 'tb_lpb_log')) {
             $data['data_after'] = isset($payload['data_after']) ? json_encode($payload['data_after']) : null;
+        }
+        if ($this->db->field_exists('checker_name', 'tb_lpb_log')) {
+            $data['checker_name'] = $checkerContext['checker_name'];
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb_log')) {
+            $data['checker_by'] = $checkerContext['checker_by'];
         }
 
         return $this->db->insert('tb_lpb_log', $data);
@@ -6944,6 +7346,18 @@ FROM (
             $headerInsert['status_lpb'] = 1;
         }
 
+        $checkerName = trim((string) ($header['checker_name'] ?? $header['dilakukan_oleh'] ?? ''));
+        $checkerBy = trim((string) ($header['checker_by'] ?? ''));
+        if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+            $headerInsert['checker_name'] = $checkerName !== '' ? $checkerName : null;
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+            $headerInsert['checker_by'] = $checkerBy !== '' ? $checkerBy : null;
+        }
+        if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+            $headerInsert['checker_at'] = date('Y-m-d H:i:s');
+        }
+
         $this->db->insert('tb_lpb', $headerInsert);
         $idLpb = $this->db->insert_id();
 
@@ -7056,10 +7470,13 @@ FROM (
                 'jenis_lpb' => $headerInsert['jenis_lpb'] ?? '',
                 'nosj' => $headerInsert['nosj'] ?? '',
                 'tgl_sj' => $headerInsert['tgl_sj'] ?? '',
-                'status_lpb' => $headerInsert['status_lpb'] ?? 1
+                'status_lpb' => $headerInsert['status_lpb'] ?? 1,
+                'checker_name' => $headerInsert['checker_name'] ?? ''
             ],
             'keterangan'     => 'Draft temporary penerimaan direkam otomatis menjadi POST',
-            'dilakukan_oleh' => $header['dilakukan_oleh'] ?? 'SYSTEM'
+            'dilakukan_oleh' => $header['dilakukan_oleh'] ?? 'SYSTEM',
+            'checker_name'   => $headerInsert['checker_name'] ?? $checkerName,
+            'checker_by'     => $headerInsert['checker_by'] ?? $checkerBy
         ]);
 
         $this->db->where('kd_suplier', $header['kd_suplier']);

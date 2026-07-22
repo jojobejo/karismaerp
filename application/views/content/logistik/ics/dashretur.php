@@ -39,6 +39,11 @@
                                                 <i class="fas fa-file-csv"></i> Retur Pembelian
                                             </a>
                                         </div>
+                                        <div class="col-auto">
+                                            <a class="btn btn-warning mb-3 " href="<?= base_url('ics/retur/pembelian/adjustment') ?>">
+                                                <i class="fas fa-balance-scale"></i> Adjustment Harga LPB
+                                            </a>
+                                        </div>
                                     </div>
                                 <?php else : ?>
                                     <div class="row">

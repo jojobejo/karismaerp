@@ -10,8 +10,86 @@ class C_Ics extends CI_Controller
         $this->load->model('M_Ics');
         $this->load->model('M_Logistik');
         $this->load->model('M_Keuangan');
+        $this->load->model('M_ReturPembelian');
+        $this->load->model('M_LpbPriceAdjustment');
         $this->load->helper('stock_helper');
         date_default_timezone_set('Asia/Jakarta');
+
+        $method = $this->router->fetch_method();
+        if ($this->is_retur_method($method)) {
+            $this->require_retur_access(strpos($method, 'ajax_') === 0);
+        }
+    }
+
+    private function is_retur_method($method)
+    {
+        return in_array($method, ['dash_retur', 'detail_retur', 'retur_penjualan', 'retur_pembelian', 'retur_pembelian_adjustment'], true)
+            || strpos((string)$method, 'ajax_retur') === 0;
+    }
+
+    private function require_retur_access($json = false)
+    {
+        if (!$this->session->userdata('logged_in')) {
+            if ($json) {
+                $this->json_response(['status' => false, 'message' => 'Sesi login tidak ditemukan.', 'errors' => ['AUTH_REQUIRED']]);
+                exit;
+            }
+            redirect('Auth');
+            exit;
+        }
+
+        if ($this->has_retur_access()) {
+            return;
+        }
+
+        if ($json) {
+            $this->json_response(['status' => false, 'message' => 'Anda tidak memiliki akses ke module retur.', 'errors' => ['RETUR_ACCESS_DENIED']]);
+            exit;
+        }
+
+        show_error('Anda tidak memiliki akses ke module retur.', 403, 'Akses Ditolak');
+    }
+
+    private function has_retur_access()
+    {
+        $username = strtolower(trim((string)$this->session->userdata('username')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+
+        if ($username === 'admin' || (bool)$this->session->userdata('is_admin_dashboard')) {
+            return true;
+        }
+
+        $allowedDepartemen = ['LOGISTIK', 'PURCHASING', 'KEUANGAN', 'FINANCE', 'ACCOUNTING', 'IT'];
+        foreach ($allowedDepartemen as $allowed) {
+            if ($departemen === $allowed || strpos($departemen, $allowed) !== false) {
+                return true;
+            }
+        }
+
+        $allowedJobdesk = [
+            'LOGISTIK',
+            'ADMINLOGLPB',
+            'ADMLPB2',
+            'ADMINICS',
+            'ADMLOG',
+            'ADMINPURCHASING',
+            'ADMIN PO',
+            'PURCHASING',
+            'ADMINKEU',
+            'ADMINKEUTC',
+            'KIUKEU',
+            'KEUANGAN',
+            'ACCOUNTING',
+            'FINANCE',
+            'IT',
+            'ADMINIT',
+            'ADMIN IT',
+            'PROGRAMMER',
+            'DEVELOPMENT'
+        ];
+
+        return in_array($jobdesk, $allowedJobdesk, true);
     }
 
     public function index()
@@ -788,6 +866,14 @@ class C_Ics extends CI_Controller
             ?: 'SYSTEM';
     }
 
+    private function active_user_code()
+    {
+        return $this->session->userdata('nik')
+            ?: $this->session->userdata('username')
+            ?: $this->session->userdata('id')
+            ?: '';
+    }
+
     private function is_admin_po_jobdesk()
     {
         $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
@@ -850,7 +936,20 @@ class C_Ics extends CI_Controller
             'no_invoice'  => $header['no_invoice'] ?? '',
             'tanggal_invoice' => $header['tanggal_invoice'] ?? '',
             'kode_faktur_pajak' => $header['kode_faktur_pajak'] ?? '',
-            'tanggal_faktur_pajak' => $header['tanggal_faktur_pajak'] ?? ''
+            'tanggal_faktur_pajak' => $header['tanggal_faktur_pajak'] ?? '',
+            'checker_name' => $header['checker_name'] ?? '',
+            'checker_by' => $header['checker_by'] ?? '',
+            'checker_at' => $header['checker_at'] ?? '',
+            'has_sales_transaction' => $header['has_sales_transaction'] ?? 0,
+            'sales_invoice_count' => $header['sales_invoice_count'] ?? 0,
+            'sales_qty_total' => $header['sales_qty_total'] ?? 0,
+            'sales_invoice_sample' => $header['sales_invoice_sample'] ?? '',
+            'latest_sales_at' => $header['latest_sales_at'] ?? '',
+            'has_active_lpb_journal' => $header['has_active_lpb_journal'] ?? 0,
+            'lpb_journal_count' => $header['lpb_journal_count'] ?? 0,
+            'lpb_active_journal_count' => $header['lpb_active_journal_count'] ?? 0,
+            'lpb_journal_sample' => $header['lpb_journal_sample'] ?? '',
+            'lpb_operational_warning' => $header['lpb_operational_warning'] ?? ''
         ];
     }
 
@@ -1224,6 +1323,18 @@ class C_Ics extends CI_Controller
             'dilakukan_oleh'     => $this->active_user_name()
         ]);
 
+        if (is_array($saved) && array_key_exists('status', $saved) && empty($saved['status'])) {
+            $this->db->trans_rollback();
+            $this->json_response([
+                'status'  => 'error',
+                'message' => $saved['message'] ?? 'Update harga detail LPB tidak dapat diproses.',
+                'errors'  => $saved['errors'] ?? [],
+                'data'    => $saved['data'] ?? [],
+                'html'    => ''
+            ]);
+            return;
+        }
+
         if (!$saved || $this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             $this->json_response(['status' => 'error', 'message' => 'Update harga detail LPB gagal disimpan.', 'html' => '']);
@@ -1428,11 +1539,6 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            $this->json_response(['status' => 'error', 'message' => 'Update invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
-            return;
-        }
-
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_invoice_lpb([
             'id_lpb'         => $id_lpb,
@@ -1484,11 +1590,6 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            $this->json_response(['status' => 'error', 'message' => 'Pecah invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
-            return;
-        }
-
         $this->db->trans_begin();
         $saved = $this->M_Logistik->split_lpb_multiple_invoice([
             'id_lpb'         => $id_lpb,
@@ -1535,11 +1636,6 @@ class C_Ics extends CI_Controller
         $header = $this->M_Logistik->get_lpb_record_header($id_lpb);
         if (!$header) {
             $this->json_response(['status' => 'error', 'message' => 'Data LPB tidak ditemukan.', 'html' => '']);
-            return;
-        }
-
-        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
-            $this->json_response(['status' => 'error', 'message' => 'Update faktur pajak hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
             return;
         }
 
@@ -2164,7 +2260,9 @@ class C_Ics extends CI_Controller
             'jenis_lpb'   => trim((string) $this->input->post('jenis_lpb', TRUE)),
             'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
             'keterangan'  => trim((string) $this->input->post('keterangan', TRUE)),
-            'dilakukan_oleh' => $this->active_user_name()
+            'dilakukan_oleh' => $this->active_user_name(),
+            'checker_name' => trim((string) $this->input->post('checker_name', TRUE)) ?: $this->active_user_name(),
+            'checker_by' => trim((string) $this->input->post('checker_by', TRUE)) ?: $this->active_user_code()
         ];
 
         if ($payload['no_po'] === '' || $payload['kd_suplier'] === '') {
@@ -2297,7 +2395,7 @@ class C_Ics extends CI_Controller
         echo json_encode([
             'status'  => 'success',
             'step'    => 'save_final',
-            'message' => 'Penerimaan berhasil disimpan ke LPB, status PO diperbarui, dan draft temporary sudah dibersihkan.',
+            'message' => 'Penerimaan berhasil disimpan ke LPB dengan status POST, status PO diperbarui, dan draft temporary sudah dibersihkan.',
             'accounting' => $accountingResult,
             'debug'   => [
                 'id_lpb'       => $idLpb,
@@ -4161,12 +4259,230 @@ class C_Ics extends CI_Controller
     public function retur_pembelian()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['kd_retur']   = $this->M_Ics->generate_kd_retur_by_type(1);
+        $this->M_ReturPembelian->ensure_schema();
+        $data['retur_pembelian_rows'] = $this->M_ReturPembelian->header_rows(100);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/returform_pembelian.php', $data);
         $this->load->view('content/logistik/ics/ajax_retur_pembelian.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_retur_pembelian_lpb_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $rows = $this->M_ReturPembelian->lpb_options($this->input->get('term', true));
+        $result = [];
+        foreach ($rows as $row) {
+            $supplier = trim((string)($row['nama_suplier'] ?? ''));
+            $result[] = [
+                'id' => (int)$row['id_lpb'],
+                'text' => trim((string)$row['nomor_lpb']) . ' | PO ' . trim((string)$row['no_po']) . ($supplier !== '' ? ' | ' . $supplier : ''),
+                'kd_po' => $row['kd_po'],
+                'no_po' => $row['no_po'],
+                'kd_supplier' => $row['kd_suplier'],
+                'nama_supplier' => $supplier,
+                'gudang_id' => $row['gudang_id'],
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_lpb_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $idLpb = (int)$this->input->get('id_lpb', true);
+        if ($idLpb <= 0) {
+            $this->json_response(['status' => false, 'message' => 'LPB tidak valid.', 'rows' => []]);
+            return;
+        }
+
+        $this->json_response([
+            'status' => true,
+            'message' => 'Detail LPB berhasil dimuat.',
+            'rows' => $this->M_ReturPembelian->lpb_detail_rows($idLpb)
+        ]);
+    }
+
+    public function ajax_retur_pembelian_create_draft()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $detailsRaw = $this->input->post('details', false);
+        $details = json_decode((string)$detailsRaw, true);
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        $result = $this->M_ReturPembelian->create_draft([
+            'id_lpb' => $this->input->post('id_lpb', true),
+            'tanggal_retur' => $this->input->post('tanggal_retur', true),
+            'jenis_penyelesaian' => $this->input->post('jenis_penyelesaian', true),
+            'alasan_retur' => $this->input->post('alasan_retur', true),
+        ], $details, $this->active_user_name());
+
+        $this->json_response([
+            'status' => (bool)$result['success'],
+            'message' => $result['message'],
+            'data' => $result['data'],
+            'errors' => $result['errors']
+        ]);
+    }
+
+    public function ajax_retur_pembelian_submit()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->submit((int)$this->input->post('id_retur_pembelian', true), $this->active_user_name());
+        $this->json_response(['status' => (bool)$result['success'], 'message' => $result['message'], 'data' => $result['data'], 'errors' => $result['errors']]);
+    }
+
+    public function ajax_retur_pembelian_verify_purchasing()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->verify_purchasing(
+            (int)$this->input->post('id_retur_pembelian', true),
+            $this->input->post('catatan', true),
+            $this->active_user_name()
+        );
+        $this->json_response(['status' => (bool)$result['success'], 'message' => $result['message'], 'data' => $result['data'], 'errors' => $result['errors']]);
+    }
+
+    public function ajax_retur_pembelian_verify_accounting()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->verify_accounting(
+            (int)$this->input->post('id_retur_pembelian', true),
+            $this->input->post('catatan', true),
+            $this->active_user_name()
+        );
+        $this->json_response(['status' => (bool)$result['success'], 'message' => $result['message'], 'data' => $result['data'], 'errors' => $result['errors']]);
+    }
+
+    public function ajax_retur_pembelian_post()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->post((int)$this->input->post('id_retur_pembelian', true), $this->active_user_name());
+        $this->json_response(['status' => (bool)$result['success'], 'message' => $result['message'], 'data' => $result['data'], 'errors' => $result['errors']]);
+    }
+
+    public function ajax_retur_pembelian_void()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $result = $this->M_ReturPembelian->void_posted(
+            (int)$this->input->post('id_retur_pembelian', true),
+            $this->input->post('alasan', true),
+            $this->active_user_name()
+        );
+        $this->json_response(['status' => (bool)$result['success'], 'message' => $result['message'], 'data' => $result['data'], 'errors' => $result['errors']]);
+    }
+
+    public function retur_pembelian_adjustment()
+    {
+        $data['page_title'] = 'KARISMA - LOGISTIK';
+        $this->M_LpbPriceAdjustment->ensure_schema();
+        $data['adjustment_rows'] = $this->M_LpbPriceAdjustment->rows(100);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/returform_pembelian_adjustment.php', $data);
+        $this->load->view('content/logistik/ics/ajax_retur_pembelian_adjustment.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_retur_pembelian_adjustment_lpb_select2()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $rows = $this->M_LpbPriceAdjustment->lpb_options($this->input->get('term', true));
+        $result = [];
+        foreach ($rows as $row) {
+            $supplier = trim((string)($row['nama_suplier'] ?? ''));
+            $result[] = [
+                'id' => (int)$row['id_lpb'],
+                'text' => trim((string)$row['nomor_lpb']) . ' | PO ' . trim((string)$row['no_po']) . ($supplier !== '' ? ' | ' . $supplier : ''),
+                'nomor_lpb' => $row['nomor_lpb'],
+                'kd_po' => $row['kd_po'],
+                'no_po' => $row['no_po'],
+                'no_invoice' => $row['no_invoice'],
+                'kd_supplier' => $row['kd_suplier'],
+                'nama_supplier' => $supplier,
+                'gudang_id' => $row['gudang_id'],
+            ];
+        }
+
+        $this->json_response($result);
+    }
+
+    public function ajax_retur_pembelian_adjustment_lpb_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $idLpb = (int)$this->input->get('id_lpb', true);
+        if ($idLpb <= 0) {
+            $this->json_response(['status' => false, 'message' => 'LPB tidak valid.', 'rows' => []]);
+            return;
+        }
+
+        $this->json_response([
+            'status' => true,
+            'message' => 'Detail LPB berhasil dimuat.',
+            'rows' => $this->M_LpbPriceAdjustment->lpb_detail_rows($idLpb),
+            'adjustment_lot' => M_LpbPriceAdjustment::ADJ_LOT,
+            'adjustment_expired' => M_LpbPriceAdjustment::ADJ_EXPIRED,
+        ]);
+    }
+
+    public function ajax_retur_pembelian_adjustment_post()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+
+        $detailsRaw = $this->input->post('details', false);
+        $details = json_decode((string)$detailsRaw, true);
+        if (!is_array($details)) {
+            $details = [];
+        }
+
+        $result = $this->M_LpbPriceAdjustment->create_and_post([
+            'id_lpb' => $this->input->post('id_lpb', true),
+            'tanggal_adjustment' => $this->input->post('tanggal_adjustment', true),
+            'alasan_adjustment' => $this->input->post('alasan_adjustment', true),
+        ], $details, $this->active_user_name(), (int)$this->session->userdata('id') ?: null);
+
+        $this->json_response([
+            'status' => (bool)$result['success'],
+            'message' => $result['message'],
+            'data' => $result['data'],
+            'errors' => $result['errors'],
+        ]);
     }
 
     public function ajax_retur_pembelian_faktur_select2()

@@ -307,6 +307,7 @@ $route['api/v1/stock/(:any)']                       = 'logistik/C_Ics/api_stock/
 $route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
 $route['ics/retur/penjualan']                       = 'logistik/C_Ics/retur_penjualan';
 $route['ics/retur/pembelian']                       = 'logistik/C_Ics/retur_pembelian';
+$route['ics/retur/pembelian/adjustment']            = 'logistik/C_Ics/retur_pembelian_adjustment';
 $route['ics/retur/faktur_select2']                  = 'logistik/C_Ics/ajax_retur_faktur_select2';
 $route['ics/retur/barang_select2']                  = 'logistik/C_Ics/ajax_retur_barang_select2';
 $route['ics/retur/lot_select2']                     = 'logistik/C_Ics/ajax_retur_lot_select2';
@@ -324,6 +325,9 @@ $route['ics/retur/pembelian/exp_select2']           = 'logistik/C_Ics/ajax_retur
 $route['ics/retur/pembelian/add_detail']            = 'logistik/C_Ics/ajax_retur_pembelian_add_detail';
 $route['ics/retur/pembelian/list_detail']           = 'logistik/C_Ics/ajax_retur_pembelian_list_detail';
 $route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur_pembelian_delete_detail';
+$route['ics/retur/pembelian/adjustment/lpb_select2'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_select2';
+$route['ics/retur/pembelian/adjustment/lpb_detail'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_detail';
+$route['ics/retur/pembelian/adjustment/post']       = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_post';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';

@@ -450,11 +450,12 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                     <tr>
                                                         <th>Tgl LPB</th>
                                                         <th>No LPB</th>
+                                                        <th>Invoice</th>
                                                         <th>No PO</th>
                                                         <th>Nama Supplier</th>
                                                         <th class="text-right">Grand Total LPB</th>
-                                                        <th class="text-center">LPB Status</th>
                                                         <th class="text-center">Status Data</th>
+                                                        <th class="text-center">Notif</th>
                                                         <th class="text-center" style="width:90px;">#</th>
                                                     </tr>
                                                 </thead>
@@ -469,27 +470,25 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                             $hasInvoice = $invoiceValue !== '' && $invoiceValue !== '-';
                                                             $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
                                                             $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
-                                                            $rawStatusLpb = $row['status_lpb'] ?? null;
-                                                            if ($rawStatusLpb === null || $rawStatusLpb === '') {
-                                                                $lpbStatusBadge = '<span class="badge badge-secondary px-2 py-1"><i class="fas fa-edit mr-1"></i> DRAFT</span>';
-                                                            } elseif ((int) $rawStatusLpb === 0) {
-                                                                $lpbStatusBadge = '<span class="badge badge-warning px-2 py-1"><i class="fas fa-clock mr-1"></i> UNPOST</span>';
-                                                            } else {
-                                                                $lpbStatusBadge = '<span class="badge badge-success px-2 py-1"><i class="fas fa-check mr-1"></i> POST</span>';
-                                                            }
                                                             $invoiceBtnClass = $hasInvoice ? 'btn-success' : 'btn-light text-secondary border';
                                                             $fakturBtnClass = $hasFaktur ? 'btn-success' : 'btn-light text-secondary border';
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
+                                                            $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
+                                                            $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;
+                                                            $salesTitle = $hasSalesTransaction
+                                                                ? 'Sudah ada ' . (int) ($row['sales_invoice_count'] ?? 0) . ' faktur penjualan: ' . (string) ($row['sales_invoice_sample'] ?? '-')
+                                                                : 'Belum ada transaksi penjualan dari LPB ini';
+                                                            $journalTitle = $hasActiveJournal
+                                                                ? 'Jurnal LPB POSTED: ' . (string) ($row['lpb_journal_sample'] ?? '-')
+                                                                : 'Belum ada jurnal LPB POSTED aktif';
                                                         ?>
-                                                        <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>">
+                                                        <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
                                                             <td><?= htmlspecialchars($row['tgl_lpb'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
                                                             <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                             <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
                                                             <td class="text-right"><?= 'Rp ' . number_format((float) ($row['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
-                                                            <td class="text-center">
-                                                                <?= $lpbStatusBadge ?>
-                                                            </td>
                                                             <td class="text-center">
                                                                 <div class="lpb-status-actions">
                                                                     <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= $hasInvoice ? 'Invoice sudah ada' : 'Invoice belum ada' ?>">
@@ -504,6 +503,16 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                                 </div>
                                                             </td>
                                                             <td class="text-center">
+                                                                <div class="lpb-status-actions">
+                                                                    <button type="button" class="btn btn-sm <?= $hasSalesTransaction ? 'btn-warning' : 'btn-light text-secondary border' ?>" title="<?= htmlspecialchars($salesTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                                        <i class="fas fa-cash-register"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm <?= $hasActiveJournal ? 'btn-danger' : 'btn-light text-secondary border' ?>" title="<?= htmlspecialchars($journalTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                                        <i class="fas fa-balance-scale"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-center">
                                                                 <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
                                                                     <i class="fas fa-list"></i>
                                                                 </a>
@@ -512,7 +521,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                         <?php endforeach; ?>
                                                     <?php else : ?>
                                                         <tr>
-                                                            <td colspan="8" class="text-center text-muted">
+                                                            <td colspan="9" class="text-center text-muted">
                                                                 <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
                                                             </td>
                                                         </tr>
