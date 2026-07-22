@@ -7,12 +7,14 @@ class M_Dashboard extends CI_Model
     {
         $lv = (int)$this->session->userdata('lv');
         $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        $departemen = strtoupper(trim((string)($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
         $username = strtolower(trim((string)$this->session->userdata('username')));
 
         return array(
             'id' => $this->session->userdata('id'),
             'nama' => $this->session->userdata('nama') ?: $this->session->userdata('username'),
             'username' => $username,
+            'departemen' => $departemen,
             'lv' => $lv,
             'jobdesk' => $jobdesk,
             'is_admin' => (bool)$this->session->userdata('is_admin_dashboard') || $username === 'admin' || ($lv === 1 && in_array($jobdesk, array('ADMIN', 'ADMINICS'), true)),
@@ -30,6 +32,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.'),
                     $this->menu('Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul pembelian dan monitoring PO keuangan.'),
                     $this->menu('Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul penjualan, jurnal penjualan, dan jurnal pembayaran.'),
+                    $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'red', 'Akses retur pembelian dan retur penjualan untuk verifikasi dampak stok serta jurnal.'),
                     $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
                     $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'purple', 'Kelola chart of accounts dan akun jurnal general ledger.'),
@@ -56,6 +59,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.'),
                     $this->menu('Master Gudang', 'ics/gudang', 'fas fa-warehouse', 'green', 'Kelola master gudang dan wilayah penyimpanan.'),
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data Purchase Order untuk kontrol barang masuk.'),
+                    $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian dan penjualan berbasis stok gudang.'),
                     $this->menu('Master Barang PIC', 'ics/barangpic', 'fas fa-user-check', 'lime', 'Atur daftar barang yang menjadi tanggung jawab PIC.'),
                     $this->menu('Barang Per Gudang', 'ics/barangpergudang', 'fas fa-dolly-flatbed', 'purple', 'Cek komposisi barang pada setiap gudang.'),
                     $this->menu('Mutasi Barang Gudang', 'ics/mutasi_barang', 'fas fa-exchange-alt', 'teal', 'Telusuri perpindahan barang antar gudang secara operasional.'),
@@ -71,8 +75,17 @@ class M_Dashboard extends CI_Model
                 'description' => 'Akses pembelian, LPB, dan monitoring PO.',
                 'menus' => array(
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.'),
+                    $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.'),
                     $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Pantau PO yang masih membutuhkan tindak lanjut.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-box', 'slate', 'Buka master barang untuk referensi pembelian.'),
+                ),
+            ),
+            'it' => array(
+                'label' => 'IT',
+                'icon' => 'fas fa-laptop-code',
+                'description' => 'Akses modul lintas departemen untuk support dan validasi teknis.',
+                'menus' => array(
+                    $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur untuk support workflow Logistik, Purchasing, dan Keuangan.'),
                 ),
             ),
             'sales' => array(
@@ -114,6 +127,11 @@ class M_Dashboard extends CI_Model
             'STOCKOPNAME' => 'logistik',
             'ADMINPURCHASING' => 'purchasing',
             'ADMIN PO' => 'purchasing',
+            'PURCHASING' => 'purchasing',
+            'IT' => 'it',
+            'ADMINIT' => 'it',
+            'ADMIN IT' => 'it',
+            'PROGRAMMER' => 'it',
             'SALES' => 'sales',
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
@@ -129,8 +147,63 @@ class M_Dashboard extends CI_Model
 
     private function apply_access_rules(array $sections, array $context)
     {
-        // Rules detail per user dan level akan dipusatkan di sini.
+        if ($this->has_retur_access($context)) {
+            return $sections;
+        }
+
+        foreach ($sections as $key => $section) {
+            if (empty($section['menus']) || !is_array($section['menus'])) {
+                continue;
+            }
+
+            $sections[$key]['menus'] = array_values(array_filter($section['menus'], function ($menu) {
+                return ($menu['route'] ?? '') !== 'ics/retur';
+            }));
+
+            if ($key === 'it' && empty($sections[$key]['menus'])) {
+                unset($sections[$key]);
+            }
+        }
+
         return $sections;
+    }
+
+    private function has_retur_access(array $context)
+    {
+        if (!empty($context['is_admin'])) {
+            return true;
+        }
+
+        $departemen = strtoupper(trim((string)($context['departemen'] ?? '')));
+        $jobdesk = strtoupper(trim((string)($context['jobdesk'] ?? '')));
+
+        foreach (array('LOGISTIK', 'PURCHASING', 'KEUANGAN', 'FINANCE', 'ACCOUNTING', 'IT') as $allowed) {
+            if ($departemen === $allowed || strpos($departemen, $allowed) !== false) {
+                return true;
+            }
+        }
+
+        return in_array($jobdesk, array(
+            'LOGISTIK',
+            'ADMINLOGLPB',
+            'ADMLPB2',
+            'ADMINICS',
+            'ADMLOG',
+            'ADMINPURCHASING',
+            'ADMIN PO',
+            'PURCHASING',
+            'ADMINKEU',
+            'ADMINKEUTC',
+            'KIUKEU',
+            'KEUANGAN',
+            'ACCOUNTING',
+            'FINANCE',
+            'IT',
+            'ADMINIT',
+            'ADMIN IT',
+            'PROGRAMMER',
+            'DEVELOPMENT'
+        ), true);
     }
 
     private function admin_section(array $sections)

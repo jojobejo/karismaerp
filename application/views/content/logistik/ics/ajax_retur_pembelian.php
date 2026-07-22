@@ -1,257 +1,218 @@
 <script>
     $(function() {
-        const $faktur = $('#select_faktur');
-        const $barang = $('#select_barang');
-        const $exp = $('#select_exp');
-        const $kode = $('#kode_barang');
-        const $lot = $('#nolot_isi');
+        const urls = {
+            lpbSelect: "<?= base_url('ics/retur/pembelian/lpb_select2') ?>",
+            lpbDetail: "<?= base_url('ics/retur/pembelian/lpb_detail') ?>",
+            createDraft: "<?= base_url('ics/retur/pembelian/create_draft') ?>",
+            submit: "<?= base_url('ics/retur/pembelian/submit') ?>",
+            verifyPurchasing: "<?= base_url('ics/retur/pembelian/verify_purchasing') ?>",
+            verifyAccounting: "<?= base_url('ics/retur/pembelian/verify_accounting') ?>",
+            post: "<?= base_url('ics/retur/pembelian/post') ?>",
+            voidDoc: "<?= base_url('ics/retur/pembelian/void') ?>"
+        };
 
-        function setSelectDisabled($el, disabled) {
-            $el.prop('disabled', disabled);
-            if (disabled) {
-                $el.val(null).trigger('change');
-            }
-        }
+        const $lpb = $('#select_lpb_retur');
+        const $detailBody = $('#lpb_return_detail_table tbody');
 
-        setSelectDisabled($barang, true);
-        setSelectDisabled($exp, true);
-        setSelectDisabled($lot, true);
-
-        $faktur.select2({
-            theme: 'bootstrap4',
-            placeholder: 'Pilih nomor faktur',
-            allowClear: true,
-            ajax: {
-                url: "<?= base_url('ics/retur/pembelian/faktur_select2') ?>",
-                dataType: 'json',
-                delay: 250,
-                data: function(params) {
-                    return {
-                        term: params.term
-                    };
-                },
-                processResults: function(data) {
-                    return {
-                        results: data
-                    };
-                },
-                cache: true
-            }
-        });
-
-        $barang.select2({
-            theme: 'bootstrap4',
-            placeholder: 'Pilih barang',
-            allowClear: true,
-            ajax: {
-                url: "<?= base_url('ics/retur/pembelian/barang_select2') ?>",
-                dataType: 'json',
-                delay: 250,
-                data: function(params) {
-                    return {
-                        term: params.term,
-                        kd_faktur: $faktur.val()
-                    };
-                },
-                processResults: function(data) {
-                    return {
-                        results: data
-                    };
-                },
-                cache: true
-            }
-        });
-
-        $exp.select2({
-            theme: 'bootstrap4',
-            placeholder: 'Pilih expired date',
-            allowClear: true,
-            ajax: {
-                url: "<?= base_url('ics/retur/pembelian/exp_select2') ?>",
-                dataType: 'json',
-                delay: 250,
-                data: function(params) {
-                    return {
-                        term: params.term,
-                        kd_faktur: $faktur.val(),
-                        kd_barang: $barang.val()
-                    };
-                },
-                processResults: function(data) {
-                    return {
-                        results: data
-                    };
-                },
-                cache: true
-            }
-        });
-
-        function renderDetailTable(rows) {
-            const $tbody = $('#input_retur_penjualan tbody');
-            $tbody.empty();
-
-            if (!rows || rows.length === 0) {
-                return;
-            }
-
-            rows.forEach(function(r) {
-                const tr = `
-                    <tr>
-                        <td>${r.kd_faktur || ''}</td>
-                        <td>${r.kd_barang || ''}</td>
-                        <td>${r.nama_barang || ''}</td>
-                        <td>${r.tgl_expired || ''}</td>
-                        <td>${r.no_lot || '-'}</td>
-                        <td>${r.qty || ''}</td>
-                        <td>
-                            <button type="button" class="btn btn-danger btn-sm btn-delete-detail" data-id="${r.id}">Hapus</button>
-                        </td>
-                    </tr>
-                `;
-                $tbody.append(tr);
+        function esc(value) {
+            return String(value == null ? '' : value).replace(/[&<>"'`=\/]/g, function(s) {
+                return ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;',
+                    '/': '&#x2F;',
+                    '`': '&#x60;',
+                    '=': '&#x3D;'
+                })[s];
             });
         }
 
-        function loadDetailTable() {
+        function money(value) {
+            const num = parseFloat(value || 0);
+            return num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function notify(message) {
+            alert(message);
+        }
+
+        $lpb.select2({
+            theme: 'bootstrap4',
+            placeholder: 'Cari supplier / PO / nomor LPB',
+            allowClear: true,
+            ajax: {
+                url: urls.lpbSelect,
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return { term: params.term || '' };
+                },
+                processResults: function(data) {
+                    return { results: data || [] };
+                },
+                cache: true
+            }
+        });
+
+        function renderRows(rows) {
+            $detailBody.empty();
+            if (!rows || !rows.length) {
+                $detailBody.append('<tr><td colspan="10" class="text-center text-muted">Detail LPB tidak ditemukan.</td></tr>');
+                return;
+            }
+
+            rows.forEach(function(row) {
+                const qtyDiterima = parseFloat(row.qty_diterima || 0);
+                const qtyReturSebelumnya = parseFloat(row.qty_retur_sebelumnya || 0);
+                const qtyOnHand = parseFloat(row.qty_on_hand || 0);
+                const maxQty = Math.max(0, Math.min(qtyDiterima - qtyReturSebelumnya, qtyOnHand));
+                const disabled = maxQty <= 0 ? 'disabled' : '';
+
+                $detailBody.append(`
+                    <tr data-id-detail-lpb="${esc(row.id_detail_lpb)}">
+                        <td>${esc(row.kd_barang)}</td>
+                        <td>${esc(row.nama_barang)}</td>
+                        <td>${esc(row.no_lot || '-')}</td>
+                        <td>${esc(row.expired_date || '-')}</td>
+                        <td class="text-right">${money(qtyDiterima)}</td>
+                        <td class="text-right">${money(qtyReturSebelumnya)}</td>
+                        <td class="text-right">${money(qtyOnHand)}</td>
+                        <td class="text-right">${money(row.harga_satuan)}</td>
+                        <td>
+                            <input type="number" min="0" step="0.01" max="${maxQty}" class="form-control form-control-sm js-qty-retur" ${disabled}>
+                            <small class="text-muted">Maks ${money(maxQty)}</small>
+                        </td>
+                        <td><input type="text" class="form-control form-control-sm js-alasan-item" ${disabled}></td>
+                    </tr>
+                `);
+            });
+        }
+
+        $lpb.on('change', function() {
+            const idLpb = $lpb.val();
+            $detailBody.html('<tr><td colspan="10" class="text-center text-muted">Memuat detail LPB...</td></tr>');
+            if (!idLpb) {
+                $detailBody.html('<tr><td colspan="10" class="text-center text-muted">Pilih LPB final terlebih dahulu.</td></tr>');
+                return;
+            }
+
             $.ajax({
-                url: "<?= base_url('ics/retur/pembelian/list_detail') ?>",
-                type: "GET",
-                dataType: "json",
+                url: urls.lpbDetail,
+                type: 'GET',
+                dataType: 'json',
+                data: { id_lpb: idLpb },
                 success: function(res) {
-                    renderDetailTable(res);
+                    renderRows(res && res.rows ? res.rows : []);
                 },
                 error: function() {
-                    $('#input_retur_penjualan tbody').empty();
+                    renderRows([]);
                 }
             });
-        }
-
-        $faktur.on('change', function() {
-            const hasFaktur = !!$faktur.val();
-            $kode.val('');
-            setSelectDisabled($barang, !hasFaktur);
-            setSelectDisabled($exp, true);
         });
 
-        $barang.on('select2:select', function(e) {
-            const data = e.params.data || {};
-            $kode.val(data.id || '');
-        });
+        $('#btn_create_draft_retur').on('click', function() {
+            const details = [];
+            $('#lpb_return_detail_table tbody tr[data-id-detail-lpb]').each(function() {
+                const $tr = $(this);
+                const qty = parseFloat($tr.find('.js-qty-retur').val() || 0);
+                if (qty > 0) {
+                    details.push({
+                        id_detail_lpb: $tr.data('id-detail-lpb'),
+                        qty_retur: qty,
+                        alasan_retur: $tr.find('.js-alasan-item').val()
+                    });
+                }
+            });
 
-        $barang.on('change', function() {
-            const hasBarang = !!$barang.val();
-            if (!hasBarang) {
-                $kode.val('');
+            if (!$lpb.val() || !details.length) {
+                notify('Pilih LPB dan isi minimal satu qty retur.');
+                return;
             }
-            setSelectDisabled($exp, !hasBarang);
-        });
-
-        $('#btninputdata').on('click', function(e) {
-            e.preventDefault();
-
-            const payload = {
-                kd_faktur: $faktur.val(),
-                kd_barang: $kode.val(),
-                tgl_expired: $exp.val(),
-                qty: $('#qtyinput').val(),
-                no_lot: $lot.val()
-            };
-
-            if (!payload.kd_faktur || !payload.kd_barang || !payload.tgl_expired || !payload.qty) {
-                alert('Data belum lengkap.');
+            if (!confirm('Buat draft retur pembelian dari LPB ini?')) {
                 return;
             }
 
             $.ajax({
-                url: "<?= base_url('ics/retur/pembelian/add_detail') ?>",
-                type: "POST",
-                dataType: "json",
+                url: urls.createDraft,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    id_lpb: $lpb.val(),
+                    tanggal_retur: $('#tanggal_retur').val(),
+                    jenis_penyelesaian: $('#jenis_penyelesaian').val(),
+                    alasan_retur: $('#alasan_retur').val(),
+                    details: JSON.stringify(details)
+                },
+                success: function(res) {
+                    notify(res && res.message ? res.message : 'Draft diproses.');
+                    if (res && res.status) {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    notify('Server error saat membuat draft retur pembelian.');
+                }
+            });
+        });
+
+        function runAction(url, payload, confirmText) {
+            if (confirmText && !confirm(confirmText)) {
+                return;
+            }
+            $.ajax({
+                url: url,
+                type: 'POST',
+                dataType: 'json',
                 data: payload,
                 success: function(res) {
+                    notify(res && res.message ? res.message : 'Aksi selesai.');
                     if (res && res.status) {
-                        $('#qtyinput').val('');
-                        alert(res.message || 'Data tersimpan');
-                        loadDetailTable();
-                    } else {
-                        alert((res && res.message) ? res.message : 'Gagal menyimpan data');
-                    }
-                },
-                error: function() {
-                    alert('Server error. Coba lagi.');
-                }
-            });
-        });
-
-        $('#input_retur_penjualan tbody').on('click', '.btn-delete-detail', function() {
-            const id = $(this).data('id');
-            if (!id) {
-                alert('ID tidak valid.');
-                return;
-            }
-            if (!confirm('Hapus data retur ini?')) {
-                return;
-            }
-
-            $.ajax({
-                url: "<?= base_url('ics/retur/pembelian/delete_detail') ?>",
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    id: id
-                },
-                success: function(res) {
-                    if (res && res.status) {
-                        alert(res.message || 'Data terhapus');
-                        loadDetailTable();
-                    } else {
-                        alert((res && res.message) ? res.message : 'Gagal menghapus data');
-                    }
-                },
-                error: function() {
-                    alert('Server error. Coba lagi.');
-                }
-            });
-        });
-
-        $('#rekamreturpembelian').on('click', function(e) {
-            e.preventDefault();
-
-            const kdRetur = $('#nofresnsi').val();
-            const keterangan = $('#keterangan_retur').val();
-            const tglTransaksi = $('#tgl_transaksi').val();
-
-            if (!kdRetur) {
-                alert('No referensi belum diisi.');
-                return;
-            }
-
-            if (!confirm('Rekam retur pembelian sekarang?')) {
-                return;
-            }
-
-            $.ajax({
-                url: "<?= base_url('ics/retur/rekam_pembelian') ?>",
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    kd_retur: kdRetur,
-                    keterangan: keterangan,
-                    tgl_transaksi: tglTransaksi
-                },
-                success: function(res) {
-                    if (res && res.status) {
-                        alert(res.message || 'Retur pembelian tersimpan');
                         location.reload();
-                    } else {
-                        alert((res && res.message) ? res.message : 'Gagal rekam retur');
                     }
                 },
                 error: function() {
-                    alert('Server error. Coba lagi.');
+                    notify('Server error saat memproses aksi retur.');
                 }
             });
+        }
+
+        $('#retur_pembelian_table').DataTable({
+            pageLength: 25,
+            order: [[0, 'desc']],
+            columnDefs: [
+                { targets: [5, 9, 10], className: 'text-center text-nowrap' },
+                { targets: [6, 7, 8], className: 'text-right text-nowrap' }
+            ]
         });
 
-        loadDetailTable();
+        $('#retur_pembelian_table').on('click', '.js-retur-action', function() {
+            const id = $(this).data('id');
+            const action = $(this).data('action');
+            if (!id) {
+                notify('ID retur tidak valid.');
+                return;
+            }
+
+            if (action === 'submit') {
+                runAction(urls.submit, { id_retur_pembelian: id }, 'Submit draft retur pembelian?');
+            } else if (action === 'verify_purchasing') {
+                const catatanPurchasing = prompt('Catatan Purchasing:', '');
+                runAction(urls.verifyPurchasing, { id_retur_pembelian: id, catatan: catatanPurchasing || '' }, 'Verifikasi Purchasing untuk retur ini?');
+            } else if (action === 'verify_accounting') {
+                const catatanAccounting = prompt('Catatan Accounting:', '');
+                runAction(urls.verifyAccounting, { id_retur_pembelian: id, catatan: catatanAccounting || '' }, 'Verifikasi Accounting untuk retur ini?');
+            } else if (action === 'post') {
+                runAction(urls.post, { id_retur_pembelian: id }, 'Posting retur pembelian ke stock dan jurnal?');
+            } else if (action === 'void') {
+                const alasan = prompt('Alasan void/reversal:', '');
+                if (!alasan) {
+                    notify('Alasan void wajib diisi.');
+                    return;
+                }
+                runAction(urls.voidDoc, { id_retur_pembelian: id, alasan: alasan }, 'Void retur posted dan buat reversal?');
+            }
+        });
     });
 </script>

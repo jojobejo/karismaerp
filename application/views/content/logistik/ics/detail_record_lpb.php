@@ -286,6 +286,20 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             min-width: 120px;
                         }
 
+                        .lpb-invoice-overview .table th,
+                        .lpb-invoice-overview .table td {
+                            white-space: nowrap;
+                            vertical-align: middle;
+                        }
+
+                        .lpb-invoice-overview .js-lpb-invoice-row {
+                            cursor: pointer;
+                        }
+
+                        .lpb-invoice-overview .js-lpb-invoice-row.active {
+                            background: #eef6ff;
+                        }
+
                         .lpb-workflow-actions {
                             margin-left: auto;
                         }
@@ -378,6 +392,37 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     </div>
                     <?php endif; ?>
 
+                    <?php if (!$showLpbListPanel) : ?>
+                    <div class="lpb-panel lpb-invoice-overview mb-4">
+                        <div class="lpb-panel-header">
+                            <div>
+                                <h3 class="card-title mb-0 font-weight-bold">List Invoice LPB</h3>
+                            </div>
+                            <span class="badge badge-light" id="lpbInvoiceOverviewCount">0 invoice</span>
+                        </div>
+                        <div class="lpb-panel-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered table-hover mb-0" id="lpbInvoiceOverviewTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Nomor LPB</th>
+                                            <th>Invoice</th>
+                                            <th class="text-center">Tanggal Invoice</th>
+                                            <th class="text-center">Faktur Pajak</th>
+                                            <th class="text-right">Total Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">Memuat list invoice LPB...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="row">
                         <?php if ($showLpbListPanel) : ?>
                         <div class="col-lg-3 lpb-list-column mb-4">
@@ -418,7 +463,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                 <div class="lpb-panel-header">
                                     <div class="lpb-panel-title">
                                         <h3 class="card-title mb-0 font-weight-bold">Detail LPB</h3>
-                                        <span class="badge badge-secondary" id="selectedLpbStatusBadge" style="display:none;">-</span>
                                     </div>
                                     <div class="d-flex align-items-center flex-wrap lpb-workflow-actions" id="lpbWorkflowActions" style="gap:8px; display:none;">
                                         <?php if (!$showLpbListPanel) : ?>
@@ -517,9 +561,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                         <?php endif; ?>
                                         <div class="lpb-table-actions" id="lpbPurchasingVerifyActions" style="display:none;">
                                             <span class="text-muted small" id="lpbBulkVerifyInfo"></span>
-                                            <button type="button" class="btn btn-success btn-sm" id="btnBulkAcceptLpbPrice">
-                                                <i class="fas fa-save mr-1"></i> Rekam
-                                            </button>
                                             <button type="button" class="btn btn-danger btn-sm" id="btnPurchasingUnpostLpb" style="display:none;">
                                                 <i class="fas fa-undo mr-1"></i> UNPOST
                                             </button>
@@ -535,13 +576,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                                         <tr>
                                                             <th>Waktu</th>
                                                             <th>User</th>
+                                                            <th>Checker</th>
                                                             <th>Aktivitas</th>
                                                             <th>Status</th>
                                                             <th>Keterangan</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody id="lpbActivityLogBody">
-                                                        <tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>
+                                                        <tr><td colspan="6" class="text-center text-muted">Belum ada aktivitas.</td></tr>
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -1125,6 +1167,35 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     '</div>';
             }
 
+            function renderInvoiceOverview(rows) {
+                if (showLpbListPanel) {
+                    return;
+                }
+
+                var tbody = $('#lpbInvoiceOverviewTable tbody');
+                tbody.empty();
+                $('#lpbInvoiceOverviewCount').text(formatNumber((rows || []).length) + ' invoice');
+
+                if (!rows || rows.length === 0) {
+                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Belum ada invoice LPB untuk PO ini.</td></tr>');
+                    return;
+                }
+
+                $.each(rows, function(_, row) {
+                    var invoice = hasInvoice(row.no_invoice) ? row.no_invoice : '-';
+                    var faktur = row.kode_faktur_pajak ? row.kode_faktur_pajak : '-';
+                    tbody.append(
+                        '<tr class="js-lpb-invoice-row" data-id="' + escAttr(row.id_lpb) + '">' +
+                        '<td>' + escHtml(row.nomor_lpb || '-') + '</td>' +
+                        '<td>' + escHtml(invoice) + '</td>' +
+                        '<td class="text-center">' + escHtml(formatDateId(row.tanggal_invoice)) + '</td>' +
+                        '<td class="text-center">' + escHtml(faktur) + '</td>' +
+                        '<td class="text-right">' + escHtml(formatNumber(row.total_qty || 0)) + '</td>' +
+                        '</tr>'
+                    );
+                });
+            }
+
             function renderList(rows, options) {
                 options = options || {};
                 var container = $('#lpbListContainer');
@@ -1134,6 +1205,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     $('#lpbListLoading').hide();
                     $('#lpbListWrap').hide();
                     $('#lpbListEmpty').show();
+                    renderInvoiceOverview([]);
                     resetDetailState();
                     updateStats([]);
                     return;
@@ -1142,6 +1214,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $.each(rows, function(_, row) {
                     container.append(buildListItem(row));
                 });
+                renderInvoiceOverview(rows);
 
                 $('#lpbListLoading').hide();
                 $('#lpbListEmpty').hide();
@@ -1170,12 +1243,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 updateActivityLogVisibility();
                 renderActivityLogs([]);
                 $('#selectedLpbText').text('Belum ada LPB dipilih');
-                $('#selectedLpbStatusBadge').hide().text('-').removeClass('badge-success badge-warning badge-danger badge-info').addClass('badge-secondary');
                 $('#lpbDetailLoading').hide();
                 $('#lpbDetailWrap').hide();
                 $('#lpbDetailEmpty').show();
                 $('#lpbDetailHeaderGrid').empty();
                 $('#lpbDetailTable tbody').empty();
+                renderInvoiceOverview(allRows);
                 $('#lpbGrandTotalHargaWrap').hide();
                 $('#lpbTotalDpp').text(formatRupiah(0));
                 $('#lpbGrandTotalHarga').text(formatRupiah(0));
@@ -1187,6 +1260,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 selectedIdLpb = parseInt(idLpb, 10) || 0;
                 $('.js-lpb-item').removeClass('active');
                 $('.js-lpb-item[data-id="' + selectedIdLpb + '"]').addClass('active');
+                $('.js-lpb-invoice-row').removeClass('active');
+                $('.js-lpb-invoice-row[data-id="' + selectedIdLpb + '"]').addClass('active');
             }
 
             function updateDetailViewButton() {
@@ -1234,12 +1309,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             function renderDetailHeader(header) {
                 var html = '';
                 var nomorJenisLpb = (header.nomor_lpb || 'Nomor LPB belum dibuat') + ' / ' + (header.jenis_lpb || 'Jenis LPB belum ditentukan');
-                var statusInfo = lpbStatusInfo(header.status_lpb);
-                $('#selectedLpbStatusBadge')
-                    .removeClass('badge-secondary badge-success badge-warning badge-danger badge-info')
-                    .addClass(statusInfo.badge)
-                    .text(statusInfo.label)
-                    .show();
                 var boxes = [{
                         label: 'Nomor / Jenis LPB',
                         value: nomorJenisLpb
@@ -1267,6 +1336,22 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     {
                         label: 'Tanggal Terbit Faktur',
                         value: formatDateId(header.tanggal_faktur_pajak)
+                    },
+                    {
+                        label: 'Checker',
+                        value: header.checker_name || '-'
+                    },
+                    {
+                        label: 'Transaksi Penjualan',
+                        value: parseInt(header.has_sales_transaction || 0, 10) === 1
+                            ? formatNumber(header.sales_invoice_count || 0) + ' faktur / Qty ' + formatNumber(header.sales_qty_total || 0)
+                            : 'Belum ada'
+                    },
+                    {
+                        label: 'Jurnal LPB',
+                        value: parseInt(header.has_active_lpb_journal || 0, 10) === 1
+                            ? 'POSTED: ' + (header.lpb_journal_sample || '-')
+                            : 'Belum POSTED aktif'
                     }
                 ];
 
@@ -1293,16 +1378,15 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 $('#lpbWorkflowActions').show();
-                var isPost = isSelectedLpbPost();
                 $('#btnUpdateInvoice')
-                    .prop('disabled', isPost)
-                    .attr('title', isPost ? 'Update invoice hanya bisa dilakukan saat status UNPOST' : 'Update Invoice');
+                    .prop('disabled', false)
+                    .attr('title', 'Update Invoice');
                 $('#btnSplitInvoice')
-                    .prop('disabled', isPost)
-                    .attr('title', isPost ? 'Pecah invoice hanya bisa dilakukan saat status UNPOST' : 'Pecah Invoice');
+                    .prop('disabled', false)
+                    .attr('title', 'Pecah Invoice');
                 $('#btnUpdateFaktur')
-                    .prop('disabled', isPost)
-                    .attr('title', isPost ? 'Update faktur hanya bisa dilakukan saat status UNPOST' : 'Update Faktur');
+                    .prop('disabled', false)
+                    .attr('title', 'Update Faktur');
 
                 if (!showLpbListPanel || detailViewMode !== 'lpb') {
                     $('#lpbPostActions').hide();
@@ -1333,7 +1417,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#lpbActivityLogCount').text(formatNumber(rows.length) + ' aktivitas');
 
                 if (rows.length === 0) {
-                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Belum ada aktivitas.</td></tr>');
+                    tbody.html('<tr><td colspan="6" class="text-center text-muted">Belum ada aktivitas.</td></tr>');
                     return;
                 }
 
@@ -1345,6 +1429,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         '<tr>' +
                         '<td>' + escHtml(formatDateTimeId(row.dilakukan_pada)) + '</td>' +
                         '<td>' + escHtml(row.dilakukan_oleh || '-') + '</td>' +
+                        '<td>' + escHtml(row.checker_name || '-') + '</td>' +
                         '<td><span class="badge badge-light">' + escHtml(row.action_type || '-') + '</span></td>' +
                         '<td>' + escHtml(statusText) + '</td>' +
                         '<td class="activity-note">' + escHtml(row.keterangan || '-') + '</td>' +
@@ -1714,17 +1799,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 var rows = selectedPurchasingRows || [];
-                var acceptableRows = getBulkAcceptableRows();
-                var allVerified = rows.length > 0 && acceptableRows.length === 0;
                 var isPost = isSelectedLpbPost();
 
-                $('#lpbPurchasingVerifyActions').show();
+                $('#lpbPurchasingVerifyActions').toggle(isPost);
                 $('#lpbBulkVerifyInfo').text(isPost ? 'LPB sudah berstatus POST.' : '');
-                $('#btnBulkAcceptLpbPrice')
-                    .removeClass('btn-warning btn-danger')
-                    .addClass('btn-success')
-                    .prop('disabled', isPost || (!allVerified && acceptableRows.length === 0) || isBulkAcceptingLpbPrice || isChangingLpbStatus)
-                    .html(isBulkAcceptingLpbPrice || isChangingLpbStatus ? '<i class="fas fa-spinner fa-spin mr-1"></i> Rekam...' : '<i class="fas fa-save mr-1"></i> Rekam');
                 $('#btnPurchasingUnpostLpb')
                     .toggle(isPost)
                     .prop('disabled', !isPost || isChangingLpbStatus)
@@ -1796,11 +1874,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 if (!activeId || !activeHeader) {
                     Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update terlebih dahulu.', 'warning');
-                    return;
-                }
-
-                if (parseInt(activeHeader.status_lpb || 1, 10) !== 0) {
-                    Swal.fire('Validasi', 'Update invoice hanya bisa dilakukan saat status UNPOST.', 'warning');
                     return;
                 }
 
@@ -2115,11 +2188,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
-                if (!isSelectedLpbUnpost()) {
-                    Swal.fire('Validasi', 'Pecah invoice hanya bisa dilakukan saat status UNPOST.', 'warning');
-                    return;
-                }
-
                 if (getSplitSourceRows().length === 0) {
                     Swal.fire('Validasi', 'Detail LPB belum tersedia untuk dipecah.', 'warning');
                     return;
@@ -2136,11 +2204,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 if (!activeId || !activeHeader) {
                     Swal.fire('Validasi', 'Silakan pilih LPB yang ingin di-update faktur pajaknya terlebih dahulu.', 'warning');
-                    return;
-                }
-
-                if (parseInt(activeHeader.status_lpb || 1, 10) !== 0) {
-                    Swal.fire('Validasi', 'Update faktur pajak hanya bisa dilakukan saat status UNPOST.', 'warning');
                     return;
                 }
 
@@ -2303,6 +2366,12 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 loadDetail(idLpb);
             });
 
+            $(document).on('click', '.js-lpb-invoice-row', function() {
+                var idLpb = $(this).data('id');
+                selectListItem(idLpb);
+                loadDetail(idLpb);
+            });
+
             $(document).on('click', '.js-open-adjustment', function() {
                 if (!canManagePoInvoice) {
                     return;
@@ -2367,10 +2436,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         isAcceptingLpbPrice = false;
                     }
                 });
-            });
-
-            $('#btnBulkAcceptLpbPrice').on('click', function() {
-                bulkAcceptDisplayedLpbPrices();
             });
 
             $('#btnHistoryInvoiceAll').on('click', function() {
