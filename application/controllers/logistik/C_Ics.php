@@ -3765,13 +3765,19 @@ class C_Ics extends CI_Controller
                 (string) $t->exp_date
             );
 
-            if ((int) $t->qty > $qtyGudang) {
+            if ((float) $t->qty > ((float) $qtyGudang + 0.0001)) {
                 echo json_encode([
                     'status' => false,
                     'msg' => 'Qty ' . $t->nama_barang . ' lot ' . $t->no_lot . ' melebihi stok database'
                 ]);
                 return;
             }
+        }
+
+        $stockValidation = $this->M_Ics->validate_mutasi_stock_available($tmp, $post['fromgdg'], $post['tujuangdg']);
+        if (!$stockValidation['status']) {
+            echo json_encode(['status' => false, 'msg' => $stockValidation['msg']]);
+            return;
         }
 
         $IS_HOLD = ($post['tujuangdg'] == '10');
@@ -3859,17 +3865,16 @@ class C_Ics extends CI_Controller
                 }
             }
             $this->db->insert_batch('tb_detail_mutasi', $detail);
+
+            $stockPost = $this->M_Ics->post_mutasi_stock($tmp, $post['fromgdg'], $post['tujuangdg'], $post['nofresnsi']);
+            if (!$stockPost['status']) {
+                $this->db->trans_rollback();
+                echo json_encode(['status' => false, 'msg' => $stockPost['msg']]);
+                return;
+            }
         }
 
         $this->db->where('user_inputer', $user)->delete('tb_tmp_mutasi');
-
-        if ($this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-            echo json_encode(['status' => false, 'msg' => 'Gagal merekam mutasi']);
-            return;
-        }
-
-        $this->db->trans_commit();
 
         $this->db->insert('tb_log_mutasi', [
             'noreff'     => $post['nofresnsi'],
@@ -3880,6 +3885,14 @@ class C_Ics extends CI_Controller
             'user'       => $user,
             'created_at' => date('Y-m-d H:i:s')
         ]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'msg' => 'Gagal merekam mutasi']);
+            return;
+        }
+
+        $this->db->trans_commit();
 
         echo json_encode([
             'status' => true,
@@ -3924,7 +3937,25 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $this->db->where('noreff', $noreff)
+        $header = $this->M_Ics->get_mutasi_header($noreff);
+        if (!$header) {
+            echo json_encode(['status' => false, 'msg' => 'Data mutasi tidak ditemukan']);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        if ($header->status === 'POSTED') {
+            $reverse = $this->M_Ics->reverse_mutasi_stock($noreff);
+            if (!$reverse['status']) {
+                $this->db->trans_rollback();
+                echo json_encode(['status' => false, 'msg' => $reverse['msg']]);
+                return;
+            }
+        }
+
+        $this->db
+            ->where('noreff', $noreff)
             ->update('tb_mutasi', [
                 'status' => 'UNPOST'
             ]);
@@ -3933,8 +3964,17 @@ class C_Ics extends CI_Controller
             'noreff' => $noreff,
             'aksi' => 'UNPOST',
             'keterangan' => 'UNPOST MUTASI',
-            'user' => $this->session->userdata('nik')
+            'user' => $this->session->userdata('nik'),
+            'created_at' => date('Y-m-d H:i:s')
         ]);
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'msg' => 'Gagal unpost mutasi']);
+            return;
+        }
+
+        $this->db->trans_commit();
 
         echo json_encode(['status' => true, 'msg' => 'Mutasi berhasil di-unpost']);
     }
@@ -3947,7 +3987,22 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $header = $this->M_Ics->get_mutasi_header($noreff);
+        if (!$header) {
+            echo json_encode(['status' => false, 'msg' => 'Data mutasi tidak ditemukan']);
+            return;
+        }
+
         $this->db->trans_begin();
+
+        if ($header->status === 'POSTED') {
+            $reverse = $this->M_Ics->reverse_mutasi_stock($noreff);
+            if (!$reverse['status']) {
+                $this->db->trans_rollback();
+                echo json_encode(['status' => false, 'msg' => $reverse['msg']]);
+                return;
+            }
+        }
 
         $this->db->where('noreff', $noreff)->delete('tb_detail_mutasi');
         $this->db->where('noreff', $noreff)->delete('tb_mutasi');
@@ -3957,7 +4012,8 @@ class C_Ics extends CI_Controller
             'noreff' => $noreff,
             'aksi' => 'DELETE',
             'keterangan' => 'DELETE MUTASI',
-            'user' => $this->session->userdata('nik')
+            'user' => $this->session->userdata('nik'),
+            'created_at' => date('Y-m-d H:i:s')
         ]);
 
         if ($this->db->trans_status() === FALSE) {
@@ -3978,6 +4034,16 @@ class C_Ics extends CI_Controller
         }
 
         $user = $this->session->userdata('nik');
+        $header = $this->M_Ics->get_mutasi_header($noreff);
+        if (!$header) {
+            echo json_encode(['status' => false, 'msg' => 'Data mutasi tidak ditemukan']);
+            return;
+        }
+
+        if ($header->status !== 'HOLD') {
+            echo json_encode(['status' => false, 'msg' => 'Rollback hanya dapat diproses dari status HOLD']);
+            return;
+        }
 
         $this->db->trans_begin();
 
@@ -3993,16 +4059,22 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $this->db
+        $details = $this->db
             ->where('noreff', $noreff)
-            ->update('tb_detail_mutasi', [
-                'gdg_mutasi' => '2'
-            ]);
+            ->get('tb_detail_mutasi')
+            ->result();
+
+        $stockPost = $this->M_Ics->post_mutasi_stock($details, $header->gudang_asal, $header->gudang_mutasi, $noreff);
+        if (!$stockPost['status']) {
+            $this->db->trans_rollback();
+            echo json_encode(['status' => false, 'msg' => $stockPost['msg']]);
+            return;
+        }
 
         $this->db
             ->where('noref', $noreff)
             ->update('tb_stock_hold', [
-                'status' => 'RELEASED',
+                'status' => 'RELEASE',
                 'released_at' => date('Y-m-d H:i:s')
             ]);
 

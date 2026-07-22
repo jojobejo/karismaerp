@@ -7,10 +7,36 @@
         padding: 18px 22px 16px;
     }
 
+    .mutasi-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .mutasi-back-icon {
+        width: 34px;
+        height: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #157fad;
+        color: #fff;
+        border-radius: 4px;
+        text-decoration: none;
+    }
+
+    .mutasi-back-icon:hover,
+    .mutasi-back-icon:focus {
+        color: #fff;
+        background: #0f6e98;
+        text-decoration: none;
+    }
+
     .mutasi-title {
         font-size: 24px;
         font-weight: 500;
-        margin-bottom: 18px;
+        margin: 0;
     }
 
     .mutasi-header-grid {
@@ -475,7 +501,12 @@
 
         <div class="content-wrapper">
             <section class="content mutasi-page">
-                <h1 class="mutasi-title">Pemindahan Barang Antar Gudang</h1>
+                <div class="mutasi-title-row">
+                    <a class="mutasi-back-icon" href="<?= base_url('ics/mutasi_barang') ?>" title="Kembali ke mutasi barang" aria-label="Kembali ke mutasi barang">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="mutasi-title">Pemindahan Barang Antar Gudang</h1>
+                </div>
 
                 <div class="mutasi-header-grid">
                     <label for="nofresnsi">Ref. :</label>

@@ -4,6 +4,8 @@ use JetBrains\PhpStorm\Internal\ReturnTypeContract;
 
 class M_Ics extends CI_Model
 {
+    private $mutasiStockCodeCache = [];
+
     private function karyawan_nik_match_sql($karyawanColumn = 'd.nik', $inputerColumn = 'a.inputer')
     {
         return "{$karyawanColumn} COLLATE utf8mb4_unicode_ci = {$inputerColumn} COLLATE utf8mb4_unicode_ci";
@@ -2387,6 +2389,356 @@ LEFT JOIN tb_customer c
         return TRUE;
     }
 
+    private function mutasi_row_value($row, $field, $default = '')
+    {
+        if (is_array($row) && array_key_exists($field, $row)) {
+            return $row[$field];
+        }
+
+        if (is_object($row) && isset($row->$field)) {
+            return $row->$field;
+        }
+
+        return $default;
+    }
+
+    private function normalize_mutasi_stock_date($value)
+    {
+        $value = trim((string) $value);
+        if ($value === '' || $value === '0000-00-00') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $value)) {
+            return substr($value, 0, 10);
+        }
+
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
+
+        if (preg_match('/^(\d{1,2})-(\d{1,2})-(\d{4})$/', $value, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
+
+        $ts = strtotime($value);
+        return $ts ? date('Y-m-d', $ts) : null;
+    }
+
+    private function resolve_mutasi_stock_code($row)
+    {
+        if (!$this->db->table_exists('tbpo_barang')) {
+            return '';
+        }
+
+        $candidates = [
+            trim((string) $this->mutasi_row_value($row, 'kode_barang_system')),
+            trim((string) $this->mutasi_row_value($row, 'kode_barang')),
+            trim((string) $this->mutasi_row_value($row, 'kd_barang')),
+            trim((string) $this->mutasi_row_value($row, 'kode_barang_zahir')),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+
+            $cacheKey = 'code:' . $candidate;
+            if (array_key_exists($cacheKey, $this->mutasiStockCodeCache)) {
+                return $this->mutasiStockCodeCache[$cacheKey];
+            }
+
+            $rowBarang = $this->db
+                ->select('kode_barang')
+                ->from('tbpo_barang')
+                ->where('kode_barang', $candidate)
+                ->limit(1)
+                ->get()
+                ->row();
+
+            $this->mutasiStockCodeCache[$cacheKey] = $rowBarang ? $rowBarang->kode_barang : '';
+            if ($rowBarang) {
+                return $rowBarang->kode_barang;
+            }
+        }
+
+        $namaBarang = trim((string) $this->mutasi_row_value($row, 'nama_barang'));
+        if ($namaBarang === '') {
+            return '';
+        }
+
+        $cacheKey = 'name:' . $namaBarang;
+        if (array_key_exists($cacheKey, $this->mutasiStockCodeCache)) {
+            return $this->mutasiStockCodeCache[$cacheKey];
+        }
+
+        $rowBarang = $this->db
+            ->select('kode_barang')
+            ->from('tbpo_barang')
+            ->where('nama_barang', $namaBarang)
+            ->limit(1)
+            ->get()
+            ->row();
+
+        $this->mutasiStockCodeCache[$cacheKey] = $rowBarang ? $rowBarang->kode_barang : '';
+        return $this->mutasiStockCodeCache[$cacheKey];
+    }
+
+    private function build_mutasi_stock_groups($rows, $defaultGudangAsal = null, $defaultGudangTujuan = null)
+    {
+        $groups = [];
+
+        if (empty($rows)) {
+            return [
+                'status' => false,
+                'msg' => 'Detail mutasi tidak ditemukan'
+            ];
+        }
+
+        foreach ($rows as $row) {
+            $kdBarang = $this->resolve_mutasi_stock_code($row);
+            if ($kdBarang === '') {
+                return [
+                    'status' => false,
+                    'msg' => 'Kode barang ' . $this->mutasi_row_value($row, 'nama_barang', '-') . ' tidak ditemukan di tbpo_barang'
+                ];
+            }
+
+            $qty = (float) $this->mutasi_row_value($row, 'qty', 0);
+            if ($qty <= 0) {
+                return [
+                    'status' => false,
+                    'msg' => 'Qty ' . $this->mutasi_row_value($row, 'nama_barang', $kdBarang) . ' tidak valid'
+                ];
+            }
+
+            $noLot = trim((string) $this->mutasi_row_value($row, 'no_lot'));
+            $noLot = $noLot === '' ? '-' : $noLot;
+            $expiredDate = $this->normalize_mutasi_stock_date($this->mutasi_row_value($row, 'expired_date', $this->mutasi_row_value($row, 'exp_date')));
+            $gudangAsal = $this->mutasi_row_value($row, 'gdg_asal', $this->mutasi_row_value($row, 'gudang_asal', $defaultGudangAsal));
+            $gudangTujuan = $this->mutasi_row_value($row, 'gdg_mutasi', $this->mutasi_row_value($row, 'gudang_tujuan', $defaultGudangTujuan));
+
+            if ($gudangAsal === null || $gudangAsal === '' || $gudangTujuan === null || $gudangTujuan === '') {
+                return [
+                    'status' => false,
+                    'msg' => 'Gudang asal/tujuan mutasi tidak valid'
+                ];
+            }
+
+            $key = implode('|', [$kdBarang, $gudangAsal, $gudangTujuan, $noLot, (string) $expiredDate]);
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'kd_barang' => $kdBarang,
+                    'nama_barang' => $this->mutasi_row_value($row, 'nama_barang', $kdBarang),
+                    'gudang_asal' => $gudangAsal,
+                    'gudang_tujuan' => $gudangTujuan,
+                    'no_lot' => $noLot,
+                    'expired_date' => $expiredDate,
+                    'qty' => 0,
+                ];
+            }
+
+            $groups[$key]['qty'] += $qty;
+        }
+
+        return [
+            'status' => true,
+            'groups' => array_values($groups)
+        ];
+    }
+
+    private function get_mutasi_stock_batch_row($kdBarang, $gudangId, $noLot, $expiredDate)
+    {
+        $this->db
+            ->from('tberp_stock_batch')
+            ->where('kd_barang', $kdBarang)
+            ->where('gudang_id', $gudangId);
+
+        if ($noLot === '-') {
+            $this->db
+                ->group_start()
+                ->where('no_lot', '-')
+                ->or_where('no_lot', '')
+                ->or_where('no_lot IS NULL', null, false)
+                ->group_end();
+        } else {
+            $this->db->where('no_lot', $noLot);
+        }
+
+        if ($expiredDate === null) {
+            $this->db->where('expired_date IS NULL', null, false);
+        } else {
+            $this->db->where('expired_date', $expiredDate);
+        }
+
+        return $this->db->limit(1)->get()->row_array();
+    }
+
+    private function apply_mutasi_stock_batch_delta($group, $gudangId, $delta)
+    {
+        $batch = $this->get_mutasi_stock_batch_row($group['kd_barang'], $gudangId, $group['no_lot'], $group['expired_date']);
+        $now = date('Y-m-d H:i:s');
+
+        if ($batch) {
+            $this->db->where('id', $batch['id']);
+
+            if ((float) $delta < 0) {
+                $this->db->where('(qty_on_hand - qty_reserved) >= ' . abs((float) $delta), null, false);
+            }
+
+            $this->db
+                ->set('qty_on_hand', 'qty_on_hand + ' . (float) $delta, false)
+                ->set('update_at', $now)
+                ->update('tberp_stock_batch');
+
+            return $this->db->affected_rows() > 0;
+        }
+
+        if ((float) $delta < 0) {
+            return false;
+        }
+
+        return $this->db->insert('tberp_stock_batch', [
+            'kd_barang' => $group['kd_barang'],
+            'gudang_id' => $gudangId,
+            'no_lot' => $group['no_lot'],
+            'expired_date' => $group['expired_date'],
+            'qty_on_hand' => (float) $delta,
+            'qty_reserved' => 0,
+            'created_at' => $now,
+            'update_at' => $now
+        ]);
+    }
+
+    private function insert_mutasi_stock_ledger($group, $gudangId, $tipe, $refNo, $refType)
+    {
+        return $this->db->insert('tberp_stock_ledger', [
+            'kd_barang' => $group['kd_barang'],
+            'gudang_id' => $gudangId,
+            'no_lot' => $group['no_lot'],
+            'expired_date' => $group['expired_date'],
+            'qty' => $group['qty'],
+            'tipe' => $tipe,
+            'ref_no' => $refNo,
+            'ref_type' => $refType,
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    private function validate_mutasi_stock_groups_available($groups, $gudangField)
+    {
+        if (!$this->db->table_exists('tberp_stock_batch') || !$this->db->table_exists('tberp_stock_ledger')) {
+            return [
+                'status' => false,
+                'msg' => 'Tabel tberp_stock_batch / tberp_stock_ledger belum tersedia'
+            ];
+        }
+
+        foreach ($groups as $group) {
+            $batch = $this->get_mutasi_stock_batch_row($group['kd_barang'], $group[$gudangField], $group['no_lot'], $group['expired_date']);
+            $available = $batch
+                ? ((float) $batch['qty_on_hand'] - (float) $batch['qty_reserved'])
+                : 0;
+
+            if ($available + 0.0001 < (float) $group['qty']) {
+                return [
+                    'status' => false,
+                    'msg' => 'Qty ' . $group['nama_barang'] . ' lot ' . $group['no_lot'] . ' melebihi stok tersedia. Tersedia: ' . rtrim(rtrim(number_format($available, 3, '.', ''), '0'), '.')
+                ];
+            }
+        }
+
+        return ['status' => true];
+    }
+
+    public function validate_mutasi_stock_available($rows, $defaultGudangAsal, $defaultGudangTujuan = null)
+    {
+        $groups = $this->build_mutasi_stock_groups($rows, $defaultGudangAsal, $defaultGudangTujuan);
+        if (!$groups['status']) {
+            return $groups;
+        }
+
+        $valid = $this->validate_mutasi_stock_groups_available($groups['groups'], 'gudang_asal');
+        if (!$valid['status']) {
+            return $valid;
+        }
+
+        return [
+            'status' => true,
+            'groups' => $groups['groups']
+        ];
+    }
+
+    public function post_mutasi_stock($rows, $defaultGudangAsal, $defaultGudangTujuan, $noreff)
+    {
+        $valid = $this->validate_mutasi_stock_available($rows, $defaultGudangAsal, $defaultGudangTujuan);
+        if (!$valid['status']) {
+            return $valid;
+        }
+
+        foreach ($valid['groups'] as $group) {
+            if (!$this->apply_mutasi_stock_batch_delta($group, $group['gudang_asal'], -1 * (float) $group['qty'])) {
+                return ['status' => false, 'msg' => 'Gagal mengurangi stok gudang asal'];
+            }
+
+            if (!$this->apply_mutasi_stock_batch_delta($group, $group['gudang_tujuan'], (float) $group['qty'])) {
+                return ['status' => false, 'msg' => 'Gagal menambah stok gudang tujuan'];
+            }
+
+            if (!$this->insert_mutasi_stock_ledger($group, $group['gudang_asal'], 'OUT', $noreff, 'MUTASI_BARANG')) {
+                return ['status' => false, 'msg' => 'Gagal membuat ledger OUT mutasi'];
+            }
+
+            if (!$this->insert_mutasi_stock_ledger($group, $group['gudang_tujuan'], 'IN', $noreff, 'MUTASI_BARANG')) {
+                return ['status' => false, 'msg' => 'Gagal membuat ledger IN mutasi'];
+            }
+        }
+
+        return ['status' => true];
+    }
+
+    public function reverse_mutasi_stock($noreff)
+    {
+        $details = $this->db
+            ->where('noreff', $noreff)
+            ->get('tb_detail_mutasi')
+            ->result();
+
+        if (!$details) {
+            return ['status' => false, 'msg' => 'Detail mutasi tidak ditemukan'];
+        }
+
+        $groups = $this->build_mutasi_stock_groups($details);
+        if (!$groups['status']) {
+            return $groups;
+        }
+
+        $valid = $this->validate_mutasi_stock_groups_available($groups['groups'], 'gudang_tujuan');
+        if (!$valid['status']) {
+            return $valid;
+        }
+
+        foreach ($groups['groups'] as $group) {
+            if (!$this->apply_mutasi_stock_batch_delta($group, $group['gudang_tujuan'], -1 * (float) $group['qty'])) {
+                return ['status' => false, 'msg' => 'Gagal mengurangi stok gudang tujuan saat reversal'];
+            }
+
+            if (!$this->apply_mutasi_stock_batch_delta($group, $group['gudang_asal'], (float) $group['qty'])) {
+                return ['status' => false, 'msg' => 'Gagal mengembalikan stok gudang asal saat reversal'];
+            }
+
+            if (!$this->insert_mutasi_stock_ledger($group, $group['gudang_tujuan'], 'OUT', $noreff, 'MUTASI_BARANG_REVERSAL')) {
+                return ['status' => false, 'msg' => 'Gagal membuat ledger reversal OUT'];
+            }
+
+            if (!$this->insert_mutasi_stock_ledger($group, $group['gudang_asal'], 'IN', $noreff, 'MUTASI_BARANG_REVERSAL')) {
+                return ['status' => false, 'msg' => 'Gagal membuat ledger reversal IN'];
+            }
+        }
+
+        return ['status' => true];
+    }
+
     private function barang_mutasi_search_sql($search, &$params)
     {
         if ($search === '') {
@@ -2398,31 +2750,30 @@ LEFT JOIN tb_customer c
         $params[] = $like;
         $params[] = $like;
 
-        return " AND (sa.kode_barang_zahir LIKE ? OR sa.kode_barang_system LIKE ? OR sa.nama_barang LIKE ?) ";
+        return " AND (sb.kd_barang LIKE ? OR b.kode_barang LIKE ? OR b.nama_barang LIKE ?) ";
     }
 
     public function count_barang_mutasi_by_gudang($id_gudang, $search = '')
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return 0;
         }
 
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereSearch = $this->barang_mutasi_search_sql($search, $params);
 
         $row = $this->db->query("
             SELECT COUNT(*) AS total_rows
             FROM (
                 SELECT
-                    sa.kode_barang_zahir,
-                    sa.kode_barang_system,
-                    sa.nama_barang,
-                    COALESCE(SUM(sa.qty), 0) AS qty
-                FROM tb_saldo_awal sa
-                LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-                WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                    sb.kd_barang,
+                    b.nama_barang,
+                    COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty
+                FROM tberp_stock_batch sb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+                WHERE sb.gudang_id = ?
                     {$whereSearch}
-                GROUP BY sa.kode_barang_zahir, sa.kode_barang_system, sa.nama_barang
+                GROUP BY sb.kd_barang, b.nama_barang
                 HAVING qty > 0
             ) stock
         ", $params)->row();
@@ -2432,47 +2783,37 @@ LEFT JOIN tb_customer c
 
     public function get_barang_mutasi_by_gudang($id_gudang, $search = '', $limit = 100, $offset = 0)
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return [];
         }
 
         $limit = max(1, (int) $limit);
         $offset = max(0, (int) $offset);
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereSearch = $this->barang_mutasi_search_sql($search, $params);
 
         return $this->db->query("
             SELECT
-                stock.kode_barang_zahir AS kd_barang,
-                stock.kode_barang_system,
-                stock.nama_barang,
-                COALESCE(NULLIF(mb.satuan, ''), 'Pcs') AS satuan_nama,
+                stock.kd_barang AS kd_barang,
+                stock.kd_barang AS kode_barang_system,
+                COALESCE(NULLIF(stock.nama_barang, ''), stock.kd_barang) AS nama_barang,
+                COALESCE(NULLIF(stock.satuan, ''), 'Pcs') AS satuan_nama,
                 COALESCE(s.id_satuan, 2) AS satuan_id,
                 stock.qty
             FROM (
                 SELECT
-                    sa.kode_barang_zahir,
-                    sa.kode_barang_system,
-                    sa.nama_barang,
-                    COALESCE(SUM(sa.qty), 0) AS qty
-                FROM tb_saldo_awal sa
-                LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-                WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                    sb.kd_barang,
+                    MAX(b.nama_barang) AS nama_barang,
+                    MAX(b.satuan) AS satuan,
+                    COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty
+                FROM tberp_stock_batch sb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+                WHERE sb.gudang_id = ?
                     {$whereSearch}
-                GROUP BY sa.kode_barang_zahir, sa.kode_barang_system, sa.nama_barang
+                GROUP BY sb.kd_barang
                 HAVING qty > 0
             ) stock
-            LEFT JOIN (
-                SELECT
-                    kode_barang_system,
-                    kd_barang,
-                    MAX(satuan) AS satuan
-                FROM tb_master_barang_all
-                GROUP BY kode_barang_system, kd_barang
-            ) mb
-                ON mb.kode_barang_system = stock.kode_barang_system
-                OR ((stock.kode_barang_system IS NULL OR stock.kode_barang_system = '') AND mb.kd_barang = stock.kode_barang_zahir)
-            LEFT JOIN tbpo_satuan s ON LOWER(s.nm_satuan) = LOWER(COALESCE(NULLIF(mb.satuan, ''), 'Pcs'))
+            LEFT JOIN tbpo_satuan s ON LOWER(s.nm_satuan) = LOWER(COALESCE(NULLIF(stock.satuan, ''), 'Pcs'))
             ORDER BY stock.nama_barang ASC
             LIMIT {$offset}, {$limit}
         ", $params)->result();
@@ -2480,17 +2821,17 @@ LEFT JOIN tb_customer c
 
     public function count_mutasi_lot_options($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '')
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return 0;
         }
 
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereItem = '';
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return 0;
@@ -2498,7 +2839,7 @@ LEFT JOIN tb_customer c
 
         $whereSearch = '';
         if ($search !== '') {
-            $whereSearch = " AND (sa.nolot LIKE ? OR sa.exp_date LIKE ?) ";
+            $whereSearch = " AND (COALESCE(NULLIF(sb.no_lot, ''), '-') LIKE ? OR sb.expired_date LIKE ?) ";
             $like = '%' . $search . '%';
             $params[] = $like;
             $params[] = $like;
@@ -2508,15 +2849,15 @@ LEFT JOIN tb_customer c
             SELECT COUNT(*) AS total_rows
             FROM (
                 SELECT
-                    COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
-                    sa.exp_date,
-                    COALESCE(SUM(sa.qty), 0) AS qty_gudang
-                FROM tb_saldo_awal sa
-                LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-                WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                    COALESCE(NULLIF(sb.no_lot, ''), '-') AS no_lot,
+                    sb.expired_date AS exp_date,
+                    COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+                FROM tberp_stock_batch sb
+                LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+                WHERE sb.gudang_id = ?
                     {$whereItem}
                     {$whereSearch}
-                GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-'), sa.exp_date
+                GROUP BY COALESCE(NULLIF(sb.no_lot, ''), '-'), sb.expired_date
                 HAVING qty_gudang > 0
             ) lot_stock
         ", $params)->row();
@@ -2526,17 +2867,17 @@ LEFT JOIN tb_customer c
 
     public function get_mutasi_lot_options($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '', $limit = 0, $offset = 0)
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return [];
         }
 
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereItem = '';
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return [];
@@ -2544,7 +2885,7 @@ LEFT JOIN tb_customer c
 
         $whereSearch = '';
         if ($search !== '') {
-            $whereSearch = " AND (sa.nolot LIKE ? OR sa.exp_date LIKE ?) ";
+            $whereSearch = " AND (COALESCE(NULLIF(sb.no_lot, ''), '-') LIKE ? OR sb.expired_date LIKE ?) ";
             $like = '%' . $search . '%';
             $params[] = $like;
             $params[] = $like;
@@ -2559,34 +2900,34 @@ LEFT JOIN tb_customer c
 
         return $this->db->query("
             SELECT
-                COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
-                sa.exp_date,
-                COALESCE(SUM(sa.qty), 0) AS qty_gudang
-            FROM tb_saldo_awal sa
-            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                COALESCE(NULLIF(sb.no_lot, ''), '-') AS no_lot,
+                sb.expired_date AS exp_date,
+                COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+            FROM tberp_stock_batch sb
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+            WHERE sb.gudang_id = ?
                 {$whereItem}
                 {$whereSearch}
-            GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-'), sa.exp_date
+            GROUP BY COALESCE(NULLIF(sb.no_lot, ''), '-'), sb.expired_date
             HAVING qty_gudang > 0
-            ORDER BY sa.exp_date ASC, no_lot ASC
+            ORDER BY sb.expired_date ASC, no_lot ASC
             {$limitSql}
         ", $params)->result();
     }
 
     public function get_mutasi_lot_select2($id_gudang, $kode_barang_system = '', $nama_barang = '', $search = '', $limit = 20)
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return [];
         }
 
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereItem = '';
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return [];
@@ -2594,7 +2935,7 @@ LEFT JOIN tb_customer c
 
         $whereSearch = '';
         if ($search !== '') {
-            $whereSearch = " AND COALESCE(NULLIF(sa.nolot, ''), '-') LIKE ? ";
+            $whereSearch = " AND COALESCE(NULLIF(sb.no_lot, ''), '-') LIKE ? ";
             $params[] = '%' . $search . '%';
         }
 
@@ -2602,14 +2943,14 @@ LEFT JOIN tb_customer c
 
         return $this->db->query("
             SELECT
-                COALESCE(NULLIF(sa.nolot, ''), '-') AS no_lot,
-                COALESCE(SUM(sa.qty), 0) AS qty_gudang
-            FROM tb_saldo_awal sa
-            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+                COALESCE(NULLIF(sb.no_lot, ''), '-') AS no_lot,
+                COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+            FROM tberp_stock_batch sb
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+            WHERE sb.gudang_id = ?
                 {$whereItem}
                 {$whereSearch}
-            GROUP BY COALESCE(NULLIF(sa.nolot, ''), '-')
+            GROUP BY COALESCE(NULLIF(sb.no_lot, ''), '-')
             HAVING qty_gudang > 0
             ORDER BY no_lot ASC
             LIMIT {$limit}
@@ -2618,17 +2959,17 @@ LEFT JOIN tb_customer c
 
     public function get_mutasi_exp_select2($id_gudang, $kode_barang_system = '', $nama_barang = '', $no_lot = '', $search = '', $limit = 20)
     {
-        if (!$id_gudang || $no_lot === '') {
+        if (!$id_gudang || $no_lot === '' || !$this->db->table_exists('tberp_stock_batch')) {
             return [];
         }
 
-        $params = [$id_gudang, $id_gudang, $no_lot];
+        $params = [$id_gudang, $no_lot];
         $whereItem = '';
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return [];
@@ -2636,7 +2977,7 @@ LEFT JOIN tb_customer c
 
         $whereSearch = '';
         if ($search !== '') {
-            $whereSearch = " AND sa.exp_date LIKE ? ";
+            $whereSearch = " AND sb.expired_date LIKE ? ";
             $params[] = '%' . $search . '%';
         }
 
@@ -2644,77 +2985,81 @@ LEFT JOIN tb_customer c
 
         return $this->db->query("
             SELECT
-                sa.exp_date,
-                COALESCE(SUM(sa.qty), 0) AS qty_gudang
-            FROM tb_saldo_awal sa
-            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
-                AND COALESCE(NULLIF(sa.nolot, ''), '-') = ?
+                sb.expired_date AS exp_date,
+                COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+            FROM tberp_stock_batch sb
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+            WHERE sb.gudang_id = ?
+                AND COALESCE(NULLIF(sb.no_lot, ''), '-') = ?
                 {$whereItem}
                 {$whereSearch}
-            GROUP BY sa.exp_date
+            GROUP BY sb.expired_date
             HAVING qty_gudang > 0
-            ORDER BY sa.exp_date ASC
+            ORDER BY sb.expired_date ASC
             LIMIT {$limit}
         ", $params)->result();
     }
 
     public function get_mutasi_lot_qty($id_gudang, $kode_barang_system, $nama_barang, $no_lot, $exp_date)
     {
-        $params = [$id_gudang, $id_gudang, $no_lot, $exp_date];
+        if (!$this->db->table_exists('tberp_stock_batch')) {
+            return 0;
+        }
+
+        $params = [$id_gudang, $no_lot, $this->normalize_mutasi_stock_date($exp_date)];
         $whereItem = '';
 
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return 0;
         }
 
         $row = $this->db->query("
-            SELECT COALESCE(SUM(sa.qty), 0) AS qty_gudang
-            FROM tb_saldo_awal sa
-            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
-                AND COALESCE(NULLIF(sa.nolot, ''), '-') = ?
-                AND sa.exp_date = ?
+            SELECT COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+            FROM tberp_stock_batch sb
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+            WHERE sb.gudang_id = ?
+                AND COALESCE(NULLIF(sb.no_lot, ''), '-') = ?
+                AND sb.expired_date = ?
                 {$whereItem}
         ", $params)->row();
 
-        return $row ? (int) $row->qty_gudang : 0;
+        return $row ? (float) $row->qty_gudang : 0;
     }
 
     public function get_mutasi_item_total_qty($id_gudang, $kode_barang_system = '', $nama_barang = '')
     {
-        if (!$id_gudang) {
+        if (!$id_gudang || !$this->db->table_exists('tberp_stock_batch')) {
             return 0;
         }
 
-        $params = [$id_gudang, $id_gudang];
+        $params = [$id_gudang];
         $whereItem = '';
 
         if ($kode_barang_system !== '') {
-            $whereItem = " AND sa.kode_barang_system = ? ";
+            $whereItem = " AND sb.kd_barang = ? ";
             $params[] = $kode_barang_system;
         } elseif ($nama_barang !== '') {
-            $whereItem = " AND sa.nama_barang = ? ";
+            $whereItem = " AND b.nama_barang = ? ";
             $params[] = $nama_barang;
         } else {
             return 0;
         }
 
         $row = $this->db->query("
-            SELECT COALESCE(SUM(sa.qty), 0) AS qty_gudang
-            FROM tb_saldo_awal sa
-            LEFT JOIN tb_gudang_wilayah gw ON gw.id_wilayah = sa.wilayah_id
-            WHERE (gw.id_gudang = ? OR sa.wilayah_id = ?)
+            SELECT COALESCE(SUM(sb.qty_on_hand - sb.qty_reserved), 0) AS qty_gudang
+            FROM tberp_stock_batch sb
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sb.kd_barang
+            WHERE sb.gudang_id = ?
                 {$whereItem}
         ", $params)->row();
 
-        return $row ? (int) $row->qty_gudang : 0;
+        return $row ? (float) $row->qty_gudang : 0;
     }
 
     public function get_mutasi_satuan_options()
