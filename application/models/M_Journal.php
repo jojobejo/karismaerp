@@ -94,8 +94,11 @@ class M_Journal extends CI_Model
         $id_akun_debit = $akun_debit ? $akun_debit['id_akun'] : null;
 
         // Cari ID Akun Kredit (Piutang Usaha)
-        $this->db->like('nama_akun', 'Piutang Usaha');
-        $akun_kredit = $this->db->get('tbkeu_akun')->row_array();
+        $akun_kredit = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
+        if (!$akun_kredit) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_kredit = $this->db->get('tbkeu_akun')->row_array();
+        }
         $id_akun_kredit = $akun_kredit ? $akun_kredit['id_akun'] : null;
 
         if ($id_akun_debit || $id_akun_kredit) {
@@ -354,8 +357,11 @@ class M_Journal extends CI_Model
 
         // Account IDs resolver
         // 1. Piutang Usaha (Kredit)
-        $this->db->like('nama_akun', 'Piutang Usaha');
-        $akun_piutang = $this->db->get('tbkeu_akun')->row_array();
+        $akun_piutang = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
+        if (!$akun_piutang) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_piutang = $this->db->get('tbkeu_akun')->row_array();
+        }
         $id_akun_piutang = $akun_piutang ? $akun_piutang['id_akun'] : 205; // fallback to 205 Q Piutang Dagang
 
         // 2. Q PPN K (Debit for taxable)

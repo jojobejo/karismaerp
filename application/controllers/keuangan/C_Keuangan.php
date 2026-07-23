@@ -1466,8 +1466,8 @@ class C_Keuangan extends CI_Controller
         }
 
         $sections[$equityIndex]['rows'][] = [
-            'kode_akun' => '',
-            'nama_akun' => 'Laba/Rugi Berjalan',
+            'kode_akun' => '32020',
+            'nama_akun' => 'Laba Tahun Berjalan',
             'saldo_normal' => 'KREDIT',
             'debit' => 0.0,
             'kredit' => 0.0,
