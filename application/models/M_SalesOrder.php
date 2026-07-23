@@ -1733,7 +1733,7 @@ class M_SalesOrder extends CI_Model
                 $no_faktur,
                 '',
                 (int)($faktur_header['created_by_id'] ?? 0) ?: null,
-                false
+                true
             );
 
             if (empty($journal['success'])) {
