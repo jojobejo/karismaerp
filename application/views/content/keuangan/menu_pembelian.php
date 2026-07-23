@@ -4,7 +4,7 @@
     .menu-page .page-title-left { display: flex; align-items: center; gap: 10px; }
     .menu-page .page-home-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; background: #1788b8; color: #fff; }
     .menu-page .page-title { font-size: 30px; font-weight: 700; color: #34495e; margin: 0; }
-    .menu-page .report-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .menu-page .report-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .menu-page .support-card-btn { width: 100%; min-height: 116px; text-align: left; border: 1px solid #d9e2ec; border-radius: 6px; background: #fff; padding: 14px; color: #1f2d3d; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
     .menu-page .report-card-link { display: block; text-decoration: none; }
     .menu-page .report-card-link .support-card-btn { display: block; }
@@ -35,11 +35,18 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-info py-4 text-center">
-                        <i class="fas fa-info-circle mr-2"></i> Belum ada menu pembelian yang tersedia saat ini.
+                    <div class="report-card-grid">
+                        <a href="<?= base_url('jurnal/pembelian') ?>" class="report-card-link">
+                            <span class="support-card-btn">
+                                <span class="support-card-icon"><i class="fas fa-shopping-cart"></i></span>
+                                <span class="support-card-title">Daftar Jurnal Pembelian</span>
+                                <span class="support-card-desc">Daftar pencatatan jurnal transaksi pembelian (LPB dan PO).</span>
+                            </span>
+                        </a>
                     </div>
                 </div>
             </section>
         </div>
     </div>
 </body>
+

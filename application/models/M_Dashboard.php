@@ -21,7 +21,7 @@ class M_Dashboard extends CI_Model
         );
     }
 
-    public function module_sections(array $context)
+    public function module_sections($context = array())
     {
         $sections = array(
             'keuangan' => array(
@@ -101,6 +101,14 @@ class M_Dashboard extends CI_Model
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
                     $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
+                ),
+            ),
+            'laporan' => array(
+                'label' => 'LAPORAN',
+                'icon' => 'fas fa-chart-bar',
+                'description' => 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan laporan lainnya.',
+                'menus' => array(
+                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'blue', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
                 ),
             ),
         );

@@ -94,8 +94,11 @@ class M_Journal extends CI_Model
         $id_akun_debit = $akun_debit ? $akun_debit['id_akun'] : null;
 
         // Cari ID Akun Kredit (Piutang Usaha)
-        $this->db->like('nama_akun', 'Piutang Usaha');
-        $akun_kredit = $this->db->get('tbkeu_akun')->row_array();
+        $akun_kredit = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
+        if (!$akun_kredit) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_kredit = $this->db->get('tbkeu_akun')->row_array();
+        }
         $id_akun_kredit = $akun_kredit ? $akun_kredit['id_akun'] : null;
 
         if ($id_akun_debit || $id_akun_kredit) {
@@ -354,8 +357,11 @@ class M_Journal extends CI_Model
 
         // Account IDs resolver
         // 1. Piutang Usaha (Kredit)
-        $this->db->like('nama_akun', 'Piutang Usaha');
-        $akun_piutang = $this->db->get('tbkeu_akun')->row_array();
+        $akun_piutang = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
+        if (!$akun_piutang) {
+            $this->db->like('nama_akun', 'Piutang Usaha');
+            $akun_piutang = $this->db->get('tbkeu_akun')->row_array();
+        }
         $id_akun_piutang = $akun_piutang ? $akun_piutang['id_akun'] : 205; // fallback to 205 Q Piutang Dagang
 
         // 2. Q PPN K (Debit for taxable)
@@ -469,5 +475,80 @@ class M_Journal extends CI_Model
         ]);
 
         return true;
+    }
+
+    public function accounting_sales_journal_report($start_date = '', $end_date = '')
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return [];
+        }
+
+        // Fetch headers
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            j.source_no AS referensi,
+            j.source_id AS no_faktur,
+            j.keterangan,
+            j.total_debit AS nilai,
+            j.status,
+            COALESCE(f.no_so, '') AS no_so,
+            COALESCE(f.customer_name, '') AS pelanggan,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbso_faktur_penjualan f', 'j.source_module = "SALES" AND f.no_faktur = j.source_id', 'left');
+        $this->db->where('j.source_module', 'SALES');
+        $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
+        
+        if ($start_date !== '' && $end_date !== '') {
+            $this->db->where('j.tanggal_transaksi >=', $start_date);
+            $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+
+        $this->db->order_by('j.tanggal_transaksi', 'ASC');
+        $this->db->order_by('j.id_jurnal', 'ASC');
+        $headers = $this->db->get()->result_array();
+
+        if (empty($headers)) {
+            return [];
+        }
+
+        // Extract IDs for fetching details
+        $journal_ids = array_column($headers, 'id_jurnal');
+
+        // Fetch details
+        $this->db->select("
+            d.id_jurnal,
+            d.nomor_baris,
+            a.kode_akun,
+            COALESCE(a.kode_akun_display, a.kode_akun) AS kode_rekening_display,
+            a.nama_akun,
+            d.keterangan,
+            d.debit,
+            d.kredit,
+            d.cost_center,
+            d.project_no
+        ", false);
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun');
+        $this->db->where_in('d.id_jurnal', $journal_ids);
+        $this->db->order_by('d.id_jurnal', 'ASC');
+        $this->db->order_by('d.nomor_baris', 'ASC');
+        $details = $this->db->get()->result_array();
+
+        // Group details by id_jurnal
+        $details_grouped = [];
+        foreach ($details as $d) {
+            $details_grouped[$d['id_jurnal']][] = $d;
+        }
+
+        // Merge headers with details
+        foreach ($headers as &$h) {
+            $h['details'] = isset($details_grouped[$h['id_jurnal']]) ? $details_grouped[$h['id_jurnal']] : [];
+        }
+
+        return $headers;
     }
 }
