@@ -429,7 +429,7 @@ class M_Ics extends CI_Model
 
     public function getBarangByKode($kd)
     {
-        return $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd])->row();
+        return $this->db->get_where('tbpo_barang', ['kode_barang' => $kd])->row();
     }
 
     public function updateWilayahByOpname($id, $id_wilayah)
@@ -568,8 +568,8 @@ class M_Ics extends CI_Model
         ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
         LEFT JOIN (
             SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang as kd
-            FROM tb_master_barang_all
-            GROUP BY kd_barang
+            FROM tbpo_barang
+            GROUP BY kode_barang
         ) mb ON mb.kd = x.kode_barang_zahir
         LEFT JOIN (
             SELECT kd_faktur , kd_barang , tgl_expired , SUM(qty) as qty_rjual 
@@ -679,8 +679,8 @@ class M_Ics extends CI_Model
         ) o ON o.kd_system = x.kode_barang_zahir
         LEFT JOIN (
             SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , kd_barang
-            FROM tb_master_barang_all
-            GROUP BY kd_barang,nama_barang
+            FROM tbpo_barang
+            GROUP BY kode_barang,nama_barang
         ) mb ON mb.kd_barang = x.kode_barang_zahir
         $where
         ORDER BY x.nama_barang;")->result();
@@ -694,7 +694,7 @@ class M_Ics extends CI_Model
             IFNULL(s.pic, '-') AS pic,
             IFNULL(s.kordinat, '-') AS kordinat,
             IFNULL(s.kordinat1, '-') AS kordinat1
-            FROM tb_master_barang_all a
+            FROM tbpo_barang a
             LEFT JOIN (
             SELECT 
                 nama_barang,
@@ -716,7 +716,7 @@ class M_Ics extends CI_Model
         b.qty,
         b.barang_pic as PIC,
         b.koordinat_id
-        FROM tb_master_barang_all a 
+        FROM tbpo_barang a 
         JOIN tb_saldo_awal b ON b.nama_barang = a.nama_barang
         WHERE a.kode_barang = '$kd'
         ")->result();
@@ -725,7 +725,7 @@ class M_Ics extends CI_Model
     public function edit_mbarang_ics($id, $data)
     {
         $this->db->where('id', $id);
-        return $this->db->update('tb_master_barang_all', $data);
+        return $this->db->update('tbpo_barang', $data);
     }
 
     public function get_master_barang_log()
@@ -739,7 +739,7 @@ class M_Ics extends CI_Model
         (a.p*a.l*a.t) as dimensi,
         a.berat as berat,
         a.kubikasi as kubikasi
-        FROM tb_master_barang_all a
+        FROM tbpo_barang a
         LEFT JOIN tb_suplier b ON b.kd_suplier = a.kd_suplier
         ")->result();
     }
@@ -748,8 +748,8 @@ class M_Ics extends CI_Model
     {
         return $this->db->query("SELECT
         a.*
-        FROM tb_master_barang_all a
-        WHERE a.kd_barang = '$br'
+        FROM tbpo_barang a
+        WHERE a.kode_barang = '$br'
         ")->result();
     }
 
@@ -758,8 +758,8 @@ class M_Ics extends CI_Model
         return $this->db->query("SELECT
         a.exp_date
         FROM tb_saldo_awal a
-        LEFT JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
-        WHERE b.kd_barang = '$kd'
+        LEFT JOIN tbpo_barang b ON b.nama_barang = a.nama_barang
+        WHERE b.kode_barang = '$kd'
         GROUP BY a.exp_date
         ")->result();
     }
@@ -796,7 +796,7 @@ class M_Ics extends CI_Model
 		
         FROM tb_saldo_awal a
         
-        JOIN tb_master_barang_all b ON b.kd_barang = a.kode_barang_zahir                
+        JOIN tbpo_barang b ON b.kode_barang = a.kode_barang_zahir                
         LEFT JOIN tb_gudang gdg ON gdg.id_gudang = a.wilayah_id
         LEFT JOIN tb_gudang_wilayah kr ON kr.id_wilayah = a.koordinat_id
         
@@ -988,8 +988,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1125,8 +1125,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1262,8 +1262,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1399,8 +1399,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1536,8 +1536,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1673,8 +1673,8 @@ class M_Ics extends CI_Model
     ) o ON o.kd_system = x.kode_barang_zahir AND o.exp_date = x.exp_date
     LEFT JOIN (
         SELECT nama_barang, MAX(p) AS p, MAX(l) AS l, MAX(t) AS t , MAX(kd_barang) AS kd
-        FROM tb_master_barang_all
-        GROUP BY kd_barang
+        FROM tbpo_barang
+        GROUP BY kode_barang
     ) mb ON mb.kd = x.kode_barang_zahir
     LEFT JOIN(
     	SELECT nama_barang , kode_barang_zahir , exp_date , sum(qty) as qty_mutasi
@@ -1753,7 +1753,7 @@ class M_Ics extends CI_Model
             c.nama_kios as nm_kios,
             b.kd_rute as rute
         FROM tb_ics_do a
-        LEFT JOIN tb_master_barang_all m ON m.nama_barang = a.nama_barang
+        LEFT JOIN tbpo_barang m ON m.nama_barang = a.nama_barang
         LEFT JOIN tb_detail_do b ON b.kd_faktur = a.kd_faktur
         LEFT JOIN tb_customer c ON c.kd_customer = b.kd_customer
         WHERE 
@@ -1788,8 +1788,8 @@ FROM (
         a.no_lot,
         a.exp_date
     FROM tb_ics_do a
-    LEFT JOIN tb_master_barang_all m 
-        ON m.kd_barang = a.kd_barang
+    LEFT JOIN tbpo_barang m 
+        ON m.kode_barang = a.kd_barang
     GROUP BY a.kd_faktur, a.kd_barang, a.exp_date
 ) x
 LEFT JOIN (
@@ -1819,7 +1819,7 @@ LEFT JOIN tb_customer c
             MOD(a.qty, (m.p * m.l * m.t))    AS qty_pcs,
             a.lpb_note as note
         FROM tb_ics_po a
-        LEFT JOIN tb_master_barang_all m ON m.nama_barang = a.nama_barang
+        LEFT JOIN tbpo_barang m ON m.nama_barang = a.nama_barang
         WHERE DATE(a.tgl_transaksi) = '$tgl'
         AND (m.p * m.l * m.t) > 0")->result();
     }
@@ -1840,7 +1840,7 @@ LEFT JOIN tb_customer c
             a.lpb_note as note,
             a.lpb_status as status
         FROM tb_ics_po a
-        LEFT JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+        LEFT JOIN tbpo_barang m ON m.kode_barang = a.kd_barang
         ")->result();
     }
 
@@ -1854,7 +1854,7 @@ LEFT JOIN tb_customer c
     //         a.lpb_note as note,
     //         a.lpb_status as status
     //     FROM tb_ics_po a
-    //     LEFT JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+    //     LEFT JOIN tbpo_barang m ON m.kode_barang = a.kd_barang
     //     GROUP BY a.kd_faktur_lpb
     //     ")->result();
     // }
@@ -1892,7 +1892,7 @@ LEFT JOIN tb_customer c
         COALESCE(opname.qty_opname, 0) -((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) AS selisih,
         IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0),1,0) AS status
         FROM tb_ics a
-        JOIN tb_master_barang_all b ON b.nama_barang = a.nama_barang
+        JOIN tbpo_barang b ON b.nama_barang = a.nama_barang
         LEFT JOIN 
         (	SELECT nama_barang, SUM(qty) AS qty_pending
             FROM tb_ics_do
@@ -2064,7 +2064,7 @@ LEFT JOIN tb_customer c
     public function getBarangByGudangWilayah()
     {
         $this->db->select('b.*, g.nama_gudang, w.nama_wilayah')
-            ->from('tb_master_barang_all b')
+            ->from('tbpo_barang b')
             ->join('tb_gudang g', 'g.id_gudang=b.id_gudang', 'left')
             ->join('tb_gudang_wilayah w', 'w.id_wilayah=b.id_wilayah', 'left');
 
@@ -2100,8 +2100,8 @@ LEFT JOIN tb_customer c
             FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
             MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
         FROM v_stock_per_gudang a
-        JOIN tb_master_barang_all b
-            ON b.kd_barang = a.kode_barang
+        JOIN tbpo_barang b
+            ON b.kode_barang = a.kode_barang
         WHERE a.gudang = ?
         ORDER BY a.nama_barang ASC
     ", [$id_gudang])->result();
@@ -2120,8 +2120,8 @@ LEFT JOIN tb_customer c
                 FLOOR(a.qty/(b.p*b.l*b.t)) AS qty_box,
                 MOD(a.qty,(b.p*b.l*b.t)) AS qty_pcs
             FROM v_stock_per_gudang a
-            JOIN tb_master_barang_all b
-                ON b.kd_barang = a.kode_barang
+            JOIN tbpo_barang b
+                ON b.kode_barang = a.kode_barang
         ";
 
         $params = [];
@@ -2156,7 +2156,7 @@ LEFT JOIN tb_customer c
     public function get_barang_select2($search = '')
     {
         $this->db->select('nama_barang');
-        $this->db->from('tb_master_barang_all');
+        $this->db->from('tbpo_barang');
 
         if ($search) {
             $this->db->like('nama_barang', $search);
@@ -3162,7 +3162,7 @@ LEFT JOIN tb_customer c
         return $this->db
             ->select('d.id, d.kd_faktur, d.kd_barang, m.nama_barang, d.tgl_expired, d.no_lot, d.qty')
             ->from('tb_detail_retur_barang d')
-            ->join('tb_master_barang_all m', 'm.kd_barang = d.kd_barang', 'left')
+            ->join('tbpo_barang m', 'm.kode_barang = d.kd_barang', 'left')
             ->where('d.retur_type', $retur_type)
             ->where('d.status_data', $status_data)
             ->order_by('d.tgl_input', 'DESC')
@@ -3236,10 +3236,10 @@ LEFT JOIN tb_customer c
         COALESCE(s.nm_satuan, CASE WHEN a.satuan_id = 1 THEN 'Btl' WHEN a.satuan_id = 2 THEN 'Pcs' WHEN a.satuan_id = 3 THEN 'Box' ELSE 'Pcs' END) AS satuan_nama,
         a.user_inputer
         FROM tb_tmp_mutasi a
-        LEFT JOIN tb_master_barang_all b
+        LEFT JOIN tbpo_barang b
             ON b.nama_barang = a.nama_barang
             OR (" . ($this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi') ? "b.kode_barang_system = a.kode_barang_system" : "1 = 0") . ")
-            OR (" . ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi') ? "b.kd_barang = a.kode_barang" : "1 = 0") . ")
+            OR (" . ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi') ? "b.kode_barang = a.kode_barang" : "1 = 0") . ")
         LEFT JOIN tbpo_satuan s ON s.id_satuan = a.satuan_id
         WHERE a.user_inputer = ?
         GROUP BY a.id
@@ -3461,8 +3461,8 @@ LEFT JOIN tb_customer c
                 - IFNULL(mu.qty_mutasi_out, 0)
             ) AS saldo_realtime
         FROM tb_saldo_awal sa
-        JOIN tb_master_barang_all mb
-            ON mb.kd_barang = sa.kode_barang_system
+        JOIN tbpo_barang mb
+            ON mb.kode_barang = sa.kode_barang_system
         JOIN tb_gudang_wilayah gw
             ON gw.id_wilayah = sa.wilayah_id
         JOIN tb_gudang g

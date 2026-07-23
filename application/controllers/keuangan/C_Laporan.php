@@ -151,12 +151,12 @@ class C_Laporan extends CI_Controller
             }
             $in_tx = $this->db->query($in_query, $params_in)->result_array();
 
-            // Fetch OUT transactions
+            // Fetch OUT transactions from sales invoices (tbso_faktur_detail)
             $out_query = "SELECT f.tanggal_faktur AS tanggal, f.no_faktur AS referensi, fd.qty, fd.hrg_satuan AS harga, f.gudang_id, 'OUT' AS type, b.satuan
                           FROM tbso_faktur_penjualan f
                           JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
                           JOIN tbpo_barang b ON fd.kd_barang = b.kode_barang
-                          WHERE fd.kd_barang = ? AND f.status = 'confirmed'";
+                          WHERE fd.kd_barang = ? AND f.status NOT IN ('draft', 'cancelled')";
             $params_out = [$prod['kode_barang']];
             if ($id_gudang && $id_gudang !== 'all') {
                 $out_query .= " AND f.gudang_id = ?";

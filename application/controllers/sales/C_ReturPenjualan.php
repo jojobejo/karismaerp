@@ -434,7 +434,7 @@ class C_ReturPenjualan extends CI_Controller
             return;
         }
         $this->db->select('kd_barang, nama_barang, satuan, hpp');
-        $this->db->from('tb_master_barang_all');
+        $this->db->from('tbpo_barang');
         $this->db->like('nama_barang', $q);
         $this->db->order_by('nama_barang', 'ASC');
         $this->db->limit(30);
@@ -1178,8 +1178,8 @@ class C_ReturPenjualan extends CI_Controller
             $kb = !empty($kd_barang_arr[$i]) ? $kd_barang_arr[$i] : '';
             if (empty($kb)) {
                 // cari kd_barang dari db jika inputnya kosong
-                $mb = $this->db->get_where('tb_master_barang_all', ['nama_barang' => $nb])->row_array();
-                $kb = $mb ? $mb['kd_barang'] : '';
+                $mb = $this->db->get_where('tbpo_barang', ['nama_barang' => $nb])->row_array();
+                $kb = $mb ? $mb['kode_barang'] : '';
             }
 
             $rows[] = [

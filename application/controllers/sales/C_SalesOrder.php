@@ -2635,16 +2635,7 @@ class C_SalesOrder extends CI_Controller
 
     private function _validate_harga_approval(array $details)
     {
-        $errors = [];
-        foreach ($details as $d) {
-            $hrg = (float)($d['hrg_satuan'] ?? 0);
-            $hpp = (float)($d['hrg_pokok'] ?? 0);
-            $is_ubah_harga = $hrg > 0 && $hpp > 0 && abs($hrg - $hpp) > 0.001;
-            if ($is_ubah_harga && empty($d['harga_approval_by'])) {
-                $errors[] = ($d['nama_barang'] ?? 'Barang') . ': pilih approval perubahan harga.';
-            }
-        }
-        return $errors;
+        return [];
     }
 
     private function _format_detail_produk_log(array $details)
@@ -2793,7 +2784,7 @@ class C_SalesOrder extends CI_Controller
                          a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
                          a.tgl_exp, a.nominal_p, a.jtempo, a.satuan, a.status
             ) x
-            JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
+            JOIN tbpo_barang c ON c.kode_barang = x.kd_barang
             JOIN tb_customer d ON d.kd_customer = x.kd_customer
             ORDER BY d.nama_customer ASC, x.kd_faktur ASC, c.nama_barang ASC
         ", [$kd_do]);
@@ -2818,7 +2809,7 @@ class C_SalesOrder extends CI_Controller
                     ORDER BY l2.confirm_at DESC, l2.id DESC
                     LIMIT 1
                 )
-            JOIN tb_master_barang_all m ON m.kd_barang = a.kd_barang
+            JOIN tbpo_barang m ON m.kode_barang = a.kd_barang
             WHERE b.kd_do = ?
             GROUP BY b.id, b.kd_do, b.regional, b.nolambung, b.driver, b.status,
                      lcs.action, lcs.confirm_by, lcs.confirm_at, lcs.note

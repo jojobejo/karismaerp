@@ -404,7 +404,7 @@ class M_ReturPenjualan extends CI_Model
     {
         $this->db->select('d.*, m.satuan, m.kd_barang');
         $this->db->from('tbrp_spr_detail d');
-        $this->db->join('tb_master_barang_all m', 'm.nama_barang = d.nama_barang', 'left');
+        $this->db->join('tbpo_barang m', 'm.nama_barang = d.nama_barang', 'left');
         $this->db->where('d.id_spr', (int) $id_spr);
         $this->db->group_by('d.id_spr_detail'); // prevent duplicates if multiple kd_barang exist
         $this->db->order_by('d.no_urut', 'ASC');

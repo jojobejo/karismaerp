@@ -155,6 +155,11 @@ class M_Journal extends CI_Model
         $this->db->join('tbso_faktur_penjualan f', 'j.source_module = "SALES" AND f.no_faktur = j.source_id', 'left');
         $this->db->where('j.source_module', 'SALES');
         $this->db->where('j.source_type', 'FAKTUR_PENJUALAN');
+        $this->db->group_start();
+        $this->db->where('j.posting_event', 'SALES_INVOICE');
+        $this->db->or_where('j.posting_event IS NULL');
+        $this->db->or_where('j.posting_event', '');
+        $this->db->group_end();
         
         if ($search !== '') {
             $this->db->group_start();
@@ -279,16 +284,44 @@ class M_Journal extends CI_Model
             return null;
         }
 
+        $journal_ids = [(int)$idJurnal];
+        $ref_no = !empty($journal->source_id) ? $journal->source_id : (!empty($journal->source_no) ? $journal->source_no : '');
+        if ($ref_no !== '') {
+            $this->db->select('id_jurnal');
+            $this->db->from('tbkeu_jurnal');
+            $this->db->where('source_module', 'SALES');
+            $this->db->group_start();
+            $this->db->where('source_id', $ref_no);
+            $this->db->or_where('source_no', $ref_no);
+            $this->db->group_end();
+            $related = $this->db->get()->result_array();
+            if (!empty($related)) {
+                $journal_ids = array_unique(array_merge($journal_ids, array_map('intval', array_column($related, 'id_jurnal'))));
+            }
+        }
+
         $this->db->select("d.*, a.kode_akun, a.nama_akun, COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display", false);
         $this->db->from('tbkeu_jurnal_detail d');
         $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
         $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
-        $this->db->where('d.id_jurnal', (int)$idJurnal);
+        $this->db->where_in('d.id_jurnal', $journal_ids);
+        $this->db->order_by('d.id_jurnal', 'ASC');
         $this->db->order_by('d.nomor_baris', 'ASC');
+
+        $details = $this->db->get()->result();
+
+        $tot_debit = 0;
+        $tot_kredit = 0;
+        foreach ($details as $d) {
+            $tot_debit += (float)$d->debit;
+            $tot_kredit += (float)$d->kredit;
+        }
+        $journal->total_debit = $tot_debit;
+        $journal->total_kredit = $tot_kredit;
 
         return [
             'journal' => $journal,
-            'details' => $this->db->get()->result(),
+            'details' => $details,
         ];
     }
 

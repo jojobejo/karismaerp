@@ -149,7 +149,7 @@ class M_ReturPembelian extends CI_Model
                 INNER JOIN tb_lpb l ON l.id_lpb = d.id_lpb
                 LEFT JOIN tbpo_detail_po pp ON pp.kd_po = l.kd_po AND pp.no_po = l.no_po AND pp.kd_barang = d.kd_barang
                 LEFT JOIN tbpo_barang b ON b.kode_barang = d.kd_barang
-                LEFT JOIN tb_master_barang_all m ON m.kd_barang = d.kd_barang
+                LEFT JOIN tbpo_barang m ON m.kode_barang = d.kd_barang
                 LEFT JOIN tberp_stock_batch sb ON sb.kd_barang = d.kd_barang
                     AND sb.gudang_id = CAST(l.gudang_id AS CHAR)
                     AND COALESCE(sb.no_lot, '') = COALESCE(d.no_lot, '')

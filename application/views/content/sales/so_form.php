@@ -584,7 +584,7 @@ function buatBaris(idx, d) {
     var subDisc   = subBefore * (1 - disc / 100);
     var sub       = subDisc;
     var expSoon   = exp && isExpiringSoon(exp);
-    var hargaClass = (hrg > 0 && pk > 0 && Math.abs(hrg - pk) > 0.001) ? 'text-danger' : '';
+    var hargaClass = '';
 
     var expOption = exp
         ? '<option value="'+esc(exp)+'" data-lot="'+esc(lot)+'" data-av="'+av
@@ -656,12 +656,12 @@ function buatBaris(idx, d) {
     /* 5 Satuan */
     h += '<td><input type="text" id="satlbl_'+idx+'" class="form-control form-control-sm" value="'+esc(sat)+'" readonly></td>';
 
-    /* 6 Harga */
+    /* 6 Harga (Manual Input) */
     h += '<td>'
        + '<input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" id="hrg_'+idx+'"'
-       + ' class="form-control form-control-sm '+hargaClass+'" value="'+formatHargaInput(hrg)+'" required>'
-       + '<div id="hargaapproval_wrap_'+idx+'" class="mt-1" style="'+(hargaClass ? '' : 'display:none')+'">'
-       +   '<select name="harga_approval_by[]" id="hargaapproval_'+idx+'" class="form-control form-control-sm"'+(hargaClass ? ' required' : '')+'>'
+       + ' class="form-control form-control-sm" value="'+(hrg > 0 ? formatHargaInput(hrg) : '')+'" placeholder="Input harga" required>'
+       + '<div id="hargaapproval_wrap_'+idx+'" class="mt-1" style="'+(hargaApproval ? '' : 'display:none')+'">'
+       +   '<select name="harga_approval_by[]" id="hargaapproval_'+idx+'" class="form-control form-control-sm">'
        +     '<option value="">-- Approval harga --</option>'
        +     '<option value="direksi"'+(hargaApproval === 'direksi' ? ' selected' : '')+'>Direksi</option>'
        +     '<option value="koor sc"'+(hargaApproval === 'koor sc' ? ' selected' : '')+'>Koor SC</option>'
@@ -718,12 +718,6 @@ function bindBaris(idx) {
         elHarga.addEventListener('blur', function() {
             if (String(this.value).trim() !== '') {
                 this.value = formatHargaInput(this.value);
-                return;
-            }
-            var pk = parseFloat((document.getElementById('pk_'+idx) || {value: 0}).value) || 0;
-            if (pk > 0) {
-                this.value = formatHargaInput(pk);
-                hitungBaris(idx);
             }
         });
         elHarga.addEventListener('focus', function() {
@@ -802,18 +796,8 @@ function hitungBaris(idx) {
         return id.indexOf('hrg_') === 0 ? parseHargaInput(e.value) : (parseFloat(e.value)||0);
     }
     var hrg=v('hrg_'+idx), qBox=v('qtybox_'+idx), qSat=v('qtyecer_'+idx);
-    var disc=v('disc_'+idx), pk=v('pk_'+idx);
+    var disc=v('disc_'+idx);
     var isi=getIsi(idx);
-    var isNego = hrg>0 && pk>0 && Math.abs(hrg-pk)>0.001;
-    var elH = document.getElementById('hrg_'+idx);
-    if (elH) isNego ? elH.classList.add('text-danger') : elH.classList.remove('text-danger');
-    var approvalWrap = document.getElementById('hargaapproval_wrap_'+idx);
-    var approvalEl = document.getElementById('hargaapproval_'+idx);
-    if (approvalWrap) approvalWrap.style.display = isNego ? '' : 'none';
-    if (approvalEl) {
-        approvalEl.required = isNego;
-        if (!isNego) approvalEl.value = '';
-    }
 
     var qK   = (qBox*isi)+qSat;
     var sD   = hrg*qK*(1-disc/100);
@@ -825,9 +809,6 @@ function hitungBaris(idx) {
     if (elQ)  elQ.textContent  = fmtNum(qK,0);
     if (elSD) elSD.textContent = fmtNum(sD);
     if (elS)  elS.textContent  = fmtNum(tot);
-
-    var wEl = document.getElementById('hrgwarn_'+idx);
-    if (wEl) wEl.innerHTML = isNego ? '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Harga berbeda HPP</span>' : '';
 
     hitungGrand(); hitungTK();
 }
@@ -1004,10 +985,7 @@ function applyBarangKeBaris(i, btn) {
     var isiDef = parseInt(btn.dataset.isi||1); if(isiDef<1) isiDef=1;
     document.getElementById('isi_'+i).value = isiDef;
 
-    /* Auto-fill HPP ke harga jika harga belum diisi */
-    var hpp = parseFloat(btn.dataset.pk||0);
-    var elH = document.getElementById('hrg_'+i);
-    if (elH && hpp > 0 && !parseHargaInput(elH.value)) elH.value = formatHargaInput(hpp);
+    /* Manual input harga — HPP tidak di-autofill ke harga */
 
     /* Rebuild dropdown expired */
     var rows = stockCache.filter(function(s){ return (s.kd_barang||'')===kd; });

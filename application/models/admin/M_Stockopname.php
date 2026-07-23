@@ -7,7 +7,7 @@ class M_Stockopname extends CI_Model
     private $opnameTable = 'stockopname_opname';
     private $manualOpnameTable = 'stockopname_manual_input';
     private $manualMasterTable = 'stockopname_master_manual_item';
-    private $masterBarangAllTable = 'tb_master_barang_all';
+    private $masterBarangAllTable = 'tbpo_barang';
     private $pendingTable = 'stockopname_pending';
     private $pendingCalculationMode = 'add';
 
@@ -2809,7 +2809,7 @@ class M_Stockopname extends CI_Model
     public function create_master_barang_catalog(array $input)
     {
         if (!$this->db->table_exists($this->masterBarangAllTable)) {
-            return ['status' => false, 'message' => 'Tabel tb_master_barang_all belum tersedia.'];
+            return ['status' => false, 'message' => 'Tabel ' . $this->masterBarangAllTable . ' belum tersedia.'];
         }
 
         $lockName = 'karisma_master_barang_system_code';
@@ -2862,7 +2862,7 @@ class M_Stockopname extends CI_Model
     public function update_master_barang_catalog($id, array $input)
     {
         if (!$this->db->table_exists($this->masterBarangAllTable)) {
-            return ['status' => false, 'message' => 'Tabel tb_master_barang_all belum tersedia.'];
+            return ['status' => false, 'message' => 'Tabel ' . $this->masterBarangAllTable . ' belum tersedia.'];
         }
 
         $id = (int)$id;

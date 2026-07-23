@@ -1533,7 +1533,7 @@ class C_Logistik extends CI_Controller
                 a.satuan,
                 a.status
         ) x
-        JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
+        JOIN tbpo_barang c ON c.kode_barang = x.kd_barang
         JOIN tb_customer d ON d.kd_customer = x.kd_customer
         JOIN tb_do bd ON bd.kd_do = x.kd_do
         LEFT JOIN tb_log_confirm_sales lcs
@@ -1583,8 +1583,8 @@ class C_Logistik extends CI_Controller
             FROM tb_detail_do a
             JOIN tb_do b
                 ON b.kd_do = a.kd_do
-            JOIN tb_master_barang_all m
-                ON m.kd_barang = a.kd_barang
+            JOIN tbpo_barang m
+                ON m.kode_barang = a.kd_barang
             LEFT JOIN tb_op_plat plat
                 ON plat.id = b.nolambung
             LEFT JOIN tb_op_driver driver
@@ -2136,7 +2136,7 @@ class C_Logistik extends CI_Controller
                 a.kd_barang, a.no_lot, a.tgl_exp,
                 a.satuan, a.status
         ) x
-        LEFT JOIN tb_master_barang_all c ON c.kd_barang = x.kd_barang
+        LEFT JOIN tbpo_barang c ON c.kode_barang = x.kd_barang
         LEFT JOIN tb_customer d ON d.kd_customer = x.kd_customer
         ORDER BY x.norut ASC, x.kd_faktur ASC, c.nama_barang ASC", [$kd_do]);
 
@@ -2155,7 +2155,7 @@ class C_Logistik extends CI_Controller
             COUNT(DISTINCT a.kd_customer) AS totalfaktur
         FROM tb_detail_do a
         LEFT JOIN tb_do b ON b.kd_do = a.kd_do
-        LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+        LEFT JOIN tbpo_barang c ON c.kode_barang = a.kd_barang
         LEFT JOIN tb_op_plat plat ON plat.id = b.nolambung
         LEFT JOIN tb_op_driver driver ON driver.kd_driver = b.driver
         WHERE b.kd_do = ?
@@ -2286,7 +2286,7 @@ class C_Logistik extends CI_Controller
             FLOOR(sum(a.qty) / (b.p*b.l*b.t)) AS qty_box,
             (sum(a.qty) - FLOOR(sum(a.qty) / (b.p*b.l*b.t)) * (b.p*b.l*b.t)) AS qty_pcs
             FROM tb_detail_do a
-            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
+            JOIN tbpo_barang b ON b.kode_barang = a.kd_barang
             WHERE a.kd_do = '$kd_do'
             GROUP BY a.kd_barang , a.tgl_exp , a.no_lot");
 

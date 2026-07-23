@@ -266,7 +266,7 @@ class C_Ics extends CI_Controller
         $data_barang = $this->db
             ->select('a.kode_barang_zahir, a.exp_date')
             ->from('tb_saldo_awal a')
-            ->join('tb_master_barang_all b', 'b.kd_barang = a.kode_barang_zahir')
+            ->join('tbpo_barang b', 'b.kode_barang = a.kode_barang_zahir')
             ->where('a.kode_barang_zahir', $kdbarang)
             ->group_by('a.exp_date')
             ->get()
@@ -293,7 +293,7 @@ class C_Ics extends CI_Controller
             ((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0))- COALESCE(opname.qty_opname, 0) AS selisih,
             IF(((SUM(a.qty) - COALESCE(pending.qty_pending, 0)) + COALESCE(purchase.qty_po, 0)) = COALESCE(opname.qty_opname, 0), 1, 0) AS status
             FROM tb_saldo_awal a
-            JOIN tb_master_barang_all b ON b.kd_barang = a.kode_barang_zahir
+            JOIN tbpo_barang b ON b.kode_barang = a.kode_barang_zahir
             LEFT JOIN (
                 SELECT nama_barang, exp_date, SUM(qty) AS qty_pending , kd_barang
                 FROM tb_ics_do
@@ -463,8 +463,8 @@ class C_Ics extends CI_Controller
             ])
             ->from('tb_detail_retur_barang r')
             ->join(
-                'tb_master_barang_all m',
-                'm.kd_barang = r.kd_barang',
+                'tbpo_barang m',
+                'm.kode_barang = r.kd_barang',
                 'left'
             )
             ->where('r.kd_barang', $kd_barang)
@@ -3198,8 +3198,8 @@ class C_Ics extends CI_Controller
                 COALESCE(sub.qty_masuk, 0)           AS qty_masuk,
                 (pp.qty - COALESCE(sub.qty_masuk,0)) AS sisa
             FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = pp.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang = pp.kd_barang
             LEFT JOIN (
                 SELECT kd_barang, SUM(qty_diterima) AS qty_masuk
                 FROM tb_po_received

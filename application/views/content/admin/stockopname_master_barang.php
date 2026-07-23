@@ -246,7 +246,7 @@ $qtyZeroCount = (int)($qty_zero_count ?? 0);
                         <label for="masterSourceSearch">Cari barang</label>
                         <input type="search" class="form-control" id="masterSourceSearch" placeholder="Ketik nama atau kode barang (minimal 2 karakter)">
                         <div class="list-group master-source-result" id="masterSourceResult" style="display:none"></div>
-                        <small class="form-text text-muted">Sumber data: <code>tb_master_barang_all</code>.</small>
+                        <small class="form-text text-muted">Sumber data: <code>tbpo_barang</code>.</small>
                     </div>
                     <input type="hidden" name="source_id" id="masterSourceId">
                     <div class="alert alert-light border mb-3" id="masterSourceSelected">Pilih barang dari hasil pencarian untuk mengisi data dan dimensi.</div>

@@ -318,7 +318,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_detail_barang($kd_barang)
     {
-        $row = $this->db->get_where('tb_master_barang_all', ['kd_barang' => $kd_barang])->row_array();
+        $row = $this->db->get_where('tbpo_barang', ['kode_barang' => $kd_barang])->row_array();
         if (!$row) return null;
         return $this->_normalize_barang($row);
     }
@@ -326,12 +326,38 @@ class M_SalesOrder extends CI_Model
     private function _get_master_bulk(array $kd_list)
     {
         if (empty($kd_list)) return [];
-        $rows = $this->db->where_in('kd_barang', array_unique($kd_list))
-            ->get('tb_master_barang_all')
+        $unique_kds = array_values(array_unique(array_filter($kd_list)));
+        if (empty($unique_kds)) return [];
+
+        $rows = $this->db->where_in('kode_barang', $unique_kds)
+            ->get('tbpo_barang')
             ->result_array();
+
+        // Fetch HPP from tb_lpb_detail for these items
+        $hpp_map = [];
+        $lpb_rows = $this->db->query("
+            SELECT d.kd_barang, d.harga_satuan
+            FROM tb_lpb_detail d
+            JOIN (
+                SELECT kd_barang, MAX(id_detail_lpb) AS max_id
+                FROM tb_lpb_detail
+                WHERE kd_barang IN ? AND COALESCE(harga_satuan, 0) > 0
+                GROUP BY kd_barang
+            ) latest ON d.id_detail_lpb = latest.max_id
+        ", [$unique_kds])->result_array();
+
+        foreach ($lpb_rows as $lr) {
+            $hpp_map[$lr['kd_barang']] = (float)$lr['harga_satuan'];
+        }
+
         $map = [];
         foreach ($rows as $r) {
-            $map[$r['kd_barang']] = $this->_normalize_barang($r);
+            $kd = $r['kode_barang'];
+            $normalized = $this->_normalize_barang($r);
+            if (isset($hpp_map[$kd]) && $hpp_map[$kd] > 0) {
+                $normalized['hpp'] = $hpp_map[$kd];
+            }
+            $map[$kd] = $normalized;
         }
         return $map;
     }
@@ -412,7 +438,7 @@ class M_SalesOrder extends CI_Model
                            (sb.' . $qty_col . ' - COALESCE(sb.qty_reserved, 0)) AS available_stock,
                            mb.nama_barang AS nama_barang', false);
         $this->db->from('tberp_stock_batch sb');
-        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = sb.kd_barang', 'left');
+        $this->db->join('tbpo_barang mb', 'mb.kode_barang = sb.kd_barang', 'left');
 
         if (!empty($kd_barang))     $this->db->where('sb.kd_barang', $kd_barang);
         if (!empty($gudang_id_str)) {
@@ -1377,7 +1403,7 @@ class M_SalesOrder extends CI_Model
             LEFT JOIN tbso_sales_order so ON so.id_so = f.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
             WHERE f.status = 'confirmed'
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
@@ -1495,7 +1521,7 @@ class M_SalesOrder extends CI_Model
             LEFT JOIN tbso_sales_order so ON so.id_so = f.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(h.regional, ''), NULLIF(d.kd_rute, ''), NULLIF(so.kd_rute, ''), c.kd_rute)
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
             WHERE f.status = 'selesai_do'
             AND DATE(od_log.create_at) = CURDATE()
             AND h.status = 5

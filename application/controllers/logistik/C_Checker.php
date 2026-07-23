@@ -1096,7 +1096,7 @@ class C_Checker extends CI_Controller
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer
-            LEFT JOIN tb_master_barang_all b ON b.kd_barang = sod.kd_barang
+            LEFT JOIN tbpo_barang b ON b.kode_barang = sod.kd_barang
             WHERE so.status IN ('siap_faktur', 'partial', 'completed')
               AND COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute, 'TANPA_RUTE') = ?
               $date_filter

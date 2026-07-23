@@ -131,7 +131,7 @@ class M_LpbPriceAdjustment extends CI_Model
                 INNER JOIN tb_lpb l ON l.id_lpb = d.id_lpb
                 LEFT JOIN tbpo_detail_po pp ON pp.kd_po = l.kd_po AND pp.no_po = l.no_po AND pp.kd_barang = d.kd_barang
                 LEFT JOIN tbpo_barang b ON b.kode_barang = d.kd_barang
-                LEFT JOIN tb_master_barang_all m ON m.kd_barang = d.kd_barang
+                LEFT JOIN tbpo_barang m ON m.kode_barang = d.kd_barang
                 WHERE d.id_lpb = ?
                 ORDER BY d.id_detail_lpb ASC";
         return $this->db->query($sql, [(int)$idLpb])->result_array();

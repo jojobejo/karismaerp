@@ -563,8 +563,8 @@ class M_Logistik extends CI_Model
         FROM tb_pre_do a
         INNER JOIN tb_customer b
             ON b.kd_customer = a.kd_customer
-        LEFT JOIN tb_master_barang_all m
-            ON m.kd_barang = a.kd_barang
+        LEFT JOIN tbpo_barang m
+            ON m.kode_barang = a.kd_barang
         WHERE m.kd_barang IS NULL
         GROUP BY a.kd_faktur, a.kd_barang
         ORDER BY STR_TO_DATE(a.tgl_inputer, '%e/%c/%Y') DESC, a.kd_faktur DESC;")->result();
@@ -607,8 +607,8 @@ class M_Logistik extends CI_Model
         AND EXISTS (
             SELECT 1
             FROM tb_pre_do x
-            LEFT JOIN tb_master_barang_all m 
-                ON m.kd_barang = x.kd_barang
+            LEFT JOIN tbpo_barang m 
+                ON m.kode_barang = x.kd_barang
             WHERE x.kd_faktur = a.kd_faktur
             AND m.kd_barang IS NULL
         )
@@ -675,7 +675,7 @@ class M_Logistik extends CI_Model
             FROM tbso_faktur_penjualan f
             JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
             JOIN tb_customer c ON c.kd_customer = f.kd_customer
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
             LEFT JOIN tb_rutecs r ON r.kd_rute = c.regional
             LEFT JOIN tb_detail_do d
                 ON d.kd_faktur = f.no_faktur
@@ -697,7 +697,7 @@ class M_Logistik extends CI_Model
                 ROUND(COALESCE(SUM(d.qty * COALESCE(m.berat, 0)), 0) / 1000000, 3) AS total_tonase_faktur,
                 ROUND(COALESCE(SUM(d.qty * COALESCE(m.kubikasi, 0)), 0), 4) AS total_kubikasi
             FROM tb_detail_do d
-            LEFT JOIN tb_master_barang_all m ON m.kd_barang = d.kd_barang
+            LEFT JOIN tbpo_barang m ON m.kode_barang = d.kd_barang
             WHERE d.kd_do = ?
         ", [$kd_do])->row();
     }
@@ -770,8 +770,8 @@ class M_Logistik extends CI_Model
                 ON c.kd_customer = f.kd_customer
             LEFT JOIN tbso_sales_order so
                 ON so.id_so = f.id_so
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang COLLATE utf8mb4_general_ci = fd.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang COLLATE utf8mb4_general_ci = fd.kd_barang
             WHERE f.status = 'confirmed'
             AND COALESCE(NULLIF(so.kd_rute, ''), NULLIF(c.kd_rute, ''), 'TANPA_RUTE') = ?
             AND NOT EXISTS (
@@ -978,8 +978,8 @@ class M_Logistik extends CI_Model
                 ON c.kd_customer = f.kd_customer
             LEFT JOIN tb_rutecs r
                 ON r.kd_rute = c.regional
-            LEFT JOIN tb_master_barang_all mb
-                ON mb.kd_barang = fd.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang = fd.kd_barang
             WHERE f.no_faktur = ?
         ", [$kd_faktur])->result();
     }
@@ -1002,8 +1002,8 @@ class M_Logistik extends CI_Model
         AND s.exp_date = DATE_FORMAT(
                 STR_TO_DATE(d.tgl_exp, '%m/%d/%Y'),
                 '%m/%d/%Y')
-        LEFT JOIN tb_master_barang_all m
-            ON m.kd_barang = d.kd_barang
+        LEFT JOIN tbpo_barang m
+            ON m.kode_barang = d.kd_barang
         WHERE d.kd_do = '$kd_faktur'
         AND s.exp_date IS NULL;";
         return $this->db->query($sql, [$kd_faktur])->result();
@@ -2070,7 +2070,7 @@ class M_Logistik extends CI_Model
                        SUM(d.qty * m.berat) AS total_tonase_kg, 
                        SUM(d.qty * m.kubikasi) AS total_kubikasi_m3');
         $this->db->from('tb_tmp_detaildo d');
-        $this->db->join('tb_master_barang_all m', 'd.kd_barang = m.kd_barang');
+        $this->db->join('tbpo_barang m', 'd.kd_barang = m.kode_barang');
         $this->db->where('d.kd_do', $kd_do);
         $this->db->group_by('d.kd_do');
 
@@ -2095,7 +2095,7 @@ class M_Logistik extends CI_Model
                 1                                   AS barang_sts
             FROM tbso_faktur_penjualan f
             JOIN tbso_faktur_detail fd ON fd.id_faktur = f.id_faktur
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = fd.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
             WHERE f.no_faktur = ?
         ", [$kd])->result();
 
@@ -2111,7 +2111,7 @@ class M_Logistik extends CI_Model
                     (a.qty * (c.berat/1000)) AS total_berat,
                     a.satuan, a.no_lot, a.tgl_exp, a.barang_sts
                 FROM tb_pre_do a
-                LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+                LEFT JOIN tbpo_barang c ON c.kode_barang = a.kd_barang
                 WHERE a.kd_faktur = ?
                 GROUP BY a.id
             ", [$kd])->result();
@@ -2201,7 +2201,7 @@ class M_Logistik extends CI_Model
         FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) AS qty_box,
         (SUM(a.qty) - FLOOR(SUM(a.qty) / (b.p * b.l * b.t)) * (b.p * b.l * b.t)) AS qty_pcs
     FROM tb_qty_lot a
-    JOIN tb_master_barang_all b ON b.nama_barang = a.nm_barang
+    JOIN tbpo_barang b ON b.nama_barang = a.nm_barang
     JOIN tb_suplier c ON c.kd_suplier = a.suplier
     GROUP BY a.nm_barang, a.exp_date, b.kd_system, b.p, b.l, b.t ")->result();
     }
@@ -3706,7 +3706,7 @@ FROM (
         return $this->db->query("SELECT
             a.*,b.nama_barang
             FROM tb_pnd_do a
-            JOIN tb_master_barang_all b ON b.kd_barang = a.kd_barang
+            JOIN tbpo_barang b ON b.kode_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
@@ -3734,7 +3734,7 @@ FROM (
             a.barang_sts
             FROM tb_pre_do a
             LEFT JOIN tb_customer b ON b.kd_customer = a.kd_customer
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            LEFT JOIN tbpo_barang c ON c.kode_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
@@ -3755,7 +3755,7 @@ FROM (
             a.tgl_exp,
             a.barang_sts
             FROM tb_pnd_do a
-            LEFT JOIN tb_master_barang_all c ON c.kd_barang = a.kd_barang
+            LEFT JOIN tbpo_barang c ON c.kode_barang = a.kd_barang
             WHERE a.kd_faktur = '$kd'
         ")->result();
     }
@@ -4446,7 +4446,7 @@ FROM (
                 COALESCE(sub.qty_masuk, 0) AS qty_masuk,
                 (pp.qty - COALESCE(sub.qty_masuk, 0)) AS sisa
             FROM tb_pre_po pp
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = pp.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = pp.kd_barang
             LEFT JOIN (
                 SELECT kd_po, kd_barang, SUM(qty_diterima) AS qty_masuk
                 FROM tb_po_received
@@ -4490,7 +4490,7 @@ FROM (
         ');
         $this->db->from('tb_po_received dl');
         $this->db->join(
-            'tb_master_barang_all mb',
+            'tbpo_barang mb',
             'mb.kd_barang = dl.kd_barang',
             'left'
         );
@@ -4611,8 +4611,8 @@ FROM (
                 END AS status_barang
 
             FROM tbpo_detail_po a
-            LEFT JOIN tb_master_barang_all b 
-                ON b.kd_barang = a.kd_barang
+            LEFT JOIN tbpo_barang b 
+                ON b.kode_barang = a.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = a.kd_barang
             LEFT JOIN (
@@ -4960,7 +4960,7 @@ FROM (
                 END AS harga_terverifikasi
             FROM tb_lpb_detail d
             INNER JOIN tb_lpb h ON h.id_lpb = d.id_lpb
-            LEFT JOIN tb_master_barang_all mb ON mb.kd_barang = d.kd_barang
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = d.kd_barang
             LEFT JOIN tbpo_detail_po pp
                 ON pp.no_po = h.no_po
                 AND pp.kd_po = h.kd_po
@@ -5417,7 +5417,7 @@ FROM (
                 AND po.kd_po = h.kd_po
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
-            LEFT JOIN tb_master_barang_all mb
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
                 ON mb.kd_barang = d.kd_barang
             LEFT JOIN (
                 SELECT
@@ -5852,7 +5852,7 @@ FROM (
                 ON pp.kd_po = t.kd_po
                 AND pp.kd_barang = t.kd_barang
                 AND pp.kd_suplier = t.kd_suplier
-            LEFT JOIN tb_master_barang_all mb
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
                 ON mb.kd_barang = t.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
@@ -5891,7 +5891,7 @@ FROM (
                 ON pp.kd_po = t.kd_po
                 AND pp.kd_barang = t.kd_barang
                 AND pp.kd_suplier = t.kd_suplier
-            LEFT JOIN tb_master_barang_all mb
+            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
                 ON mb.kd_barang = t.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
@@ -6087,7 +6087,7 @@ FROM (
             pp.status
         ');
         $this->db->from('tb_pre_po pp');
-        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        $this->db->join('tbpo_barang mb', 'mb.kode_barang = pp.kd_barang', 'left');
         $this->db->where('pp.kd_po', $kd_po);
         $this->db->order_by('pp.id_pre_po', 'ASC');
 
@@ -6133,7 +6133,7 @@ FROM (
             ') . '
         ');
         $this->db->from('tb_pre_po pp');
-        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = pp.kd_barang', 'left');
+        $this->db->join('tbpo_barang mb', 'mb.kode_barang = pp.kd_barang', 'left');
         if ($hasAdjustmentTable) {
             $this->db->join('tb_pre_po_invoice_adjustment adj', 'adj.kd_po = pp.kd_po AND adj.kd_barang = pp.kd_barang', 'left');
         }
@@ -7986,7 +7986,7 @@ FROM (
             dl.create_at
         ');
         $this->db->from('tb_po_received dl');
-        $this->db->join('tb_master_barang_all mb', 'mb.kd_barang = dl.kd_barang', 'left');
+        $this->db->join('tbpo_barang mb', 'mb.kode_barang = dl.kd_barang', 'left');
 
         // Join ke tb_pre_po untuk dapat kd_suplier
         $this->db->join('tb_pre_po pp', 'pp.no_po = dl.no_po AND pp.kd_barang = dl.kd_barang', 'left');

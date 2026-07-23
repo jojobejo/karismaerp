@@ -18,8 +18,8 @@ class M_Distribusi extends CI_Model
         FROM tb_rutecs r
         LEFT JOIN tb_pre_do p
             ON p.kd_rute = r.kd_rute
-        LEFT JOIN tb_master_barang_all b
-            ON b.kd_barang = p.kd_barang
+        LEFT JOIN tbpo_barang b
+            ON b.kode_barang = p.kd_barang
         GROUP BY r.kd_rute
         ORDER BY tonase_terkirim DESC;
         ")->result();
@@ -327,8 +327,8 @@ class M_Distribusi extends CI_Model
         FROM tb_rutecs r
         LEFT JOIN tb_pre_do p
             ON p.kd_rute = r.kd_rute
-        LEFT JOIN tb_master_barang_all b
-            ON b.kd_barang = p.kd_barang
+        LEFT JOIN tbpo_barang b
+            ON b.kode_barang = p.kd_barang
         GROUP BY r.kd_rute
         ORDER BY tonase_terkirim DESC;")->result();
     }
@@ -544,8 +544,8 @@ class M_Distribusi extends CI_Model
         return $this->db->query("SELECT 
             ROUND(SUM(b.berat * d.qty) / 1000000, 3) AS total_tonase
         FROM tb_detail_do d
-        JOIN tb_master_barang_all b 
-            ON b.kd_barang = d.kd_barang
+        JOIN tbpo_barang b 
+            ON b.kode_barang = d.kd_barang
         JOIN tb_do o 
             ON o.kd_do = d.kd_do
         WHERE o.tgl_pengiriman BETWEEN '2026-01-01' AND '2026-01-31' AND o.status = '2'")->result();
@@ -556,8 +556,8 @@ class M_Distribusi extends CI_Model
         return $this->db->query("SELECT 
             ROUND(SUM(b.berat * d.qty) / 1000000, 3) AS tonase_terkirim
         FROM tb_detail_do d
-        JOIN tb_master_barang_all b 
-            ON b.kd_barang = d.kd_barang
+        JOIN tbpo_barang b 
+            ON b.kode_barang = d.kd_barang
         JOIN tb_do o 
             ON o.kd_do = d.kd_do
         WHERE d.status = '4'
@@ -578,8 +578,8 @@ class M_Distribusi extends CI_Model
             ELSE 'Status Tidak Dikenal'
         END AS keterangan_status
     FROM tb_pre_do a
-    LEFT JOIN tb_master_barang_all b 
-        ON a.kd_barang = b.kd_barang
+    LEFT JOIN tbpo_barang b 
+        ON b.kode_barang = a.kd_barang
     WHERE a.kd_rute = '$rute'
     GROUP BY 
         a.kd_faktur,
