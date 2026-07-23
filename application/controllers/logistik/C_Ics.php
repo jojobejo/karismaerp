@@ -662,6 +662,8 @@ class C_Ics extends CI_Controller
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $data['is_admin_po'] = $isAdminPo;
         $data['can_sync_po'] = $canSyncPo;
+        $data['can_lpb_manual'] = $this->can_access_lpb_manual();
+        $data['can_lpb_report'] = $this->can_access_lpb_report();
         $data['lpb_panel_mode'] = $lpbPanelMode;
         $data['show_logistik_panel'] = $showLogistikPanel;
         $data['show_purchasing_panel'] = $showPurchasingPanel;
@@ -754,6 +756,194 @@ class C_Ics extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_record_lpb.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function lpb_manual()
+    {
+        if (!$this->can_access_lpb_manual()) {
+            show_error('Akses input LPB Manual hanya untuk Purchasing, ADMIN PO, IT, atau Admin.', 403);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_manual_schema();
+
+        $data['page_title'] = 'KARISMA - Input LPB Manual';
+        $data['list_gudang'] = $this->db
+            ->select('id_gudang, nama_gudang')
+            ->order_by('nama_gudang', 'ASC')
+            ->get('tb_gudang')
+            ->result_array();
+        $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
+        $data['manual_ref'] = $this->M_Logistik->generate_lpb_manual_ref();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/lpb_manual.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_lpb_manual_barang()
+    {
+        if (!$this->can_access_lpb_manual()) {
+            $this->json_response(['status' => 'error', 'message' => 'Akses ditolak.', 'results' => []]);
+            return;
+        }
+
+        $term = trim((string) $this->input->get('q', TRUE));
+        $rows = $this->M_Logistik->search_lpb_manual_barang($term, 30);
+        $results = [];
+
+        foreach ($rows as $row) {
+            $results[] = [
+                'id' => $row['kode_barang'],
+                'text' => $row['kode_barang'] . ' - ' . $row['nama_barang'],
+                'kode_barang' => $row['kode_barang'],
+                'nama_barang' => $row['nama_barang'],
+                'satuan' => $row['satuan'],
+                'isi' => $row['isi'],
+                'kemasan' => $row['kemasan']
+            ];
+        }
+
+        $this->json_response(['status' => 'success', 'results' => $results]);
+    }
+
+    public function ajax_lpb_manual_store()
+    {
+        if (!$this->can_access_lpb_manual()) {
+            $this->json_response(['status' => 'error', 'message' => 'Akses input LPB Manual ditolak.']);
+            return;
+        }
+
+        $payload = [
+            'manual_ref_no' => trim((string) $this->input->post('manual_ref_no', TRUE)),
+            'tgl_lpb' => trim((string) $this->input->post('tgl_lpb', TRUE)),
+            'jenis_lpb' => trim((string) $this->input->post('jenis_lpb', TRUE)),
+            'gudang_id' => trim((string) $this->input->post('gudang_id', TRUE)),
+            'nosj' => trim((string) $this->input->post('nosj', TRUE)),
+            'no_invoice' => trim((string) $this->input->post('no_invoice', TRUE)),
+            'keterangan' => trim((string) $this->input->post('keterangan', TRUE)),
+            'dilakukan_oleh' => $this->active_user_name(),
+            'checker_name' => $this->active_user_name(),
+            'checker_by' => $this->active_user_code()
+        ];
+
+        if ($payload['manual_ref_no'] === '') {
+            $payload['manual_ref_no'] = $this->M_Logistik->generate_lpb_manual_ref();
+        }
+
+        $kodeBarang = (array) $this->input->post('kd_barang');
+        $qty = (array) $this->input->post('qty_diterima');
+        $satuan = (array) $this->input->post('satuan');
+        $noLot = (array) $this->input->post('no_lot');
+        $expiredDate = (array) $this->input->post('expired_date');
+        $hargaSatuan = (array) $this->input->post('harga_satuan');
+        $detailRows = [];
+
+        foreach ($kodeBarang as $index => $kode) {
+            $kode = trim((string) $kode);
+            $qtyValue = (float) str_replace(',', '.', (string) ($qty[$index] ?? 0));
+
+            if ($kode === '' && $qtyValue <= 0) {
+                continue;
+            }
+
+            $detailRows[] = [
+                'kd_barang' => $kode,
+                'qty_diterima' => $qtyValue,
+                'satuan' => trim((string) ($satuan[$index] ?? '')),
+                'no_lot' => trim((string) ($noLot[$index] ?? '')),
+                'expired_date' => trim((string) ($expiredDate[$index] ?? '')),
+                'harga_satuan' => (float) str_replace(',', '.', (string) ($hargaSatuan[$index] ?? 0))
+            ];
+        }
+
+        $validation = $this->M_Logistik->validate_lpb_manual_payload($payload, $detailRows);
+        if (empty($validation['status'])) {
+            $this->M_Logistik->insert_lpb_manual_system_log([
+                'action_type' => 'VALIDATE_MANUAL_LPB',
+                'status' => 'FAILED',
+                'manual_ref_no' => $payload['manual_ref_no'],
+                'message' => $validation['message'] ?? 'Validasi LPB Manual gagal.',
+                'payload' => ['header' => $payload, 'detail_rows' => $detailRows],
+                'created_by' => $this->active_user_name(),
+                'ip_address' => $this->input->ip_address(),
+                'user_agent' => $this->input->user_agent()
+            ]);
+            $this->json_response(['status' => 'error', 'message' => $validation['message'] ?? 'Data LPB Manual belum lengkap.']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->M_Logistik->ensure_lpb_manual_schema();
+        $this->db->trans_begin();
+        $idLpb = $this->M_Logistik->create_lpb_manual($payload, $validation['detail_rows']);
+
+        if (!$idLpb || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->M_Logistik->insert_lpb_manual_system_log([
+                'action_type' => 'CREATE_MANUAL_LPB',
+                'status' => 'FAILED',
+                'manual_ref_no' => $payload['manual_ref_no'],
+                'message' => 'Gagal menyimpan LPB Manual ke tabel transaksi.',
+                'payload' => ['header' => $payload, 'detail_rows' => $validation['detail_rows']],
+                'created_by' => $this->active_user_name(),
+                'ip_address' => $this->input->ip_address(),
+                'user_agent' => $this->input->user_agent()
+            ]);
+            $this->json_response(['status' => 'error', 'message' => 'Gagal menyimpan LPB Manual.']);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        $this->json_response([
+            'status' => 'success',
+            'message' => 'LPB Manual berhasil disimpan dan stok tercatat di batch serta ledger.',
+            'id_lpb' => (int) $idLpb,
+            'manual_ref_no' => $payload['manual_ref_no'],
+            'redirect_url' => base_url('ics/lpb_report?source=manual')
+        ]);
+    }
+
+    public function lpb_report()
+    {
+        if (!$this->can_access_lpb_report()) {
+            show_error('Akses laporan LPB ditolak.', 403);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_manual_schema();
+
+        $filters = [
+            'source' => trim((string) $this->input->get('source', TRUE)) ?: 'all',
+            'date1' => trim((string) $this->input->get('date1', TRUE)),
+            'date2' => trim((string) $this->input->get('date2', TRUE))
+        ];
+
+        $data['page_title'] = 'KARISMA - Laporan LPB';
+        $data['filters'] = $filters;
+        $data['rows'] = $this->M_Logistik->get_lpb_report_rows($filters);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/lpb_report.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function lpb_manual_log()
+    {
+        if (!$this->can_access_lpb_manual_log()) {
+            show_error('Akses log sistem LPB Manual hanya untuk IT atau Admin.', 403);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_manual_schema();
+
+        $data['page_title'] = 'KARISMA - Log Sistem LPB Manual';
+        $data['rows'] = $this->M_Logistik->get_lpb_manual_system_logs(500);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/lpb_manual_log.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -917,6 +1107,37 @@ class C_Ics extends CI_Controller
         ]);
 
         return TRUE;
+    }
+
+    private function can_access_lpb_manual()
+    {
+        return $this->is_admin_po_jobdesk() || $this->can_access_lpb_manual_log();
+    }
+
+    private function can_access_lpb_report()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+
+        if ($this->is_admin_po_jobdesk() || $this->can_access_lpb_manual_log()) {
+            return TRUE;
+        }
+
+        return strpos($departemen, 'LOGISTIK') !== FALSE
+            || in_array($jobdesk, ['LOGISTIK', 'ADMINLOGLPB', 'ADMLPB2', 'ADMINICS'], TRUE);
+    }
+
+    private function can_access_lpb_manual_log()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+        $level = (string) $this->session->userdata('lv');
+
+        return $username === 'admin'
+            || $level === '1'
+            || strpos($departemen, 'IT') !== FALSE
+            || in_array($jobdesk, ['IT', 'ADMINIT', 'ADMIN IT', 'PROGRAMMER', 'DEVELOPMENT', 'ADMIN'], TRUE);
     }
 
     private function rupiah($value)

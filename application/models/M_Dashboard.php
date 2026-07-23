@@ -59,6 +59,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.'),
                     $this->menu('Master Gudang', 'ics/gudang', 'fas fa-warehouse', 'green', 'Kelola master gudang dan wilayah penyimpanan.'),
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data Purchase Order untuk kontrol barang masuk.'),
+                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual dan LPB hasil input Logistik.'),
                     $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Buka dashboard retur pembelian dan penjualan berbasis stok gudang.'),
                     $this->menu('Master Barang PIC', 'ics/barangpic', 'fas fa-user-check', 'lime', 'Atur daftar barang yang menjadi tanggung jawab PIC.'),
                     $this->menu('Barang Per Gudang', 'ics/barangpergudang', 'fas fa-dolly-flatbed', 'purple', 'Cek komposisi barang pada setiap gudang.'),
@@ -75,6 +76,8 @@ class M_Dashboard extends CI_Model
                 'description' => 'Akses pembelian, LPB, dan monitoring PO.',
                 'menus' => array(
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.'),
+                    $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.'),
+                    $this->menu('Laporan LPB', 'ics/lpb_report', 'fas fa-chart-bar', 'cyan', 'Pantau LPB manual Purchasing dan LPB hasil input Logistik.'),
                     $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'orange', 'Akses retur pembelian dari LPB final dan monitoring retur.'),
                     $this->menu('Pending PO', 'pendingpo', 'fas fa-hourglass-half', 'orange', 'Pantau PO yang masih membutuhkan tindak lanjut.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-box', 'slate', 'Buka master barang untuk referensi pembelian.'),
@@ -85,6 +88,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-laptop-code',
                 'description' => 'Akses modul lintas departemen untuk support dan validasi teknis.',
                 'menus' => array(
+                    $this->menu('Log LPB Manual', 'ics/lpb_manual_log', 'fas fa-terminal', 'dark', 'Pantau log sistem khusus LPB Manual.'),
                     $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur untuk support workflow Logistik, Purchasing, dan Keuangan.'),
                 ),
             ),

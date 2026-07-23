@@ -7317,6 +7317,489 @@ FROM (
         return $raw;
     }
 
+    public function ensure_lpb_manual_schema()
+    {
+        $this->load->dbforge();
+
+        if ($this->db->table_exists('tb_lpb')) {
+            if (!$this->db->field_exists('source_type', 'tb_lpb')) {
+                $this->dbforge->add_column('tb_lpb', [
+                    'source_type' => [
+                        'type' => 'VARCHAR',
+                        'constraint' => 20,
+                        'null' => FALSE,
+                        'default' => 'PO',
+                        'after' => $this->db->field_exists('checker_at', 'tb_lpb') ? 'checker_at' : 'input_at'
+                    ]
+                ]);
+            }
+
+            if (!$this->db->field_exists('manual_ref_no', 'tb_lpb')) {
+                $this->dbforge->add_column('tb_lpb', [
+                    'manual_ref_no' => [
+                        'type' => 'VARCHAR',
+                        'constraint' => 50,
+                        'null' => TRUE,
+                        'after' => 'source_type'
+                    ]
+                ]);
+            }
+        }
+
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `tb_lpb_manual_log` (
+                `id_log` INT(11) NOT NULL AUTO_INCREMENT,
+                `id_lpb` INT(11) DEFAULT NULL,
+                `manual_ref_no` VARCHAR(50) DEFAULT NULL,
+                `action_type` VARCHAR(50) NOT NULL,
+                `status` VARCHAR(20) NOT NULL,
+                `message` TEXT DEFAULT NULL,
+                `payload` LONGTEXT DEFAULT NULL,
+                `created_by` VARCHAR(100) DEFAULT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `ip_address` VARCHAR(45) DEFAULT NULL,
+                `user_agent` VARCHAR(255) DEFAULT NULL,
+                PRIMARY KEY (`id_log`),
+                KEY `idx_lpb_manual_log_ref` (`manual_ref_no`),
+                KEY `idx_lpb_manual_log_lpb` (`id_lpb`),
+                KEY `idx_lpb_manual_log_status` (`status`),
+                KEY `idx_lpb_manual_log_created` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        ");
+
+        return TRUE;
+    }
+
+    public function generate_lpb_manual_ref()
+    {
+        $prefix = 'LPBM' . date('ymd');
+        $row = $this->db
+            ->select("MAX(CAST(SUBSTRING(manual_ref_no, " . (strlen($prefix) + 1) . ") AS UNSIGNED)) AS max_seq", false)
+            ->like('manual_ref_no', $prefix, 'after')
+            ->get('tb_lpb')
+            ->row_array();
+
+        $next = ((int) ($row['max_seq'] ?? 0)) + 1;
+
+        return $prefix . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+    }
+
+    public function search_lpb_manual_barang($term = '', $limit = 30)
+    {
+        if (!$this->db->table_exists('tbpo_barang')) {
+            return [];
+        }
+
+        $this->db->select('
+            kode_barang,
+            MAX(nama_barang) AS nama_barang,
+            MAX(COALESCE(NULLIF(satuan, ""), "PCS")) AS satuan,
+            MAX(COALESCE(isi, 0)) AS isi,
+            MAX(COALESCE(kemasan, 0)) AS kemasan
+        ', false);
+        $this->db->from('tbpo_barang');
+
+        if ($this->db->field_exists('is_active', 'tbpo_barang')) {
+            $this->db->where('is_active', 'T');
+        }
+
+        if ($term !== '') {
+            $this->db->group_start();
+            $this->db->like('kode_barang', $term);
+            $this->db->or_like('nama_barang', $term);
+            $this->db->group_end();
+        }
+
+        $this->db->group_by('kode_barang');
+        $this->db->order_by('kode_barang', 'ASC');
+        $this->db->limit((int) $limit > 0 ? (int) $limit : 30);
+
+        return $this->db->get()->result_array();
+    }
+
+    private function get_lpb_manual_barang_row($kodeBarang)
+    {
+        $kodeBarang = trim((string) $kodeBarang);
+        if ($kodeBarang === '' || !$this->db->table_exists('tbpo_barang')) {
+            return null;
+        }
+
+        $this->db->select('
+            kode_barang,
+            MAX(nama_barang) AS nama_barang,
+            MAX(COALESCE(NULLIF(satuan, ""), "PCS")) AS satuan,
+            MAX(COALESCE(isi, 0)) AS isi,
+            MAX(COALESCE(kemasan, 0)) AS kemasan
+        ', false);
+        $this->db->from('tbpo_barang');
+        $this->db->where('kode_barang', $kodeBarang);
+        $this->db->group_by('kode_barang');
+        $this->db->limit(1);
+
+        return $this->db->get()->row_array();
+    }
+
+    public function validate_lpb_manual_payload(array $payload, array $detailRows)
+    {
+        if (trim((string) ($payload['tgl_lpb'] ?? '')) === '') {
+            return ['status' => FALSE, 'message' => 'Tanggal LPB wajib diisi.'];
+        }
+
+        if (trim((string) ($payload['jenis_lpb'] ?? '')) === '') {
+            return ['status' => FALSE, 'message' => 'Jenis LPB wajib dipilih.'];
+        }
+
+        if (trim((string) ($payload['gudang_id'] ?? '')) === '') {
+            return ['status' => FALSE, 'message' => 'Gudang wajib dipilih.'];
+        }
+
+        if (empty($detailRows)) {
+            return ['status' => FALSE, 'message' => 'Minimal harus ada 1 barang untuk LPB Manual.'];
+        }
+
+        $validatedRows = [];
+        foreach ($detailRows as $index => $row) {
+            $lineNo = $index + 1;
+            $kodeBarang = trim((string) ($row['kd_barang'] ?? ''));
+            $qty = (float) ($row['qty_diterima'] ?? 0);
+            $noLot = trim((string) ($row['no_lot'] ?? ''));
+            $expiredDate = trim((string) ($row['expired_date'] ?? ''));
+
+            if ($kodeBarang === '') {
+                return ['status' => FALSE, 'message' => 'Kode barang baris ' . $lineNo . ' wajib dipilih dari list barang.'];
+            }
+            if ($qty <= 0) {
+                return ['status' => FALSE, 'message' => 'Qty diterima baris ' . $lineNo . ' harus lebih dari 0.'];
+            }
+            if ($noLot === '') {
+                return ['status' => FALSE, 'message' => 'No lot baris ' . $lineNo . ' wajib diisi manual.'];
+            }
+            if ($expiredDate === '') {
+                return ['status' => FALSE, 'message' => 'Expired date baris ' . $lineNo . ' wajib diisi manual.'];
+            }
+
+            $barang = $this->get_lpb_manual_barang_row($kodeBarang);
+            if (!$barang) {
+                return ['status' => FALSE, 'message' => 'Kode barang ' . $kodeBarang . ' tidak ditemukan di tbpo_barang.'];
+            }
+
+            $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
+            $validatedRows[] = [
+                'kd_barang' => $kodeBarang,
+                'nama_barang' => $barang['nama_barang'] ?? '',
+                'qty_diterima' => $qty,
+                'satuan' => trim((string) ($row['satuan'] ?? '')) ?: ($barang['satuan'] ?? 'PCS'),
+                'no_lot' => $noLot,
+                'expired_date' => $this->_normalizeDate($expiredDate),
+                'harga_satuan' => $hargaSatuan,
+                'total_harga' => $qty * $hargaSatuan
+            ];
+        }
+
+        return ['status' => TRUE, 'detail_rows' => $validatedRows];
+    }
+
+    public function create_lpb_manual(array $header, array $detailRows)
+    {
+        $this->ensure_lpb_manual_schema();
+
+        $jenisLpb = $this->normalize_lpb_type($header['jenis_lpb'] ?? 'LPB CP');
+        $manualRef = trim((string) ($header['manual_ref_no'] ?? ''));
+        if ($manualRef === '') {
+            $manualRef = $this->generate_lpb_manual_ref();
+        }
+
+        $headerInsert = [
+            'kd_po' => $manualRef,
+            'no_po' => $manualRef,
+            'nosj' => trim((string) ($header['nosj'] ?? '')) !== '' ? trim((string) $header['nosj']) : '-',
+            'tgl_sj' => $this->_normalizeDate($header['tgl_lpb'] ?? date('Y-m-d')),
+            'no_invoice' => trim((string) ($header['no_invoice'] ?? '')) !== '' ? trim((string) $header['no_invoice']) : '-',
+            'gudang_id' => (int) ($header['gudang_id'] ?? 0),
+            'keterangan' => trim((string) ($header['keterangan'] ?? '')),
+            'input_at' => date('Y-m-d H:i:s')
+        ];
+
+        if ($this->db->field_exists('jenis_lpb', 'tb_lpb')) {
+            $headerInsert['jenis_lpb'] = $jenisLpb;
+        }
+        if ($this->db->field_exists('nomor_lpb', 'tb_lpb')) {
+            $headerInsert['nomor_lpb'] = $this->generate_lpb_number($jenisLpb);
+        }
+        if ($this->db->field_exists('status_lpb', 'tb_lpb')) {
+            $headerInsert['status_lpb'] = 1;
+        }
+        if ($this->db->field_exists('source_type', 'tb_lpb')) {
+            $headerInsert['source_type'] = 'MANUAL';
+        }
+        if ($this->db->field_exists('manual_ref_no', 'tb_lpb')) {
+            $headerInsert['manual_ref_no'] = $manualRef;
+        }
+        if ($this->db->field_exists('checker_name', 'tb_lpb')) {
+            $headerInsert['checker_name'] = trim((string) ($header['checker_name'] ?? '')) ?: ($header['dilakukan_oleh'] ?? 'SYSTEM');
+        }
+        if ($this->db->field_exists('checker_by', 'tb_lpb')) {
+            $headerInsert['checker_by'] = trim((string) ($header['checker_by'] ?? ''));
+        }
+        if ($this->db->field_exists('checker_at', 'tb_lpb')) {
+            $headerInsert['checker_at'] = date('Y-m-d H:i:s');
+        }
+
+        $this->db->insert('tb_lpb', $headerInsert);
+        $idLpb = (int) $this->db->insert_id();
+        if ($idLpb <= 0) {
+            return FALSE;
+        }
+
+        foreach ($detailRows as $row) {
+            $hargaSatuan = (float) ($row['harga_satuan'] ?? 0);
+            $totalHarga = (float) ($row['total_harga'] ?? 0);
+            $detailInsert = [
+                'id_lpb' => $idLpb,
+                'kd_barang' => $row['kd_barang'],
+                'qty_diterima' => (float) $row['qty_diterima'],
+                'no_lot' => $row['no_lot'],
+                'expired_date' => $this->_normalizeDate($row['expired_date'] ?? ''),
+                'input_at' => date('Y-m-d H:i:s')
+            ];
+
+            if ($this->db->field_exists('harga_satuan', 'tb_lpb_detail')) {
+                $detailInsert['harga_satuan'] = $hargaSatuan;
+            }
+            if ($this->db->field_exists('total_harga', 'tb_lpb_detail')) {
+                $detailInsert['total_harga'] = $totalHarga;
+            }
+            if ($this->db->field_exists('harga_verified_by', 'tb_lpb_detail')) {
+                $detailInsert['harga_verified_by'] = $header['dilakukan_oleh'] ?? 'SYSTEM';
+            }
+            if ($this->db->field_exists('harga_verified_at', 'tb_lpb_detail')) {
+                $detailInsert['harga_verified_at'] = date('Y-m-d H:i:s');
+            }
+
+            $this->db->insert('tb_lpb_detail', $detailInsert);
+            $idDetailLpb = (int) $this->db->insert_id();
+            if ($idDetailLpb <= 0) {
+                return FALSE;
+            }
+
+            if ($this->db->table_exists('tb_lpb_batch')) {
+                $this->db->insert('tb_lpb_batch', [
+                    'id_detail_lpb' => $idDetailLpb,
+                    'no_lot' => $row['no_lot'],
+                    'expired_date' => $this->_normalizeDate($row['expired_date'] ?? ''),
+                    'qty' => (float) $row['qty_diterima']
+                ]);
+            }
+
+            $this->upsert_lpb_manual_stock($headerInsert['gudang_id'], $manualRef, $row);
+        }
+
+        $this->insert_lpb_activity_log([
+            'id_lpb' => $idLpb,
+            'kd_po' => $manualRef,
+            'no_invoice' => $headerInsert['no_invoice'] ?? '-',
+            'action_type' => 'CREATE_LPB_MANUAL',
+            'status_before' => null,
+            'status_after' => 'POST',
+            'data_before' => null,
+            'data_after' => [
+                'id_lpb' => $idLpb,
+                'manual_ref_no' => $manualRef,
+                'nomor_lpb' => $headerInsert['nomor_lpb'] ?? '',
+                'jenis_lpb' => $jenisLpb,
+                'source_type' => 'MANUAL',
+                'total_detail' => count($detailRows)
+            ],
+            'keterangan' => 'LPB Manual dibuat oleh Purchasing tanpa data PO dan langsung tercatat POST.',
+            'dilakukan_oleh' => $header['dilakukan_oleh'] ?? 'SYSTEM',
+            'checker_name' => $headerInsert['checker_name'] ?? null,
+            'checker_by' => $headerInsert['checker_by'] ?? null
+        ]);
+
+        $this->insert_lpb_manual_system_log([
+            'id_lpb' => $idLpb,
+            'manual_ref_no' => $manualRef,
+            'action_type' => 'CREATE_MANUAL_LPB',
+            'status' => 'SUCCESS',
+            'message' => 'LPB Manual tersimpan ke tb_lpb, tb_lpb_detail, batch, dan stock ledger.',
+            'payload' => ['header' => $headerInsert, 'detail_rows' => $detailRows],
+            'created_by' => $header['dilakukan_oleh'] ?? 'SYSTEM'
+        ]);
+
+        return $idLpb;
+    }
+
+    private function upsert_lpb_manual_stock($gudangId, $manualRef, array $row)
+    {
+        $stockQty = (float) ($row['qty_diterima'] ?? 0);
+        $stockNoLot = trim((string) ($row['no_lot'] ?? ''));
+        $expiredDate = $this->_normalizeDate($row['expired_date'] ?? '');
+
+        if ($stockQty <= 0) {
+            return FALSE;
+        }
+
+        if ($this->db->table_exists('tberp_stock_batch')) {
+            $this->db->where('kd_barang', $row['kd_barang']);
+            $this->db->where('gudang_id', (string) $gudangId);
+            $this->db->where('no_lot', $stockNoLot);
+            if ($expiredDate !== null) {
+                $this->db->where('expired_date', $expiredDate);
+            } else {
+                $this->db->where('expired_date', null);
+            }
+
+            $existing = $this->db->get('tberp_stock_batch')->row_array();
+            if ($existing) {
+                $this->db->where('id', $existing['id']);
+                $this->db->set('qty_on_hand', 'qty_on_hand + ' . $stockQty, FALSE);
+                $this->db->set('update_at', date('Y-m-d H:i:s'));
+                $this->db->update('tberp_stock_batch');
+            } else {
+                $this->db->insert('tberp_stock_batch', [
+                    'kd_barang' => $row['kd_barang'],
+                    'gudang_id' => (string) $gudangId,
+                    'no_lot' => $stockNoLot,
+                    'expired_date' => $expiredDate,
+                    'qty_on_hand' => $stockQty,
+                    'qty_reserved' => 0
+                ]);
+            }
+        }
+
+        if ($this->db->table_exists('tberp_stock_ledger')) {
+            $this->db->insert('tberp_stock_ledger', [
+                'kd_barang' => $row['kd_barang'],
+                'gudang_id' => (string) $gudangId,
+                'no_lot' => $stockNoLot,
+                'expired_date' => $expiredDate,
+                'qty' => $stockQty,
+                'tipe' => 'IN',
+                'ref_no' => $manualRef,
+                'ref_type' => 'LPB_MANUAL',
+                'created_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        return TRUE;
+    }
+
+    public function insert_lpb_manual_system_log(array $payload)
+    {
+        $this->ensure_lpb_manual_schema();
+
+        if (!$this->db->table_exists('tb_lpb_manual_log')) {
+            return FALSE;
+        }
+
+        return $this->db->insert('tb_lpb_manual_log', [
+            'id_lpb' => !empty($payload['id_lpb']) ? (int) $payload['id_lpb'] : null,
+            'manual_ref_no' => $payload['manual_ref_no'] ?? null,
+            'action_type' => $payload['action_type'] ?? 'LPB_MANUAL',
+            'status' => $payload['status'] ?? 'INFO',
+            'message' => $payload['message'] ?? '',
+            'payload' => isset($payload['payload']) ? json_encode($payload['payload']) : null,
+            'created_by' => $payload['created_by'] ?? 'SYSTEM',
+            'created_at' => date('Y-m-d H:i:s'),
+            'ip_address' => $payload['ip_address'] ?? null,
+            'user_agent' => $payload['user_agent'] ?? null
+        ]);
+    }
+
+    public function get_lpb_manual_system_logs($limit = 500)
+    {
+        $this->ensure_lpb_manual_schema();
+
+        if (!$this->db->table_exists('tb_lpb_manual_log')) {
+            return [];
+        }
+
+        $this->db->order_by('created_at', 'DESC');
+        $this->db->order_by('id_log', 'DESC');
+        $this->db->limit((int) $limit > 0 ? (int) $limit : 500);
+
+        return $this->db->get('tb_lpb_manual_log')->result_array();
+    }
+
+    public function get_lpb_report_rows(array $filters = [])
+    {
+        $this->ensure_lpb_manual_schema();
+
+        $source = strtolower(trim((string) ($filters['source'] ?? 'all')));
+        $date1 = trim((string) ($filters['date1'] ?? ''));
+        $date2 = trim((string) ($filters['date2'] ?? ''));
+        $sourceExpr = $this->db->field_exists('source_type', 'tb_lpb')
+            ? "COALESCE(NULLIF(h.source_type, ''), 'PO')"
+            : "'PO'";
+        $manualRefExpr = $this->db->field_exists('manual_ref_no', 'tb_lpb')
+            ? "COALESCE(NULLIF(h.manual_ref_no, ''), h.kd_po)"
+            : "h.kd_po";
+
+        $sql = "SELECT
+                h.id_lpb,
+                h.input_at,
+                h.tgl_sj AS tgl_lpb,
+                h.kd_po,
+                h.no_po,
+                {$manualRefExpr} AS manual_ref_no,
+                COALESCE(NULLIF(h.nomor_lpb, ''), '-') AS nomor_lpb,
+                COALESCE(NULLIF(h.jenis_lpb, ''), '-') AS jenis_lpb,
+                {$sourceExpr} AS source_type,
+                CASE WHEN {$sourceExpr} = 'MANUAL' THEN 'LPB Manual Purchasing' ELSE 'LPB Logistik dari PO' END AS source_label,
+                h.no_invoice,
+                h.nosj,
+                h.gudang_id,
+                COALESCE(g.nama_gudang, '-') AS nama_gudang,
+                h.keterangan,
+                COUNT(d.id_detail_lpb) AS total_baris,
+                COUNT(DISTINCT d.kd_barang) AS total_item,
+                COALESCE(SUM(d.qty_diterima), 0) AS total_qty,
+                COALESCE(SUM(d.total_harga), 0) AS total_harga
+            FROM tb_lpb h
+            LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+            LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
+            WHERE 1 = 1";
+        $params = [];
+
+        if ($source === 'manual') {
+            $sql .= " AND {$sourceExpr} = 'MANUAL'";
+        } elseif ($source === 'logistik') {
+            $sql .= " AND {$sourceExpr} <> 'MANUAL'";
+        }
+
+        if ($date1 !== '') {
+            $sql .= " AND DATE(h.input_at) >= ?";
+            $params[] = $date1;
+        }
+        if ($date2 !== '') {
+            $sql .= " AND DATE(h.input_at) <= ?";
+            $params[] = $date2;
+        }
+
+        $sql .= " GROUP BY
+                h.id_lpb,
+                h.input_at,
+                h.tgl_sj,
+                h.kd_po,
+                h.no_po,
+                h.nomor_lpb,
+                h.jenis_lpb,
+                h.no_invoice,
+                h.nosj,
+                h.gudang_id,
+                g.nama_gudang,
+                h.keterangan";
+        if ($this->db->field_exists('source_type', 'tb_lpb')) {
+            $sql .= ", h.source_type";
+        }
+        if ($this->db->field_exists('manual_ref_no', 'tb_lpb')) {
+            $sql .= ", h.manual_ref_no";
+        }
+        $sql .= " ORDER BY h.input_at DESC, h.id_lpb DESC LIMIT 1000";
+
+        return $this->db->query($sql, $params)->result_array();
+    }
+
     public function create_lpb_from_tmp($header, $detailRows)
     {
         $headerInsert = [

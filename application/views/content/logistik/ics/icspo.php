@@ -9,6 +9,8 @@ $canSyncPo = !empty($can_sync_po);
 $showLpbActions = !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINICS';
 $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel);
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
+$canLpbManual = !empty($can_lpb_manual);
+$canLpbReport = !empty($can_lpb_report);
 $showPanelTabs = $showLogistikPanel && $showPurchasingPanel;
 $logistikPanelClass = $showPanelTabs ? 'tab-pane fade show active' : '';
 $purchasingPanelClass = $showPanelTabs ? 'tab-pane fade' : '';
@@ -200,65 +202,26 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                             <h3 class="card-title">
                                 <i class="fas fa-plus-circle mr-2"></i> <?= $panelTitle ?>
                             </h3>
-                            <?php if ($canSyncPo) : ?>
-                                <div class="sync-meta text-md-right">
-                                    <div>Waktu sync terakhir: <strong id="sync-last-time"><?= htmlspecialchars($lastSyncTime) ?></strong></div>
-                                </div>
-                            <?php endif; ?>
                         </div>
 
                         <div class="card-body">
-                            <?php if ($canSyncPo) : ?>
-                            <div class="container-fluid px-0" hidden>
-                                <div class="row mb-3" id="header-title-sync">
-                                    <div class="col-md-3 col-6 mb-3">
-                                        <div class="sync-stat-box sync-stat-primary">
-                                            <h4 id="sync-total-inserted"><?= $lastSyncInserted ?></h4>
-                                            <p>Data baru tersimpan</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-3">
-                                        <div class="sync-stat-box sync-stat-success">
-                                            <h4 id="sync-total-updated"><?= $lastSyncUpdated ?></h4>
-                                            <p>Data berhasil diperbarui</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-3">
-                                        <div class="sync-stat-box sync-stat-warning">
-                                            <h4 id="sync-total-skipped"><?= $lastSyncSkipped ?></h4>
-                                            <p>Data dilewati</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-6 mb-3">
-                                        <div class="sync-stat-box sync-stat-dark">
-                                            <h4 id="sync-total-rows"><?= count($sync_rows) ?></h4>
-                                            <p>Baris ditampilkan</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endif; ?>
-
                             <div class="container-fluid px-0">
-                                <form action="<?= base_url('ics/icspo') ?>" method="post">
-                                    <div class="row mb-3">
+                                <div class="row mb-3" id="button-row-lpb">
+                                    <?php if ($canLpbManual) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
-                                            <input type="date" class="form-control" name="date1" value="<?= $date1 ?? '' ?>">
+                                            <a class="btn btn-success btn-block" href="<?= base_url('ics/lpb_manual') ?>">
+                                                <i class="fas fa-keyboard"></i> Input LPB Manual
+                                            </a>
                                         </div>
-                                        <div class="col-md-2 col-sm-6 mb-2">
-                                            <input type="date" class="form-control" name="date2" value="<?= $date2 ?? '' ?>">
-                                        </div>
-                                        <div class="col-md-2 col-sm-6 mb-2">
-                                            <button class="btn btn-primary btn-block">
-                                                <i class="fas fa-search"></i> Tampil
-                                            </button>
-                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($canLpbReport) : ?>
+                                    <div class="col-md-2 col-sm-6 mb-2">
+                                        <a class="btn btn-info btn-block" href="<?= base_url('ics/lpb_report') ?>">
+                                            <i class="fas fa-chart-bar"></i> Laporan LPB
+                                        </a>
                                     </div>
-                                </form>
-
-                                <?php if ($canSyncPo) : ?>
-                                    <div class="row mb-3" id="button-row-lpb">
-                                        <?php if ($showLpbActions) : ?>
+                                    <?php endif; ?>
+                                    <?php if ($canSyncPo && $showLpbActions) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
                                                 <i class="fas fa-file-csv"></i> Data LPB
@@ -270,14 +233,9 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                             </a>
                                         </div>
                                         <?php endif; ?>
-                                        <div class="col-md-2 col-sm-6 mb-2">
-                                            <button class="btn btn-primary btn-block" id="btn-sync-po">
-                                                <i class="fas fa-sync"></i> Sync PO
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="alert d-none" id="sync-alert"></div>
-                                <?php elseif ($this->session->userdata('lv') == '2') : ?>
+                                </div>
+
+                                <?php if (!$canSyncPo && $this->session->userdata('lv') == '2') : ?>
                                     <div class="row mb-3">
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <button class="btn btn-success btn-block" data-toggle="modal" data-target="#modalImportCSV">
@@ -643,117 +601,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                 purchasingTable.draw();
             });
             <?php endif; ?>
-
-            function escapeHtml(text) {
-                return $('<div>').text(text === null || text === undefined ? '' : text).html();
-            }
-
-            function formatNumber(value) {
-                var parsed = parseFloat(value || 0);
-                return parsed.toLocaleString('id-ID');
-            }
-
-            function renderStatusBadge(status) {
-                if (parseInt(status, 10) === 2) {
-                    return '<span class="badge badge-success">Sudah Difakturkan</span>';
-                }
-
-                return '<span class="badge badge-warning">Belum Difakturkan</span>';
-            }
-
-            function renderSyncRows(rows) {
-                var $tbody = $('#sync-result-body');
-                $tbody.empty();
-
-                if (!rows || !rows.length) {
-                    $tbody.append('<tr><td colspan="11" class="text-center text-muted">Belum ada data hasil sinkronisasi.</td></tr>');
-                    return;
-                }
-
-                $.each(rows, function(index, row) {
-                    $tbody.append(
-                        '<tr>' +
-                        '<td>' + escapeHtml(row.no_po) + '</td>' +
-                        '<td>' + escapeHtml(row.kd_po) + '</td>' +
-                        '<td>' + escapeHtml(row.tgl_transaksi) + '</td>' +
-                        '<td>' + escapeHtml(row.kd_suplier) + '</td>' +
-                        '<td>' + escapeHtml(row.kd_barang) + '</td>' +
-                        '<td>' + escapeHtml(row.satuan) + '</td>' +
-                        '<td class="text-right">' + formatNumber(row.qty) + '</td>' +
-                        '<td class="text-right">' + formatNumber(row.hrg_satuan) + '</td>' +
-                        '<td class="text-right">' + formatNumber(row.harga_total) + '</td>' +
-                        '<td class="text-center">' + renderStatusBadge(row.status) + '</td>' +
-                        '<td>' + escapeHtml(row.create_at) + '</td>' +
-                        '</tr>'
-                    );
-                });
-            }
-
-            function showSyncAlert(type, message) {
-                var $alert = $('#sync-alert');
-                $alert
-                    .removeClass('d-none alert-success alert-danger alert-warning')
-                    .addClass('alert-' + type)
-                    .html(message);
-            }
-
-            function setButtonLoading(isLoading) {
-                var $button = $('#btn-sync-po');
-
-                if (isLoading) {
-                    $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-1"></span> Sinkronisasi berjalan...');
-                    return;
-                }
-
-                $button.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i> Sinkronisasi PO ERP');
-            }
-
-            $('#btn-sync-po').on('click', function(e) {
-                e.preventDefault();
-                showSyncAlert('warning', 'Mengambil data Purchase Order dari API kiu_po...');
-                setButtonLoading(true);
-
-                $.ajax({
-                    url: '<?= $sync_api_url ?>',
-                    type: 'POST',
-                    dataType: 'json',
-                    timeout: 120000,
-                    success: function(response) {
-                        if (response.status) {
-                            $('#sync-total-inserted').text(response.inserted || 0);
-                            $('#sync-total-updated').text(response.updated || 0);
-                            $('#sync-total-skipped').text(response.skipped || 0);
-                            $('#sync-total-rows').text(response.rows ? response.rows.length : 0);
-                            $('#sync-last-time').text(response.sync_time || '-');
-                            renderSyncRows(response.rows || []);
-
-                            showSyncAlert(
-                                'success',
-                                (response.message || 'Sinkronisasi berhasil') +
-                                ' | Inserted: <strong>' + (response.inserted || 0) + '</strong>' +
-                                ' | Updated: <strong>' + (response.updated || 0) + '</strong>' +
-                                ' | Skipped: <strong>' + (response.skipped || 0) + '</strong>' +
-                                ' | Histori diskon: <strong>' + (response.discount_rows || 0) + '</strong>' +
-                                ' | Invoice adjustment: <strong>' + (response.invoice_adjustment_rows || 0) + '</strong>'
-                            );
-                        } else {
-                            showSyncAlert('danger', response.message || 'Gagal sinkronisasi');
-                        }
-                    },
-                    error: function(xhr) {
-                        var message = 'Gagal sinkronisasi';
-
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            message = xhr.responseJSON.message;
-                        }
-
-                        showSyncAlert('danger', message);
-                    },
-                    complete: function() {
-                        setButtonLoading(false);
-                    }
-                });
-            });
         });
     </script>
 </body>
