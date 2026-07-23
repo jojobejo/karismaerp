@@ -1465,15 +1465,25 @@ class C_Keuangan extends CI_Controller
             $equityIndex = count($sections) - 1;
         }
 
+        $debit_val = 0.0;
+        $kredit_val = 0.0;
+        if ($netIncome >= 0) {
+            $kredit_val = $netIncome;
+        } else {
+            $debit_val = abs($netIncome);
+        }
+
         $sections[$equityIndex]['rows'][] = [
             'kode_akun' => '32020',
             'nama_akun' => 'Laba Tahun Berjalan',
             'saldo_normal' => 'KREDIT',
-            'debit' => 0.0,
-            'kredit' => 0.0,
+            'debit' => $debit_val,
+            'kredit' => $kredit_val,
             'amount' => $netIncome,
             'is_summary' => true,
         ];
+        $sections[$equityIndex]['debit'] = (float)$sections[$equityIndex]['debit'] + $debit_val;
+        $sections[$equityIndex]['kredit'] = (float)$sections[$equityIndex]['kredit'] + $kredit_val;
         $sections[$equityIndex]['total'] = (float)$sections[$equityIndex]['total'] + $netIncome;
         $equity += $netIncome;
 
