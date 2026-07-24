@@ -57,6 +57,8 @@ class M_Journal extends CI_Model
 
         $metode = $data_pembayaran['metode_pembayaran'] ?? '';
         $jumlah = (float)($data_pembayaran['jumlah_pembayaran'] ?? 0);
+        $diskon = (float)($data_pembayaran['jumlah_diskon'] ?? 0);
+        $total_piutang = $jumlah + $diskon;
         $no_faktur = $data_pembayaran['no_faktur'] ?? '';
         $tanggal = $data_pembayaran['tanggal_pembayaran'] ?? date('Y-m-d');
         $nomor_jurnal = $this->generate_no_jurnal($metode);
@@ -78,8 +80,8 @@ class M_Journal extends CI_Model
             'source_type' => 'PEMBAYARAN_FAKTUR',
             'source_id' => $id_pembayaran,
             'source_no' => $no_faktur,
-            'total_debit' => $jumlah,
-            'total_kredit' => $jumlah,
+            'total_debit' => $total_piutang,
+            'total_kredit' => $total_piutang,
             'created_by' => $userId,
             'created_at' => date('Y-m-d H:i:s'),
             'posted_by' => $userId,
@@ -93,6 +95,17 @@ class M_Journal extends CI_Model
         $akun_debit = $this->db->get_where('tbkeu_akun', ['nama_akun' => $metode])->row_array();
         $id_akun_debit = $akun_debit ? $akun_debit['id_akun'] : null;
 
+        // Cari ID Akun Diskon
+        $id_akun_diskon = null;
+        if ($diskon > 0) {
+            $akun_diskon = $this->db->get_where('tbkeu_akun', ['kode_akun' => '41097'])->row_array();
+            if (!$akun_diskon) {
+                $this->db->like('nama_akun', 'Potongan Penjualan');
+                $akun_diskon = $this->db->get('tbkeu_akun')->row_array();
+            }
+            $id_akun_diskon = $akun_diskon ? $akun_diskon['id_akun'] : null;
+        }
+
         // Cari ID Akun Kredit (Piutang Usaha)
         $akun_kredit = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
         if (!$akun_kredit) {
@@ -102,24 +115,39 @@ class M_Journal extends CI_Model
         $id_akun_kredit = $akun_kredit ? $akun_kredit['id_akun'] : null;
 
         if ($id_akun_debit || $id_akun_kredit) {
-            // Baris Debit
-            $this->db->insert('tbkeu_jurnal_detail', [
-                'id_jurnal' => $id_jurnal,
-                'nomor_baris' => 1,
-                'id_akun' => $id_akun_debit,
-                'keterangan' => 'Penerimaan ' . $metode,
-                'debit' => $jumlah,
-                'kredit' => 0
-            ]);
+            $baris = 1;
+            // Baris Debit (Pembayaran)
+            if ($jumlah > 0) {
+                $this->db->insert('tbkeu_jurnal_detail', [
+                    'id_jurnal' => $id_jurnal,
+                    'nomor_baris' => $baris++,
+                    'id_akun' => $id_akun_debit,
+                    'keterangan' => 'Penerimaan ' . $metode,
+                    'debit' => $jumlah,
+                    'kredit' => 0
+                ]);
+            }
+
+            // Baris Debit (Diskon)
+            if ($diskon > 0) {
+                $this->db->insert('tbkeu_jurnal_detail', [
+                    'id_jurnal' => $id_jurnal,
+                    'nomor_baris' => $baris++,
+                    'id_akun' => $id_akun_diskon,
+                    'keterangan' => 'Potongan Penjualan Faktur ' . $no_faktur,
+                    'debit' => $diskon,
+                    'kredit' => 0
+                ]);
+            }
 
             // Baris Kredit
             $this->db->insert('tbkeu_jurnal_detail', [
                 'id_jurnal' => $id_jurnal,
-                'nomor_baris' => 2,
+                'nomor_baris' => $baris++,
                 'id_akun' => $id_akun_kredit,
                 'keterangan' => 'Piutang Usaha Faktur ' . $no_faktur,
                 'debit' => 0,
-                'kredit' => $jumlah
+                'kredit' => $total_piutang
             ]);
         }
 

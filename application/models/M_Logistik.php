@@ -5852,8 +5852,8 @@ FROM (
                 ON pp.kd_po = t.kd_po
                 AND pp.kd_barang = t.kd_barang
                 AND pp.kd_suplier = t.kd_suplier
-            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
-                ON mb.kd_barang = t.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang = t.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
             WHERE pp.no_po = ?
@@ -5891,8 +5891,8 @@ FROM (
                 ON pp.kd_po = t.kd_po
                 AND pp.kd_barang = t.kd_barang
                 AND pp.kd_suplier = t.kd_suplier
-            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
-                ON mb.kd_barang = t.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang = t.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = t.kd_barang
             WHERE t.kd_po = ?

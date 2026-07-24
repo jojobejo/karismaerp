@@ -278,13 +278,17 @@ $default_metode = '';
                                     </div>
                                     <div class="form-group">
                                         <label>Jumlah Pembayaran <span class="text-danger">*</span></label>
-                                        <input type="number" name="jumlah_pembayaran" class="form-control" min="1"
+                                        <input type="number" name="jumlah_pembayaran" id="jumlah_pembayaran" class="form-control" min="1"
                                                max="<?= (float)$faktur['sisa_tagihan'] ?>" step="0.01"
                                                value="<?= $is_bg_cair_mode ? (float)$pending_bg['jumlah_pembayaran'] : (float)$faktur['sisa_tagihan'] ?>"
                                                <?= $is_bg_cair_mode ? 'readonly' : 'required' ?>>
                                         <?php if (!$is_bg_cair_mode): ?>
                                             <small class="text-muted">Maksimal Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></small>
                                         <?php endif; ?>
+                                    </div>
+                                    <div class="form-group" <?= $is_bg_cair_mode ? 'style="display:none;"' : '' ?>>
+                                        <label>Jumlah Diskon</label>
+                                        <input type="number" name="jumlah_diskon" id="jumlah_diskon" class="form-control" min="0" step="0.01" value="0" <?= $is_bg_cair_mode ? 'readonly' : '' ?>>
                                     </div>
                                     <div class="form-group" id="tanggal_bg_cair_group" style="<?= (!$is_bg_cair_mode && $default_metode !== 'bg') ? 'display:none' : '' ?>">
                                         <label>Tanggal BG Cair <span class="text-danger">*</span></label>

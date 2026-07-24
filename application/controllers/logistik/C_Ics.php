@@ -2468,6 +2468,18 @@ class C_Ics extends CI_Controller
     public function ajax_finalize_tmp_po_received()
     {
         while (ob_get_level()) ob_end_clean();
+        ob_start();
+        
+        register_shutdown_function(function() {
+            $err = error_get_last();
+            $out = ob_get_clean();
+            if ($err) {
+                file_put_contents(APPPATH . 'logs/ajax_finalize_debug.txt', "Error: " . print_r($err, true) . "\nOutput: $out", FILE_APPEND);
+            } else {
+                file_put_contents(APPPATH . 'logs/ajax_finalize_debug.txt', "Success Output: $out\n", FILE_APPEND);
+            }
+            echo $out;
+        });
 
         header('Content-Type: application/json; charset=utf-8');
 

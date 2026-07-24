@@ -26,6 +26,12 @@ class M_pembayaran extends CI_Model
 
         if ($this->db->table_exists($this->payment_table)) {
             foreach ([
+                'jumlah_diskon' => [
+                    'type'       => 'DECIMAL',
+                    'constraint' => '16,2',
+                    'default'    => 0,
+                    'after'      => 'jumlah_pembayaran',
+                ],
                 'tanggal_bg_cair' => [
                     'type'  => 'DATE',
                     'null'  => true,
@@ -81,6 +87,11 @@ class M_pembayaran extends CI_Model
                 'type' => 'DATE',
             ],
             'jumlah_pembayaran' => [
+                'type'       => 'DECIMAL',
+                'constraint' => '16,2',
+                'default'    => 0,
+            ],
+            'jumlah_diskon' => [
                 'type'       => 'DECIMAL',
                 'constraint' => '16,2',
                 'default'    => 0,

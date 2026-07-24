@@ -99,6 +99,7 @@ class C_pembayaran extends CI_Controller
 
         $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
+        $jumlah_diskon = $this->_normalize_amount($this->input->post('jumlah_diskon', true));
         $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
         $allowed_accounts = [
             'Q Kas', 'A Kas', 'Bank', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
@@ -116,8 +117,8 @@ class C_pembayaran extends CI_Controller
 
         if ($metode_pembayaran === 'Q Hutang Non Dagang') {
             $saldo_retur = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
-            if ($jumlah_pembayaran > $saldo_retur) {
-                $this->session->set_flashdata('error', 'Jumlah pembayaran retur (' . number_format($jumlah_pembayaran, 0, ',', '.') . ') melebihi saldo retur customer (' . number_format($saldo_retur, 0, ',', '.') . ').');
+            if ($jumlah_pembayaran + $jumlah_diskon > $saldo_retur) {
+                $this->session->set_flashdata('error', 'Jumlah pembayaran retur dan diskon melebihi saldo retur customer.');
                 redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
             }
         }
@@ -139,8 +140,8 @@ class C_pembayaran extends CI_Controller
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
-        if ($jumlah_pembayaran > (float)$faktur['sisa_tagihan']) {
-            $this->session->set_flashdata('error', 'Jumlah pembayaran tidak boleh melebihi sisa tagihan.');
+        if ($jumlah_pembayaran + $jumlah_diskon > (float)$faktur['sisa_tagihan'] + 1) { // Adding small buffer for floating point
+            $this->session->set_flashdata('error', 'Jumlah pembayaran dan diskon tidak boleh melebihi sisa tagihan.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
@@ -154,6 +155,7 @@ class C_pembayaran extends CI_Controller
             'no_faktur'           => $faktur['no_faktur'],
             'tanggal_pembayaran'  => $tanggal_pembayaran,
             'jumlah_pembayaran'   => $jumlah_pembayaran,
+            'jumlah_diskon'       => $jumlah_diskon,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
             'tanggal_bg_cair'     => $metode_pembayaran === 'bg' ? $tanggal_bg_cair : null,
             'status_bg'           => $metode_pembayaran === 'bg' ? 'pending' : 'not_bg',
