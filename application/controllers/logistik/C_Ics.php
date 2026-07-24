@@ -4443,6 +4443,7 @@ class C_Ics extends CI_Controller
     public function dash_retur()
     {
         $data['page_title'] = 'KARISMA - LOGISTIK';
+        $this->M_ReturPembelian->ensure_schema();
         $data['retur_all']  = $this->M_Ics->get_retur_dashboard();
 
         $this->load->view('partial/main/header.php', $data);

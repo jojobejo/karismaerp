@@ -214,6 +214,11 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                             </a>
                                         </div>
                                     <?php endif; ?>
+                                    <div class="col-md-2 col-sm-6 mb-2">
+                                        <a class="btn btn-warning btn-block" href="<?= base_url('ics/retur') ?>">
+                                            <i class="fas fa-undo"></i> Retur
+                                        </a>
+                                    </div>
                                     <?php if ($canLpbReport) : ?>
                                     <div class="col-md-2 col-sm-6 mb-2">
                                         <a class="btn btn-info btn-block" href="<?= base_url('ics/lpb_report') ?>">
@@ -227,11 +232,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                 <i class="fas fa-file-csv"></i> Data LPB
                                             </a>
                                         </div>
-                                        <div class="col-md-2 col-sm-6 mb-2">
-                                            <a class="btn btn-success btn-block" href="<?= base_url('ics/retur') ?>">
-                                                <i class="fas fa-undo"></i> Data Retur
-                                            </a>
-                                        </div>
                                         <?php endif; ?>
                                 </div>
 
@@ -241,11 +241,6 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                             <button class="btn btn-success btn-block" data-toggle="modal" data-target="#modalImportCSV">
                                                 <i class="fas fa-file-csv"></i> Import CSV
                                             </button>
-                                        </div>
-                                        <div class="col-md-2 col-sm-6 mb-2">
-                                            <a class="btn btn-success btn-block" href="<?= base_url('ics/retur') ?>">
-                                                <i class="fas fa-undo"></i> Retur
-                                            </a>
                                         </div>
                                     </div>
 
@@ -407,14 +402,17 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                 <thead class="thead-dark text-center">
                                                     <tr>
                                                         <th>Tgl LPB</th>
-                                                        <th>No LPB</th>
-                                                        <th>Invoice</th>
+                                                        <th>NO LPB</th>
+                                                        <th>Tgl PO</th>
                                                         <th>No PO</th>
-                                                        <th>Nama Supplier</th>
-                                                        <th class="text-right">Grand Total LPB</th>
+                                                        <th>Tgl SJ</th>
+                                                        <th>No SJ</th>
+                                                        <th>No Invoice</th>
+                                                        <th>No FP</th>
+                                                        <th>Suplier</th>
+                                                        <th class="text-right">Grand Total</th>
                                                         <th class="text-center">Status Data</th>
-                                                        <th class="text-center">Notif</th>
-                                                        <th class="text-center" style="width:90px;">#</th>
+                                                        <th class="text-center">Satatus Barang</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -433,6 +431,19 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                             $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
                                                             $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
                                                             $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;
+                                                            $statusLpbRaw = $row['status_lpb'] ?? null;
+                                                            if ($statusLpbRaw === null || $statusLpbRaw === '') {
+                                                                $statusBarangBadge = '<span class="badge badge-secondary px-2 py-1">DRAFT</span>';
+                                                            } elseif ((string) $statusLpbRaw === '0') {
+                                                                $statusBarangBadge = '<span class="badge badge-warning px-2 py-1">UNPOST</span>';
+                                                            } else {
+                                                                $statusBarangBadge = '<span class="badge badge-success px-2 py-1">POST</span>';
+                                                            }
+                                                            $tglSjValue = trim((string) ($row['tgl_sj'] ?? ''));
+                                                            if ($tglSjValue === '' || $tglSjValue === '0000-00-00') {
+                                                                $tglSjValue = '-';
+                                                            }
+                                                            $detailUrl = base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? ''));
                                                             $salesTitle = $hasSalesTransaction
                                                                 ? 'Sudah ada ' . (int) ($row['sales_invoice_count'] ?? 0) . ' faktur penjualan: ' . (string) ($row['sales_invoice_sample'] ?? '-')
                                                                 : 'Belum ada transaksi penjualan dari LPB ini';
@@ -442,9 +453,17 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                         ?>
                                                         <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
                                                             <td><?= htmlspecialchars($row['tgl_lpb'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?></td>
-                                                            <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
+                                                            <td>
+                                                                <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
+                                                                    <?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?>
+                                                                </a>
+                                                            </td>
+                                                            <td><?= htmlspecialchars($row['tgl_po'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                            <td><?= htmlspecialchars($tglSjValue) ?></td>
+                                                            <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
+                                                            <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
+                                                            <td><?= htmlspecialchars($hasFaktur ? $fakturValue : '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
                                                             <td class="text-right"><?= 'Rp ' . number_format((float) ($row['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
                                                             <td class="text-center">
@@ -462,6 +481,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                             </td>
                                                             <td class="text-center">
                                                                 <div class="lpb-status-actions">
+                                                                    <?= $statusBarangBadge ?>
                                                                     <button type="button" class="btn btn-sm <?= $hasSalesTransaction ? 'btn-warning' : 'btn-light text-secondary border' ?>" title="<?= htmlspecialchars($salesTitle, ENT_QUOTES, 'UTF-8') ?>">
                                                                         <i class="fas fa-cash-register"></i>
                                                                     </button>
@@ -470,16 +490,11 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                                     </button>
                                                                 </div>
                                                             </td>
-                                                            <td class="text-center">
-                                                                <a href="<?= base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
-                                                                    <i class="fas fa-list"></i>
-                                                                </a>
-                                                            </td>
                                                         </tr>
                                                         <?php endforeach; ?>
                                                     <?php else : ?>
                                                         <tr>
-                                                            <td colspan="9" class="text-center text-muted">
+                                                            <td colspan="12" class="text-center text-muted">
                                                                 <i class="fas fa-inbox mr-1"></i> Tidak ada data purchasing
                                                             </td>
                                                         </tr>

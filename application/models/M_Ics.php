@@ -3172,19 +3172,138 @@ LEFT JOIN tb_customer c
 
     public function get_retur_dashboard()
     {
+        $rows = [];
+
+        if ($this->db->table_exists('tb_retur_pembelian')) {
+            $rows = array_merge($rows, $this->get_retur_pembelian_dashboard_rows());
+        }
+
+        if ($this->db->table_exists('tbrp_retur_penjualan_header')) {
+            $rows = array_merge($rows, $this->get_retur_penjualan_dashboard_rows());
+        }
+
+        if ($this->db->table_exists('tb_retur_barang')) {
+            $rows = array_merge($rows, $this->get_retur_legacy_dashboard_rows());
+        }
+
+        usort($rows, function ($a, $b) {
+            $timeA = strtotime($a['sort_at'] ?: $a['tanggal_retur']);
+            $timeB = strtotime($b['sort_at'] ?: $b['tanggal_retur']);
+            return $timeB <=> $timeA;
+        });
+
+        return array_map(function ($row) {
+            return (object)$row;
+        }, array_slice($rows, 0, 200));
+    }
+
+    private function get_retur_pembelian_dashboard_rows()
+    {
         $sub = $this->db
-            ->select('kd_retur, COUNT(kd_barang) AS total_barang')
+            ->select('id_retur_pembelian, COUNT(id_detail_retur_pembelian) AS total_item')
+            ->from('tb_retur_pembelian_detail')
+            ->group_by('id_retur_pembelian')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("
+                'purchase_return' AS source_type,
+                r.id_retur_pembelian AS source_id,
+                r.no_retur_pembelian AS no_retur,
+                r.tanggal_retur,
+                r.created_at AS sort_at,
+                'Retur Pembelian' AS jenis_retur,
+                COALESCE(NULLIF(TRIM(l.nomor_lpb), ''), '-') AS nomor_lpb,
+                COALESCE(NULLIF(TRIM(r.no_po), ''), NULLIF(TRIM(r.kd_po), ''), '-') AS nomor_po,
+                COALESCE(NULLIF(TRIM(s.nama_suplier), ''), NULLIF(TRIM(r.kd_supplier), ''), '-') AS partner,
+                r.alasan_retur AS keterangan,
+                COALESCE(d.total_item, 0) AS total_item,
+                r.total_dpp,
+                r.total_ppn,
+                r.grand_total,
+                r.status
+            ", false)
+            ->from('tb_retur_pembelian r')
+            ->join('tb_lpb l', 'l.id_lpb = r.id_lpb', 'left')
+            ->join('tbpo_suplier s', 's.kd_suplier = r.kd_supplier', 'left')
+            ->join("($sub) d", 'd.id_retur_pembelian = r.id_retur_pembelian', 'left', false)
+            ->order_by('r.created_at', 'DESC')
+            ->limit(200)
+            ->get()
+            ->result_array();
+
+        return $rows;
+    }
+
+    private function get_retur_penjualan_dashboard_rows()
+    {
+        $sub = $this->db
+            ->select('id_retur, COUNT(id_retur_detail) AS total_item, SUM(qty_retur * harga_satuan) AS grand_total')
+            ->from('tbrp_retur_penjualan_detail')
+            ->group_by('id_retur')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select("
+                'sales_return' AS source_type,
+                r.id_retur AS source_id,
+                r.no_retur,
+                r.tanggal_retur,
+                r.create_at_retur AS sort_at,
+                'Retur Penjualan' AS jenis_retur,
+                '-' AS nomor_lpb,
+                COALESCE(NULLIF(TRIM(r.no_spr), ''), NULLIF(TRIM(r.no_faktur_potong), ''), '-') AS nomor_po,
+                COALESCE(NULLIF(TRIM(r.nama_customer), ''), NULLIF(TRIM(c.nama_customer), ''), NULLIF(TRIM(r.kd_customer), ''), '-') AS partner,
+                r.catatan_logistik AS keterangan,
+                COALESCE(d.total_item, 0) AS total_item,
+                0 AS total_dpp,
+                0 AS total_ppn,
+                COALESCE(d.grand_total, 0) AS grand_total,
+                r.status_retur AS status
+            ", false)
+            ->from('tbrp_retur_penjualan_header r')
+            ->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left')
+            ->join("($sub) d", 'd.id_retur = r.id_retur', 'left', false)
+            ->order_by('r.create_at_retur', 'DESC')
+            ->limit(200)
+            ->get()
+            ->result_array();
+    }
+
+    private function get_retur_legacy_dashboard_rows()
+    {
+        $sub = $this->db
+            ->select('kd_retur, COUNT(kd_barang) AS total_item')
             ->from('tb_detail_retur_barang')
             ->group_by('kd_retur')
             ->get_compiled_select();
 
-        return $this->db
-            ->select('r.id, r.kd_retur, r.type_retur, r.keterangan, r.status, r.input_at, COALESCE(d.total_barang, 0) AS total_barang')
+        $rows = $this->db
+            ->select("
+                'legacy_ics' AS source_type,
+                r.id AS source_id,
+                r.kd_retur AS no_retur,
+                DATE(r.input_at) AS tanggal_retur,
+                r.input_at AS sort_at,
+                CASE WHEN r.type_retur = 1 THEN 'Retur Pembelian Lama' WHEN r.type_retur = 2 THEN 'Retur Penjualan Lama' ELSE 'Retur Lama' END AS jenis_retur,
+                '-' AS nomor_lpb,
+                '-' AS nomor_po,
+                '-' AS partner,
+                r.keterangan,
+                COALESCE(d.total_item, 0) AS total_item,
+                NULL AS total_dpp,
+                NULL AS total_ppn,
+                NULL AS grand_total,
+                r.status
+            ", false)
             ->from('tb_retur_barang r')
             ->join("($sub) d", 'd.kd_retur = r.kd_retur', 'left', false)
             ->order_by('r.input_at', 'DESC')
+            ->limit(200)
             ->get()
-            ->result();
+            ->result_array();
+
+        return $rows;
     }
 
     public function get_retur_detail_by_kd($kd_retur)
