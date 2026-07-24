@@ -1092,7 +1092,13 @@ class C_Checker extends CI_Controller
                 so.no_so, 
                 so.customer_name, 
                 c.nama_kios,
-                b.nama_barang, b.satuan, (b.p * b.l * b.t) AS isi_per_box
+                b.nama_barang, b.satuan,
+                (CASE 
+                    WHEN COALESCE(b.isi, 0) > 0 THEN b.isi
+                    WHEN (COALESCE(b.panjang, 0) * COALESCE(b.lebar, 0) * COALESCE(b.tinggi, 0)) > 0 
+                        THEN (COALESCE(b.panjang, 0) * COALESCE(b.lebar, 0) * COALESCE(b.tinggi, 0))
+                    ELSE 1 
+                END) AS isi_per_box
             FROM tbso_sales_order_detail sod
             JOIN tbso_sales_order so ON so.id_so = sod.id_so
             LEFT JOIN tb_customer c ON c.kd_customer = so.kd_customer

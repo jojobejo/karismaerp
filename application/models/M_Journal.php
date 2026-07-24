@@ -414,13 +414,15 @@ class M_Journal extends CI_Model
         $total_kredit = 0;
         $grouped_retur = [];
         $total_ppn = 0;
+        $grouped_stock = [];
 
         foreach ($details as $d) {
             $item_val = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             if ($item_val <= 0) continue;
 
-            $this->db->select('b.kode_akun_retur_penjualan, g.DESKRIPSI');
+            $this->db->select('b.kode_barang, b.kode_akun_retur_penjualan, b.kode_akun_persediaan, b.kode_akun_harga_pokok, fd.hrg_pokok, g.DESKRIPSI');
             $this->db->from('tbpo_barang b');
+            $this->db->join('tbso_faktur_detail fd', 'fd.kd_barang = b.kode_barang AND fd.no_faktur = ' . $this->db->escape($d['no_faktur']), 'left');
             $this->db->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left');
             $this->db->where('b.nama_barang', $d['nama_barang']);
             $prod = $this->db->get()->row_array();
@@ -455,6 +457,48 @@ class M_Journal extends CI_Model
             }
             $grouped_retur[$id_akun_retur] += $dpp;
             $total_ppn += $ppn;
+
+            // Stock/HPP reversal calculation
+            $cost_unit = $prod && (float)$prod['hrg_pokok'] > 0 ? (float)$prod['hrg_pokok'] : 0;
+            if ($cost_unit <= 0) {
+                $fallback_prod = $this->db->get_where('tbpo_barang', ['nama_barang' => $d['nama_barang']])->row_array();
+                $cost_unit = $fallback_prod ? (float)$fallback_prod['harga_pokok'] : 0;
+            }
+            $cost_total = round((float)$d['qty_retur'] * $cost_unit, 2);
+
+            $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
+            $kode_persediaan = '';
+            $kode_hpp = '';
+
+            if ($prefix === 'Q') {
+                if ($is_bkp) {
+                    $kode_persediaan = '14010';
+                    $kode_hpp = '51010';
+                } else {
+                    $kode_persediaan = '14011';
+                    $kode_hpp = '51011';
+                }
+            } elseif ($prefix === 'Z') {
+                $kode_persediaan = '14011';
+                $kode_hpp = '51011';
+            } elseif ($prefix === 'A') {
+                $kode_persediaan = '14031';
+                $kode_hpp = '51031';
+            } else {
+                $kode_persediaan = $prod && !empty($prod['kode_akun_persediaan']) ? $prod['kode_akun_persediaan'] : '14010';
+                $kode_hpp = $prod && !empty($prod['kode_akun_harga_pokok']) ? $prod['kode_akun_harga_pokok'] : '51010';
+            }
+
+            $id_persediaan = isset($akun_map[$kode_persediaan]) ? $akun_map[$kode_persediaan] : 0;
+            $id_hpp = isset($akun_map[$kode_hpp]) ? $akun_map[$kode_hpp] : 0;
+
+            if ($cost_total > 0 && $id_persediaan > 0 && $id_hpp > 0) {
+                $key = $id_persediaan . '-' . $id_hpp;
+                if (!isset($grouped_stock[$key])) {
+                    $grouped_stock[$key] = 0.0;
+                }
+                $grouped_stock[$key] += $cost_total;
+            }
         }
 
         // Insert Grouped Retur Lines (Debit)
@@ -499,6 +543,40 @@ class M_Journal extends CI_Model
                 'kredit' => $total_debit
             ]);
             $total_kredit += $total_debit;
+        }
+
+        // Insert Stock Reversal Lines (Debit: Persediaan, Kredit: HPP)
+        foreach ($grouped_stock as $key => $cost_amount) {
+            if ($cost_amount <= 0) continue;
+            list($id_persediaan, $id_hpp) = explode('-', $key);
+
+            $persediaan_info = $this->db->get_where('tbkeu_akun', ['id_akun' => $id_persediaan])->row_array();
+            $nama_persediaan = $persediaan_info ? $persediaan_info['nama_akun'] : 'Persediaan';
+
+            $hpp_info = $this->db->get_where('tbkeu_akun', ['id_akun' => $id_hpp])->row_array();
+            $nama_hpp = $hpp_info ? $hpp_info['nama_akun'] : 'HPP';
+
+            // Debit: Persediaan
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal,
+                'nomor_baris' => $line_num++,
+                'id_akun' => $id_persediaan,
+                'keterangan' => 'Reversal Persediaan Retur (' . $nama_persediaan . ') - ' . $no_retur,
+                'debit' => $cost_amount,
+                'kredit' => 0
+            ]);
+            $total_debit += $cost_amount;
+
+            // Kredit: HPP
+            $this->db->insert('tbkeu_jurnal_detail', [
+                'id_jurnal' => $id_jurnal,
+                'nomor_baris' => $line_num++,
+                'id_akun' => $id_hpp,
+                'keterangan' => 'Reversal HPP Retur (' . $nama_hpp . ') - ' . $no_retur,
+                'debit' => 0,
+                'kredit' => $cost_amount
+            ]);
+            $total_kredit += $cost_amount;
         }
 
         // Adjust totals in header to match exact rounding
