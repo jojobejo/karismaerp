@@ -747,9 +747,9 @@ $route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPen
 $route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
 $route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';
 $route['retur_penjualan/ajax/search_barang']                 = 'sales/C_ReturPenjualan/ajax_search_barang';
-// Koor SC
-$route['retur_penjualan/koor_sc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/koor_sc_verifikasi/$1';
-$route['retur_penjualan/koor_sc/simpan/(:any)']              = 'sales/C_ReturPenjualan/koor_sc_simpan/$1';
+// Manager SC (Mng SC)
+$route['retur_penjualan/mngsc/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/mngsc_verifikasi/$1';
+$route['retur_penjualan/mngsc/simpan/(:any)']              = 'sales/C_ReturPenjualan/mngsc_simpan/$1';
 // Kadep UB (Jagung)
 $route['retur_penjualan/kadepub/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/kadepub_verifikasi/$1';
 $route['retur_penjualan/kadepub/simpan/(:any)']              = 'sales/C_ReturPenjualan/kadepub_simpan/$1';
