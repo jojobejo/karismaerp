@@ -753,9 +753,9 @@ $route['retur_penjualan/mngsc/simpan/(:any)']              = 'sales/C_ReturPenju
 // Kadep UB (Jagung)
 $route['retur_penjualan/kadepub/verifikasi/(:any)']          = 'sales/C_ReturPenjualan/kadepub_verifikasi/$1';
 $route['retur_penjualan/kadepub/simpan/(:any)']              = 'sales/C_ReturPenjualan/kadepub_simpan/$1';
-// Admin Stock
-$route['retur_penjualan/admin_stock/cek/(:any)']             = 'sales/C_ReturPenjualan/admin_stock_cek/$1';
-$route['retur_penjualan/admin_stock/simpan/(:any)']          = 'sales/C_ReturPenjualan/admin_stock_simpan/$1';
+// Admin Retur (Adm Retur)
+$route['retur_penjualan/admretur/cek/(:any)']                = 'sales/C_ReturPenjualan/admretur_cek/$1';
+$route['retur_penjualan/admretur/simpan/(:any)']             = 'sales/C_ReturPenjualan/admretur_simpan/$1';
 // Kadep SC
 $route['retur_penjualan/kadep_sc/approve/(:any)']            = 'sales/C_ReturPenjualan/kadep_sc_approve/$1';
 $route['retur_penjualan/kadep_sc/simpan/(:any)']             = 'sales/C_ReturPenjualan/kadep_sc_simpan/$1';
