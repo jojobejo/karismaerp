@@ -1,3 +1,4 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <!-- views/content/sales/retur/spr_form.php -->
 <style>
     .spr-card-header {

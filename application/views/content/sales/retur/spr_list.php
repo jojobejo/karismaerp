@@ -1,19 +1,10 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <!-- views/content/sales/retur/spr_list.php -->
 <style>
-    .spr-status-badge {
-        display: inline-flex;
-        justify-content: center;
-        min-width: 110px;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: .3px;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
     .timeline-step {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
         font-size: 11px;
     }
     .timeline-step .dot {
@@ -22,9 +13,6 @@
         border-radius: 50%;
         flex-shrink: 0;
     }
-    .dot-done    { background: #28a745; }
-    .dot-active  { background: #ffc107; }
-    .dot-pending { background: #dee2e6; }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -252,7 +240,7 @@
                                                     <span class="text-danger small"><i class="fas fa-times-circle"></i> Ditolak</span>
                                                 <?php else: ?>
                                                     <div class="d-flex align-items-center">
-                                                        <div class="progress flex-grow-1 mr-1" style="height:14px; border-radius:3px;">
+                                                        <div class="progress flex-grow-1 mr-1" style="height:14px;">
                                                             <div class="progress-bar bg-<?= $bar_c ?>"
                                                                  style="width:<?= $pct ?>%; font-size:10px; line-height:14px;">
                                                                 <?= $pct > 20 ? $pct.'%' : '' ?>

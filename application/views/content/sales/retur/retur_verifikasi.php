@@ -1,3 +1,4 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <?php /* views/content/sales/retur/retur_verifikasi.php */ ?>
 <style>
     .table-detail-spr th { background:#f8f9fa; font-size:12px; border:1px solid #dee2e6; }

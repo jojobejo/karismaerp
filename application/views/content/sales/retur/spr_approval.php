@@ -1,3 +1,4 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <!-- views/content/sales/retur/spr_approval.php -->
 <!-- Digunakan oleh: Manager SC, Admin Retur, Kadep SC, Logistik -->
 <style>

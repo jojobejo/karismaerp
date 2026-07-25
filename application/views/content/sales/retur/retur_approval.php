@@ -1,3 +1,4 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <?php /* views/content/sales/retur/retur_approval.php */
 if (!function_exists('hitung_durasi')) {
     function hitung_durasi($from, $to) {

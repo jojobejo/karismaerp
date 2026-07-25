@@ -1,3 +1,4 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <?php /* views/content/sales/retur/admlpb2_spr_list.php */ ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">

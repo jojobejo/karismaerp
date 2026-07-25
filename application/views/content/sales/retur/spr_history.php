@@ -1,28 +1,5 @@
+<?php $this->load->view('content/sales/retur_custom_css'); ?>
 <!-- views/content/sales/retur/spr_history.php -->
-<style>
-    .spr-status-badge {
-        display: inline-flex;
-        justify-content: center;
-        min-width: 110px;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: .3px;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-    .history-badge {
-        display: inline-flex;
-        justify-content: center;
-        min-width: 110px;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 3px 8px;
-        border-radius: 4px;
-    }
-    .table-history th { background: #f8f9fa; font-size: 12px; border: 1px solid #dee2e6; }
-    .table-history td { font-size: 12px; border: 1px solid #dee2e6; vertical-align: middle; }
-</style>
-
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
