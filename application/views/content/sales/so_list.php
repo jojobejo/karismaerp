@@ -294,7 +294,7 @@
                                     <!-- PROGRESS -->
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="progress flex-grow-1 mr-1" style="height:16px; border-radius:3px;">
+                                            <div class="progress flex-grow-1 mr-1" style="height:16px;">
                                                 <div class="progress-bar bg-<?= $bar_color ?>"
                                                      style="width:<?= $pct ?>%; font-size:10px; line-height:16px;">
                                                     <?= $pct > 15 ? $pct . '%' : '' ?>

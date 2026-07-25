@@ -815,3 +815,40 @@
     }
 }
 
+/* ==========================================================================
+   Sales Order List Progress Bar Modernization
+   ========================================================================== */
+.sales-modern-page .progress {
+    background-color: #eaecf4 !important;
+    border-radius: 30px !important; /* Fully rounded corners */
+    overflow: hidden !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05) !important;
+}
+.sales-modern-page .progress-bar {
+    border-radius: 30px !important;
+    box-shadow: none !important;
+    transition: width 0.6s ease !important;
+}
+
+/* Gradients for Progress Bars on Sales Order Page */
+.sales-modern-page .progress-bar.bg-success {
+    background: linear-gradient(90deg, #1cc88a, #0fbe7c) !important;
+}
+.sales-modern-page .progress-bar.bg-warning {
+    background: linear-gradient(90deg, #f6c23e, #dda20a) !important;
+    color: #ffffff !important;
+}
+.sales-modern-page .progress-bar.bg-danger {
+    background: linear-gradient(90deg, #e74a3b, #d12e1e) !important;
+}
+.sales-modern-page .progress-bar.bg-info {
+    background: linear-gradient(90deg, #36b9cc, #2299aa) !important;
+}
+.sales-modern-page .progress-bar.bg-primary {
+    background: linear-gradient(90deg, #4e73df, #2e59d9) !important;
+}
+.sales-modern-page .progress-bar.bg-secondary {
+    background: linear-gradient(90deg, #858796, #6e707e) !important;
+}
+
+
