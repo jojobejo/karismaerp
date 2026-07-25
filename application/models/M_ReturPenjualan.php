@@ -402,7 +402,7 @@ class M_ReturPenjualan extends CI_Model
 
     public function get_spr_detail($id_spr)
     {
-        $this->db->select('d.*, m.satuan, m.kd_barang');
+        $this->db->select('d.*, m.satuan, m.kode_barang AS kd_barang');
         $this->db->from('tbrp_spr_detail d');
         $this->db->join('tbpo_barang m', 'm.nama_barang = d.nama_barang', 'left');
         $this->db->where('d.id_spr', (int) $id_spr);
