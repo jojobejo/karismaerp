@@ -196,7 +196,19 @@ $money = function ($value) {
                                             </tr>
                                         <?php endforeach; ?>
 
-                                        <tr class="total-row">
+                                        <?php 
+                                        $isHarta = false;
+                                        if ($isNeraca) {
+                                            $secName = strtolower($section['name'] ?? '');
+                                            $secCode = (string)($section['code'] ?? '');
+                                            $secCodePrefix = substr($secCode, 0, 1);
+                                            if ($secCodePrefix === '1' || strpos($secName, 'harta') !== false || strpos($secName, 'asset') !== false) {
+                                                $isHarta = true;
+                                            }
+                                        }
+                                        $totalRowClass = $isHarta ? 'grand-row' : 'total-row';
+                                        ?>
+                                        <tr class="<?= $totalRowClass ?>">
                                             <td colspan="5">Total <?= html_escape($section['name']) ?></td>
                                             <td class="money-cell"><?= $money($section['total'] ?? 0) ?></td>
                                         </tr>

@@ -239,7 +239,7 @@ $default_metode = '';
                                     <?= $is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran' ?>
                                 </h3>
                             </div>
-                            <form action="<?= $is_bg_cair_mode ? base_url('keuangan/pembayaran/cair/' . $pending_bg['id_pembayaran']) : base_url('keuangan/pembayaran/simpan/' . $faktur['id_faktur']) ?>"
+                            <form id="formPembayaran" action="<?= $is_bg_cair_mode ? base_url('keuangan/pembayaran/cair/' . $pending_bg['id_pembayaran']) : base_url('keuangan/pembayaran/simpan/' . $faktur['id_faktur']) ?>"
                                   method="post"
                                   <?= $is_bg_cair_mode ? "onsubmit=\"return confirm('Tandai BG ini sudah cair dan kurangi sisa tagihan?');\"" : '' ?>>
                                 <div class="card-body">
@@ -551,9 +551,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (kreditNilaiEl) kreditNilaiEl.textContent = formattedAmount;
     }
 
+    var diskonInput = document.getElementById('jumlah_diskon');
+
     metode.addEventListener('change', handleMetodeChange);
     if (jumlahInput) {
         jumlahInput.addEventListener('input', hitungJurnal);
+    }
+    if (diskonInput) {
+        diskonInput.addEventListener('input', hitungJurnal);
+    }
+
+    var form = document.getElementById('formPembayaran');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Only validate in normal mode (not BG cair mode where fields are readonly)
+            if (<?= $is_bg_cair_mode ? 'true' : 'false' ?>) {
+                return;
+            }
+
+            var bayar = parseFloat(jumlahInput.value) || 0;
+            var diskon = diskonInput ? (parseFloat(diskonInput.value) || 0) : 0;
+            var total = bayar + diskon;
+
+            if (total > sisaTagihan + 1) { // Allowing tiny floating point buffer similar to server side
+                e.preventDefault();
+                alert('❌ Jumlah Pembayaran + Diskon (Rp ' + total.toLocaleString('id-ID') + ') tidak boleh melebihi Sisa Tagihan (Rp ' + sisaTagihan.toLocaleString('id-ID') + ')!');
+                return false;
+            }
+        });
     }
     
     handleMetodeChange();

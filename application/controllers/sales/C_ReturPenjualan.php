@@ -433,9 +433,12 @@ class C_ReturPenjualan extends CI_Controller
             echo json_encode(['results' => []]);
             return;
         }
-        $this->db->select('kd_barang, nama_barang, satuan, hpp');
+        $this->db->select('kode_barang AS kd_barang, nama_barang, satuan, 0 AS hpp');
         $this->db->from('tbpo_barang');
+        $this->db->group_start();
         $this->db->like('nama_barang', $q);
+        $this->db->or_like('kode_barang', $q);
+        $this->db->group_end();
         $this->db->order_by('nama_barang', 'ASC');
         $this->db->limit(30);
         $rows = $this->db->get()->result_array();
@@ -443,7 +446,7 @@ class C_ReturPenjualan extends CI_Controller
         $results = array_map(function($r) {
             return [
                 'id'     => $r['nama_barang'],
-                'text'   => $r['nama_barang'],
+                'text'   => '[' . $r['kd_barang'] . '] ' . $r['nama_barang'],
                 'satuan' => $r['satuan'],
                 'harga'  => (float) $r['hpp'],
             ];
