@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<!-- views/content/sales/retur/spr_approval.php -->
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><!-- views/content/sales/retur/spr_approval.php -->
 <!-- Digunakan oleh: Manager SC, Admin Retur, Kadep SC, Logistik -->
 <style>
     .table-detail-spr th { background: #f8f9fa; font-size: 14px; border: 1px solid #dee2e6; padding: 8px !important; }

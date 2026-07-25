@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<?php /* views/content/sales/retur/retur_approval.php */
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><?php /* views/content/sales/retur/retur_approval.php */
 if (!function_exists('hitung_durasi')) {
     function hitung_durasi($from, $to) {
         if (empty($from) || empty($to)) return null;

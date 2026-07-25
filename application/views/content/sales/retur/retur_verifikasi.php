@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<?php /* views/content/sales/retur/retur_verifikasi.php */ ?>
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><?php /* views/content/sales/retur/retur_verifikasi.php */ ?>
 <style>
     .table-detail-spr th { background:#f8f9fa; font-size:12px; border:1px solid #dee2e6; }
     .table-detail-spr td { font-size:12px; border:1px solid #dee2e6; vertical-align:middle; }

@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<!-- views/content/sales/retur/spr_form.php -->
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><!-- views/content/sales/retur/spr_form.php -->
 <style>
     .spr-card-header {
         background: linear-gradient(135deg, #c0392b, #e74c3c);

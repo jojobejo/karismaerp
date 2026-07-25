@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<?php /* views/content/sales/retur/retur_form.php */ ?>
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><?php /* views/content/sales/retur/retur_form.php */ ?>
 <style>
     .table-retur th { background: #343a40; color: #fff; font-size: 12px; }
     .table-retur td { font-size: 12px; vertical-align: middle; }

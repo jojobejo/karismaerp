@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<!DOCTYPE html>
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">

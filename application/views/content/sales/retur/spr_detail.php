@@ -1,5 +1,4 @@
-<?php $this->load->view('content/sales/retur_custom_css'); ?>
-<!-- views/content/sales/retur/spr_detail.php -->
+<link rel="stylesheet" href="<?= base_url('assets/dist/css/retur-custom.css') ?>"><!-- views/content/sales/retur/spr_detail.php -->
 <?php
 if (!function_exists('hitung_durasi')) {
     function hitung_durasi($from, $to) {
