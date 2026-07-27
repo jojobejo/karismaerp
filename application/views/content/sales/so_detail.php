@@ -134,7 +134,7 @@ $format_payment = function($value) {
             <?php endforeach; ?>
 
             <!-- TOMBOL AKSI -->
-            <div class="sales-action-bar">
+            <div class="sales-action-bar mb-3">
                 <a href="<?= $back_url ?>" class="btn btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> <?= $back_label ?>
                 </a>
@@ -257,7 +257,7 @@ $format_payment = function($value) {
             <?php endif; ?>
 
             <!-- INFORMASI & ITEM SO -->
-            <div class="card card-outline card-primary mb-3 collapsed-card">
+            <div class="card card-outline card-primary mb-3">
                 <div class="card-header py-2">
                     <h3 class="card-title">
                         <i class="fas fa-info-circle mr-1"></i> Informasi & Item Sales Order
@@ -265,7 +265,7 @@ $format_payment = function($value) {
                     </h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                            <i class="fas fa-plus"></i>
+                            <i class="fas fa-minus"></i>
                         </button>
                     </div>
                 </div>

@@ -157,15 +157,13 @@ class M_pembayaran extends CI_Model
                 id_faktur,
                 COALESCE(SUM(
                     CASE
-                        WHEN LOWER(COALESCE(metode_pembayaran, '')) = 'bg'
-                            AND COALESCE(status_bg, 'pending') <> 'cair' THEN 0
-                        ELSE jumlah_pembayaran
+                        WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN 0
+                        ELSE (jumlah_pembayaran + jumlah_diskon)
                     END
                 ), 0) AS total_pembayaran,
                 COALESCE(SUM(
                     CASE
-                        WHEN LOWER(COALESCE(metode_pembayaran, '')) = 'bg'
-                            AND COALESCE(status_bg, 'pending') <> 'cair' THEN jumlah_pembayaran
+                        WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN (jumlah_pembayaran + jumlah_diskon)
                         ELSE 0
                     END
                 ), 0) AS total_bg_pending
@@ -313,8 +311,7 @@ class M_pembayaran extends CI_Model
     {
         return $this->db
             ->where('id_faktur', (int)$id_faktur)
-            ->where("LOWER(COALESCE(metode_pembayaran, '')) = 'bg'", null, false)
-            ->where('status_bg <>', 'cair')
+            ->where('status_bg', 'pending')
             ->order_by('tanggal_pembayaran', 'ASC')
             ->order_by('id_pembayaran', 'ASC')
             ->limit(1)
@@ -328,7 +325,7 @@ class M_pembayaran extends CI_Model
         $this->db->insert($this->payment_table, $data);
         $id_pembayaran = $this->db->insert_id();
 
-        $is_pending_bg = (strtolower($data['metode_pembayaran'] ?? '') === 'bg' && ($data['status_bg'] ?? '') === 'pending');
+        $is_pending_bg = (($data['status_bg'] ?? '') === 'pending');
 
         if (!$is_pending_bg && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
             $this->load->model('M_Journal');
@@ -390,5 +387,50 @@ class M_pembayaran extends CI_Model
         $total_used = (float)$this->db->get()->row()->total_used;
 
         return max(0.0, $total_retur - $total_used);
+    }
+
+    public function update_cara_pembayaran($id_faktur, $cara_pembayaran)
+    {
+        if ($this->db->field_exists('cara_pembayaran', 'tbso_faktur_penjualan')) {
+            $this->db->where('id_faktur', (int)$id_faktur);
+            return $this->db->update('tbso_faktur_penjualan', ['cara_pembayaran' => $cara_pembayaran]);
+        }
+        return false;
+    }
+
+    public function get_recent_payments($keyword = '', $limit = 50)
+    {
+        $this->db->select('p.*, c.nama_customer, c.kd_customer');
+        $this->db->from($this->payment_table . ' p');
+        $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left');
+        $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
+        
+        if ($keyword !== '') {
+            $this->db->group_start();
+            $this->db->like('p.no_faktur', $keyword);
+            $this->db->or_like('c.nama_customer', $keyword);
+            $this->db->or_like('p.metode_pembayaran', $keyword);
+            $this->db->group_end();
+        }
+        
+        $this->db->order_by('p.tanggal_pembayaran', 'DESC');
+        $this->db->order_by('p.id_pembayaran', 'DESC');
+        $this->db->limit($limit);
+        
+        return $this->db->get()->result_array();
+    }
+
+    public function get_due_pending_payments()
+    {
+        return $this->db
+            ->select('p.*, c.nama_customer, c.kd_customer')
+            ->from($this->payment_table . ' p')
+            ->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left')
+            ->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left')
+            ->where('p.status_bg', 'pending')
+            ->where('p.tanggal_bg_cair <=', date('Y-m-d'))
+            ->order_by('p.tanggal_bg_cair', 'ASC')
+            ->get()
+            ->result_array();
     }
 }

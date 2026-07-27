@@ -163,6 +163,9 @@
                             <i class="fas fa-route mr-2"></i> Rute Siap Faktur
                         </h3>
                         <div class="card-tools">
+                            <a href="<?= base_url('sales_order/admin_sc/activity_log') ?>" class="btn btn-warning btn-xs mr-1">
+                                <i class="fas fa-history mr-1"></i> Activity Log
+                            </a>
                             <a href="<?= base_url('sales_order/admin_sc/faktur') ?>" class="btn btn-light btn-xs mr-1">
                                 <i class="fas fa-file-invoice mr-1"></i> Faktur Selesai
                             </a>

@@ -267,9 +267,6 @@
                     <a href="<?= base_url('sales_order') ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke SO
                     </a>
-                    <a href="<?= base_url('sales_order/faktur_rute') ?>" class="btn btn-success btn-sm ml-1">
-                        <i class="fas fa-route mr-1"></i> Faktur per Rute
-                    </a>
                     <?php if (!empty($selected_rute) && !empty($sales_orders)): ?>
                     <button type="button"
                             class="btn btn-success btn-sm ml-1"

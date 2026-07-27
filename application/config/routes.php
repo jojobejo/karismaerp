@@ -165,6 +165,7 @@ $route['keuangan']                                  = 'keuangan/C_Keuangan';
 $route['keuangan/pembelian']                         = 'keuangan/C_Keuangan/menu_pembelian';
 $route['keuangan/penjualan']                         = 'keuangan/C_Keuangan/menu_penjualan';
 $route['keuangan/pembayaran']                       = 'keuangan/C_pembayaran';
+$route['keuangan/pembayaran/history']               = 'keuangan/C_pembayaran/history';
 $route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/customer/$1';
 $route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
 $route['keuangan/pembayaran/simpan/(:num)']         = 'keuangan/C_pembayaran/simpan/$1';
@@ -735,6 +736,8 @@ $route['sales_order/admin_sc/get_faktur_detail_info_json'] = 'sales/C_SalesOrder
 $route['sales_order/split_faktur/(:any)']           = 'sales/C_SalesOrder/split_faktur/$1';
 $route['sales_order/simpan_split_faktur/(:any)']     = 'sales/C_SalesOrder/simpan_split_faktur/$1';
 $route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kembalikan_so_ke_sales';
+$route['sales_order/admin_sc/get_faktur_activity_log_json'] = 'sales/C_SalesOrder/get_faktur_activity_log_json';
+$route['sales_order/admin_sc/activity_log'] = 'sales/C_SalesOrder/admin_sc_activity_log';
 
 
 // ---- Retur Penjualan (SPR) ----

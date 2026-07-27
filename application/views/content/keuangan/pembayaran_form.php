@@ -221,7 +221,12 @@ $default_metode = '';
                                                             <br><small class="text-muted">Dikonfirmasi <?= date('d/m/Y H:i', strtotime($row['bg_cair_at'])) ?></small>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <td class="text-right">Rp <?= number_format((float)$row['jumlah_pembayaran'], 0, ',', '.') ?></td>
+                                                    <td class="text-right">
+                                                        Rp <?= number_format((float)$row['jumlah_pembayaran'], 0, ',', '.') ?>
+                                                        <?php if ((float)($row['jumlah_diskon'] ?? 0) > 0): ?>
+                                                            <br><small class="text-muted">(Diskon: Rp <?= number_format((float)$row['jumlah_diskon'], 0, ',', '.') ?>)</small>
+                                                        <?php endif; ?>
+                                                    </td>
                                                 </tr>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
@@ -249,11 +254,18 @@ $default_metode = '';
                                             Pembayaran BG ini sudah dicatat tetapi belum mengurangi tagihan. Klik tombol <strong>BG Sudah Cair</strong> untuk memasukkannya ke total pembayaran.
                                         </div>
                                     <?php endif; ?>
-                                    <div class="form-group">
-                                        <label>Metode Pembayaran <span class="text-danger">*</span></label>
-                                        <?php if ($is_bg_cair_mode): ?>
+                                    <?php if ($is_bg_cair_mode): ?>
+                                        <div class="form-group">
+                                            <label>Cara Pembayaran</label>
                                             <input type="text" class="form-control" value="BG" readonly>
-                                        <?php else: ?>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Metode Pembayaran <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" value="<?= htmlspecialchars($pending_bg['metode_pembayaran'] ?? '-') ?>" readonly>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="form-group">
+                                            <label>Metode Pembayaran <span class="text-danger">*</span></label>
                                              <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required>
                                                  <?php foreach ($metode_options as $value => $label): ?>
                                                      <?php
@@ -268,8 +280,23 @@ $default_metode = '';
                                                      </option>
                                                  <?php endforeach; ?>
                                              </select>
-                                        <?php endif; ?>
-                                    </div>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="form-group" <?= $is_bg_cair_mode ? 'style="display:none;"' : '' ?>>
+                                         <label>Cara Pembayaran Faktur <span class="text-danger">*</span></label>
+                                         <select name="cara_pembayaran_faktur" class="form-control" required <?= $is_bg_cair_mode ? 'disabled' : '' ?>>
+                                             <?php
+                                             $current_cp = strtolower(trim((string)($faktur['cara_pembayaran'] ?? '')));
+                                             $cp_options = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG', 'tempo' => 'Tempo'];
+                                             foreach ($cp_options as $cpKey => $cpLabel):
+                                             ?>
+                                                 <option value="<?= $cpKey ?>" <?= $current_cp === $cpKey ? 'selected' : '' ?>>
+                                                     <?= htmlspecialchars($cpLabel) ?>
+                                                 </option>
+                                             <?php endforeach; ?>
+                                         </select>
+                                         <small class="text-muted">Gunakan pilihan ini untuk mengubah cara pembayaran faktur jika diperlukan.</small>
+                                     </div>
                                     <div class="form-group">
                                         <label>Tanggal Pembayaran <span class="text-danger">*</span></label>
                                         <input type="date" name="tanggal_pembayaran" class="form-control"
@@ -476,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var jumlahInput = document.querySelector('input[name="jumlah_pembayaran"]');
     var sisaTagihan = <?= (float)$faktur['sisa_tagihan'] ?>;
     var saldoRetur = <?= (float)$saldo_retur ?>;
+    var caraBayarFaktur = document.querySelector('select[name="cara_pembayaran_faktur"]');
 
     if (!metode) return;
 
@@ -483,10 +511,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleMetodeChange() {
         var val = metode.value;
+        var termVal = caraBayarFaktur ? caraBayarFaktur.value : '';
         
         // Toggle BG Group
         if (bgGroup) {
-            var isBg = val === 'bg';
+            var isBg = (val === 'bg' || termVal === 'bg');
             bgGroup.style.display = isBg ? '' : 'none';
             if (bgDate) bgDate.required = isBg;
         }
@@ -554,6 +583,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var diskonInput = document.getElementById('jumlah_diskon');
 
     metode.addEventListener('change', handleMetodeChange);
+    if (caraBayarFaktur) {
+        caraBayarFaktur.addEventListener('change', handleMetodeChange);
+    }
     if (jumlahInput) {
         jumlahInput.addEventListener('input', hitungJurnal);
     }

@@ -110,8 +110,11 @@
                 <?php endforeach; ?>
 
                 <div class="mb-3">
-                    <a href="<?= base_url('sales_order/admin_sc') ?>" class="btn btn-secondary btn-sm">
+                    <a href="<?= base_url('sales_order/admin_sc') ?>" class="btn btn-secondary btn-sm mr-1">
                         <i class="fas fa-arrow-left mr-1"></i> Kembali ke Admin SC
+                    </a>
+                    <a href="<?= base_url('sales_order/admin_sc/activity_log') ?>" class="btn btn-warning btn-sm">
+                        <i class="fas fa-history mr-1"></i> Activity Log Admin SC
                     </a>
                 </div>
 

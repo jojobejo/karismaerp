@@ -35,6 +35,28 @@
                     <?php endif; ?>
                 <?php endforeach; ?>
 
+                <?php if (!empty($due_payments)): ?>
+                    <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert" style="border-left: 5px solid #ffc107;">
+                        <h5 class="font-weight-bold"><i class="fas fa-bell mr-2"></i>Pemberitahuan BG Jatuh Tempo / Lewat Tanggal Cair!</h5>
+                        <p class="mb-2">Terdapat <strong><?= count($due_payments) ?></strong> pembayaran tunda/BG yang sudah mencapai atau melewati tanggal cair hari ini. Harap segera konfirmasi pencairan jika dana sudah masuk:</p>
+                        <ul class="mb-0 pl-3 small">
+                            <?php foreach (array_slice($due_payments, 0, 5) as $pay): ?>
+                                <li>
+                                    Faktur <strong><?= htmlspecialchars($pay['no_faktur']) ?></strong> - <?= htmlspecialchars($pay['nama_customer']) ?> 
+                                    (Metode: <?= htmlspecialchars($pay['metode_pembayaran'] ?: '-') ?>, Jml: Rp <?= number_format((float)$pay['jumlah_pembayaran'], 0, ',', '.') ?>, Rencana Cair: <?= date('d/m/Y', strtotime($pay['tanggal_bg_cair'])) ?>) 
+                                    - <a href="<?= base_url('keuangan/pembayaran/bayar/' . $pay['id_faktur']) ?>" class="alert-link font-weight-bold" style="text-decoration: underline;"><i class="fas fa-external-link-alt ml-1"></i> Buka Form Bayar</a>
+                                </li>
+                            <?php endforeach; ?>
+                            <?php if (count($due_payments) > 5): ?>
+                                <li class="font-italic">Dan <?= count($due_payments) - 5 ?> data lainnya...</li>
+                            <?php endif; ?>
+                        </ul>
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                <?php endif; ?>
+
                 <div class="card card-outline card-primary">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-search mr-1"></i>Cari Customer</h3>
@@ -55,6 +77,12 @@
                             </div>
                         </form>
                     </div>
+                </div>
+
+                <div class="mb-3 text-right">
+                    <a href="<?= base_url('keuangan/pembayaran/history') ?>" class="btn btn-success">
+                        <i class="fas fa-history mr-1"></i>Histori Pembayaran
+                    </a>
                 </div>
 
                 <div class="card">

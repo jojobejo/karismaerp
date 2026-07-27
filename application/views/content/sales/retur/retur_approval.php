@@ -181,12 +181,6 @@ if (!function_exists('hitung_durasi')) {
                                 <div class="spr-note-bottom mt-3">
                                     Barang yang kami retur sesuai dengan data di atas. Bilamana tidak sesuai, maka kami (toko) akan bertanggung jawab
                                     menerima konsekuensinya (retur ditolak) sesuai kebijakan PT Karisma Indoagro Universal. <br><br>
-                                    <strong>Catatan Keuangan:</strong> 
-                                    <?php if (($retur['tipe_retur'] ?? 'biasa') === 'biasa'): ?>
-                                        Jika retur ini telah diselesaikan, maka saldo dari retur ini akan masuk ke akun <strong>210-17 Q Hutang Non Dagang (Retur Penjualan yg blm dipot)</strong> milik customer dan jurnal otomatis akan dibuat.
-                                    <?php else: ?>
-                                        Karena tipe retur adalah <strong><?= strtoupper($retur['tipe_retur']) ?></strong>, maka tidak ada jurnal otomatis yang akan dibuat.
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

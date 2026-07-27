@@ -12,6 +12,7 @@ class C_SalesOrder extends CI_Controller
         $this->load->model('M_Stock');
         $this->load->model('M_Logistik');
         $this->load->model('M_ActivityLog');
+        $this->load->model('M_FakturLog');
         $this->load->model('M_Checker');
         $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
@@ -1045,7 +1046,18 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
+        $old_detail = $this->db->get_where('tbso_so_detail', ['id_so_detail' => $id_so_detail])->row_array();
         $updated = $this->M_SalesOrder->update_so_detail_harga($id_so, $id_so_detail, $harga, $this->_getUsername());
+        if ($updated) {
+            $this->M_FakturLog->log(
+                $so['no_so'] ?? '',
+                null,
+                null,
+                'UPDATE_HARGA',
+                'Admin SC mengubah harga item ' . ($old_detail['nama_barang'] ?? '') . ' pada SO ' . ($so['no_so'] ?? '') . ' menjadi Rp ' . number_format($harga, 0, ',', '.'),
+                $this->_getUsername()
+            );
+        }
         echo json_encode([
             'msg' => $updated ? 'success' : 'error',
             'message' => $updated ? 'Harga SO berhasil diperbarui.' : 'Gagal memperbarui harga SO.',
@@ -1801,6 +1813,16 @@ class C_SalesOrder extends CI_Controller
                 implode("\n", $detail_str)
             );
 
+            $this->M_FakturLog->log(
+                $so['no_so'] ?? '',
+                $no_faktur,
+                is_array($result) ? ($result['id_faktur'] ?? null) : null,
+                'BUAT_FAKTUR',
+                'Admin SC membuat Faktur Penjualan ' . $no_faktur . ' dari SO ' . ($so['no_so'] ?? '') . ' (' . count($faktur_items) . ' item).',
+                $this->_getUsername(),
+                implode("\n", $detail_str)
+            );
+
             // Cek apakah SO sudah completed
             $auto_do_message = '';
             if (!empty($auto_do['kd_do'])) {
@@ -2124,6 +2146,14 @@ class C_SalesOrder extends CI_Controller
         $result = $this->M_SalesOrder->proses_split_faktur($faktur, $details, $splits, $username);
 
         if ($result === true) {
+            $this->M_FakturLog->log(
+                $so['no_so'] ?? '',
+                $faktur['no_faktur'] ?? '',
+                $id_faktur,
+                'SPLIT_FAKTUR',
+                'Admin SC memecah Faktur Z ' . ($faktur['no_faktur'] ?? '') . ' menjadi ' . count($splits) . ' faktur turunan.',
+                $username
+            );
             $this->session->set_flashdata('success', 'Faktur Z <b>' . $faktur['no_faktur'] . '</b> berhasil dipecah menjadi faktur turunan.');
             redirect('sales_order/detail_faktur/' . $id_faktur);
         } else {
@@ -2950,6 +2980,16 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
+        $faktur_info = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
+        $this->M_FakturLog->log(
+            $faktur_info['no_so'] ?? null,
+            $faktur_info['no_faktur'] ?? null,
+            $id_faktur,
+            'REPOST_ITEM',
+            'Admin SC merepost ' . count($id_fd_list) . ' item faktur kembali ke SO.',
+            $repost_by
+        );
+
         echo json_encode([
             'status'  => true,
             'message' => 'Item berhasil direpost ke SO.',
@@ -3075,6 +3115,15 @@ class C_SalesOrder extends CI_Controller
             $update_by
         );
 
+        $this->M_FakturLog->log(
+            $so['no_so'] ?? '',
+            null,
+            null,
+            'KEMBALIKAN_SO',
+            'Admin SC mengembalikan SO ' . ($so['no_so'] ?? '') . ' ke Sales. Status baru: ' . $result['new_status'],
+            $update_by
+        );
+
         $message = 'SO berhasil dikembalikan ke Sales dengan status <b>' . $result['new_status'] . '</b>.';
         
         // Jika DO otomatis dibuat karena matching barang tidak terfaktur = tidak dimuat
@@ -3089,5 +3138,69 @@ class C_SalesOrder extends CI_Controller
             'do_created' => $result['do_created'] ?? null,
         ]);
         exit;
+    }
+
+    public function get_faktur_activity_log_json()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (!$this->_canAccessAdminSc()) {
+            echo json_encode(['status' => false, 'message' => 'Akses ditolak']);
+            exit;
+        }
+
+        $id_faktur = $this->input->get('id_faktur', true);
+        $no_faktur = $this->input->get('no_faktur', true);
+        $no_so     = $this->input->get('no_so', true);
+        $keyword   = $this->input->get('keyword', true);
+        $limit     = (int)($this->input->get('limit', true) ?: 100);
+
+        $logs = $this->M_FakturLog->get_filtered([
+            'id_faktur' => $id_faktur,
+            'no_faktur' => $no_faktur,
+            'no_so'     => $no_so,
+            'keyword'   => $keyword,
+        ], $limit);
+
+        foreach ($logs as &$log) {
+            $log['formatted_date'] = !empty($log['created_at']) ? date('d/m/Y H:i:s', strtotime($log['created_at'])) : '-';
+        }
+        unset($log);
+
+        echo json_encode(['status' => true, 'data' => $logs]);
+        exit;
+    }
+
+    public function admin_sc_activity_log()
+    {
+        if (!$this->_canAccessAdminSc()) {
+            $this->_denyAdminScAccess();
+            return;
+        }
+
+        $per_page = 25;
+        $page     = max(1, (int)($this->input->get('page') ?? 1));
+        $offset   = ($page - 1) * $per_page;
+
+        $filter = [
+            'no_so'     => $this->input->get('no_so',   true) ?? '',
+            'no_faktur' => $this->input->get('no_faktur', true) ?? '',
+            'aksi'      => $this->input->get('aksi',    true) ?? '',
+            'tanggal'   => $this->input->get('tanggal', true) ?? '',
+            'keyword'   => $this->input->get('keyword', true) ?? '',
+        ];
+
+        $data['page_title'] = 'KARISMA - Activity Log Admin SC';
+        $data['logs']       = $this->M_FakturLog->get_filtered($filter, $per_page, $offset);
+        $data['total']      = $this->M_FakturLog->count_filtered($filter);
+        $data['filter']     = $filter;
+        $data['per_page']   = $per_page;
+        $data['page']       = $page;
+        $data['total_pages']= ceil($data['total'] / $per_page);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/admin_sc_activity_log.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 }
