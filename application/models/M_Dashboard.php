@@ -142,6 +142,10 @@ class M_Dashboard extends CI_Model
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
             'SC' => 'sales',
+            'ADMINSC' => 'sales',
+            'MNGSC' => 'sales',
+            'MANAGER SC' => 'sales',
+            'MANAGERSC' => 'sales',
         );
 
         if (isset($map[$jobdesk]) && isset($sections[$map[$jobdesk]])) {

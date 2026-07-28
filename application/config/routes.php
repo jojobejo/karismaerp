@@ -867,6 +867,12 @@ $route['buku_besar/jurnal_umum_list']               = 'keuangan/C_BukuBesar/jurn
 $route['buku_besar/jurnal_umum_store']              = 'keuangan/C_BukuBesar/jurnal_umum_store';
 $route['buku_besar/jurnal_umum_delete']             = 'keuangan/C_BukuBesar/jurnal_umum_delete';
 $route['buku_besar/jurnal_umum_detail']             = 'keuangan/C_BukuBesar/jurnal_umum_detail';
+// APPROVAL EDIT HARGA SALES ORDER
+$route['sales_order/admin_sc/minta_approval_harga/(:num)']  = 'sales/C_SalesOrder/admin_sc_minta_approval_harga/$1';
+$route['sales_order/admin_sc/get_approval_status/(:num)']    = 'sales/C_SalesOrder/admin_sc_get_approval_status/$1';
+$route['sales_order/admin_sc/approve_harga']                 = 'sales/C_SalesOrder/admin_sc_approve_harga';
+$route['sales_order/admin_sc/reject_harga']                  = 'sales/C_SalesOrder/admin_sc_reject_harga';
+$route['sales_order/admin_sc/get_pending_approvals']         = 'sales/C_SalesOrder/admin_sc_get_pending_approvals';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

@@ -17,6 +17,30 @@ class C_SalesOrder extends CI_Controller
         $this->load->library(['form_validation', 'session', 'pagination']);
         $this->load->helper(['url', 'form']);
         $this->config->load('plafon_api', false, true);
+        $this->_initApprovalTable();
+    }
+
+    private function _initApprovalTable()
+    {
+        if (!$this->db->table_exists('tbso_approval_harga')) {
+            $this->db->query("
+                CREATE TABLE `tbso_approval_harga` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `id_so` INT NOT NULL,
+                    `id_so_detail` INT NOT NULL,
+                    `harga_lama` DECIMAL(15,2) NOT NULL,
+                    `harga_baru` DECIMAL(15,2) NOT NULL,
+                    `requested_by` VARCHAR(100) NOT NULL,
+                    `status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    `approved_by` VARCHAR(100) DEFAULT NULL,
+                    `created_at` DATETIME NOT NULL,
+                    `updated_at` DATETIME NOT NULL,
+                    INDEX (`id_so`),
+                    INDEX (`id_so_detail`),
+                    INDEX (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            ");
+        }
     }
 
     // ================================================================
@@ -283,7 +307,7 @@ class C_SalesOrder extends CI_Controller
 
     private function _canAccessAdminSc()
     {
-        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC', 'SC', 'SALESCOUNTER', 'ADMIN'], true);
+        return in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['ADMINSC', 'SC', 'SALESCOUNTER', 'ADMIN', 'MNGSC', 'MANAGER SC', 'MANAGERSC'], true);
     }
 
     private function _isAdminScOnlyUser()
@@ -1046,7 +1070,28 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
-        $old_detail = $this->db->get_where('tbso_so_detail', ['id_so_detail' => $id_so_detail])->row_array();
+        // Enforce approval check for non-manager SC users (e.g. ADMINSC)
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        $can_bypass = in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true);
+
+        if (!$can_bypass) {
+            $approved_request = $this->db->get_where('tbso_approval_harga', [
+                'id_so_detail' => $id_so_detail,
+                'harga_baru' => $harga,
+                'status' => 'approved'
+            ])->row_array();
+
+            if (!$approved_request) {
+                echo json_encode([
+                    'msg' => 'error',
+                    'message' => 'Perubahan harga memerlukan persetujuan Manager SC. Silakan ajukan permintaan persetujuan.',
+                    'require_approval' => true
+                ]);
+                exit;
+            }
+        }
+
+        $old_detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
         $updated = $this->M_SalesOrder->update_so_detail_harga($id_so, $id_so_detail, $harga, $this->_getUsername());
         if ($updated) {
             $this->M_FakturLog->log(
@@ -1111,9 +1156,12 @@ class C_SalesOrder extends CI_Controller
             if ($customer) {
                 $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
                 if ($plafon !== null && (float)$plafon == 1000) {
-                    $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
-                    redirect('sales_order/create');
-                    return;
+                    $cp = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
+                    if (!in_array($cp, ['cash', 'transfer'], true)) {
+                        $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 harus menggunakan pembayaran Cash atau Transfer.');
+                        redirect('sales_order/create');
+                        return;
+                    }
                 }
 
                 $grand_total = 0;
@@ -1377,9 +1425,12 @@ class C_SalesOrder extends CI_Controller
             if ($customer) {
                 $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
                 if ($plafon !== null && (float)$plafon == 1000) {
-                    $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
-                    redirect('sales_order/edit/' . $id_so);
-                    return;
+                    $cp = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
+                    if (!in_array($cp, ['cash', 'transfer'], true)) {
+                        $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 harus menggunakan pembayaran Cash atau Transfer.');
+                        redirect('sales_order/edit/' . $id_so);
+                        return;
+                    }
                 }
 
                 $grand_total = 0;
@@ -3202,5 +3253,196 @@ class C_SalesOrder extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/sales/admin_sc_activity_log.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function admin_sc_minta_approval_harga($id_so)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($this->input->method() !== 'post') {
+            echo json_encode(['msg' => 'error', 'message' => 'Method tidak valid.']);
+            exit;
+        }
+
+        if (!$this->_canAccessAdminSc()) {
+            echo json_encode(['msg' => 'error', 'message' => 'Anda tidak memiliki akses.']);
+            exit;
+        }
+
+        $id_so_detail = (int)$this->input->post('id_so_detail', true);
+        $harga_baru = (float)$this->input->post('harga', true);
+
+        if ($id_so_detail <= 0 || $harga_baru <= 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'Parameter tidak valid.']);
+            exit;
+        }
+
+        $old_detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $id_so_detail])->row_array();
+        if (!$old_detail) {
+            echo json_encode(['msg' => 'error', 'message' => 'Item SO tidak ditemukan.']);
+            exit;
+        }
+
+        $harga_lama = (float)$old_detail['hrg_satuan'];
+        if (abs($harga_lama - $harga_baru) < 0.01) {
+            echo json_encode(['msg' => 'error', 'message' => 'Harga baru sama dengan harga saat ini.']);
+            exit;
+        }
+
+        // Hapus request pending sebelumnya untuk item ini agar tidak menumpuk
+        $this->db->where([
+            'id_so_detail' => $id_so_detail,
+            'status' => 'pending'
+        ])->delete('tbso_approval_harga');
+
+        $data_request = [
+            'id_so' => $id_so,
+            'id_so_detail' => $id_so_detail,
+            'harga_lama' => $harga_lama,
+            'harga_baru' => $harga_baru,
+            'requested_by' => $this->_getUsername(),
+            'status' => 'pending',
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        $inserted = $this->db->insert('tbso_approval_harga', $data_request);
+
+        echo json_encode([
+            'msg' => $inserted ? 'success' : 'error',
+            'message' => $inserted ? 'Permintaan persetujuan harga berhasil dikirim ke Manager SC.' : 'Gagal mengirim permintaan.',
+        ]);
+        exit;
+    }
+
+    public function admin_sc_get_approval_status($id_so)
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $approvals = $this->db->get_where('tbso_approval_harga', ['id_so' => $id_so])->result_array();
+        echo json_encode([
+            'msg' => 'success',
+            'data' => $approvals
+        ]);
+        exit;
+    }
+
+    public function admin_sc_approve_harga()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        if (!in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Hanya Manager SC yang dapat memberikan persetujuan.']);
+            exit;
+        }
+
+        $id_approval = (int)$this->input->post('id', true);
+        if ($id_approval <= 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'ID tidak valid.']);
+            exit;
+        }
+
+        $approval = $this->db->get_where('tbso_approval_harga', ['id' => $id_approval])->row_array();
+        if (!$approval) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data permintaan tidak ditemukan.']);
+            exit;
+        }
+
+        $this->db->trans_begin();
+
+        $this->db->where('id', $id_approval)->update('tbso_approval_harga', [
+            'status' => 'approved',
+            'approved_by' => $this->_getUsername(),
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->M_SalesOrder->update_so_detail_harga(
+            $approval['id_so'],
+            $approval['id_so_detail'],
+            $approval['harga_baru'],
+            $this->_getUsername()
+        );
+
+        $so = $this->M_SalesOrder->get_so($approval['id_so']);
+        $old_detail = $this->db->get_where('tbso_sales_order_detail', ['id' => $approval['id_so_detail']])->row_array();
+
+        $this->M_FakturLog->log(
+            $so['no_so'] ?? '',
+            null,
+            null,
+            'UPDATE_HARGA',
+            'Manager SC menyetujui perubahan harga item ' . ($old_detail['nama_barang'] ?? '') . ' menjadi Rp ' . number_format($approval['harga_baru'], 0, ',', '.'),
+            $this->_getUsername()
+        );
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo json_encode(['msg' => 'error', 'message' => 'Gagal memproses persetujuan.']);
+        } else {
+            $this->db->trans_commit();
+            echo json_encode(['msg' => 'success', 'message' => 'Permintaan persetujuan harga disetujui.']);
+        }
+        exit;
+    }
+
+    public function admin_sc_reject_harga()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        if (!in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Hanya Manager SC yang dapat menolak permintaan.']);
+            exit;
+        }
+
+        $id_approval = (int)$this->input->post('id', true);
+        if ($id_approval <= 0) {
+            echo json_encode(['msg' => 'error', 'message' => 'ID tidak valid.']);
+            exit;
+        }
+
+        $approval = $this->db->get_where('tbso_approval_harga', ['id' => $id_approval])->row_array();
+        if (!$approval) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data permintaan tidak ditemukan.']);
+            exit;
+        }
+
+        $updated = $this->db->where('id', $id_approval)->update('tbso_approval_harga', [
+            'status' => 'rejected',
+            'approved_by' => $this->_getUsername(),
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        echo json_encode([
+            'msg' => $updated ? 'success' : 'error',
+            'message' => $updated ? 'Permintaan persetujuan harga ditolak.' : 'Gagal memproses penolakan.',
+        ]);
+        exit;
+    }
+
+    public function admin_sc_get_pending_approvals()
+    {
+        while (ob_get_level()) ob_end_clean();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $this->db->select('a.*, so.no_so, customer.nm_customer, d.nama_barang');
+        $this->db->from('tbso_approval_harga a');
+        $this->db->join('tbso_so so', 'so.id_so = a.id_so', 'left');
+        $this->db->join('tbso_so_detail d', 'd.id_so_detail = a.id_so_detail', 'left');
+        $this->db->join('tb_customer customer', 'customer.id = so.customer_id', 'left');
+        $this->db->where('a.status', 'pending');
+        $this->db->order_by('a.created_at', 'DESC');
+        $pending = $this->db->get()->result_array();
+
+        echo json_encode([
+            'msg' => 'success',
+            'data' => $pending
+        ]);
+        exit;
     }
 }
