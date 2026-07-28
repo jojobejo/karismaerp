@@ -861,6 +861,13 @@ $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
 
+// BUKU BESAR & JURNAL UMUM
+$route['buku_besar/jurnal_umum']                    = 'keuangan/C_BukuBesar/jurnal_umum';
+$route['buku_besar/jurnal_umum_list']               = 'keuangan/C_BukuBesar/jurnal_umum_list';
+$route['buku_besar/jurnal_umum_store']              = 'keuangan/C_BukuBesar/jurnal_umum_store';
+$route['buku_besar/jurnal_umum_delete']             = 'keuangan/C_BukuBesar/jurnal_umum_delete';
+$route['buku_besar/jurnal_umum_detail']             = 'keuangan/C_BukuBesar/jurnal_umum_detail';
+
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
 

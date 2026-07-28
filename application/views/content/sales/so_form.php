@@ -164,7 +164,10 @@
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <!-- <small class="text-muted">Cara pembayaran akan otomatis digunakan saat faktur dibuat.</small> -->
+                                            <div id="plafon-payment-warning" class="alert alert-warning py-1 px-2 mt-1 mb-0 small" style="display:none;">
+                                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                <strong>Plafon customer 1.000:</strong> Hanya <strong>Cash</strong> atau <strong>Transfer</strong> yang diizinkan.
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1097,19 +1100,42 @@ function focusTableRow(selector, current, step) {
     rows[next].scrollIntoView({ block: 'nearest' });
 }
 
+function applyPlafonRestriction(plafon) {
+    var sel = document.getElementById('cara_pembayaran');
+    var warning = document.getElementById('plafon-payment-warning');
+    var isPlafon1000 = (parsePlafonNumber(plafon) === 1000);
+    if (!sel) return;
+
+    Array.prototype.forEach.call(sel.options, function(opt) {
+        var val = opt.value;
+        if (isPlafon1000 && (val === 'bg' || val === 'tempo')) {
+            opt.style.display = 'none';
+            opt.disabled = true;
+            /* Jika nilai saat ini adalah bg/tempo, reset ke cash */
+            if (sel.value === 'bg' || sel.value === 'tempo') {
+                sel.value = 'cash';
+            }
+        } else {
+            opt.style.display = '';
+            opt.disabled = false;
+        }
+    });
+
+    if (warning) warning.style.display = isPlafon1000 ? '' : 'none';
+}
+
 function chooseCustomerRow(tr) {
     if (!tr) return;
-    var plafon = parsePlafonNumber(tr.dataset.plafon);
-    if (plafon !== null && plafon === 1000) {
-        salesToast('error', 'Customer dengan plafon 1.000 tidak dapat dipilih untuk membuat SO.');
-        return;
-    }
     document.getElementById('customer_id').value      = tr.dataset.kd;
     document.getElementById('customer_name').value    = tr.dataset.nama;
     document.getElementById('customer_display').value = tr.dataset.nama;
     document.getElementById('customer_plafon').value  = tr.dataset.plafon || '';
     updateSelectedCustomerPlafon(tr.dataset.kd, tr.dataset.plafon);
     document.getElementById('customer_validation').style.display = 'none';
+    applyPlafonRestriction(tr.dataset.plafon || '');
+    if (parsePlafonNumber(tr.dataset.plafon) === 1000) {
+        salesToast('info', 'Customer plafon 1.000: cara pembayaran hanya Cash atau Transfer.');
+    }
     $('#modal-customer').modal('hide');
 }
 
@@ -1280,6 +1306,7 @@ document.getElementById('customer-body').addEventListener('keydown', function(e)
     if (e.key === 'Enter') { e.preventDefault(); chooseCustomerRow(tr); }
 });
 updateSelectedCustomerPlafon(document.getElementById('customer_id').value, '');
+applyPlafonRestriction(document.getElementById('customer_plafon').value || '');
 
 /* Cari barang */
 document.getElementById('stock-search').addEventListener('input', function(){ renderStock(stockCache); });
@@ -1348,9 +1375,12 @@ document.getElementById('form-so').addEventListener('submit', function(e){
     }
     var custPlafon = parsePlafonNumber(document.getElementById('customer_plafon').value);
     if (custPlafon !== null && custPlafon === 1000) {
-        e.preventDefault();
-        salesToast('error', 'Customer dengan plafon 1.000 tidak dapat digunakan untuk membuat SO.');
-        return;
+        var cp = document.getElementById('cara_pembayaran').value;
+        if (cp === 'bg' || cp === 'tempo') {
+            e.preventDefault();
+            salesToast('error', 'Customer dengan plafon 1.000 hanya boleh menggunakan cara pembayaran Cash atau Transfer.');
+            return;
+        }
     }
     var rows=document.querySelectorAll('#item-body tr');
     var grandTotal = 0;
