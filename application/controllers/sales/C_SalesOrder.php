@@ -3430,11 +3430,11 @@ class C_SalesOrder extends CI_Controller
         while (ob_get_level()) ob_end_clean();
         header('Content-Type: application/json; charset=utf-8');
 
-        $this->db->select('a.*, so.no_so, customer.nm_customer, d.nama_barang');
+        $this->db->select('a.*, so.no_so, customer.nama_customer AS nm_customer, d.nama_barang');
         $this->db->from('tbso_approval_harga a');
-        $this->db->join('tbso_so so', 'so.id_so = a.id_so', 'left');
-        $this->db->join('tbso_so_detail d', 'd.id_so_detail = a.id_so_detail', 'left');
-        $this->db->join('tb_customer customer', 'customer.id = so.customer_id', 'left');
+        $this->db->join('tbso_sales_order so', 'so.id_so = a.id_so', 'left');
+        $this->db->join('tbso_sales_order_detail d', 'd.id = a.id_so_detail', 'left');
+        $this->db->join('tb_customer customer', 'customer.kd_customer = so.kd_customer', 'left');
         $this->db->where('a.status', 'pending');
         $this->db->order_by('a.created_at', 'DESC');
         $pending = $this->db->get()->result_array();

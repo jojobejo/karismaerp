@@ -121,6 +121,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/buku_besar') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book"></i>
+                <p>
+                  Buku Besar
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>

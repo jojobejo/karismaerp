@@ -704,6 +704,22 @@ $(document).ready(function () {
         let adaMelewati = false;
         let hargaTidakValid = false;
 
+        // Cek apakah ada harga yang masih pending approval
+        let adaPending = false;
+        if (typeof soApprovals !== 'undefined' && soApprovals.length > 0) {
+            soApprovals.forEach(function(app) {
+                if (app.status === 'pending') {
+                    adaPending = true;
+                }
+            });
+        }
+
+        if (adaPending) {
+            e.preventDefault();
+            salesToast('error', 'Faktur tidak dapat disimpan karena masih ada perubahan harga yang menunggu persetujuan Manager SC.');
+            return;
+        }
+
         $('.qty-faktur').each(function () {
             const qty    = parseFloat($(this).val()) || 0;
             const maxQty = parseFloat($(this).data('outstanding')) || 0;
