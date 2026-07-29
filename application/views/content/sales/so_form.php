@@ -757,7 +757,7 @@ function bindBaris(idx) {
     var sel = document.getElementById('exp_'+idx);
     if (sel) sel.addEventListener('change', function() {
         var opt = this.options[this.selectedIndex];
-        if (!opt || !opt.value) return;
+        if (!opt || this.selectedIndex === 0) return;
         var av  = parseFloat(opt.dataset.av  || 0);
         var lot = opt.dataset.lot || '';
         var bg  = parseFloat(opt.dataset.ton || 0);
