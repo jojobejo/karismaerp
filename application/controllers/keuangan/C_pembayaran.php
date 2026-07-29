@@ -19,10 +19,11 @@ class C_pembayaran extends CI_Controller
             redirect('Auth');
         }
 
-        if (strtoupper((string)$this->session->userdata('jobdesk')) !== 'KIUKEU') {
-            $this->session->set_flashdata('error', 'Halaman pembayaran faktur hanya untuk user KIU KEU.');
-            redirect('dashboard');
-        }
+        // Menonaktifkan sementara blokir jobdesk KIUKEU untuk testing/akses fleksibel
+        // if (strtoupper((string)$this->session->userdata('jobdesk')) !== 'KIUKEU') {
+        //     $this->session->set_flashdata('error', 'Halaman pembayaran faktur hanya untuk user KIU KEU.');
+        //     redirect('dashboard');
+        // }
     }
 
     public function index()
@@ -74,10 +75,11 @@ class C_pembayaran extends CI_Controller
 
     public function bayar($id_faktur = null)
     {
-        $faktur = $this->_get_valid_faktur($id_faktur);
+        $faktur = $this->_get_valid_faktur($id_faktur, true);
 
         $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN FAKTUR';
         $data['faktur'] = $faktur;
+        $data['is_lunas'] = (float)$faktur['sisa_tagihan'] <= 0;
         $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
         $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
         $data['saldo_retur'] = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
@@ -233,16 +235,16 @@ class C_pembayaran extends CI_Controller
         }
     }
 
-    private function _get_valid_faktur($id_faktur)
+    private function _get_valid_faktur($id_faktur, $allow_lunas = false)
     {
-        $faktur = $this->M_pembayaran->get_faktur_summary((int)$id_faktur);
+        $faktur = $this->M_pembayaran->get_faktur_summary($id_faktur);
 
         if (!$faktur || $faktur['status'] !== 'selesai_do') {
             $this->session->set_flashdata('error', 'Faktur tidak ditemukan atau belum selesai DO.');
             redirect('keuangan/pembayaran');
         }
 
-        if ((float)$faktur['sisa_tagihan'] <= 0) {
+        if (!$allow_lunas && (float)$faktur['sisa_tagihan'] <= 0) {
             $this->session->set_flashdata('warning', 'Faktur tersebut sudah lunas.');
             redirect('keuangan/pembayaran/customer/' . rawurlencode($faktur['kd_customer']));
         }

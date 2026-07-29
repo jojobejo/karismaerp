@@ -1350,7 +1350,12 @@ class M_SalesOrder extends CI_Model
         $this->db->select('f.*, c.nama_customer, c.kd_rute AS customer_kd_rute');
         $this->db->from('tbso_faktur_penjualan f');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
-        $this->db->where('f.id_faktur', $id_faktur);
+        // Support lookup by numeric id_faktur OR by no_faktur string (e.g. from buku besar drilldown)
+        if (is_numeric($id_faktur)) {
+            $this->db->where('f.id_faktur', (int)$id_faktur);
+        } else {
+            $this->db->where('f.no_faktur', $id_faktur);
+        }
         return $this->db->get()->row_array();
     }
 

@@ -289,10 +289,14 @@ class M_pembayaran extends CI_Model
         return $this->db->get()->result_array();
     }
 
-    public function get_faktur_summary($id_faktur)
+    public function get_faktur_summary($identifier)
     {
         $this->_select_invoice_summary();
-        $this->db->where('f.id_faktur', $id_faktur);
+        if (is_numeric($identifier) && (int)$identifier == $identifier) {
+            $this->db->where('f.id_faktur', (int)$identifier);
+        } else {
+            $this->db->where('f.no_faktur', $identifier);
+        }
 
         return $this->db->get()->row_array();
     }

@@ -71,10 +71,24 @@ class M_Journal extends CI_Model
             $userId = null;
         }
 
+        $customerName = '';
+        if (!empty($no_faktur)) {
+            $faktur = $this->db
+                ->select('c.nama_customer')
+                ->from('tbso_faktur_penjualan f')
+                ->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left')
+                ->where('f.no_faktur', $no_faktur)
+                ->get()
+                ->row();
+            if ($faktur) {
+                $customerName = trim($faktur->nama_customer);
+            }
+        }
+
         $jurnal_data = [
             'nomor_jurnal' => $nomor_jurnal,
             'tanggal_transaksi' => $tanggal,
-            'keterangan' => 'Pembayaran Faktur ' . $no_faktur . ' via ' . $metode,
+            'keterangan' => 'Penerimaan dari ' . ($customerName !== '' ? $customerName : 'Customer') . ' via ' . $metode,
             'status' => 'POSTED',
             'source_module' => 'KEUANGAN',
             'source_type' => 'PEMBAYARAN_FAKTUR',

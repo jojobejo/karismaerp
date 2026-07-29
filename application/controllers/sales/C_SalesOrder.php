@@ -1918,7 +1918,10 @@ class C_SalesOrder extends CI_Controller
         $faktur  = $this->M_SalesOrder->get_faktur($id_faktur);
         if (!$faktur) show_404();
 
-        $details = $this->M_SalesOrder->get_faktur_detail($id_faktur);
+        // Resolve numeric id_faktur (supports lookup by no_faktur string from buku besar drilldown)
+        $numeric_id_faktur = $faktur['id_faktur'];
+
+        $details = $this->M_SalesOrder->get_faktur_detail($numeric_id_faktur);
         $so      = $this->M_SalesOrder->get_so($faktur['id_so']);
         if (!$this->_canAccessSo($so)) {
             $this->_denySoAccess();
@@ -1927,7 +1930,7 @@ class C_SalesOrder extends CI_Controller
 
         $child_fakturs = [];
         if (!empty($faktur['is_split_parent'])) {
-            $child_fakturs = $this->db->get_where('tbso_faktur_penjualan', ['parent_id_faktur' => $id_faktur])->result_array();
+            $child_fakturs = $this->db->get_where('tbso_faktur_penjualan', ['parent_id_faktur' => $numeric_id_faktur])->result_array();
         }
 
         $parent_faktur = null;
@@ -1940,7 +1943,7 @@ class C_SalesOrder extends CI_Controller
             $child_details = $this->db->select('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date, SUM(fd.qty) as qty_allocated')
                 ->from('tbso_faktur_detail fd')
                 ->join('tbso_faktur_penjualan fp', 'fp.id_faktur = fd.id_faktur')
-                ->where('fp.parent_id_faktur', $id_faktur)
+                ->where('fp.parent_id_faktur', $numeric_id_faktur)
                 ->where('fp.status !=', 'cancelled')
                 ->group_by('fd.id_so_detail, fd.kd_barang, fd.no_lot, fd.expired_date')
                 ->get()

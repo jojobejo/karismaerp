@@ -128,6 +128,14 @@ class Accounting_source_service
             }
         }
 
+        $customerName = '';
+        if (!empty($header->kd_customer)) {
+            $cust = $this->CI->db->select('nama_customer')->where('kd_customer', $header->kd_customer)->get('tb_customer')->row();
+            if ($cust) {
+                $customerName = ' ' . trim($cust->nama_customer);
+            }
+        }
+
         $base = [
             'tanggal_transaksi' => $header->tanggal_faktur,
             'source_module' => 'SALES',
@@ -137,7 +145,7 @@ class Accounting_source_service
             'scope_type' => 'WAREHOUSE',
             'scope_key' => trim((string)$header->gudang_id) !== '' ? (string)$header->gudang_id : '*',
             'tanggal_jatuh_tempo' => $header->tanggal_jatuh_tempo,
-            'keterangan' => 'Faktur penjualan ' . $noFaktur . ($kdDo !== '' ? ' / DO ' . $kdDo : ''),
+            'keterangan' => 'Penjualan ' . ($customerName !== '' ? $customerName . ' ' : '') . $noFaktur,
         ];
 
         $is_pajak = $this->CI->db->query(

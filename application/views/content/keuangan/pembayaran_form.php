@@ -248,6 +248,12 @@ $default_metode = '';
                                   method="post"
                                   <?= $is_bg_cair_mode ? "onsubmit=\"return confirm('Tandai BG ini sudah cair dan kurangi sisa tagihan?');\"" : '' ?>>
                                 <div class="card-body">
+                                    <?php if (isset($is_lunas) && $is_lunas): ?>
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            Faktur ini sudah dibayar lunas. Anda dapat melihat riwayat pembayarannya di bawah ini.
+                                        </div>
+                                    <?php endif; ?>
                                     <?php if ($is_bg_cair_mode): ?>
                                         <div class="alert alert-warning">
                                             <i class="fas fa-info-circle mr-1"></i>
@@ -340,10 +346,16 @@ $default_metode = '';
                                     </div>
                                 </div>
                                 <div class="card-footer text-right">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas <?= $is_bg_cair_mode ? 'fa-check' : 'fa-save' ?> mr-1"></i>
-                                        <?= $is_bg_cair_mode ? 'BG Sudah Cair' : 'Simpan Pembayaran' ?>
-                                    </button>
+                                    <?php if (isset($is_lunas) && $is_lunas): ?>
+                                        <button type="button" class="btn btn-secondary" disabled>
+                                            <i class="fas fa-ban mr-1"></i> Sudah Lunas
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas <?= $is_bg_cair_mode ? 'fa-check' : 'fa-save' ?> mr-1"></i>
+                                            <?= $is_bg_cair_mode ? 'BG Sudah Cair' : 'Simpan Pembayaran' ?>
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         </div>

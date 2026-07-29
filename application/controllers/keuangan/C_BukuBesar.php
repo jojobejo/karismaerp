@@ -48,7 +48,7 @@ class C_BukuBesar extends CI_Controller
         $data['next_ref'] = 'GJ-' . $dateStr . sprintf('%05d', $next_num);
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/keuangan/buku_besar_jurnal_umum.php', $data);
+        $this->load->view('content/keuangan/jurnal_umum.php', $data);
         $this->load->view('partial/main/footergdg.php');
     }
 
@@ -406,7 +406,12 @@ class C_BukuBesar extends CI_Controller
                 COALESCE(d.nama_departemen, '') as departemen,
                 COALESCE(jd.debit, 0) as debit,
                 COALESCE(jd.kredit, 0) as kredit,
-                jd.id_jurnal_detail
+                jd.id_jurnal_detail,
+                j.source_module,
+                j.source_type,
+                j.source_id,
+                j.source_no,
+                j.id_jurnal
             ", false);
             $this->db->from('tbkeu_jurnal_detail jd');
             $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = jd.id_jurnal', 'inner');

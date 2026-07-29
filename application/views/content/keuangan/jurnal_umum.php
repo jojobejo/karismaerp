@@ -1,4 +1,4 @@
-<!-- application/views/content/keuangan/buku_besar_jurnal_umum.php -->
+<!-- application/views/content/keuangan/jurnal_umum.php -->
 <style>
     :root {
         --zahir-blue: #127fad;
@@ -48,25 +48,38 @@
         margin-bottom: 0;
         border-collapse: separate;
         border-spacing: 0;
+        table-layout: fixed;
     }
 
-    .zahir-table th {
+    .zahir-table thead th {
         background-color: var(--zahir-blue) !important;
         color: #fff !important;
-        font-weight: 600;
-        text-transform: uppercase;
+        font-weight: 500;
+        padding: 12px 15px;
         font-size: 13px;
-        letter-spacing: 0.5px;
-        padding: 12px 16px;
+        text-transform: capitalize;
+        letter-spacing: 0.3px;
         border: none;
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
-    .zahir-table td {
-        padding: 12px 16px;
-        vertical-align: middle;
+    .zahir-table tbody td {
+        padding: 12px 15px;
+        font-size: 13px;
         border-bottom: 1px solid #eef2f5;
-        font-size: 14px;
-        transition: background-color 0.2s;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .zahir-table td.text-right-no-ellipsis {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
     }
 
     .zahir-table tbody tr {
@@ -224,16 +237,33 @@
     }
 </style>
 
+<?php 
+$has_id = !empty($this->input->get('id'));
+?>
+<?php if ($has_id): ?>
+<style id="hold-preloader-style">
+    .preloader {
+        height: 100vh !important;
+        opacity: 1 !important;
+        display: flex !important;
+    }
+</style>
+<?php endif; ?>
+
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
+    <!-- Preloader -->
+    <div class="preloader flex-column justify-content-center align-items-center">
+        <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" alt="KarismaLogo" height="150" width="300">
+    </div>
+
     <?php $this->load->view('partial/main/navbar') ?>
     <?php $this->load->view('partial/main/sidebar') ?>
 
     <div class="content-wrapper">
         <div class="buku-besar-container">
-            
             <!-- SECTION 1: DAFTAR TRANSAKSI JURNAL -->
-            <div id="view-list" class="zahir-card">
+            <div id="view-list" class="zahir-card" <?= $has_id ? 'style="display: none;"' : '' ?>>
                 <div class="buku-besar-header d-flex justify-content-between align-items-center">
                     <h2>Daftar Transaksi Jurnal</h2>
                     <div class="d-flex align-items-center" style="gap: 12px;">
@@ -282,7 +312,7 @@
             </div>
 
             <!-- SECTION 2: INPUT TRANSAKSI JURNAL UMUM -->
-            <div id="view-form" class="zahir-card" style="display: none;">
+            <div id="view-form" class="zahir-card" <?= $has_id ? 'style="display: block;"' : 'style="display: none;"' ?>>
                 <div class="buku-besar-header">
                     <h2>Jurnal Umum</h2>
                 </div>
@@ -469,7 +499,7 @@
                                     <td>${row.tanggal_formatted}</td>
                                     <td>${row.nomor_jurnal}</td>
                                     <td>${row.keterangan}</td>
-                                    <td class="text-right font-weight-bold">${row.nilai_formatted}</td>
+                                    <td class="text-right-no-ellipsis text-right font-weight-bold">${row.nilai_formatted}</td>
                                     <td class="text-center">${check}</td>
                                 </tr>`;
                             });
@@ -483,19 +513,27 @@
 
         loadJurnalList();
 
+        // Check if there is an 'id' query parameter in the URL (e.g. from Buku Besar drilldown)
+        const urlParams = new URLSearchParams(window.location.search);
+        const journalId = urlParams.get('id');
+        if (journalId) {
+            // Give a short delay to ensure list is initialized, then load the form
+            setTimeout(function() {
+                openJournalInForm(journalId);
+            }, 300);
+        }
+
         $('#btn-refresh').click(function() {
             loadJurnalList();
         });
 
         // Open journal in form view
         function openJournalInForm(id) {
-            Swal.fire({
-                title: 'Memuat jurnal...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
+            // Animasi preloader ditahan oleh CSS #hold-preloader-style
+            // Jika memanggil ini secara manual (bukan drilldown), panggil preloader baru
+            if (!$('#hold-preloader-style').length) {
+                $('.preloader').css('height', '100vh');
+            }
             
             $.ajax({
                 url: '<?= base_url("buku_besar/jurnal_umum_detail") ?>',
@@ -505,15 +543,22 @@
                 },
                 dataType: 'json',
                 success: function(res) {
-                    Swal.close();
+                    if ($('#hold-preloader-style').length) {
+                        setTimeout(function() {
+                            $('#hold-preloader-style').remove();
+                        }, 100);
+                    } else {
+                        setTimeout(function() {
+                            $('.preloader').css('height', 0);
+                        }, 200);
+                    }
+                    
                     if (res.success && res.data) {
                         let journal = res.data.journal;
                         let details = res.data.details;
                         
-                        $('#view-list').fadeOut(200, function() {
-                            $('#view-form').fadeIn(200);
+                        let populateData = function() {
                             clearForm();
-                            
                             $('#form-ref').val(journal.nomor_jurnal);
                             $('#form-tanggal').val(journal.tanggal_transaksi);
                             $('#form-keterangan').val(journal.keterangan);
@@ -544,14 +589,27 @@
                             });
                             
                             calculateFormTotals();
-                        });
+                        };
+
+                        if ($('#view-form').is(':visible')) {
+                            populateData();
+                        } else {
+                            $('#view-list').fadeOut(200, function() {
+                                $('#view-form').fadeIn(200);
+                                populateData();
+                            });
+                        }
                     } else {
                         Swal.fire('Gagal!', 'Gagal memuat detail jurnal.', 'error');
                     }
                 },
                 error: function() {
-                    Swal.close();
-                    Swal.fire('Gagal!', 'Terjadi kesalahan saat memuat data.', 'error');
+                    if ($('#hold-preloader-style').length) {
+                        $('#hold-preloader-style').remove();
+                    } else {
+                        $('.preloader').css('height', 0);
+                    }
+                    Swal.fire('Gagal!', 'Terjadi kesalahan sistem.', 'error');
                 }
             });
         }
@@ -627,12 +685,17 @@
             });
         });
 
-        // Switch back to list
+        // Switch back to list or return to Buku Besar
         $('#btn-batal-form').click(function() {
-            $('#view-form').fadeOut(200, function() {
-                $('#view-list').fadeIn(200);
-                loadJurnalList();
-            });
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('id')) {
+                window.location.href = '<?= base_url("keuangan/buku_besar") ?>';
+            } else {
+                $('#view-form').fadeOut(200, function() {
+                    $('#view-list').fadeIn(200);
+                    loadJurnalList();
+                });
+            }
         });
 
         // Add row to form

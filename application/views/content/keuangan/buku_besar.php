@@ -64,25 +64,27 @@
     .zahir-table-container {
         height: 500px;
         max-height: 65vh;
-        background-color: #eaeaea;
+        background-color: transparent;
         overflow-y: auto;
     }
 
     .zahir-table {
         width: 100%;
         margin-bottom: 0;
-        border-collapse: collapse;
-        background-color: #f0f0f0;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
     }
 
     .zahir-table th {
         background-color: var(--zahir-blue) !important;
         color: #fff !important;
         font-weight: 500;
+        padding: 12px 15px;
         font-size: 13px;
-        padding: 8px 12px;
-        border: 1px solid #10729c;
-        text-align: left;
+        text-transform: capitalize;
+        letter-spacing: 0.3px;
+        border: none;
         position: -webkit-sticky;
         position: sticky;
         top: 0;
@@ -90,15 +92,20 @@
     }
 
     .zahir-table td {
-        padding: 6px 12px;
+        padding: 12px 15px;
         font-size: 13px;
-        border: 1px solid #d2d6de;
-        color: #333;
-        background-color: #f7f7f7;
+        border-bottom: 1px solid #eef2f5;
+        vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background-color: #fff;
     }
 
-    .zahir-table tbody tr:nth-child(even) td {
-        background-color: #eeeeee;
+    .zahir-table td.text-right-no-ellipsis {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
     }
 
     .zahir-table tbody tr.account-header-row td {
@@ -118,10 +125,22 @@
         font-style: italic;
     }
 
+    /* Drilldown rows: clickable transaction rows */
+    .zahir-table tbody tr.ledger-drilldown-row {
+        cursor: pointer;
+    }
+    .zahir-table tbody tr.ledger-drilldown-row:hover td {
+        background-color: #e3f2fd !important;
+        transition: background-color 0.15s ease;
+    }
+    .zahir-table tbody tr.ledger-drilldown-row:active td {
+        background-color: #b5d9f5 !important;
+    }
+
     .zahir-footer-summary {
         background-color: var(--zahir-blue);
         color: #fff;
-        padding: 12px 20px;
+        padding: 0;
         font-size: 13px;
     }
 
@@ -322,7 +341,18 @@
     }
 </style>
 
-<div class="buku-besar-wrapper">
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+    <!-- Preloader -->
+    <div class="preloader flex-column justify-content-center align-items-center">
+        <img class="animation__shake" src="<?= base_url('assets/images/Karisma.png') ?>" alt="KarismaLogo" height="150" width="300">
+    </div>
+
+    <?php $this->load->view('partial/main/navbar') ?>
+    <?php $this->load->view('partial/main/sidebar') ?>
+
+    <div class="content-wrapper">
+        <div class="buku-besar-wrapper">
     <div class="zahir-card" id="print-area">
         <!-- Top Bar -->
         <div class="zahir-top-bar">
@@ -344,11 +374,11 @@
                         <th style="width: 10%">Tanggal</th>
                         <th style="width: 5%">Tp</th>
                         <th style="width: 15%">No Referensi</th>
-                        <th style="width: 25%">Catatan</th>
-                        <th style="width: 15%">Departemen</th>
-                        <th style="width: 10%; text-align: right;">Debit</th>
-                        <th style="width: 10%; text-align: right;">Kredit</th>
-                        <th style="width: 15%; text-align: right;">Job</th>
+                        <th style="width: 30%">Catatan</th>
+                        <th style="width: 8%">Departemen</th>
+                        <th style="width: 13.5%; text-align: right;">Debit</th>
+                        <th style="width: 13.5%; text-align: right;">Kredit</th>
+                        <th style="width: 5%; text-align: right;">Job</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -359,50 +389,95 @@
             </table>
         </div>
 
-        <!-- Footer Summary -->
-        <div class="zahir-footer-summary">
+        <!-- Footer Summary — lebar kolom sama dengan tabel atas agar lurus -->
+        <div class="zahir-footer-summary" style="padding: 0;">
+
             <!-- Single Mode Summary -->
-            <div id="summary-single-mode">
-                <div class="summary-grid">
-                    <div class="summary-item">
-                        <span>Saldo Awal</span>
-                        <strong id="sum-saldo-awal">Rp 0.00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Jumlah Debit</span>
-                        <strong id="sum-jumlah-debit">Rp 0.00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Saldo Akhir</span>
-                        <strong id="sum-saldo-akhir">Rp 0.00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Jumlah Kredit</span>
-                        <strong id="sum-jumlah-kredit">Rp 0.00</strong>
-                    </div>
-                    <div class="summary-item">
-                        <span>Mutasi</span>
-                        <strong id="sum-mutasi">Rp 0.00</strong>
-                    </div>
-                </div>
+            <div id="summary-single-mode" style="padding-right: 17px;">
+                <table style="width:100%; table-layout:fixed; border-collapse:collapse;">
+                    <colgroup>
+                        <col style="width:10%">
+                        <col style="width:5%">
+                        <col style="width:15%">
+                        <col style="width:30%">
+                        <col style="width:8%">
+                        <col style="width:13.5%">
+                        <col style="width:13.5%">
+                        <col style="width:5%">
+                    </colgroup>
+                    <!-- Baris 1: Saldo Awal | Jumlah Debit | Jumlah Kredit -->
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <td colspan="3" style="padding: 7px 12px; font-size:12px; color: rgba(255,255,255,0.85);">
+                            Saldo Awal:&nbsp;<strong id="sum-saldo-awal" style="color:#fff;">Rp 0.00</strong>
+                        </td>
+                        <td colspan="2" style="padding: 7px 12px; font-size:12px; color: rgba(255,255,255,0.85); text-align:right;">
+                            Jumlah Debit
+                        </td>
+                        <td style="padding: 7px 12px; font-size:13px; font-weight:bold; color:#fff; text-align:right;">
+                            <span id="sum-jumlah-debit">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 7px 12px; font-size:13px; font-weight:bold; color:#fff; text-align:right;">
+                            <span id="sum-jumlah-kredit">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 7px 12px; font-size:12px; color: rgba(255,255,255,0.7); text-align:right;">
+                            Jumlah Kredit
+                        </td>
+                    </tr>
+                    <!-- Baris 2: Saldo Akhir | Mutasi -->
+                    <tr>
+                        <td colspan="3" style="padding: 6px 12px; font-size:12px; color: rgba(255,255,255,0.85);">
+                            Saldo Akhir:&nbsp;<strong id="sum-saldo-akhir" style="color:#fff;">Rp 0.00</strong>
+                        </td>
+                        <td colspan="2" style="padding: 6px 12px; font-size:12px; color: rgba(255,255,255,0.85); text-align:right;">
+                            Mutasi
+                        </td>
+                        <td colspan="2" style="padding: 6px 12px; font-size:13px; font-weight:bold; color:#ffe082; text-align:right; padding-right: 12px;">
+                            <span id="sum-mutasi">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 6px 12px;"></td>
+                    </tr>
+                </table>
             </div>
 
             <!-- Combined Mode Summary -->
-            <div id="summary-combined-mode" style="display: none;">
-                <div style="display: flex; flex-direction: column; width: 100%; max-width: 500px; margin-left: auto; font-size: 13px;">
-                    <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted rgba(255,255,255,0.3);">
-                        <span style="font-weight: 500;">Jumlah</span>
-                        <div style="display: flex; gap: 30px; font-weight: bold; width: 250px; justify-content: space-between;">
-                            <span id="comb-sum-debit" style="text-align: right; flex: 1;">Rp 0.00</span>
-                            <span id="comb-sum-kredit" style="text-align: right; flex: 1;">Rp 0.00</span>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 6px 0;">
-                        <span style="font-weight: 500;">Mutasi</span>
-                        <strong style="font-size: 14px;" id="comb-sum-mutasi">Rp 0.00</strong>
-                    </div>
-                </div>
+            <div id="summary-combined-mode" style="display: none; padding-right: 17px;">
+                <table style="width:100%; table-layout:fixed; border-collapse:collapse;">
+                    <colgroup>
+                        <col style="width:10%">
+                        <col style="width:5%">
+                        <col style="width:15%">
+                        <col style="width:30%">
+                        <col style="width:8%">
+                        <col style="width:13.5%">
+                        <col style="width:13.5%">
+                        <col style="width:5%">
+                    </colgroup>
+                    <!-- Baris Jumlah: lurus di bawah kolom Debit & Kredit -->
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <td colspan="5" style="padding: 7px 12px; font-size:12px; font-weight:500; color: rgba(255,255,255,0.85); text-align:right;">
+                            Jumlah
+                        </td>
+                        <td style="padding: 7px 12px; font-size:13px; font-weight:bold; color:#fff; text-align:right;">
+                            <span id="comb-sum-debit">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 7px 12px; font-size:13px; font-weight:bold; color:#fff; text-align:right;">
+                            <span id="comb-sum-kredit">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 7px 12px;"></td>
+                    </tr>
+                    <!-- Baris Mutasi -->
+                    <tr>
+                        <td colspan="5" style="padding: 6px 12px; font-size:12px; font-weight:500; color: rgba(255,255,255,0.85); text-align:right;">
+                            Mutasi
+                        </td>
+                        <td colspan="2" style="padding: 6px 12px; font-size:13px; font-weight:bold; color:#ffe082; text-align:right; padding-right: 12px;">
+                            <span id="comb-sum-mutasi">Rp 0.00</span>
+                        </td>
+                        <td style="padding: 6px 12px;"></td>
+                    </tr>
+                </table>
             </div>
+
         </div>
     </div>
 
@@ -554,8 +629,7 @@
 $(document).ready(function() {
     let activeTargetInput = null;
 
-    // Show filter modal on page load
-    $('#modalFilter').modal('show');
+
 
     // Tab toggles
     $('.filter-tab-btn').click(function() {
@@ -665,7 +739,11 @@ $(document).ready(function() {
         e.preventDefault();
         $('#btn-submit-filter').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Memproses...');
         
+        let formArray = $(this).serializeArray();
         let formData = $(this).serialize();
+        
+        // Simpan filter ke session storage agar persisten saat di-refresh
+        sessionStorage.setItem('bukuBesarFilter', JSON.stringify(formArray));
 
         $.ajax({
             url: "<?= base_url('keuangan/buku_besar/data') ?>",
@@ -703,6 +781,68 @@ $(document).ready(function() {
         $('#sum-mutasi').text(formatRupiah(0));
     }
 
+    // -------------------------------------------------------
+    // Build Drilldown URL based on source_module / source_type
+    // -------------------------------------------------------
+    function buildDrilldownUrl(m) {
+        let base = '<?= base_url() ?>';
+        let mod  = (m.source_module || '').toUpperCase();
+        let type = (m.source_type  || '').toUpperCase();
+        let sid  = m.source_id  || '';
+        let sno  = m.source_no  || '';
+        let ref  = m.no_referensi || '';
+
+        // --- PENJUALAN (Faktur) ---
+        if (mod === 'SALES' && type === 'FAKTUR_PENJUALAN') {
+            // source_id is the faktur no (e.g. DINV2507260001)
+            // Open faktur detail
+            return base + 'sales_order/detail_faktur/' + encodeURIComponent(sid || ref);
+        }
+        // --- PEMBAYARAN PIUTANG ---
+        if (mod === 'KEUANGAN' && (type === 'PEMBAYARAN_FAKTUR' || type === 'PEMBAYARAN')) {
+            // source_no is the faktur number (e.g. DINV2507260001)
+            let fakturNo = sno || sid;
+            return base + 'keuangan/pembayaran/bayar/' + encodeURIComponent(fakturNo);
+        }
+        // --- PEMBELIAN (LPB) ---
+        if (mod === 'LOGISTIK' && (type === 'LPB_FINAL' || type === 'LPB' || type === 'PEMBELIAN')) {
+            return base + 'ics/detail_record_lpb?id=' + encodeURIComponent(sid);
+        }
+        // --- RETUR PENJUALAN ---
+        if (mod === 'SALES' && type === 'RETUR_PENJUALAN') {
+            return base + 'retur_penjualan/detail/' + encodeURIComponent(sid);
+        }
+        // --- RETUR PEMBELIAN ---
+        if (mod === 'LOGISTIK' && type === 'RETUR_PEMBELIAN') {
+            return base + 'ics/retur/detail_retur/' + encodeURIComponent(sid);
+        }
+        // --- MANUAL / JURNAL UMUM ---
+        if (type === 'MANUAL' || mod === 'MANUAL' || type === 'JURNAL_UMUM' || type === 'GJ' || type === 'JU') {
+            return base + 'buku_besar/jurnal_umum?id=' + encodeURIComponent(m.id_jurnal || '');
+        }
+        // Fallback: open accounting journal detail
+        if (m.id_jurnal) {
+            return base + 'accounting/journal-detail?id=' + encodeURIComponent(m.id_jurnal);
+        }
+        return null;
+    }
+
+    // Build a clickable table row for a mutation
+    function buildMutationRow(m, rowStyle) {
+        let url = buildDrilldownUrl(m);
+        let clickable = url ? 'class="ledger-drilldown-row" data-url="' + url + '" title="Klik 2x untuk membuka transaksi"' : '';
+        return `<tr ${clickable} style="${rowStyle || ''}">
+            <td>${m.tanggal_formatted}</td>
+            <td style="text-align: center; color: var(--zahir-blue); font-weight: bold;">${m.tp}</td>
+            <td>${m.no_referensi}</td>
+            <td>${m.catatan}${url ? ' <span style="color:#aaa;font-size:10px;" title="Double-click untuk buka transaksi">&#x1F517;</span>' : ''}</td>
+            <td>${m.departemen}</td>
+            <td class="text-right-no-ellipsis" style="text-align: right;">${m.debit > 0 ? formatRupiah(m.debit) : 'Rp 0.00'}</td>
+            <td class="text-right-no-ellipsis" style="text-align: right;">${m.kredit > 0 ? formatRupiah(m.kredit) : 'Rp 0.00'}</td>
+            <td></td>
+        </tr>`;
+    }
+
     function renderLedgerTable(response) {
         let data = response.data;
         let filters = response.filters;
@@ -722,16 +862,7 @@ $(document).ready(function() {
 
             // Render mutations in a flat list
             data.forEach(function(m) {
-                tbodyHtml += `<tr>
-                    <td>${m.tanggal_formatted}</td>
-                    <td style="text-align: center; color: var(--zahir-blue); font-weight: bold;">${m.tp}</td>
-                    <td>${m.no_referensi}</td>
-                    <td>${m.catatan}</td>
-                    <td>${m.departemen}</td>
-                    <td style="text-align: right;">${m.debit > 0 ? formatRupiah(m.debit) : 'Rp 0.00'}</td>
-                    <td style="text-align: right;">${m.kredit > 0 ? formatRupiah(m.kredit) : 'Rp 0.00'}</td>
-                    <td></td> <!-- Job column placeholder -->
-                </tr>`;
+                tbodyHtml += buildMutationRow(m);
             });
 
             $('#filtered-account-label').text('Buku Besar (Campuran Akun) | Periode: ' + formatDateIndo(filters.date_from) + ' s.d ' + formatDateIndo(filters.date_to));
@@ -775,16 +906,7 @@ $(document).ready(function() {
                 // Render Mutations
                 if (accData.mutations.length > 0) {
                     accData.mutations.forEach(function(m) {
-                        tbodyHtml += `<tr>
-                            <td>${m.tanggal_formatted}</td>
-                            <td style="text-align: center; color: var(--zahir-blue); font-weight: bold;">${m.tp}</td>
-                            <td>${m.no_referensi}</td>
-                            <td>${m.catatan}</td>
-                            <td>${m.departemen}</td>
-                            <td style="text-align: right;">${m.debit > 0 ? formatRupiah(m.debit) : 'Rp 0.00'}</td>
-                            <td style="text-align: right;">${m.kredit > 0 ? formatRupiah(m.kredit) : 'Rp 0.00'}</td>
-                            <td></td> <!-- Job column placeholder -->
-                        </tr>`;
+                        tbodyHtml += buildMutationRow(m);
                     });
                 } else {
                     tbodyHtml += `<tr>
@@ -817,6 +939,15 @@ $(document).ready(function() {
         }
 
         $('#table-ledger-body tbody').html(tbodyHtml);
+
+        // --- Attach double-click drilldown ---
+        $('#table-ledger-body').off('dblclick', '.ledger-drilldown-row');
+        $('#table-ledger-body').on('dblclick', '.ledger-drilldown-row', function() {
+            let url = $(this).data('url');
+            if (url) {
+                window.location.href = url;
+            }
+        });
     }
 
     function formatDateIndo(dateStr) {
@@ -827,5 +958,47 @@ $(document).ready(function() {
         }
         return dateStr;
     }
+    
+    // Cek filter yang disimpan (setelah event handler .submit terdaftar)
+    let savedFilter = sessionStorage.getItem('bukuBesarFilter');
+    if (savedFilter) {
+        try {
+            let filterArray = JSON.parse(savedFilter);
+            filterArray.forEach(function(item) {
+                let el = $('#formFilterBukuBesar [name="' + item.name + '"]');
+                if (el.length) {
+                    el.val(item.value);
+                }
+            });
+
+            // Update UI Tab berdasarkan filter_type
+            let filterType = $('#filter-type').val();
+            $('.filter-tab-btn').removeClass('active');
+            if (filterType === 'standar') {
+                $('#tab-standar').addClass('active');
+                $('#group-standar').show();
+                $('#group-pencarian').hide();
+            } else {
+                $('#tab-pencarian').addClass('active');
+                $('#group-standar').hide();
+                $('#group-pencarian').show();
+            }
+            
+            // Trigger submit form melalui jQuery
+            $('#formFilterBukuBesar').trigger('submit');
+        } catch (e) {
+            $('#modalFilter').modal('show');
+        }
+    } else {
+        // Show filter modal on page load jika tidak ada filter yg tersimpan
+        $('#modalFilter').modal('show');
+    }
 });
 </script>
+    </div> <!-- end content-wrapper -->
+    <footer class="main-footer">
+        <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
+        All rights reserved.
+    </footer>
+</div> <!-- end wrapper -->
+</body>
