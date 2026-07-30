@@ -129,6 +129,22 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/kas_keluar') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-check-alt"></i>
+                <p>
+                  Kas Keluar
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/kas_masuk') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cash-register"></i>
+                <p>
+                  Kas Masuk
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
