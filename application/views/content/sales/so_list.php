@@ -53,6 +53,21 @@
         justify-content: center;
         min-width: 92px;
     }
+
+    @keyframes custom-shake {
+        0%, 100% { transform: rotate(0deg); }
+        5%, 15%, 25% { transform: rotate(8deg); }
+        10%, 20%, 30% { transform: rotate(-8deg); }
+        35% { transform: rotate(3deg); }
+        40% { transform: rotate(-3deg); }
+        45%, 95% { transform: rotate(0deg); }
+    }
+
+    .btn-shake-notification {
+        animation: custom-shake 2.2s ease-in-out infinite;
+        transform-origin: 50% 50%;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    }
 </style>
 <body class="hold-transition sidebar-mini sidebar-collapse sales-modern-page">
 <div class="wrapper">
@@ -96,6 +111,12 @@
                 <?php endif; ?>
             <?php endforeach; ?>
 
+            <!-- Panel Approval Harga Manager SC (Button-only Mode) -->
+            <?php 
+            $user_jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+            $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true);
+            ?>
+
             <!-- TOMBOL AKSI -->
             <div class="row mb-2">
                 <div class="col-auto">
@@ -128,6 +149,13 @@
                         <i class="fas fa-undo-alt"></i> Retur Penjualan
                     </a>
                 </div>
+                <?php if ($is_manager_sc): ?>
+                <div class="col-auto" id="colPanelApproval" style="display: none;">
+                    <button type="button" class="btn btn-warning text-dark font-weight-bold btn-shake-notification" id="btnBukaPanelApproval">
+                        <i class="fas fa-bell mr-1"></i> Tinjau Permintaan (<span id="managerApprovalCount">0</span>)
+                    </button>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- FILTER -->
@@ -326,6 +354,45 @@
                 </div>
             </div>
 
+            <?php if ($is_manager_sc): ?>
+            <!-- Modal Panel Approval Harga -->
+            <div class="modal fade" id="modalPanelApprovalHarga" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-xl" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title font-weight-bold"><i class="fas fa-money-bill-wave mr-1"></i> Permintaan Persetujuan Edit Harga (Admin SC)</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>No. SO</th>
+                                            <th>Customer</th>
+                                            <th>Barang</th>
+                                            <th class="text-right">Harga Lama</th>
+                                            <th class="text-right text-success">Harga Baru</th>
+                                            <th>Diajukan Oleh</th>
+                                            <th class="text-center" width="20%">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="panel-approval-body">
+                                        <!-- Loaded via AJAX -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
         </div>
     </section>
     </div>
@@ -357,5 +424,111 @@ $(document).ready(function () {
             paginate:    { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
     });
+
+    <?php if ($is_manager_sc): ?>
+    function loadPendingApprovals() {
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/get_pending_approvals") ?>',
+            type: 'GET',
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success' && res.data.length > 0) {
+                    $('#managerApprovalCount').text(res.data.length);
+                    $('#colPanelApproval').fadeIn(200);
+                    
+                    let html = '';
+                    res.data.forEach(function(row) {
+                        html += `<tr>
+                            <td>${row.no_so}</td>
+                            <td>${row.nm_customer || '-'}</td>
+                            <td>${row.nama_barang || '-'}</td>
+                            <td class="text-right">Rp ${parseFloat(row.harga_lama).toLocaleString('id-ID')}</td>
+                            <td class="text-right text-success font-weight-bold">Rp ${parseFloat(row.harga_baru).toLocaleString('id-ID')}</td>
+                            <td>${row.requested_by}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-xs btn-success btn-approve-harga-mgr" data-id="${row.id}"><i class="fas fa-check"></i> Setuju</button>
+                                <button type="button" class="btn btn-xs btn-danger btn-reject-harga-mgr" data-id="${row.id}"><i class="fas fa-times"></i> Tolak</button>
+                            </td>
+                        </tr>`;
+                    });
+                    $('#panel-approval-body').html(html);
+                } else {
+                    $('#colPanelApproval').fadeOut(200);
+                }
+            }
+        });
+    }
+
+    loadPendingApprovals();
+    
+    // Interval check every 15 seconds
+    setInterval(loadPendingApprovals, 15000);
+
+    $('#btnBukaPanelApproval').on('click', function() {
+        $('#modalPanelApprovalHarga').modal('show');
+    });
+
+    $(document).on('click', '.btn-approve-harga-mgr', function() {
+        const id = $(this).data('id');
+        const btn = $(this);
+        btn.prop('disabled', true);
+        
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/approve_harga") ?>',
+            type: 'POST',
+            data: { id: id },
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success') {
+                    alert('✅ ' + res.message);
+                    loadPendingApprovals();
+                    setTimeout(function() {
+                        if ($('#panel-approval-body tr').length <= 1) {
+                            $('#modalPanelApprovalHarga').modal('hide');
+                        }
+                    }, 500);
+                } else {
+                    alert('❌ ' + (res.message || 'Gagal menyetujui.'));
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
+
+    $(document).on('click', '.btn-reject-harga-mgr', function() {
+        const id = $(this).data('id');
+        const btn = $(this);
+        btn.prop('disabled', true);
+        
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/reject_harga") ?>',
+            type: 'POST',
+            data: { id: id },
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success') {
+                    alert('✅ ' + res.message);
+                    loadPendingApprovals();
+                    setTimeout(function() {
+                        if ($('#panel-approval-body tr').length <= 1) {
+                            $('#modalPanelApprovalHarga').modal('hide');
+                        }
+                    }, 500);
+                } else {
+                    alert('❌ ' + (res.message || 'Gagal menolak.'));
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
+    <?php endif; ?>
 });
 </script>

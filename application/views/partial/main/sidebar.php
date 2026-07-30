@@ -125,6 +125,10 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Pembayaran Supplier
+              <a href="<?php echo base_url('keuangan/buku_besar') ?>" class="nav-link">
+                <i class="nav-icon fas fa-book"></i>
+                <p>
+                  Buku Besar
                 </p>
               </a>
             </li>

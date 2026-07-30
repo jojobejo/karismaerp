@@ -102,6 +102,25 @@
                     <?php endif; ?>
                 <?php endforeach; ?>
 
+                <!-- Panel Approval Harga Manager SC -->
+                <?php 
+                $user_jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+                $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true);
+                if ($is_manager_sc): 
+                ?>
+                    <div id="managerApprovalBanner" class="alert alert-warning mb-3" style="display: none; border-left: 5px solid #ffc107;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-exclamation-triangle mr-2 text-warning" style="font-size: 18px;"></i>
+                                <span class="font-weight-bold" id="managerApprovalText">Ada 0 permintaan persetujuan edit harga dari Admin SC.</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" id="btnBukaPanelApproval">
+                                <i class="fas fa-list mr-1"></i> Tinjau Permintaan
+                            </button>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="card card-outline card-secondary">
                     <div class="card-header py-2">
                         <h3 class="card-title"><i class="fas fa-filter mr-1"></i> Filter</h3>
@@ -417,6 +436,43 @@
     </div>
 </div>
 
+<!-- MODAL: PANEL APPROVAL EDIT HARGA (MANAGER SC) -->
+<div class="modal fade" id="modalPanelApprovalHarga" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-check-double mr-2"></i> Permintaan Persetujuan Edit Harga</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped mb-0">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>No. SO</th>
+                                <th>Customer</th>
+                                <th>Barang</th>
+                                <th class="text-right">Harga Lama</th>
+                                <th class="text-right text-success">Harga Baru</th>
+                                <th>Diajukan Oleh</th>
+                                <th class="text-center" width="20%">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="panel-approval-body">
+                            <!-- Loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function () {
     var isRouteDetail = <?= !empty($selected_rute) ? 'true' : 'false' ?>;
@@ -437,7 +493,114 @@ $(document).ready(function () {
             paginate: { first:"Pertama", last:"Terakhir", next:"Berikutnya", previous:"Sebelumnya" }
         }
     });
+
+    <?php if ($is_manager_sc): ?>
+    function loadPendingApprovals() {
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/get_pending_approvals") ?>',
+            type: 'GET',
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success' && res.data.length > 0) {
+                    $('#managerApprovalText').text('Ada ' + res.data.length + ' permintaan persetujuan edit harga dari Admin SC.');
+                    $('#managerApprovalBanner').fadeIn(200);
+                    
+                    let html = '';
+                    res.data.forEach(function(row) {
+                        html += `<tr>
+                            <td>${row.no_so}</td>
+                            <td>${row.nm_customer || '-'}</td>
+                            <td>${row.nama_barang || '-'}</td>
+                            <td class="text-right">Rp ${parseFloat(row.harga_lama).toLocaleString('id-ID')}</td>
+                            <td class="text-right text-success font-weight-bold">Rp ${parseFloat(row.harga_baru).toLocaleString('id-ID')}</td>
+                            <td>${row.requested_by}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-xs btn-success btn-approve-harga-mgr" data-id="${row.id}"><i class="fas fa-check"></i> Setuju</button>
+                                <button type="button" class="btn btn-xs btn-danger btn-reject-harga-mgr" data-id="${row.id}"><i class="fas fa-times"></i> Tolak</button>
+                            </td>
+                        </tr>`;
+                    });
+                    $('#panel-approval-body').html(html);
+                } else {
+                    $('#managerApprovalBanner').fadeOut(200);
+                }
+            }
+        });
+    }
+
+    loadPendingApprovals();
+    
+    // Interval check every 15 seconds
+    setInterval(loadPendingApprovals, 15000);
+
+    $('#btnBukaPanelApproval').on('click', function() {
+        $('#modalPanelApprovalHarga').modal('show');
+    });
+
+    $(document).on('click', '.btn-approve-harga-mgr', function() {
+        const id = $(this).data('id');
+        const btn = $(this);
+        btn.prop('disabled', true);
+        
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/approve_harga") ?>',
+            type: 'POST',
+            data: { id: id },
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success') {
+                    alert('✅ ' + res.message);
+                    loadPendingApprovals();
+                    setTimeout(function() {
+                        if ($('#panel-approval-body tr').length <= 1) {
+                            $('#modalPanelApprovalHarga').modal('hide');
+                        }
+                    }, 500);
+                } else {
+                    alert('❌ ' + (res.message || 'Gagal menyetujui.'));
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
+
+    $(document).on('click', '.btn-reject-harga-mgr', function() {
+        const id = $(this).data('id');
+        const btn = $(this);
+        btn.prop('disabled', true);
+        
+        $.ajax({
+            url: '<?= base_url("sales_order/admin_sc/reject_harga") ?>',
+            type: 'POST',
+            data: { id: id },
+            dataType: 'JSON',
+            success: function(res) {
+                if (res && res.msg === 'success') {
+                    alert('✅ ' + res.message);
+                    loadPendingApprovals();
+                    setTimeout(function() {
+                        if ($('#panel-approval-body tr').length <= 1) {
+                            $('#modalPanelApprovalHarga').modal('hide');
+                        }
+                    }, 500);
+                } else {
+                    alert('❌ ' + (res.message || 'Gagal menolak.'));
+                    btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Terjadi kesalahan koneksi.');
+                btn.prop('disabled', false);
+            }
+        });
+    });
+    <?php endif; ?>
 });
+
 // ── Kembalikan SO ke Sales ─────────────────────────────
 var kembalikanIdSO = 0;
 

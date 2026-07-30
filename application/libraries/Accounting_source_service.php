@@ -128,7 +128,16 @@ class Accounting_source_service
             }
         }
 
+        $customerName = '';
+        if (!empty($header->kd_customer)) {
+            $cust = $this->CI->db->select('nama_customer')->where('kd_customer', $header->kd_customer)->get('tb_customer')->row();
+            if ($cust) {
+                $customerName = trim($cust->nama_customer);
+            }
+        }
+
         $base = [
+            'journal_type' => 'SJ',
             'tanggal_transaksi' => $header->tanggal_faktur,
             'source_module' => 'SALES',
             'source_type' => 'FAKTUR_PENJUALAN',
@@ -137,7 +146,7 @@ class Accounting_source_service
             'scope_type' => 'WAREHOUSE',
             'scope_key' => trim((string)$header->gudang_id) !== '' ? (string)$header->gudang_id : '*',
             'tanggal_jatuh_tempo' => $header->tanggal_jatuh_tempo,
-            'keterangan' => 'Faktur penjualan ' . $noFaktur . ($kdDo !== '' ? ' / DO ' . $kdDo : ''),
+            'keterangan' => 'Penjualan, ' . $customerName,
         ];
 
         $is_pajak = $this->CI->db->query(
@@ -201,14 +210,15 @@ class Accounting_source_service
                     if ($id_akun > 0) $inventory_lines[] = ['amount' => $val, 'id_akun' => $id_akun];
                 }
 
-                $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', $base + [
+                $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', array_merge($base, [
+                    'keterangan' => 'Penyesuaian persediaan, untuk [NOMOR_JURNAL]',
                     'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
                     'amount' => '0.0000',
                     'tax' => '0.0000',
                     'cogs' => $standard_cogs,
                     'cogs_lines' => $cogs_lines,
                     'inventory_lines' => $inventory_lines
-                ], $userId);
+                ]), $userId);
                 if ($issue['success']) {
                     $issue_data = $issue['data'];
                 }

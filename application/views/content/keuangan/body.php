@@ -91,6 +91,7 @@
                             <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                             <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
                             <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
+                            <a href="<?= base_url('keuangan/buku_besar') ?>" class="btn btn-success mb-2">Buku Besar</a>
                         <?php else : ?>
                             <a href="<?= base_url('gudang/1') ?>" class="btn btn-success mb-2">Gudang Global</a>
                             <a href="<?= base_url('gudang/2') ?>" class="btn btn-success mb-2">Gudang Induk</a>
@@ -98,6 +99,7 @@
                             <a href="<?= base_url('daily_stock_lot') ?>" class="btn btn-success mb-2">Stock Expired & Lot</a>
                             <a href="<?= base_url('pendingpo') ?>" class="btn btn-success mb-2">Pending PO</a>
                             <a href="<?= base_url('master_barang') ?>" class="btn btn-success mb-2">Master Barang</a>
+                            <a href="<?= base_url('keuangan/buku_besar') ?>" class="btn btn-success mb-2">Buku Besar</a>
                             <a href="<?= base_url('pricelist_online') ?>" class="btn btn-success mb-2">Pricelist Online</a>
                         <?php endif; ?>
                     </div>

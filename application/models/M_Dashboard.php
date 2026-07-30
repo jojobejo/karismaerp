@@ -32,11 +32,15 @@ class M_Dashboard extends CI_Model
                     $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.'),
                     $this->menu('Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul pembelian dan monitoring PO keuangan.'),
                     $this->menu('Pembayaran Supplier', 'keuangan/pembayaran-supplier', 'fas fa-money-check-alt', 'green', 'Bayar hutang supplier dari LPB, retur, invoice, dan jurnal hutang.'),
+                    $this->menu('Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul pembelian and monitoring PO keuangan.'),
                     $this->menu('Penjualan', 'keuangan/penjualan', 'fas fa-handshake', 'green', 'Akses modul penjualan, jurnal penjualan, dan jurnal pembayaran.'),
                     $this->menu('Retur', 'ics/retur', 'fas fa-undo-alt', 'red', 'Akses retur pembelian dan retur penjualan untuk verifikasi dampak stok serta jurnal.'),
                     $this->menu('Daily Stock Lot', 'daily_stock_lot', 'fas fa-layer-group', 'teal', 'Buka stok harian berbasis lot untuk rekonsiliasi persediaan.'),
                     $this->menu('Master Barang', 'master_barang', 'fas fa-boxes', 'slate', 'Kelola master barang yang dipakai modul keuangan dan stok.'),
                     $this->menu('Jurnal', 'jurnal', 'fas fa-book-open', 'purple', 'Kelola chart of accounts dan akun jurnal general ledger.'),
+                    $this->menu('Transaksi Jurnal Umum', 'buku_besar/jurnal_umum', 'fas fa-book-open', 'lime', 'Kelola dan rekam transaksi jurnal umum.'),
+                    $this->menu('Buku Besar', 'keuangan/buku_besar', 'fas fa-book', 'blue', 'Buka laporan buku besar / general ledger per akun.'),
+                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
                 ),
             ),
             'hrd' => array(
@@ -104,14 +108,6 @@ class M_Dashboard extends CI_Model
                     $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
                 ),
             ),
-            'laporan' => array(
-                'label' => 'LAPORAN',
-                'icon' => 'fas fa-chart-bar',
-                'description' => 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan laporan lainnya.',
-                'menus' => array(
-                    $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'blue', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
-                ),
-            ),
         );
 
         if (!empty($context['is_admin'])) {
@@ -149,6 +145,10 @@ class M_Dashboard extends CI_Model
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
             'SC' => 'sales',
+            'ADMINSC' => 'sales',
+            'MNGSC' => 'sales',
+            'MANAGER SC' => 'sales',
+            'MANAGERSC' => 'sales',
         );
 
         if (isset($map[$jobdesk]) && isset($sections[$map[$jobdesk]])) {

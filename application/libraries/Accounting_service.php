@@ -1138,12 +1138,14 @@ class Accounting_service
         $now = date('Y-m-d H:i:s');
         $status = $postNow ? 'POSTED' : 'DRAFT';
 
+        $keterangan_journal = str_replace('[NOMOR_JURNAL]', $nomor, $normalized['keterangan']);
+
         $this->CI->db->insert('tbkeu_jurnal', [
             'nomor_jurnal' => $nomor,
             'id_jenis_jurnal' => (int)$journalType->id_jenis_jurnal,
             'tanggal_transaksi' => $normalized['tanggal_transaksi'],
             'id_periode' => (int)$period->id_periode,
-            'keterangan' => $normalized['keterangan'],
+            'keterangan' => $keterangan_journal,
             'source_module' => $normalized['source_module'],
             'source_type' => $normalized['source_type'],
             'source_id' => $normalized['source_id'],
@@ -1168,7 +1170,7 @@ class Accounting_service
                 'id_jurnal' => $idJurnal,
                 'nomor_baris' => $index + 1,
                 'id_akun' => (int)$line['id_akun'],
-                'keterangan' => $line['keterangan'],
+                'keterangan' => str_replace('[NOMOR_JURNAL]', $nomor, $line['keterangan']),
                 'debit' => $this->money($line['debit']),
                 'kredit' => $this->money($line['kredit']),
                 'id_customer' => $line['id_customer'] ?: null,
@@ -1181,7 +1183,7 @@ class Accounting_service
             ]);
         }
 
-        $this->log_journal($idJurnal, $postNow ? 'POSTED' : 'DRAFT_CREATED', $normalized['keterangan'], $userId);
+        $this->log_journal($idJurnal, $postNow ? 'POSTED' : 'DRAFT_CREATED', $keterangan_journal, $userId);
 
         return $this->ok($postNow ? 'Jurnal berhasil diposting.' : 'Draft jurnal berhasil dibuat.', [
             'id_jurnal' => $idJurnal,
@@ -1643,6 +1645,9 @@ class Accounting_service
         if ($type === 'AUTO') {
             $period = 'ALL';
             $prefix = 'B25';
+        } elseif ($type === 'SJ') {
+            $period = date('ymd', strtotime($date));
+            $prefix = 'SJ-' . date('dmy', strtotime($date)) . '-';
         } else {
             $period = date('Ym', strtotime($date));
             $prefix = $type . '-' . $period . '-';
@@ -1679,6 +1684,8 @@ class Accounting_service
 
         if ($type === 'AUTO') {
             return $prefix . sprintf('%07d', $next);
+        } elseif ($type === 'SJ') {
+            return $prefix . sprintf('%04d', $next);
         }
         return $prefix . sprintf('%05d', $next);
     }

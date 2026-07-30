@@ -1350,7 +1350,12 @@ class M_SalesOrder extends CI_Model
         $this->db->select('f.*, c.nama_customer, c.kd_rute AS customer_kd_rute');
         $this->db->from('tbso_faktur_penjualan f');
         $this->db->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left');
-        $this->db->where('f.id_faktur', $id_faktur);
+        // Support lookup by numeric id_faktur OR by no_faktur string (e.g. from buku besar drilldown)
+        if (is_numeric($id_faktur)) {
+            $this->db->where('f.id_faktur', (int)$id_faktur);
+        } else {
+            $this->db->where('f.no_faktur', $id_faktur);
+        }
         return $this->db->get()->row_array();
     }
 
@@ -2279,6 +2284,34 @@ class M_SalesOrder extends CI_Model
             }
         }
 
+        // A. Hapus jurnal lama terlebih dahulu (baik untuk cancel maupun recalculate)
+        $no_faktur = $faktur['no_faktur'];
+        $q1 = $this->db->select('id_jurnal')
+            ->where_in('idempotency_key', [
+                'SALES_INVOICE-FAKTUR-' . $no_faktur,
+                'GOODS_ISSUE-FAKTUR-' . $no_faktur
+            ])
+            ->get('tbkeu_jurnal')
+            ->result_array();
+            
+        $q2 = $this->db->select('id_jurnal')
+            ->where('source_type', 'PROMOSI_PENJUALAN')
+            ->where('source_id', $id_faktur)
+            ->get('tbkeu_jurnal')
+            ->result_array();
+            
+        $old_journals = array_merge($q1, $q2);
+
+        if (!empty($old_journals)) {
+            $old_ids = array_column($old_journals, 'id_jurnal');
+            $this->db->where_in('id_jurnal', $old_ids)->delete('tbkeu_jurnal_detail');
+            if ($this->db->table_exists('tbkeu_jurnal_log')) {
+                $this->db->where_in('id_jurnal', $old_ids)->delete('tbkeu_jurnal_log');
+            }
+            $this->db->where_in('id_jurnal', $old_ids)->delete('tbkeu_jurnal');
+        }
+        $this->db->delete('tbso_faktur_jurnal', ['id_faktur' => $id_faktur]);
+
         // 5. Cek sisa detail faktur — jika kosong, cancel faktur
         $sisa_detail = $this->db->where('id_faktur', $id_faktur)->count_all_results('tbso_faktur_detail');
         if ($sisa_detail === 0) {
@@ -2300,6 +2333,57 @@ class M_SalesOrder extends CI_Model
                 'update_by'      => $repost_by,
                 'update_at'      => date('Y-m-d H:i:s'),
             ]);
+
+            // B. Hitung ulang dan posting jurnal baru yang terupdate
+            $this->db->select('SUM(subtotal_after_disc) AS total_after', false);
+            $this->db->where('id_faktur', $id_faktur);
+            $remaining_sums = $this->db->get('tbso_faktur_detail')->row_array();
+            $total_nilai_pesanan = (float)($remaining_sums['total_after'] ?? 0);
+
+            $tax_rate = 0.0;
+            $first_item = $this->db->limit(1)->get_where('tbso_faktur_detail', ['id_faktur' => $id_faktur])->row_array();
+            if ($first_item) {
+                $tax_rate = (float)($first_item['pajak'] ?? 0);
+            }
+            $div_factor = 1 + ($tax_rate / 100);
+
+            $jurnal_piutang = round($total_nilai_pesanan);
+            $jurnal_penjualan = round($jurnal_piutang / $div_factor);
+            $jurnal_ppn_keluar = $jurnal_piutang - $jurnal_penjualan;
+
+            $fj = [
+                'id_faktur'      => $id_faktur,
+                'no_faktur'      => $faktur['no_faktur'],
+                'piutang_dagang' => $jurnal_piutang,
+                'penjualan'      => $jurnal_penjualan,
+                'ppn_keluar'     => $jurnal_ppn_keluar,
+                'created_at'     => date('Y-m-d H:i:s')
+            ];
+            if ($this->db->table_exists('tbso_faktur_jurnal')) {
+                $this->db->insert('tbso_faktur_jurnal', $fj);
+            }
+
+            if ($this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                $this->load->library('Accounting_source_service');
+                $current_user_id = (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0);
+                
+                $journal = $this->accounting_source_service->post_sales_invoice(
+                    $faktur['no_faktur'],
+                    '',
+                    $current_user_id ?: null,
+                    true
+                );
+
+                if (empty($journal['success'])) {
+                    $this->db->trans_rollback();
+                    return [
+                        'errors' => [
+                            'Repost gagal karena posting jurnal baru tidak berhasil: '
+                            . ($journal['message'] ?? 'Posting jurnal gagal.')
+                        ],
+                    ];
+                }
+            }
         }
 
         // 6. Update status SO

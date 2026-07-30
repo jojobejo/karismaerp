@@ -176,6 +176,9 @@ $route['keuangan/pembayaran-supplier/form/(:num)']  = 'keuangan/C_PembayaranSupp
 $route['keuangan/pembayaran-supplier/post']         = 'keuangan/C_PembayaranSupplier/post';
 $route['keuangan/pembayaran-supplier/history']      = 'keuangan/C_PembayaranSupplier/history';
 $route['keuangan/pembayaran-supplier/void/(:num)']  = 'keuangan/C_PembayaranSupplier/void/$1';
+$route['keuangan/pembayaran/bayar/(:any)']          = 'keuangan/C_pembayaran/bayar/$1';
+$route['keuangan/pembayaran/simpan/(:any)']         = 'keuangan/C_pembayaran/simpan/$1';
+$route['keuangan/pembayaran/cair/(:any)']           = 'keuangan/C_pembayaran/cair/$1';
 $route['laporan']                                   = 'keuangan/C_Laporan/index';
 $route['laporan/keuangan']                          = 'keuangan/C_Laporan/keuangan';
 $route['laporan/penjualan']                         = 'keuangan/C_Laporan/penjualan';
@@ -214,6 +217,9 @@ $route['jurnal/master/(:any)/update']               = 'keuangan/C_Keuangan/jurna
 $route['jurnal/master/(:any)/delete']               = 'keuangan/C_Keuangan/jurnal_master_delete/$1';
 $route['jurnal/period-store']                       = 'keuangan/C_Keuangan/jurnal_period_store';
 $route['jurnal/period-action']                      = 'keuangan/C_Keuangan/jurnal_period_action';
+$route['keuangan/buku_besar']                           = 'keuangan/C_BukuBesar/index';
+$route['keuangan/buku_besar/data']                      = 'keuangan/C_BukuBesar/get_ledger_data';
+$route['keuangan/buku_besar/accounts']                  = 'keuangan/C_BukuBesar/get_accounts_lookup';
 $route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
 $route['keuangan/jurnal/pembelian']                 = 'keuangan/C_Keuangan/jurnal_pembelian';
 $route['keuangan/jurnal/penjualan']                 = 'keuangan/C_Keuangan/jurnal_penjualan';
@@ -866,6 +872,19 @@ $route['checker/pause_siapkan_lk']                  = 'logistik/C_Checker/pause_
 $route['checker/resume_siapkan_lk']                 = 'logistik/C_Checker/resume_siapkan_lk';
 $route['checker/detail_kk/(:any)']                  = 'logistik/C_Checker/detail_kk/$1';
 $route['checker/detail_lk/(:any)']                  = 'logistik/C_Checker/detail_lk/$1';
+
+// BUKU BESAR & JURNAL UMUM
+$route['buku_besar/jurnal_umum']                    = 'keuangan/C_BukuBesar/jurnal_umum';
+$route['buku_besar/jurnal_umum_list']               = 'keuangan/C_BukuBesar/jurnal_umum_list';
+$route['buku_besar/jurnal_umum_store']              = 'keuangan/C_BukuBesar/jurnal_umum_store';
+$route['buku_besar/jurnal_umum_delete']             = 'keuangan/C_BukuBesar/jurnal_umum_delete';
+$route['buku_besar/jurnal_umum_detail']             = 'keuangan/C_BukuBesar/jurnal_umum_detail';
+// APPROVAL EDIT HARGA SALES ORDER
+$route['sales_order/admin_sc/minta_approval_harga/(:num)']  = 'sales/C_SalesOrder/admin_sc_minta_approval_harga/$1';
+$route['sales_order/admin_sc/get_approval_status/(:num)']    = 'sales/C_SalesOrder/admin_sc_get_approval_status/$1';
+$route['sales_order/admin_sc/approve_harga']                 = 'sales/C_SalesOrder/admin_sc_approve_harga';
+$route['sales_order/admin_sc/reject_harga']                  = 'sales/C_SalesOrder/admin_sc_reject_harga';
+$route['sales_order/admin_sc/get_pending_approvals']         = 'sales/C_SalesOrder/admin_sc_get_pending_approvals';
 
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';

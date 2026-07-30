@@ -340,9 +340,14 @@ $faktur_back_url = $is_admin_sc_context
                             <input type="number" class="form-control text-right" id="editHargaValue" min="0" step="0.01">
                         </div>
                     </div>
+                    <div class="form-group mt-3" id="approvalStatusContainer" style="display: none;">
+                        <label>Status Persetujuan Manager SC:</label>
+                        <div id="approvalStatusBadge" class="p-2 rounded font-weight-bold text-center"></div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-warning" id="btnMintaApproval" style="display: none;">Minta Approval Manager</button>
                     <button type="button" class="btn btn-primary" id="btnSimpanHarga">Simpan Harga</button>
                 </div>
             </div>
@@ -457,6 +462,49 @@ $(document).ready(function () {
  
     hitungSubtotal();
 
+    const isManagerSc = <?= in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true) ? 'true' : 'false' ?>;
+    let soApprovals = [];
+    let originalPrices = {};
+
+    function fetchApprovals() {
+        $.ajax({
+            url: "<?= base_url('sales_order/admin_sc/get_approval_status/' . $so['id_so']) ?>",
+            type: "GET",
+            dataType: "JSON",
+            success: function(res) {
+                if (res && res.msg === 'success') {
+                    soApprovals = res.data || [];
+                    updatePriceUIWithApprovals();
+                }
+            }
+        });
+    }
+
+    function updatePriceUIWithApprovals() {
+        $('.approval-badge-inline').remove();
+        
+        soApprovals.forEach(function(app) {
+            let rowBtn = $('.btn-edit-harga[data-detail="' + app.id_so_detail + '"]');
+            if (rowBtn.length) {
+                let badgeHtml = '';
+                if (app.status === 'pending') {
+                    badgeHtml = '<span class="badge badge-warning approval-badge-inline ml-2"><i class="fas fa-hourglass-half mr-1"></i>Menunggu Persetujuan Manager (Rp ' + parseFloat(app.harga_baru).toLocaleString('id-ID') + ')</span>';
+                } else if (app.status === 'approved') {
+                    badgeHtml = '<span class="badge badge-success approval-badge-inline ml-2"><i class="fas fa-check mr-1"></i>Disetujui Manager (Rp ' + parseFloat(app.harga_baru).toLocaleString('id-ID') + ')</span>';
+                    let row = rowBtn.data('row');
+                    $('.harga-satuan-input[data-row="' + row + '"]').val(app.harga_baru);
+                    $('.harga-satuan-text[data-row="' + row + '"]').text(formatRupiah(app.harga_baru));
+                } else if (app.status === 'rejected') {
+                    badgeHtml = '<span class="badge badge-danger approval-badge-inline ml-2"><i class="fas fa-times mr-1"></i>Ditolak (Rp ' + parseFloat(app.harga_baru).toLocaleString('id-ID') + ')</span>';
+                }
+                rowBtn.closest('div').after(badgeHtml);
+            }
+        });
+        hitungSubtotal();
+    }
+
+    fetchApprovals();
+
     $(document).on('click', '.btn-remove-item', function() {
         if ($('.btn-remove-item').length <= 1) {
             salesToast('warning', 'Faktur harus berisi minimal 1 item.');
@@ -468,16 +516,125 @@ $(document).ready(function () {
 
     $(document).on('click', '.btn-edit-harga', function() {
         const row = $(this).data('row');
-        const harga = $('.harga-satuan-input[data-row="' + row + '"]').val() || 0;
+        const idSoDetail = $(this).data('detail');
+        const currentHarga = $('.harga-satuan-input[data-row="' + row + '"]').val() || 0;
+        
+        if (originalPrices[idSoDetail] === undefined) {
+            originalPrices[idSoDetail] = parseFloat(currentHarga);
+        }
+        
         $('#editHargaRow').val(row);
-        $('#editHargaDetail').val($(this).data('detail') || '');
+        $('#editHargaDetail').val(idSoDetail);
         $('#editHargaBarang').val($(this).data('barang') || '');
-        $('#editHargaValue').val(harga);
+        $('#editHargaValue').val(currentHarga);
+        
+        let approval = soApprovals.find(x => parseInt(x.id_so_detail) === parseInt(idSoDetail));
+        
+        $('#approvalStatusContainer').hide();
+        $('#btnMintaApproval').hide();
+        $('#btnSimpanHarga').show();
+        $('#editHargaValue').prop('readonly', false);
+        
+        if (!isManagerSc) {
+            if (approval) {
+                $('#approvalStatusContainer').show();
+                let badge = $('#approvalStatusBadge');
+                badge.removeClass('bg-warning bg-success bg-danger text-white text-dark');
+                
+                if (approval.status === 'pending') {
+                    badge.addClass('bg-warning text-dark').text('Menunggu Persetujuan Manager (Rp ' + parseFloat(approval.harga_baru).toLocaleString('id-ID') + ')');
+                    $('#editHargaValue').val(approval.harga_baru);
+                    $('#editHargaValue').prop('readonly', true);
+                    $('#btnSimpanHarga').hide();
+                } else if (approval.status === 'approved') {
+                    badge.addClass('bg-success text-white').text('Telah Disetujui Manager (Rp ' + parseFloat(approval.harga_baru).toLocaleString('id-ID') + ')');
+                    $('#editHargaValue').val(approval.harga_baru);
+                    $('#editHargaValue').prop('readonly', true);
+                } else if (approval.status === 'rejected') {
+                    badge.addClass('bg-danger text-white').text('Ditolak Manager (Rp ' + parseFloat(approval.harga_baru).toLocaleString('id-ID') + ')');
+                }
+            }
+        }
+        
         $('#modalEditHarga').modal('show');
     });
+
     $('#modalEditHarga').on('shown.bs.modal', function() {
         $('#editHargaValue').trigger('focus').trigger('select');
     });
+
+    $(document).on('input change', '#editHargaValue', function() {
+        if (isManagerSc) return;
+        
+        const idSoDetail = $('#editHargaDetail').val();
+        const enteredVal = parseFloat($(this).val()) || 0;
+        const origVal = originalPrices[idSoDetail];
+        
+        let approval = soApprovals.find(x => parseInt(x.id_so_detail) === parseInt(idSoDetail) && parseFloat(x.harga_baru) === enteredVal);
+        
+        if (Math.abs(enteredVal - origVal) < 0.01) {
+            $('#btnMintaApproval').hide();
+            $('#btnSimpanHarga').show();
+            $('#approvalStatusContainer').hide();
+        } else if (approval && approval.status === 'approved') {
+            $('#btnMintaApproval').hide();
+            $('#btnSimpanHarga').show();
+            $('#approvalStatusContainer').show().find('#approvalStatusBadge').removeClass().addClass('p-2 rounded font-weight-bold text-center bg-success text-white').text('Telah Disetujui Manager (Rp ' + enteredVal.toLocaleString('id-ID') + ')');
+        } else {
+            $('#btnSimpanHarga').hide();
+            $('#btnMintaApproval').show();
+            if (approval && approval.status === 'pending') {
+                $('#approvalStatusContainer').show().find('#approvalStatusBadge').removeClass().addClass('p-2 rounded font-weight-bold text-center bg-warning text-dark').text('Menunggu Persetujuan Manager (Rp ' + enteredVal.toLocaleString('id-ID') + ')');
+                $('#btnMintaApproval').hide();
+            } else if (approval && approval.status === 'rejected') {
+                $('#approvalStatusContainer').show().find('#approvalStatusBadge').removeClass().addClass('p-2 rounded font-weight-bold text-center bg-danger text-white').text('Ditolak Manager (Rp ' + enteredVal.toLocaleString('id-ID') + ')');
+            } else {
+                $('#approvalStatusContainer').hide();
+            }
+        }
+    });
+
+    $('#btnMintaApproval').on('click', function() {
+        const idSoDetail = $('#editHargaDetail').val();
+        const harga = parseFloat($('#editHargaValue').val()) || 0;
+        if (harga <= 0) {
+            salesToast('error', 'Harga satuan harus lebih dari 0.');
+            return;
+        }
+        if (!idSoDetail) {
+            salesToast('error', 'Data item SO tidak valid.');
+            return;
+        }
+        
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Mengirim');
+        
+        $.ajax({
+            url: "<?= base_url('sales_order/admin_sc/minta_approval_harga/' . $so['id_so']) ?>",
+            type: "POST",
+            dataType: "JSON",
+            data: {
+                id_so_detail: idSoDetail,
+                harga: harga
+            },
+            success: function(response) {
+                if (response && response.msg === 'success') {
+                    salesToast('success', response.message);
+                    $('#modalEditHarga').modal('hide');
+                    fetchApprovals();
+                } else {
+                    salesToast('error', (response && response.message) || 'Gagal mengajukan persetujuan.');
+                }
+            },
+            error: function(xhr, status, error) {
+                salesToast('error', 'Terjadi kesalahan: ' + error);
+            },
+            complete: function() {
+                $btn.prop('disabled', false).html('Minta Approval Manager');
+            }
+        });
+    });
+
     $('#btnSimpanHarga').on('click', function() {
         const row = $('#editHargaRow').val();
         const idSoDetail = $('#editHargaDetail').val();
@@ -512,6 +669,7 @@ $(document).ready(function () {
                 hitungSubtotal();
                 $('#modalEditHarga').modal('hide');
                 salesToast('success', response.message || 'Harga SO berhasil diperbarui.');
+                fetchApprovals();
             },
             error: function(xhr, status, error) {
                 salesToast('error', 'Terjadi kesalahan: ' + error);
@@ -545,6 +703,22 @@ $(document).ready(function () {
         let adaQty = false;
         let adaMelewati = false;
         let hargaTidakValid = false;
+
+        // Cek apakah ada harga yang masih pending approval
+        let adaPending = false;
+        if (typeof soApprovals !== 'undefined' && soApprovals.length > 0) {
+            soApprovals.forEach(function(app) {
+                if (app.status === 'pending') {
+                    adaPending = true;
+                }
+            });
+        }
+
+        if (adaPending) {
+            e.preventDefault();
+            salesToast('error', 'Faktur tidak dapat disimpan karena masih ada perubahan harga yang menunggu persetujuan Manager SC.');
+            return;
+        }
 
         $('.qty-faktur').each(function () {
             const qty    = parseFloat($(this).val()) || 0;
