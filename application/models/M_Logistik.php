@@ -3920,7 +3920,7 @@ FROM (
                 ON supp.kd_suplier = p.kd_suplier
             LEFT JOIN tbpo_detail_po d
                 ON d.kd_po = p.kd_po
-            WHERE 1=1";
+            WHERE UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
 
         $params = [];
 
@@ -3999,7 +3999,7 @@ FROM (
                 ON supp.kd_suplier = p.kd_suplier
             LEFT JOIN tbpo_detail_po d
                 ON d.kd_po = p.kd_po
-            WHERE 1=1";
+            WHERE UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
 
         $params = [];
 
@@ -4168,7 +4168,7 @@ FROM (
             ) invlog
                 ON invlog.kd_po = h.kd_po
                 AND invlog.no_invoice = h.no_invoice
-            WHERE 1=1";
+            WHERE UPPER(TRIM(COALESCE(p.status, ''))) = 'DONE'";
 
         $params = [];
 
