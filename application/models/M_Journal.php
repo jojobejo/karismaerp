@@ -85,8 +85,22 @@ class M_Journal extends CI_Model
             }
         }
 
+        $prefix = (strtolower($metode) === 'q kas' || strtolower($metode) === 'a kas') ? 'KM' : 'MR';
+        $jenis = $this->db->get_where('tbkeu_jenis_jurnal', ['kode_jenis_jurnal' => $prefix])->row();
+        if (!$jenis) {
+            $this->db->insert('tbkeu_jenis_jurnal', [
+                'kode_jenis_jurnal' => $prefix,
+                'nama_jenis_jurnal' => $prefix === 'KM' ? 'Kas Masuk' : 'Masuk Rekening',
+                'is_active' => 1
+            ]);
+            $id_jenis_jurnal = $this->db->insert_id();
+        } else {
+            $id_jenis_jurnal = $jenis->id_jenis_jurnal;
+        }
+
         $jurnal_data = [
             'nomor_jurnal' => $nomor_jurnal,
+            'id_jenis_jurnal' => $id_jenis_jurnal,
             'tanggal_transaksi' => $tanggal,
             'keterangan' => 'Penerimaan dari ' . ($customerName !== '' ? $customerName : 'Customer') . ' via ' . $metode,
             'status' => 'POSTED',
