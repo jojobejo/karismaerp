@@ -106,6 +106,7 @@
             rating: null
         };
         var defaultOpenStatusId = '<?= isset($default_status_id) ? intval($default_status_id) : 1 ?>';
+        var isReadonlyPenilaian = <?= !empty($is_readonly_penilaian) ? 'true' : 'false' ?>;
 
         function escapeHtml(value) {
             return String(value == null ? '' : value).replace(/[&<>"'`=\/]/g, function(s) {
@@ -309,12 +310,14 @@
                         '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                         '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
                         '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
-                        '<td>' + statusBadge(item.status_name) + '</td>' +
-                        '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>' +
-                        '</tr>';
+                        '<td>' + statusBadge(item.status_name) + '</td>';
+                    if (!isReadonlyPenilaian) {
+                        tbody += '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '" data-dismiss="modal"><i class="fas fa-pen"></i></button></td>';
+                    }
+                    tbody += '</tr>';
                 });
             } else {
-                tbody = '<tr><td colspan="8" class="text-center text-muted">Tidak ada data detail.</td></tr>';
+                tbody = '<tr><td colspan="' + (isReadonlyPenilaian ? 7 : 8) + '" class="text-center text-muted">Tidak ada data detail.</td></tr>';
             }
             $('#issueBreakdownTable tbody').html(tbody);
         }
@@ -416,12 +419,14 @@
                             '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                             '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
                             '<td>' + escapeHtml(item.due_date || '-') + '</td>' +
-                            '<td>' + statusBadge(item.status_name) + '</td>' +
-                            '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-pen"></i></button></td>' +
-                            '</tr>';
+                            '<td>' + statusBadge(item.status_name) + '</td>';
+                        if (!isReadonlyPenilaian) {
+                            tbody += '<td><button class="btn btn-xs btn-dark btn-update-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-pen"></i></button></td>';
+                        }
+                        tbody += '</tr>';
                     });
                 } else {
-                    tbody = '<tr><td colspan="8" class="text-center text-muted">Tidak ada data issue.</td></tr>';
+                    tbody = '<tr><td colspan="' + (isReadonlyPenilaian ? 7 : 8) + '" class="text-center text-muted">Tidak ada data issue.</td></tr>';
                 }
                 $('#issueTable tbody').html(tbody);
             });
@@ -437,12 +442,14 @@
                             '<td class="font-weight-bold">' + escapeHtml(item.location_name || '-') + '</td>' +
                             '<td><div class="env-desc">' + escapeHtml(item.description || '-') + '</div></td>' +
                             '<td>' + escapeHtml(item.report_datetime || '-') + '</td>' +
-                            '<td>' + escapeHtml(item.created_by || '-') + '</td>' +
-                            '<td><button class="btn btn-xs btn-dark btn-update-pending-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-pen"></i></button></td>' +
-                            '</tr>';
+                            '<td>' + escapeHtml(item.created_by || '-') + '</td>';
+                        if (!isReadonlyPenilaian) {
+                            tbody += '<td><button class="btn btn-xs btn-dark btn-update-pending-issue" data-id="' + escapeHtml(item.id) + '"><i class="fas fa-pen"></i></button></td>';
+                        }
+                        tbody += '</tr>';
                     });
                 } else {
-                    tbody = '<tr><td colspan="5" class="text-center text-muted">Tidak ada input user yang menunggu proses.</td></tr>';
+                    tbody = '<tr><td colspan="' + (isReadonlyPenilaian ? 4 : 5) + '" class="text-center text-muted">Tidak ada input user yang menunggu proses.</td></tr>';
                 }
                 $('#pendingIssuesTable tbody').html(tbody);
             });
@@ -741,6 +748,7 @@
         });
 
         $(document).on('click', '.btn-update-issue', function() {
+            if (isReadonlyPenilaian) return;
             loadIssueDetail($(this).data('id'), 'admin');
         });
 
@@ -784,6 +792,7 @@
         $('#reloadPendingIssues').on('click', loadPendingIssuesTable);
 
         $(document).on('click', '.btn-update-pending-issue', function() {
+            if (isReadonlyPenilaian) return;
             loadIssueDetail($(this).data('id'), 'pending');
         });
 

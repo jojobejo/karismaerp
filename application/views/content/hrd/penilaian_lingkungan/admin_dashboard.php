@@ -1,3 +1,4 @@
+<?php $isReadonlyPenilaian = !empty($is_readonly_penilaian); ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
         <div class="preloader flex-column justify-content-center align-items-center">
@@ -14,11 +15,16 @@
                         <div>
                             <h1 class="env-title">Dashboard Penilaian Lingkungan</h1>
                             <p class="env-subtitle mb-0">Ringkasan issue, prioritas, dan tindak lanjut area kantor.</p>
+                            <?php if ($isReadonlyPenilaian) : ?>
+                                <span class="badge badge-info mt-2">Mode Readonly Direksi</span>
+                            <?php endif; ?>
                         </div>
                         <div class="btn-group env-nav">
                             <a href="<?= base_url('dashboard_penilaian') ?>" class="btn btn-sm btn-dark active"><i class="fas fa-chart-pie mr-1"></i> Dashboard</a>
                             <a href="<?= base_url('hrd/penilaian_lingkungan/monitoring') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-desktop mr-1"></i> Monitoring</a>
-                            <a href="<?= base_url('penilaian_lingkungan') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-plus mr-1"></i> Form</a>
+                            <?php if (!$isReadonlyPenilaian) : ?>
+                                <a href="<?= base_url('penilaian_lingkungan') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-plus mr-1"></i> Form</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -151,7 +157,9 @@
                                                     <th>Lapor</th>
                                                     <th>Due</th>
                                                     <th>Status</th>
-                                                    <th>Aksi</th>
+                                                    <?php if (!$isReadonlyPenilaian) : ?>
+                                                        <th>Aksi</th>
+                                                    <?php endif; ?>
                                                 </tr>
                                             </thead>
                                             <tbody></tbody>
@@ -180,6 +188,7 @@
                         </div>
                     </div>
 
+                    <?php if (!$isReadonlyPenilaian) : ?>
                     <div class="modal fade" id="issueUpdateModal" tabindex="-1" role="dialog" aria-hidden="true">
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content env-modal">
@@ -237,6 +246,7 @@
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <div class="modal fade" id="issueBreakdownModal" tabindex="-1" role="dialog" aria-hidden="true">
                         <div class="modal-dialog modal-xl" role="document">
@@ -291,7 +301,9 @@
                                                     <th>Lapor</th>
                                                     <th>Due</th>
                                                     <th>Status</th>
-                                                    <th>Aksi</th>
+                                                    <?php if (!$isReadonlyPenilaian) : ?>
+                                                        <th>Aksi</th>
+                                                    <?php endif; ?>
                                                 </tr>
                                             </thead>
                                             <tbody></tbody>

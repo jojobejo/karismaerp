@@ -121,6 +121,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran-supplier') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>
+                  Pembayaran Supplier
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -142,6 +150,14 @@
                 <i class="nav-icon fas fa-cash-register"></i>
                 <p>
                   Pembayaran Faktur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran-supplier') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>
+                  Pembayaran Supplier
                 </p>
               </a>
             </li>
@@ -367,6 +383,14 @@
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran-supplier') ?>" class="nav-link">
+                <i class="nav-icon fas fa-file-invoice-dollar"></i>
+                <p>
+                  Pembayaran Supplier
                 </p>
               </a>
             </li>

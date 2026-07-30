@@ -661,6 +661,7 @@ class Accounting_service
 
         $allocated = '0.0000';
         $seenInvoices = [];
+        $invoiceAccountIds = [];
         foreach ($allocations as $allocation) {
             $allocationAmount = $this->money($allocation['amount_allocated'] ?? 0);
             if (bccomp($allocationAmount, '0', 4) <= 0) {
@@ -678,6 +679,7 @@ class Accounting_service
             if (bccomp($allocationAmount, $outstanding, 4) === 1) {
                 return $this->fail('Alokasi invoice ' . $invoiceNo . ' melebihi outstanding ' . $outstanding . '.', ['PAYMENT_EXCEEDS_OUTSTANDING']);
             }
+            $invoiceAccountIds[$invoiceNo] = $this->invoice_outstanding_account_id($paymentType, $invoiceNo);
             $allocated = bcadd($allocated, $allocationAmount, 4);
         }
         if (bccomp($allocated, $amount, 4) === 1) {
@@ -727,6 +729,9 @@ class Accounting_service
                 $controlLine[$paymentType === 'CUSTOMER_PAYMENT' ? 'debit' : 'kredit'] = '0.0000';
                 $controlLine['nomor_dokumen'] = trim((string)$allocation['invoice_no']);
                 $controlLine['keterangan'] = $journalPayload['keterangan'] . ' - ' . $controlLine['nomor_dokumen'];
+                if ($paymentType === 'SUPPLIER_PAYMENT' && !empty($invoiceAccountIds[$controlLine['nomor_dokumen']])) {
+                    $controlLine['id_akun'] = (int)$invoiceAccountIds[$controlLine['nomor_dokumen']];
+                }
                 $journalPayload['lines'][] = $controlLine;
             }
             $unapplied = bcsub($amount, $allocated, 4);
@@ -1469,14 +1474,16 @@ class Accounting_service
                 ['GRNI', 'KREDIT', $amount],
             ];
         } elseif ($event === 'CUSTOMER_PAYMENT') {
+            $cashAccountId = (int)($payload['cash_bank_account_id'] ?? $payload['id_akun_kas_bank'] ?? 0);
             $lineSpecs = [
-                ['CASH_BANK', 'DEBIT', $amount],
+                $cashAccountId > 0 ? ['CASH_BANK', 'DEBIT', $amount, $cashAccountId] : ['CASH_BANK', 'DEBIT', $amount],
                 ['ACCOUNT_RECEIVABLE', 'KREDIT', $amount],
             ];
         } elseif ($event === 'SUPPLIER_PAYMENT') {
+            $cashAccountId = (int)($payload['cash_bank_account_id'] ?? $payload['id_akun_kas_bank'] ?? 0);
             $lineSpecs = [
                 ['ACCOUNT_PAYABLE', 'DEBIT', $amount],
-                ['CASH_BANK', 'KREDIT', $amount],
+                $cashAccountId > 0 ? ['CASH_BANK', 'KREDIT', $amount, $cashAccountId] : ['CASH_BANK', 'KREDIT', $amount],
             ];
         } elseif ($event === 'SALES_RETURN') {
             $lineSpecs = [
@@ -1931,12 +1938,17 @@ class Accounting_service
     private function invoice_outstanding($paymentType, $invoiceNo)
     {
         $control = $paymentType === 'CUSTOMER_PAYMENT' ? 'PIUTANG' : 'HUTANG';
+        $extraPayableSql = '';
+        if ($paymentType === 'SUPPLIER_PAYMENT') {
+            $extraPayableSql = " OR a.kode_akun = '21098'";
+        }
+
         $row = $this->CI->db->query(
             "SELECT COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit
              FROM tbkeu_jurnal_detail d
-             INNER JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED'
+             INNER JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED' AND j.reversed_at IS NULL
              INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
-             WHERE a.tipe_kontrol = ? AND d.nomor_dokumen = ?",
+             WHERE (a.tipe_kontrol = ?{$extraPayableSql}) AND d.nomor_dokumen = ?",
             [$control, $invoiceNo]
         )->row();
         if (!$row) {
@@ -1945,6 +1957,32 @@ class Accounting_service
         return $paymentType === 'CUSTOMER_PAYMENT'
             ? bcsub($this->money($row->debit), $this->money($row->kredit), 4)
             : bcsub($this->money($row->kredit), $this->money($row->debit), 4);
+    }
+
+    private function invoice_outstanding_account_id($paymentType, $invoiceNo)
+    {
+        $control = $paymentType === 'CUSTOMER_PAYMENT' ? 'PIUTANG' : 'HUTANG';
+        $extraPayableSql = '';
+        if ($paymentType === 'SUPPLIER_PAYMENT') {
+            $extraPayableSql = " OR a.kode_akun = '21098'";
+        }
+
+        $row = $this->CI->db->query(
+            "SELECT d.id_akun,
+                    COALESCE(SUM(d.debit),0) AS debit,
+                    COALESCE(SUM(d.kredit),0) AS kredit
+             FROM tbkeu_jurnal_detail d
+             INNER JOIN tbkeu_jurnal j ON j.id_jurnal = d.id_jurnal AND j.status = 'POSTED' AND j.reversed_at IS NULL
+             INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
+             WHERE (a.tipe_kontrol = ?{$extraPayableSql}) AND d.nomor_dokumen = ?
+             GROUP BY d.id_akun
+             HAVING " . ($paymentType === 'CUSTOMER_PAYMENT' ? 'debit - kredit' : 'kredit - debit') . " > 0
+             ORDER BY ABS(COALESCE(SUM(d.kredit),0) - COALESCE(SUM(d.debit),0)) DESC
+             LIMIT 1",
+            [$control, $invoiceNo]
+        )->row();
+
+        return $row ? (int)$row->id_akun : 0;
     }
 
     private function ok($message, $data = [])

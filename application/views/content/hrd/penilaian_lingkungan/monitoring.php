@@ -1,3 +1,4 @@
+<?php $isReadonlyPenilaian = !empty($is_readonly_penilaian); ?>
 <body class="hold-transition sidebar-mini sidebar-collapse">
     <div class="wrapper">
         <div class="preloader flex-column justify-content-center align-items-center">
@@ -14,11 +15,16 @@
                         <div>
                             <h1 class="env-title">Monitoring Penilaian Lingkungan</h1>
                             <p class="env-subtitle mb-0">Pantau issue, proses input user, dan master data dalam satu halaman.</p>
+                            <?php if ($isReadonlyPenilaian) : ?>
+                                <span class="badge badge-info mt-2">Mode Readonly Direksi</span>
+                            <?php endif; ?>
                         </div>
                         <div class="btn-group env-nav">
                             <a href="<?= base_url('dashboard_penilaian') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-chart-pie mr-1"></i> Dashboard</a>
                             <a href="<?= base_url('hrd/penilaian_lingkungan/monitoring') ?>" class="btn btn-sm btn-dark active"><i class="fas fa-desktop mr-1"></i> Monitoring</a>
-                            <a href="<?= base_url('penilaian_lingkungan') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-plus mr-1"></i> Form</a>
+                            <?php if (!$isReadonlyPenilaian) : ?>
+                                <a href="<?= base_url('penilaian_lingkungan') ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-plus mr-1"></i> Form</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -69,7 +75,9 @@
                             <ul class="nav nav-pills env-tabs" id="environmentMonitoringTabs" role="tablist">
                                 <li class="nav-item"><a class="nav-link active" data-toggle="pill" href="#envOverview" role="tab"><i class="fas fa-chart-bar mr-1"></i> Overview</a></li>
                                 <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#envPending" role="tab"><i class="fas fa-tasks mr-1"></i> Input User</a></li>
-                                <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#envMaster" role="tab"><i class="fas fa-sliders-h mr-1"></i> Master Data</a></li>
+                                <?php if (!$isReadonlyPenilaian) : ?>
+                                    <li class="nav-item"><a class="nav-link" data-toggle="pill" href="#envMaster" role="tab"><i class="fas fa-sliders-h mr-1"></i> Master Data</a></li>
+                                <?php endif; ?>
                             </ul>
                         </div>
                         <div class="card-body">
@@ -110,7 +118,9 @@
                                                     <th>Deskripsi</th>
                                                     <th>Lapor</th>
                                                     <th>Pelapor</th>
-                                                    <th>Aksi</th>
+                                                    <?php if (!$isReadonlyPenilaian) : ?>
+                                                        <th>Aksi</th>
+                                                    <?php endif; ?>
                                                 </tr>
                                             </thead>
                                             <tbody></tbody>
@@ -118,6 +128,7 @@
                                     </div>
                                 </div>
 
+                                <?php if (!$isReadonlyPenilaian) : ?>
                                 <div class="tab-pane fade" id="envMaster" role="tabpanel">
                                     <div class="row">
                                         <div class="col-lg-6">
@@ -183,10 +194,12 @@
                                         </div>
                                     </div>
                                 </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
 
+                    <?php if (!$isReadonlyPenilaian) : ?>
                     <div class="modal fade" id="pendingIssueUpdateModal" tabindex="-1" role="dialog" aria-hidden="true">
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content env-modal">
@@ -239,6 +252,7 @@
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </section>
         </div>

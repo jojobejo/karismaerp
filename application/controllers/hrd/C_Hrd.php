@@ -30,6 +30,29 @@ class C_Hrd extends CI_Controller
         return strtoupper(trim((string) $this->session->userdata('jobdesk'))) === 'KARYAWAN';
     }
 
+    private function _is_penilaian_direksi_readonly()
+    {
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+        $jobdeskHrd = strtolower(trim((string) $this->session->userdata('jobdesk_hrd')));
+
+        return in_array($username, array('direktur1', 'direktur2', 'direktur3'), true)
+            || $jobdeskHrd === 'direksi_readonly';
+    }
+
+    private function _block_penilaian_direksi_crud()
+    {
+        if (!$this->_is_penilaian_direksi_readonly()) {
+            return false;
+        }
+
+        $this->output->set_status_header(403)->set_content_type('application/json');
+        echo json_encode(array(
+            'status' => false,
+            'message' => 'Akun direksi hanya memiliki akses readonly. Aksi CRUD tidak diizinkan.',
+        ));
+        return true;
+    }
+
     private function _apply_karyawan_issue_scope(array $filters = array())
     {
         if ($this->_is_karyawan_session()) {
@@ -951,6 +974,7 @@ class C_Hrd extends CI_Controller
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['rating'] = $this->M_Hrd->get_ratings()->result();
         $data['default_status_id'] = $this->_get_default_issue_status_id();
+        $data['is_readonly_penilaian'] = $this->_is_penilaian_direksi_readonly();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/admin_dashboard.php', $data);
@@ -960,6 +984,11 @@ class C_Hrd extends CI_Controller
 
     public function penilaian_lingkungan()
     {
+        if ($this->_is_penilaian_direksi_readonly()) {
+            redirect('dashboard_penilaian');
+            return;
+        }
+
         // temporarily disabled access check for penilaian lingkungan
         // $this->_require_hak_akses(array(1, 2));
         $data['page_title'] = 'Penilaian Lingkungan Kantor';
@@ -1027,6 +1056,7 @@ class C_Hrd extends CI_Controller
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['rating'] = $this->M_Hrd->get_ratings()->result();
         $data['default_status_id'] = $this->_get_default_issue_status_id();
+        $data['is_readonly_penilaian'] = $this->_is_penilaian_direksi_readonly();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/admin_dashboard.php', $data);
@@ -1042,6 +1072,7 @@ class C_Hrd extends CI_Controller
         $data['status'] = $this->M_Hrd->get_statuses()->result();
         $data['ratings'] = $this->M_Hrd->get_ratings()->result();
         $data['default_status_id'] = $this->_get_default_issue_status_id();
+        $data['is_readonly_penilaian'] = $this->_is_penilaian_direksi_readonly();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/hrd/penilaian_lingkungan/monitoring.php', $data);
@@ -1054,6 +1085,10 @@ class C_Hrd extends CI_Controller
         // temporarily disabled access check for submit_environment_issue
         // $this->_require_hak_akses(array(1, 2));
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $this->load->library('form_validation');
 
         $this->form_validation->set_rules('location_id', 'Lokasi', 'required');
@@ -1149,6 +1184,10 @@ class C_Hrd extends CI_Controller
         // temporarily disabled access check for update_environment_issue
         // $this->_require_hak_akses(array(1));
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $this->load->library('form_validation');
 
         $this->form_validation->set_rules('issue_id', 'Issue ID', 'required');
@@ -1299,6 +1338,10 @@ class C_Hrd extends CI_Controller
     public function save_hrd_location()
     {
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $name = trim($this->input->post('name'));
         $isActive = $this->input->post('is_active') !== null ? intval($this->input->post('is_active')) : 1;
         $id = $this->input->post('id');
@@ -1328,6 +1371,10 @@ class C_Hrd extends CI_Controller
     public function delete_hrd_location()
     {
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $id = $this->input->post('id');
         if (empty($id)) {
             echo json_encode(array('status' => false, 'message' => 'ID lokasi tidak valid.'));
@@ -1352,6 +1399,10 @@ class C_Hrd extends CI_Controller
     public function save_hrd_rating()
     {
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $name = trim($this->input->post('name'));
         $score = $this->input->post('score');
         $id = $this->input->post('id');
@@ -1385,6 +1436,10 @@ class C_Hrd extends CI_Controller
     public function delete_hrd_rating()
     {
         $this->output->set_content_type('application/json');
+        if ($this->_block_penilaian_direksi_crud()) {
+            return;
+        }
+
         $id = $this->input->post('id');
         if (empty($id)) {
             echo json_encode(array('status' => false, 'message' => 'ID rating tidak valid.'));
