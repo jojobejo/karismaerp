@@ -219,6 +219,22 @@
                             flex-wrap: wrap;
                             margin-top: 18px;
                         }
+
+                        .lpb-po-filter {
+                            display: flex;
+                            gap: 8px;
+                            flex-wrap: wrap;
+                            align-items: center;
+                            margin-bottom: 12px;
+                        }
+
+                        .lpb-status-actions {
+                            display: inline-flex;
+                            gap: 5px;
+                            align-items: center;
+                            justify-content: center;
+                            flex-wrap: nowrap;
+                        }
                     </style>
 
                     <div class="row mb-3">
@@ -247,6 +263,7 @@
                     </div>
 
                     <?php
+                    $isPurchasingDetailPo = !empty($is_detail_po_purchasing);
                     $totalOrder = 0;
                     $totalReceived = 0;
                     $totalLpbRecord = 0;
@@ -254,6 +271,10 @@
                         $number = (float) $value;
                         $decimals = $maxDecimals > 0 && abs($number - round($number)) > 0.00001 ? $maxDecimals : 0;
                         return number_format($number, $decimals, ',', '.');
+                    };
+                    $formatDatePo = static function ($value) {
+                        $value = trim((string) $value);
+                        return $value === '' || $value === '0000-00-00' ? '-' : $value;
                     };
                     foreach ($detail as $row) {
                         $totalOrder += (float) ($row['qty_kecil'] ?? 0);
@@ -303,9 +324,11 @@
                                         <th class="text-center align-middle" rowspan="2">Qty In</th>
                                         <th class="text-center" colspan="2">Qty Diterima</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
-                                        <th class="text-center align-middle" rowspan="2">Status</th>
-                                        <th class="text-center align-middle" rowspan="2">Draft Temp</th>
-                                        <th class="text-center align-middle" rowspan="2">#</th>
+                                        <?php if (!$isPurchasingDetailPo) : ?>
+                                            <th class="text-center align-middle" rowspan="2">Status</th>
+                                            <th class="text-center align-middle" rowspan="2">Draft Temp</th>
+                                            <th class="text-center align-middle" rowspan="2">#</th>
+                                        <?php endif; ?>
                                     </tr>
                                     <tr>
                                         <th class="text-center">Box</th>
@@ -328,35 +351,37 @@
                                                 <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
-                                                <td class="text-center js-status-cell">
-                                                    <?php
-                                                    $statusBarang = strtoupper((string) ($row['status_barang'] ?? 'BELUM'));
-                                                    $badgeClass = 'secondary';
-                                                    if ($statusBarang === 'FULL') {
-                                                        $badgeClass = 'success';
-                                                    } elseif ($statusBarang === 'PARTIAL') {
-                                                        $badgeClass = 'warning';
-                                                    } elseif ($statusBarang === 'BELUM') {
-                                                        $badgeClass = 'danger';
-                                                    }
-                                                    ?>
-                                                    <span class="badge badge-<?= $badgeClass ?> px-3 py-2 js-status-badge"><?= htmlspecialchars($statusBarang) ?></span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <span class="badge badge-soft js-draft-badge" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
-                                                        0 baris
-                                                    </span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-sisa-besar="<?= htmlspecialchars((string) ($row['qty_sisa'] ?? 0)) ?>" data-sisa-kecil="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-dimensi="<?= htmlspecialchars((string) ($row['dimensi_br'] ?? 1)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
-                                                        <i class="fas fa-plus"></i>
-                                                    </button>
-                                                </td>
+                                                <?php if (!$isPurchasingDetailPo) : ?>
+                                                    <td class="text-center js-status-cell">
+                                                        <?php
+                                                        $statusBarang = strtoupper((string) ($row['status_barang'] ?? 'BELUM'));
+                                                        $badgeClass = 'secondary';
+                                                        if ($statusBarang === 'FULL') {
+                                                            $badgeClass = 'success';
+                                                        } elseif ($statusBarang === 'PARTIAL') {
+                                                            $badgeClass = 'warning';
+                                                        } elseif ($statusBarang === 'BELUM') {
+                                                            $badgeClass = 'danger';
+                                                        }
+                                                        ?>
+                                                        <span class="badge badge-<?= $badgeClass ?> px-3 py-2 js-status-badge"><?= htmlspecialchars($statusBarang) ?></span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge badge-soft js-draft-badge" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>">
+                                                            0 baris
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-success btn-round-action js-open-modal" title="Tambah draft penerimaan" data-kd-po="<?= htmlspecialchars($row['kd_po'] ?? '') ?>" data-kd-suplier="<?= htmlspecialchars($kd_suplier ?? '') ?>" data-kd-barang="<?= htmlspecialchars($row['kd_barang'] ?? '') ?>" data-nama-barang="<?= htmlspecialchars($row['nama_barang'] ?? '-') ?>" data-no-po="<?= htmlspecialchars($no_po) ?>" data-satuan="<?= htmlspecialchars($row['satuan'] ?? '') ?>" data-sisa="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-sisa-besar="<?= htmlspecialchars((string) ($row['qty_sisa'] ?? 0)) ?>" data-sisa-kecil="<?= htmlspecialchars((string) ($row['qty_kecil_sisa'] ?? 0)) ?>" data-dimensi="<?= htmlspecialchars((string) ($row['dimensi_br'] ?? 1)) ?>" data-toggle="modal" data-target="#modalTmpPoReceived">
+                                                            <i class="fas fa-plus"></i>
+                                                        </button>
+                                                    </td>
+                                                <?php endif; ?>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="17" class="text-center text-muted">
+                                            <td colspan="<?= $isPurchasingDetailPo ? 10 : 13 ?>" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -366,6 +391,144 @@
                         </div>
                     </div>
 
+                    <?php if ($isPurchasingDetailPo) : ?>
+                    <div class="card draft-shell">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title mb-0">
+                                <i class="fas fa-clipboard-check mr-2"></i> List Data LPB Yang Telah Direkam
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="lpb-po-filter" id="lpbPoStatusDataFilter">
+                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="invoice">
+                                    <i class="fas fa-file-invoice mr-1"></i> Belum Invoice
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="pajak">
+                                    <i class="fas fa-percent mr-1"></i> Belum Pajak
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="uang">
+                                    <i class="fas fa-check-double mr-1"></i> Belum Afirmasi Harga
+                                </button>
+                            </div>
+                            <div class="lpb-po-filter" id="lpbPoStatusBarangFilter">
+                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua Status Barang</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="sales">
+                                    <i class="fas fa-cash-register mr-1"></i> Sudah Transaksi
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="journal">
+                                    <i class="fas fa-balance-scale mr-1"></i> Sudah Jurnal
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="clear">
+                                    <i class="fas fa-check-circle mr-1"></i> Belum Transaksi/Jurnal
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover" id="tabelLpbPoPurchasing">
+                                    <thead class="thead-dark text-center">
+                                        <tr>
+                                            <th>Tgl LPB</th>
+                                            <th>NO LPB</th>
+                                            <th>Tgl PO</th>
+                                            <th>No PO</th>
+                                            <th>Tgl SJ</th>
+                                            <th>No SJ</th>
+                                            <th class="text-center">Invoice</th>
+                                            <th>No FP</th>
+                                            <th class="text-right">Grand Total</th>
+                                            <th class="text-center">Status</th>
+                                            <th class="text-center">Status Data</th>
+                                            <th class="text-center">Satatus Barang</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($lpb_po_records)) : ?>
+                                            <?php foreach ($lpb_po_records as $row) :
+                                                $progressStatus = strtolower(trim((string) ($row['progress_status'] ?? 'belum')));
+                                                $totalVerified = (int) ($row['total_verified'] ?? 0);
+                                                $totalDetail = (int) ($row['total_detail'] ?? 0);
+                                                $invoiceValue = trim((string) ($row['no_invoice'] ?? ''));
+                                                $invoiceCount = (int) ($row['invoice_count'] ?? 0);
+                                                $fakturValue = trim((string) ($row['kode_faktur_pajak'] ?? ''));
+                                                $hasInvoice = $invoiceCount > 0;
+                                                $hasFaktur = $fakturValue !== '' && $fakturValue !== '-';
+                                                $isVerified = $progressStatus === 'done' || ($totalDetail > 0 && $totalVerified >= $totalDetail);
+                                                $invoiceBtnClass = $hasInvoice ? 'btn-success' : 'btn-light text-secondary border';
+                                                $fakturBtnClass = $hasFaktur ? 'btn-success' : 'btn-light text-secondary border';
+                                                $verifiedBtnClass = $isVerified ? 'btn-success' : 'btn-light text-secondary border';
+                                                $hasSalesTransaction = (int) ($row['has_sales_transaction'] ?? 0) === 1;
+                                                $hasActiveJournal = (int) ($row['has_active_lpb_journal'] ?? 0) === 1;
+                                                $statusLpbRaw = $row['status_lpb'] ?? null;
+                                                if ($statusLpbRaw === null || $statusLpbRaw === '') {
+                                                    $statusBadge = '<span class="badge badge-secondary px-2 py-1">DRAFT</span>';
+                                                } elseif ((string) $statusLpbRaw === '0') {
+                                                    $statusBadge = '<span class="badge badge-warning px-2 py-1">UNPOST</span>';
+                                                } else {
+                                                    $statusBadge = '<span class="badge badge-success px-2 py-1">TERPOSTING</span>';
+                                                }
+                                                $detailUrl = base_url('ics/detail_record_lpb?kd_po=' . urlencode($row['kd_po'] ?? '') . '&no_po=' . urlencode($row['no_po'] ?? '') . '&kd_suplier=' . urlencode($row['kd_suplier'] ?? '') . '&id_lpb=' . urlencode($row['id_lpb'] ?? ''));
+                                                $invoiceTitle = $hasInvoice
+                                                    ? $invoiceCount . ' invoice untuk nomor LPB ini'
+                                                    : 'Belum ada invoice untuk nomor LPB ini';
+                                                $salesTitle = $hasSalesTransaction
+                                                    ? 'Sudah ada ' . (int) ($row['sales_invoice_count'] ?? 0) . ' faktur penjualan: ' . (string) ($row['sales_invoice_sample'] ?? '-')
+                                                    : 'Belum ada transaksi penjualan dari LPB ini';
+                                                $journalTitle = $hasActiveJournal
+                                                    ? 'Jurnal LPB POSTED: ' . (string) ($row['lpb_journal_sample'] ?? '-')
+                                                    : 'Belum ada jurnal LPB POSTED aktif';
+                                            ?>
+                                            <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>" data-has-journal="<?= $hasActiveJournal ? '1' : '0' ?>">
+                                                <td><?= htmlspecialchars($row['tgl_lpb'] ?? '-') ?></td>
+                                                <td>
+                                                    <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
+                                                        <?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?>
+                                                    </a>
+                                                </td>
+                                                <td><?= htmlspecialchars($row['tgl_po'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($formatDatePo($row['tgl_sj'] ?? '-')) ?></td>
+                                                <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
+                                                <td class="text-center">
+                                                    <span class="badge <?= $hasInvoice ? 'badge-success' : 'badge-secondary' ?>" title="<?= htmlspecialchars($invoiceTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                        <?= $hasInvoice ? number_format($invoiceCount, 0, ',', '.') . ' invoice' : '0 invoice' ?>
+                                                    </span>
+                                                </td>
+                                                <td><?= htmlspecialchars($hasFaktur ? $fakturValue : '-') ?></td>
+                                                <td class="text-right"><?= 'Rp ' . number_format((float) ($row['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
+                                                <td class="text-center"><?= $statusBadge ?></td>
+                                                <td class="text-center">
+                                                    <div class="lpb-status-actions">
+                                                        <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= $hasInvoice ? 'Invoice sudah ada' : 'Invoice belum ada' ?>">
+                                                            <i class="fas fa-file-invoice"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm <?= $fakturBtnClass ?>" title="<?= $hasFaktur ? 'Pajak/Faktur sudah ada' : 'Pajak/Faktur belum ada' ?>">
+                                                            <i class="fas fa-percent"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm <?= $verifiedBtnClass ?>" title="<?= $isVerified ? 'Afirmasi harga selesai' : 'Afirmasi harga belum selesai' ?>">
+                                                            <i class="fas fa-check-double"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="lpb-status-actions">
+                                                        <button type="button" class="btn btn-sm <?= $hasSalesTransaction ? 'btn-warning' : 'btn-light text-secondary border' ?>" title="<?= htmlspecialchars($salesTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <i class="fas fa-cash-register"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm <?= $hasActiveJournal ? 'btn-danger' : 'btn-light text-secondary border' ?>" title="<?= htmlspecialchars($journalTitle, ENT_QUOTES, 'UTF-8') ?>">
+                                                            <i class="fas fa-balance-scale"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <?php else : ?>
                     <div class="card draft-shell">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h3 class="card-title mb-0">
@@ -478,6 +641,7 @@
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </section>
             </div>
         </div>
@@ -586,6 +750,7 @@
 
     <script>
         $(function() {
+            var isPurchasingDetailPo = <?= $isPurchasingDetailPo ? 'true' : 'false' ?>;
             var currentItem = {
                 kd_po: '',
                 kd_suplier: '',
@@ -617,7 +782,7 @@
                 order: [
                     [0, 'asc']
                 ],
-                columnDefs: [{
+                columnDefs: isPurchasingDetailPo ? [] : [{
                     orderable: false,
                     targets: [11, 12]
                 }],
@@ -635,6 +800,94 @@
                     }
                 }
             });
+
+            if (isPurchasingDetailPo) {
+                var lpbPoStatusDataFilter = 'all';
+                var lpbPoStatusBarangFilter = 'all';
+
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    if (!settings.nTable || settings.nTable.id !== 'tabelLpbPoPurchasing') {
+                        return true;
+                    }
+
+                    var $row = $(settings.aoData[dataIndex].nTr);
+
+                    if (lpbPoStatusDataFilter === 'invoice' && String($row.data('has-invoice')) !== '0') {
+                        return false;
+                    }
+
+                    if (lpbPoStatusDataFilter === 'pajak' && String($row.data('has-faktur')) !== '0') {
+                        return false;
+                    }
+
+                    if (lpbPoStatusDataFilter === 'uang' && String($row.data('is-verified')) !== '0') {
+                        return false;
+                    }
+
+                    if (lpbPoStatusBarangFilter === 'sales' && String($row.data('has-sales')) !== '1') {
+                        return false;
+                    }
+
+                    if (lpbPoStatusBarangFilter === 'journal' && String($row.data('has-journal')) !== '1') {
+                        return false;
+                    }
+
+                    if (lpbPoStatusBarangFilter === 'clear' &&
+                        (String($row.data('has-sales')) !== '0' || String($row.data('has-journal')) !== '0')) {
+                        return false;
+                    }
+
+                    return true;
+                });
+
+                var lpbPoTable = $('#tabelLpbPoPurchasing').DataTable({
+                    responsive: true,
+                    autoWidth: false,
+                    pageLength: 25,
+                    order: [
+                        [0, 'desc']
+                    ],
+                    columnDefs: [{
+                        orderable: false,
+                        targets: [10, 11]
+                    }],
+                    language: {
+                        search: "Cari:",
+                        lengthMenu: "Tampilkan _MENU_ data",
+                        info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                        zeroRecords: "Tidak ada data ditemukan",
+                        emptyTable: "Belum ada LPB yang direkam untuk PO ini",
+                        paginate: {
+                            first: "Pertama",
+                            last: "Terakhir",
+                            next: "Berikutnya",
+                            previous: "Sebelumnya"
+                        }
+                    }
+                });
+
+                $('#lpbPoStatusDataFilter').on('click', 'button[data-filter]', function() {
+                    lpbPoStatusDataFilter = $(this).data('filter') || 'all';
+                    $('#lpbPoStatusDataFilter button[data-filter]')
+                        .removeClass('btn-primary active')
+                        .addClass('btn-outline-secondary');
+                    $(this)
+                        .removeClass('btn-outline-secondary')
+                        .addClass('btn-primary active');
+                    lpbPoTable.draw();
+                });
+
+                $('#lpbPoStatusBarangFilter').on('click', 'button[data-filter]', function() {
+                    lpbPoStatusBarangFilter = $(this).data('filter') || 'all';
+                    $('#lpbPoStatusBarangFilter button[data-filter]')
+                        .removeClass('btn-primary active')
+                        .addClass('btn-outline-secondary');
+                    $(this)
+                        .removeClass('btn-outline-secondary')
+                        .addClass('btn-primary active');
+                    lpbPoTable.draw();
+                });
+            }
 
             function escHtml(str) {
                 return $('<div>').text(str || '').html();
@@ -1251,8 +1504,10 @@
                 $('#tmpRowsBody').empty();
             });
 
-            resetFinalForm();
-            reloadSummaryTable();
+            if (!isPurchasingDetailPo) {
+                resetFinalForm();
+                reloadSummaryTable();
+            }
         });
     </script>
 </body>

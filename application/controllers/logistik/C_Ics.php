@@ -684,6 +684,36 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
+    public function data_lpb()
+    {
+        $date1 = $this->input->post('date1');
+        $date2 = $this->input->post('date2');
+
+        $data['page_title'] = 'KARISMA - Data LPB';
+        $data['is_admin_po'] = $this->is_admin_po_jobdesk();
+        $data['can_sync_po'] = FALSE;
+        $data['can_lpb_manual'] = $this->can_access_lpb_manual();
+        $data['can_lpb_report'] = $this->can_access_lpb_report();
+        $data['is_data_lpb_page'] = TRUE;
+        $data['is_admlpb_user'] = $this->is_admlpb_user();
+        $data['lpb_panel_mode'] = 'logistik';
+        $data['show_logistik_panel'] = TRUE;
+        $data['show_purchasing_panel'] = FALSE;
+        $data['hide_lpb_supplier_code'] = TRUE;
+        $data['hide_lpb_last_input'] = TRUE;
+        $data['lpb'] = $this->M_Logistik->get_lpb($date1, $date2);
+        $data['lpb_purchasing'] = [];
+        $data['date1'] = $date1;
+        $data['date2'] = $date2;
+        $data['sync_api_url'] = '';
+        $data['sync_rows'] = [];
+        $data['last_sync'] = [];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/icspo.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
     public function detail_po()
     {
         $no_po = $this->input->get('no_po');
@@ -705,6 +735,13 @@ class C_Ics extends CI_Controller
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $data['detail']     = $this->M_Logistik->detail_po_received($nopo, $kdsuplier);
         $data['kd_po']      = !empty($data['detail'][0]['kd_po']) ? $data['detail'][0]['kd_po'] : '';
+        $data['is_detail_po_purchasing'] = $this->resolve_ics_po_panel_mode() === 'purchasing';
+        if ($data['is_detail_po_purchasing']) {
+            $lpbPoRecords = $this->M_Logistik->get_lpb_purchasing_view(null, null, $nopo, $data['kd_po'], FALSE);
+            $data['lpb_po_records'] = $this->M_Logistik->group_lpb_purchasing_records_by_nomor_lpb($lpbPoRecords);
+        } else {
+            $data['lpb_po_records'] = [];
+        }
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_po.php', $data);
@@ -748,6 +785,7 @@ class C_Ics extends CI_Controller
         $data['kd_po']      = $kd_po;
         $data['no_po']      = $no_po;
         $data['kd_suplier'] = $kd_suplier;
+        $data['initial_id_lpb'] = (int) $this->input->get('id_lpb', TRUE);
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
         $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
@@ -952,6 +990,7 @@ class C_Ics extends CI_Controller
         while (ob_get_level()) ob_end_clean();
 
         $kd_po = trim((string) $this->input->get('kd_po', TRUE));
+        $id_lpb = (int) $this->input->get('id_lpb', TRUE);
 
         header('Content-Type: application/json; charset=utf-8');
 
@@ -964,8 +1003,9 @@ class C_Ics extends CI_Controller
         }
 
         echo json_encode([
-            'status' => 'success',
-            'rows'   => $this->M_Logistik->get_lpb_records_by_kd_po($kd_po)
+            'status'       => 'success',
+            'rows'         => $this->M_Logistik->get_lpb_records_by_kd_po($kd_po, FALSE, $id_lpb),
+            'invoice_rows' => $this->M_Logistik->get_lpb_invoice_records_by_kd_po($kd_po, $id_lpb)
         ]);
     }
 
@@ -1092,6 +1132,17 @@ class C_Ics extends CI_Controller
         }
 
         return 'both';
+    }
+
+    private function is_admlpb_user()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        return strpos($departemen, 'LOGISTIK') !== FALSE
+            || in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], TRUE)
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], TRUE);
     }
 
     private function reject_non_admin_po_ajax()
@@ -1811,6 +1862,11 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        if ((int) ($header['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Pecah LPB multiple invoice hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->split_lpb_multiple_invoice([
             'id_lpb'         => $id_lpb,
@@ -1832,6 +1888,68 @@ class C_Ics extends CI_Controller
             'status'  => 'success',
             'message' => 'LPB berhasil dipecah menjadi multiple invoice.',
             'id_lpb'  => $saved['id_lpb'] ?? [],
+            'html'    => ''
+        ]);
+    }
+
+    public function ajax_split_lpb_detail()
+    {
+        if ($this->reject_non_admin_po_ajax()) {
+            return;
+        }
+
+        $idDetailLpb = (int) $this->input->post('id_detail_lpb', TRUE);
+        $rawSplits = (string) $this->input->post('splits', FALSE);
+        $splits = json_decode($rawSplits, TRUE);
+        $keterangan = trim((string) $this->input->post('keterangan', TRUE));
+
+        if ($idDetailLpb <= 0 || !is_array($splits) || count($splits) < 2) {
+            $this->json_response(['status' => 'error', 'message' => 'Data split detail LPB belum lengkap.', 'html' => '']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $detail = $this->db
+            ->select('d.id_lpb, d.qty_diterima, h.status_lpb')
+            ->from('tb_lpb_detail d')
+            ->join('tb_lpb h', 'h.id_lpb = d.id_lpb', 'inner')
+            ->where('d.id_detail_lpb', $idDetailLpb)
+            ->limit(1)
+            ->get()
+            ->row_array();
+
+        if (!$detail) {
+            $this->json_response(['status' => 'error', 'message' => 'Detail LPB tidak ditemukan.', 'html' => '']);
+            return;
+        }
+
+        if ((int) ($detail['status_lpb'] ?? 1) !== 0) {
+            $this->json_response(['status' => 'error', 'message' => 'Split detail LPB hanya bisa dilakukan saat status UNPOST.', 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->split_lpb_detail([
+            'id_detail_lpb'  => $idDetailLpb,
+            'splits'         => $splits,
+            'keterangan'     => $keterangan,
+            'dilakukan_oleh' => $this->active_user_name()
+        ]);
+
+        if (empty($saved['status']) || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $message = is_array($saved) && !empty($saved['message'])
+                ? $saved['message']
+                : 'Split detail LPB gagal disimpan.';
+            $this->json_response(['status' => 'error', 'message' => $message, 'html' => '']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->json_response([
+            'status'  => 'success',
+            'message' => 'Detail LPB berhasil di-split.',
+            'row'     => $saved,
             'html'    => ''
         ]);
     }

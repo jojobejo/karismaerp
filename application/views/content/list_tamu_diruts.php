@@ -6,30 +6,10 @@
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
         <!-- Content Wrapper. Contains page content -->
-
-        <nav class="main-header navbar navbar-expand-md navbar-light navbar-white">
-            <div class="container">
-                <a href="../../index3.html" class="navbar-brand">
-                    <img src="<?= base_url('assets/images/Karisma.png') ?>" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
-                    <span class="brand-text font-weight-bold">PT.Karisma Indoagro Universal</span>
-                </a>
-
-                <div class="collapse navbar-collapse order-3" id="navbarCollapse">
-                    <ul class="order-1 order-md-3 navbar-nav navbar-no-expand ml-auto">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link" href="<?= base_url('') ?>">
-                                <i class="fas fa-home"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link" href="<?= base_url('') ?>">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
+        <?php
+        $karisma_topbar_has_sidebar = false;
+        $this->load->view('partial/main/app_topbar');
+        ?>
 
         <?php $this->load->view('content/schedule/modalschedule.php') ?>
 

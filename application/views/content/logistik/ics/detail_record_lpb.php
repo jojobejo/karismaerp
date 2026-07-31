@@ -396,7 +396,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     <div class="lpb-panel lpb-invoice-overview mb-4">
                         <div class="lpb-panel-header">
                             <div>
-                                <h3 class="card-title mb-0 font-weight-bold">List Invoice LPB</h3>
+                                <h3 class="card-title mb-0 font-weight-bold">List Invoice LPB per Nomor LPB</h3>
                             </div>
                             <span class="badge badge-light" id="lpbInvoiceOverviewCount">0 invoice</span>
                         </div>
@@ -712,6 +712,101 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
         </div>
     </div>
 
+    <div class="modal fade" id="modalSplitLpbDetail" tabindex="-1" role="dialog" aria-labelledby="modalSplitLpbDetailLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <form id="formSplitLpbDetail" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalSplitLpbDetailLabel">Split Qty dan Harga Barang</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="splitDetailIdDetail" name="id_detail_lpb">
+                    <input type="hidden" id="splitDetailQtyAwalRaw">
+                    <input type="hidden" id="splitDetailHargaAwalRaw">
+                    <input type="hidden" id="splitDetailTotalAwalRaw">
+                    <input type="hidden" id="splitDetailKdBarang">
+                    <input type="hidden" id="splitDetailNamaBarang">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2" style="gap:8px;">
+                        <div>
+                            <div class="text-muted small">Data Acuan</div>
+                            <div class="font-weight-bold" id="splitDetailBarang">-</div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddSplitDetailRow">
+                            <i class="fas fa-plus mr-1"></i> Tambah Baris
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Qty In Awal</label>
+                                <input type="text" class="form-control" id="splitDetailQtyAwal" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Harga Satuan Awal</label>
+                                <input type="text" class="form-control" id="splitDetailHargaAwal" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Total Harga Awal</label>
+                                <input type="text" class="form-control" id="splitDetailTotalAwal" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Keterangan</label>
+                                <input type="text" class="form-control" id="splitDetailKeterangan" name="keterangan" placeholder="Keterangan split">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm lpb-table mb-2" id="splitDetailTable">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:160px;">Baris</th>
+                                    <th class="text-right" style="min-width:150px;">Qty</th>
+                                    <th class="text-right" style="min-width:170px;">Harga Satuan</th>
+                                    <th class="text-right" style="min-width:170px;">Total</th>
+                                    <th class="text-center" style="width:70px;">#</th>
+                                </tr>
+                            </thead>
+                            <tbody id="splitDetailRows"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>Total Input</th>
+                                    <th class="text-right" id="splitDetailTotalQtyInput">0</th>
+                                    <th></th>
+                                    <th class="text-right" id="splitDetailTotalHargaInput">Rp 0</th>
+                                    <th></th>
+                                </tr>
+                                <tr>
+                                    <th>Selisih</th>
+                                    <th class="text-right" id="splitDetailDiffQty">0</th>
+                                    <th></th>
+                                    <th class="text-right" id="splitDetailDiffHarga">Rp 0</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="alert alert-info mb-0" id="splitDetailInfo">
+                        Total qty dan total harga seluruh baris harus sama dengan data acuan.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="btnSubmitSplitDetail">
+                        <i class="fas fa-code-branch mr-1"></i> Simpan Split
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="modal fade" id="modalSplitInvoice" tabindex="-1" role="dialog" aria-labelledby="modalSplitInvoiceLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl" role="document">
             <form id="formSplitInvoice" class="modal-content">
@@ -960,7 +1055,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             var showLpbListPanel = <?= $showLpbListPanel ? 'true' : 'false' ?>;
             var showPrePoAdjustmentPanel = false;
             var allRows = [];
-            var selectedIdLpb = 0;
+            var allInvoiceRows = [];
+            var selectedIdLpb = <?= (int) ($initial_id_lpb ?? 0) ?>;
+            var scopedIdLpb = selectedIdLpb;
             var selectedHeader = null;
             var selectedDetailRows = [];
             var selectedPurchasingRows = [];
@@ -974,11 +1071,13 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             var isSubmittingFaktur = false;
             var isSubmittingJenisLpb = false;
             var isSubmittingLpbPrice = false;
+            var isSubmittingLpbDetailSplit = false;
             var isSubmittingLpbSj = false;
             var isSubmittingLpbDetailReceipt = false;
             var isChangingLpbStatus = false;
             var isAcceptingLpbPrice = false;
             var isBulkAcceptingLpbPrice = false;
+            var splitDetailRowCounter = 0;
 
             function escHtml(value) {
                 return $('<div>').text(value == null ? '' : value).html();
@@ -1107,6 +1206,134 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#lpbPriceTotalBaruText').val(formatRupiah(qty * hargaBaru));
             }
 
+            function addSplitDetailRow(label, qty, harga, removable) {
+                splitDetailRowCounter++;
+                var rowId = splitDetailRowCounter;
+                var rowHtml = '' +
+                    '<tr class="js-split-detail-row" data-row-id="' + rowId + '">' +
+                    '<td class="align-middle">' +
+                    '<input type="text" class="form-control form-control-sm js-split-detail-label" value="' + escAttr(label || ('Split ' + rowId)) + '" readonly>' +
+                    '</td>' +
+                    '<td><input type="number" min="0.0001" step="0.0001" class="form-control form-control-sm text-right js-split-detail-qty" value="' + escAttr(formatInputNumber(qty || 0)) + '" required></td>' +
+                    '<td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-right js-split-detail-harga" value="' + escAttr(harga || 0) + '" required></td>' +
+                    '<td class="text-right align-middle js-split-detail-total">Rp 0</td>' +
+                    '<td class="text-center align-middle">' +
+                    (removable ? '<button type="button" class="btn btn-outline-danger btn-sm js-remove-split-detail-row" title="Hapus baris"><i class="fas fa-trash"></i></button>' : '') +
+                    '</td>' +
+                    '</tr>';
+                $('#splitDetailRows').append(rowHtml);
+                updateSplitDetailPreview();
+            }
+
+            function collectSplitDetailRows() {
+                var rows = [];
+                $('#splitDetailRows .js-split-detail-row').each(function(index) {
+                    var qty = parseFloat($(this).find('.js-split-detail-qty').val()) || 0;
+                    var harga = parseFloat($(this).find('.js-split-detail-harga').val()) || 0;
+                    rows.push({
+                        label: $(this).find('.js-split-detail-label').val() || ('Baris ' + (index + 1)),
+                        qty: qty,
+                        harga_satuan: harga,
+                        total_harga: qty * harga
+                    });
+                });
+                return rows;
+            }
+
+            function updateSplitDetailPreview() {
+                var qtyAwal = parseFloat($('#splitDetailQtyAwalRaw').val()) || 0;
+                var totalAwal = parseFloat($('#splitDetailTotalAwalRaw').val()) || 0;
+                var rows = collectSplitDetailRows();
+                var totalQtyInput = 0;
+                var totalHargaInput = 0;
+                var message = 'Total qty dan total harga seluruh baris sudah sama dengan data acuan.';
+                var hasError = false;
+
+                $.each(rows, function(_, row) {
+                    totalQtyInput += row.qty;
+                    totalHargaInput += row.total_harga;
+                });
+
+                $('#splitDetailRows .js-split-detail-row').each(function() {
+                    var qty = parseFloat($(this).find('.js-split-detail-qty').val()) || 0;
+                    var harga = parseFloat($(this).find('.js-split-detail-harga').val()) || 0;
+                    $(this).find('.js-split-detail-total').text(formatRupiah(qty * harga));
+                });
+
+                var diffQty = qtyAwal - totalQtyInput;
+                var diffHarga = totalAwal - totalHargaInput;
+
+                if (rows.length < 2) {
+                    message = 'Minimal harus ada 2 baris hasil split.';
+                    hasError = true;
+                } else if ($.grep(rows, function(row) { return row.qty <= 0; }).length > 0) {
+                    message = 'Setiap baris hasil split harus memiliki qty lebih dari 0.';
+                    hasError = true;
+                } else if ($.grep(rows, function(row) { return row.harga_satuan < 0; }).length > 0) {
+                    message = 'Harga satuan tidak boleh minus.';
+                    hasError = true;
+                } else if (Math.abs(diffQty) > 0.0001) {
+                    message = 'Total qty seluruh baris harus sama dengan Qty In awal.';
+                    hasError = true;
+                } else if (Math.abs(diffHarga) > 0.01) {
+                    message = 'Total harga seluruh baris harus sama dengan total harga awal.';
+                    hasError = true;
+                }
+
+                $('#splitDetailTotalQtyInput').text(formatNumber(totalQtyInput));
+                $('#splitDetailTotalHargaInput').text(formatRupiah(totalHargaInput));
+                $('#splitDetailDiffQty')
+                    .toggleClass('text-danger font-weight-bold', Math.abs(diffQty) > 0.0001)
+                    .text(formatNumber(diffQty));
+                $('#splitDetailDiffHarga')
+                    .toggleClass('text-danger font-weight-bold', Math.abs(diffHarga) > 0.01)
+                    .text(formatRupiah(diffHarga));
+                $('#splitDetailInfo')
+                    .toggleClass('alert-danger', hasError)
+                    .toggleClass('alert-info', !hasError)
+                    .text(message);
+
+                return hasError ? message : '';
+            }
+
+            function openSplitLpbDetailModal(btn) {
+                if (!isSelectedLpbUnpost()) {
+                    Swal.fire('Validasi', 'Split detail LPB hanya bisa dilakukan saat status UNPOST.', 'warning');
+                    return;
+                }
+
+                var qtyAwal = parseFloat(btn.attr('data-qty') || 0) || 0;
+                var hargaAwal = parseFloat(btn.attr('data-harga-satuan') || 0) || 0;
+                var totalAwal = parseFloat(btn.attr('data-total-harga') || 0) || 0;
+                if (totalAwal <= 0 && qtyAwal > 0) {
+                    totalAwal = qtyAwal * hargaAwal;
+                }
+
+                if (qtyAwal <= 0) {
+                    Swal.fire('Validasi', 'Qty In detail LPB tidak valid untuk di-split.', 'warning');
+                    return;
+                }
+
+                $('#splitDetailIdDetail').val(btn.attr('data-id-detail') || 0);
+                $('#splitDetailKdBarang').val(btn.attr('data-kd-barang') || '');
+                $('#splitDetailNamaBarang').val(btn.attr('data-nama-barang') || '-');
+                $('#modalSplitLpbDetailLabel').text('Split Qty dan Harga Barang - ' + (btn.attr('data-nama-barang') || '-'));
+                $('#splitDetailBarang').text((btn.attr('data-kd-barang') || '-') + ' - ' + (btn.attr('data-nama-barang') || '-'));
+                $('#splitDetailQtyAwalRaw').val(qtyAwal);
+                $('#splitDetailHargaAwalRaw').val(hargaAwal);
+                $('#splitDetailTotalAwalRaw').val(totalAwal);
+                $('#splitDetailQtyAwal').val(formatNumber(qtyAwal));
+                $('#splitDetailHargaAwal').val(formatRupiah(hargaAwal));
+                $('#splitDetailTotalAwal').val(formatRupiah(totalAwal));
+                $('#splitDetailKeterangan').val('');
+                $('#splitDetailRows').empty();
+                splitDetailRowCounter = 0;
+                addSplitDetailRow('Data Sekarang', qtyAwal, hargaAwal, false);
+                addSplitDetailRow('Split 1', 0, hargaAwal, true);
+                updateSplitDetailPreview();
+                $('#modalSplitLpbDetail').modal('show');
+            }
+
             function validateLpbPriceQtyInput() {
                 var qty = parseFloat($('#lpbPriceQty').val()) || 0;
                 var qtyMax = parseFloat($('#lpbPriceQtyMax').val()) || 0;
@@ -1174,10 +1401,25 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 var tbody = $('#lpbInvoiceOverviewTable tbody');
                 tbody.empty();
-                $('#lpbInvoiceOverviewCount').text(formatNumber((rows || []).length) + ' invoice');
+                var lpbNumbers = {};
+                var invoiceCount = 0;
+
+                $.each(rows || [], function(_, row) {
+                    if (row.nomor_lpb) {
+                        lpbNumbers[row.nomor_lpb] = true;
+                    }
+                    if (hasInvoice(row.no_invoice)) {
+                        invoiceCount++;
+                    }
+                });
+
+                $('#lpbInvoiceOverviewCount').text(
+                    formatNumber(invoiceCount) + ' invoice / ' +
+                    formatNumber(Object.keys(lpbNumbers).length) + ' nomor LPB'
+                );
 
                 if (!rows || rows.length === 0) {
-                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Belum ada invoice LPB untuk PO ini.</td></tr>');
+                    tbody.html('<tr><td colspan="5" class="text-center text-muted">Belum ada nomor LPB terekam untuk PO ini.</td></tr>');
                     return;
                 }
 
@@ -1205,7 +1447,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     $('#lpbListLoading').hide();
                     $('#lpbListWrap').hide();
                     $('#lpbListEmpty').show();
-                    renderInvoiceOverview([]);
+                    renderInvoiceOverview(allInvoiceRows);
                     resetDetailState();
                     updateStats([]);
                     return;
@@ -1214,7 +1456,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $.each(rows, function(_, row) {
                     container.append(buildListItem(row));
                 });
-                renderInvoiceOverview(rows);
+                renderInvoiceOverview(allInvoiceRows);
 
                 $('#lpbListLoading').hide();
                 $('#lpbListEmpty').hide();
@@ -1248,7 +1490,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 $('#lpbDetailEmpty').show();
                 $('#lpbDetailHeaderGrid').empty();
                 $('#lpbDetailTable tbody').empty();
-                renderInvoiceOverview(allRows);
+                renderInvoiceOverview(allInvoiceRows);
                 $('#lpbGrandTotalHargaWrap').hide();
                 $('#lpbTotalDpp').text(formatRupiah(0));
                 $('#lpbGrandTotalHarga').text(formatRupiah(0));
@@ -1378,12 +1620,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 }
 
                 $('#lpbWorkflowActions').show();
+                var isUnpost = isSelectedLpbUnpost();
                 $('#btnUpdateInvoice')
                     .prop('disabled', false)
                     .attr('title', 'Update Invoice');
                 $('#btnSplitInvoice')
-                    .prop('disabled', false)
-                    .attr('title', 'Pecah Invoice');
+                    .toggle(isUnpost)
+                    .prop('disabled', !isUnpost)
+                    .attr('title', isUnpost ? 'Pecah Invoice' : 'UNPOST LPB terlebih dahulu untuk pecah invoice');
                 $('#btnUpdateFaktur')
                     .prop('disabled', false)
                     .attr('title', 'Update Faktur');
@@ -1393,7 +1637,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
-                var isUnpost = isSelectedLpbUnpost();
                 $('#lpbPostActions').show();
                 $('#btnUnpostLpb').toggle(!isUnpost).prop('disabled', isChangingLpbStatus);
                 $('#btnPostLpb').toggle(isUnpost).prop('disabled', isChangingLpbStatus);
@@ -1490,6 +1733,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     $.each(rows, function(index, row) {
                         var actionColumn = canEditDetail ? (
                             '<td class="text-center">' +
+                            '<div class="btn-group btn-group-sm" role="group">' +
                             '<button type="button" class="btn btn-warning btn-sm js-open-lpb-detail-receipt" title="Edit detail LPB" ' +
                             'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
                             'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
@@ -1499,6 +1743,16 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             'data-qty="' + escAttr(row.qty_diterima || row.qty_lpb || 0) + '">' +
                             '<i class="fas fa-pencil-alt"></i>' +
                             '</button>' +
+                            '<button type="button" class="btn btn-outline-warning btn-sm js-open-lpb-detail-split" title="Split detail LPB" ' +
+                            'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                            'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                            'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                            'data-qty="' + escAttr(row.qty_in || row.qty_diterima || row.qty_lpb || 0) + '" ' +
+                            'data-harga-satuan="' + escAttr(row.harga_satuan_exclude || row.harga_satuan || 0) + '" ' +
+                            'data-total-harga="' + escAttr(row.total_harga_exclude || row.total_harga || 0) + '">' +
+                            '<i class="fas fa-code-branch"></i>' +
+                            '</button>' +
+                            '</div>' +
                             '</td>'
                         ) : '';
 
@@ -1604,7 +1858,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     type: 'GET',
                     dataType: 'json',
                     data: {
-                        kd_po: kdPo
+                        kd_po: kdPo,
+                        id_lpb: scopedIdLpb
                     },
                     success: function(res) {
                         if (res.status !== 'success') {
@@ -1616,6 +1871,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         }
 
                         allRows = res.rows || [];
+                        allInvoiceRows = res.invoice_rows || [];
                         renderList(allRows, options);
                         applySearch();
                     },
@@ -1730,6 +1986,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     var totalHargaAktif = row.total_harga_display || row.total_harga_exclude || row.total_harga || 0;
                     var actionColumn = canEditPrice ? (
                         '<td class="text-center">' +
+                        '<div class="btn-group btn-group-sm" role="group">' +
                         '<button type="button" class="btn btn-warning btn-sm js-open-lpb-price" title="Update harga dan Qty LPB" ' +
                         'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
                         'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
@@ -1742,6 +1999,16 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         'data-total-harga="' + escAttr(totalHargaEdit) + '">' +
                         '<i class="fas fa-pencil-alt"></i>' +
                         '</button>' +
+                        '<button type="button" class="btn btn-outline-warning btn-sm js-open-lpb-detail-split" title="Split detail LPB" ' +
+                        'data-id-detail="' + escAttr(row.id_detail_lpb || 0) + '" ' +
+                        'data-kd-barang="' + escAttr(row.kd_barang || '') + '" ' +
+                        'data-nama-barang="' + escAttr(row.nama_barang || '-') + '" ' +
+                        'data-qty="' + escAttr(row.qty_in || row.qty_lpb || 0) + '" ' +
+                        'data-harga-satuan="' + escAttr(hargaSatuanAktif) + '" ' +
+                        'data-total-harga="' + escAttr(totalHargaEdit) + '">' +
+                        '<i class="fas fa-code-branch"></i>' +
+                        '</button>' +
+                        '</div>' +
                         '</td>'
                     ) : '';
 
@@ -2188,6 +2455,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     return;
                 }
 
+                if (!isSelectedLpbUnpost()) {
+                    Swal.fire('Validasi', 'Pecah LPB hanya bisa dilakukan saat status UNPOST.', 'warning');
+                    return;
+                }
+
                 if (getSplitSourceRows().length === 0) {
                     Swal.fire('Validasi', 'Detail LPB belum tersedia untuk dipecah.', 'warning');
                     return;
@@ -2395,6 +2667,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 openUpdateLpbPriceModal($(this));
             });
 
+            $(document).on('click', '.js-open-lpb-detail-split', function() {
+                openSplitLpbDetailModal($(this));
+            });
+
             $(document).on('click', '.js-open-lpb-detail-receipt', function() {
                 openUpdateLpbDetailReceiptModal($(this));
             });
@@ -2483,6 +2759,20 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             $('#lpbPriceQty, #lpbPriceHargaBaru').on('input', function() {
                 updateLpbPriceTotal();
+            });
+
+            $('#btnAddSplitDetailRow').on('click', function() {
+                var hargaAwal = parseFloat($('#splitDetailHargaAwalRaw').val()) || 0;
+                addSplitDetailRow('Split ' + splitDetailRowCounter, 0, hargaAwal, true);
+            });
+
+            $('#splitDetailRows').on('click', '.js-remove-split-detail-row', function() {
+                $(this).closest('tr').remove();
+                updateSplitDetailPreview();
+            });
+
+            $('#splitDetailRows').on('input change', '.js-split-detail-qty, .js-split-detail-harga', function() {
+                updateSplitDetailPreview();
             });
 
             $('#formAdjustmentHarga').on('submit', function(e) {
@@ -2953,6 +3243,61 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     complete: function() {
                         isSubmittingLpbDetailReceipt = false;
                         $('#btnSubmitLpbDetailReceipt').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Detail');
+                    }
+                });
+            });
+
+            $('#formSplitLpbDetail').on('submit', function(e) {
+                e.preventDefault();
+
+                if (isSubmittingLpbDetailSplit) {
+                    return;
+                }
+
+                var validationMessage = updateSplitDetailPreview();
+                if (validationMessage) {
+                    Swal.fire('Validasi Split LPB', validationMessage, 'warning');
+                    return;
+                }
+
+                isSubmittingLpbDetailSplit = true;
+                var previousDetailMode = detailViewMode;
+                $('#btnSubmitSplitDetail').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+                $.ajax({
+                    url: '<?= base_url('ics/ajax_split_lpb_detail') ?>',
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        id_detail_lpb: $('#splitDetailIdDetail').val(),
+                        splits: JSON.stringify(collectSplitDetailRows()),
+                        keterangan: $('#splitDetailKeterangan').val()
+                    },
+                    success: function(res) {
+                        if (res.status !== 'success') {
+                            Swal.fire('Gagal', res.message || 'Split detail LPB gagal disimpan.', 'error');
+                            return;
+                        }
+
+                        $('#modalSplitLpbDetail').modal('hide');
+                        Swal.fire('Berhasil', res.message || 'Detail LPB berhasil di-split.', 'success');
+                        loadList({
+                            skipDetailReload: true
+                        });
+                        if (selectedIdLpb) {
+                            if (previousDetailMode === 'purchasing') {
+                                loadPurchasingDetailView();
+                            } else {
+                                loadDetail(selectedIdLpb);
+                            }
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan split detail LPB.', 'error');
+                    },
+                    complete: function() {
+                        isSubmittingLpbDetailSplit = false;
+                        $('#btnSubmitSplitDetail').prop('disabled', false).html('<i class="fas fa-code-branch mr-1"></i> Simpan Split');
                     }
                 });
             });

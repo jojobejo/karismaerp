@@ -18,6 +18,7 @@
     <!-- Theme style -->
     <link rel="stylesheet" href="<?= base_url('assets/dist/css/adminlte.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/dist/css/purchase.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/dist/css/karisma-custom.css') ?>">
     <!-- DataTables -->
     <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/plugins/datatables-responsive/css/responsive.bootstrap4.min.css') ?>">

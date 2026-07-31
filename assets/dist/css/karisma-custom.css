@@ -1,3 +1,72 @@
+.karisma-app-topbar {
+    background: #1687ad;
+    border: 0;
+    color: #fff;
+    min-height: 54px;
+    padding: 0 8px;
+    box-shadow: none;
+}
+.karisma-app-topbar .nav-link {
+    color: #fff !important;
+}
+.karisma-topbar-toggle {
+    align-items: center;
+    display: inline-flex;
+    font-size: 19px;
+    justify-content: center;
+    min-height: 54px;
+    padding-left: 0;
+    padding-right: 11px;
+    width: 33px;
+}
+.karisma-topbar-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1;
+    padding-left: 0;
+}
+.karisma-topbar-module {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+.karisma-topbar-logout {
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, .65);
+    border-radius: 3px;
+    display: inline-flex;
+    height: 34px;
+    justify-content: center;
+    margin-left: 10px;
+    padding: 0;
+    width: 34px;
+}
+.karisma-topbar-logout:hover,
+.karisma-topbar-logout:focus,
+.karisma-topbar-toggle:hover,
+.karisma-topbar-toggle:focus {
+    background: rgba(255, 255, 255, .12);
+}
+@media (max-width: 575.98px) {
+    .karisma-topbar-title {
+        font-size: 17px;
+    }
+    .karisma-topbar-module {
+        font-size: 12px;
+        max-width: 44vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+@media print {
+    .karisma-app-topbar {
+        display: none !important;
+    }
+}
+
 .sales-modern-page .content-wrapper {
     background:
         linear-gradient(180deg, rgba(37, 99, 235, .08) 0, rgba(37, 99, 235, 0) 220px),

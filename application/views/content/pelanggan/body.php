@@ -6,6 +6,10 @@
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="AdminLTELogo" height="150" width="300">
         </div>
 
+        <?php
+        $karisma_topbar_has_sidebar = false;
+        $this->load->view('partial/main/app_topbar');
+        ?>
 
         <div class="content-wrapper bgipkp">
 

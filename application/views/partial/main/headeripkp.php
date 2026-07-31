@@ -43,4 +43,5 @@
   <script src="<?= base_url('assets/plugins/jquery/jquery.js') ?>"></script>
   <!-- CSS Custom Karisma -->
   <link rel="stylesheet" href="<?php echo base_url("assets/ipkp.css") ?>">
+  <link rel="stylesheet" href="<?= base_url('assets/dist/css/karisma-custom.css') ?>">
 </head>

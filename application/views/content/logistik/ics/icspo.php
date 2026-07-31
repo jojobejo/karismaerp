@@ -11,12 +11,19 @@ $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
 $canLpbManual = !empty($can_lpb_manual);
 $canLpbReport = !empty($can_lpb_report);
-$showPanelTabs = $showLogistikPanel && $showPurchasingPanel;
+$isDataLpbPage = !empty($is_data_lpb_page);
+$isAdmlpbUser = !empty($is_admlpb_user);
+$hideSupplierCode = !empty($hide_lpb_supplier_code);
+$hideLastInput = !empty($hide_lpb_last_input);
+$lpbTableColspan = 10 - ($hideSupplierCode ? 1 : 0) - ($hideLastInput ? 1 : 0);
+$showPanelTabs = !$isDataLpbPage && $showLogistikPanel && $showPurchasingPanel;
 $logistikPanelClass = $showPanelTabs ? 'tab-pane fade show active' : '';
 $purchasingPanelClass = $showPanelTabs ? 'tab-pane fade' : '';
-$panelTitle = $showPurchasingPanel && !$showLogistikPanel
+$panelTitle = $isDataLpbPage
+    ? 'Data LPB'
+    : ($showPurchasingPanel && !$showLogistikPanel
     ? 'Data LPB Purchasing'
-    : ($isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)');
+    : ($isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)'));
 ?>
 <style>
     .sync-summary-card {
@@ -172,7 +179,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
         <div class="content-wrapper">
             <div class="content-header">
                 <section class="content">
-                    <?php if (!$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
+                    <?php if (!$isDataLpbPage && !$isAdminPo && $this->session->userdata('lv') == '1' && $this->session->userdata('jobdesk') != 'ADMINLOGLPB') : ?>
                         <div class="row">
                             <div class="col-auto">
                                 <a href="<?= base_url('ics/ics_diffrent') ?>" class="btn btn-md btn-primary w-100 mb-3">
@@ -207,7 +214,14 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                         <div class="card-body">
                             <div class="container-fluid px-0">
                                 <div class="row mb-3" id="button-row-lpb">
-                                    <?php if ($canLpbManual) : ?>
+                                    <?php if ($isDataLpbPage && $isAdmlpbUser) : ?>
+                                        <div class="col-md-1 col-sm-3 col-4 mb-2">
+                                            <a class="btn btn-secondary btn-block" href="<?= base_url('dashboard') ?>" title="Kembali Dashboard">
+                                                <i class="fas fa-home"></i>
+                                            </a>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($canLpbManual && (!$isDataLpbPage || !$isAdmlpbUser)) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('ics/lpb_manual') ?>">
                                                 <i class="fas fa-keyboard"></i> Input LPB Manual
@@ -235,7 +249,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                         <?php endif; ?>
                                 </div>
 
-                                <?php if (!$canSyncPo && $this->session->userdata('lv') == '2') : ?>
+                                <?php if (!$isDataLpbPage && !$canSyncPo && $this->session->userdata('lv') == '2') : ?>
                                     <div class="row mb-3">
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <button class="btn btn-success btn-block" data-toggle="modal" data-target="#modalImportCSV">
@@ -285,21 +299,39 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                 </ul>
                                 <?php endif; ?>
 
-                                <div class="tab-content" id="poPanelTabsContent">
+                                <div class="<?= $showPanelTabs ? 'tab-content' : '' ?>"<?= $showPanelTabs ? ' id="poPanelTabsContent"' : '' ?>>
                                     <?php if ($showLogistikPanel) : ?>
                                     <div class="<?= $logistikPanelClass ?>" id="logistik-panel" role="tabpanel" aria-labelledby="logistik-tab">
+                                        <?php if ($isDataLpbPage) : ?>
+                                            <div class="lpb-filter-toolbar mb-3" id="lpbStatusFilter">
+                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="belum">
+                                                    <i class="fas fa-times mr-1"></i> Belum
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="partial">
+                                                    <i class="fas fa-clock mr-1"></i> Partial
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="done">
+                                                    <i class="fas fa-check mr-1"></i> Done
+                                                </button>
+                                            </div>
+                                        <?php endif; ?>
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
                                             <tr>
                                                 <th>No PO</th>
                                                 <th>Tgl Transaksi</th>
+                                                <?php if (!$hideSupplierCode) : ?>
                                                 <th>Kode Supplier</th>
+                                                <?php endif; ?>
                                                 <th>Nama Supplier</th>
                                                 <th class="text-center">Total Barang Order</th>
                                                 <th class="text-center">Total Barang Diterima</th>
                                                 <th class="text-center">Progress</th>
+                                                <?php if (!$hideLastInput) : ?>
                                                 <th class="text-center">Input Terakhir</th>
+                                                <?php endif; ?>
                                                 <th class="text-center">Status</th>
                                                 <th class="text-center" style="width:90px;">#</th>
                                             </tr>
@@ -338,10 +370,12 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                         $badge = '<span class="badge badge-danger px-2 py-1"><i class="fas fa-times mr-1"></i> Belum</span>';
                                                     }
                                                 ?>
-                                                    <tr class="<?= $rowClass ?>">
+                                                    <tr class="<?= $rowClass ?>" data-lpb-status="<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>">
                                                         <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
                                                         <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                                        <?php if (!$hideSupplierCode) : ?>
                                                         <td><?= htmlspecialchars($row['kdsupp'] ?? '') ?></td>
+                                                        <?php endif; ?>
                                                         <td><?= htmlspecialchars($row['nm_suplier'] ?? '-') ?></td>
                                                         <td class="text-center font-weight-bold"><?= $jumlah_barang_order ?></td>
                                                         <td class="text-center font-weight-bold <?= $jumlah_barang_diterima > 0 ? 'text-success' : 'text-danger' ?>">
@@ -359,7 +393,9 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                                 <div class="po-progress-note">Berdasarkan qty diterima</div>
                                                             </div>
                                                         </td>
+                                                        <?php if (!$hideLastInput) : ?>
                                                         <td class="text-center"><?= htmlspecialchars($row['input_terakhir'] ?? '-') ?></td>
+                                                        <?php endif; ?>
                                                         <td class="text-center"><?= $badge ?></td>
                                                         <td class="text-center">
                                                             <a href="<?= base_url('ics/detail_po?no_po=' . urlencode($row['no_po']) . '&kd_suplier=' . urlencode($row['kdsupp'] ?? '')) ?>" class="btn btn-info btn-sm" target="_blank">
@@ -370,7 +406,7 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                                                 <?php endforeach; ?>
                                             <?php else : ?>
                                                 <tr>
-                                                    <td colspan="10" class="text-center text-muted">
+                                                    <td colspan="<?= $lpbTableColspan ?>" class="text-center text-muted">
                                                         <i class="fas fa-inbox mr-1"></i> Tidak ada data
                                                     </td>
                                                 </tr>
@@ -523,7 +559,24 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
     <script>
         $(document).ready(function() {
             <?php if ($showLogistikPanel) : ?>
-            $('#idtb_ics_po').DataTable({
+            <?php if ($isDataLpbPage) : ?>
+            var lpbStatusFilter = 'all';
+
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (!settings.nTable || settings.nTable.id !== 'idtb_ics_po') {
+                    return true;
+                }
+
+                if (lpbStatusFilter === 'all') {
+                    return true;
+                }
+
+                var $row = $(settings.aoData[dataIndex].nTr);
+                return String($row.data('lpb-status')) === lpbStatusFilter;
+            });
+            <?php endif; ?>
+
+            var lpbTable = $('#idtb_ics_po').DataTable({
                 responsive: true,
                 autoWidth: false,
                 pageLength: 25,
@@ -548,6 +601,19 @@ $panelTitle = $showPurchasingPanel && !$showLogistikPanel
                     }
                 }
             });
+
+            <?php if ($isDataLpbPage) : ?>
+            $('#lpbStatusFilter').on('click', 'button[data-filter]', function() {
+                lpbStatusFilter = $(this).data('filter') || 'all';
+                $('#lpbStatusFilter button[data-filter]')
+                    .removeClass('btn-primary active')
+                    .addClass('btn-outline-secondary');
+                $(this)
+                    .removeClass('btn-outline-secondary')
+                    .addClass('btn-primary active');
+                lpbTable.draw();
+            });
+            <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($showPurchasingPanel) : ?>

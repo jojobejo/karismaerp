@@ -30,24 +30,6 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
             linear-gradient(135deg, #f8fafc 0%, #edf2f7 50%, #e7edf4 100%);
     }
 
-    .dashboard-topbar {
-        min-height: 56px;
-        color: #fff;
-        background: #127fad;
-        border: 0;
-        box-shadow: 0 8px 18px rgba(18, 127, 173, .18);
-    }
-
-    .dashboard-topbar .navbar-brand,
-    .dashboard-topbar .nav-link {
-        color: #fff !important;
-    }
-
-    .dashboard-topbar .navbar-brand {
-        font-weight: 700;
-        letter-spacing: .2px;
-    }
-
     .dashboard-shell {
         width: min(1880px, calc(100% - 36px));
         margin: 0 auto;
@@ -347,21 +329,10 @@ $lv = isset($context['lv']) ? (int)$context['lv'] : (int)$this->session->userdat
             <img class="animation__shake" src="<?php echo base_url('assets/images/Karisma.png') ?>" alt="Karisma" height="150" width="300">
         </div>
 
-        <nav class="main-header navbar navbar-expand dashboard-topbar">
-            <a href="<?= base_url('dashboard') ?>" class="navbar-brand">
-                <i class="fas fa-th-large mr-2"></i> Dashboard
-            </a>
-            <ul class="navbar-nav ml-auto align-items-center">
-                <li class="nav-item d-none d-sm-block">
-                    <span class="nav-link"><?= html_escape($nama) ?></span>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= base_url('logout') ?>" class="btn btn-sm btn-outline-light">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+        <?php
+        $karisma_topbar_has_sidebar = false;
+        $this->load->view('partial/main/app_topbar');
+        ?>
 
         <div class="content-wrapper">
             <section class="content">
