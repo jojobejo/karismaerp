@@ -23,7 +23,7 @@ class C_Ics extends CI_Controller
 
     private function is_retur_method($method)
     {
-        return in_array($method, ['dash_retur', 'detail_retur', 'retur_penjualan', 'retur_pembelian', 'retur_pembelian_adjustment'], true)
+        return in_array($method, ['dash_retur', 'detail_retur', 'retur_pembelian', 'retur_pembelian_adjustment'], true)
             || strpos((string)$method, 'ajax_retur') === 0;
     }
 
@@ -4594,17 +4594,6 @@ class C_Ics extends CI_Controller
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/detail_retur.php', $data);
-        $this->load->view('partial/main/footer.php');
-    }
-
-    public function retur_penjualan()
-    {
-        $data['page_title'] = 'KARISMA - LOGISTIK';
-        $data['kd_retur']   = $this->M_Ics->generate_kd_retur_by_type(2);
-
-        $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/logistik/ics/returform.php', $data);
-        $this->load->view('content/logistik/ics/ajax_retur.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 

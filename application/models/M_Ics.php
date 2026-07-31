@@ -3178,10 +3178,6 @@ LEFT JOIN tb_customer c
             $rows = array_merge($rows, $this->get_retur_pembelian_dashboard_rows());
         }
 
-        if ($this->db->table_exists('tbrp_retur_penjualan_header')) {
-            $rows = array_merge($rows, $this->get_retur_penjualan_dashboard_rows());
-        }
-
         if ($this->db->table_exists('tb_retur_barang')) {
             $rows = array_merge($rows, $this->get_retur_legacy_dashboard_rows());
         }
@@ -3298,6 +3294,7 @@ LEFT JOIN tb_customer c
             ", false)
             ->from('tb_retur_barang r')
             ->join("($sub) d", 'd.kd_retur = r.kd_retur', 'left', false)
+            ->where('r.type_retur', 1)
             ->order_by('r.input_at', 'DESC')
             ->limit(200)
             ->get()

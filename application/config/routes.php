@@ -165,6 +165,9 @@ $route['keuangan']                                  = 'keuangan/C_Keuangan';
 $route['keuangan/pembelian']                         = 'keuangan/C_Keuangan/menu_pembelian';
 $route['keuangan/penjualan']                         = 'keuangan/C_Keuangan/menu_penjualan';
 $route['keuangan/pembayaran']                       = 'keuangan/C_pembayaran';
+$route['keuangan/pembayaran/collection']            = 'keuangan/C_pembayaran/collection';
+$route['keuangan/pembayaran/export-excel']          = 'keuangan/C_pembayaran/export_excel';
+$route['keuangan/pembayaran/get_payment_history_json'] = 'keuangan/C_pembayaran/get_payment_history_json';
 $route['keuangan/pembayaran/history']               = 'keuangan/C_pembayaran/history';
 $route['keuangan/pembayaran/customer/(:any)']       = 'keuangan/C_pembayaran/customer/$1';
 $route['keuangan/pembayaran/bayar/(:num)']          = 'keuangan/C_pembayaran/bayar/$1';
@@ -481,7 +484,6 @@ $route['ics/api/stock_per_gudang']                  = 'logistik/C_Ics/api_stock_
 $route['api/v1/stock/(:any)']                       = 'logistik/C_Ics/api_stock/$1';
 
 $route['ics/retur']                                 = 'logistik/C_Ics/dash_retur';
-$route['ics/retur/penjualan']                       = 'logistik/C_Ics/retur_penjualan';
 $route['ics/retur/pembelian']                       = 'logistik/C_Ics/retur_pembelian';
 $route['ics/retur/faktur_select2']                  = 'logistik/C_Ics/ajax_retur_faktur_select2';
 $route['ics/retur/barang_select2']                  = 'logistik/C_Ics/ajax_retur_barang_select2';

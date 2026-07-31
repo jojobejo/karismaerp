@@ -37,6 +37,12 @@ class M_pembayaran extends CI_Model
                     'null'  => true,
                     'after' => 'metode_pembayaran',
                 ],
+                'cara_pembayaran' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'metode_pembayaran',
+                ],
                 'status_bg' => [
                     'type'       => 'VARCHAR',
                     'constraint' => 20,
@@ -99,6 +105,11 @@ class M_pembayaran extends CI_Model
             'metode_pembayaran' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
+                'null'       => true,
+            ],
+            'cara_pembayaran' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 50,
                 'null'       => true,
             ],
             'tanggal_bg_cair' => [
@@ -214,6 +225,7 @@ class M_pembayaran extends CI_Model
             c.regional,
             c.kd_rute,
             f.tanggal_faktur,
+            f.tanggal_jatuh_tempo,
             {$cara_pembayaran_select},
             {$tanggal_selesai_do} AS tanggal_selesai_do,
             f.status,
@@ -228,10 +240,12 @@ class M_pembayaran extends CI_Model
                 ELSE 'belum_lunas'
             END AS status_pembayaran,
             DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) AS hari_overdue,
+            DATEDIFF(DATE(f.tanggal_jatuh_tempo), CURDATE()) AS sisa_hari,
             CASE
-                WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 30 THEN 'Overdue 30'
-                WHEN DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) <= 60 THEN 'Overdue 60'
-                ELSE 'Overdue 90'
+                WHEN COALESCE(f.jtempo, 0) = 30 THEN 'Overdue 30'
+                WHEN COALESCE(f.jtempo, 0) = 60 THEN 'Overdue 60'
+                WHEN COALESCE(f.jtempo, 0) = 90 THEN 'Overdue 90'
+                ELSE 'Belum overdue'
             END AS status_overdue,
             COALESCE(fnb.nama_barang, '-') AS nama_barang
         ", false);
@@ -282,6 +296,22 @@ class M_pembayaran extends CI_Model
     {
         $this->_select_invoice_summary();
         $this->db->where('f.kd_customer', $kd_customer);
+        $this->db->having('sisa_tagihan >', 0);
+        $this->db->order_by('tanggal_selesai_do', 'ASC');
+        $this->db->order_by('f.tanggal_faktur', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
+    public function get_all_unpaid_fakturs()
+    {
+        $this->_select_invoice_summary();
+        
+        $this->db->group_start();
+        $this->db->where('f.jtempo >', 0);
+        $this->db->or_where('f.tempo >', 0);
+        $this->db->group_end();
+
         $this->db->having('sisa_tagihan >', 0);
         $this->db->order_by('tanggal_selesai_do', 'ASC');
         $this->db->order_by('f.tanggal_faktur', 'ASC');

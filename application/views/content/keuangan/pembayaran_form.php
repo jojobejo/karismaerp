@@ -136,6 +136,10 @@ $default_metode = '';
                                         <td><?= !empty($faktur['tanggal_faktur']) ? date('d/m/Y', strtotime($faktur['tanggal_faktur'])) : '-' ?></td>
                                     </tr>
                                     <tr>
+                                        <td class="text-muted">Tanggal Tempo</td>
+                                        <td><?= !empty($faktur['tanggal_jatuh_tempo']) ? date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) : '-' ?></td>
+                                    </tr>
+                                    <tr>
                                         <td class="text-muted">Customer</td>
                                         <td><?= htmlspecialchars($faktur['nama_customer']) ?></td>
                                     </tr>
@@ -158,7 +162,7 @@ $default_metode = '';
                                         <td><span class="badge badge-<?= $faktur['status_overdue'] === 'Belum overdue' ? 'secondary' : ($faktur['status_overdue'] === 'Overdue 30' ? 'warning' : 'danger') ?>"><?= htmlspecialchars($faktur['status_overdue']) ?></span></td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Total Tagihan</td>
+                                        <td class="text-muted">Total Piutang</td>
                                         <td>Rp <?= number_format((float)$faktur['total_tagihan'], 0, ',', '.') ?></td>
                                     </tr>
                                     <tr>
@@ -172,7 +176,7 @@ $default_metode = '';
                                     </tr>
                                     <?php endif; ?>
                                     <tr>
-                                        <td class="text-muted">Sisa Tagihan</td>
+                                        <td class="text-muted">Sisa Piutang</td>
                                         <td><strong class="text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></strong></td>
                                     </tr>
                                 </table>
@@ -619,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (total > sisaTagihan + 1) { // Allowing tiny floating point buffer similar to server side
                 e.preventDefault();
-                alert('❌ Jumlah Pembayaran + Diskon (Rp ' + total.toLocaleString('id-ID') + ') tidak boleh melebihi Sisa Tagihan (Rp ' + sisaTagihan.toLocaleString('id-ID') + ')!');
+                alert('❌ Jumlah Pembayaran + Diskon (Rp ' + total.toLocaleString('id-ID') + ') tidak boleh melebihi Sisa Piutang (Rp ' + sisaTagihan.toLocaleString('id-ID') + ')!');
                 return false;
             }
         });

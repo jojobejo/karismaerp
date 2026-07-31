@@ -98,10 +98,10 @@
                                 <tr>
                                     <th>Customer</th>
                                     <th class="text-center">Total Faktur</th>
-                                    <th class="text-right">Total Tagihan</th>
+                                    <th class="text-right">Total Piutang</th>
                                     <th class="text-right">Total Pembayaran</th>
                                     <th class="text-right">BG Belum Cair</th>
-                                    <th class="text-right">Sisa Tagihan</th>
+                                    <th class="text-right">Sisa Piutang</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>

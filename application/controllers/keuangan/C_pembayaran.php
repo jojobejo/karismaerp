@@ -28,6 +28,11 @@ class C_pembayaran extends CI_Controller
 
     public function index()
     {
+        $jobdesk = strtoupper(trim((string)$this->session->userdata('jobdesk')));
+        if ($jobdesk === 'COLLECTION') {
+            redirect('keuangan/pembayaran/collection');
+        }
+
         $keyword = trim((string)$this->input->get('q', true));
 
         $data['page_title'] = 'KARISMA - PEMBAYARAN FAKTUR';
@@ -38,6 +43,104 @@ class C_pembayaran extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_customer.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function collection()
+    {
+        $data['page_title'] = 'KARISMA - PIUTANG CUSTOMER (COLLECTION)';
+        $data['fakturs'] = $this->M_pembayaran->get_all_unpaid_fakturs();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/piutang_collection.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function export_excel()
+    {
+        require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+        $fakturs = $this->M_pembayaran->get_all_unpaid_fakturs();
+
+        $ps = new PhpSpreadsheetLib();
+        $spreadsheet = $ps->spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Headers
+        $headers = [
+            'No Faktur', 'Tanggal Faktur', 'Tanggal Tempo', 'Sisa Hari', 'Customer',
+            'Total Piutang', 'Total Pembayaran', 'BG Belum Cair', 'Sisa Piutang',
+            'Status Bayar', 'Overdue', 'Frekuensi Bayar', 'Cara Pembayaran'
+        ];
+
+        $col = 1;
+        foreach ($headers as $h) {
+            $sheet->setCellValueByColumnAndRow($col, 1, $h);
+            $col++;
+        }
+
+        $rowNum = 2;
+        foreach ($fakturs as $faktur) {
+            $status_bayar = strtolower($faktur['status_pembayaran']);
+            $status_label = [
+                'lunas'       => 'Lunas',
+                'sebagian'    => 'Sebagian',
+                'belum_lunas' => 'Belum Lunas',
+            ][$status_bayar] ?? $faktur['status_pembayaran'];
+            
+            $sisa = (int)$faktur['sisa_hari'];
+            $sisa_label = $sisa . ' hari';
+
+            // Get payment history details
+            $history = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
+            $frekuensi = count($history);
+            
+            $methods = [];
+            foreach ($history as $h_item) {
+                $m = $h_item['cara_pembayaran'] ?: $h_item['metode_pembayaran'] ?: '-';
+                if ($m !== '-' && in_array(strtolower($m), ['cash', 'transfer', 'bg', 'tempo'], true)) {
+                    $m = ucfirst(strtolower($m));
+                }
+                if (!in_array($m, $methods, true)) {
+                    $methods[] = $m;
+                }
+            }
+            $methods_str = empty($methods) ? '-' : implode(', ', $methods);
+
+            $sheet->setCellValueByColumnAndRow(1, $rowNum, $faktur['no_faktur']);
+            $sheet->setCellValueByColumnAndRow(2, $rowNum, !empty($faktur['tanggal_faktur']) ? date('d/m/Y', strtotime($faktur['tanggal_faktur'])) : '-');
+            $sheet->setCellValueByColumnAndRow(3, $rowNum, !empty($faktur['tanggal_jatuh_tempo']) ? date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) : '-');
+            $sheet->setCellValueByColumnAndRow(4, $rowNum, $sisa_label);
+            $sheet->setCellValueByColumnAndRow(5, $rowNum, $faktur['nama_customer'] . " (" . $faktur['kd_customer'] . ")");
+            $sheet->setCellValueByColumnAndRow(6, $rowNum, (float)$faktur['total_tagihan']);
+            $sheet->setCellValueByColumnAndRow(7, $rowNum, (float)$faktur['total_pembayaran']);
+            $sheet->setCellValueByColumnAndRow(8, $rowNum, (float)($faktur['total_bg_pending'] ?? 0));
+            $sheet->setCellValueByColumnAndRow(9, $rowNum, (float)$faktur['sisa_tagihan']);
+            $sheet->setCellValueByColumnAndRow(10, $rowNum, $status_label);
+            $sheet->setCellValueByColumnAndRow(11, $rowNum, $faktur['status_overdue']);
+            $sheet->setCellValueByColumnAndRow(12, $rowNum, $frekuensi);
+            $sheet->setCellValueByColumnAndRow(13, $rowNum, $methods_str);
+
+            $rowNum++;
+        }
+
+        $filename = 'laporan_piutang_customer_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = $ps->writer($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function get_payment_history_json()
+    {
+        $id_faktur = $this->input->get('id_faktur', true);
+        if (empty($id_faktur)) {
+            echo json_encode(['status' => false, 'message' => 'ID Faktur tidak valid']);
+            return;
+        }
+        $history = $this->M_pembayaran->get_payment_history($id_faktur);
+        echo json_encode(['status' => true, 'data' => $history]);
     }
 
     public function history()
@@ -175,6 +278,7 @@ class C_pembayaran extends CI_Controller
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
+            'cara_pembayaran'     => !empty($cara_pembayaran_faktur) ? $cara_pembayaran_faktur : null,
             'tanggal_bg_cair'     => $is_pending ? $tanggal_bg_cair : null,
             'status_bg'           => $is_pending ? 'pending' : 'not_bg',
             'keterangan'          => $keterangan !== '' ? $keterangan : null,
