@@ -37,11 +37,23 @@ class M_pembayaran extends CI_Model
                     'null'  => true,
                     'after' => 'metode_pembayaran',
                 ],
+                'no_bg' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 50,
+                    'null'       => true,
+                    'after'      => 'tanggal_bg_cair',
+                ],
+                'nama_bank' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => true,
+                    'after'      => 'no_bg',
+                ],
                 'cara_pembayaran' => [
                     'type'       => 'VARCHAR',
                     'constraint' => 50,
                     'null'       => true,
-                    'after'      => 'metode_pembayaran',
+                    'after'      => 'nama_bank',
                 ],
                 'status_bg' => [
                     'type'       => 'VARCHAR',
@@ -378,14 +390,15 @@ class M_pembayaran extends CI_Model
             ->row_array();
     }
 
-    public function mark_bg_cair($id_pembayaran, $user)
+    public function mark_bg_cair($id_pembayaran, $user, $update_data = [])
     {
         $this->db->where('id_pembayaran', (int)$id_pembayaran);
-        $success = $this->db->update($this->payment_table, [
+        $payload = array_merge($update_data, [
             'status_bg'  => 'cair',
             'bg_cair_by' => $user,
             'bg_cair_at' => date('Y-m-d H:i:s'),
         ]);
+        $success = $this->db->update($this->payment_table, $payload);
 
         if ($success) {
             $payment = $this->get_payment($id_pembayaran);

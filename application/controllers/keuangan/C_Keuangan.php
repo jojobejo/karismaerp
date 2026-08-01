@@ -1553,8 +1553,14 @@ class C_Keuangan extends CI_Controller
     {
         $debit = (float)($row->debit ?? 0);
         $kredit = (float)($row->kredit ?? 0);
-        $saldoNormal = strtoupper(trim((string)($row->saldo_normal ?? 'DEBIT')));
-        return $saldoNormal === 'KREDIT' ? ($kredit - $debit) : ($debit - $kredit);
+        $saldoNormalAkun = strtoupper(trim((string)($row->saldo_normal ?? '')));
+        $saldoNormalKlasifikasi = strtoupper(trim((string)($row->klasifikasi_saldo_normal ?? $saldoNormalAkun ?: 'DEBIT')));
+
+        // Klasifikasi KREDIT (seperti Pendapatan, Modal, Kewajiban):
+        // Total = Kredit - Debit (sehingga akun Contra seperti Potongan Penjualan [Debit] menjadi bernilai negatif/mengurangi).
+        // Klasifikasi DEBIT (seperti Harta, Beban):
+        // Total = Debit - Kredit.
+        return $saldoNormalKlasifikasi === 'KREDIT' ? ($kredit - $debit) : ($debit - $kredit);
     }
 
     public function jurnal_list()

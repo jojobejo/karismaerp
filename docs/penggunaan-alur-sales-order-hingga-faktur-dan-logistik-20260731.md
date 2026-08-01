@@ -118,3 +118,44 @@ Alur lengkap pengajuan, persetujuan berjenjang, penerimaan fisik gudang, hingga 
 * **Cetak & Riwayat Retur**:
   * Cetak fisik SPR dan Nota Retur Penjualan dilengkapi stempel Tanda Tangan Digital (QR Code).
   * Audit trail riwayat persetujuan dan aktivitas retur penjualan.
+
+---
+
+### 5. Modul Keuangan & Pembayaran Faktur
+Modul penatausahaan piutang dan penerimaan pembayaran faktur penjualan customer oleh tim Keuangan (KIU KEU / Kasir / Collection).
+
+* **Dashboard Pembayaran & Monitoring Customer**:
+  * Pencarian dan monitoring daftar customer yang memiliki faktur belum lunas.
+  * Fitur pencarian kata kunci (`q`) berdasarkan nama atau kode customer.
+  * System Alert / Notifikasi Bilyet Giro (BG) jatuh tempo yang siap dicairkan hari ini.
+
+* **Modul Piutang Customer (Collection)**:
+  * Monitoring menyeluruh seluruh faktur penjualan berstatus `selesai_do` yang belum lunas.
+  * Pemantauan status keterlambatan (Overdue 30, Overdue 60, Overdue 90 hari) dan sisa hari jatuh tempo.
+  * Tracking statistik piutang: Total Piutang, Total Pembayaran Masuk, Total BG Pending, dan Sisa Piutang.
+  * Fitur **Export Excel**: Mengunduh laporan piutang customer lengkap dengan frekuensi bayar dan riwayat metode pembayaran secara realtime.
+
+* **Input Pembayaran Faktur**:
+  * Pemilihan faktur aktif customer berstatus `selesai_do`.
+  * **Pilihan Metode Pembayaran**:
+    * **Kas / Bank / Transfer**: Pilihan akun kas atau rekening bank resmi (Q Kas, A Kas, Q BCA, Q Mandiri, Q BRI, A BCA, A Mandiri, DLL).
+    * **Potongan Retur (`Q Hutang Non Dagang`)**: Pembayaran menggunakan saldo retur penjualan customer yang telah disetujui Direksi.
+    * **Bilyet Giro (BG)**: Pembayaran tunda menggunakan Bilyet Giro dengan pengisian tanggal estimasi cair. Status BG otomatis berstatus `pending` dan tidak langsung memotong sisa piutang sebelum dicairkan.
+  * Input Potongan Diskon Pembayaran per faktur.
+  * **Proteksi Sistem**:
+    * Penguncian jumlah bayar + diskon tidak boleh melebihi sisa tagihan faktur.
+    * Pengecekan saldo retur customer jika menggunakan metode `Q Hutang Non Dagang`.
+    * Blokir pembukaan pembayaran BG baru jika faktur masih memiliki pembayaran BG berstatus `pending`.
+
+* **Pencairan Bilyet Giro (BG)**:
+  * Pengubahan status pembayaran BG dari `pending` menjadi `cair`.
+  * Pencatatan audit trail petugas yang mencairkan (`bg_cair_by`) dan waktu pencairan (`bg_cair_at`).
+  * Otomatis menambahkan nilai pembayaran BG ke Total Pembayaran dan memotong Sisa Tagihan Faktur secara permanen.
+
+* **Integrasi Jurnal Keuangan Otomatis**:
+  * Otomatis posting ke Jurnal Akuntansi Keuangan (`M_Journal`) saat transaksi pembayaran tunai/transfer disimpan atau saat status BG berubah menjadi `cair`.
+
+* **Histori & Tracking Pembayaran**:
+  * Logging riwayat transaksi pembayaran per faktur (Tanggal, Jumlah, Diskon, Metode, Audit User).
+  * API JSON endpoint untuk penarikan data histori pembayaran faktur secara fleksibel.
+

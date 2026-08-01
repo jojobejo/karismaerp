@@ -242,6 +242,8 @@ class C_pembayaran extends CI_Controller
             }
         }
         $tanggal_bg_cair = $this->input->post('tanggal_bg_cair', true);
+        $no_bg = trim((string)$this->input->post('no_bg', true));
+        $nama_bank = trim((string)$this->input->post('nama_bank', true));
         $keterangan = trim((string)$this->input->post('keterangan', true));
         $cara_pembayaran_faktur = strtolower(trim((string)$this->input->post('cara_pembayaran_faktur', true)));
         $is_pending = ($cara_pembayaran_faktur === 'bg');
@@ -278,6 +280,8 @@ class C_pembayaran extends CI_Controller
             'jumlah_pembayaran'   => $jumlah_pembayaran,
             'jumlah_diskon'       => $jumlah_diskon,
             'metode_pembayaran'   => $metode_pembayaran !== '' ? $metode_pembayaran : null,
+            'no_bg'               => $no_bg !== '' ? $no_bg : null,
+            'nama_bank'           => $nama_bank !== '' ? $nama_bank : null,
             'cara_pembayaran'     => !empty($cara_pembayaran_faktur) ? $cara_pembayaran_faktur : null,
             'tanggal_bg_cair'     => $is_pending ? $tanggal_bg_cair : null,
             'status_bg'           => $is_pending ? 'pending' : 'not_bg',
@@ -326,7 +330,41 @@ class C_pembayaran extends CI_Controller
         $faktur = $this->M_pembayaran->get_faktur_summary((int)$payment['id_faktur']);
         $kd_customer = $faktur ? $faktur['kd_customer'] : '';
 
-        if ($this->M_pembayaran->mark_bg_cair($payment['id_pembayaran'], $user)) {
+        $update_data = [];
+        if ($this->input->method() === 'post') {
+            $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
+            $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
+            $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
+            $no_bg = trim((string)$this->input->post('no_bg', true));
+            $nama_bank = trim((string)$this->input->post('nama_bank', true));
+            $tanggal_bg_cair = $this->input->post('tanggal_bg_cair', true);
+            $keterangan = trim((string)$this->input->post('keterangan', true));
+            $cara_pembayaran_faktur = strtolower(trim((string)$this->input->post('cara_pembayaran_faktur', true)));
+
+            if (!empty($tanggal_pembayaran)) {
+                $update_data['tanggal_pembayaran'] = $tanggal_pembayaran;
+            }
+            if ($jumlah_pembayaran > 0) {
+                $update_data['jumlah_pembayaran'] = $jumlah_pembayaran;
+            }
+            if (!empty($metode_pembayaran)) {
+                $update_data['metode_pembayaran'] = $metode_pembayaran;
+            }
+            $update_data['no_bg'] = $no_bg !== '' ? $no_bg : null;
+            $update_data['nama_bank'] = $nama_bank !== '' ? $nama_bank : null;
+            if (!empty($tanggal_bg_cair)) {
+                $update_data['tanggal_bg_cair'] = $tanggal_bg_cair;
+            }
+            if (!empty($keterangan)) {
+                $update_data['keterangan'] = $keterangan;
+            }
+
+            if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
+                $this->M_pembayaran->update_cara_pembayaran($payment['id_faktur'], $cara_pembayaran_faktur);
+            }
+        }
+
+        if ($this->M_pembayaran->mark_bg_cair($payment['id_pembayaran'], $user, $update_data)) {
             $this->session->set_flashdata('success', 'Pembayaran BG berhasil ditandai sudah cair dan masuk ke total pembayaran.');
         } else {
             $this->session->set_flashdata('error', 'Status BG gagal diperbarui.');

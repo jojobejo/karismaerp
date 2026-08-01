@@ -533,7 +533,7 @@
                                                         <?php endif; ?>
                                                     </td>
                                                     <td class="text-center">
-                                                        <span class="badge badge-<?= $badge ?> route-status-badge px-2 py-1"><?= htmlspecialchars($label) ?></span>
+                                                        <span class="badge badge-<?= $badge ?> <?= ($status === 'partial' || $badge === 'warning') ? 'text-white' : '' ?> route-status-badge px-2 py-1"><?= htmlspecialchars($label) ?></span>
                                                         <?php if ($qty_tidak_terkirim > 0): ?>
                                                             <br><small class="text-danger font-weight-bold">
                                                                 <?= number_format($qty_tidak_terkirim, 2) ?> tidak ikut faktur

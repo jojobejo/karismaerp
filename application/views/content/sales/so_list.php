@@ -336,7 +336,7 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge badge-<?= $badge ?> so-status-badge px-2 py-1"><?= $label ?></span>
+                                        <span class="badge badge-<?= $badge ?> <?= ($row['status'] === 'partial' || $badge === 'warning') ? 'text-white' : '' ?> so-status-badge px-2 py-1"><?= $label ?></span>
                                     </td>
 
                                     <!-- TOMBOL AKSI — diperbesar -->
