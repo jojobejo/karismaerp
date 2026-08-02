@@ -223,6 +223,10 @@
                                                    class="btn btn-sm btn-info" title="Detail">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
+                                                <a href="<?= base_url('retur_penjualan/retur/print/' . $r['id_retur']) ?>"
+                                                   target="_blank" class="btn btn-sm btn-secondary" title="Cetak Retur Penjualan">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
                                                 <?php if ($st === 'menunggu_verifikasi' && $is_admretur): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/verifikasi/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-warning" title="Verifikasi">
@@ -241,15 +245,10 @@
                                                        class="btn btn-sm btn-warning" title="Persetujuan">
                                                         <i class="fas fa-check-circle"></i> Persetujuan
                                                     </a>
-                                                <?php elseif ($st === 'menunggu_collection' && $is_collection): ?>
+                                                <?php elseif (($st === 'menunggu_collection' || ($st === 'selesai' && ($r['tipe_retur'] ?? 'biasa') === 'biasa' && (float)($r['sisa_saldo_retur'] ?? 0) > 0)) && $is_collection): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/collection/' . $r['id_retur']) ?>"
                                                        class="btn btn-sm btn-info" title="Proses Collection">
                                                         <i class="fas fa-handshake"></i> Proses
-                                                      </a>
-                                                <?php elseif ($st === 'menunggu_kasir' && $is_kasir): ?>
-                                                    <a href="<?= base_url('retur_penjualan/retur/kasir/' . $r['id_retur']) ?>"
-                                                       class="btn btn-sm btn-success" title="Proses Kasir">
-                                                        <i class="fas fa-cash-register"></i> Kasir
                                                       </a>
                                                 <?php elseif ($st === 'ditolak' && $is_admlpb2): ?>
                                                     <a href="<?= base_url('retur_penjualan/retur/edit/' . $r['id_retur']) ?>"

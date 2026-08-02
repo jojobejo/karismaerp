@@ -165,23 +165,27 @@ $money = function ($value) {
                                     <tr>
                                         <th style="width: 130px;">Kode Akun</th>
                                         <th>Akun / Klasifikasi</th>
+                                        <?php if ($isNeraca) : ?>
                                         <th style="width: 130px;">Saldo Normal</th>
                                         <th class="text-right" style="width: 150px;">Debit</th>
                                         <th class="text-right" style="width: 150px;">Kredit</th>
+                                        <?php endif; ?>
                                         <th class="text-right" style="width: 170px;">Nilai Laporan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($sections)) : ?>
-                                        <tr><td colspan="6" class="empty-state">Belum ada jurnal POSTED untuk laporan ini.</td></tr>
+                                        <tr><td colspan="<?= $isNeraca ? 6 : 3 ?>" class="empty-state">Belum ada jurnal POSTED untuk laporan ini.</td></tr>
                                     <?php endif; ?>
 
                                     <?php foreach ($sections as $section) : ?>
                                         <tr class="section-row">
                                             <td><?= html_escape($section['alias'] ?: '-') ?></td>
-                                            <td colspan="2"><?= html_escape($section['name']) ?></td>
+                                            <td <?= $isNeraca ? 'colspan="2"' : '' ?>><?= html_escape($section['name']) ?></td>
+                                            <?php if ($isNeraca) : ?>
                                             <td class="money-cell"><?= $money($section['debit'] ?? 0) ?></td>
                                             <td class="money-cell"><?= $money($section['kredit'] ?? 0) ?></td>
+                                            <?php endif; ?>
                                             <td class="money-cell"><?= $money($section['total'] ?? 0) ?></td>
                                         </tr>
 
@@ -189,9 +193,11 @@ $money = function ($value) {
                                             <tr>
                                                 <td><?= html_escape($row['kode_akun'] ?: '-') ?></td>
                                                 <td><?= html_escape($row['nama_akun']) ?></td>
+                                                <?php if ($isNeraca) : ?>
                                                 <td><?= html_escape($row['saldo_normal'] ?: '-') ?></td>
                                                 <td class="money-cell"><?= $money($row['debit'] ?? 0) ?></td>
                                                 <td class="money-cell"><?= $money($row['kredit'] ?? 0) ?></td>
+                                                <?php endif; ?>
                                                 <td class="money-cell"><?= $money($row['amount'] ?? 0) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -209,7 +215,7 @@ $money = function ($value) {
                                         $totalRowClass = $isHarta ? 'grand-row' : 'total-row';
                                         ?>
                                         <tr class="<?= $totalRowClass ?>">
-                                            <td colspan="5">Total <?= html_escape($section['name']) ?></td>
+                                            <td colspan="<?= $isNeraca ? 5 : 2 ?>">Total <?= html_escape($section['name']) ?></td>
                                             <td class="money-cell"><?= $money($section['total'] ?? 0) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -221,7 +227,7 @@ $money = function ($value) {
                                         </tr>
                                     <?php elseif (!$isNeraca && !empty($sections)) : ?>
                                         <tr class="grand-row">
-                                            <td colspan="5">Laba Bersih</td>
+                                            <td colspan="2">Laba Bersih</td>
                                             <td class="money-cell"><?= $money($totals['net_income'] ?? 0) ?></td>
                                         </tr>
                                     <?php endif; ?>

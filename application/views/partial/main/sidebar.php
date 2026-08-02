@@ -105,6 +105,14 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
                 <i class="nav-icon fas fa-quran"></i>
                 <p>
@@ -166,10 +174,26 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('keuangan/pembayaran') ?>" class="nav-link">
                 <i class="nav-icon fas fa-cash-register"></i>
                 <p>
                   Pembayaran Faktur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
+                <i class="nav-icon fas fa-undo-alt"></i>
+                <p>
+                  Retur Penjualan
                 </p>
               </a>
             </li>
@@ -199,6 +223,14 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('schedule_direktur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-book"></i>
                 <p>
@@ -222,6 +254,14 @@
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
             <li class="nav-item">
               <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
                 <i class="nav-icon fas fa-book"></i>
@@ -255,7 +295,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('logistik') ?>" class="nav-link">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
@@ -287,6 +327,13 @@
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
 
+          <li class="nav-item">
+            <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+              <i class="nav-icon fas fa-home"></i>
+              <p>Dashboard</p>
+            </a>
+          </li>
+
           <!-- Sales Order -->
           <li class="nav-item">
             <a href="<?php echo base_url('sales_order') ?>" class="nav-link">
@@ -313,7 +360,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('ics/ics_diffrent') ?>" class="nav-link">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
@@ -345,7 +392,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('s') ?>" class="nav-link">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
@@ -376,6 +423,11 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i><p>Dashboard</p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('supervisi-opname') ?>" class="nav-link">
                 <i class="nav-icon fas fa-clipboard-check"></i><p>Supervisi Opname</p>
               </a>
@@ -399,7 +451,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('keuangan') ?>" class="nav-link">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
@@ -431,7 +483,7 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
-              <a href="<?php echo base_url('checker/dashboard') ?>" class="nav-link">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
                 <i class="nav-icon fas fa-home"></i>
                 <p>
                   Dashboard
@@ -461,6 +513,14 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('sales_order/admin_sc') ?>" class="nav-link">
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
@@ -485,6 +545,14 @@
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan') ?>" class="nav-link">
                 <i class="nav-icon fas fa-file-invoice"></i>
@@ -521,6 +589,14 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
                 <p>
@@ -545,6 +621,14 @@
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/admlpb2') ?>" class="nav-link">
                 <i class="nav-icon fas fa-truck-loading"></i>
@@ -571,6 +655,14 @@
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <li class="nav-item">
+              <a href="<?php echo base_url('dashboard') ?>" class="nav-link">
+                <i class="nav-icon fas fa-home"></i>
+                <p>
+                  Dashboard
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -578,6 +670,7 @@
                 </p>
               </a>
             </li>
+          </ul>
         </nav>
         <!-- /.sidebar-menu -->
       </div>

@@ -85,15 +85,19 @@ $default_metode = '';
                                         <th>Tipe Retur</th>
                                         <th>Tanggal Retur</th>
                                         <th>Status Retur</th>
+                                        <th>Catatan / Instruksi Nominal</th>
                                         <th class="text-right">Nominal Retur</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($linked_returs as $ret): ?>
+                                        <?php 
+                                        $no_retur_display = !empty($ret['no_retur']) ? $ret['no_retur'] : (!empty($ret['no_spr']) ? $ret['no_spr'] : 'RETUR #' . $ret['id_retur']);
+                                        ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['no_retur']) ?>" class="font-weight-bold" target="_blank">
-                                                    <?= htmlspecialchars($ret['no_retur']) ?> <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
+                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['id_retur']) ?>" class="font-weight-bold" target="_blank">
+                                                    <?= htmlspecialchars($no_retur_display) ?> <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
                                                 </a>
                                             </td>
                                             <td><span class="badge badge-secondary"><?= htmlspecialchars(ucfirst($ret['tipe_retur'])) ?></span></td>
@@ -107,6 +111,7 @@ $default_metode = '';
                                                 ?>
                                                 <span class="badge badge-info"><?= htmlspecialchars($lbl) ?></span>
                                             </td>
+                                            <td><?= nl2br(htmlspecialchars($ret['catatan_collection'] ?? '')) ?></td>
                                             <td class="text-right font-weight-bold text-success">Rp <?= number_format((float)$ret['total_retur'], 0, ',', '.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>

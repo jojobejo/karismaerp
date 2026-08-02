@@ -1,3 +1,19 @@
+<style>
+    @keyframes custom-shake {
+        0%, 100% { transform: rotate(0deg); }
+        5%, 15%, 25% { transform: rotate(8deg); }
+        10%, 20%, 30% { transform: rotate(-8deg); }
+        35% { transform: rotate(3deg); }
+        40% { transform: rotate(-3deg); }
+        45%, 95% { transform: rotate(0deg); }
+    }
+
+    .btn-shake-notification {
+        animation: custom-shake 2.2s ease-in-out infinite;
+        transform-origin: 50% 50%;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    }
+</style>
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
@@ -10,12 +26,17 @@
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
-                <div class="row mb-2">
+                <div class="row align-items-center mb-2">
                     <div class="col-sm-6">
                         <h1 class="m-0"><i class="fas fa-cash-register mr-2"></i>Pembayaran Faktur</h1>
                     </div>
-                    <div class="col-sm-6">
-                        <ol class="breadcrumb float-sm-right">
+                    <div class="col-sm-6 text-right">
+                        <?php if (!empty($pending_retur_count) && $pending_retur_count > 0): ?>
+                            <button type="button" class="btn btn-warning text-dark font-weight-bold btn-shake-notification mr-3" data-toggle="modal" data-target="#modalPendingRetur">
+                                <i class="fas fa-bell mr-1"></i> Retur Pending (<?= $pending_retur_count ?>)
+                            </button>
+                        <?php endif; ?>
+                        <ol class="breadcrumb float-sm-right d-inline-flex mb-0">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item active">Pembayaran Faktur</li>
                         </ol>
@@ -145,6 +166,69 @@
         <strong>Copyright &copy; 2022 <a href="https://kiu.co.id">PT.KARISMA INDOARGO UNIVERSAL</a>.</strong>
         All rights reserved.
     </footer>
+</div>
+
+<!-- Modal Pending Retur -->
+<div class="modal fade" id="modalPendingRetur" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title font-weight-bold text-dark"><i class="fas fa-bell mr-2"></i>Rekomendasi Potong Faktur (Retur Penjualan)</h5>
+                <button type="button" class="close text-dark" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-sm mb-0">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>No Retur</th>
+                                <th>Customer</th>
+                                <th>Tgl. Instruksi</th>
+                                <th>Target Faktur</th>
+                                <th class="text-right">Sisa Tagihan Faktur</th>
+                                <th>Catatan / Instruksi Nominal</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($pending_returs)): ?>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">Tidak ada instruksi potong faktur yang tertunda.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($pending_returs as $pr): ?>
+                                    <tr>
+                                        <td><strong><?= htmlspecialchars($pr['no_retur']) ?></strong></td>
+                                        <td><?= htmlspecialchars($pr['nama_customer']) ?><br><small class="text-muted"><?= htmlspecialchars($pr['kd_customer']) ?></small></td>
+                                        <td><?= date('d/m/Y H:i', strtotime($pr['collection_at'])) ?></td>
+                                        <td><strong><?= htmlspecialchars($pr['no_faktur_potong']) ?></strong></td>
+                                        <td class="text-right text-danger font-weight-bold">Rp <?= number_format((float)($pr['sisa_tagihan'] ?? 0), 0, ',', '.') ?></td>
+                                        <td class="small"><?= nl2br(htmlspecialchars($pr['catatan_collection'] ?? '')) ?></td>
+                                        <td class="text-center">
+                                            <?php if (!empty($pr['id_faktur'])): ?>
+                                                <a href="<?= base_url('keuangan/pembayaran/bayar/' . $pr['id_faktur']) ?>" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-external-link-alt mr-1"></i> Bayar
+                                                </a>
+                                            <?php else: ?>
+                                                <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($pr['kd_customer'])) ?>" class="btn btn-sm btn-secondary">
+                                                    <i class="fas fa-search mr-1"></i> Cari
+                                                </a>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>

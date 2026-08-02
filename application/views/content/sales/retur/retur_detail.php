@@ -52,8 +52,11 @@ if (!function_exists('hitung_durasi')) {
                     <div class="col-sm-6">
                         <h1 class="m-0"><i class="fas fa-file-invoice mr-2 text-primary"></i> Detail Retur: <?= htmlspecialchars($retur['no_retur']) ?></h1>
                     </div>
-                    <div class="col-sm-6">
-                        <ol class="breadcrumb float-sm-right">
+                    <div class="col-sm-6 text-right">
+                        <a href="<?= base_url('retur_penjualan/retur/print/' . $retur['id_retur']) ?>" target="_blank" class="btn btn-primary btn-sm mr-2">
+                            <i class="fas fa-print mr-1"></i> Cetak Retur
+                        </a>
+                        <ol class="breadcrumb float-sm-right d-inline-flex mb-0">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item"><a href="<?= base_url('retur_penjualan/retur') ?>">Retur Penjualan</a></li>
                             <li class="breadcrumb-item active">Detail</li>
@@ -175,8 +178,9 @@ if (!function_exists('hitung_durasi')) {
                                                 <th>No. Batch</th>
                                                 <th class="text-center">Exp. Date</th>
                                                 <th class="text-center">Qty</th>
-                                                <th class="text-right">Harga</th>
-                                                <th class="text-right">Subtotal</th>
+                                                <?php $hide_harga = ($jobdesk === 'ADMLPB2'); ?>
+                                                <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Harga</th>
+                                                <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -195,11 +199,11 @@ if (!function_exists('hitung_durasi')) {
                                                     <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
                                                     <td class="text-center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
                                                     <td class="text-center"><?= number_format((float)$d['qty_retur'], 3) ?></td>
-                                                    <td class="text-right">Rp <?= number_format((float)$d['harga_satuan'], 0, ',', '.') ?></td>
-                                                    <td class="text-right">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
+                                                    <td class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Rp <?= number_format((float)$d['harga_satuan'], 0, ',', '.') ?></td>
+                                                    <td class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
                                                 </tr>
                                                 <?php endforeach; ?>
-                                                <tr class="table-dark">
+                                                <tr class="table-dark <?= $hide_harga ? 'd-none' : '' ?>">
                                                     <td colspan="8" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
                                                     <td class="text-right font-weight-bold">Rp <?= number_format($total, 0, ',', '.') ?></td>
                                                 </tr>
@@ -410,26 +414,6 @@ if (!function_exists('hitung_durasi')) {
                                     'at' => $retur['dirut_at_retur'] ?? null,
                                     'note' => $retur['catatan_dirut_retur'] ?? null,
                                     'prev_at' => 'dirop_at_retur'
-                                ];
-
-                                $steps_retur[] = [
-                                    'label' => 'Proses Collection',
-                                    'icon' => 'handshake',
-                                    'done_statuses' => ['menunggu_kasir', 'selesai'],
-                                    'by' => $retur['collection_by'] ?? null,
-                                    'at' => $retur['collection_at'] ?? null,
-                                    'note' => $retur['catatan_collection'] ?? null,
-                                    'prev_at' => 'dirut_at_retur'
-                                ];
-
-                                $steps_retur[] = [
-                                    'label' => 'Kasir Selesai',
-                                    'icon' => 'cash-register',
-                                    'done_statuses' => ['selesai'],
-                                    'by' => $retur['kasir_by'] ?? null,
-                                    'at' => $retur['kasir_at'] ?? null,
-                                    'note' => $retur['catatan_kasir'] ?? null,
-                                    'prev_at' => 'collection_at'
                                 ];
 
                                 $rejected_by = '';

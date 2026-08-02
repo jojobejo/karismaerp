@@ -142,8 +142,9 @@
                                             <th>No. Batch/Lot</th>
                                             <th>Expired Date</th>
                                             <th class="text-center" style="width:100px;">Qty Retur</th>
-                                            <th class="text-right" style="width:130px;">Harga Satuan</th>
-                                            <th class="text-right" style="width:140px;">Subtotal</th>
+                                            <?php $hide_harga = isset($user['jobdesk']) && in_array($user['jobdesk'], ['ADMLPB2']); ?>
+                                            <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>" style="width:130px;">Harga Satuan</th>
+                                            <th class="text-right <?= $hide_harga ? 'd-none' : '' ?>" style="width:140px;">Subtotal</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -180,18 +181,18 @@
                                                     <input type="number" name="qty_retur[]" class="form-control form-control-sm text-right qty-input field-retur"
                                                            value="<?= (float)($d['qty'] ?? 0) ?>" min="0.001" step="0.001" readonly required>
                                                 </td>
-                                                <td>
+                                                <td class="<?= $hide_harga ? 'd-none' : '' ?>">
                                                     <input type="number" name="harga_satuan[]" class="form-control form-control-sm text-right harga-input field-retur"
                                                            value="<?= (float)($d['harga'] ?? 0) ?>" min="0" step="0.01" readonly required>
                                                 </td>
-                                                <td>
+                                                <td class="<?= $hide_harga ? 'd-none' : '' ?>">
                                                     <input type="text" class="form-control form-control-sm text-right subtotal-input"
                                                            value="Rp 0" readonly>
                                                 </td>
                                             </tr>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
-                                        <tr class="table-dark">
+                                        <tr class="table-dark <?= $hide_harga ? 'd-none' : '' ?>">
                                             <td colspan="8" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
                                             <td class="text-right font-weight-bold" id="grand-total">Rp 0</td>
                                         </tr>

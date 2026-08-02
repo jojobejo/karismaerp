@@ -120,7 +120,15 @@ class M_Journal extends CI_Model
         $id_jurnal = $this->db->insert_id();
 
         // Cari ID Akun Debit (berdasarkan nama metode pembayaran)
-        $akun_debit = $this->db->get_where('tbkeu_akun', ['nama_akun' => $metode])->row_array();
+        if (strtolower($metode) === 'retur') {
+            $akun_debit = $this->db->get_where('tbkeu_akun', ['kode_akun' => '21017'])->row_array();
+            if (!$akun_debit) {
+                $this->db->like('nama_akun', 'Retur Penjualan yg blm dipot');
+                $akun_debit = $this->db->get('tbkeu_akun')->row_array();
+            }
+        } else {
+            $akun_debit = $this->db->get_where('tbkeu_akun', ['nama_akun' => $metode])->row_array();
+        }
         $id_akun_debit = $akun_debit ? $akun_debit['id_akun'] : null;
 
         // Cari ID Akun Diskon
@@ -445,13 +453,27 @@ class M_Journal extends CI_Model
         $id_jurnal = $this->db->insert_id();
 
         // Account IDs resolver
-        // 1. Piutang Usaha (Kredit)
-        $akun_piutang = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
-        if (!$akun_piutang) {
-            $this->db->like('nama_akun', 'Piutang Usaha');
-            $akun_piutang = $this->db->get('tbkeu_akun')->row_array();
+        // 1. Kredit (Piutang Usaha atau Hutang Non Dagang jika Refund/Biasa)
+        $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
+        $is_refund = ($tipe_retur === 'biasa' || $tipe_retur === 'refund');
+        
+        if ($is_refund) {
+            $akun_kredit_row = $this->db->get_where('tbkeu_akun', ['kode_akun' => '21017'])->row_array();
+            if (!$akun_kredit_row) {
+                $this->db->like('nama_akun', 'Retur Penjualan yg blm dipot');
+                $akun_kredit_row = $this->db->get('tbkeu_akun')->row_array();
+            }
+            $id_akun_kredit = $akun_kredit_row ? $akun_kredit_row['id_akun'] : 0;
+            $keterangan_kredit = 'Hutang Retur ' . $no_retur;
+        } else {
+            $akun_kredit_row = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
+            if (!$akun_kredit_row) {
+                $this->db->like('nama_akun', 'Piutang Usaha');
+                $akun_kredit_row = $this->db->get('tbkeu_akun')->row_array();
+            }
+            $id_akun_kredit = $akun_kredit_row ? $akun_kredit_row['id_akun'] : 205; // fallback to 205 Q Piutang Dagang
+            $keterangan_kredit = 'Potongan Piutang Retur ' . $no_retur;
         }
-        $id_akun_piutang = $akun_piutang ? $akun_piutang['id_akun'] : 205; // fallback to 205 Q Piutang Dagang
 
         // 2. Q PPN K (Debit for taxable)
         $akun_ppn = $this->db->get_where('tbkeu_akun', ['kode_akun' => '21024'])->row_array()
@@ -588,13 +610,13 @@ class M_Journal extends CI_Model
             $total_debit += $total_ppn;
         }
 
-        // Kredit: Piutang Usaha
-        if ($total_debit > 0) {
+        // Kredit: Sesuai tipe retur (Piutang Usaha atau Hutang Non Dagang)
+        if ($total_debit > 0 && $id_akun_kredit) {
             $this->db->insert('tbkeu_jurnal_detail', [
                 'id_jurnal' => $id_jurnal,
                 'nomor_baris' => $line_num++,
-                'id_akun' => $id_akun_piutang,
-                'keterangan' => 'Potongan Piutang Retur ' . $no_retur,
+                'id_akun' => $id_akun_kredit,
+                'keterangan' => $keterangan_kredit,
                 'debit' => 0,
                 'kredit' => $total_debit
             ]);

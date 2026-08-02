@@ -163,6 +163,16 @@ class M_ReturPenjualan extends CI_Model
         if (!$this->db->field_exists('tipe_retur', 'tbrp_retur_penjualan_header')) {
             $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `tipe_retur` ENUM('biasa','replace','service') NOT NULL DEFAULT 'biasa' AFTER `no_retur`");
         }
+        
+        // Tambah total_nilai_retur ke tbrp_retur_penjualan_header jika belum ada
+        if (!$this->db->field_exists('total_nilai_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `total_nilai_retur` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `tipe_retur`");
+        }
+
+        // Tambah sisa_saldo_retur ke tbrp_retur_penjualan_header jika belum ada
+        if (!$this->db->field_exists('sisa_saldo_retur', 'tbrp_retur_penjualan_header')) {
+            $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` ADD COLUMN `sisa_saldo_retur` DECIMAL(15,2) NOT NULL DEFAULT 0.00 AFTER `total_nilai_retur`");
+        }
 
         // Modify status_retur enum to include new approval stages
         $this->db->query("ALTER TABLE `tbrp_retur_penjualan_header` MODIFY COLUMN `status_retur` ENUM(
@@ -650,10 +660,21 @@ class M_ReturPenjualan extends CI_Model
         $this->db->join('tb_customer c', 'c.kd_customer = r.kd_customer', 'left');
 
         if (!empty($filter['status'])) {
-            if (is_array($filter['status'])) {
-                $this->db->where_in('r.status_retur', $filter['status']);
+            if ($filter['status'] === 'collection_active') {
+                $this->db->group_start();
+                $this->db->where('r.status_retur', 'menunggu_collection');
+                $this->db->or_group_start();
+                $this->db->where('r.status_retur', 'selesai');
+                $this->db->where('r.tipe_retur', 'biasa');
+                $this->db->where('r.sisa_saldo_retur >', 0);
+                $this->db->group_end();
+                $this->db->group_end();
             } else {
-                $this->db->where('r.status_retur', $filter['status']);
+                if (is_array($filter['status'])) {
+                    $this->db->where_in('r.status_retur', $filter['status']);
+                } else {
+                    $this->db->where('r.status_retur', $filter['status']);
+                }
             }
         }
         if (!empty($filter['date1'])) $this->db->where('r.tanggal_retur >=', $filter['date1']);

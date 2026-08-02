@@ -39,6 +39,22 @@ class C_pembayaran extends CI_Controller
         $data['keyword'] = $keyword;
         $data['customers'] = $this->M_pembayaran->get_customers_with_unpaid_faktur($keyword);
         $data['due_payments'] = $this->M_pembayaran->get_due_pending_payments();
+        
+        $pending_retur_query = "SELECT h.*, c.nama_customer, f.id_faktur FROM tbrp_retur_penjualan_header h LEFT JOIN tb_customer c ON h.kd_customer = c.kd_customer LEFT JOIN tbso_faktur_penjualan f ON h.no_faktur_potong = f.no_faktur WHERE h.no_faktur_potong IS NOT NULL AND h.no_faktur_potong != '' AND NOT EXISTS (SELECT 1 FROM tbkeu_pembayaran_faktur p WHERE p.no_faktur = h.no_faktur_potong AND p.metode_pembayaran = 'retur')";
+        $pending_returs = $this->db->query($pending_retur_query)->result_array();
+        
+        foreach ($pending_returs as &$pr) {
+            $pr['sisa_tagihan'] = 0;
+            if (!empty($pr['id_faktur'])) {
+                $faktur_summary = $this->M_pembayaran->get_faktur_summary($pr['id_faktur']);
+                if ($faktur_summary) {
+                    $pr['sisa_tagihan'] = $faktur_summary['sisa_tagihan'];
+                }
+            }
+        }
+        
+        $data['pending_returs'] = $pending_returs;
+        $data['pending_retur_count'] = count($pending_returs);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_customer.php', $data);
@@ -189,7 +205,7 @@ class C_pembayaran extends CI_Controller
 
         // Fetch returns linked by Collection to this invoice
         $data['linked_returs'] = $this->db
-            ->select('h.no_retur, h.tipe_retur, h.tanggal_retur, h.status_retur, COALESCE(SUM(d.qty_retur * d.harga_satuan), 0) AS total_retur')
+            ->select('h.id_retur, h.no_retur, h.no_spr, h.tipe_retur, h.tanggal_retur, h.status_retur, h.catatan_collection, COALESCE(SUM(d.qty_retur * d.harga_satuan), 0) AS total_retur')
             ->from('tbrp_retur_penjualan_header h')
             ->join('tbrp_retur_penjualan_detail d', 'd.id_retur = h.id_retur', 'left')
             ->where('h.no_faktur_potong', $faktur['no_faktur'])
