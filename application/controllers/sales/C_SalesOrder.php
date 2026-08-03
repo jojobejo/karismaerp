@@ -1162,6 +1162,14 @@ class C_SalesOrder extends CI_Controller
                         redirect('sales_order/create');
                         return;
                     }
+
+                    $this->load->model('keuangan/M_pembayaran');
+                    $unpaid_invoices = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
+                    if (!empty($unpaid_invoices)) {
+                        $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat membuat SO baru karena masih memiliki nota (Faktur) yang belum lunas.');
+                        redirect('sales_order/create');
+                        return;
+                    }
                 }
 
                 $grand_total = 0;
@@ -1237,6 +1245,22 @@ class C_SalesOrder extends CI_Controller
         $id_so = $this->M_SalesOrder->simpan_so($header, $details);
 
         if ($id_so) {
+            // Deduct plafon customer
+            if (!empty($post['customer_id'])) {
+                $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
+                if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                    $so_total = 0;
+                    foreach ($details as $d) {
+                        $so_total += (float)$d['total_harga'];
+                    }
+                    if ($so_total > 0) {
+                        $this->db->set('plafon_aktif', 'plafon_aktif - ' . $so_total, FALSE);
+                        $this->db->where('kd_customer', $post['customer_id']);
+                        $this->db->update('tb_customer');
+                    }
+                }
+            }
+
             // Activity log
             $detail_str = $this->_format_detail_produk_log($details);
 
@@ -1431,6 +1455,14 @@ class C_SalesOrder extends CI_Controller
                         redirect('sales_order/edit/' . $id_so);
                         return;
                     }
+
+                    $this->load->model('keuangan/M_pembayaran');
+                    $unpaid_invoices = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
+                    if (!empty($unpaid_invoices)) {
+                        $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat melakukan pemesanan karena masih memiliki nota (Faktur) yang belum lunas.');
+                        redirect('sales_order/edit/' . $id_so);
+                        return;
+                    }
                 }
 
                 $grand_total = 0;
@@ -1499,9 +1531,44 @@ class C_SalesOrder extends CI_Controller
             'update_by'         => $this->_getUsername(),
         ];
 
+        // Calculate old total for plafon refund
+        $old_total = 0;
+        $old_details = $this->M_SalesOrder->get_so_detail($id_so);
+        foreach ($old_details as $d) {
+            $old_total += (float)$d['total_harga'];
+        }
+        $old_customer = $so['kd_customer'];
+
         $result = $this->M_SalesOrder->update_so($id_so, $header, $details);
 
         if ($result) {
+            // Plafon adjustments
+            // 1. Refund old total to old customer
+            if ($old_total > 0 && !empty($old_customer)) {
+                $old_cust_check = $this->db->get_where('tb_customer', ['kd_customer' => $old_customer])->row_array();
+                if ($old_cust_check && isset($old_cust_check['plafon_aktif']) && (float)$old_cust_check['plafon_aktif'] != 1000) {
+                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $old_total, FALSE);
+                    $this->db->where('kd_customer', $old_customer);
+                    $this->db->update('tb_customer');
+                }
+            }
+            
+            // 2. Deduct new total from new customer
+            if (!empty($post['customer_id'])) {
+                $new_total = 0;
+                foreach ($details as $d) {
+                    $new_total += (float)$d['total_harga'];
+                }
+                if ($new_total > 0) {
+                    $new_cust_check = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
+                    if ($new_cust_check && isset($new_cust_check['plafon_aktif']) && (float)$new_cust_check['plafon_aktif'] != 1000) {
+                        $this->db->set('plafon_aktif', 'plafon_aktif - ' . $new_total, FALSE);
+                        $this->db->where('kd_customer', $post['customer_id']);
+                        $this->db->update('tb_customer');
+                    }
+                }
+            }
+
             $so_fresh = $this->M_SalesOrder->get_so($id_so);
             $detail_str = $this->_format_detail_produk_log($details);
 
@@ -1591,6 +1658,21 @@ class C_SalesOrder extends CI_Controller
         }
 
         $this->M_SalesOrder->update_status($id_so, 'cancelled', $this->_getUsername());
+
+        // Restore plafon
+        $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $so['kd_customer']])->row_array();
+        if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+            $details = $this->M_SalesOrder->get_so_detail($id_so);
+            $so_total = 0;
+            foreach ($details as $d) {
+                $so_total += (float)$d['total_harga'];
+            }
+            if ($so_total > 0) {
+                $this->db->set('plafon_aktif', 'plafon_aktif + ' . $so_total, FALSE);
+                $this->db->where('kd_customer', $so['kd_customer']);
+                $this->db->update('tb_customer');
+            }
+        }
 
         $this->M_ActivityLog->log(
             $so['no_so'] ?? '', '', 'CANCEL_SO',

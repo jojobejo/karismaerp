@@ -307,6 +307,17 @@ class C_pembayaran extends CI_Controller
         ];
 
         if ($this->M_pembayaran->insert_payment($data)) {
+            // Restore plafon
+            if (!$is_pending && ($jumlah_pembayaran + $jumlah_diskon) > 0) {
+                $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $faktur['kd_customer']])->row_array();
+                if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                    $restore_amount = (float)($jumlah_pembayaran + $jumlah_diskon);
+                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $restore_amount, FALSE);
+                    $this->db->where('kd_customer', $faktur['kd_customer']);
+                    $this->db->update('tb_customer');
+                }
+            }
+
             $cara_pembayaran_faktur = strtolower(trim((string)$this->input->post('cara_pembayaran_faktur', true)));
             if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
                 $this->M_pembayaran->update_cara_pembayaran($faktur['id_faktur'], $cara_pembayaran_faktur);
@@ -381,6 +392,20 @@ class C_pembayaran extends CI_Controller
         }
 
         if ($this->M_pembayaran->mark_bg_cair($payment['id_pembayaran'], $user, $update_data)) {
+            // Restore plafon
+            $final_jumlah = isset($update_data['jumlah_pembayaran']) ? (float)$update_data['jumlah_pembayaran'] : (float)$payment['jumlah_pembayaran'];
+            $diskon = (float)$payment['jumlah_diskon']; // assuming discount is not updated during cair
+            $restore_amount = $final_jumlah + $diskon;
+            
+            if ($restore_amount > 0 && !empty($kd_customer)) {
+                $customer_check = $this->db->get_where('tb_customer', ['kd_customer' => $kd_customer])->row_array();
+                if ($customer_check && isset($customer_check['plafon_aktif']) && (float)$customer_check['plafon_aktif'] != 1000) {
+                    $this->db->set('plafon_aktif', 'plafon_aktif + ' . $restore_amount, FALSE);
+                    $this->db->where('kd_customer', $kd_customer);
+                    $this->db->update('tb_customer');
+                }
+            }
+
             $this->session->set_flashdata('success', 'Pembayaran BG berhasil ditandai sudah cair dan masuk ke total pembayaran.');
         } else {
             $this->session->set_flashdata('error', 'Status BG gagal diperbarui.');

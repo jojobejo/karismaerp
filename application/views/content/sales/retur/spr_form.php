@@ -180,7 +180,7 @@
                                  <div class="col-md-2 d-flex align-items-center" style="margin-top: 24px;">
                                      <div class="custom-control custom-checkbox">
                                          <input type="checkbox" class="custom-control-input" name="is_jagung" id="is_jagung" value="1" <?= ($is_edit && !empty($spr['is_jagung'])) ? 'checked' : '' ?>>
-                                         <label class="custom-control-label font-weight-bold text-success" for="is_jagung">Barang Jagung</label>
+                                         <label class="custom-control-label font-weight-bold text-success" for="is_jagung">KUB</label>
                                      </div>
                                  </div>
                                  <div class="col-md-4">

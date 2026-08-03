@@ -29,7 +29,7 @@ class C_ReturPenjualan extends CI_Controller
 
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
+        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
         if (!in_array($jobdesk, $allowed_jobdesks)) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
@@ -82,9 +82,9 @@ class C_ReturPenjualan extends CI_Controller
     }
 
     /** Admin Penjualan */
-    private function _isAdmpnj()
+    private function _isAdmstock()
     {
-        return $this->_isJobdesk(['ADMPNJ', 'ADMIN']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN']);
     }
 
     /** Kepala Departemen SC */
@@ -130,7 +130,7 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user   = $this->_getUser();
         
-        // ADMRETUR is not allowed to see SPR list anymore (separated to ADMPNJ)
+        // ADMRETUR is not allowed to see SPR list anymore (separated to ADMSTOCK)
         if ($this->_isJobdesk(['ADMRETUR']) && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan/retur');
             return;
@@ -158,7 +158,7 @@ class C_ReturPenjualan extends CI_Controller
             if ($this->_isKadepub()) {
                 $allowed_statuses[] = 'menunggu_kadepub';
             }
-            if ($this->_isAdmpnj()) {
+            if ($this->_isAdmstock()) {
                 $allowed_statuses[] = 'diverifikasi_koor';
             }
             if ($this->_isKadepSC() || $this->_isKadepub()) {
@@ -298,7 +298,7 @@ class C_ReturPenjualan extends CI_Controller
 
     public function edit($id_spr)
     {
-        if (!$this->_isAdmpnj()) {
+        if (!$this->_isAdmstock()) {
             $this->_denyAccess();
             return;
         }
@@ -324,7 +324,7 @@ class C_ReturPenjualan extends CI_Controller
 
     public function update($id_spr)
     {
-        if (!$this->_isAdmpnj() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+        if (!$this->_isAdmstock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan');
             return;
         }
@@ -655,7 +655,7 @@ class C_ReturPenjualan extends CI_Controller
 
     public function admretur_cek($id_spr)
     {
-        if (!$this->_isAdmpnj()) {
+        if (!$this->_isAdmstock()) {
             $this->_denyAccess();
             return;
         }
@@ -682,7 +682,7 @@ class C_ReturPenjualan extends CI_Controller
 
     public function admretur_simpan($id_spr)
     {
-        if (!$this->_isAdmpnj() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+        if (!$this->_isAdmstock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan');
             return;
         }
@@ -1019,8 +1019,8 @@ class C_ReturPenjualan extends CI_Controller
     {
         $user    = $this->_getUser();
         
-        // ADMPNJ is not allowed to see Retur list (separated to ADMRETUR)
-        if ($this->_isJobdesk(['ADMPNJ']) && !$this->_isJobdesk(['ADMIN'])) {
+        // ADMSTOCK is not allowed to see Retur list (separated to ADMRETUR)
+        if ($this->_isJobdesk(['ADMSTOCK']) && !$this->_isJobdesk(['ADMIN'])) {
             redirect('retur_penjualan');
             return;
         }

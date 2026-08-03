@@ -92,12 +92,21 @@ $default_metode = '';
                                 <tbody>
                                     <?php foreach ($linked_returs as $ret): ?>
                                         <?php 
-                                        $no_retur_display = !empty($ret['no_retur']) ? $ret['no_retur'] : (!empty($ret['no_spr']) ? $ret['no_spr'] : 'RETUR #' . $ret['id_retur']);
+                                        $n_retur = trim((string)($ret['no_retur'] ?? ''));
+                                        $n_spr = trim((string)($ret['no_spr'] ?? ''));
+                                        
+                                        $no_retur_display = 'RETUR #' . $ret['id_retur'];
+                                        if ($n_retur !== '') {
+                                            $no_retur_display = $n_retur;
+                                        } elseif ($n_spr !== '') {
+                                            $no_retur_display = $n_spr;
+                                        }
                                         ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['id_retur']) ?>" class="font-weight-bold" target="_blank">
-                                                    <?= htmlspecialchars($no_retur_display) ?> <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
+                                                <a href="<?= base_url('retur_penjualan/retur/detail/' . $ret['id_retur']) ?>" class="font-weight-bold text-dark" target="_blank">
+                                                    <?= htmlspecialchars($no_retur_display, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> 
+                                                    <i class="fas fa-external-link-alt ml-1" style="font-size: 0.8em;"></i>
                                                 </a>
                                             </td>
                                             <td><span class="badge badge-secondary"><?= htmlspecialchars(ucfirst($ret['tipe_retur'])) ?></span></td>
