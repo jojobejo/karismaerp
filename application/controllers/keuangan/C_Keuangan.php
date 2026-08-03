@@ -1650,7 +1650,6 @@ class C_Keuangan extends CI_Controller
             ], 409);
         }
 
-        $this->load->model('M_Journal');
         $search = trim((string)$this->input->post('search', true));
         return $this->accounting_ajax_response(true, 'Daftar jurnal penjualan berhasil dimuat.', [
             'rows' => $this->M_Journal->accounting_sales_journal_rows($search, 150),

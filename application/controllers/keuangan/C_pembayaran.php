@@ -39,6 +39,7 @@ class C_pembayaran extends CI_Controller
         $data['keyword'] = $keyword;
         $data['customers'] = $this->M_pembayaran->get_customers_with_unpaid_faktur($keyword);
         $data['due_payments'] = $this->M_pembayaran->get_due_pending_payments();
+        $data['pending_kasir'] = $this->M_pembayaran->get_pending_kasir_payments();
         
         $pending_retur_query = "SELECT h.*, c.nama_customer, f.id_faktur FROM tbrp_retur_penjualan_header h LEFT JOIN tb_customer c ON h.kd_customer = c.kd_customer LEFT JOIN tbso_faktur_penjualan f ON h.no_faktur_potong = f.no_faktur WHERE h.no_faktur_potong IS NOT NULL AND h.no_faktur_potong != '' AND NOT EXISTS (SELECT 1 FROM tbkeu_pembayaran_faktur p WHERE p.no_faktur = h.no_faktur_potong AND p.metode_pembayaran = 'retur')";
         $pending_returs = $this->db->query($pending_retur_query)->result_array();
@@ -202,6 +203,19 @@ class C_pembayaran extends CI_Controller
         $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
         $data['pending_bg'] = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
         $data['saldo_retur'] = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
+
+        $validasi_kasir_id = $this->input->get('validasi_kasir');
+        $data['validasi_kasir'] = null;
+        $data['is_validasi_kasir_mode'] = false;
+        if ($validasi_kasir_id) {
+            $data['validasi_kasir'] = $this->db->get_where('tbkeu_pembayaran_faktur', [
+                'id_pembayaran' => $validasi_kasir_id, 
+                'status_kasir' => 'pending_kasir'
+            ])->row_array();
+            if ($data['validasi_kasir']) {
+                $data['is_validasi_kasir_mode'] = true;
+            }
+        }
 
         // Fetch returns linked by Collection to this invoice
         $data['linked_returs'] = $this->db
@@ -418,6 +432,43 @@ class C_pembayaran extends CI_Controller
         }
     }
 
+    public function approve_kasir($id_pembayaran)
+    {
+        $user = $this->session->userdata('nm_karyawan')
+            ?: $this->session->userdata('nama')
+            ?: $this->session->userdata('username')
+            ?: 'system';
+        
+        // Cek apakah ada POST data (dari form validasi)
+        if ($this->input->server('REQUEST_METHOD') === 'POST') {
+            $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
+            $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
+            $keterangan = trim((string)$this->input->post('keterangan', true));
+            
+            // Update the pending payment first
+            $this->db->where('id_pembayaran', $id_pembayaran);
+            $this->db->where('status_kasir', 'pending_kasir');
+            $this->db->update('tbkeu_pembayaran_faktur', [
+                'jumlah_pembayaran' => $jumlah_pembayaran,
+                'tanggal_pembayaran' => $tanggal_pembayaran,
+                'keterangan' => $keterangan !== '' ? $keterangan : null
+            ]);
+        }
+
+        if ($this->M_pembayaran->approve_kasir_payment($id_pembayaran, $user)) {
+            $this->session->set_flashdata('success', 'Pembayaran kasir berhasil divalidasi dan jurnal diterbitkan.');
+        } else {
+            $this->session->set_flashdata('error', 'Gagal memvalidasi pembayaran kasir.');
+        }
+        
+        $payment = $this->db->get_where('tbkeu_pembayaran_faktur', ['id_pembayaran' => $id_pembayaran])->row_array();
+        if ($payment && isset($payment['id_faktur'])) {
+            redirect('keuangan/pembayaran/bayar/' . $payment['id_faktur']);
+        } else {
+            redirect('keuangan/pembayaran');
+        }
+    }
+
     private function _get_valid_faktur($id_faktur, $allow_lunas = false)
     {
         $faktur = $this->M_pembayaran->get_faktur_summary($id_faktur);
@@ -442,5 +493,126 @@ class C_pembayaran extends CI_Controller
         $value = str_replace(',', '.', $value);
 
         return (float)$value;
+    }
+
+    // --- KASIR METHODS ---
+
+    public function kasir()
+    {
+        $keyword = trim((string)$this->input->get('q', true));
+
+        $data['page_title'] = 'KARISMA - KASIR PEMBAYARAN CASH';
+        $data['keyword'] = $keyword;
+        $data['customers'] = $this->M_pembayaran->get_customers_with_unpaid_faktur($keyword);
+        
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/kasir_customer.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function kasir_customer($kd_customer = null)
+    {
+        if (empty($kd_customer)) {
+            $this->session->set_flashdata('error', 'Customer tidak ditemukan.');
+            redirect('keuangan/pembayaran/kasir');
+        }
+
+        $kd_customer = rawurldecode($kd_customer);
+        $fakturs = $this->M_pembayaran->get_unpaid_faktur_by_customer($kd_customer);
+
+        $data['page_title'] = 'KARISMA - DETAIL PEMBAYARAN KASIR';
+        $data['kd_customer'] = $kd_customer;
+        $data['fakturs'] = $fakturs;
+        $data['customer_name'] = !empty($fakturs) ? $fakturs[0]['nama_customer'] : $kd_customer;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/kasir_faktur_detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function kasir_bayar($id_faktur = null)
+    {
+        $faktur = $this->_get_valid_faktur_kasir($id_faktur, true);
+
+        $data['page_title'] = 'KARISMA - INPUT PEMBAYARAN CASH KASIR';
+        $data['faktur'] = $faktur;
+        $data['is_lunas'] = (float)$faktur['sisa_tagihan'] <= 0;
+        $data['history'] = $this->M_pembayaran->get_payment_history($faktur['id_faktur']);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/kasir_pembayaran_form.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function kasir_simpan($id_faktur = null)
+    {
+        $faktur = $this->_get_valid_faktur_kasir($id_faktur);
+
+        $this->form_validation->set_rules('tanggal_pembayaran', 'Tanggal Pembayaran', 'required');
+        $this->form_validation->set_rules('jumlah_pembayaran', 'Jumlah Pembayaran', 'required');
+
+        if (!$this->form_validation->run()) {
+            $this->session->set_flashdata('error', validation_errors('', '<br>'));
+            redirect('keuangan/pembayaran/kasir_bayar/' . $faktur['id_faktur']);
+        }
+
+        $tanggal_pembayaran = $this->input->post('tanggal_pembayaran', true);
+        $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
+        $keterangan = trim((string)$this->input->post('keterangan', true));
+
+        if ($jumlah_pembayaran <= 0) {
+            $this->session->set_flashdata('error', 'Jumlah pembayaran harus lebih dari 0.');
+            redirect('keuangan/pembayaran/kasir_bayar/' . $faktur['id_faktur']);
+        }
+
+        if ($jumlah_pembayaran > (float)$faktur['sisa_tagihan'] + 1) { 
+            $this->session->set_flashdata('error', 'Jumlah pembayaran tidak boleh melebihi sisa tagihan.');
+            redirect('keuangan/pembayaran/kasir_bayar/' . $faktur['id_faktur']);
+        }
+
+        $created_by = $this->session->userdata('nm_karyawan')
+            ?: $this->session->userdata('nama')
+            ?: $this->session->userdata('username')
+            ?: 'system';
+
+        $data = [
+            'id_faktur'           => $faktur['id_faktur'],
+            'no_faktur'           => $faktur['no_faktur'],
+            'tanggal_pembayaran'  => $tanggal_pembayaran,
+            'jumlah_pembayaran'   => $jumlah_pembayaran,
+            'jumlah_diskon'       => 0,
+            'metode_pembayaran'   => 'Q Kas',
+            'cara_pembayaran'     => 'cash',
+            'status_bg'           => 'not_bg',
+            'status_kasir'        => 'pending_kasir',
+            'keterangan'          => $keterangan !== '' ? $keterangan : null,
+            'create_by'           => $created_by,
+            'create_at'           => date('Y-m-d H:i:s'),
+        ];
+
+        if ($this->M_pembayaran->insert_payment($data)) {
+            $this->session->set_flashdata('success', 'Pembayaran cash berhasil disubmit. Menunggu validasi dari KIU KEU.');
+            redirect('keuangan/pembayaran/kasir_customer/' . rawurlencode($faktur['kd_customer']));
+        }
+
+        $this->session->set_flashdata('error', 'Pembayaran gagal disimpan.');
+        redirect('keuangan/pembayaran/kasir_bayar/' . $faktur['id_faktur']);
+    }
+
+    private function _get_valid_faktur_kasir($id_faktur, $allow_lunas = false)
+    {
+        $faktur = $this->M_pembayaran->get_faktur_summary($id_faktur);
+
+        if (!$faktur || $faktur['status'] !== 'selesai_do') {
+            $this->session->set_flashdata('error', 'Faktur tidak ditemukan atau belum selesai DO.');
+            redirect('keuangan/pembayaran/kasir');
+        }
+
+        if (!$allow_lunas && (float)$faktur['sisa_tagihan'] <= 0) {
+            $this->session->set_flashdata('warning', 'Faktur tersebut sudah lunas.');
+            redirect('keuangan/pembayaran/kasir_customer/' . rawurlencode($faktur['kd_customer']));
+        }
+
+        return $faktur;
     }
 }

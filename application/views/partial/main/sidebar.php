@@ -604,6 +604,16 @@
                 </p>
               </a>
             </li>
+            <?php if ($this->session->userdata('jobdesk') == 'KASIR') : ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('keuangan/pembayaran/kasir') ?>" class="nav-link">
+                <i class="nav-icon fas fa-cash-register"></i>
+                <p>
+                  Pembayaran Kasir
+                </p>
+              </a>
+            </li>
+            <?php endif; ?>
             <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>

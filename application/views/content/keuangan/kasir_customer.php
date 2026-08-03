@@ -36,11 +36,6 @@
                                 <i class="fas fa-bell mr-1"></i> Retur Pending (<?= $pending_retur_count ?>)
                             </button>
                         <?php endif; ?>
-                        <?php if (!empty($pending_kasir) && count($pending_kasir) > 0): ?>
-                            <button type="button" class="btn btn-info text-white font-weight-bold btn-shake-notification mr-3" data-toggle="modal" data-target="#modalPendingKasir">
-                                <i class="fas fa-cash-register mr-1"></i> Kasir Pending (<?= count($pending_kasir) ?>)
-                            </button>
-                        <?php endif; ?>
                         <ol class="breadcrumb float-sm-right d-inline-flex mb-0">
                             <li class="breadcrumb-item"><a href="<?= base_url('dashboard') ?>">Home</a></li>
                             <li class="breadcrumb-item active">Pembayaran Faktur</li>
@@ -70,7 +65,7 @@
                                 <li>
                                     Faktur <strong><?= htmlspecialchars($pay['no_faktur']) ?></strong> - <?= htmlspecialchars($pay['nama_customer']) ?> 
                                     (Metode: <?= htmlspecialchars($pay['metode_pembayaran'] ?: '-') ?>, Jml: Rp <?= number_format((float)$pay['jumlah_pembayaran'], 0, ',', '.') ?>, Rencana Cair: <?= date('d/m/Y', strtotime($pay['tanggal_bg_cair'])) ?>) 
-                                    - <a href="<?= base_url('keuangan/pembayaran/bayar/' . $pay['id_faktur']) ?>" class="alert-link font-weight-bold" style="text-decoration: underline;"><i class="fas fa-external-link-alt ml-1"></i> Buka Form Bayar</a>
+                                    - <a href="<?= base_url('keuangan/pembayaran/kasir_bayar/' . $pay['id_faktur']) ?>" class="alert-link font-weight-bold" style="text-decoration: underline;"><i class="fas fa-external-link-alt ml-1"></i> Buka Form Bayar</a>
                                 </li>
                             <?php endforeach; ?>
                             <?php if (count($due_payments) > 5): ?>
@@ -83,14 +78,12 @@
                     </div>
                 <?php endif; ?>
 
-
-
                 <div class="card card-outline card-primary">
                     <div class="card-header">
                         <h3 class="card-title"><i class="fas fa-search mr-1"></i>Cari Customer</h3>
                     </div>
                     <div class="card-body">
-                        <form method="get" action="<?= base_url('keuangan/pembayaran') ?>">
+                        <form method="get" action="<?= base_url('keuangan/pembayaran/kasir') ?>">
                             <div class="row">
                                 <div class="col-md-6">
                                     <input type="text" name="q" class="form-control" placeholder="Nama customer / kode customer"
@@ -100,7 +93,7 @@
                                     <button class="btn btn-primary">
                                         <i class="fas fa-search mr-1"></i>Tampilkan
                                     </button>
-                                    <a href="<?= base_url('keuangan/pembayaran') ?>" class="btn btn-secondary">Reset</a>
+                                    <a href="<?= base_url('keuangan/pembayaran/kasir') ?>" class="btn btn-secondary">Reset</a>
                                 </div>
                             </div>
                         </form>
@@ -142,7 +135,7 @@
                                     <?php foreach ($customers as $customer): ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($customer['kd_customer'])) ?>">
+                                                <a href="<?= base_url('keuangan/pembayaran/kasir_customer/' . rawurlencode($customer['kd_customer'])) ?>">
                                                     <strong><?= htmlspecialchars($customer['nama_customer']) ?></strong>
                                                 </a>
                                                 <br><small class="text-muted"><?= htmlspecialchars($customer['kd_customer']) ?></small>
@@ -153,7 +146,7 @@
                                             <td class="text-right text-warning">Rp <?= number_format((float)($customer['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
                                             <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$customer['sisa_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-center">
-                                                <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($customer['kd_customer'])) ?>"
+                                                <a href="<?= base_url('keuangan/pembayaran/kasir_customer/' . rawurlencode($customer['kd_customer'])) ?>"
                                                    class="btn btn-info btn-sm">
                                                     <i class="fas fa-eye mr-1"></i>Detail
                                                 </a>
@@ -215,69 +208,14 @@
                                         <td class="small"><?= nl2br(htmlspecialchars($pr['catatan_collection'] ?? '')) ?></td>
                                         <td class="text-center">
                                             <?php if (!empty($pr['id_faktur'])): ?>
-                                                <a href="<?= base_url('keuangan/pembayaran/bayar/' . $pr['id_faktur']) ?>" class="btn btn-sm btn-primary">
+                                                <a href="<?= base_url('keuangan/pembayaran/kasir_bayar/' . $pr['id_faktur']) ?>" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-external-link-alt mr-1"></i> Bayar
                                                 </a>
                                             <?php else: ?>
-                                                <a href="<?= base_url('keuangan/pembayaran/customer/' . rawurlencode($pr['kd_customer'])) ?>" class="btn btn-sm btn-secondary">
+                                                <a href="<?= base_url('keuangan/pembayaran/kasir_customer/' . rawurlencode($pr['kd_customer'])) ?>" class="btn btn-sm btn-secondary">
                                                     <i class="fas fa-search mr-1"></i> Cari
                                                 </a>
                                             <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Pending Kasir -->
-<div class="modal fade" id="modalPendingKasir" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-cash-register mr-2"></i>Input Pembayaran Kasir (Pending Validasi)</h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped table-sm mb-0">
-                        <thead class="thead-dark">
-                            <tr>
-                                <th>Faktur</th>
-                                <th>Customer</th>
-                                <th>Tgl. Pembayaran</th>
-                                <th class="text-right">Nominal Input Kasir</th>
-                                <th>Keterangan</th>
-                                <th class="text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($pending_kasir)): ?>
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">Tidak ada pembayaran kasir yang pending.</td>
-                                </tr>
-                            <?php else: ?>
-                                <?php foreach ($pending_kasir as $pay): ?>
-                                    <tr>
-                                        <td><strong><?= htmlspecialchars($pay['no_faktur']) ?></strong></td>
-                                        <td><?= htmlspecialchars($pay['nama_customer']) ?></td>
-                                        <td><?= date('d/m/Y', strtotime($pay['tanggal_pembayaran'])) ?></td>
-                                        <td class="text-right font-weight-bold text-success">Rp <?= number_format((float)$pay['jumlah_pembayaran'], 0, ',', '.') ?></td>
-                                        <td class="small"><?= nl2br(htmlspecialchars($pay['keterangan'] ?? '-')) ?></td>
-                                        <td class="text-center">
-                                            <a href="<?= base_url('keuangan/pembayaran/bayar/' . $pay['id_faktur'] . '?validasi_kasir=' . $pay['id_pembayaran']) ?>" class="btn btn-sm btn-info">
-                                                <i class="fas fa-check-circle mr-1"></i> Validasi / Proses
-                                            </a>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

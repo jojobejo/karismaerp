@@ -73,6 +73,24 @@ class M_pembayaran extends CI_Model
                     'null' => true,
                     'after' => 'bg_cair_by',
                 ],
+                'status_kasir' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 20,
+                    'default'    => 'valid',
+                    'null'       => false,
+                    'after'      => 'status_bg',
+                ],
+                'kasir_approved_by' => [
+                    'type'       => 'VARCHAR',
+                    'constraint' => 100,
+                    'null'       => true,
+                    'after'      => 'status_kasir',
+                ],
+                'kasir_approved_at' => [
+                    'type' => 'DATETIME',
+                    'null' => true,
+                    'after' => 'kasir_approved_by',
+                ],
             ] as $field => $definition) {
                 if (!$this->db->field_exists($field, $this->payment_table)) {
                     $this->dbforge->add_column($this->payment_table, [$field => $definition]);
@@ -142,6 +160,20 @@ class M_pembayaran extends CI_Model
                 'type' => 'DATETIME',
                 'null' => true,
             ],
+            'status_kasir' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 20,
+                'default'    => 'valid',
+            ],
+            'kasir_approved_by' => [
+                'type'       => 'VARCHAR',
+                'constraint' => 100,
+                'null'       => true,
+            ],
+            'kasir_approved_at' => [
+                'type' => 'DATETIME',
+                'null' => true,
+            ],
             'keterangan' => [
                 'type' => 'TEXT',
                 'null' => true,
@@ -181,6 +213,7 @@ class M_pembayaran extends CI_Model
                 COALESCE(SUM(
                     CASE
                         WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN 0
+                        WHEN COALESCE(status_kasir, 'valid') = 'pending_kasir' THEN 0
                         ELSE (jumlah_pembayaran + jumlah_diskon)
                     END
                 ), 0) AS total_pembayaran,
@@ -372,8 +405,9 @@ class M_pembayaran extends CI_Model
         $id_pembayaran = $this->db->insert_id();
 
         $is_pending_bg = (($data['status_bg'] ?? '') === 'pending');
+        $is_pending_kasir = (($data['status_kasir'] ?? 'valid') === 'pending_kasir');
 
-        if (!$is_pending_bg && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+        if (!$is_pending_bg && !$is_pending_kasir && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
             $this->load->model('M_Journal');
             $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $data);
         }
@@ -479,5 +513,37 @@ class M_pembayaran extends CI_Model
             ->order_by('p.tanggal_bg_cair', 'ASC')
             ->get()
             ->result_array();
+    }
+
+    public function get_pending_kasir_payments()
+    {
+        return $this->db
+            ->select('p.*, c.nama_customer, c.kd_customer')
+            ->from($this->payment_table . ' p')
+            ->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur', 'left')
+            ->join('tb_customer c', 'c.kd_customer = f.kd_customer', 'left')
+            ->where('p.status_kasir', 'pending_kasir')
+            ->order_by('p.tanggal_pembayaran', 'ASC')
+            ->get()
+            ->result_array();
+    }
+
+    public function approve_kasir_payment($id_pembayaran, $user)
+    {
+        $this->db->where('id_pembayaran', (int)$id_pembayaran);
+        $success = $this->db->update($this->payment_table, [
+            'status_kasir' => 'valid',
+            'kasir_approved_by' => $user,
+            'kasir_approved_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        if ($success) {
+            $payment = $this->get_payment($id_pembayaran);
+            if ($payment && $this->db->table_exists('tbkeu_jurnal') && $this->db->table_exists('tbkeu_jurnal_detail')) {
+                $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_pembayaran($id_pembayaran, $payment);
+            }
+        }
+        return $success;
     }
 }
