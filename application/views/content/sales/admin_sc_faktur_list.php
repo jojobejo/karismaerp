@@ -432,7 +432,7 @@
                                                 class="btn btn-sm btn-secondary" target="_blank" title="Cetak Faktur">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <?php if ($status === 'confirmed'): ?>
+                                                <?php if (in_array($status, ['confirmed', 'proses_do', 'selesai_do'])): ?>
                                                     <button class="btn btn-sm btn-warning btn-repost-faktur ml-1"
                                                             data-id="<?= (int)$f['id_faktur'] ?>"
                                                             data-nofaktur="<?= htmlspecialchars($f['no_faktur']) ?>"

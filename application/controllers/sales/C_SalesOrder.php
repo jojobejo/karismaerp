@@ -3145,15 +3145,10 @@ class C_SalesOrder extends CI_Controller
             exit;
         }
 
-        // Cek faktur belum masuk DO
+        // Cek faktur
         $faktur = $this->db->get_where('tbso_faktur_penjualan', ['id_faktur' => $id_faktur])->row_array();
         if (!$faktur) {
             echo json_encode(['status' => false, 'message' => 'Faktur tidak ditemukan']);
-            exit;
-        }
-        $in_do = $this->db->get_where('tb_detail_do', ['kd_faktur' => $faktur['no_faktur']])->num_rows();
-        if ($in_do > 0) {
-            echo json_encode(['status' => false, 'message' => 'Faktur sudah masuk DO, tidak bisa direpost']);
             exit;
         }
 

@@ -2196,10 +2196,6 @@ class M_SalesOrder extends CI_Model
         if (!$faktur) return ['errors' => ['Faktur tidak ditemukan.']];
         if ($faktur['status'] === 'cancelled') return ['errors' => ['Faktur sudah dibatalkan.']];
 
-        // Cek faktur belum masuk DO
-        $in_do = $this->db->get_where('tb_detail_do', ['kd_faktur' => $faktur['no_faktur']])->num_rows();
-        if ($in_do > 0) return ['errors' => ['Faktur sudah masuk Delivery Order, tidak bisa direpost.']];
-
         $so = $this->db->get_where('tbso_sales_order', ['id_so' => $faktur['id_so']])->row_array();
         if (!$so) return ['errors' => ['SO tidak ditemukan.']];
 
