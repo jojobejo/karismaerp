@@ -1044,7 +1044,8 @@ function renderCustomers(q) {
         var initials = String(nama || '?').trim().split(/\s+/).slice(0, 2).map(function(part){
             return part.charAt(0);
         }).join('').toUpperCase() || '?';
-        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'" data-plafon="'+esc(c.plafon_aktif||'')+'"'
+        var unpaidFlag = c.has_unpaid_1000 ? '1' : '0';
+        html += '<tr class="tr-pick-customer" tabindex="0" data-kd="'+esc(c.kd_customer)+'" data-nama="'+esc(c.nama_customer)+'" data-plafon="'+esc(c.plafon_aktif||'')+'" data-unpaid="'+unpaidFlag+'"'
               + ' title="Klik untuk memilih">'
               + '<td><div class="d-flex align-items-center">'
               + '<span class="customer-avatar">'+esc(initials)+'</span>'
@@ -1126,6 +1127,12 @@ function applyPlafonRestriction(plafon) {
 
 function chooseCustomerRow(tr) {
     if (!tr) return;
+    var plafon = parsePlafonNumber(tr.dataset.plafon);
+    if (plafon === 1000 && tr.dataset.unpaid === '1') {
+        salesToast('error', 'Customer ini memiliki Plafon 1.000 dan masih memiliki faktur belum lunas. Tidak dapat membuat SO baru.');
+        return;
+    }
+    
     document.getElementById('customer_id').value      = tr.dataset.kd;
     document.getElementById('customer_name').value    = tr.dataset.nama;
     document.getElementById('customer_display').value = tr.dataset.nama;

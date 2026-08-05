@@ -707,6 +707,22 @@ class M_ReturPenjualan extends CI_Model
             ->result_array();
     }
 
+    /** Ambil retur lain yang saldonya > 0 untuk customer tertentu */
+    public function get_available_returns_for_customer($kd_customer, $exclude_id_retur = null)
+    {
+        $this->db->where('kd_customer', $kd_customer)
+                 ->where('sisa_saldo_retur >', 0)
+                 ->where_in('status_retur', ['menunggu_collection', 'selesai']);
+        
+        if ($exclude_id_retur !== null) {
+            $this->db->where('id_retur !=', (int)$exclude_id_retur);
+        }
+        
+        return $this->db->order_by('tanggal_retur', 'ASC')
+                        ->get('tbrp_retur_penjualan_header')
+                        ->result_array();
+    }
+
     /** Update status Retur Penjualan */
     public function update_retur_penjualan_status($id_retur, $status, array $extra = [])
     {

@@ -1056,13 +1056,39 @@ class C_ReturPenjualan extends CI_Controller
             if (empty($filter['status'])) $filter['status'] = 'collection_active';
         }
 
-        $data['page_title']  = 'KARISMA — Retur Penjualan';
+        $data['page_title']  = 'KARISMA - Retur Penjualan';
         $data['retur_list']  = $this->M_ReturPenjualan->get_all_retur_penjualan($filter);
         $data['filter']      = $filter;
         $data['user']        = $user;
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/retur/retur_list.php', $data);
+        if (in_array(strtoupper((string)($user['jobdesk'] ?? '')), ['COLLECTION', 'KOLEKTOR'])) {
+            $this->load->view('content/sales/retur/retur_list_collection.php', $data);
+        } else {
+            $this->load->view('content/sales/retur/retur_list.php', $data);
+        }
+        $this->load->view('partial/main/footer.php');
+    }
+    
+    /** Halaman khusus Collection untuk melihat daftar retur by Customer */
+    public function collection_list()
+    {
+        $user    = $this->_getUser();
+        $jobdesk = $user['jobdesk'];
+
+        $filter  = [
+            'date1'  => $this->input->get('date1', true),
+            'date2'  => $this->input->get('date2', true),
+            'status' => $this->input->get('status', true) ?: 'collection_active',
+        ];
+
+        $data['page_title']  = 'KARISMA - Retur Penjualan (Collection)';
+        $data['retur_list']  = $this->M_ReturPenjualan->get_all_retur_penjualan($filter);
+        $data['filter']      = $filter;
+        $data['user']        = $user;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/retur/retur_list_collection.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -1476,6 +1502,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['retur_detail'] = $retur_detail;
         $data['total_retur']  = $total_retur;
         $data['faktur_belum_lunas'] = $faktur_belum_lunas;
+        $data['all_returns']        = $this->M_ReturPenjualan->get_available_returns_for_customer($retur['kd_customer'], null);
         $data['user']         = $this->_getUser();
 
         $this->load->view('partial/main/header.php', $data);
@@ -1519,41 +1546,69 @@ class C_ReturPenjualan extends CI_Controller
         }
         
         if ($retur['tipe_retur'] === 'biasa') {
-            $retur_detail = $this->M_ReturPenjualan->get_retur_penjualan_detail($id_retur);
-            $total_retur = 0;
-            foreach ($retur_detail as $d) $total_retur += (float)$d['qty_retur'] * (float)$d['harga_satuan'];
-            
-            $max_potong = $retur['status_retur'] === 'selesai' ? (float)$retur['sisa_saldo_retur'] : $total_retur;
+            $selected_returs = $this->input->post('selected_returs') ?: [];
+            if (empty($selected_returs)) {
+                $this->session->set_flashdata('error', 'Tidak ada retur yang dipilih untuk pemotongan.');
+                redirect('retur_penjualan/retur/collection/' . $id_retur);
+                return;
+            }
+
+            $max_potong = 0;
+            $valid_returs = [];
+            foreach ($selected_returs as $sel_id) {
+                $sel_retur = $this->M_ReturPenjualan->get_retur_penjualan($sel_id);
+                if ($sel_retur && $sel_retur['kd_customer'] === $retur['kd_customer'] && (float)$sel_retur['sisa_saldo_retur'] > 0 && in_array($sel_retur['status_retur'], ['menunggu_collection', 'selesai'])) {
+                    $max_potong += (float)$sel_retur['sisa_saldo_retur'];
+                    $valid_returs[] = $sel_retur;
+                }
+            }
+
             if ($nominal_potongan > $max_potong) {
-                $this->session->set_flashdata('error', 'Nominal potongan melebihi sisa saldo retur.');
+                $this->session->set_flashdata('error', 'Nominal potongan melebihi sisa saldo retur gabungan terpilih.');
                 redirect('retur_penjualan/retur/collection/' . $id_retur);
                 return;
             }
             
-            // Hanya merekam instruksi potong faktur, tidak melakukan insert_payment
-            // Pembayaran aktual akan dilakukan oleh tim Keuangan
+            // Distribusikan potongan ke retur yang terpilih
+            $sisa_nominal_yg_harus_dipotong = $nominal_potongan;
             
-            $instruksi_nominal = "Instruksi Potong Faktur {$faktur['no_faktur']} senilai Rp " . number_format($nominal_potongan, 0, ',', '.') . ". ";
-            $catatan_collection = $instruksi_nominal . $catatan_collection;
+            $this->db->trans_start();
+
+            foreach ($valid_returs as $r) {
+                if ($sisa_nominal_yg_harus_dipotong <= 0) break;
+                
+                $saldo_r = (float)$r['sisa_saldo_retur'];
+                if ($saldo_r <= 0) continue;
+
+                $potong_di_sini = min($saldo_r, $sisa_nominal_yg_harus_dipotong);
+                $sisa_nominal_yg_harus_dipotong -= $potong_di_sini;
+                $new_sisa = $saldo_r - $potong_di_sini;
+
+                $instruksi_nominal = "Instruksi Potong Faktur {$faktur['no_faktur']} senilai Rp " . number_format($potong_di_sini, 0, ',', '.') . ". ";
+                $catatan_khusus = $instruksi_nominal . ($r['id_retur'] == $id_retur ? $catatan_collection : '');
+
+                $this->db->where('id_retur', $r['id_retur']);
+                $this->db->update('tbrp_retur_penjualan_header', [
+                    'sisa_saldo_retur'   => $new_sisa,
+                    'collection_by'      => $user['nama'],
+                    'collection_at'      => date('Y-m-d H:i:s'),
+                    'catatan_collection' => $catatan_khusus,
+                    'no_faktur_potong'   => $faktur['no_faktur'],
+                    'update_by_retur'    => $user['nama'],
+                    'status_retur'       => 'menunggu_kasir'
+                ]);
+
+                $notif_msg = "Rekomendasi potong faktur {$faktur['no_faktur']} sejumlah Rp " . number_format($potong_di_sini, 0, ',', '.') . ". Menunggu eksekusi pembayaran oleh Keuangan.";
+                $this->M_ReturPenjualan->record_log($r['no_retur'], 'retur', 'retur_collection_potong', $r['status_retur'], 'menunggu_kasir', $notif_msg, $user['nama']);
+            }
             
-            // Update Sisa Saldo
-            $new_sisa = $max_potong - $nominal_potongan;
-            
-            $this->db->where('id_retur', $id_retur);
-            $this->db->update('tbrp_retur_penjualan_header', [
-                'sisa_saldo_retur'   => $new_sisa,
-                'collection_by'      => $user['nama'],
-                'collection_at'      => date('Y-m-d H:i:s'),
-                'catatan_collection' => $catatan_collection,
-                'no_faktur_potong'   => $faktur['no_faktur'],
-                'update_by_retur'    => $user['nama']
-            ]);
-            
-            // Log & Notification for KIUKEU
-            $notif_msg = "Rekomendasi potong faktur {$faktur['no_faktur']} sejumlah Rp " . number_format($nominal_potongan, 0, ',', '.') . ". Menunggu eksekusi pembayaran oleh Keuangan.";
-            $this->M_ReturPenjualan->record_log($retur['no_retur'], 'retur', 'retur_collection_potong', $retur['status_retur'], 'selesai', $notif_msg, $user['nama']);
-            
-            $this->session->set_flashdata('success', "Instruksi pemotongan faktur berhasil disimpan. Pembayaran tagihan aktual akan dieksekusi oleh Tim Keuangan.");
+            $this->db->trans_complete();
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->session->set_flashdata('error', 'Gagal memproses pemotongan faktur.');
+            } else {
+                $this->session->set_flashdata('success', "Instruksi pemotongan faktur berhasil disimpan untuk " . count($semua_retur) . " retur. Menunggu eksekusi Keuangan.");
+            }
             redirect('retur_penjualan/retur');
             return;
         } else {

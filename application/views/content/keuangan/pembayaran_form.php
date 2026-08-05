@@ -77,6 +77,14 @@ $default_metode = '';
                     <div class="alert alert-info shadow-sm border-info mb-4" style="background-color: #e8f4fd; color: #0c5460; border-left: 5px solid #17a2b8;">
                         <h5 class="font-weight-bold mb-2"><i class="fas fa-info-circle mr-2"></i>Informasi Pemotongan Retur dari Collection</h5>
                         <p class="mb-2">Collection telah menentukan bahwa Faktur ini dapat dipotong menggunakan Retur Penjualan berikut:</p>
+                        <?php
+                          $total_instruksi_potongan = 0;
+                          foreach ($linked_returs as $ret) {
+                              if (preg_match('/Instruksi Potong Faktur .*? senilai Rp ([\d\.]+)/', $ret['catatan_collection'], $m)) {
+                                  $total_instruksi_potongan += (float) str_replace('.', '', $m[1]);
+                              }
+                          }
+                          ?>
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-2 bg-white text-dark small" style="border-radius: 4px; overflow: hidden;">
                                 <thead class="thead-light">
@@ -84,8 +92,8 @@ $default_metode = '';
                                         <th>No. Retur</th>
                                         <th>Tipe Retur</th>
                                         <th>Tanggal Retur</th>
-                                        <th>Status Retur</th>
-                                        <th>Catatan / Instruksi Nominal</th>
+                                        <th class="text-right">Nominal Pemotongan</th>
+                                        <th>Catatan</th>
                                         <th class="text-right">Nominal Retur</th>
                                     </tr>
                                 </thead>
@@ -111,20 +119,33 @@ $default_metode = '';
                                             </td>
                                             <td><span class="badge badge-secondary"><?= htmlspecialchars(ucfirst($ret['tipe_retur'])) ?></span></td>
                                             <td><?= date('d/m/Y', strtotime($ret['tanggal_retur'])) ?></td>
-                                            <td>
-                                                <?php
-                                                $lbl = $ret['status_retur'];
-                                                if ($lbl === 'menunggu_collection') $lbl = 'Menunggu Collection';
-                                                elseif ($lbl === 'menunggu_kasir') $lbl = 'Menunggu Kasir (Serah Terima)';
-                                                elseif ($lbl === 'selesai') $lbl = 'Selesai';
-                                                ?>
-                                                <span class="badge badge-info"><?= htmlspecialchars($lbl) ?></span>
-                                            </td>
-                                            <td><?= nl2br(htmlspecialchars($ret['catatan_collection'] ?? '')) ?></td>
+                                            <?php
+                                            $cat_raw = $ret['catatan_collection'] ?? '';
+                                            $nom_potong = 0;
+                                            $cat_bersih = $cat_raw;
+                                            if (preg_match('/Instruksi Potong Faktur .*? senilai Rp ([\d\.]+)\.?\s*(.*)$/si', $cat_raw, $m)) {
+                                                $nom_potong = (float) str_replace('.', '', $m[1]);
+                                                $cat_bersih = trim($m[2]);
+                                            } elseif (preg_match('/Instruksi Potong Faktur .*? senilai Rp ([\d\.]+)/i', $cat_raw, $m)) {
+                                                $nom_potong = (float) str_replace('.', '', $m[1]);
+                                                $cat_bersih = trim(str_replace($m[0], '', $cat_raw));
+                                            }
+                                            ?>
+                                            <td class="text-right font-weight-bold text-primary">Rp <?= number_format($nom_potong, 0, ',', '.') ?></td>
+                                            <td><?= nl2br(htmlspecialchars($cat_bersih)) ?></td>
                                             <td class="text-right font-weight-bold text-success">Rp <?= number_format((float)$ret['total_retur'], 0, ',', '.') ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
+                                <?php if ($total_instruksi_potongan > 0): ?>
+                                <tfoot>
+                                    <tr class="bg-light">
+                                        <td colspan="3" class="text-right font-weight-bold text-dark">TOTAL INSTRUKSI POTONGAN UNTUK FAKTUR INI:</td>
+                                        <td class="text-right font-weight-bold text-danger" style="font-size: 1.1em;">Rp <?= number_format($total_instruksi_potongan, 0, ',', '.') ?></td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                                <?php endif; ?>
                             </table>
                         </div>
                     </div>

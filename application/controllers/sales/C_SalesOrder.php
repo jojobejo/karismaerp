@@ -99,11 +99,20 @@ class C_SalesOrder extends CI_Controller
 
     private function _attachPlafonToCustomers(array $customers)
     {
+        $this->load->model('M_pembayaran');
         foreach ($customers as &$customer) {
             $customer['plafon_aktif']      = $customer['plafon_aktif']      ?? null;
             $customer['piutang']           = null;
             $customer['plafon_status']     = null;
             $customer['plafon_updated_at'] = $customer['plafon_updated_at'] ?? null;
+            
+            $customer['has_unpaid_1000'] = false;
+            if ($customer['plafon_aktif'] !== null && (float)$customer['plafon_aktif'] == 1000) {
+                $unpaid = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
+                if (!empty($unpaid)) {
+                    $customer['has_unpaid_1000'] = true;
+                }
+            }
         }
         unset($customer);
         return $customers;

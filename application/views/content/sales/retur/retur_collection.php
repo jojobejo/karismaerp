@@ -28,86 +28,27 @@
         <section class="content">
             <div class="container-fluid">
 
-                <!-- INFO RETUR -->
+                <?php 
+                    $grand_total_saldo = 0;
+                    foreach ($all_returns as $ar) {
+                        $grand_total_saldo += (float)$ar['sisa_saldo_retur'];
+                    }
+                ?>
+                <!-- INFO CUSTOMER & TOTAL SALDO -->
                 <div class="card shadow mb-3">
                     <div class="card-header bg-info text-white py-2">
-                        <h3 class="card-title font-weight-bold"><i class="fas fa-file-invoice mr-1"></i> Retur: <?= htmlspecialchars($retur['no_retur']) ?></h3>
+                        <h3 class="card-title font-weight-bold"><i class="fas fa-user-tie mr-1"></i> Informasi Customer</h3>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                 <table class="table table-sm table-borderless" style="font-size:13px;">
-                                     <tr><td class="font-weight-bold" style="width:130px;">No. Retur</td><td>: <?= htmlspecialchars($retur['no_retur']) ?></td></tr>
-                                     <tr><td class="font-weight-bold">Dari SPR</td><td>: <?= htmlspecialchars($retur['no_spr'] ?? '-') ?></td></tr>
-                                     <tr><td class="font-weight-bold">Customer</td><td>: <strong><?= htmlspecialchars($retur['nama_customer'] ?: $retur['nama_customer_master'] ?: '-') ?></strong></td></tr>
-                                     <tr>
-                                         <td class="font-weight-bold">Tipe Retur</td>
-                                         <td>: 
-                                             <?php if (($retur['tipe_retur'] ?? 'biasa') === 'replace'): ?>
-                                                 <span class="badge badge-success px-2 py-1">REPLACE (Ganti Barang)</span>
-                                             <?php elseif (($retur['tipe_retur'] ?? 'biasa') === 'service'): ?>
-                                                 <span class="badge badge-warning px-2 py-1">SERVICE (Servis Barang)</span>
-                                             <?php else: ?>
-                                                 <span class="badge badge-secondary px-2 py-1">RETUR (Refund/Potong Faktur)</span>
-                                             <?php endif; ?>
-                                         </td>
-                                     </tr>
-                                 </table>
+                    <div class="card-body py-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 border-right">
+                                <h5 class="mb-1 text-primary font-weight-bold"><?= htmlspecialchars($retur['nama_customer'] ?: $retur['nama_customer_master'] ?: '-') ?></h5>
+                                <div class="text-muted small"><i class="fas fa-map-marker-alt mr-1"></i> <?= htmlspecialchars($retur['alamat'] ?: $retur['alamat_master'] ?: '-') ?></div>
                             </div>
-                            <div class="col-md-6">
-                                <table class="table table-sm table-borderless" style="font-size:13px;">
-                                    <tr><td class="font-weight-bold" style="width:130px;">Tanggal</td><td>: <?= date('d/m/Y', strtotime($retur['tanggal_retur'])) ?></td></tr>
-                                    <tr><td class="font-weight-bold">Sales</td><td>: <?= htmlspecialchars($retur['nama_sales'] ?? '-') ?></td></tr>
-                                    <tr><td class="font-weight-bold">Dibuat Oleh</td><td>: <?= htmlspecialchars($retur['create_by_retur'] ?? '-') ?></td></tr>
-                                </table>
+                            <div class="col-md-6 text-center text-md-right mt-3 mt-md-0">
+                                <div class="text-muted small mb-1">Total Saldo Retur Aktif:</div>
+                                <h3 class="text-success font-weight-bold mb-0">Rp <?= number_format($grand_total_saldo, 0, ',', '.') ?></h3>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TABEL BARANG -->
-                <div class="card mb-3">
-                    <div class="card-header bg-dark text-white py-2">
-                        <h3 class="card-title"><i class="fas fa-boxes mr-1"></i> Detail Barang Retur</h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-sm mb-0">
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th class="text-center" style="width:40px;">No.</th>
-                                        <th>Nama Barang</th>
-                                        <th>Satuan</th>
-                                        <th>No. Faktur</th>
-                                        <th>No. Batch</th>
-                                        <th class="text-center">Exp. Date</th>
-                                        <th class="text-center">Qty</th>
-                                        <th class="text-right">Harga</th>
-                                        <th class="text-right">Subtotal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($retur_detail as $i => $d):
-                                        $subtotal = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $i + 1 ?></td>
-                                        <td><?= htmlspecialchars($d['nama_barang'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($d['satuan'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
-                                        <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
-                                        <td class="text-center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
-                                        <td class="text-center"><?= number_format((float)$d['qty_retur'], 3) ?></td>
-                                        <td class="text-right">Rp <?= number_format((float)$d['harga_satuan'], 0, ',', '.') ?></td>
-                                        <td class="text-right">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                    <tr class="table-dark">
-                                        <td colspan="8" class="text-right font-weight-bold">TOTAL NILAI RETUR:</td>
-                                        <td class="text-right font-weight-bold">Rp <?= number_format($total_retur, 0, ',', '.') ?></td>
-                                    </tr>
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -122,10 +63,43 @@
                             <h3 class="card-title"><i class="fas fa-file-signature mr-1"></i> Penyerahan Surat Retur & Alokasi Faktur Potong</h3>
                         </div>
                         <div class="card-body">
-                            <div class="alert alert-success py-2 mb-3 small">
-                                <i class="fas fa-check-circle mr-1"></i>
-                                <strong>Status Retur: Approved.</strong> Saldo customer untuk retur ini sudah aktif (cair). Silakan pilih nomor faktur tujuan pemotongan di bawah ini.
+                            <div class="alert alert-info py-2 mb-3">
+                                <label class="mb-1 font-weight-bold"><i class="fas fa-list mr-1"></i> Daftar Saldo Retur Tersedia</label>
+                                <p class="small mb-2">Pilih retur mana saja yang akan digunakan untuk memotong tagihan faktur:</p>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered bg-white mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th class="text-center" style="width:50px;">Pilih</th>
+                                                <th>No Retur</th>
+                                                <th>Tgl Retur</th>
+                                                <th class="text-right">Sisa Saldo</th>
+                                                <th class="text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($all_returns as $ar): 
+                                                $is_current = ($ar['id_retur'] == $retur['id_retur']);
+                                            ?>
+                                                <tr>
+                                                    <td class="text-center align-middle">
+                                                        <input type="checkbox" name="selected_returs[]" value="<?= $ar['id_retur'] ?>" class="chk-retur" data-saldo="<?= $ar['sisa_saldo_retur'] ?>" style="transform: scale(1.5);">
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <?= htmlspecialchars($ar['no_retur']) ?>
+                                                    </td>
+                                                    <td class="align-middle"><?= date('d/m/Y', strtotime($ar['tanggal_retur'])) ?></td>
+                                                    <td class="text-right align-middle text-success font-weight-bold">Rp <?= number_format($ar['sisa_saldo_retur'], 0, ',', '.') ?></td>
+                                                    <td class="text-center align-middle">
+                                                        <a href="<?= base_url('retur_penjualan/retur/detail/' . $ar['id_retur']) ?>" target="_blank" class="btn btn-xs btn-info" title="Lihat Detail Retur"><i class="fas fa-eye"></i></a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
+
                             <div class="form-group">
                                 <label class="font-weight-bold">Pilih Faktur yang Akan Dipotong <span class="text-danger">*</span></label>
                                 <div class="input-group">
@@ -263,5 +237,47 @@ document.addEventListener('DOMContentLoaded', function() {
             $(this).val(max);
         }
     });
+
+    // Update max saldo retur jika ada retur yang dicentang
+    function recalculateMaxSaldo() {
+        var totalSelected = 0;
+        $('.chk-retur:checked').each(function() {
+            totalSelected += parseFloat($(this).data('saldo')) || 0;
+        });
+        
+        var newMax = totalSelected;
+        $('#max_saldo_retur').val(newMax);
+        
+        // Update input max jika faktur sudah dipilih
+        var selectedSisa = 0;
+        var displayStr = $('#display_faktur_potong').val() || '';
+        if (displayStr.indexOf('Sisa:') !== -1) {
+            // Faktur sudah terpilih
+            var match = displayStr.match(/Rp\s*([\d\.]+)/);
+            if (match) {
+                selectedSisa = parseFloat(match[1].replace(/\./g, ''));
+            }
+        }
+        
+        if (selectedSisa > 0) {
+            var currentMaxInput = Math.min(selectedSisa, newMax);
+            $('#nominal_potongan').attr('max', currentMaxInput);
+            $('#nominal_hint').html('Maksimal pemotongan: Rp ' + currentMaxInput.toLocaleString('id-ID') + ' (Terkecil antara Saldo Terpilih & Sisa Tagihan)');
+            
+            // Validasi ulang nilai input jika melebihi batas baru
+            var currentVal = parseFloat($('#nominal_potongan').val()) || 0;
+            if (currentVal > currentMaxInput) {
+                $('#nominal_potongan').val(currentMaxInput);
+            }
+        } else {
+            $('#nominal_potongan').attr('max', newMax);
+            $('#nominal_hint').html('Maksimal pemotongan saldo retur gabungan: Rp ' + newMax.toLocaleString('id-ID'));
+        }
+    }
+
+    $('.chk-retur').on('change', recalculateMaxSaldo);
+    
+    // Inisialisasi saat load
+    recalculateMaxSaldo();
 });
 </script>
