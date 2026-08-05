@@ -732,6 +732,8 @@ class C_SalesOrder extends CI_Controller
 
         $data['page_title'] = 'KARISMA - Sales Order';
         $data['so_list']    = $this->M_SalesOrder->get_all_so($filter);
+        $pending = $this->M_SalesOrder->get_pending_cancel_requests();
+        $data['pending_cancels'] = !empty($pending) ? array_unique(array_column($pending, 'id_so')) : [];
         $data['customers']  = $this->M_SalesOrder->get_customers();
         $data['filter']     = array_diff_key($filter, ['exclude_status' => true]);
         $data['show_completed'] = $show_completed;
@@ -1163,7 +1165,7 @@ class C_SalesOrder extends CI_Controller
                         return;
                     }
 
-                    $this->load->model('keuangan/M_pembayaran');
+                    $this->load->model('M_pembayaran');
                     $unpaid_invoices = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
                     if (!empty($unpaid_invoices)) {
                         $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat membuat SO baru karena masih memiliki nota (Faktur) yang belum lunas.');
@@ -2932,12 +2934,12 @@ class C_SalesOrder extends CI_Controller
         $query = $this->db->query("
             SELECT x.norut, d.nama_customer AS nama_kios, d.telp1, d.telp2,
                    x.kd_rute, d.regional, x.id, x.kd_faktur, x.tgl_transaksi,
-                   x.note_faktur, c.kd_barang AS kd_system, c.nama_barang AS nm_barang,
+                   x.note_faktur, c.kode_barang AS kd_system, c.nama_barang AS nm_barang,
                    x.no_lot, x.nominal_p, x.jtempo, x.tgl_exp, x.satuan,
                    x.status, x.kd_do, x.qty,
-                   (c.p * c.l * c.t) AS dimensi,
-                   FLOOR(x.qty / (c.p * c.l * c.t)) AS qty_box,
-                   (x.qty % (c.p * c.l * c.t)) AS qty_pcs
+                   (c.panjang * c.lebar * c.tinggi) AS dimensi,
+                   FLOOR(x.qty / NULLIF((c.panjang * c.lebar * c.tinggi), 0)) AS qty_box,
+                   (x.qty % NULLIF((c.panjang * c.lebar * c.tinggi), 0)) AS qty_pcs
             FROM (
                 SELECT a.id, a.norut, a.kd_do, a.kd_customer, a.kd_rute,
                        a.kd_faktur, a.tgl_transaksi, a.kd_barang, a.no_lot,
@@ -3524,5 +3526,100 @@ class C_SalesOrder extends CI_Controller
             'data' => $pending
         ]);
         exit;
+    }
+
+    public function get_partial_items($id_so)
+    {
+        while (ob_get_level()) ob_end_clean();
+        $items = $this->db->select('id as id_so_detail, kd_barang, nama_barang, qty, COALESCE(qty_faktur, 0) as qty_faktur')
+                          ->from('tbso_sales_order_detail')
+                          ->where('id_so', $id_so)
+                          ->where('(qty - COALESCE(qty_faktur, 0)) >', 0.001)
+                          ->get()->result_array();
+        echo json_encode(['msg' => 'success', 'data' => $items]);
+    }
+
+    public function request_cancel_partial()
+    {
+        while (ob_get_level()) ob_end_clean();
+        $id_so = $this->input->post('id_so');
+        $items = $this->input->post('items');
+        
+        if (empty($id_so) || empty($items)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Data tidak valid.']);
+            return;
+        }
+
+        $inserted = $this->M_SalesOrder->submit_cancel_partial_request($id_so, $items, $this->_getUsername());
+        
+        echo json_encode([
+            'msg' => $inserted ? 'success' : 'error',
+            'message' => $inserted ? 'Permintaan pembatalan berhasil diajukan ke Manager SC.' : 'Gagal mengajukan permintaan.'
+        ]);
+    }
+
+    public function admin_sc_get_pending_cancel_requests()
+    {
+        while (ob_get_level()) ob_end_clean();
+        $requests = $this->M_SalesOrder->get_pending_cancel_requests();
+        echo json_encode(['msg' => 'success', 'data' => $requests]);
+    }
+
+    public function admin_sc_approve_cancel_partial()
+    {
+        while (ob_get_level()) ob_end_clean();
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        if (!in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Akses ditolak.']);
+            return;
+        }
+
+        $request_ids = $this->input->post('request_ids');
+        if (empty($request_ids)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Tidak ada data yang dipilih.']);
+            return;
+        }
+
+        $first_req = $this->M_SalesOrder->get_request_by_id($request_ids[0]);
+        $id_so = $first_req ? $first_req['id_so'] : null;
+
+        $approved = $this->M_SalesOrder->approve_cancel_partial($request_ids, $this->_getUsername());
+
+        if ($approved && $id_so) {
+            $this->M_SalesOrder->check_and_update_completed_so($id_so);
+            $so = $this->M_SalesOrder->get_so($id_so);
+            $this->M_ActivityLog->log(
+                $so['no_so'] ?? '', null, 'CANCEL_PARTIAL',
+                'Manager SC menyetujui pembatalan sisa barang partial.',
+                $this->_getUsername()
+            );
+        }
+
+        echo json_encode([
+            'msg' => $approved ? 'success' : 'error',
+            'message' => $approved ? 'Pembatalan disetujui.' : 'Gagal menyetujui.'
+        ]);
+    }
+
+    public function admin_sc_reject_cancel_partial()
+    {
+        while (ob_get_level()) ob_end_clean();
+        $jobdesk = strtoupper((string)$this->session->userdata('jobdesk'));
+        if (!in_array($jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Akses ditolak.']);
+            return;
+        }
+
+        $request_ids = $this->input->post('request_ids');
+        if (empty($request_ids)) {
+            echo json_encode(['msg' => 'error', 'message' => 'Tidak ada data yang dipilih.']);
+            return;
+        }
+
+        $rejected = $this->M_SalesOrder->reject_cancel_partial($request_ids, $this->_getUsername());
+        echo json_encode([
+            'msg' => $rejected ? 'success' : 'error',
+            'message' => $rejected ? 'Pembatalan ditolak.' : 'Gagal menolak.'
+        ]);
     }
 }

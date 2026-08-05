@@ -2706,4 +2706,117 @@ class M_SalesOrder extends CI_Model
             'can_create_do' => $can_create_do,
         ];
     }
+
+    public function submit_cancel_partial_request($id_so, $details, $user)
+    {
+        $this->db->trans_start();
+        foreach ($details as $detail) {
+            $data = [
+                'id_so'        => $id_so,
+                'id_so_detail' => $detail['id_so_detail'],
+                'qty_cancel'   => $detail['qty_cancel'],
+                'status'       => 'pending',
+                'request_by'   => $user,
+                'request_at'   => date('Y-m-d H:i:s')
+            ];
+            $this->db->insert('tbso_cancel_partial_request', $data);
+        }
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    public function get_pending_cancel_requests($id_so = null)
+    {
+        $this->db->select('cr.*, sd.kd_barang, sd.nama_barang, sd.hrg_satuan, so.no_so, so.tanggal_transaksi, c.nama_customer')
+                 ->from('tbso_cancel_partial_request cr')
+                 ->join('tbso_sales_order_detail sd', 'sd.id = cr.id_so_detail')
+                 ->join('tbso_sales_order so', 'so.id_so = cr.id_so')
+                 ->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left')
+                 ->where('cr.status', 'pending');
+        if ($id_so) {
+            $this->db->where('cr.id_so', $id_so);
+        }
+        return $this->db->get()->result_array();
+    }
+
+    public function get_request_by_id($req_id)
+    {
+        return $this->db->get_where('tbso_cancel_partial_request', ['id' => $req_id])->row_array();
+    }
+
+    public function approve_cancel_partial($request_ids, $user)
+    {
+        $this->db->trans_start();
+
+        foreach ($request_ids as $req_id) {
+            $req = $this->db->get_where('tbso_cancel_partial_request', ['id' => $req_id, 'status' => 'pending'])->row_array();
+            if ($req) {
+                $so = $this->db->select('no_so, gudang_id')->get_where('tbso_sales_order', ['id_so' => $req['id_so']])->row_array();
+                $sd = $this->db->select('kd_barang, expired_date, no_lot, hrg_satuan')
+                               ->get_where('tbso_sales_order_detail', ['id' => $req['id_so_detail']])->row_array();
+
+                $this->db->where('id', $req_id)
+                         ->update('tbso_cancel_partial_request', [
+                             'status'     => 'approved',
+                             'approve_by' => $user,
+                             'approve_at' => date('Y-m-d H:i:s')
+                         ]);
+
+                $this->db->set('qty', 'qty - ' . (float)$req['qty_cancel'], FALSE)
+                         ->where('id', $req['id_so_detail'])
+                         ->update('tbso_sales_order_detail');
+
+                if ($so && $sd) {
+                    // Update total_harga
+                    $this->db->set('total_harga', 'qty * ' . (float)$sd['hrg_satuan'], FALSE)
+                             ->where('id', $req['id_so_detail'])
+                             ->update('tbso_sales_order_detail');
+
+                    // Release reserved stock di tberp_stock_batch + catat di ledger
+                    $this->_kurangi_reserved_batch(
+                        $so['no_so'],
+                        $sd['kd_barang'],
+                        $sd['expired_date'],
+                        $sd['no_lot'],
+                        $so['gudang_id'],
+                        (float)$req['qty_cancel']
+                    );
+                }
+            }
+        }
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+    
+    public function reject_cancel_partial($request_ids, $user)
+    {
+        $this->db->trans_start();
+        $this->db->where_in('id', $request_ids)
+                 ->where('status', 'pending')
+                 ->update('tbso_cancel_partial_request', [
+                     'status'     => 'rejected',
+                     'approve_by' => $user,
+                     'approve_at' => date('Y-m-d H:i:s')
+                 ]);
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+    
+    public function check_and_update_completed_so($id_so)
+    {
+        $details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+        $all_completed = true;
+        foreach ($details as $d) {
+            if (round((float)$d['qty'] - (float)$d['qty_faktur'], 3) > 0) {
+                $all_completed = false;
+                break;
+            }
+        }
+        
+        if ($all_completed) {
+            $this->db->where('id_so', $id_so)->update('tbso_sales_order', ['status' => 'completed']);
+            return true;
+        }
+        return false;
+    }
 }

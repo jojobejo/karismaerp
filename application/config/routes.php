@@ -912,6 +912,13 @@ $route['sales_order/admin_sc/approve_harga']                 = 'sales/C_SalesOrd
 $route['sales_order/admin_sc/reject_harga']                  = 'sales/C_SalesOrder/admin_sc_reject_harga';
 $route['sales_order/admin_sc/get_pending_approvals']         = 'sales/C_SalesOrder/admin_sc_get_pending_approvals';
 
+// Pembatalan Sisa Barang (Partial)
+$route['sales_order/get_partial_items/(:any)']             = 'sales/C_SalesOrder/get_partial_items/$1';
+$route['sales_order/request_cancel_partial']               = 'sales/C_SalesOrder/request_cancel_partial';
+$route['sales_order/admin_sc_get_pending_cancel_requests'] = 'sales/C_SalesOrder/admin_sc_get_pending_cancel_requests';
+$route['sales_order/admin_sc_approve_cancel_partial']      = 'sales/C_SalesOrder/admin_sc_approve_cancel_partial';
+$route['sales_order/admin_sc_reject_cancel_partial']       = 'sales/C_SalesOrder/admin_sc_reject_cancel_partial';
+
 // dashboard_penilaian
 $route['dashboard_penilaian']                       = 'hrd/C_Hrd/dashboard_penilaian';
 

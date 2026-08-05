@@ -117,6 +117,9 @@
             $is_manager_sc = in_array($user_jobdesk, ['MNGSC', 'MANAGER SC', 'MANAGERSC', 'ADMIN'], true);
             ?>
 
+            <?php if ($is_manager_sc): ?>
+            <?php endif; ?>
+
             <!-- TOMBOL AKSI -->
             <div class="row mb-2">
                 <div class="col-auto">
@@ -153,6 +156,11 @@
                 <div class="col-auto" id="colPanelApproval" style="display: none;">
                     <button type="button" class="btn btn-warning text-dark font-weight-bold btn-shake-notification" id="btnBukaPanelApproval">
                         <i class="fas fa-bell mr-1"></i> Tinjau Permintaan (<span id="managerApprovalCount">0</span>)
+                    </button>
+                </div>
+                <div class="col-auto" id="colPanelCancelPartial" style="display: none;">
+                    <button type="button" class="btn btn-dark font-weight-bold btn-shake-notification" id="btnBukaPanelCancelPartial">
+                        <i class="fas fa-bell mr-1"></i> Pembatalan Sisa (<span id="managerCancelPartialCount">0</span>)
                     </button>
                 </div>
                 <?php endif; ?>
@@ -300,8 +308,9 @@
                                     } else {
                                         $bar_color = 'secondary';
                                     }
+                                    $is_pending_cancel = isset($pending_cancels) && in_array($row['id_so'], $pending_cancels);
                                 ?>
-                                <tr>
+                                <tr <?= $is_pending_cancel ? 'style="background-color: #ffeeba;" title="Ada permintaan pembatalan parsial menunggu persetujuan"' : '' ?>>
                                     <td>
                                         <a href="<?= base_url('sales_order/detail/' . $row['id_so']) ?>"
                                            class="font-weight-bold">
@@ -345,6 +354,11 @@
                                            class="btn btn-sm btn-info" title="Detail">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        <?php if ($row['status'] === 'partial' && !$is_pending_cancel): ?>
+                                            <button type="button" class="btn btn-sm btn-warning btn-cancel-partial" data-id="<?= $row['id_so'] ?>" title="Batalkan Sisa Barang">
+                                                <i class="fas fa-times-circle text-white"></i>
+                                            </button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -386,6 +400,90 @@
                             </div>
                         </div>
                         <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Modal Cancel Partial -->
+            <div class="modal fade" id="modalCancelPartial" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Batalkan Sisa Barang (Partial)</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Pilih barang yang belum terfaktur untuk dibatalkan:</p>
+                            <form id="formCancelPartial">
+                                <input type="hidden" name="id_so" id="cp_id_so">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th style="width: 40px; text-align: center;"><input type="checkbox" id="cp_check_all"></th>
+                                                <th>Kode</th>
+                                                <th>Nama Barang</th>
+                                                <th class="text-right">Qty Sisa (Batal)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cp_items_tbody">
+                                            <!-- Data injected via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
+                            <button type="button" class="btn btn-danger btn-sm" id="btnSubmitCancelPartial"><i class="fas fa-paper-plane"></i> Ajukan Pembatalan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <?php if ($is_manager_sc): ?>
+            <!-- Modal Cancel Partial (Manager SC) -->
+            <div class="modal fade" id="modalPanelCancelPartial" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-xl" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title"><i class="fas fa-times-circle mr-2"></i> Persetujuan Pembatalan Sisa Barang</h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 40px;"><input type="checkbox" id="mgr_cp_check_all"></th>
+                                            <th>No. SO</th>
+                                            <th>Tgl SO</th>
+                                            <th>Customer</th>
+                                            <th>Barang</th>
+                                            <th class="text-right">Hrg Satuan</th>
+                                            <th class="text-right">Sisa (Batal)</th>
+                                            <th class="text-right">Total Hrg</th>
+                                            <th>Sales</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="panel-cancel-partial-body">
+                                        <!-- Loaded via AJAX -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-between">
+                            <div>
+                                <button type="button" class="btn btn-success btn-sm" id="btnMgrApproveCancelPartial"><i class="fas fa-check"></i> Setujui Terpilih</button>
+                                <button type="button" class="btn btn-danger btn-sm" id="btnMgrRejectCancelPartial"><i class="fas fa-times"></i> Tolak Terpilih</button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Tutup</button>
                         </div>
                     </div>
@@ -530,5 +628,152 @@ $(document).ready(function () {
         });
     });
     <?php endif; ?>
+
+    // Cancel Partial Script
+    $('.btn-cancel-partial').click(function(e) {
+        e.preventDefault();
+        let id_so = $(this).data('id');
+        $('#cp_id_so').val(id_so);
+        $('#cp_items_tbody').html('<tr><td colspan="4" class="text-center">Loading...</td></tr>');
+        $('#cp_check_all').prop('checked', false);
+        $('#modalCancelPartial').modal('show');
+
+        $.get('<?= base_url('sales_order/get_partial_items/') ?>' + id_so, function(res) {
+            let data = JSON.parse(res);
+            let html = '';
+            if (data.msg === 'success' && data.data.length > 0) {
+                data.data.forEach(function(item) {
+                    let sisa = parseFloat(item.qty) - parseFloat(item.qty_faktur);
+                    html += `<tr>
+                        <td class="text-center"><input type="checkbox" class="cp-item-check" value="${item.id_so_detail}" data-qty="${sisa}"></td>
+                        <td>${item.kd_barang}</td>
+                        <td>${item.nama_barang}</td>
+                        <td class="text-right text-danger font-weight-bold">${sisa}</td>
+                    </tr>`;
+                });
+            } else {
+                html = '<tr><td colspan="4" class="text-center">Tidak ada sisa barang yang bisa dibatalkan.</td></tr>';
+            }
+            $('#cp_items_tbody').html(html);
+        });
+    });
+
+    $('#cp_check_all').change(function() {
+        $('.cp-item-check').prop('checked', $(this).prop('checked'));
+    });
+
+    $('#btnSubmitCancelPartial').click(function() {
+        let items = [];
+        $('.cp-item-check:checked').each(function() {
+            items.push({
+                id_so_detail: $(this).val(),
+                qty_cancel: $(this).data('qty')
+            });
+        });
+
+        if (items.length === 0) {
+            alert('Pilih minimal 1 barang untuk dibatalkan.');
+            return;
+        }
+
+        if (confirm('Ajukan pembatalan sisa barang ke Manager SC?')) {
+            let btn = $(this);
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Proses...');
+            $.post('<?= base_url('sales_order/request_cancel_partial') ?>', {
+                id_so: $('#cp_id_so').val(),
+                items: items
+            }, function(res) {
+                let data = JSON.parse(res);
+                if (data.msg === 'success') {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.message);
+                    btn.prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Ajukan Pembatalan');
+                }
+            });
+        }
+    });
+
+    <?php if ($is_manager_sc): ?>
+    // Cancel Partial Logic (Manager SC)
+    function loadPendingCancelPartial() {
+        $.get('<?= base_url('sales_order/admin_sc_get_pending_cancel_requests') ?>', function(res) {
+            let data = JSON.parse(res);
+            let count = data.data.length;
+            if (count > 0) {
+                $('#managerCancelPartialCount').text(count);
+                $('#colPanelCancelPartial').show();
+                
+                let html = '';
+                data.data.forEach(function(row) {
+                    let hrg = parseFloat(row.hrg_satuan || 0);
+                    let qty = parseFloat(row.qty_cancel || 0);
+                    let total = hrg * qty;
+                    html += `<tr>
+                        <td class="text-center"><input type="checkbox" class="mgr-cp-check" value="${row.id}"></td>
+                        <td>${row.no_so}</td>
+                        <td>${row.tanggal_transaksi}</td>
+                        <td>${row.nama_customer || '-'}</td>
+                        <td>${row.nama_barang || '-'}</td>
+                        <td class="text-right text-nowrap">Rp ${hrg.toLocaleString('id-ID')}</td>
+                        <td class="text-right text-danger font-weight-bold">${qty}</td>
+                        <td class="text-right text-nowrap">Rp ${total.toLocaleString('id-ID')}</td>
+                        <td>${row.request_by}</td>
+                    </tr>`;
+                });
+                $('#panel-cancel-partial-body').html(html);
+            } else {
+                $('#colPanelCancelPartial').hide();
+                $('#panel-cancel-partial-body').html('<tr><td colspan="7" class="text-center">Tidak ada permintaan.</td></tr>');
+            }
+        });
+    }
+
+    loadPendingCancelPartial();
+    setInterval(loadPendingCancelPartial, 15000);
+
+    $('#btnBukaPanelCancelPartial').on('click', function() {
+        $('#mgr_cp_check_all').prop('checked', false);
+        $('#modalPanelCancelPartial').modal('show');
+    });
+
+    $('#mgr_cp_check_all').change(function() {
+        $('.mgr-cp-check').prop('checked', $(this).prop('checked'));
+    });
+
+    $('#btnMgrApproveCancelPartial, #btnMgrRejectCancelPartial').click(function() {
+        let isApprove = $(this).attr('id') === 'btnMgrApproveCancelPartial';
+        let ids = [];
+        $('.mgr-cp-check:checked').each(function() {
+            ids.push($(this).val());
+        });
+
+        if (ids.length === 0) {
+            alert('Pilih minimal 1 data.');
+            return;
+        }
+
+        if (confirm(isApprove ? 'Setujui pembatalan terpilih?' : 'Tolak pembatalan terpilih?')) {
+            let btn = $(this);
+            let url = isApprove ? '<?= base_url('sales_order/admin_sc_approve_cancel_partial') ?>' : '<?= base_url('sales_order/admin_sc_reject_cancel_partial') ?>';
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Proses...');
+            
+            $.post(url, { request_ids: ids }, function(res) {
+                let data = JSON.parse(res);
+                if (data.msg === 'success') {
+                    alert(data.message);
+                    loadPendingCancelPartial();
+                    $('#modalPanelCancelPartial').modal('hide');
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+                btn.prop('disabled', false).html(isApprove ? '<i class="fas fa-check"></i> Setujui Terpilih' : '<i class="fas fa-times"></i> Tolak Terpilih');
+            });
+        }
+    });
+    <?php endif; ?>
+
 });
 </script>
