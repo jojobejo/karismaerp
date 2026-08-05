@@ -24,6 +24,7 @@ class M_Dashboard extends CI_Model
     public function module_sections($context = array())
     {
         $retur_pj_route = $this->get_retur_penjualan_route($context);
+        $piutang_customer_route = $this->get_piutang_customer_route($context);
         $sections = array(
             'keuangan' => array(
                 'label' => 'KEUANGAN',
@@ -42,7 +43,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Buku Besar', 'keuangan/buku_besar', 'fas fa-book', 'blue', 'Buka laporan buku besar / general ledger per akun.'),
                     $this->menu('Kas Keluar', 'keuangan/kas_keluar', 'fas fa-money-check-alt', 'teal', 'Kelola transaksi pengeluaran kas / bank dan posting jurnal umum.'),
                     $this->menu('Kas Masuk', 'keuangan/kas_masuk', 'fas fa-cash-register', 'green', 'Kelola transaksi penerimaan kas / bank dan posting jurnal umum.'),
-                    $this->menu('Piutang Customer', 'keuangan/pembayaran', 'fas fa-cash-register', 'blue', 'Kelola piutang customer dan input pembayaran faktur.'),
+                    $this->menu('Piutang Customer', $piutang_customer_route, 'fas fa-cash-register', 'blue', 'Kelola piutang customer dan input pembayaran faktur.'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
                     $this->menu('Semua Laporan', 'laporan', 'fas fa-chart-bar', 'cyan', 'Laporan keuangan, penjualan & piutang, pembelian & hutang, barang, dan lainnya.'),
                 ),
@@ -110,6 +111,7 @@ class M_Dashboard extends CI_Model
                 'description' => 'Akses penjualan, katalog, order, dan laporan sales.',
                 'menus' => array(
                     $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
+                    $this->menu('Faktur Penjualan', 'faktur_penjualan', 'fas fa-file-invoice-dollar', 'cyan', 'Lihat semua faktur penjualan dan edit Qty retur revisi.'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
                     $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
@@ -215,6 +217,15 @@ class M_Dashboard extends CI_Model
             return 'retur_penjualan/retur';
         }
         return 'retur_penjualan';
+    }
+
+    private function get_piutang_customer_route($context)
+    {
+        $jobdesk = strtoupper((string)($context['jobdesk'] ?? ''));
+        if ($jobdesk === 'KASIR') {
+            return 'keuangan/pembayaran/kasir';
+        }
+        return 'keuangan/pembayaran';
     }
 
     private function has_retur_access(array $context)

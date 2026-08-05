@@ -214,6 +214,26 @@
                                         </div>
                                     </div>
 
+                                    <?php if (($retur['tipe_retur'] ?? 'biasa') === 'biasa'): ?>
+                                    <div class="form-group mb-3 p-2" style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px;">
+                                        <label class="font-weight-bold mb-1">Klasifikasi Retur Biasa</label>
+                                        <div>
+                                            <div class="custom-control custom-radio mb-1">
+                                                <input type="radio" id="is_revisi_0" name="is_revisi" value="0" class="custom-control-input" checked>
+                                                <label class="custom-control-label" for="is_revisi_0">
+                                                    Tetap Retur Biasa (Refund / Potong Faktur)
+                                                </label>
+                                            </div>
+                                            <div class="custom-control custom-radio">
+                                                <input type="radio" id="is_revisi_1" name="is_revisi" value="1" class="custom-control-input">
+                                                <label class="custom-control-label text-warning" for="is_revisi_1">
+                                                    Jadikan Retur Revisi (Bukan Saldo)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+
                                     <div class="form-group mb-3">
                                         <label class="font-weight-bold mb-1">
                                             Catatan / Alasan

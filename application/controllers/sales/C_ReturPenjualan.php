@@ -1406,6 +1406,7 @@ class C_ReturPenjualan extends CI_Controller
 
         $aksi         = $this->input->post('aksi');
         $catatan      = $this->input->post('catatan_admretur');
+        $is_revisi    = (int)$this->input->post('is_revisi') ?: 0;
         $user         = $this->_getUser();
         $id_retur_det = $this->input->post('id_retur_detail') ?: [];
         $qty_retur    = $this->input->post('qty_retur') ?: [];
@@ -1448,10 +1449,11 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $this->M_ReturPenjualan->update_retur_penjualan_status($id_retur, $new_status, [
+            'is_revisi'         => $is_revisi,
             'admretur_by_retur' => $user['nama'],
             'admretur_at_retur' => date('Y-m-d H:i:s'),
             'catatan_admretur'  => $catatan,
-            'update_by_retur'      => $user['nama'],
+            'update_by_retur'   => $user['nama'],
         ]);
 
         // Record Log
@@ -2079,18 +2081,27 @@ class C_ReturPenjualan extends CI_Controller
                 $total_retur += (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             }
             
+            $sisa_saldo = $total_retur;
+            if (isset($retur['is_revisi']) && $retur['is_revisi'] == 1) {
+                $sisa_saldo = 0; // Jika retur revisi, saldo = 0 (tidak bisa potong tagihan)
+            }
+
             $this->db->where('id_retur', $id_retur);
             $this->db->update('tbrp_retur_penjualan_header', [
                 'total_nilai_retur' => $total_retur,
-                'sisa_saldo_retur'  => $total_retur
+                'sisa_saldo_retur'  => $sisa_saldo
             ]);
 
-            $this->load->model('M_Journal');
-            $this->M_Journal->post_jurnal_retur_penjualan($id_retur);
-            
             $tipe_retur = strtolower(trim($retur['tipe_retur'] ?? 'biasa'));
             $is_refund = ($tipe_retur === 'biasa' || $tipe_retur === 'refund');
-            $msg = "Retur {$retur['no_retur']} berhasil disetujui, jurnal otomatis diposting" . ($is_refund ? " dan masuk antrian Collection." : ".");
+            
+            if (!isset($retur['is_revisi']) || $retur['is_revisi'] == 0) {
+                $this->load->model('M_Journal');
+                $this->M_Journal->post_jurnal_retur_penjualan($id_retur);
+                $msg = "Retur {$retur['no_retur']} berhasil disetujui, jurnal otomatis diposting" . ($is_refund ? " dan masuk antrian Collection." : ".");
+            } else {
+                $msg = "Retur {$retur['no_retur']} berhasil disetujui sebagai Retur Revisi tanpa posting jurnal saldo.";
+            }
         }
 
         // Record Activity Log

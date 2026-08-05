@@ -598,6 +598,21 @@ class C_SalesOrder extends CI_Controller
         ");
     }
 
+    private function _ensureFakturStatusEnum()
+    {
+        $column = $this->db->query("SHOW COLUMNS FROM tbso_faktur_penjualan LIKE 'status'")->row_array();
+        $type = strtolower((string)($column['Type'] ?? ''));
+        if (strpos($type, "enum") !== false) {
+            return;
+        }
+
+        $this->db->query("
+            ALTER TABLE tbso_faktur_penjualan
+            MODIFY COLUMN status ENUM('confirmed','selesai_do','cancelled')
+            NOT NULL DEFAULT 'confirmed' COMMENT 'confirmed | selesai_do | cancelled'
+        ");
+    }
+
     private function _ensureSoLoadingVerificationColumns()
     {
         $this->load->dbforge();
@@ -762,6 +777,7 @@ class C_SalesOrder extends CI_Controller
         $this->_ensureSoFakturZColumn();
         $this->_ensureSoSedangVerifikasiStatus();
         $this->_ensureSoLoadingVerificationColumns();
+        $this->_ensureFakturStatusEnum();
         $this->M_Logistik->sync_faktur_selesai_do_for_on_delivery();
 
         $selected_rute = trim((string)(
@@ -1467,7 +1483,7 @@ class C_SalesOrder extends CI_Controller
                         return;
                     }
 
-                    $this->load->model('keuangan/M_pembayaran');
+                    $this->load->model('M_pembayaran');
                     $unpaid_invoices = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
                     if (!empty($unpaid_invoices)) {
                         $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 tidak dapat melakukan pemesanan karena masih memiliki nota (Faktur) yang belum lunas.');

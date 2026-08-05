@@ -50,6 +50,21 @@ class C_Logistik extends CI_Controller
         ");
     }
 
+    private function _ensureFakturStatusEnum()
+    {
+        $column = $this->db->query("SHOW COLUMNS FROM tbso_faktur_penjualan LIKE 'status'")->row_array();
+        $type = strtolower((string)($column['Type'] ?? ''));
+        if (strpos($type, "enum") !== false) {
+            return;
+        }
+
+        $this->db->query("
+            ALTER TABLE tbso_faktur_penjualan
+            MODIFY COLUMN status ENUM('confirmed','selesai_do','cancelled')
+            NOT NULL DEFAULT 'confirmed' COMMENT 'confirmed | selesai_do | cancelled'
+        ");
+    }
+
     private function _ensureSoLoadingVerificationColumns()
     {
         $this->load->dbforge();
@@ -1100,7 +1115,7 @@ class C_Logistik extends CI_Controller
     public function delivery_order()
     {
         $this->_ensureSoRouteColumn();
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
 
         $data['page_title']     = 'KARISMA - LOGISTIK';
         $data['kdgenerate']     = $this->M_Keuangan->generate_update();
@@ -1117,7 +1132,7 @@ class C_Logistik extends CI_Controller
     public function so_siap_loading()
     {
         $this->_ensureSoRouteColumn();
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1143,7 +1158,7 @@ class C_Logistik extends CI_Controller
     public function tambah_so_siap_loading()
     {
         $this->_ensureSoRouteColumn();
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1160,7 +1175,7 @@ class C_Logistik extends CI_Controller
         if ($this->input->method() !== 'post') show_404();
 
         $this->_ensureSoRouteColumn();
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1185,7 +1200,7 @@ class C_Logistik extends CI_Controller
     public function verifikasi_barang_so_siap_loading($id_so)
     {
         $this->_ensureSoRouteColumn();
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1209,7 +1224,7 @@ class C_Logistik extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1299,7 +1314,7 @@ class C_Logistik extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
 
@@ -1337,7 +1352,7 @@ class C_Logistik extends CI_Controller
     {
         if ($this->input->method() !== 'post') show_404();
 
-        $this->_ensureSoSedangVerifikasiStatus();
+        $this->_ensureSoSedangVerifikasiStatus(); $this->_ensureFakturStatusEnum();
         $this->_ensureSoLoadingVerificationColumns();
         $this->_ensureSoLoadingPlanColumns();
         $current_rute = trim((string)$this->input->post('current_rute', true));

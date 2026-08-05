@@ -596,20 +596,12 @@
                 </p>
               </a>
             </li>
+            <?php if ($this->session->userdata('jobdesk') != 'KASIR') : ?>
             <li class="nav-item">
               <a href="<?php echo base_url('retur_penjualan/retur') ?>" class="nav-link">
                 <i class="nav-icon fas fa-undo-alt"></i>
                 <p>
                   Retur Penjualan
-                </p>
-              </a>
-            </li>
-            <?php if ($this->session->userdata('jobdesk') == 'KASIR') : ?>
-            <li class="nav-item">
-              <a href="<?php echo base_url('keuangan/pembayaran/kasir') ?>" class="nav-link">
-                <i class="nav-icon fas fa-cash-register"></i>
-                <p>
-                  Pembayaran Kasir
                 </p>
               </a>
             </li>
