@@ -342,6 +342,13 @@
             </a>
           </li>
 
+          <li class="nav-item">
+            <a href="<?php echo base_url('sales/C_PengajuanOD') ?>" class="nav-link">
+              <i class="nav-icon fas fa-calendar-alt"></i>
+              <p>Pengajuan OD</p>
+            </a>
+          </li>
+
           <!-- Logout -->
           <li class="nav-item">
             <a href="<?php echo base_url('logout') ?>" class="nav-link">
@@ -529,6 +536,12 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('sales/C_PengajuanOD') ?>" class="nav-link">
+                <i class="nav-icon fas fa-calendar-alt"></i>
+                <p>Pengajuan OD</p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -540,7 +553,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'MANAGERSC', 'KADEP'])) : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array($this->session->userdata('jobdesk'), ['ADMPNJ', 'KADEPUB', 'KADEPSC', 'MANAGERSC', 'KADEP', 'MANAGERTC'])) : ?>
       <div class="sidebar">
         <!-- Sidebar Menu -->
         <nav class="mt-2">
@@ -571,6 +584,12 @@
               </a>
             </li>
             <?php endif; ?>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales/C_PengajuanOD') ?>" class="nav-link">
+                <i class="nav-icon fas fa-calendar-alt"></i>
+                <p>Pengajuan OD</p>
+              </a>
+            </li>
             <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>

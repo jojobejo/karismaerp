@@ -271,6 +271,8 @@ class M_pembayaran extends CI_Model
             c.kd_rute,
             f.tanggal_faktur,
             f.tanggal_jatuh_tempo,
+            f.tempo,
+            f.jtempo,
             {$cara_pembayaran_select},
             {$tanggal_selesai_do} AS tanggal_selesai_do,
             f.status,
