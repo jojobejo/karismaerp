@@ -36,6 +36,9 @@
 
                 <div class="row mb-3">
                     <div class="col-12 text-right">
+                        <a href="<?= base_url('sales/C_PengajuanOD/activity_log') ?>" class="btn btn-secondary mr-2">
+                            <i class="fas fa-history mr-1"></i> Activity Log
+                        </a>
                         <?php if (in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
                             <a href="<?= base_url('sales/C_PengajuanOD/create') ?>" class="btn btn-primary">
                                 <i class="fas fa-plus mr-1"></i> Buat Pengajuan OD Baru
@@ -144,8 +147,8 @@
                                         <!-- Approval Action Buttons -->
                                         <?php
                                         $show_approve = false;
-                                        if ($row['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'ADMIN'])) $show_approve = true;
-                                        if ($row['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'ADMIN'])) $show_approve = true;
+                                        if ($row['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'ADMIN'])) $show_approve = true;
+                                        if ($row['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'ADMIN'])) $show_approve = true;
                                         if ($row['status'] == 'pending_kadepsc' && in_array($user['jobdesk'], ['KADEPSC', 'ADMIN'])) $show_approve = true;
                                         
                                         if ($show_approve) :

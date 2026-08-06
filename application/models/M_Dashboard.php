@@ -116,6 +116,7 @@ class M_Dashboard extends CI_Model
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
                     $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
                     $this->menu('Retur Penjualan', $retur_pj_route, 'fas fa-undo-alt', 'orange', 'Kelola data dan input transaksi retur penjualan.'),
+                    $this->menu('Pengajuan OD', 'sales/C_PengajuanOD', 'fas fa-calendar-alt', 'red', 'Kelola pengajuan overdue (OD) untuk tempo faktur.'),
                 ),
             ),
         );
@@ -159,6 +160,8 @@ class M_Dashboard extends CI_Model
             'MANAGER SC' => 'sales',
             'MANAGERSC' => 'sales',
             'KADEPSC' => 'sales',
+            'MANAGERTC' => 'sales',
+            'MNGTC' => 'sales',
             'KADEPUB' => 'sales',
             'ADMPNJ' => 'sales',
             'ADMRETUR' => 'logistik',

@@ -441,13 +441,13 @@ class C_PengajuanOD extends CI_Controller
         $status_baru = $pengajuan['status'];
 
         if ($action == 'approve') {
-            if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'ADMIN'])) {
+            if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['MANAGERSC', 'MNGSC', 'ADMIN'])) {
                 $status_baru = 'pending_mngtc';
                 $update_data['approval_mngsc_by'] = $user['nama'];
                 $update_data['approval_mngsc_at'] = date('Y-m-d H:i:s');
                 $update_data['catatan_mngsc'] = $catatan_approval;
             } 
-            elseif ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'ADMIN'])) {
+            elseif ($pengajuan['status'] == 'pending_mngtc' && in_array($user['jobdesk'], ['MANAGERTC', 'MNGTC', 'ADMIN'])) {
                 // Upload lampiran Mng TC (Optional)
                 $lampiran_mngtc = '';
                 if (!empty($_FILES['lampiran_mngtc']['name'])) {
@@ -522,7 +522,8 @@ class C_PengajuanOD extends CI_Controller
                 $this->db->where('id_faktur', $fk['id_faktur']);
                 $this->db->update('tbso_faktur_penjualan', [
                     'tempo' => $fk['tempo_baru'],
-                    'jtempo' => $fk['tempo_baru']
+                    'jtempo' => $fk['tempo_baru'],
+                    'tanggal_jatuh_tempo' => $fk['tanggal_jatuh_tempo_baru']
                 ]);
             }
             $this->session->set_flashdata('success', 'Pengajuan disetujui, tempo faktur telah diperbarui otomatis.');
@@ -532,5 +533,16 @@ class C_PengajuanOD extends CI_Controller
         }
 
         redirect('sales/C_PengajuanOD');
+    }
+
+    public function activity_log()
+    {
+        $data['page_title'] = 'KARISMA - Activity Log Pengajuan OD';
+        $data['logs'] = $this->M_PengajuanOD->get_activity_log();
+        $data['user'] = $this->session->userdata();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/sales/pengajuan_od/activity_log.php', $data);
+        $this->load->view('partial/main/footer.php');
     }
 }

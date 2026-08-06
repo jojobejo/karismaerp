@@ -273,6 +273,14 @@ class M_pembayaran extends CI_Model
             f.tanggal_jatuh_tempo,
             f.tempo,
             f.jtempo,
+            (
+                SELECT po_f.tempo_lama
+                FROM tb_pengajuan_od_faktur po_f
+                JOIN tb_pengajuan_od po ON po.id = po_f.id_pengajuan
+                WHERE po.status = 'approved' AND po_f.id_faktur = f.id_faktur
+                ORDER BY po.id DESC
+                LIMIT 1
+            ) AS tempo_lama,
             {$cara_pembayaran_select},
             {$tanggal_selesai_do} AS tanggal_selesai_do,
             f.status,
@@ -289,9 +297,10 @@ class M_pembayaran extends CI_Model
             DATEDIFF(CURDATE(), DATE(f.tanggal_faktur)) AS hari_overdue,
             DATEDIFF(DATE(f.tanggal_jatuh_tempo), CURDATE()) AS sisa_hari,
             CASE
-                WHEN COALESCE(f.jtempo, 0) = 30 THEN 'Overdue 30'
-                WHEN COALESCE(f.jtempo, 0) = 60 THEN 'Overdue 60'
-                WHEN COALESCE(f.jtempo, 0) = 90 THEN 'Overdue 90'
+                WHEN COALESCE(f.jtempo, 0) >= 85 AND COALESCE(f.jtempo, 0) <= 95 THEN 'Overdue 90'
+                WHEN COALESCE(f.jtempo, 0) >= 55 AND COALESCE(f.jtempo, 0) <= 65 THEN 'Overdue 60'
+                WHEN COALESCE(f.jtempo, 0) >= 25 AND COALESCE(f.jtempo, 0) <= 35 THEN 'Overdue 30'
+                WHEN COALESCE(f.jtempo, 0) > 0 THEN CONCAT('Overdue ', COALESCE(f.jtempo, 0))
                 ELSE 'Belum overdue'
             END AS status_overdue,
             COALESCE(fnb.nama_barang, '-') AS nama_barang

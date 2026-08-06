@@ -129,7 +129,12 @@
                                                 <td class="text-right text-warning">Rp <?= number_format((float)($faktur['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
                                                 <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></td>
                                                 <td class="text-center"><span class="badge badge-<?= $status_class ?>"><?= htmlspecialchars($status_label) ?></span></td>
-                                                <td class="text-center"><span class="badge badge-<?= $overdue_class ?>"><?= htmlspecialchars($overdue) ?></span></td>
+                                                <td class="text-center">
+                                                    <?php if (!empty($faktur['tempo_lama']) && $faktur['tempo_lama'] != $faktur['jtempo']): ?>
+                                                        <small class="text-muted mr-1"><del><?= $faktur['tempo_lama'] ?></del></small>
+                                                    <?php endif; ?>
+                                                    <span class="badge badge-<?= $overdue_class ?>"><?= htmlspecialchars($overdue) ?></span>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>

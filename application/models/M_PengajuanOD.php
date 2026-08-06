@@ -22,9 +22,9 @@ class M_PengajuanOD extends CI_Model
 
         if (isset($filters['only_history']) && $filters['only_history']) {
             // HISTORY PAGE: Show requests already processed/approved by this role or completed
-            if ($jobdesk === 'MANAGERSC') {
+            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC'])) {
                 $this->db->where_in('po.status', ['pending_mngtc', 'pending_kadepsc', 'approved', 'rejected']);
-            } elseif ($jobdesk === 'MANAGERTC') {
+            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC'])) {
                 $this->db->where_in('po.status', ['pending_kadepsc', 'approved', 'rejected']);
             } elseif ($jobdesk === 'KADEPSC') {
                 $this->db->where_in('po.status', ['approved', 'rejected']);
@@ -34,9 +34,9 @@ class M_PengajuanOD extends CI_Model
             }
         } elseif (isset($filters['exclude_approved']) && $filters['exclude_approved']) {
             // ACTIVE / PENDING INBOX PAGE: Show requests waiting for action from this role
-            if ($jobdesk === 'MANAGERSC') {
+            if (in_array($jobdesk, ['MANAGERSC', 'MNGSC'])) {
                 $this->db->where('po.status', 'pending_mngsc');
-            } elseif ($jobdesk === 'MANAGERTC') {
+            } elseif (in_array($jobdesk, ['MANAGERTC', 'MNGTC'])) {
                 $this->db->where('po.status', 'pending_mngtc');
             } elseif ($jobdesk === 'KADEPSC') {
                 $this->db->where('po.status', 'pending_kadepsc');
@@ -111,5 +111,48 @@ class M_PengajuanOD extends CI_Model
         $this->db->order_by('tanggal_faktur', 'DESC');
         $this->db->limit(1000); // Limit to recent 1000 to avoid memory issues, or better use select2 ajax
         return $this->db->get()->result_array();
+    }
+
+    public function get_activity_log($limit = 500, $offset = 0)
+    {
+        $sql = "
+            SELECT id, 'Buat Pengajuan' as aksi, create_by as actor, create_at as waktu, catatan as note 
+            FROM tb_pengajuan_od 
+            
+            UNION 
+            
+            SELECT id, 
+                   CASE WHEN status = 'rejected' THEN 'Ditolak MNGSC' ELSE 'Persetujuan MNGSC' END as aksi, 
+                   approval_mngsc_by as actor, 
+                   approval_mngsc_at as waktu, 
+                   catatan_mngsc as note 
+            FROM tb_pengajuan_od 
+            WHERE approval_mngsc_at IS NOT NULL
+            
+            UNION 
+            
+            SELECT id, 
+                   CASE WHEN status = 'rejected' THEN 'Ditolak MNGTC' ELSE 'Persetujuan MNGTC' END as aksi, 
+                   approval_mngtc_by as actor, 
+                   approval_mngtc_at as waktu, 
+                   catatan_mngtc as note 
+            FROM tb_pengajuan_od 
+            WHERE approval_mngtc_at IS NOT NULL
+            
+            UNION 
+            
+            SELECT id, 
+                   CASE WHEN status = 'rejected' THEN 'Ditolak KADEPSC' ELSE 'Persetujuan KADEPSC' END as aksi, 
+                   approval_kadepsc_by as actor, 
+                   approval_kadepsc_at as waktu, 
+                   catatan_kadepsc as note 
+            FROM tb_pengajuan_od 
+            WHERE approval_kadepsc_at IS NOT NULL
+            
+            ORDER BY waktu DESC
+            LIMIT ? OFFSET ?
+        ";
+        
+        return $this->db->query($sql, [(int)$limit, (int)$offset])->result_array();
     }
 }
