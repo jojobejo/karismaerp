@@ -156,15 +156,16 @@
 
                         @media (min-width: 992px) {
                             .draft-header-row {
-                                flex-wrap: nowrap;
+                                flex-wrap: wrap;
                             }
 
                             .draft-header-col {
-                                flex: 0 0 auto;
+                                flex: 1 1 auto;
+                                min-width: 110px;
                             }
 
                             .draft-header-col-lpb {
-                                width: 13%;
+                                width: 12%;
                             }
 
                             .draft-header-col-sj {
@@ -172,19 +173,30 @@
                             }
 
                             .draft-header-col-date {
-                                width: 13%;
+                                width: 12%;
                             }
 
                             .draft-header-col-type {
-                                width: 18%;
+                                width: 15%;
                             }
 
                             .draft-header-col-gudang {
-                                width: 19%;
+                                width: 15%;
+                            }
+
+                            .draft-header-col-checker {
+                                width: 16%;
                             }
 
                             .draft-header-col-note {
-                                width: 25%;
+                                width: 18%;
+                                flex-grow: 1;
+                            }
+                        }
+
+                        @media (min-width: 1366px) {
+                            .draft-header-row {
+                                flex-wrap: nowrap;
                             }
                         }
 
@@ -576,6 +588,14 @@
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
+                                    <?php if (!empty($show_checker_input) || !empty($is_admlpb_user) || !empty($is_admin_po)) : ?>
+                                    <div class="col-lg draft-header-col draft-header-col-checker col-md-6 draft-header-field">
+                                        <label class="font-weight-bold">Checker By</label>
+                                        <input type="text" class="form-control" id="final_checker_by" placeholder="Nama / Kode Checker">
+                                    </div>
+                                    <?php else : ?>
+                                    <input type="hidden" id="final_checker_by" value="">
+                                    <?php endif; ?>
                                     <div class="col-lg draft-header-col draft-header-col-note col-md-6 draft-header-field">
                                         <label class="font-weight-bold">Keterangan</label>
                                         <input type="text" class="form-control" id="final_keterangan" placeholder="Catatan">
@@ -1052,14 +1072,21 @@
             }
 
             function fillModalHeader(item) {
-                $('#tmp_kd_po').val(item.kd_po);
-                $('#tmp_kd_suplier').val(item.kd_suplier);
-                $('#tmp_kd_barang').val(item.kd_barang);
-                $('#tmp_no_po').val(item.no_po);
-                $('#tmp_display_kd_barang').val(item.kd_barang);
-                $('#tmp_nama_barang').text(item.nama_barang || '-');
-                $('#tmp_qty_sisa_besar').val(formatNumber(item.qty_sisa) + ' ' + (item.satuan_default || ''));
-                $('#tmp_qty_sisa_kecil').val(formatNumber(item.qty_kecil_sisa));
+                item = item || {};
+                var noPo = item.no_po || '<?= htmlspecialchars($no_po ?? '', ENT_QUOTES) ?>';
+                var kdPo = item.kd_po || '<?= htmlspecialchars($kd_po ?? '', ENT_QUOTES) ?>';
+                var kdSuplier = item.kd_suplier || '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>';
+                var kdBarang = item.kd_barang || '';
+                var namaBarang = item.nama_barang || '-';
+
+                $('#tmp_kd_po').val(kdPo);
+                $('#tmp_kd_suplier').val(kdSuplier);
+                $('#tmp_kd_barang').val(kdBarang);
+                $('#tmp_no_po').val(noPo);
+                $('#tmp_display_kd_barang').val(kdBarang);
+                $('#tmp_nama_barang').text(namaBarang);
+                $('#tmp_qty_sisa_besar').val(formatNumber(item.qty_sisa) + (item.satuan_default ? ' ' + item.satuan_default : ''));
+                $('#tmp_qty_sisa_kecil').val(formatNumber(item.qty_kecil_sisa) + ' PCS');
             }
 
             function renderModalRows(rows) {
@@ -1154,6 +1181,7 @@
                     $('#final_jenis_lpb').prop('selectedIndex', 0);
                 }
                 $('#final_gudang_id').val(defaultFinalForm.gudang_id);
+                $('#final_checker_by').val('');
                 $('#final_keterangan').val(defaultFinalForm.keterangan);
                 refreshGeneratedLpbNumber();
             }
@@ -1231,17 +1259,30 @@
                 });
             }
 
-            $(document).on('click', '.js-open-modal', function() {
+            $(document).on('click', '.js-open-modal', function(e) {
+                var btn = $(this).closest('.js-open-modal');
+                var getAttr = function(attrName, fallbackKey) {
+                    var val = btn.attr(attrName);
+                    if (typeof val === 'undefined' || val === null || val === '') {
+                        var dataKey = attrName.replace('data-', '').replace(/-([a-z])/g, function(g) { return g[1].toUpperCase(); });
+                        val = btn.data(dataKey);
+                    }
+                    if ((typeof val === 'undefined' || val === null || val === '') && fallbackKey) {
+                        val = btn.attr(fallbackKey) || btn.data(fallbackKey.replace('data-', ''));
+                    }
+                    return (typeof val !== 'undefined' && val !== null) ? val : '';
+                };
+
                 currentItem = {
-                    kd_po: $(this).data('kd-po') || '',
-                    kd_suplier: $(this).data('kd-suplier') || '',
-                    kd_barang: $(this).data('kd-barang') || '',
-                    nama_barang: $(this).data('nama-barang') || '',
-                    no_po: $(this).data('no-po') || '',
-                    satuan_default: $(this).data('satuan') || '',
-                    qty_sisa: parseFloat($(this).data('sisa-besar')) || 0,
-                    qty_kecil_sisa: parseFloat($(this).data('sisa-kecil')) || parseFloat($(this).data('sisa')) || 0,
-                    dimensi_br: parseFloat($(this).data('dimensi')) || 1
+                    kd_po: getAttr('data-kd-po') || '<?= htmlspecialchars($kd_po ?? '', ENT_QUOTES) ?>',
+                    kd_suplier: getAttr('data-kd-suplier') || '<?= htmlspecialchars($kd_suplier ?? '', ENT_QUOTES) ?>',
+                    kd_barang: getAttr('data-kd-barang'),
+                    nama_barang: getAttr('data-nama-barang') || '-',
+                    no_po: getAttr('data-no-po') || '<?= htmlspecialchars($no_po ?? '', ENT_QUOTES) ?>',
+                    satuan_default: getAttr('data-satuan'),
+                    qty_sisa: parseFloat(getAttr('data-sisa-besar')) || 0,
+                    qty_kecil_sisa: parseFloat(getAttr('data-sisa-kecil', 'data-sisa')) || 0,
+                    dimensi_br: parseFloat(getAttr('data-dimensi')) || 1
                 };
 
                 fillModalHeader(currentItem);
@@ -1273,6 +1314,12 @@
                         Swal.fire('Gagal', 'Terjadi kesalahan saat mengambil draft barang.', 'error');
                     }
                 });
+            });
+
+            $('#modalTmpPoReceived').on('show.bs.modal', function() {
+                if (currentItem && (currentItem.kd_barang || currentItem.no_po)) {
+                    fillModalHeader(currentItem);
+                }
             });
 
             $('#btnTambahBarisTmp').on('click', function() {
@@ -1432,6 +1479,7 @@
                 var tanggalSj = $('#final_tgl_sj').val();
                 var jenisLpb = $('#final_jenis_lpb').val();
                 var gudangId = $('#final_gudang_id').val();
+                var checkerBy = $('#final_checker_by').length ? $.trim($('#final_checker_by').val()) : '';
                 var keterangan = $.trim($('#final_keterangan').val());
 
                 if (!invoice) {
@@ -1470,6 +1518,8 @@
                         no_invoice: invoice,
                         jenis_lpb: jenisLpb,
                         gudang_id: gudangId,
+                        checker_by: checkerBy,
+                        checker_name: checkerBy,
                         keterangan: keterangan
                     },
                     success: function(res) {

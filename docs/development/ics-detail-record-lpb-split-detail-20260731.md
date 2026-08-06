@@ -2,6 +2,8 @@
 
 Tanggal: 2026-07-31
 
+Update 2026-08-05: rules total harga diperbarui. Total qty tetap wajib sama dengan qty awal, tetapi total harga hasil split boleh berbeda dan selisihnya dicatat di log aktivitas. Detail update ada di `docs/development/ics-detail-record-lpb-split-detail-flexible-price-20260805.md`.
+
 ## Scope
 
 Route utama: `ics/detail_record_lpb`
@@ -37,8 +39,9 @@ Response sukses mengembalikan ID detail sumber, daftar baris hasil split, qty/ha
 - Baris kedua dan seterusnya adalah baris split baru yang dapat ditambah atau dihapus user.
 - Setiap baris harus memiliki qty lebih dari 0 dan harga satuan tidak boleh minus.
 - Total qty seluruh baris harus sama dengan qty awal.
-- Total nilai seluruh baris harus sama dengan total nilai awal.
-- Jika total qty atau total harga lebih besar atau kurang dari data acuan, proses ditolak.
+- Total harga seluruh baris boleh berbeda dari total nilai awal.
+- Jika total qty lebih besar atau kurang dari data acuan, proses ditolak.
+- Jika total harga berbeda dari data acuan, proses tetap boleh disimpan dan selisihnya dicatat di log aktivitas.
 - Setelah split, verifikasi harga di-reset pada baris asal dan semua baris baru.
 
 ## Alur Teknis

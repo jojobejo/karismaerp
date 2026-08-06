@@ -564,6 +564,9 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                                             <button type="button" class="btn btn-danger btn-sm" id="btnPurchasingUnpostLpb" style="display:none;">
                                                 <i class="fas fa-undo mr-1"></i> UNPOST
                                             </button>
+                                            <button type="button" class="btn btn-success btn-sm ml-2" id="btnPurchasingPostLpb" style="display:none;">
+                                                <i class="fas fa-save mr-1"></i> Posting Data
+                                            </button>
                                         </div>
                                         <div class="lpb-activity-log" id="lpbActivityLogWrap" style="display:none;">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -794,7 +797,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         </table>
                     </div>
                     <div class="alert alert-info mb-0" id="splitDetailInfo">
-                        Total qty dan total harga seluruh baris harus sama dengan data acuan.
+                        Total qty seluruh baris harus sama dengan data acuan. Selisih pada harga satuan diabaikan dan data disimpan sesuai inputan form.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1246,7 +1249,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 var rows = collectSplitDetailRows();
                 var totalQtyInput = 0;
                 var totalHargaInput = 0;
-                var message = 'Total qty dan total harga seluruh baris sudah sama dengan data acuan.';
+                var message = 'Total qty seluruh baris sudah sama dengan data acuan. Selisih pada harga satuan diabaikan dan data disimpan sesuai inputan form.';
                 var hasError = false;
 
                 $.each(rows, function(_, row) {
@@ -1275,9 +1278,6 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 } else if (Math.abs(diffQty) > 0.0001) {
                     message = 'Total qty seluruh baris harus sama dengan Qty In awal.';
                     hasError = true;
-                } else if (Math.abs(diffHarga) > 0.01) {
-                    message = 'Total harga seluruh baris harus sama dengan total harga awal.';
-                    hasError = true;
                 }
 
                 $('#splitDetailTotalQtyInput').text(formatNumber(totalQtyInput));
@@ -1286,10 +1286,11 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     .toggleClass('text-danger font-weight-bold', Math.abs(diffQty) > 0.0001)
                     .text(formatNumber(diffQty));
                 $('#splitDetailDiffHarga')
-                    .toggleClass('text-danger font-weight-bold', Math.abs(diffHarga) > 0.01)
+                    .removeClass('text-warning font-weight-bold')
                     .text(formatRupiah(diffHarga));
                 $('#splitDetailInfo')
                     .toggleClass('alert-danger', hasError)
+                    .removeClass('alert-warning')
                     .toggleClass('alert-info', !hasError)
                     .text(message);
 
@@ -1581,7 +1582,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     },
                     {
                         label: 'Checker',
-                        value: header.checker_name || '-'
+                        value: (function() {
+                            var cBy = $.trim(header.checker_by || '');
+                            var cName = $.trim(header.checker_name || '');
+                            if (cBy !== '' && cName !== '' && cBy !== cName) {
+                                return cBy + ' (' + cName + ')';
+                            }
+                            return cBy !== '' ? cBy : (cName !== '' ? cName : '-');
+                        })()
                     },
                     {
                         label: 'Transaksi Penjualan',
@@ -1681,6 +1689,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                 });
             }
 
+            function splitDetailBadge(row) {
+                if (parseInt((row || {}).is_split_detail || 0, 10) !== 1) {
+                    return '';
+                }
+
+                return ' <span class="badge badge-warning ml-1" title="Data yang pernah di-split"><i class="fas fa-code-branch mr-1"></i>Split</span>';
+            }
+
             function getActiveTotalHarga(row) {
                 var total = parseFloat(row.total_harga_display || row.total_harga_exclude || row.total_harga || 0);
                 return isNaN(total) ? 0 : total;
@@ -1760,7 +1776,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                             '<tr>' +
                             actionColumn +
                             '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
-                            '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
+                            '<td>' + escHtml(row.nama_barang || '-') + splitDetailBadge(row) + '</td>' +
                             '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
                             '<td class="text-center">' + escHtml(formatDateId(row.expired_date)) + '</td>' +
                             '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
@@ -1798,7 +1814,8 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         harga_satuan_exclude: row.harga_satuan_exclude || row.harga_satuan || 0,
                         harga_satuan_sebelumnya: row.harga_satuan_sebelumnya || 0,
                         total_harga_sebelumnya: row.total_harga_sebelumnya || 0,
-                        harga_terverifikasi: row.harga_terverifikasi || 0
+                        harga_terverifikasi: row.harga_terverifikasi || 0,
+                        is_split_detail: row.is_split_detail || 0
                     };
                 });
                 purchasingEditMode = false;
@@ -2015,7 +2032,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     tbody.append(
                         '<tr>' +
                         '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
-                        '<td>' + escHtml(row.nama_barang || '-') + '</td>' +
+                        '<td>' + escHtml(row.nama_barang || '-') + splitDetailBadge(row) + '</td>' +
                         '<td class="text-center">' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
@@ -2067,13 +2084,18 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
                 var rows = selectedPurchasingRows || [];
                 var isPost = isSelectedLpbPost();
+                var isUnpost = isSelectedLpbUnpost();
 
-                $('#lpbPurchasingVerifyActions').toggle(isPost);
-                $('#lpbBulkVerifyInfo').text(isPost ? 'LPB sudah berstatus POST.' : '');
+                $('#lpbPurchasingVerifyActions').show();
+                $('#lpbBulkVerifyInfo').text(isPost ? 'LPB berstatus POST.' : (isUnpost ? 'LPB berstatus UNPOST.' : ''));
                 $('#btnPurchasingUnpostLpb')
                     .toggle(isPost)
                     .prop('disabled', !isPost || isChangingLpbStatus)
                     .html(isChangingLpbStatus && isPost ? '<i class="fas fa-spinner fa-spin mr-1"></i> UNPOST...' : '<i class="fas fa-undo mr-1"></i> UNPOST');
+                $('#btnPurchasingPostLpb')
+                    .toggle(isUnpost)
+                    .prop('disabled', !isUnpost || isChangingLpbStatus)
+                    .html(isChangingLpbStatus && isUnpost ? '<i class="fas fa-spinner fa-spin mr-1"></i> Posting...' : '<i class="fas fa-save mr-1"></i> Posting Data');
             }
 
             function bulkAcceptDisplayedLpbPrices() {
@@ -2956,6 +2978,10 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             $('#btnPurchasingUnpostLpb').on('click', function() {
                 promptUnpostLpb();
+            });
+
+            $('#btnPurchasingPostLpb').on('click', function() {
+                changeLpbStatus('<?= base_url('ics/ajax_post_lpb') ?>', 'LPB berhasil direkam menjadi POST.');
             });
 
             $('#btnSplitInvoice').on('click', function() {

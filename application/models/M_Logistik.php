@@ -5042,6 +5042,30 @@ FROM (
         return $this->append_lpb_operational_alerts_to_row($this->db->query($sql, [$id_lpb])->row_array());
     }
 
+    private function lpb_detail_split_marker_expr($detailAlias = 'd', $headerAlias = 'h')
+    {
+        if (!$this->db->table_exists('tb_lpb_log')
+            || !$this->db->field_exists('action_type', 'tb_lpb_log')
+            || !$this->db->field_exists('data_after', 'tb_lpb_log')) {
+            return '0';
+        }
+
+        $detailAlias = preg_replace('/[^A-Za-z0-9_]/', '', (string) $detailAlias) ?: 'd';
+        $headerAlias = preg_replace('/[^A-Za-z0-9_]/', '', (string) $headerAlias) ?: 'h';
+        $scopePredicate = $this->db->field_exists('id_lpb', 'tb_lpb_log')
+            ? "sl.id_lpb = {$headerAlias}.id_lpb"
+            : "sl.kd_po = {$headerAlias}.kd_po";
+
+        return "(CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM tb_lpb_log sl
+                    WHERE {$scopePredicate}
+                        AND sl.action_type = 'SPLIT_LPB_DETAIL'
+                        AND sl.data_after REGEXP CONCAT('\"(id_detail_lpb|source_id_detail_lpb)\":', {$detailAlias}.id_detail_lpb, '([^0-9]|$)')
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END)";
+    }
+
     public function get_lpb_record_detail_rows($id_lpb)
     {
         $qtyLpbExpr = "COALESCE(d.qty_diterima, 0)";
@@ -5055,11 +5079,21 @@ FROM (
                     NULLIF(d.harga_satuan, 0),
                     0
                 )";
-        $dppExpr = "({$qtyLpbExpr} * {$hargaSatuanExcludeExpr})";
+        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
+        $splitMarkerExpr = $this->lpb_detail_split_marker_expr('d', 'h');
+        $hargaSatuanAktifExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1 THEN COALESCE(d.harga_satuan, 0)
+                    ELSE {$hargaSatuanExcludeExpr}
+                END)";
+        $dppExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1 THEN COALESCE(d.total_harga, {$qtyLpbExpr} * COALESCE(d.harga_satuan, 0))
+                    ELSE {$qtyLpbExpr} * {$hargaSatuanExcludeExpr}
+                END)";
         $dppNilaiLainExpr = "({$dppExpr} * (11 / 12))";
         $ppnExpr = "({$dppNilaiLainExpr} * (12 / 100))";
-        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
         $totalHargaDisplayExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1
+                    THEN {$dppExpr}
                     WHEN {$ppnModeExpr} = 'include'
                         AND COALESCE(pp.harga_satuan_kecil, 0) > 0
                     THEN {$qtyLpbExpr} * COALESCE(pp.harga_satuan_kecil, 0)
@@ -5102,8 +5136,9 @@ FROM (
                 d.input_at,
                 COALESCE(d.harga_satuan_sebelumnya, 0) AS harga_satuan_sebelumnya,
                 COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
-                {$hargaSatuanExcludeExpr} AS harga_satuan,
-                {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
+                {$splitMarkerExpr} AS is_split_detail,
+                {$hargaSatuanAktifExpr} AS harga_satuan,
+                {$hargaSatuanAktifExpr} AS harga_satuan_exclude,
                 {$dppExpr} AS dpp,
                 {$dppNilaiLainExpr} AS dpp_nilai_lain,
                 {$ppnExpr} AS ppn,
@@ -5442,13 +5477,6 @@ FROM (
             ];
         }
 
-        if (abs($totalHargaInput - $totalAwal) > 0.01) {
-            return [
-                'status' => FALSE,
-                'message' => 'Total harga seluruh baris split harus sama dengan total harga awal detail LPB.'
-            ];
-        }
-
         $detailFields = $this->db->list_fields('tb_lpb_detail');
         $baseNewDetail = [];
         foreach ($detailFields as $field) {
@@ -5541,6 +5569,8 @@ FROM (
             ];
         }
 
+        $totalHargaSelisih = $totalHargaInput - $totalAwal;
+
         if (!$this->insert_lpb_activity_log([
             'id_lpb'         => (int) $row['id_lpb'],
             'kd_po'          => $row['kd_po'] ?? '',
@@ -5560,9 +5590,12 @@ FROM (
                 'kd_barang' => $row['kd_barang'] ?? '',
                 'rows' => $savedRows,
                 'total_qty' => $totalQtyInput,
-                'total_harga' => $totalHargaInput
+                'total_harga_awal' => $totalAwal,
+                'total_harga' => $totalHargaInput,
+                'total_harga_selisih' => $totalHargaSelisih,
+                'harga_rule' => 'SELISIH_HARGA_DIABAIKAN'
             ],
-            'keterangan'     => 'Split detail LPB barang ' . ($row['kd_barang'] ?? '') . ': qty awal ' . $this->format_lpb_log_value($qtyAwal) . ', harga awal ' . $this->format_lpb_log_value($hargaAwal) . ', total awal ' . $this->format_lpb_log_value($totalAwal) . ' menjadi ' . count($savedRows) . ' baris split dengan total qty ' . $this->format_lpb_log_value($totalQtyInput) . ' dan total harga ' . $this->format_lpb_log_value($totalHargaInput) . '.' . ($keterangan !== '' ? ' Keterangan: ' . $keterangan : ''),
+            'keterangan'     => 'Split detail LPB barang ' . ($row['kd_barang'] ?? '') . ': qty awal ' . $this->format_lpb_log_value($qtyAwal) . ', harga awal ' . $this->format_lpb_log_value($hargaAwal) . ', total awal ' . $this->format_lpb_log_value($totalAwal) . ' menjadi ' . count($savedRows) . ' baris split dengan total qty ' . $this->format_lpb_log_value($totalQtyInput) . ', total harga ' . $this->format_lpb_log_value($totalHargaInput) . ', selisih total harga ' . $this->format_lpb_log_value($totalHargaSelisih) . '. Selisih pada harga satuan diabaikan dan disimpan sesuai inputan form.' . ($keterangan !== '' ? ' Keterangan: ' . $keterangan : ''),
             'dilakukan_oleh' => $dilakukanOleh
         ])) {
             return ['status' => FALSE, 'message' => 'Log split detail LPB gagal disimpan.'];
@@ -5577,7 +5610,8 @@ FROM (
             'harga_awal' => $hargaAwal,
             'total_awal' => $totalAwal,
             'total_qty_input' => $totalQtyInput,
-            'total_harga_input' => $totalHargaInput
+            'total_harga_input' => $totalHargaInput,
+            'total_harga_selisih' => $totalHargaSelisih
         ];
     }
 
@@ -5738,11 +5772,21 @@ FROM (
                     NULLIF(d.harga_satuan, 0),
                     0
                 )";
-        $dppExpr = "({$qtyLpbExpr} * {$hargaSatuanExcludeExpr})";
+        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
+        $splitMarkerExpr = $this->lpb_detail_split_marker_expr('d', 'h');
+        $hargaSatuanAktifExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1 THEN COALESCE(d.harga_satuan, 0)
+                    ELSE {$hargaSatuanExcludeExpr}
+                END)";
+        $dppExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1 THEN COALESCE(d.total_harga, {$qtyLpbExpr} * COALESCE(d.harga_satuan, 0))
+                    ELSE {$qtyLpbExpr} * {$hargaSatuanExcludeExpr}
+                END)";
         $dppNilaiLainExpr = "({$dppExpr} * (11 / 12))";
         $ppnExpr = "({$dppNilaiLainExpr} * (12 / 100))";
-        $ppnModeExpr = "LOWER(COALESCE(NULLIF(TRIM(pp.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude'))";
         $totalHargaDisplayExpr = "(CASE
+                    WHEN {$splitMarkerExpr} = 1
+                    THEN {$dppExpr}
                     WHEN {$ppnModeExpr} = 'include'
                         AND COALESCE(pp.harga_satuan_kecil, 0) > 0
                     THEN {$qtyLpbExpr} * COALESCE(pp.harga_satuan_kecil, 0)
@@ -5780,16 +5824,17 @@ FROM (
                     WHERE d2.id_lpb = d.id_lpb
                         AND d2.kd_barang = d.kd_barang
                 ), 0) AS qty_lpb_total,
-                {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
+                {$hargaSatuanAktifExpr} AS harga_satuan_exclude,
                 {$dppExpr} AS dpp,
                 {$dppNilaiLainExpr} AS dpp_nilai_lain,
                 {$ppnExpr} AS ppn,
                 {$dppExpr} AS total_harga_exclude,
-                {$hargaSatuanExcludeExpr} AS harga_satuan,
+                {$hargaSatuanAktifExpr} AS harga_satuan,
                 {$dppExpr} AS total_harga,
                 {$totalHargaDisplayExpr} AS total_harga_display,
                 COALESCE(d.harga_satuan_sebelumnya, 0) AS harga_satuan_sebelumnya,
                 COALESCE(d.total_harga_sebelumnya, 0) AS total_harga_sebelumnya,
+                {$splitMarkerExpr} AS is_split_detail,
                 d.harga_verified_at,
                 d.harga_verified_by,
                 CASE
@@ -5811,8 +5856,8 @@ FROM (
                 AND po.kd_po = h.kd_po
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = pp.kd_barang
-            LEFT JOIN tbpo_barang mb ON mb.kode_barang = a.kd_barang
-                ON mb.kd_barang = d.kd_barang
+            LEFT JOIN tbpo_barang mb
+                ON mb.kode_barang = d.kd_barang
             LEFT JOIN (
                 SELECT
                     h.no_po,

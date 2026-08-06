@@ -736,6 +736,9 @@ class C_Ics extends CI_Controller
         $data['detail']     = $this->M_Logistik->detail_po_received($nopo, $kdsuplier);
         $data['kd_po']      = !empty($data['detail'][0]['kd_po']) ? $data['detail'][0]['kd_po'] : '';
         $data['is_detail_po_purchasing'] = $this->resolve_ics_po_panel_mode() === 'purchasing';
+        $data['is_admlpb_user']          = $this->is_admlpb_user();
+        $data['is_admin_po']             = $this->is_admin_po_jobdesk();
+        $data['show_checker_input']      = $data['is_admlpb_user'] || $data['is_admin_po'];
         if ($data['is_detail_po_purchasing']) {
             $lpbPoRecords = $this->M_Logistik->get_lpb_purchasing_view(null, null, $nopo, $data['kd_po'], FALSE);
             $data['lpb_po_records'] = $this->M_Logistik->group_lpb_purchasing_records_by_nomor_lpb($lpbPoRecords);
@@ -951,21 +954,124 @@ class C_Ics extends CI_Controller
             return;
         }
 
-        $this->M_Logistik->ensure_lpb_manual_schema();
+        $this->load->model('M_LaporanPurchasing');
+        $this->M_LaporanPurchasing->ensure_schema();
 
         $filters = [
-            'source' => trim((string) $this->input->get('source', TRUE)) ?: 'all',
-            'date1' => trim((string) $this->input->get('date1', TRUE)),
-            'date2' => trim((string) $this->input->get('date2', TRUE))
+            'source'   => trim((string) $this->input->get('source', TRUE)) ?: 'all',
+            'aging_fp' => trim((string) $this->input->get('aging_fp', TRUE)) ?: 'all',
+            'date1'    => trim((string) $this->input->get('date1', TRUE)),
+            'date2'    => trim((string) $this->input->get('date2', TRUE))
         ];
 
-        $data['page_title'] = 'KARISMA - Laporan LPB';
-        $data['filters'] = $filters;
-        $data['rows'] = $this->M_Logistik->get_lpb_report_rows($filters);
+        $data['page_title'] = 'KARISMA - Laporan Digital Purchasing & LPB';
+        $data['filters']    = $filters;
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/lpb_report.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_lpb_report_data()
+    {
+        if (!$this->can_access_lpb_report()) {
+            $this->output
+                ->set_status_header(403)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['error' => 'Akses ditolak']));
+            return;
+        }
+
+        $this->load->model('M_LaporanPurchasing');
+
+        $draw   = (int) $this->input->post('draw');
+        $start  = (int) $this->input->post('start');
+        $length = (int) $this->input->post('length') ?: 25;
+        $search = trim((string) ($this->input->post('search')['value'] ?? ''));
+
+        $filters = [
+            'source'   => trim((string) $this->input->post('source')) ?: 'all',
+            'aging_fp' => trim((string) $this->input->post('aging_fp')) ?: 'all',
+            'date1'    => trim((string) $this->input->post('date1')),
+            'date2'    => trim((string) $this->input->post('date2'))
+        ];
+
+        $orderArr = $this->input->post('order');
+        $orderColIndex = $orderArr[0]['column'] ?? 0;
+        $orderDir      = $orderArr[0]['dir'] ?? 'desc';
+
+        $columnsMap = [
+            0  => 'id_lpb',
+            1  => 'tgl_po',
+            2  => 'no_po',
+            3  => 'tgl_perubahan_po',
+            4  => 'top_days',
+            5  => 'tgl_lpb',
+            6  => 'nomor_lpb',
+            7  => 'jenis_lpb',
+            8  => 'source_type',
+            9  => 'nosj',
+            10 => 'no_invoice',
+            11 => 'tanggal_invoice',
+            12 => 'tgl_perubahan_invoice',
+            13 => 'tgl_riil_invoice',
+            14 => 'kd_supplier',
+            15 => 'nama_supplier',
+            16 => 'kd_barang',
+            17 => 'nama_barang',
+            18 => 'produsen',
+            19 => 'spesifikasi_merk',
+            20 => 'golongan',
+            21 => 'kelompok',
+            22 => 'komposisi',
+            23 => 'grup',
+            24 => 'no_batch',
+            25 => 'exp_date',
+            26 => 'qty_diterima',
+            27 => 'harga_satuan',
+            28 => 'total_harga',
+            29 => 'sales_disc',
+            30 => 'cbd',
+            31 => 'foc',
+            32 => 'insentif_cn',
+            33 => 'dpp',
+            34 => 'ppn_11',
+            35 => 'ppn_12',
+            36 => 'dpp_nilai_lain',
+            37 => 'no_seri_fp',
+            38 => 'tgl_fp',
+            39 => 'tgl_terima_fp',
+            40 => 'tgl_input_fp',
+            41 => 'lapor_spt_masa',
+            42 => 'lead_time_po_lpb',
+            43 => 'lead_time_fp_today'
+        ];
+
+        $orderCol = $columnsMap[$orderColIndex] ?? 'id_lpb';
+
+        try {
+            $totalRecords = $this->M_LaporanPurchasing->get_total_records($filters);
+            $rowsData     = $this->M_LaporanPurchasing->get_datatables_data($filters, $search, $start, $length, $orderCol, $orderDir);
+
+            $response = [
+                "draw"            => $draw,
+                "recordsTotal"    => $totalRecords,
+                "recordsFiltered" => $search !== '' ? count($rowsData) : $totalRecords,
+                "data"            => $rowsData
+            ];
+        } catch (\Throwable $ex) {
+            $response = [
+                "draw"            => $draw,
+                "recordsTotal"    => 0,
+                "recordsFiltered" => 0,
+                "data"            => [],
+                "error"           => $ex->getMessage()
+            ];
+        }
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($response));
     }
 
     public function lpb_manual_log()
@@ -2060,6 +2166,27 @@ class C_Ics extends CI_Controller
         }
 
         $this->db->trans_commit();
+
+        if ($this->db->table_exists('tbkeu_jurnal')) {
+            $activeJournals = $this->db->select('id_jurnal')
+                ->from('tbkeu_jurnal')
+                ->where('source_module', 'LOGISTIK')
+                ->where('source_type', 'LPB_FINAL')
+                ->where('posting_event', 'GOODS_RECEIPT')
+                ->where('source_id', (string) $id_lpb)
+                ->where('status', 'POSTED')
+                ->where('reversed_at IS NULL', null, false)
+                ->get()
+                ->result_array();
+
+            if (!empty($activeJournals)) {
+                $this->load->library('Accounting_service');
+                foreach ($activeJournals as $jRow) {
+                    $this->accounting_service->reverse_journal((int) $jRow['id_jurnal'], 'UNPOST LPB: ' . $keterangan, (int) $this->session->userdata('id') ?: null);
+                }
+            }
+        }
+
         $this->json_response([
             'status'  => 'success',
             'message' => 'LPB berhasil di-UNPOST.',
@@ -2087,9 +2214,30 @@ class C_Ics extends CI_Controller
         }
 
         $this->db->trans_commit();
+
+        $this->load->library('Accounting_source_service');
+        $accountingResult = $this->accounting_source_service->post_goods_receipt(
+            $id_lpb,
+            (int) $this->session->userdata('id') ?: null
+        );
+
+        $journalSummary = $this->M_Logistik->get_lpb_goods_receipt_journal_summary($id_lpb);
+        $hasJournal = !empty($journalSummary['has_active_lpb_journal']);
+        $journalSample = !empty($journalSummary['lpb_journal_sample']) ? $journalSummary['lpb_journal_sample'] : '';
+
+        $message = 'LPB berhasil direkam menjadi POST.';
+        if ($hasJournal) {
+            $message .= ' Jurnal LPB aktif: ' . $journalSample;
+        } elseif (!empty($accountingResult['message'])) {
+            $message .= ' Note Akuntansi: ' . $accountingResult['message'];
+        }
+
         $this->json_response([
             'status'  => 'success',
-            'message' => 'LPB berhasil direkam menjadi POST.',
+            'message' => $message,
+            'accounting' => $accountingResult,
+            'has_active_lpb_journal' => $hasJournal ? 1 : 0,
+            'lpb_journal_sample' => $journalSample,
             'html'    => ''
         ]);
     }
