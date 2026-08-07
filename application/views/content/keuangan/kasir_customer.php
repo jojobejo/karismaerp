@@ -108,47 +108,66 @@
 
                 <div class="card">
                     <div class="card-header bg-primary text-white">
-                        <h3 class="card-title"><i class="fas fa-users mr-2"></i>Customer dengan Faktur Belum Lunas</h3>
+                        <h3 class="card-title"><i class="fas fa-list mr-2"></i>Faktur Selesai DO Belum Lunas</h3>
                         <div class="card-tools">
-                            <span class="badge badge-light"><?= count($customers) ?> customer</span>
+                            <span class="badge badge-light"><?= count($fakturs) ?> faktur</span>
                         </div>
                     </div>
                     <div class="card-body">
-                        <table class="table table-bordered table-hover table-sm" id="tabelPembayaranCustomer">
+                        <table class="table table-bordered table-hover table-sm" id="tabelPembayaranFaktur">
                             <thead class="thead-dark">
                                 <tr>
+                                    <th>No Faktur</th>
+                                    <th>Tanggal Faktur</th>
+                                    <th>Tanggal Tempo</th>
                                     <th>Customer</th>
-                                    <th class="text-center">Total Faktur</th>
                                     <th class="text-right">Total Piutang</th>
                                     <th class="text-right">Total Pembayaran</th>
                                     <th class="text-right">BG Belum Cair</th>
                                     <th class="text-right">Sisa Piutang</th>
+                                    <th class="text-center">Status Bayar</th>
+                                    <th class="text-center">Overdue</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (empty($customers)): ?>
+                                <?php if (empty($fakturs)): ?>
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">Tidak ada customer dengan faktur selesai DO yang belum lunas.</td>
+                                        <td colspan="11" class="text-center text-muted py-4">Tidak ada faktur belum lunas.</td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($customers as $customer): ?>
+                                    <?php foreach ($fakturs as $faktur):
+                                        $status_bayar = strtolower($faktur['status_pembayaran']);
+                                        $status_class = $status_bayar === 'lunas' ? 'success' : ($status_bayar === 'sebagian' ? 'warning' : 'danger');
+                                        $status_label = [
+                                            'lunas'       => 'Lunas',
+                                            'sebagian'    => 'Sebagian',
+                                            'belum_lunas' => 'Belum Lunas',
+                                        ][$status_bayar] ?? $faktur['status_pembayaran'];
+                                        $overdue = $faktur['status_overdue'];
+                                        $overdue_class = $overdue === 'Belum overdue' ? 'secondary' : ($overdue === 'Overdue 30' ? 'warning' : 'danger');
+                                    ?>
                                         <tr>
                                             <td>
-                                                <a href="<?= base_url('keuangan/pembayaran/kasir_customer/' . rawurlencode($customer['kd_customer'])) ?>">
-                                                    <strong><?= htmlspecialchars($customer['nama_customer']) ?></strong>
-                                                </a>
-                                                <br><small class="text-muted"><?= htmlspecialchars($customer['kd_customer']) ?></small>
+                                                <strong><?= htmlspecialchars($faktur['no_faktur']) ?></strong>
+                                                <br><small class="text-muted"><?= htmlspecialchars($faktur['no_so'] ?? '-') ?></small>
                                             </td>
-                                            <td class="text-center"><?= number_format((float)$customer['total_faktur'], 0, ',', '.') ?></td>
-                                            <td class="text-right">Rp <?= number_format((float)$customer['total_tagihan'], 0, ',', '.') ?></td>
-                                            <td class="text-right">Rp <?= number_format((float)$customer['total_pembayaran'], 0, ',', '.') ?></td>
-                                            <td class="text-right text-warning">Rp <?= number_format((float)($customer['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$customer['sisa_tagihan'], 0, ',', '.') ?></td>
+                                            <td class="text-nowrap">
+                                                <?= !empty($faktur['tanggal_faktur']) ? date('d/m/Y', strtotime($faktur['tanggal_faktur'])) : '-' ?>
+                                            </td>
+                                            <td class="text-nowrap">
+                                                <?= !empty($faktur['tanggal_jatuh_tempo']) ? date('d/m/Y', strtotime($faktur['tanggal_jatuh_tempo'])) : '-' ?>
+                                            </td>
+                                            <td><?= htmlspecialchars($faktur['nama_customer']) ?><br><small class="text-muted"><?= htmlspecialchars($faktur['kd_customer']) ?></small></td>
+                                            <td class="text-right">Rp <?= number_format((float)$faktur['total_tagihan'], 0, ',', '.') ?></td>
+                                            <td class="text-right">Rp <?= number_format((float)$faktur['total_pembayaran'], 0, ',', '.') ?></td>
+                                            <td class="text-right text-warning">Rp <?= number_format((float)($faktur['total_bg_pending'] ?? 0), 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></td>
+                                            <td class="text-center"><span class="badge badge-<?= $status_class ?>"><?= htmlspecialchars($status_label) ?></span></td>
+                                            <td class="text-center"><span class="badge badge-<?= $overdue_class ?>"><?= htmlspecialchars($overdue) ?></span></td>
                                             <td class="text-center">
-                                                <a href="<?= base_url('keuangan/pembayaran/kasir_customer/' . rawurlencode($customer['kd_customer'])) ?>"
-                                                   class="btn btn-info btn-sm">
-                                                    <i class="fas fa-eye mr-1"></i>Detail
+                                                <a href="<?= base_url('keuangan/pembayaran/kasir_bayar/' . $faktur['id_faktur']) ?>" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-money-bill-wave mr-1"></i>Bayar
                                                 </a>
                                             </td>
                                         </tr>
@@ -234,7 +253,7 @@
 <script>
 $(function () {
     if ($.fn.DataTable) {
-        $('#tabelPembayaranCustomer').DataTable();
+        $('#tabelPembayaranFaktur').DataTable();
     }
 });
 </script>

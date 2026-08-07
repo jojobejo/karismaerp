@@ -60,6 +60,7 @@
                                     <th>Nama Pemohon</th>
                                     <th>Keterangan</th>
                                     <th class="text-right">Nominal</th>
+                                    <th class="text-center">Lampiran</th>
                                     <th class="text-center">Status</th>
                                 </tr>
                             </thead>
@@ -72,6 +73,13 @@
                                 <td><?= $row['nama_pemohon'] ?></td>
                                 <td><?= $row['keterangan'] ?></td>
                                 <td class="text-right">Rp <?= number_format($row['nominal'], 0, ',', '.') ?></td>
+                                <td class="text-center">
+                                    <?php if (!empty($row['lampiran'])): ?>
+                                        <a href="<?= base_url('assets/uploads/kasbon/' . htmlspecialchars($row['lampiran'])) ?>" target="_blank" class="btn btn-xs btn-info"><i class="fas fa-paperclip"></i> Lihat</a>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-center">
                                     <?php 
                                         if ($row['status'] == 'pending') echo '<span class="badge badge-warning">Pending</span>';

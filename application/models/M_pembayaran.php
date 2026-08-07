@@ -359,6 +359,26 @@ class M_pembayaran extends CI_Model
         return $this->db->get()->result_array();
     }
 
+    public function get_all_unpaid_fakturs_kasir($keyword = '')
+    {
+        $this->_select_invoice_summary();
+
+        if (!empty($keyword)) {
+            $this->db->group_start();
+            $this->db->like('f.no_faktur', $keyword);
+            $this->db->or_like('f.no_so', $keyword);
+            $this->db->or_like('c.nama_customer', $keyword);
+            $this->db->or_like('c.kd_customer', $keyword);
+            $this->db->group_end();
+        }
+
+        $this->db->having('sisa_tagihan >', 0);
+        $this->db->order_by('tanggal_selesai_do', 'ASC');
+        $this->db->order_by('f.tanggal_faktur', 'ASC');
+
+        return $this->db->get()->result_array();
+    }
+
     public function get_all_unpaid_fakturs()
     {
         $this->_select_invoice_summary();

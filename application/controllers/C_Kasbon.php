@@ -69,12 +69,36 @@ class C_Kasbon extends CI_Controller
 
         $no_kasbon = $this->M_Kasbon->generate_no_kasbon();
 
+        $lampiran_file = null;
+        if (!empty($_FILES['lampiran']['name'])) {
+            $config['upload_path']   = './assets/uploads/kasbon/';
+            $config['allowed_types'] = 'jpg|jpeg|png|pdf';
+            $config['max_size']      = 2048;
+            $config['file_name']     = 'KB_' . time() . '_' . rand(1000, 9999);
+
+            if (!is_dir($config['upload_path'])) {
+                mkdir($config['upload_path'], 0777, true);
+            }
+
+            $this->load->library('upload', $config);
+
+            if ($this->upload->do_upload('lampiran')) {
+                $uploadData = $this->upload->data();
+                $lampiran_file = $uploadData['file_name'];
+            } else {
+                $this->session->set_flashdata('error', 'Gagal upload lampiran: ' . $this->upload->display_errors('',''));
+                redirect('C_Kasbon/create');
+                return;
+            }
+        }
+
         $data_insert = [
             'no_kasbon'         => $no_kasbon,
             'id_user'           => $user['id'],
             'nama_pemohon'      => $user['nama'],
             'nominal'           => $nominal,
             'keterangan'        => $keterangan,
+            'lampiran'          => $lampiran_file,
             'tanggal_pengajuan' => date('Y-m-d'),
             'status'            => 'pending',
             'created_at'        => date('Y-m-d H:i:s')

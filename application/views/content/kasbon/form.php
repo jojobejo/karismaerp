@@ -36,7 +36,7 @@
                     <div class="card-header">
                         <h3 class="card-title">Silakan isi data pengajuan Kas Bon</h3>
                     </div>
-                    <form action="<?= base_url('C_Kasbon/store') ?>" method="post">
+                    <form action="<?= base_url('C_Kasbon/store') ?>" method="post" enctype="multipart/form-data">
                         <div class="card-body">
                             
                             <div class="form-group row">
@@ -65,6 +65,14 @@
                                 <label class="col-sm-3 col-form-label">Keterangan / Keperluan <span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <textarea name="keterangan" class="form-control" rows="4" required placeholder="Tuliskan keterangan lengkap pengajuan kas bon..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group row">
+                                <label class="col-sm-3 col-form-label">Lampiran (Opsional)</label>
+                                <div class="col-sm-9">
+                                    <input type="file" name="lampiran" class="form-control-file" accept=".jpg,.jpeg,.png,.pdf">
+                                    <small class="text-muted">Format file: JPG, PNG, atau PDF. Maksimal 2MB.</small>
                                 </div>
                             </div>
 

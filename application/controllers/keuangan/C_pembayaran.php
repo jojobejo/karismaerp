@@ -503,7 +503,8 @@ class C_pembayaran extends CI_Controller
 
         $data['page_title'] = 'KARISMA - KASIR PEMBAYARAN CASH';
         $data['keyword'] = $keyword;
-        $data['customers'] = $this->M_pembayaran->get_customers_with_unpaid_faktur($keyword);
+        // Get all unpaid faktur directly instead of grouped by customer
+        $data['fakturs'] = $this->M_pembayaran->get_all_unpaid_fakturs_kasir($keyword);
         
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/kasir_customer.php', $data);
