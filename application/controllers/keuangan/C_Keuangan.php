@@ -600,6 +600,9 @@ class C_Keuangan extends CI_Controller
 
     public function master_barang()
     {
+        $this->load->model('M_LaporanPurchasing');
+        $this->M_LaporanPurchasing->ensure_schema();
+
         $data['page_title']         = 'KARISMA';
         $data['gudangid']           = 0;
         $data['supplier_options']   = $this->M_Keuangan->master_barang_supplier_options();
@@ -635,6 +638,12 @@ class C_Keuangan extends CI_Controller
             'nama_barang' => trim((string)$this->input->post('nama_barang', true)),
             'bahan_aktif' => trim((string)$this->input->post('bahan_aktif', true)),
             'satuan'      => trim((string)$this->input->post('satuan', true)),
+            'produsen'    => trim((string)$this->input->post('produsen', true)),
+            'spesifikasi_merk' => trim((string)$this->input->post('spesifikasi_merk', true)),
+            'golongan'    => trim((string)$this->input->post('golongan', true)),
+            'kelompok'    => trim((string)$this->input->post('kelompok', true)),
+            'komposisi'   => trim((string)$this->input->post('komposisi', true)),
+            'grup'        => trim((string)$this->input->post('grup', true)),
             'stock_minimum' => (int)$this->input->post('stock_minimum', true),
             'merk_barang' => trim((string)$this->input->post('merk_barang', true)),
             'kelompok_dagang' => trim((string)$this->input->post('kelompok_dagang', true)),

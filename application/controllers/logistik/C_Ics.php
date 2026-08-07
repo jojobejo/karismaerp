@@ -958,10 +958,13 @@ class C_Ics extends CI_Controller
         $this->M_LaporanPurchasing->ensure_schema();
 
         $filters = [
-            'source'   => trim((string) $this->input->get('source', TRUE)) ?: 'all',
-            'aging_fp' => trim((string) $this->input->get('aging_fp', TRUE)) ?: 'all',
-            'date1'    => trim((string) $this->input->get('date1', TRUE)),
-            'date2'    => trim((string) $this->input->get('date2', TRUE))
+            'source'        => trim((string) $this->input->get('source', TRUE)) ?: 'all',
+            'status_lpb'    => trim((string) $this->input->get('status_lpb', TRUE)) ?: 'all',
+            'aging_fp'      => trim((string) $this->input->get('aging_fp', TRUE)) ?: 'all',
+            'jenis_lpb'     => trim((string) $this->input->get('jenis_lpb', TRUE)) ?: 'all',
+            'aging_invoice' => trim((string) $this->input->get('aging_invoice', TRUE)) ?: 'all',
+            'date1'         => trim((string) $this->input->get('date1', TRUE)),
+            'date2'         => trim((string) $this->input->get('date2', TRUE))
         ];
 
         $data['page_title'] = 'KARISMA - Laporan Digital Purchasing & LPB';
@@ -990,10 +993,13 @@ class C_Ics extends CI_Controller
         $search = trim((string) ($this->input->post('search')['value'] ?? ''));
 
         $filters = [
-            'source'   => trim((string) $this->input->post('source')) ?: 'all',
-            'aging_fp' => trim((string) $this->input->post('aging_fp')) ?: 'all',
-            'date1'    => trim((string) $this->input->post('date1')),
-            'date2'    => trim((string) $this->input->post('date2'))
+            'source'        => trim((string) $this->input->post('source')) ?: 'all',
+            'status_lpb'    => trim((string) $this->input->post('status_lpb')) ?: 'all',
+            'aging_fp'      => trim((string) $this->input->post('aging_fp')) ?: 'all',
+            'jenis_lpb'     => trim((string) $this->input->post('jenis_lpb')) ?: 'all',
+            'aging_invoice' => trim((string) $this->input->post('aging_invoice')) ?: 'all',
+            'date1'         => trim((string) $this->input->post('date1')),
+            'date2'         => trim((string) $this->input->post('date2'))
         ];
 
         $orderArr = $this->input->post('order');
@@ -1072,6 +1078,270 @@ class C_Ics extends CI_Controller
         $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode($response));
+    }
+
+    /**
+     * Halaman Dashboard Ringkasan Hutang Purchasing (Summary Per Faktur/Invoice)
+     */
+    public function summary_hutang()
+    {
+        if (!$this->can_access_lpb_report()) {
+            show_error('Akses dashboard summary hutang ditolak.', 403);
+            return;
+        }
+
+        $this->load->model('M_LaporanPurchasing');
+        $this->M_LaporanPurchasing->ensure_schema();
+
+        $filters = [
+            'date1' => trim((string) $this->input->get('date1', TRUE)),
+            'date2' => trim((string) $this->input->get('date2', TRUE))
+        ];
+
+        $data['page_title'] = 'KARISMA - Dashboard Summary Hutang Purchasing (Per Faktur)';
+        $data['filters']    = $filters;
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/summary_hutang_purchasing.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Endpoint DataTables AJAX untuk Summary Hutang Purchasing Per Faktur
+     */
+    public function ajax_summary_hutang_data()
+    {
+        if (!$this->can_access_lpb_report()) {
+            $this->output
+                ->set_status_header(403)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['error' => 'Akses ditolak']));
+            return;
+        }
+
+        $this->load->model('M_LaporanPurchasing');
+
+        $draw   = (int) $this->input->post('draw');
+        $start  = (int) $this->input->post('start');
+        $length = (int) $this->input->post('length') ?: 25;
+        $search = trim((string) ($this->input->post('search')['value'] ?? ''));
+
+        $filters = [
+            'date1' => trim((string) $this->input->post('date1')),
+            'date2' => trim((string) $this->input->post('date2'))
+        ];
+
+        $orderArr = $this->input->post('order');
+        $orderColIndex = $orderArr[0]['column'] ?? 0;
+        $orderDir      = $orderArr[0]['dir'] ?? 'desc';
+
+        try {
+            $totalRecords = $this->M_LaporanPurchasing->get_summary_hutang_total_records($filters);
+            $rowsData     = $this->M_LaporanPurchasing->get_summary_hutang_data($filters, $search, $start, $length, $orderColIndex, $orderDir);
+
+            $response = [
+                "draw"            => $draw,
+                "recordsTotal"    => $totalRecords,
+                "recordsFiltered" => $search !== '' ? count($rowsData) : $totalRecords,
+                "data"            => $rowsData
+            ];
+        } catch (\Throwable $ex) {
+            $response = [
+                "draw"            => $draw,
+                "recordsTotal"    => 0,
+                "recordsFiltered" => 0,
+                "data"            => [],
+                "error"           => $ex->getMessage()
+            ];
+        }
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($response));
+    }
+
+    public function export_lpb_report_excel()
+    {
+        if (!$this->can_access_lpb_report()) {
+            show_error('Akses laporan LPB ditolak.', 403);
+            return;
+        }
+
+        $this->load->model('M_LaporanPurchasing');
+
+        $filters = [
+            'source'        => trim((string) $this->input->get('source', TRUE)) ?: 'all',
+            'aging_fp'      => trim((string) $this->input->get('aging_fp', TRUE)) ?: 'all',
+            'jenis_lpb'     => trim((string) $this->input->get('jenis_lpb', TRUE)) ?: 'all',
+            'aging_invoice' => trim((string) $this->input->get('aging_invoice', TRUE)) ?: 'all',
+            'date1'         => trim((string) $this->input->get('date1', TRUE)),
+            'date2'         => trim((string) $this->input->get('date2', TRUE))
+        ];
+
+        $rowsData = $this->M_LaporanPurchasing->get_report_data_for_export($filters);
+        $filename = 'Laporan_Digital_Purchasing_LPB_' . date('Ymd_His') . '.xlsx';
+
+        if (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
+            try {
+                require_once APPPATH . 'libraries/PhpSpreadsheet.php';
+                $ps = new PhpSpreadsheetLib();
+                $spreadsheet = $ps->spreadsheet();
+                $sheet = $spreadsheet->getActiveSheet();
+                $sheet->setTitle('Laporan LPB');
+
+                $headers = [
+                    'No', 'Tgl PO', 'No PO', 'Tgl Perubahan PO', 'TOP (Hari)',
+                    'Tgl LPB', 'No LPB', 'Jenis LPB', 'Sumber', 'No SJ',
+                    'No Invoice', 'Tgl Invoice', 'Tgl Perubahan Invoice', 'Tgl Riil Invoice',
+                    'Kode Supplier', 'Nama Supplier', 'Kode Barang', 'Nama Barang',
+                    'Produsen', 'Spesifikasi Merk', 'Golongan', 'Kelompok', 'Komposisi', 'Grup',
+                    'No Batch/Lot', 'Exp Date', 'Qty Diterima', 'Harga Satuan', 'Total Harga',
+                    'Sales Disc', 'CBD', 'FOC', 'Insentif CN', 'DPP', 'PPN 11%', 'PPN 12%', 'DPP Nilai Lain',
+                    'No Seri FP', 'Tgl FP', 'Tgl Terima FP', 'Tgl Input FP', 'SPT Masa',
+                    'LT PO-LPB (Hari)', 'LT FP-Hari Ini (Hari)', 'Aging FP', 'Aging Invoice'
+                ];
+
+                $col = 1;
+                foreach ($headers as $h) {
+                    $sheet->setCellValueByColumnAndRow($col, 1, $h);
+                    $col++;
+                }
+
+                $rowNum = 2;
+                foreach ($rowsData as $index => $row) {
+                    $c = 1;
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $index + 1);
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_po'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_po'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_perubahan_po'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, isset($row['top_days']) ? $row['top_days'] . ' Hari' : '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_lpb'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['nomor_lpb'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['jenis_lpb'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['source_type'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['nosj'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_invoice'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tanggal_invoice'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_perubahan_invoice'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_riil_invoice'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['kd_supplier'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['nama_supplier'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['kd_barang'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['nama_barang'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['produsen'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['spesifikasi_merk'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['golongan'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['kelompok'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['komposisi'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['grup'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_batch'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['exp_date'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['qty_diterima'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['harga_satuan'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['total_harga'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['sales_disc'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['cbd'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['foc'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['insentif_cn'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['dpp'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['ppn_11'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['ppn_12'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['dpp_nilai_lain'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_seri_fp'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_fp'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_terima_fp'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_input_fp'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['lapor_spt_masa'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['lead_time_po_lpb'] !== null ? $row['lead_time_po_lpb'] . ' Hari' : '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['lead_time_fp_today'] !== null ? $row['lead_time_fp_today'] . ' Hari' : '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['aging_fp_category'] ?? '-');
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['aging_invoice_category'] ?? '-');
+                    $rowNum++;
+                }
+
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Cache-Control: max-age=0');
+
+                $writer = $ps->writer($spreadsheet);
+                $writer->save('php://output');
+                exit;
+            } catch (\Throwable $ex) {
+                // Fallback
+            }
+        }
+
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        echo "<table border='1'>";
+        echo "<thead><tr>";
+        $headers = [
+            'No', 'Tgl PO', 'No PO', 'Tgl Perubahan PO', 'TOP (Hari)',
+            'Tgl LPB', 'No LPB', 'Jenis LPB', 'Sumber', 'No SJ',
+            'No Invoice', 'Tgl Invoice', 'Tgl Perubahan Invoice', 'Tgl Riil Invoice',
+            'Kode Supplier', 'Nama Supplier', 'Kode Barang', 'Nama Barang',
+            'Produsen', 'Spesifikasi Merk', 'Golongan', 'Kelompok', 'Komposisi', 'Grup',
+            'No Batch/Lot', 'Exp Date', 'Qty Diterima', 'Harga Satuan', 'Total Harga',
+            'Sales Disc', 'CBD', 'FOC', 'Insentif CN', 'DPP', 'PPN 11%', 'PPN 12%', 'DPP Nilai Lain',
+            'No Seri FP', 'Tgl FP', 'Tgl Terima FP', 'Tgl Input FP', 'SPT Masa',
+            'LT PO-LPB (Hari)', 'LT FP-Hari Ini (Hari)', 'Aging FP', 'Aging Invoice'
+        ];
+        foreach ($headers as $h) echo "<th>" . htmlspecialchars($h) . "</th>";
+        echo "</tr></thead><tbody>";
+        foreach ($rowsData as $index => $row) {
+            echo "<tr>";
+            echo "<td>" . ($index + 1) . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_po'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['no_po'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_perubahan_po'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars(isset($row['top_days']) ? $row['top_days'] . ' Hari' : '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_lpb'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['nomor_lpb'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['jenis_lpb'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['source_type'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['nosj'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['no_invoice'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tanggal_invoice'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_perubahan_invoice'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_riil_invoice'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['kd_supplier'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['nama_supplier'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['kd_barang'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['nama_barang'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['produsen'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['spesifikasi_merk'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['golongan'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['kelompok'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['komposisi'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['grup'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['no_batch'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['exp_date'] ?? '-') . "</td>";
+            echo "<td>" . (float)($row['qty_diterima'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['harga_satuan'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['total_harga'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['sales_disc'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['cbd'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['foc'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['insentif_cn'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['dpp'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['ppn_11'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['ppn_12'] ?? 0) . "</td>";
+            echo "<td>" . (float)($row['dpp_nilai_lain'] ?? 0) . "</td>";
+            echo "<td>" . htmlspecialchars($row['no_seri_fp'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_fp'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_terima_fp'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['tgl_input_fp'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['lapor_spt_masa'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['lead_time_po_lpb'] !== null ? $row['lead_time_po_lpb'] . ' Hari' : '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['lead_time_fp_today'] !== null ? $row['lead_time_fp_today'] . ' Hari' : '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['aging_fp_category'] ?? '-') . "</td>";
+            echo "<td>" . htmlspecialchars($row['aging_invoice_category'] ?? '-') . "</td>";
+            echo "</tr>";
+        }
+        echo "</tbody></table>";
+        exit;
     }
 
     public function lpb_manual_log()
@@ -2625,12 +2895,10 @@ class C_Ics extends CI_Controller
         );
 
         if (!$priceInfo) {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_price',
-                'message' => 'Data harga exclude PO tidak ditemukan untuk barang ini.'
-            ]);
-            return;
+            $priceInfo = [
+                'harga_satuan' => (float) ($qtyInfo['hrg_satuan'] ?? 0),
+                'harga_satuan_kecil' => (float) ($qtyInfo['hrg_satuan'] ?? 0) / ($dimensiBr > 0 ? $dimensiBr : 1)
+            ];
         }
 
         $hargaSatuan = (float) ($priceInfo['harga_satuan'] ?? 0);
@@ -2643,7 +2911,7 @@ class C_Ics extends CI_Controller
         }
         unset($insertRow);
 
-        if ($totalQty > (float) $qtyInfo['qty_kecil_sisa']) {
+        if ($totalQty > (float) $qtyInfo['qty_kecil_sisa'] + 0.0001) {
             echo json_encode([
                 'status'  => 'error',
                 'step'    => 'validate_qty',
@@ -2734,175 +3002,179 @@ class C_Ics extends CI_Controller
     public function ajax_finalize_tmp_po_received()
     {
         while (ob_get_level()) ob_end_clean();
-        ob_start();
-        
-        register_shutdown_function(function() {
-            $err = error_get_last();
-            $out = ob_get_clean();
-            if ($err) {
-                file_put_contents(APPPATH . 'logs/ajax_finalize_debug.txt', "Error: " . print_r($err, true) . "\nOutput: $out", FILE_APPEND);
-            } else {
-                file_put_contents(APPPATH . 'logs/ajax_finalize_debug.txt', "Success Output: $out\n", FILE_APPEND);
-            }
-            echo $out;
-        });
-
         header('Content-Type: application/json; charset=utf-8');
 
-        $payload = [
-            'no_po'       => trim((string) $this->input->post('no_po', TRUE)),
-            'kd_po'       => trim((string) $this->input->post('kd_po', TRUE)),
-            'kd_suplier'  => trim((string) $this->input->post('kd_suplier', TRUE)),
-            'nosj'        => trim((string) $this->input->post('nosj', TRUE)),
-            'tgl_sj'      => trim((string) $this->input->post('tgl_sj', TRUE)),
-            'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
-            'jenis_lpb'   => trim((string) $this->input->post('jenis_lpb', TRUE)),
-            'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
-            'keterangan'  => trim((string) $this->input->post('keterangan', TRUE)),
-            'dilakukan_oleh' => $this->active_user_name(),
-            'checker_name' => trim((string) $this->input->post('checker_name', TRUE)) ?: $this->active_user_name(),
-            'checker_by' => trim((string) $this->input->post('checker_by', TRUE)) ?: $this->active_user_code()
-        ];
+        try {
+            $payload = [
+                'no_po'       => trim((string) $this->input->post('no_po', TRUE)),
+                'kd_po'       => trim((string) $this->input->post('kd_po', TRUE)),
+                'kd_suplier'  => trim((string) $this->input->post('kd_suplier', TRUE)),
+                'nosj'        => trim((string) $this->input->post('nosj', TRUE)),
+                'tgl_sj'      => trim((string) $this->input->post('tgl_sj', TRUE)),
+                'no_invoice'  => trim((string) $this->input->post('no_invoice', TRUE)),
+                'jenis_lpb'   => trim((string) $this->input->post('jenis_lpb', TRUE)),
+                'gudang_id'   => trim((string) $this->input->post('gudang_id', TRUE)),
+                'keterangan'  => trim((string) $this->input->post('keterangan', TRUE)),
+                'dilakukan_oleh' => $this->active_user_name(),
+                'checker_name' => trim((string) $this->input->post('checker_name', TRUE)) ?: $this->active_user_name(),
+                'checker_by' => trim((string) $this->input->post('checker_by', TRUE)) ?: $this->active_user_code()
+            ];
 
-        if ($payload['no_po'] === '' || $payload['kd_suplier'] === '') {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_header',
-                'message' => 'Parameter utama draft penerimaan tidak lengkap.'
-            ]);
-            return;
-        }
-
-        if ($payload['no_invoice'] === '') {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_header',
-                'message' => 'Nomor invoice wajib diisi.'
-            ]);
-            return;
-        }
-
-        if ($payload['jenis_lpb'] === '') {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_header',
-                'message' => 'Jenis PO / LPB wajib dipilih.'
-            ]);
-            return;
-        }
-
-        if ($payload['gudang_id'] === '') {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_header',
-                'message' => 'Gudang wajib dipilih.'
-            ]);
-            return;
-        }
-
-        $tmpRows = $this->M_Logistik->get_tmp_po_received_posting_rows($payload['no_po'], $payload['kd_suplier']);
-
-        if (empty($tmpRows)) {
-            echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_detail',
-                'message' => 'Minimal harus ada 1 draft detail sebelum simpan.'
-            ]);
-            return;
-        }
-
-        $remainingRows = $this->M_Logistik->get_po_remaining_qty($payload['no_po'], $payload['kd_suplier']);
-        $remainingMap = [];
-        foreach ($remainingRows as $item) {
-            $remainingMap[$item['kd_po'] . '||' . $item['kd_barang']] = (float) $item['qty_kecil_sisa'];
-        }
-
-        $draftMap = [];
-        foreach ($tmpRows as $row) {
-            $key = $row['kd_po'] . '||' . $row['kd_barang'];
-            $draftMap[$key] = ($draftMap[$key] ?? 0) + (float) $row['qty_diterima'];
-        }
-
-        foreach ($draftMap as $key => $draftQty) {
-            $qtySisa = $remainingMap[$key] ?? 0;
-            if ($draftQty > $qtySisa) {
-                list($kdPo, $kdBarang) = explode('||', $key);
+            if ($payload['no_po'] === '' || $payload['kd_suplier'] === '') {
                 echo json_encode([
                     'status'  => 'error',
-                    'step'    => 'validate_qty',
-                    'message' => 'Ada qty draft yang melebihi Qty Sisa PO.',
-                    'debug'   => [
-                        'kd_po'       => $kdPo,
-                        'kd_barang'   => $kdBarang,
-                        'qty_kecil_sisa' => $qtySisa,
-                        'total_draft' => $draftQty
-                    ]
+                    'step'    => 'validate_header',
+                    'message' => 'Parameter utama draft penerimaan tidak lengkap.'
                 ]);
                 return;
             }
-        }
 
-        $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
-        $payload['detail_rows'] = $tmpRows;
+            if ($payload['no_invoice'] === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_header',
+                    'message' => 'Nomor invoice wajib diisi.'
+                ]);
+                return;
+            }
 
-        if ($payload['kd_po'] === '') {
+            if ($payload['jenis_lpb'] === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_header',
+                    'message' => 'Jenis PO / LPB wajib dipilih.'
+                ]);
+                return;
+            }
+
+            if ($payload['gudang_id'] === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_header',
+                    'message' => 'Gudang wajib dipilih.'
+                ]);
+                return;
+            }
+
+            $tmpRows = $this->M_Logistik->get_tmp_po_received_posting_rows($payload['no_po'], $payload['kd_suplier']);
+
+            if (empty($tmpRows)) {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_detail',
+                    'message' => 'Minimal harus ada 1 draft detail sebelum simpan.'
+                ]);
+                return;
+            }
+
+            $remainingRows = $this->M_Logistik->get_po_remaining_qty($payload['no_po'], $payload['kd_suplier']);
+            $remainingMap = [];
+            foreach ($remainingRows as $item) {
+                $remainingMap[$item['kd_po'] . '||' . $item['kd_barang']] = (float) $item['qty_kecil_sisa'];
+            }
+
+            $draftMap = [];
+            foreach ($tmpRows as $row) {
+                $key = $row['kd_po'] . '||' . $row['kd_barang'];
+                $draftMap[$key] = ($draftMap[$key] ?? 0) + (float) $row['qty_diterima'];
+            }
+
+            foreach ($draftMap as $key => $draftQty) {
+                $qtySisa = $remainingMap[$key] ?? 0;
+                if ($draftQty > $qtySisa + 0.0001) {
+                    list($kdPo, $kdBarang) = explode('||', $key);
+                    echo json_encode([
+                        'status'  => 'error',
+                        'step'    => 'validate_qty',
+                        'message' => 'Ada qty draft yang melebihi Qty Sisa PO.',
+                        'debug'   => [
+                            'kd_po'       => $kdPo,
+                            'kd_barang'   => $kdBarang,
+                            'qty_kecil_sisa' => $qtySisa,
+                            'total_draft' => $draftQty
+                        ]
+                    ]);
+                    return;
+                }
+            }
+
             $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
-        }
+            $payload['detail_rows'] = $tmpRows;
 
-        if ($payload['kd_po'] === '') {
+            if ($payload['kd_po'] === '') {
+                $payload['kd_po'] = trim((string) ($tmpRows[0]['kd_po'] ?? ''));
+            }
+
+            if ($payload['kd_po'] === '') {
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'validate_header',
+                    'message' => 'kd_po dari draft temporary tidak ditemukan.'
+                ]);
+                return;
+            }
+
+            $this->M_Logistik->ensure_lpb_workflow_columns();
+            $this->db->trans_begin();
+            $idLpb = $this->M_Logistik->create_lpb_from_tmp($payload, $tmpRows);
+
+            if (!$idLpb || $this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'save_final',
+                    'message' => 'Gagal menyimpan penerimaan final ke tabel LPB.'
+                ]);
+                return;
+            }
+
+            $updatedPrePoStatus = $this->M_Logistik->update_pre_po_status_by_kd_po($payload['kd_po'], 2);
+
+            if (!$updatedPrePoStatus || $this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                echo json_encode([
+                    'status'  => 'error',
+                    'step'    => 'update_pre_po_status',
+                    'message' => 'LPB berhasil dibuat, tetapi status PO gagal diperbarui.'
+                ]);
+                return;
+            }
+
+            $this->db->trans_commit();
+
+            $accountingResult = null;
+            try {
+                $this->load->library('Accounting_source_service');
+                $accountingResult = $this->accounting_source_service->post_goods_receipt(
+                    $idLpb,
+                    (int)$this->session->userdata('id') ?: null
+                );
+            } catch (Throwable $eAcc) {
+                $accountingResult = ['status' => 'error', 'message' => $eAcc->getMessage()];
+            }
+
             echo json_encode([
-                'status'  => 'error',
-                'step'    => 'validate_header',
-                'message' => 'kd_po dari draft temporary tidak ditemukan.'
-            ]);
-            return;
-        }
-
-        $this->M_Logistik->ensure_lpb_workflow_columns();
-        $this->db->trans_begin();
-        $idLpb = $this->M_Logistik->create_lpb_from_tmp($payload, $tmpRows);
-
-        if (!$idLpb || $this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
-            echo json_encode([
-                'status'  => 'error',
+                'status'  => 'success',
                 'step'    => 'save_final',
-                'message' => 'Gagal menyimpan penerimaan final ke tabel LPB.'
+                'message' => 'Penerimaan berhasil disimpan ke LPB dengan status POST, status PO diperbarui, dan draft temporary sudah dibersihkan.',
+                'accounting' => $accountingResult,
+                'debug'   => [
+                    'id_lpb'       => $idLpb,
+                    'no_po'        => $payload['no_po'],
+                    'kd_po'        => $payload['kd_po'],
+                    'total_detail' => count($tmpRows)
+                ]
             ]);
-            return;
-        }
-
-        $updatedPrePoStatus = $this->M_Logistik->update_pre_po_status_by_kd_po($payload['kd_po'], 2);
-
-        if (!$updatedPrePoStatus || $this->db->trans_status() === FALSE) {
-            $this->db->trans_rollback();
+        } catch (Throwable $e) {
+            if ($this->db->trans_status() !== FALSE) {
+                @$this->db->trans_rollback();
+            }
             echo json_encode([
                 'status'  => 'error',
-                'step'    => 'update_pre_po_status',
-                'message' => 'LPB berhasil dibuat, tetapi status PO gagal diperbarui.'
+                'step'    => 'exception',
+                'message' => 'Terjadi kesalahan sistem saat menyimpan LPB final: ' . $e->getMessage()
             ]);
-            return;
         }
-
-        $this->db->trans_commit();
-        $this->load->library('Accounting_source_service');
-        $accountingResult = $this->accounting_source_service->post_goods_receipt(
-            $idLpb,
-            (int)$this->session->userdata('id') ?: null
-        );
-
-        echo json_encode([
-            'status'  => 'success',
-            'step'    => 'save_final',
-            'message' => 'Penerimaan berhasil disimpan ke LPB dengan status POST, status PO diperbarui, dan draft temporary sudah dibersihkan.',
-            'accounting' => $accountingResult,
-            'debug'   => [
-                'id_lpb'       => $idLpb,
-                'no_po'        => $payload['no_po'],
-                'kd_po'        => $payload['kd_po'],
-                'total_detail' => count($tmpRows)
-            ]
-        ]);
     }
 
     public function simpan_opname()

@@ -4653,7 +4653,7 @@ FROM (
         return "(CASE
                     WHEN {$satuanExpr} = 'box' THEN 'box'
                     WHEN {$satuanExpr} IN ('kg', 'kgs', 'kilogram') THEN 'kg'
-                    WHEN {$satuanExpr} IN ('ltr', 'lt', 'liter', 'litre', 'l') THEN 'ltr'
+                    WHEN {$satuanExpr} IN ('ltr', 'lt', 'liter', 'litre', 'l', 'lr') THEN 'ltr'
                     WHEN {$satuanExpr} IN ('pcs', 'pc', 'piece') THEN 'pcs'
                     ELSE 'pcs'
                 END)";
@@ -4674,19 +4674,20 @@ FROM (
     public function detail_po_received($nopo, $kdsup)
     {
         $dimensiExpr = $this->po_conversion_factor_expr('a', 'pb');
+        $unitKeyExpr = $this->po_unit_key_expr('a');
         $isiExpr = "COALESCE(NULLIF(pb.isi, 0), NULLIF(a.isi, 0), 0)";
         $kemasanExpr = "COALESCE(NULLIF(pb.kemasan, 0), NULLIF(a.kemasan, 0), 0)";
         $qtyOrderKecilExpr = "(CASE
                     WHEN COALESCE(a.qty_kecil, 0) > 0 THEN COALESCE(a.qty_kecil, 0)
                     ELSE COALESCE(a.qty, 0) * {$dimensiExpr}
                 END)";
-        $qtyOrderBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN COALESCE(a.qty, 0) * {$isiExpr} ELSE 0 END)";
-        $qtyOrderKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $qtyOrderBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyOrderKecilExpr} / {$dimensiExpr} ELSE COALESCE(a.qty, 0) END)";
+        $qtyOrderKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE (CASE WHEN {$dimensiExpr} > 0 THEN {$qtyOrderKecilExpr} / {$dimensiExpr} ELSE COALESCE(a.qty, 0) END) END) ELSE 0 END)";
         $qtyDiterimaKecilExpr = "COALESCE(r.qty_diterima, 0)";
         $qtyInKecilExpr = "(COALESCE(r.qty_diterima, 0) + COALESCE(tmp.qty_in, 0))";
         $qtyDiterimaBaseExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
-        $qtyDiterimaBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN {$qtyDiterimaBaseExpr} * {$isiExpr} ELSE 0 END)";
-        $qtyDiterimaKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $qtyDiterimaBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
+        $qtyDiterimaKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE (CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END) END) ELSE 0 END)";
 
         $sql = "SELECT 
                 a.id_det_po AS id,
@@ -6464,6 +6465,9 @@ FROM (
 
     public function get_tmp_po_received_posting_rows($no_po, $kd_suplier)
     {
+        $no_po = trim(urldecode((string) $no_po));
+        $kd_suplier = trim(urldecode((string) $kd_suplier));
+
         $this->db->select('
             t.id_tmp_recieved,
             t.kd_po,
@@ -6480,11 +6484,16 @@ FROM (
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
             'tbpo_detail_po pp',
-            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang',
             'inner'
         );
         $this->db->where('pp.no_po', $no_po);
-        $this->db->where('t.kd_suplier', $kd_suplier);
+        if ($kd_suplier !== '') {
+            $this->db->group_start();
+            $this->db->where('t.kd_suplier', $kd_suplier);
+            $this->db->or_where('pp.kd_suplier', $kd_suplier);
+            $this->db->group_end();
+        }
         $this->db->order_by('t.id_tmp_recieved', 'ASC');
 
         return $this->db->get()->result_array();
@@ -8301,12 +8310,15 @@ FROM (
                 $totalHarga = (float) ($row['qty_diterima'] ?? 0) * $hargaSatuan;
             }
 
+            $normalizedExpired = $this->_normalizeDate($row['expired_date'] ?? '');
+            $stockNoLot = trim((string) ($row['no_lot'] ?? ''));
+
             $detailInsert = [
                 'id_lpb'        => $idLpb,
                 'kd_barang'     => $row['kd_barang'],
                 'qty_diterima'  => $row['qty_diterima'],
-                'no_lot'        => $row['no_lot'],
-                'expired_date'  => $row['expired_date'],
+                'no_lot'        => $stockNoLot !== '' ? $stockNoLot : null,
+                'expired_date'  => $normalizedExpired,
                 'input_at'      => date('Y-m-d H:i:s')
             ];
 
@@ -8327,8 +8339,8 @@ FROM (
 
             $batchInsert = [
                 'id_detail_lpb' => $idDetailLpb,
-                'no_lot'        => $row['no_lot'],
-                'expired_date'  => $row['expired_date'],
+                'no_lot'        => $stockNoLot !== '' ? $stockNoLot : null,
+                'expired_date'  => $normalizedExpired,
                 'qty'           => $row['qty_diterima']
             ];
 

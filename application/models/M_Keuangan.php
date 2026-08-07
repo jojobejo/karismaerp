@@ -438,6 +438,12 @@ class M_Keuangan extends CI_Model
             COALESCE(a.kategori_barang, '') AS kategori_barang,
             COALESCE(a.bhn_aktif, '') AS bahan_aktif,
             COALESCE(a.merk_barang, '') AS merk_barang,
+            " . $this->master_barang_text_select('produsen', '') . ",
+            " . $this->master_barang_text_select('spesifikasi_merk', '') . ",
+            " . $this->master_barang_text_select('golongan', '') . ",
+            " . $this->master_barang_text_select('kelompok', '') . ",
+            " . $this->master_barang_text_select('komposisi', '') . ",
+            " . $this->master_barang_text_select('grup', '') . ",
             COALESCE(a.produk_fokus, '') AS produk_fokus,
             COALESCE(a.stock_minimum, 0) AS stock_minimum,
             COALESCE(a.panjang, 0) AS panjang,
@@ -482,6 +488,11 @@ class M_Keuangan extends CI_Model
             $this->db->or_like('a.kelompok_barang', $search);
             $this->db->or_like('a.kategori_barang', $search);
             $this->db->or_like('a.merk_barang', $search);
+            if ($this->master_barang_field_exists('produsen')) $this->db->or_like('a.produsen', $search);
+            if ($this->master_barang_field_exists('spesifikasi_merk')) $this->db->or_like('a.spesifikasi_merk', $search);
+            if ($this->master_barang_field_exists('golongan')) $this->db->or_like('a.golongan', $search);
+            if ($this->master_barang_field_exists('kelompok')) $this->db->or_like('a.kelompok', $search);
+            if ($this->master_barang_field_exists('grup')) $this->db->or_like('a.grup', $search);
             $this->db->or_like('s.nama_suplier', $search);
             $this->db->group_end();
         }
@@ -523,6 +534,12 @@ class M_Keuangan extends CI_Model
         }
 
         foreach ([
+            'produsen',
+            'spesifikasi_merk',
+            'golongan',
+            'kelompok',
+            'komposisi',
+            'grup',
             'is_inventori',
             'is_beli',
             'is_jual',
@@ -536,7 +553,7 @@ class M_Keuangan extends CI_Model
             'kode_akun_pengiriman_jual',
             'kode_akun_retur_penjualan',
         ] as $field) {
-            if ($this->master_barang_field_exists($field)) {
+            if ($this->master_barang_field_exists($field) && isset($input[$field])) {
                 $data[$field] = $input[$field];
             }
         }

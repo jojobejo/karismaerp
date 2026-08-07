@@ -285,6 +285,15 @@ class M_LpbPriceAdjustment extends CI_Model
         }
 
         $this->db->trans_commit();
+
+        // Trigger Rekalkulasi HPP Average & Pricelist untuk barang terkait
+        $this->load->model('M_Pricelist');
+        foreach ($prepared as $line) {
+            if (!empty($line['kd_barang'])) {
+                $this->M_Pricelist->recalculate_hpp_average($line['kd_barang'], $user);
+            }
+        }
+
         return $this->ok('Adjustment harga LPB berhasil diposting. Konfirmasi ke bagian jurnal bahwa adjustment sudah dibuat.', [
             'id_adjustment' => $idAdjustment,
             'no_adjustment' => $noAdjustment,

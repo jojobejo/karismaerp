@@ -22,6 +22,8 @@ class C_Stock extends CI_Controller
             'date_from' => $this->input->get('date_from', true),
             'date_to' => $this->input->get('date_to', true),
             'tipe' => $this->input->get('tipe', true),
+            'kd_suplier' => $this->input->get('kd_suplier', true),
+            'status_alert' => $this->input->get('status_alert', true),
             'search' => $this->input->get('search', true),
             'include_zero' => $this->input->get('include_zero', true) === '1',
             'limit' => $this->input->get('limit', true),
@@ -183,4 +185,124 @@ class C_Stock extends CI_Controller
             $this->_json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function buffer()
+    {
+        $data['page_title'] = 'KARISMA - Buffer Stock Control';
+        $data['gudang_summary'] = $this->M_Stock->get_gudang_summary();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/stock/stock_buffer.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function buffer_summary()
+    {
+        try {
+            $this->_json([
+                'status' => 'ok',
+                'data' => $this->M_Stock->get_buffer_summary($this->_filters()),
+            ]);
+        } catch (Exception $e) {
+            $this->_json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function buffer_items()
+    {
+        try {
+            $filters = $this->_filters();
+            if (empty($filters['per_page'])) {
+                $filters['per_page'] = 15;
+            }
+
+            $this->_json([
+                'status' => 'ok',
+                'data' => $this->M_Stock->get_buffer_rows($filters),
+            ]);
+        } catch (Exception $e) {
+            $this->_json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function buffer_update_min()
+    {
+        try {
+            $kdBarang = $this->input->post('kd_barang', true);
+            $stockMinimum = $this->input->post('stock_minimum', true);
+
+            if (empty($kdBarang)) {
+                $this->_json(['status' => 'error', 'message' => 'Kode barang wajib diisi.'], 400);
+                return;
+            }
+
+            $success = $this->M_Stock->update_stock_minimum($kdBarang, $stockMinimum);
+            if ($success) {
+                $this->_json([
+                    'status' => 'ok',
+                    'message' => 'Berhasil memperbarui target minimum buffer stock barang.',
+                ]);
+            } else {
+                $this->_json(['status' => 'error', 'message' => 'Gagal mengedit minimum stock.'], 500);
+            }
+        } catch (Exception $e) {
+            $this->_json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function buffer_export()
+    {
+        try {
+            $filters = $this->_filters();
+            $filters['per_page'] = 999999;
+            $filters['page'] = 1;
+
+            $result = $this->M_Stock->get_buffer_rows($filters);
+            $rows = $result['rows'];
+
+            $filename = 'buffer_stock_report_' . date('Ymd_His') . '.csv';
+
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+            $output = fopen('php://output', 'w');
+            fputcsv($output, [
+                'Kode Barang',
+                'Nama Barang',
+                'Supplier',
+                'Satuan',
+                'Isi per Box',
+                'Min Buffer (Pcs)',
+                'Stok Fisik (Pcs)',
+                'Reserved (Pcs)',
+                'Stok Available (Pcs)',
+                'Defisit (Pcs)',
+                'Rekomendasi Reorder (Box)',
+                'Status Alert'
+            ]);
+
+            foreach ($rows as $r) {
+                fputcsv($output, [
+                    $r['kd_barang'],
+                    $r['nama_barang'],
+                    $r['nama_suplier'],
+                    $r['satuan'],
+                    $r['isi_per_box'],
+                    $r['stock_minimum'],
+                    $r['qty_on_hand'],
+                    $r['qty_reserved'],
+                    $r['qty_available'],
+                    $r['defisit'],
+                    $r['reorder_box'],
+                    $r['status_alert']
+                ]);
+            }
+
+            fclose($output);
+            exit;
+        } catch (Exception $e) {
+            show_error($e->getMessage(), 500);
+        }
+    }
 }
+
