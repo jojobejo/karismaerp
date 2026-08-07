@@ -91,6 +91,12 @@
           <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
             <?php $renderDynamicMenu($dynamicSidebarTree); ?>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>Kas Bon</p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>Log Out</p>
@@ -157,6 +163,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -206,6 +220,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -235,6 +257,14 @@
                 <i class="nav-icon fas fa-book"></i>
                 <p>
                   Jadwal Tamu
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
                 </p>
               </a>
             </li>
@@ -279,6 +309,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -307,6 +345,14 @@
                 <i class="nav-icon fas fa-pen-fancy"></i>
                 <p>
                   Create DO
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
                 </p>
               </a>
             </li>
@@ -383,6 +429,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -411,6 +465,14 @@
                 <i class="nav-icon fas fa-mobile-alt"></i>
                 <p>
                   Input Opname
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
                 </p>
               </a>
             </li>
@@ -474,6 +536,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -502,6 +572,14 @@
                 <i class="nav-icon fas fa-warehouse"></i>
                 <p>
                   Warehouse Activity
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
                 </p>
               </a>
             </li>
@@ -539,6 +617,14 @@
               <a href="<?php echo base_url('sales/C_PengajuanOD') ?>" class="nav-link">
                 <i class="nav-icon fas fa-calendar-alt"></i>
                 <p>Pengajuan OD</p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
               </a>
             </li>
             <li class="nav-item">
@@ -591,6 +677,14 @@
               </a>
             </li>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -626,6 +720,14 @@
             </li>
             <?php endif; ?>
             <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
               <a href="<?php echo base_url('logout') ?>" class="nav-link">
                 <i class="nav-icon fas fa-sign-out-alt"></i>
                 <p>
@@ -655,6 +757,14 @@
                 <i class="nav-icon fas fa-truck-loading"></i>
                 <p>
                   SPR Siap Retur
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('C_Kasbon') ?>" class="nav-link">
+                <i class="nav-icon fas fa-money-bill-wave"></i>
+                <p>
+                  Kas Bon
                 </p>
               </a>
             </li>

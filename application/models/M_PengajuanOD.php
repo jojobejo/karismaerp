@@ -30,7 +30,7 @@ class M_PengajuanOD extends CI_Model
                 $this->db->where_in('po.status', ['approved', 'rejected']);
                 $this->db->having('max_tempo_baru >', 90);
             } else {
-                $this->db->where_in('po.status', ['approved', 'rejected']);
+                $this->db->where_in('po.status', ['approved']);
             }
         } elseif (isset($filters['exclude_approved']) && $filters['exclude_approved']) {
             // ACTIVE / PENDING INBOX PAGE: Show requests waiting for action from this role
@@ -42,7 +42,7 @@ class M_PengajuanOD extends CI_Model
                 $this->db->where('po.status', 'pending_kadepsc');
                 $this->db->having('max_tempo_baru >', 90);
             } else {
-                $this->db->where_in('po.status', ['pending_mngsc', 'pending_mngtc', 'pending_kadepsc']);
+                $this->db->where_in('po.status', ['pending_mngsc', 'pending_mngtc', 'pending_kadepsc', 'rejected']);
             }
         } elseif (isset($filters['status']) && $filters['status'] != 'all') {
             $this->db->where('po.status', $filters['status']);

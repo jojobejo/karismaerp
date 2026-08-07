@@ -138,9 +138,9 @@
                                          </a>
 
                                          <!-- Edit Button for SC / Admin -->
-                                         <?php if ($row['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
+                                         <?php if (in_array($row['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
                                          <a href="<?= base_url('sales/C_PengajuanOD/edit/'.$row['id']) ?>" class="btn btn-warning btn-sm">
-                                             <i class="fas fa-edit"></i> Edit
+                                             <i class="fas fa-edit"></i> <?= $row['status'] == 'rejected' ? 'Ajukan Ulang' : 'Edit' ?>
                                          </a>
                                          <?php endif; ?>
 

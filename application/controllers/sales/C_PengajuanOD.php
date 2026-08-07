@@ -272,7 +272,7 @@ class C_PengajuanOD extends CI_Controller
             return;
         }
 
-        if ($pengajuan['status'] != 'pending_mngsc') {
+        if (!in_array($pengajuan['status'], ['pending_mngsc', 'rejected'])) {
             $this->session->set_flashdata('error', 'Pengajuan ini telah disetujui/diproses dan tidak dapat diedit lagi.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -307,7 +307,7 @@ class C_PengajuanOD extends CI_Controller
             return;
         }
 
-        if ($pengajuan['status'] != 'pending_mngsc') {
+        if (!in_array($pengajuan['status'], ['pending_mngsc', 'rejected'])) {
             $this->session->set_flashdata('error', 'Pengajuan ini telah disetujui/diproses dan tidak dapat diedit lagi.');
             redirect('sales/C_PengajuanOD');
             return;
@@ -355,6 +355,19 @@ class C_PengajuanOD extends CI_Controller
             'update_by' => $user['nama'],
             'update_at' => date('Y-m-d H:i:s')
         ];
+
+        if ($pengajuan['status'] == 'rejected') {
+            $data_update['status'] = 'pending_mngsc';
+            $data_update['approval_mngsc_by'] = null;
+            $data_update['approval_mngsc_at'] = null;
+            $data_update['catatan_mngsc'] = null;
+            $data_update['approval_mngtc_by'] = null;
+            $data_update['approval_mngtc_at'] = null;
+            $data_update['catatan_mngtc'] = null;
+            $data_update['approval_kadepsc_by'] = null;
+            $data_update['approval_kadepsc_at'] = null;
+            $data_update['catatan_kadepsc'] = null;
+        }
 
         $this->M_PengajuanOD->update_pengajuan($id, $data_update);
 

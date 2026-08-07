@@ -31,6 +31,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-wallet',
                 'description' => 'Kontrol stok harian, master barang, dan laporan keuangan operasional.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Daily Stock', 'keuangan', 'fas fa-chart-line', 'blue', 'Pantau dashboard daily stock dan ringkasan data keuangan.'),
                     $this->menu('Pembelian', 'keuangan/pembelian', 'fas fa-shopping-cart', 'orange', 'Akses modul pembelian dan monitoring PO keuangan.'),
                     $this->menu('Pembayaran Supplier', 'keuangan/pembayaran-supplier', 'fas fa-money-check-alt', 'green', 'Bayar hutang supplier dari LPB, retur, invoice, dan jurnal hutang.'),
@@ -53,6 +54,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-users',
                 'description' => 'Akses pengelolaan user, struktur kerja, dan penilaian lingkungan.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Penilaian Lingkungan', 'penilaian_lingkungan', 'fas fa-clipboard-check', 'green', 'Masuk ke modul penilaian lingkungan kerja.'),
                     $this->menu('Admin Penilaian', 'hrd/penilaian_lingkungan/admin', 'fas fa-user-shield', 'purple', 'Panel admin untuk monitoring dan konfigurasi penilaian.'),
                     $this->menu('User Management', 'master/user-management', 'fas fa-user-cog', 'dark', 'Kelola akun, level akses, dan status user.'),
@@ -64,6 +66,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-warehouse',
                 'description' => 'Pintu masuk operasional gudang, ICS, distribusi, dan stockopname.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Data All Barang', 'ics/by_allbarang', 'fas fa-boxes', 'blue', 'Pantau seluruh stok barang ICS lintas gudang dalam satu pintu data.'),
                     $this->menu('Data By Expired Date', 'ics/by_expdate', 'fas fa-calendar-alt', 'orange', 'Lihat barang berdasarkan tanggal expired untuk prioritas kontrol stok.'),
                     $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.'),
@@ -87,6 +90,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-shopping-cart',
                 'description' => 'Akses pembelian, LPB, dan monitoring PO.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Data PO', 'ics/icspo', 'fas fa-file-invoice', 'red', 'Buka data PO dan LPB yang berjalan.'),
                     $this->menu('Data LPB', 'ics/data_lpb', 'fas fa-clipboard-list', 'teal', 'Pantau data LPB dan progress penerimaan barang dari PO.'),
                     $this->menu('Input LPB Manual', 'ics/lpb_manual', 'fas fa-keyboard', 'green', 'Input LPB tanpa data PO dengan lot dan expired manual.'),
@@ -101,6 +105,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-laptop-code',
                 'description' => 'Akses modul lintas departemen untuk support dan validasi teknis.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Log LPB Manual', 'ics/lpb_manual_log', 'fas fa-terminal', 'dark', 'Pantau log sistem khusus LPB Manual.'),
                     $this->menu('Retur Pembelian', 'ics/retur', 'fas fa-undo-alt', 'red', 'Buka dashboard retur pembelian untuk support workflow Logistik, Purchasing, dan Keuangan.'),
                 ),
@@ -110,6 +115,7 @@ class M_Dashboard extends CI_Model
                 'icon' => 'fas fa-handshake',
                 'description' => 'Akses penjualan, katalog, order, dan laporan sales.',
                 'menus' => array(
+                    $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
                     $this->menu('Faktur Penjualan', 'faktur_penjualan', 'fas fa-file-invoice-dollar', 'cyan', 'Lihat semua faktur penjualan dan edit Qty retur revisi.'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),

@@ -214,7 +214,7 @@
                                         </a>
                                     <?php endif; ?>
 
-                                    <?php if ($pengajuan['status'] == 'pending_mngsc' && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
+                                    <?php if (in_array($pengajuan['status'], ['pending_mngsc', 'rejected']) && in_array($user['jobdesk'], ['SC', 'ADMINSC', 'ADMIN'])) : ?>
                                         <a href="<?= base_url('sales/C_PengajuanOD/edit/'.$pengajuan['id']) ?>" class="btn btn-warning mr-2">
                                             <i class="fas fa-edit"></i> Edit Pengajuan
                                         </a>
@@ -254,7 +254,9 @@
                                         'by'    => $pengajuan['create_by'],
                                         'at'    => $pengajuan['create_at'],
                                         'note'  => $pengajuan['catatan'],
-                                        'is_done' => true
+                                        'is_done' => true,
+                                        'is_reject' => false,
+                                        'is_active' => false
                                     ],
                                     [
                                         'label' => 'Persetujuan Manager SC',
@@ -262,7 +264,9 @@
                                         'by'    => $pengajuan['approval_mngsc_by'],
                                         'at'    => $pengajuan['approval_mngsc_at'],
                                         'note'  => $pengajuan['catatan_mngsc'],
-                                        'is_done' => in_array($st, ['pending_mngtc', 'pending_kadepsc', 'approved'])
+                                        'is_done' => !empty($pengajuan['approval_mngsc_by']) && !($st == 'rejected' && empty($pengajuan['approval_mngtc_by']) && empty($pengajuan['approval_kadepsc_by'])),
+                                        'is_reject' => ($st == 'rejected' && !empty($pengajuan['approval_mngsc_by']) && empty($pengajuan['approval_mngtc_by']) && empty($pengajuan['approval_kadepsc_by'])),
+                                        'is_active' => ($st == 'pending_mngsc')
                                     ],
                                     [
                                         'label' => 'Persetujuan Manager TC',
@@ -270,7 +274,9 @@
                                         'by'    => $pengajuan['approval_mngtc_by'],
                                         'at'    => $pengajuan['approval_mngtc_at'],
                                         'note'  => $pengajuan['catatan_mngtc'],
-                                        'is_done' => in_array($st, ['pending_kadepsc', 'approved'])
+                                        'is_done' => !empty($pengajuan['approval_mngtc_by']) && !($st == 'rejected' && empty($pengajuan['approval_kadepsc_by'])),
+                                        'is_reject' => ($st == 'rejected' && !empty($pengajuan['approval_mngtc_by']) && empty($pengajuan['approval_kadepsc_by'])),
+                                        'is_active' => ($st == 'pending_mngtc')
                                     ]
                                 ];
 
@@ -281,18 +287,32 @@
                                         'by'    => $pengajuan['approval_kadepsc_by'],
                                         'at'    => $pengajuan['approval_kadepsc_at'],
                                         'note'  => $pengajuan['catatan_kadepsc'],
-                                        'is_done' => ($st == 'approved')
+                                        'is_done' => ($st == 'approved'),
+                                        'is_reject' => ($st == 'rejected' && !empty($pengajuan['approval_kadepsc_by'])),
+                                        'is_active' => ($st == 'pending_kadepsc')
                                     ];
                                 }
                                 ?>
 
                                 <div class="timeline-od">
                                     <?php foreach ($steps as $step): 
-                                        $step_class = $step['is_done'] ? 'done' : ($st == 'rejected' ? 'reject' : 'active');
+                                        if (isset($step['is_reject']) && $step['is_reject']) {
+                                            $step_class = 'reject';
+                                            $icon_color = '#dc3545';
+                                        } elseif (isset($step['is_done']) && $step['is_done']) {
+                                            $step_class = 'done';
+                                            $icon_color = '#28a745';
+                                        } elseif (isset($step['is_active']) && $step['is_active']) {
+                                            $step_class = 'active';
+                                            $icon_color = '#ffc107';
+                                        } else {
+                                            $step_class = '';
+                                            $icon_color = '#6c757d'; // gray
+                                        }
                                     ?>
                                     <div class="tl-step <?= $step_class ?>">
                                         <div style="font-size:12px; font-weight:600;">
-                                            <i class="fas fa-<?= $step['icon'] ?> mr-1" style="color:<?= $step['is_done'] ? '#28a745' : ($st == 'rejected' ? '#dc3545' : '#ffc107') ?>;"></i>
+                                            <i class="fas fa-<?= $step['icon'] ?> mr-1" style="color:<?= $icon_color ?>;"></i>
                                             <?= $step['label'] ?>
                                         </div>
                                         <?php if ($step['by']): ?>
@@ -307,7 +327,7 @@
                                             <?php endif; ?>
                                         <?php else: ?>
                                             <div class="small text-muted mt-1 font-italic">
-                                                <?= $st == 'rejected' ? 'Dibatalkan' : 'Menunggu proses' ?>
+                                                <?= (isset($step['is_reject']) && $step['is_reject']) ? 'Dibatalkan' : 'Menunggu proses' ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
