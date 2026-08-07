@@ -25,11 +25,17 @@
     <div class="content-wrapper stock-page">
         <section class="content pt-3">
             <div class="container-fluid">
-                <div class="mb-2">
-                    <a href="<?= base_url('dashboard') ?>" class="btn btn-secondary" title="Home">
-                        <i class="fas fa-home"></i>
-                    </a>
+                <div class="mb-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="<?= base_url('dashboard') ?>" class="btn btn-secondary mr-1" title="Home">
+                            <i class="fas fa-home"></i>
+                        </a>
+                        <a href="<?= base_url('stock/buffer') ?>" class="btn btn-warning font-weight-bold" title="Buffer Stock & Restock Warning">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> Buffer Stock Control
+                        </a>
+                    </div>
                 </div>
+
 
                 <input type="hidden" id="filter-gudang" value="">
 

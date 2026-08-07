@@ -543,31 +543,49 @@ $dashboardUrl = base_url('dashboard/');
                                     <div class="tab-content">
                                         <div class="tab-pane fade show active" id="tab-informasi" role="tabpanel">
                                             <div class="form-grid">
-                                                <label for="kategori_barang">Kategori Barang :</label>
-                                                <input type="text" class="form-control" id="kategori_barang" name="kategori_barang">
+                                                 <label for="produsen">Produsen / Pendaftaran :</label>
+                                                 <input type="text" class="form-control" id="produsen" name="produsen" placeholder="misal: PT Jawa Agrindo">
 
-                                                <label for="bahan_aktif">Bahan Aktif :</label>
-                                                <input type="text" class="form-control" id="bahan_aktif" name="bahan_aktif">
+                                                 <label for="spesifikasi_merk">Spesifikasi / Merk :</label>
+                                                 <input type="text" class="form-control" id="spesifikasi_merk" name="spesifikasi_merk" placeholder="misal: Nostro 440 EC">
 
-                                                <label for="kelompok_barang">Kelompok Barang :</label>
-                                                <input type="text" class="form-control" id="kelompok_barang" name="kelompok_barang">
+                                                 <label for="golongan">Golongan :</label>
+                                                 <input type="text" class="form-control" id="golongan" name="golongan" placeholder="misal: Obat, Kimia, Pupuk">
 
-                                                <label for="merk_barang">Merk Barang :</label>
-                                                <input type="text" class="form-control" id="merk_barang" name="merk_barang">
+                                                 <label for="kelompok">Kelompok :</label>
+                                                 <input type="text" class="form-control" id="kelompok" name="kelompok" placeholder="misal: Fungisida, Herbisida, ZPT">
 
-                                                <label for="kd_suplier">Supplier Utama :</label>
-                                                <select class="form-control" id="kd_suplier" name="kd_suplier">
-                                                    <option value="">Pilih Supplier</option>
-                                                    <?php foreach (($supplier_options ?? []) as $supplier) : ?>
-                                                        <option value="<?= html_escape($supplier->kd_suplier) ?>"><?= html_escape($supplier->nama_suplier) ?></option>
-                                                    <?php endforeach; ?>
-                                                </select>
+                                                 <label for="grup">Grup Barang :</label>
+                                                 <input type="text" class="form-control" id="grup" name="grup" placeholder="misal: 0, Other">
 
-                                                <label for="stock_minimum">Stok Minimal :</label>
-                                                <input type="number" class="form-control" id="stock_minimum" name="stock_minimum" min="0">
+                                                 <label for="komposisi">Komposisi :</label>
+                                                 <input type="text" class="form-control" id="komposisi" name="komposisi" placeholder="misal: 440 g/l">
 
-                                                <label for="produk_fokus">Produk Fokus :</label>
-                                                <input type="text" class="form-control" id="produk_fokus" name="produk_fokus">
+                                                 <label for="kategori_barang">Kategori Barang :</label>
+                                                 <input type="text" class="form-control" id="kategori_barang" name="kategori_barang">
+
+                                                 <label for="bahan_aktif">Bahan Aktif :</label>
+                                                 <input type="text" class="form-control" id="bahan_aktif" name="bahan_aktif">
+
+                                                 <label for="kelompok_barang">Kelompok Barang :</label>
+                                                 <input type="text" class="form-control" id="kelompok_barang" name="kelompok_barang">
+
+                                                 <label for="merk_barang">Merk Barang :</label>
+                                                 <input type="text" class="form-control" id="merk_barang" name="merk_barang">
+
+                                                 <label for="kd_suplier">Supplier Utama :</label>
+                                                 <select class="form-control" id="kd_suplier" name="kd_suplier">
+                                                     <option value="">Pilih Supplier</option>
+                                                     <?php foreach (($supplier_options ?? []) as $supplier) : ?>
+                                                         <option value="<?= html_escape($supplier->kd_suplier) ?>"><?= html_escape($supplier->nama_suplier) ?></option>
+                                                     <?php endforeach; ?>
+                                                 </select>
+
+                                                 <label for="stock_minimum">Stok Minimal :</label>
+                                                 <input type="number" class="form-control" id="stock_minimum" name="stock_minimum" min="0">
+
+                                                 <label for="produk_fokus">Produk Fokus :</label>
+                                                 <input type="text" class="form-control" id="produk_fokus" name="produk_fokus">
                                             </div>
                                             <?php if (!$canFullEdit && $canInfoLainEdit) : ?>
                                                 <div class="readonly-note">Akses `<?= html_escape($jobdesk) ?>` hanya dapat mengubah tab Info Lain. Informasi Barang tampil baca-saja.</div>

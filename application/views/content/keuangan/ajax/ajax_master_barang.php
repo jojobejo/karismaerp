@@ -141,6 +141,12 @@
                 '#kategori_barang',
                 '#bahan_aktif',
                 '#merk_barang',
+                '#produsen',
+                '#spesifikasi_merk',
+                '#golongan',
+                '#kelompok',
+                '#komposisi',
+                '#grup',
                 '#kd_suplier',
                 '#stock_minimum',
                 '#produk_fokus'
@@ -181,6 +187,12 @@
             $('#kategori_barang').val(row.kategori_barang || '');
             $('#bahan_aktif').val(row.bahan_aktif || '');
             $('#merk_barang').val(row.merk_barang || '');
+            $('#produsen').val(row.produsen || '');
+            $('#spesifikasi_merk').val(row.spesifikasi_merk || '');
+            $('#golongan').val(row.golongan || '');
+            $('#kelompok').val(row.kelompok || '');
+            $('#komposisi').val(row.komposisi || '');
+            $('#grup').val(row.grup || '');
             $('#kd_suplier').val(row.kd_suplier || '');
             $('#stock_minimum').val(row.stock_minimum || 0);
             $('#produk_fokus').val(row.produk_fokus || '');

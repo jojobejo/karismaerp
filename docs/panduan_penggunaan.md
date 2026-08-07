@@ -62,29 +62,24 @@ Kontrol bisnis:
 - Lot dan expired wajib mengikuti dokumen/fisik barang.
 
 ## 4. Laporan LPB
-Gunakan untuk audit harian LPB.
+Gunakan untuk audit harian LPB dan monitoring status faktur pajak/invoice secara real-time.
 
 Langkah penggunaan:
-1. Buka `Laporan LPB`.
-2. Pilih sumber:
-   - `Semua Sumber`
-   - `LPB Manual Purchasing`
-   - `LPB Logistik dari PO`
-3. Isi rentang tanggal bila perlu.
-4. Klik filter.
-5. Cocokkan nilai, qty, no LPB, no PO, gudang, dan keterangan.
+1. Buka `ics/lpb_report` (Menu `Logistik` / `Purchasing` -> `Laporan LPB`).
+2. Gunakan **Filter Data Sajian (Nested Filter)**:
+   - **Level 1 (Filter Utama)**: Isikan rentang tanggal LPB Dari & Sampai, serta pilih Sumber Transaksi (*Semua*, *LPB Manual*, *LPB Logistik*).
+   - **Level 2 (Nested Sub-Filter Data)**: Pilih kriteria spesifik Aging Faktur Pajak, Aging Invoice, dan Jenis LPB.
+   - **Filter Cepat**: Gunakan tombol badge instan (*Semua Data*, *FP Belum Diterima*, *Aging FP > 60 Hari*, *Khusus LPB Manual*, *Khusus LPB Logistik*).
+3. Data pada tabel dan ringkasan statistik akan diperbarui secara otomatis (**Auto Live Reload**) tanpa perlu me-reload halaman browser.
+4. Klik tombol `Reset Filter` jika ingin mengembalikan seluruh kriteria pencarian ke kondisi default.
 
 Output yang dicek:
-- Tanggal LPB
-- Sumber LPB
-- No LPB
-- Referensi manual
-- No PO
-- Gudang
-- Total item
-- Total qty
-- Nilai
-- Keterangan
+- Tanggal LPB & No LPB
+- Sumber & Jenis LPB
+- No PO, No SJ, No Invoice, dan Faktur Pajak
+- Kode & Nama Supplier, Data Barang & Batch
+- Nilai Finansial, Diskon, DPP, PPN 11%/12%, DPP Nilai Lain
+- Aging Faktur Pajak & Lead Time Penerimaan
 
 ## 5. Retur Pembelian
 Gunakan ketika barang dari LPB final harus dikembalikan ke supplier.

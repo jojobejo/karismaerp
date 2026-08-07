@@ -287,6 +287,7 @@ $route['ics/lpb_manual/store']                      = 'logistik/C_Ics/ajax_lpb_m
 $route['ics/lpb_manual/barang']                     = 'logistik/C_Ics/ajax_lpb_manual_barang';
 $route['ics/lpb_report']                            = 'logistik/C_Ics/lpb_report';
 $route['ics/lpb_report/json']                       = 'logistik/C_Ics/ajax_lpb_report_data';
+$route['ics/lpb_report/export_excel']               = 'logistik/C_Ics/export_lpb_report_excel';
 $route['ics/lpb_manual_log']                        = 'logistik/C_Ics/lpb_manual_log';
 $route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
 $route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';

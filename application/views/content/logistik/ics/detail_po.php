@@ -332,9 +332,10 @@
                                         <th class="text-center align-middle" rowspan="2">Kode Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Nama Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Order</th>
-                                        <th class="text-center" colspan="2">Qty Order</th>
+                                        <th class="text-center" colspan="3">Qty Order</th>
+                                        <th class="text-center" colspan="2">Harga Satuan</th>
                                         <th class="text-center align-middle" rowspan="2">Qty In</th>
-                                        <th class="text-center" colspan="2">Qty Diterima</th>
+                                        <th class="text-center" colspan="4">Qty Diterima</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
                                         <?php if (!$isPurchasingDetailPo) : ?>
                                             <th class="text-center align-middle" rowspan="2">Status</th>
@@ -344,9 +345,14 @@
                                     </tr>
                                     <tr>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg/Ltr</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
+                                        <th class="text-center">Include</th>
+                                        <th class="text-center">Exclude</th>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg/Ltr</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
+                                        <th class="text-center">Qty Kecil</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -359,9 +365,14 @@
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_kecil'] ?? 0) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_ltr'] ?? 0, 2) ?></td>
+                                                <td class="text-right js-harga-include"><?= 'Rp ' . number_format((float) ($row['harga_satuan_include'] ?? 0), 2, ',', '.') ?></td>
+                                                <td class="text-right js-harga-exclude"><?= 'Rp ' . number_format((float) ($row['harga_satuan_exclude'] ?? 0), 2, ',', '.') ?></td>
                                                 <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-ltr"><?= $formatQtyPo($row['qty_diterima_ltr'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-kecil"><?= $formatQtyPo($row['qty_kecil_diterima'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
                                                 <?php if (!$isPurchasingDetailPo) : ?>
                                                     <td class="text-center js-status-cell">
@@ -393,7 +404,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="<?= $isPurchasingDetailPo ? 10 : 13 ?>" class="text-center text-muted">
+                                            <td colspan="<?= $isPurchasingDetailPo ? 16 : 19 ?>" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -604,21 +615,28 @@
 
                                 <div class="row">
 
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Total Qty Draft</div>
                                             <div class="value" id="summaryTotalQty">0</div>
                                         </div>
                                     </div>
 
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="draft-summary-stat">
+                                            <div class="label">Total Qty Kecil</div>
+                                            <div class="value" id="summaryTotalQtyKecil">0</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Jumlah Lot</div>
                                             <div class="value" id="summaryTotalLot">0</div>
                                         </div>
                                     </div>
 
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <div class="draft-summary-stat">
                                             <div class="label">Baris Draft</div>
                                             <div class="value" id="summaryTotalRows">0</div>
@@ -641,6 +659,7 @@
                                             <th>Kode Barang</th>
                                             <th>Nama Barang</th>
                                             <th class="text-center">Qty Diterima</th>
+                                            <th class="text-center">Qty Kecil</th>
                                             <th class="text-center">Satuan</th>
                                             <th>No Lot</th>
                                             <th class="text-center">Expired Date</th>
@@ -733,6 +752,7 @@
                                         <tr>
                                             <th style="min-width:150px;">Kd Barang</th>
                                             <th style="min-width:140px;">Qty Diterima</th>
+                                            <th style="min-width:140px;">Qty Kecil</th>
                                             <th style="min-width:150px;">Satuan</th>
                                             <th style="min-width:180px;">No Lot</th>
                                             <th style="min-width:180px;">Expired Date</th>
@@ -804,7 +824,7 @@
                 ],
                 columnDefs: isPurchasingDetailPo ? [] : [{
                     orderable: false,
-                    targets: [11, 12]
+                    targets: [12, 13]
                 }],
                 language: {
                     search: "Cari:",
@@ -959,8 +979,12 @@
                     var badgeClass = getStatusBadgeClass(statusBarang);
 
                     detailRow.find('.js-qty-in').text(formatNumber(row.qty_in));
+                    detailRow.find('.js-harga-include').text(formatCurrency(row.harga_satuan_include));
+                    detailRow.find('.js-harga-exclude').text(formatCurrency(row.harga_satuan_exclude));
                     detailRow.find('.js-qty-diterima-box').text(formatNumber(row.qty_diterima_box));
                     detailRow.find('.js-qty-diterima-kg').text(formatNumber(row.qty_diterima_kg));
+                    detailRow.find('.js-qty-diterima-ltr').text(formatNumber(row.qty_diterima_ltr));
+                    detailRow.find('.js-qty-diterima-kecil').text(formatNumber(row.qty_kecil_diterima));
                     detailRow.find('.js-qty-sisa').text(formatNumber(row.qty_kecil_sisa));
                     detailRow.find('.js-status-badge')
                         .attr('class', 'badge badge-' + badgeClass + ' px-3 py-2 js-status-badge')
@@ -1013,6 +1037,13 @@
                 }).format(parseFloat(value) || 0);
             }
 
+            function formatCurrency(value) {
+                return 'Rp ' + new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(parseFloat(value) || 0);
+            }
+
             function formatInputNumber(value) {
                 if (value === null || typeof value === 'undefined' || value === '') {
                     return '';
@@ -1029,7 +1060,15 @@
 
             function buildRow(rowData) {
                 var selectedSatuan = currentItem.satuan_default || '';
-                var qtyValue = rowData && rowData.qty_diterima ? formatInputNumber(rowData.qty_diterima) : '';
+                var qtyValue = rowData && typeof rowData.qty_diterima !== 'undefined' && rowData.qty_diterima !== null ? formatInputNumber(rowData.qty_diterima) : '';
+                var dimensiBr = parseFloat(currentItem.dimensi_br) || 1;
+                if (dimensiBr <= 0) dimensiBr = 1;
+
+                var qtyValNum = rowData && typeof rowData.qty_diterima !== 'undefined' && rowData.qty_diterima !== null ? parseFloat(rowData.qty_diterima) || 0 : 0;
+                var qtyKecilVal = (rowData && (typeof rowData.qty_diterima_kecil !== 'undefined' || typeof rowData.qty_kecil_diterima !== 'undefined'))
+                    ? formatInputNumber(rowData.qty_diterima_kecil || rowData.qty_kecil_diterima)
+                    : (qtyValNum > 0 ? formatInputNumber(qtyValNum * dimensiBr) : '');
+
                 var noLotValue = rowData && rowData.no_lot ? rowData.no_lot : '';
                 var expiredValue = rowData && rowData.expired_date ? rowData.expired_date : '';
 
@@ -1037,6 +1076,7 @@
                     '<tr>' +
                     '<td><input type="text" class="form-control form-control-sm bg-light js-kd-barang-row" value="' + escHtml(currentItem.kd_barang) + '" readonly></td>' +
                     '<td><input type="number" step="0.01" min="0" class="form-control form-control-sm js-qty-row" value="' + escHtml(qtyValue) + '" placeholder="0"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm bg-light js-qty-kecil-row" value="' + escHtml(qtyKecilVal) + '" readonly placeholder="0"></td>' +
                     '<td><input type="text" class="form-control form-control-sm bg-light js-satuan-row" value="' + escHtml(selectedSatuan) + '" readonly></td>' +
                     '<td><input type="text" class="form-control form-control-sm js-lot-row" value="' + escHtml(noLotValue) + '" placeholder="Nomor lot"></td>' +
                     '<td><input type="date" class="form-control form-control-sm js-exp-row" value="' + escHtml(expiredValue) + '"></td>' +
@@ -1115,12 +1155,17 @@
 
                 $.each(rows, function(index, row) {
                     var idTmpReceived = row.id_tmp_recieved || row.id_tmp_received || row.id || '';
+                    var qtyDiterimaKecil = (typeof row.qty_diterima_kecil !== 'undefined' && row.qty_diterima_kecil !== null)
+                        ? parseFloat(row.qty_diterima_kecil) || 0
+                        : ((parseFloat(row.qty_diterima) || 0) * (parseFloat(row.dimensi_br) || 1));
+
                     tbody.append(
                         '<tr>' +
                         '<td class="text-center">' + (index + 1) + '</td>' +
                         '<td>' + escHtml(row.kd_barang) + '</td>' +
                         '<td>' + escHtml(row.nama_barang) + '</td>' +
                         '<td class="text-center">' + formatNumber(row.qty_diterima) + '</td>' +
+                        '<td class="text-center">' + formatNumber(qtyDiterimaKecil) + '</td>' +
                         '<td class="text-center">' + escHtml(row.satuan) + '</td>' +
                         '<td>' + escHtml(row.no_lot || '-') + '</td>' +
                         '<td class="text-center">' + escHtml(row.expired_date || '-') + '</td>' +
@@ -1155,17 +1200,26 @@
 
             function updateSummaryStats(rows) {
                 var totalQty = 0;
+                var totalQtyKecil = 0;
                 var totalRows = rows ? rows.length : 0;
                 var totalLot = 0;
 
                 $.each(rows || [], function(_, row) {
-                    totalQty += parseFloat(row.qty_diterima) || 0;
+                    var qtyBesar = parseFloat(row.qty_diterima) || 0;
+                    var qtyKecil = (typeof row.qty_diterima_kecil !== 'undefined' && row.qty_diterima_kecil !== null)
+                        ? (parseFloat(row.qty_diterima_kecil) || 0)
+                        : (qtyBesar * (parseFloat(row.dimensi_br) || 1));
+
+                    totalQty += qtyBesar;
+                    totalQtyKecil += qtyKecil;
+
                     if ((row.no_lot || '').toString().trim() !== '') {
                         totalLot++;
                     }
                 });
 
                 $('#summaryTotalQty').text(formatNumber(totalQty));
+                $('#summaryTotalQtyKecil').text(formatNumber(totalQtyKecil));
                 $('#summaryTotalLot').text(formatNumber(totalLot));
                 $('#summaryTotalRows').text(formatNumber(totalRows));
             }
@@ -1189,8 +1243,22 @@
             function handleAjaxError(xhr, fallbackMessage) {
                 var message = fallbackMessage;
 
-                if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
-                    message = xhr.responseJSON.message;
+                if (xhr) {
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.responseText) {
+                        try {
+                            var json = JSON.parse(xhr.responseText);
+                            if (json && json.message) {
+                                message = json.message;
+                            }
+                        } catch (e) {
+                            var cleanedText = xhr.responseText.replace(/<[^>]*>?/gm, '').trim();
+                            if (cleanedText.length > 0) {
+                                message = cleanedText.substring(0, 300);
+                            }
+                        }
+                    }
                 }
 
                 Swal.fire('Gagal', message, 'error');
@@ -1325,6 +1393,14 @@
             $('#btnTambahBarisTmp').on('click', function() {
                 $('#tmpRowsBody').append(buildRow());
                 syncDeleteButtons();
+            });
+
+            $(document).on('input change', '.js-qty-row', function() {
+                var val = parseFloat($(this).val()) || 0;
+                var dimensi = parseFloat(currentItem.dimensi_br) || 1;
+                if (dimensi <= 0) dimensi = 1;
+                var qtyKecil = val > 0 ? formatInputNumber(val * dimensi) : '';
+                $(this).closest('tr').find('.js-qty-kecil-row').val(qtyKecil);
             });
 
             $(document).on('click', '.js-hapus-row', function() {

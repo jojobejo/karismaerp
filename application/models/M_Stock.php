@@ -819,4 +819,223 @@ class M_Stock extends CI_Model
 
         return $result;
     }
+
+    /**
+     * Mendapatkan data ringkasan KPI untuk Modul Buffer Stock
+     *
+     * @param array $filters Filter gudang, supplier, search, dll.
+     * @return array Data ringkasan status buffer stock
+     */
+    public function get_buffer_summary($filters = [])
+    {
+        $rows = $this->get_buffer_rows(array_merge($filters, ['per_page' => 999999, 'page' => 1]))['rows'];
+
+        $summary = [
+            'total_items' => count($rows),
+            'critical_count' => 0,
+            'under_buffer_count' => 0,
+            'warning_count' => 0,
+            'safe_count' => 0,
+            'total_defisit_pcs' => 0,
+            'total_reorder_box' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            switch ($row['status_alert']) {
+                case 'CRITICAL':
+                    $summary['critical_count']++;
+                    break;
+                case 'UNDER_BUFFER':
+                    $summary['under_buffer_count']++;
+                    break;
+                case 'WARNING':
+                    $summary['warning_count']++;
+                    break;
+                case 'SAFE':
+                    $summary['safe_count']++;
+                    break;
+            }
+
+            if ($row['defisit'] > 0) {
+                $summary['total_defisit_pcs'] += $row['defisit'];
+                $summary['total_reorder_box'] += $row['reorder_box'];
+            }
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Mendapatkan data list barang dengan kalkulasi buffer stock, defisit, dan rekomendasi reorder
+     *
+     * @param array $filters Filter pencarian & pagination
+     * @return array Kumpulan data row dan metadata pagination
+     */
+    public function get_buffer_rows($filters = [])
+    {
+        $params = [];
+        $whereClause = ["(b.is_active = 'T' OR b.is_active IS NULL)"];
+
+        // Filter Gudang untuk subquery ledger
+        $ledgerWhere = [];
+        if (!empty($filters['gudang_id'])) {
+            $ledgerWhere[] = 'l.gudang_id = ?';
+            $params[] = $filters['gudang_id'];
+        }
+        $ledgerWhereSql = $ledgerWhere ? 'WHERE ' . implode(' AND ', $ledgerWhere) : '';
+
+        // Filter Barang & Supplier
+        if (!empty($filters['kd_barang'])) {
+            $whereClause[] = 'b.kode_barang = ?';
+            $params[] = $filters['kd_barang'];
+        }
+
+        if (!empty($filters['kd_suplier'])) {
+            $whereClause[] = 'b.kd_suplier = ?';
+            $params[] = $filters['kd_suplier'];
+        }
+
+        if (!empty($filters['search'])) {
+            $whereClause[] = '(b.kode_barang LIKE ? OR b.nama_barang LIKE ? OR sp.nama_suplier LIKE ?)';
+            $params[] = '%' . $filters['search'] . '%';
+            $params[] = '%' . $filters['search'] . '%';
+            $params[] = '%' . $filters['search'] . '%';
+        }
+
+        $isiExpr = $this->_isiExpr();
+        $physicalExpr = $this->_physicalQtyExpr('l');
+        $reservedExpr = $this->_reservedQtyExpr('l');
+
+        $whereSql = 'WHERE ' . implode(' AND ', $whereClause);
+
+        $sql = "
+            SELECT
+                b.kode_barang AS kd_barang,
+                b.nama_barang,
+                b.kd_suplier,
+                COALESCE(sp.nama_suplier, '-') AS nama_suplier,
+                b.satuan,
+                {$isiExpr} AS isi_per_box,
+                COALESCE(b.stock_minimum, 0) AS stock_minimum,
+                COALESCE(s.ledger_qty_on_hand, 0) AS qty_on_hand,
+                COALESCE(s.ledger_qty_reserved, 0) AS qty_reserved,
+                GREATEST(COALESCE(s.ledger_qty_on_hand, 0) - COALESCE(s.ledger_qty_reserved, 0), 0) AS qty_available
+            FROM tbpo_barang b
+            LEFT JOIN tb_suplier sp ON sp.kd_suplier = b.kd_suplier
+            LEFT JOIN (
+                SELECT
+                    l.kd_barang,
+                    SUM({$physicalExpr}) AS ledger_qty_on_hand,
+                    SUM({$reservedExpr}) AS ledger_qty_reserved
+                FROM tberp_stock_ledger l
+                {$ledgerWhereSql}
+                GROUP BY l.kd_barang
+            ) s ON s.kd_barang = b.kode_barang
+            {$whereSql}
+            ORDER BY
+                (COALESCE(b.stock_minimum, 0) - GREATEST(COALESCE(s.ledger_qty_on_hand, 0) - COALESCE(s.ledger_qty_reserved, 0), 0)) DESC,
+                b.nama_barang ASC
+        ";
+
+        $rawRows = $this->db->query($sql, $params)->result_array();
+        $processedRows = [];
+
+        foreach ($rawRows as $r) {
+            $stockMinimum = (float)$r['stock_minimum'];
+            $qtyOnHand = (float)$r['qty_on_hand'];
+            $qtyReserved = (float)$r['qty_reserved'];
+            $qtyAvailable = (float)$r['qty_available'];
+            $isiPerBox = max(1, (int)$r['isi_per_box']);
+
+            $defisit = max(0, $stockMinimum - $qtyAvailable);
+
+            // Penentuan Status Alert Level yang Presisi
+            if ($qtyAvailable <= 0) {
+                $statusAlert = 'CRITICAL';
+            } elseif ($stockMinimum > 0 && $qtyAvailable <= $stockMinimum) {
+                $statusAlert = 'UNDER_BUFFER';
+            } elseif ($stockMinimum > 0 && $qtyAvailable <= ($stockMinimum * 1.2)) {
+                $statusAlert = 'WARNING';
+            } else {
+                $statusAlert = 'SAFE';
+            }
+
+
+            // Filter berdasarkan status alert jika diminta
+            if (!empty($filters['status_alert']) && $filters['status_alert'] !== 'all') {
+                if (strtoupper($filters['status_alert']) !== $statusAlert) {
+                    continue;
+                }
+            }
+
+            // Kalkulasi rekomendasi reorder dalam Box dan Pcs
+            $reorderBox = $defisit > 0 ? (int)ceil($defisit / $isiPerBox) : 0;
+            $reorderTotalPcs = $reorderBox * $isiPerBox;
+
+            $onHandSplit = $this->_splitBoxPcs($qtyOnHand, $isiPerBox);
+            $availableSplit = $this->_splitBoxPcs($qtyAvailable, $isiPerBox);
+            $minimumSplit = $this->_splitBoxPcs($stockMinimum, $isiPerBox);
+
+            $processedRows[] = [
+                'kd_barang' => $r['kd_barang'],
+                'nama_barang' => $r['nama_barang'],
+                'kd_suplier' => $r['kd_suplier'],
+                'nama_suplier' => $r['nama_suplier'],
+                'satuan' => $r['satuan'] ?: 'PCS',
+                'isi_per_box' => $isiPerBox,
+                'stock_minimum' => $this->_jsonNumber($stockMinimum),
+                'stock_minimum_box' => $minimumSplit['qty_box'],
+                'stock_minimum_pcs' => $minimumSplit['qty_pcs'],
+                'qty_on_hand' => $this->_jsonNumber($qtyOnHand),
+                'qty_on_hand_box' => $onHandSplit['qty_box'],
+                'qty_on_hand_pcs' => $onHandSplit['qty_pcs'],
+                'qty_reserved' => $this->_jsonNumber($qtyReserved),
+                'qty_available' => $this->_jsonNumber($qtyAvailable),
+                'qty_available_box' => $availableSplit['qty_box'],
+                'qty_available_pcs' => $availableSplit['qty_pcs'],
+                'defisit' => $this->_jsonNumber($defisit),
+                'reorder_box' => $reorderBox,
+                'reorder_total_pcs' => $reorderTotalPcs,
+                'status_alert' => $statusAlert,
+            ];
+        }
+
+        $totalFiltered = count($processedRows);
+        $page = max(1, (int)($filters['page'] ?? 1));
+        $perPage = max(1, (int)($filters['per_page'] ?? 15));
+        $offset = ($page - 1) * $perPage;
+
+        $pagedRows = array_slice($processedRows, $offset, $perPage);
+
+        return [
+            'total' => $totalFiltered,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => (int)ceil($totalFiltered / $perPage),
+            'rows' => $pagedRows,
+        ];
+    }
+
+    /**
+     * Memperbarui nilai target stock_minimum untuk suatu barang
+     *
+     * @param string $kdBarang Kode barang target
+     * @param int|float $stockMinimum Nilai minimum baru
+     * @return bool Status keberhasilan update
+     */
+    public function update_stock_minimum($kdBarang, $stockMinimum)
+    {
+        $kdBarang = trim((string)$kdBarang);
+        $stockMinimum = max(0, (float)$stockMinimum);
+
+        if ($kdBarang === '') {
+            return false;
+        }
+
+        $this->db->where('kode_barang', $kdBarang);
+        return $this->db->update('tbpo_barang', [
+            'stock_minimum' => $stockMinimum,
+        ]);
+    }
 }
+

@@ -344,6 +344,12 @@ $route['stock/batches']                             = 'stock/C_Stock/batches';
 $route['stock/ledger']                              = 'stock/C_Stock/ledger';
 $route['stock/reconciliation']                      = 'stock/C_Stock/reconciliation';
 $route['stock/sync']                                = 'stock/C_Stock/sync';
+$route['stock/buffer']                                = 'stock/C_Stock/buffer';
+$route['stock/buffer/summary']                        = 'stock/C_Stock/buffer_summary';
+$route['stock/buffer/items']                          = 'stock/C_Stock/buffer_items';
+$route['stock/buffer/export']                         = 'stock/C_Stock/buffer_export';
+$route['stock/buffer/update-minimum']                 = 'stock/C_Stock/buffer_update_min';
+
 
 // MASTER BARANG
 $route['master_barang']                             = 'keuangan/C_Keuangan/master_barang';
@@ -450,6 +456,15 @@ $route['ics/lpb_manual/store']                      = 'logistik/C_Ics/ajax_lpb_m
 $route['ics/lpb_manual/barang']                     = 'logistik/C_Ics/ajax_lpb_manual_barang';
 $route['ics/lpb_report']                            = 'logistik/C_Ics/lpb_report';
 $route['ics/lpb_report/json']                       = 'logistik/C_Ics/ajax_lpb_report_data';
+$route['ics/lpb_report/export_excel']               = 'logistik/C_Ics/export_lpb_report_excel';
+// Import Excel Purchasing ke LPB
+$route['ics/import_lpb']                            = 'logistik/C_ImportLpb/index';
+$route['ics/import_lpb/upload']                     = 'logistik/C_ImportLpb/upload';
+$route['ics/import_lpb/process']                    = 'logistik/C_ImportLpb/process';
+$route['ics/import_lpb/download_template']          = 'logistik/C_ImportLpb/download_template';
+// Summary Hutang Purchasing (Per Faktur)
+$route['ics/summary_hutang']                        = 'logistik/C_Ics/summary_hutang';
+$route['ics/summary_hutang/json']                   = 'logistik/C_Ics/ajax_summary_hutang_data';
 $route['ics/lpb_manual_log']                        = 'logistik/C_Ics/lpb_manual_log';
 $route['ics/ajax_get_lpb_records_by_kd_po']         = 'logistik/C_Ics/ajax_get_lpb_records_by_kd_po';
 $route['ics/ajax_get_lpb_record_detail']            = 'logistik/C_Ics/ajax_get_lpb_record_detail';
@@ -855,8 +870,13 @@ $route['extravaganza_registrasi']                   = 'extravaganza/C_Extravagan
 // USER REPORT
 $route['user_report']                               = 'karyawan_report/C_Report';
 
-// PRICELIST - ONLINE
+// PRICELIST - ONLINE & INTEGRATED MODULE
 $route['pricelist_online']                          = 'keuangan/C_Keuangan/pricelist_online';
+$route['pricelist']                                 = 'C_Pricelist/index';
+$route['pricelist/data']                            = 'C_Pricelist/ajax_data';
+$route['pricelist/update_margin']                   = 'C_Pricelist/update_margin';
+$route['pricelist/recalculate']                     = 'C_Pricelist/recalculate_all';
+$route['pricelist/history']                         = 'C_Pricelist/history';
 
 // SALES TONASE KUBIKASI
 $route['sales_report']                              = 'sales/C_Sales/dashboard_sales';

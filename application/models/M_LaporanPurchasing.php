@@ -5,6 +5,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * Model M_LaporanPurchasing
  * Mengelola data laporan digital purchasing & LPB komprehensif
  * Berelasi dengan tb_lpb, tb_lpb_detail, tb_lpb_batch, tbpo_po, tbpo_suplier/tbpo_supplier, tbpo_barang, dan tblpb_faktur_pajak
+ * 
+ * @author KARISMA ERP Development Team
+ * @since  2026-08-06 (Updated for Option C Hybrid Reporting)
  */
 class M_LaporanPurchasing extends CI_Model
 {
@@ -28,6 +31,10 @@ class M_LaporanPurchasing extends CI_Model
                 'kelompok'         => "ALTER TABLE `tbpo_barang` ADD COLUMN `kelompok` VARCHAR(100) NULL AFTER `golongan`",
                 'komposisi'        => "ALTER TABLE `tbpo_barang` ADD COLUMN `komposisi` TEXT NULL AFTER `kelompok`",
                 'grup'             => "ALTER TABLE `tbpo_barang` ADD COLUMN `grup` VARCHAR(100) NULL AFTER `komposisi`",
+                'bhn_aktif'        => "ALTER TABLE `tbpo_barang` ADD COLUMN `bhn_aktif` TEXT NULL AFTER `grup`",
+                'satuan'           => "ALTER TABLE `tbpo_barang` ADD COLUMN `satuan` VARCHAR(50) NULL AFTER `bhn_aktif`",
+                'isi'              => "ALTER TABLE `tbpo_barang` ADD COLUMN `isi` DECIMAL(15,2) DEFAULT 0.00 AFTER `satuan`",
+                'kemasan'          => "ALTER TABLE `tbpo_barang` ADD COLUMN `kemasan` DECIMAL(15,2) DEFAULT 0.00 AFTER `isi`",
             ];
             foreach ($colsBarang as $col => $sql) {
                 if (!$this->db->field_exists($col, 'tbpo_barang')) {
@@ -54,11 +61,15 @@ class M_LaporanPurchasing extends CI_Model
             if (!$this->db->field_exists('tgl_riil_invoice', 'tb_lpb')) {
                 @$this->db->query("ALTER TABLE `tb_lpb` ADD COLUMN `tgl_riil_invoice` DATE NULL AFTER `tgl_perubahan_invoice`");
             }
+            if (!$this->db->field_exists('status_lpb', 'tb_lpb')) {
+                @$this->db->query("ALTER TABLE `tb_lpb` ADD COLUMN `status_lpb` TINYINT(1) DEFAULT 1 AFTER `nomor_lpb`");
+            }
         }
 
         // 4. tb_lpb_detail schema
         if ($this->db->table_exists('tb_lpb_detail')) {
             $colsDetail = [
+                'harga_satuan_sebelumnya' => "ALTER TABLE `tb_lpb_detail` ADD COLUMN `harga_satuan_sebelumnya` DECIMAL(18,4) DEFAULT 0.0000 AFTER `harga_satuan`",
                 'sales_disc'     => "ALTER TABLE `tb_lpb_detail` ADD COLUMN `sales_disc` DECIMAL(15,2) DEFAULT 0.00 AFTER `total_harga`",
                 'cbd'            => "ALTER TABLE `tb_lpb_detail` ADD COLUMN `cbd` DECIMAL(15,2) DEFAULT 0.00 AFTER `sales_disc`",
                 'foc'            => "ALTER TABLE `tb_lpb_detail` ADD COLUMN `foc` DECIMAL(15,2) DEFAULT 0.00 AFTER `cbd`",
@@ -101,18 +112,20 @@ class M_LaporanPurchasing extends CI_Model
         $hasFpTable        = $this->db->table_exists('tblpb_faktur_pajak');
         $hasPoTable        = $this->db->table_exists('tbpo_po');
         $hasBarangTable    = $this->db->table_exists('tbpo_barang');
+        $hasPoDetailTable  = $this->db->table_exists('tbpo_detail_po');
 
         // Field Inspections in tb_lpb
         $hasSourceType       = $this->db->field_exists('source_type', 'tb_lpb');
         $hasNomorLpb        = $this->db->field_exists('nomor_lpb', 'tb_lpb');
         $hasJenisLpb        = $this->db->field_exists('jenis_lpb', 'tb_lpb');
+        $hasStatusLpb       = $this->db->field_exists('status_lpb', 'tb_lpb');
+        $hasGudangId        = $this->db->field_exists('gudang_id', 'tb_lpb');
         $hasTglPerubahanInv  = $this->db->field_exists('tgl_perubahan_invoice', 'tb_lpb');
         $hasTglRiilInv       = $this->db->field_exists('tgl_riil_invoice', 'tb_lpb');
 
         // Field Inspections in tbpo_po
         $hasPoTglPerubahan   = $hasPoTable && $this->db->field_exists('tgl_perubahan_po', 'tbpo_po');
         $hasPoTop            = $hasPoTable && $this->db->field_exists('top', 'tbpo_po');
-        $hasPoTgl            = $hasPoTable && ($this->db->field_exists('tgl_po', 'tbpo_po') || $this->db->field_exists('tgl_transaksi', 'tbpo_po'));
 
         // Field Inspections in tb_lpb_detail
         $hasDetailSalesDisc  = $this->db->field_exists('sales_disc', 'tb_lpb_detail');
@@ -123,6 +136,7 @@ class M_LaporanPurchasing extends CI_Model
         $hasDetailPpn11      = $this->db->field_exists('ppn_11', 'tb_lpb_detail');
         $hasDetailPpn12      = $this->db->field_exists('ppn_12', 'tb_lpb_detail');
         $hasDetailDppLain    = $this->db->field_exists('dpp_nilai_lain', 'tb_lpb_detail');
+        $hasDetailHrgSBLM   = $this->db->field_exists('harga_satuan_sebelumnya', 'tb_lpb_detail');
 
         // Field Inspections in tbpo_barang
         $hasBrgProdusen      = $hasBarangTable && $this->db->field_exists('produsen', 'tbpo_barang');
@@ -131,11 +145,17 @@ class M_LaporanPurchasing extends CI_Model
         $hasBrgKelompok      = $hasBarangTable && $this->db->field_exists('kelompok', 'tbpo_barang');
         $hasBrgKomposisi     = $hasBarangTable && $this->db->field_exists('komposisi', 'tbpo_barang');
         $hasBrgGrup          = $hasBarangTable && $this->db->field_exists('grup', 'tbpo_barang');
+        $hasBrgBhnAktif      = $hasBarangTable && $this->db->field_exists('bhn_aktif', 'tbpo_barang');
+        $hasBrgSatuan        = $hasBarangTable && $this->db->field_exists('satuan', 'tbpo_barang');
+        $hasBrgIsi           = $hasBarangTable && $this->db->field_exists('isi', 'tbpo_barang');
+        $hasBrgKemasan       = $hasBarangTable && $this->db->field_exists('kemasan', 'tbpo_barang');
 
         // Select Clauses
         $nomorLpbExpr        = $hasNomorLpb ? "COALESCE(NULLIF(TRIM(h.nomor_lpb), ''), '-')" : "'-'";
         $jenisLpbExpr        = $hasJenisLpb ? "COALESCE(NULLIF(TRIM(h.jenis_lpb), ''), 'LOGISTIK')" : "'LOGISTIK'";
         $sourceTypeExpr      = $hasSourceType ? "COALESCE(NULLIF(TRIM(h.source_type), ''), 'PO')" : "'PO'";
+        $statusLpbCodeExpr   = $hasStatusLpb ? "COALESCE(h.status_lpb, 1)" : "1";
+        $gudangIdExpr        = $hasGudangId ? "COALESCE(h.gudang_id, 0)" : "0";
         $tglPerubahanInvExpr = $hasTglPerubahanInv ? "h.tgl_perubahan_invoice" : "NULL";
         $tglRiilInvExpr      = $hasTglRiilInv ? "h.tgl_riil_invoice" : "NULL";
 
@@ -169,34 +189,44 @@ class M_LaporanPurchasing extends CI_Model
 
         // Supplier Join & Select
         $supplierJoin = "";
-        $supplierSelect = "'-' AS kd_supplier, '-' AS nama_supplier,";
+        $supplierSelect = "'-' AS kd_supplier, '-' AS nama_supplier, '-' AS alamat_supplier,";
 
         if ($hasSupplierTable === 'tbpo_suplier') {
             $hasPoKdSuplier = $hasPoTable && $this->db->field_exists('kd_suplier', 'tbpo_po');
             $hasPoKdSupplier = $hasPoTable && $this->db->field_exists('kd_supplier', 'tbpo_po');
+            $hasAlamat = $this->db->field_exists('alamat', 'tbpo_suplier');
+            $alamatCol = $hasAlamat ? "COALESCE(NULLIF(TRIM(s.alamat), ''), '-')" : "'-'";
 
             if ($hasPoKdSuplier) {
                 $supplierSelect = "COALESCE(NULLIF(TRIM(po.kd_suplier), ''), NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_supplier,
-                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,";
+                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,
+                                   {$alamatCol} AS alamat_supplier,";
                 $supplierJoin = "LEFT JOIN tbpo_suplier s ON s.kd_suplier = po.kd_suplier";
             } elseif ($hasPoKdSupplier) {
                 $supplierSelect = "COALESCE(NULLIF(TRIM(po.kd_supplier), ''), NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_supplier,
-                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,";
+                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,
+                                   {$alamatCol} AS alamat_supplier,";
                 $supplierJoin = "LEFT JOIN tbpo_suplier s ON s.kd_suplier = po.kd_supplier";
             } else {
                 $supplierSelect = "COALESCE(NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_supplier,
-                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,";
+                                   COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,
+                                   {$alamatCol} AS alamat_supplier,";
                 $supplierJoin = "LEFT JOIN tbpo_suplier s ON 1=0";
             }
         } elseif ($hasSupplierTable === 'tbpo_supplier') {
-            $hasPoKdSupplier = $hasPoTable && $this->db->field_exists('kd_supplier', 'tbpo_po');
+            $hasPoKdSupplier = $hasPoTable && $this->db->field_exists('kd_supplier', 'tbpo_supplier');
+            $hasAlamat = $this->db->field_exists('alamat', 'tbpo_supplier');
+            $alamatCol = $hasAlamat ? "COALESCE(NULLIF(TRIM(s.alamat), ''), '-')" : "'-'";
+
             if ($hasPoKdSupplier) {
                 $supplierSelect = "COALESCE(NULLIF(TRIM(po.kd_supplier), ''), NULLIF(TRIM(s.kd_supplier), ''), '-') AS kd_supplier,
-                                   COALESCE(NULLIF(TRIM(s.nama_supplier), ''), '-') AS nama_supplier,";
+                                   COALESCE(NULLIF(TRIM(s.nama_supplier), ''), '-') AS nama_supplier,
+                                   {$alamatCol} AS alamat_supplier,";
                 $supplierJoin = "LEFT JOIN tbpo_supplier s ON s.kd_supplier = po.kd_supplier";
             } else {
                 $supplierSelect = "COALESCE(NULLIF(TRIM(s.kd_supplier), ''), '-') AS kd_supplier,
-                                   COALESCE(NULLIF(TRIM(s.nama_supplier), ''), '-') AS nama_supplier,";
+                                   COALESCE(NULLIF(TRIM(s.nama_supplier), ''), '-') AS nama_supplier,
+                                   {$alamatCol} AS alamat_supplier,";
                 $supplierJoin = "LEFT JOIN tbpo_supplier s ON 1=0";
             }
         }
@@ -208,16 +238,32 @@ class M_LaporanPurchasing extends CI_Model
         $kelompokExpr    = $hasBrgKelompok ? "COALESCE(NULLIF(TRIM(brg.kelompok), ''), '-')" : "'-'";
         $komposisiExpr   = $hasBrgKomposisi ? "COALESCE(NULLIF(TRIM(brg.komposisi), ''), '-')" : "'-'";
         $grupExpr        = $hasBrgGrup ? "COALESCE(NULLIF(TRIM(brg.grup), ''), '-')" : "'-'";
+        $bhnAktifExpr    = $hasBrgBhnAktif ? "COALESCE(NULLIF(TRIM(brg.bhn_aktif), ''), '-')" : "'-'";
+        $satuanExpr      = $hasBrgSatuan ? "COALESCE(NULLIF(TRIM(brg.satuan), ''), '-')" : "'-'";
+        $isiExpr         = $hasBrgIsi ? "COALESCE(brg.isi, 0)" : "0";
+        $kemasanExpr     = $hasBrgKemasan ? "COALESCE(brg.kemasan, 0)" : "0";
 
         // Detail Financials
-        $salesDiscExpr   = $hasDetailSalesDisc ? "COALESCE(d.sales_disc, 0)" : "0";
-        $cbdExpr         = $hasDetailCbd ? "COALESCE(d.cbd, 0)" : "0";
-        $focExpr         = $hasDetailFoc ? "COALESCE(d.foc, 0)" : "0";
-        $insentifCnExpr  = $hasDetailInsentifCn ? "COALESCE(d.insentif_cn, 0)" : "0";
-        $dppExpr         = $hasDetailDpp ? "COALESCE(d.dpp, 0)" : "0";
-        $ppn11Expr       = $hasDetailPpn11 ? "COALESCE(d.ppn_11, 0)" : "0";
-        $ppn12Expr       = $hasDetailPpn12 ? "COALESCE(d.ppn_12, 0)" : "0";
-        $dppLainExpr     = $hasDetailDppLain ? "COALESCE(d.dpp_nilai_lain, 0)" : "0";
+        $salesDiscExpr       = $hasDetailSalesDisc ? "COALESCE(d.sales_disc, 0)" : "0";
+        $cbdExpr             = $hasDetailCbd ? "COALESCE(d.cbd, 0)" : "0";
+        $focExpr             = $hasDetailFoc ? "COALESCE(d.foc, 0)" : "0";
+        $insentifCnExpr      = $hasDetailInsentifCn ? "COALESCE(d.insentif_cn, 0)" : "0";
+        $dppExpr             = $hasDetailDpp ? "COALESCE(d.dpp, 0)" : "0";
+        $ppn11Expr           = $hasDetailPpn11 ? "COALESCE(d.ppn_11, 0)" : "0";
+        $ppn12Expr           = $hasDetailPpn12 ? "COALESCE(d.ppn_12, 0)" : "0";
+        $dppLainExpr         = $hasDetailDppLain ? "COALESCE(d.dpp_nilai_lain, 0)" : "0";
+        $hargaSebelumnyaExpr = $hasDetailHrgSBLM ? "COALESCE(d.harga_satuan_sebelumnya, 0)" : "0";
+
+        // Subquery Price List PO & Jumlah Per Faktur
+        $priceListPoExpr = $hasPoDetailTable 
+            ? "(SELECT COALESCE(pod.hrg_satuan, 0) FROM tbpo_detail_po pod WHERE (pod.kd_po = h.kd_po OR pod.no_po = h.no_po) AND pod.kd_barang = d.kd_barang LIMIT 1)"
+            : "0";
+
+        $jumlahPerFakturExpr = "(SELECT SUM(COALESCE(sub_d.dpp_nilai_lain, 0) + COALESCE(sub_d.ppn_12, 0)) 
+                                FROM tb_lpb sub_h 
+                                JOIN tb_lpb_detail sub_d ON sub_d.id_lpb = sub_h.id_lpb 
+                                WHERE sub_h.no_invoice = h.no_invoice 
+                                  AND NULLIF(TRIM(h.no_invoice), '') IS NOT NULL)";
 
         // Faktur Pajak Join
         $fpJoin = $hasFpTable ? "LEFT JOIN tblpb_faktur_pajak fp ON fp.id_lpb = h.id_lpb" : "";
@@ -239,6 +285,13 @@ class M_LaporanPurchasing extends CI_Model
                     {$nomorLpbExpr} AS nomor_lpb,
                     {$jenisLpbExpr} AS jenis_lpb,
                     {$sourceTypeExpr} AS source_type,
+                    {$statusLpbCodeExpr} AS status_lpb_code,
+                    CASE 
+                        WHEN {$statusLpbCodeExpr} = 2 THEN 'POSTED'
+                        WHEN {$statusLpbCodeExpr} = 0 THEN 'VOID'
+                        ELSE 'UNPOST'
+                    END AS status_lpb_text,
+                    {$gudangIdExpr} AS gudang_id,
                     h.nosj,
                     h.no_invoice,
                     h.tanggal_invoice,
@@ -257,9 +310,15 @@ class M_LaporanPurchasing extends CI_Model
                     {$kelompokExpr} AS kelompok,
                     {$komposisiExpr} AS komposisi,
                     {$grupExpr} AS grup,
+                    {$bhnAktifExpr} AS bhn_aktif,
+                    {$satuanExpr} AS satuan,
+                    {$isiExpr} AS isi,
+                    {$kemasanExpr} AS kemasan,
                     {$batchSelect}
                     COALESCE(d.qty_diterima, 0) AS qty_diterima,
                     COALESCE(d.harga_satuan, 0) AS harga_satuan,
+                    {$hargaSebelumnyaExpr} AS harga_satuan_sebelumnya,
+                    {$priceListPoExpr} AS price_list_po,
                     COALESCE(d.total_harga, 0) AS total_harga,
                     {$salesDiscExpr} AS sales_disc,
                     {$cbdExpr} AS cbd,
@@ -269,6 +328,8 @@ class M_LaporanPurchasing extends CI_Model
                     {$ppn11Expr} AS ppn_11,
                     {$ppn12Expr} AS ppn_12,
                     {$dppLainExpr} AS dpp_nilai_lain,
+                    ({$dppLainExpr} + {$ppn12Expr}) AS jumlah_hutang,
+                    COALESCE({$jumlahPerFakturExpr}, ({$dppLainExpr} + {$ppn12Expr})) AS jumlah_per_faktur,
                     {$fpSelect}
                     -- Lead Time PO ke LPB (Hari)
                     CASE 
@@ -310,7 +371,7 @@ class M_LaporanPurchasing extends CI_Model
     }
 
     /**
-     * Memproses filter kustom pada SQL Query
+     * Memproses filter kustom pada SQL Query (Termasuk Nested Filter)
      */
     private function apply_filters($sql, array $filters = [], &$params = [])
     {
@@ -338,6 +399,19 @@ class M_LaporanPurchasing extends CI_Model
                 }
             }
         }
+        if (!empty($filters['status_lpb']) && $filters['status_lpb'] !== 'all') {
+            $hasStatusLpb = $this->db->field_exists('status_lpb', 'tb_lpb');
+            if ($hasStatusLpb) {
+                $val = strtolower(trim($filters['status_lpb']));
+                if ($val === 'posted' || $val === '2') {
+                    $where[] = "h.status_lpb = 2";
+                } elseif ($val === 'void' || $val === '0') {
+                    $where[] = "h.status_lpb = 0";
+                } elseif ($val === 'unpost' || $val === '1') {
+                    $where[] = "(h.status_lpb = 1 OR h.status_lpb IS NULL)";
+                }
+            }
+        }
         if (!empty($filters['aging_fp']) && $filters['aging_fp'] !== 'all') {
             $hasFpTable = $this->db->table_exists('tblpb_faktur_pajak');
             if (!$hasFpTable || $filters['aging_fp'] === 'belum') {
@@ -354,114 +428,226 @@ class M_LaporanPurchasing extends CI_Model
                 $params[] = $filters['aging_fp'];
             }
         }
+        if (!empty($filters['jenis_lpb']) && $filters['jenis_lpb'] !== 'all') {
+            $hasJenisLpb = $this->db->field_exists('jenis_lpb', 'tb_lpb');
+            if ($hasJenisLpb) {
+                $where[] = "UPPER(TRIM(h.jenis_lpb)) = ?";
+                $params[] = strtoupper($filters['jenis_lpb']);
+            }
+        }
+        if (!empty($filters['aging_invoice']) && $filters['aging_invoice'] !== 'all') {
+            $hasTglRiil = $this->db->field_exists('tgl_riil_invoice', 'tb_lpb');
+            $tglInvExpr = $hasTglRiil ? "COALESCE(h.tgl_riil_invoice, h.tanggal_invoice)" : "h.tanggal_invoice";
 
-        $sql .= " WHERE " . implode(" AND ", $where);
-        return $sql;
+            if ($filters['aging_invoice'] === 'belum') {
+                $where[] = "{$tglInvExpr} IS NULL";
+            } else {
+                $where[] = "CASE 
+                    WHEN {$tglInvExpr} IS NULL THEN 'Belum Diterima'
+                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 0 AND 15 THEN '0 - 15 Hari'
+                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 16 AND 30 THEN '16 - 30 Hari'
+                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 31 AND 45 THEN '31 - 45 Hari'
+                    WHEN DATEDIFF(CURRENT_DATE, {$tglInvExpr}) BETWEEN 46 AND 60 THEN '46 - 60 Hari'
+                    ELSE '> 60 Hari'
+                END = ?";
+                $params[] = $filters['aging_invoice'];
+            }
+        }
+
+        $whereStr = implode(" AND ", $where);
+        return "SELECT * FROM ({$sql}) AS main_report WHERE {$whereStr}";
     }
 
     /**
-     * Mendapatkan total record tanpa limit untuk pagination DataTables
+     * Menghitung total data record laporan
      */
     public function get_total_records(array $filters = [])
     {
         $params = [];
         $baseSql = $this->build_base_query($filters);
         $filteredSql = $this->apply_filters($baseSql, $filters, $params);
-        $countSql = "SELECT COUNT(*) as total FROM ({$filteredSql}) AS sub";
-        $row = $this->db->query($countSql, $params)->row_array();
-        return (int) ($row['total'] ?? 0);
+
+        $countSql = "SELECT COUNT(*) as total FROM ({$filteredSql}) AS count_tbl";
+        $query = $this->db->query($countSql, $params);
+        $row = $query->row();
+        return $row ? (int)$row->total : 0;
     }
 
     /**
-     * Mendapatkan DataTables Server-Side Result
+     * Memuat data untuk DataTables Server-Side Processing (Laporan Detail LPB)
      */
-    public function get_datatables_data(array $filters = [], $search = '', $start = 0, $length = 25, $orderCol = 'h.id_lpb', $orderDir = 'DESC')
+    public function get_datatables_data(array $filters = [], $search = '', $start = 0, $length = 25, $orderCol = 0, $orderDir = 'asc')
     {
         $params = [];
         $baseSql = $this->build_base_query($filters);
-        $sql = $this->apply_filters($baseSql, $filters, $params);
+        $filteredSql = $this->apply_filters($baseSql, $filters, $params);
 
+        $searchClause = "";
         if (!empty($search)) {
-            $hasFpTable = $this->db->table_exists('tblpb_faktur_pajak');
-            $hasNomorLpb = $this->db->field_exists('nomor_lpb', 'tb_lpb');
-            $nomorLpbSearch = $hasNomorLpb ? "h.nomor_lpb LIKE ?" : "1=0";
-            $fpSearch = $hasFpTable ? "fp.no_seri_fp LIKE ?" : "1=0";
-
-            $sql .= " AND (
-                {$nomorLpbSearch} OR 
-                h.no_po LIKE ? OR 
-                h.nosj LIKE ? OR 
-                h.no_invoice LIKE ? OR 
-                d.kd_barang LIKE ? OR 
-                brg.nama_barang LIKE ? OR 
-                {$fpSearch}
+            $escapedSearch = $this->db->escape_like_str($search);
+            $searchClause = " AND (
+                nomor_lpb LIKE '%{$escapedSearch}%' OR
+                no_po LIKE '%{$escapedSearch}%' OR
+                nosj LIKE '%{$escapedSearch}%' OR
+                no_invoice LIKE '%{$escapedSearch}%' OR
+                kd_supplier LIKE '%{$escapedSearch}%' OR
+                nama_supplier LIKE '%{$escapedSearch}%' OR
+                kd_barang LIKE '%{$escapedSearch}%' OR
+                nama_barang LIKE '%{$escapedSearch}%' OR
+                no_seri_fp LIKE '%{$escapedSearch}%'
             )";
-            $searchTerm = '%' . $search . '%';
-            if ($hasNomorLpb) $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            if ($hasFpTable) $params[] = $searchTerm;
         }
 
-        // Safe columns for ordering
-        $allowedOrderCols = [
-            'id_lpb'                => 'h.id_lpb',
-            'tgl_po'                => 'tgl_po',
-            'no_po'                 => 'h.no_po',
-            'tgl_perubahan_po'      => 'po.tgl_perubahan_po',
-            'top_days'              => 'po.top',
-            'tgl_lpb'               => 'h.tgl_sj',
-            'nomor_lpb'             => 'h.nomor_lpb',
-            'jenis_lpb'             => 'h.jenis_lpb',
-            'source_type'           => 'h.source_type',
-            'nosj'                  => 'h.nosj',
-            'no_invoice'            => 'h.no_invoice',
-            'tanggal_invoice'       => 'h.tanggal_invoice',
-            'tgl_perubahan_invoice' => 'h.tgl_perubahan_invoice',
-            'tgl_riil_invoice'      => 'h.tgl_riil_invoice',
-            'kd_supplier'           => 'kd_supplier',
-            'nama_supplier'         => 'nama_supplier',
-            'kd_barang'             => 'd.kd_barang',
-            'nama_barang'           => 'brg.nama_barang',
-            'produsen'              => 'brg.produsen',
-            'spesifikasi_merk'      => 'brg.spesifikasi_merk',
-            'golongan'              => 'brg.golongan',
-            'kelompok'              => 'brg.kelompok',
-            'komposisi'             => 'brg.komposisi',
-            'grup'                  => 'brg.grup',
-            'qty_diterima'          => 'd.qty_diterima',
-            'harga_satuan'          => 'd.harga_satuan',
-            'total_harga'           => 'd.total_harga',
-            'sales_disc'            => 'd.sales_disc',
-            'cbd'                   => 'd.cbd',
-            'foc'                   => 'd.foc',
-            'insentif_cn'            => 'd.insentif_cn',
-            'dpp'                   => 'd.dpp',
-            'ppn_11'                => 'd.ppn_11',
-            'ppn_12'                => 'd.ppn_12',
-            'dpp_nilai_lain'        => 'd.dpp_nilai_lain',
-            'no_seri_fp'            => 'fp.no_seri_fp',
-            'tgl_fp'                => 'fp.tgl_fp',
-            'tgl_terima_fp'         => 'fp.tgl_terima_fp',
-            'tgl_input_fp'          => 'fp.tgl_input_fp',
-            'lead_time_po_lpb'      => 'lead_time_po_lpb',
-            'lead_time_fp_today'    => 'lead_time_fp_today'
+        $columns = [
+            0 => 'id_lpb',
+            1 => 'tgl_po',
+            2 => 'no_po',
+            3 => 'tgl_lpb',
+            4 => 'nomor_lpb',
+            5 => 'no_invoice',
+            6 => 'nama_supplier',
+            7 => 'nama_barang',
+            8 => 'qty_diterima',
+            9 => 'jumlah_hutang',
+            10 => 'no_seri_fp',
+            11 => 'lead_time_po_lpb'
         ];
 
-        $orderBy = $allowedOrderCols[$orderCol] ?? 'h.id_lpb';
-        $orderDir = strtoupper($orderDir) === 'ASC' ? 'ASC' : 'DESC';
+        $sortCol = isset($columns[$orderCol]) ? $columns[$orderCol] : 'id_lpb';
+        $sortDir = strtolower($orderDir) === 'desc' ? 'DESC' : 'ASC';
 
-        $sql .= " ORDER BY {$orderBy} {$orderDir}";
+        $finalSql = "SELECT * FROM ({$filteredSql}) AS data_tbl WHERE 1=1 {$searchClause} ORDER BY {$sortCol} {$sortDir} LIMIT {$start}, {$length}";
 
-        if ($length > 0) {
-            $sql .= " LIMIT ? OFFSET ?";
-            $params[] = (int) $length;
-            $params[] = (int) $start;
+        $query = $this->db->query($finalSql, $params);
+        return $query ? $query->result_array() : [];
+    }
+
+    /**
+     * Memuat seluruh dataset laporan untuk keperluan Export Excel
+     */
+    public function get_report_data_for_export(array $filters = [])
+    {
+        $params = [];
+        $baseSql = $this->build_base_query($filters);
+        $filteredSql = $this->apply_filters($baseSql, $filters, $params);
+
+        $finalSql = "SELECT * FROM ({$filteredSql}) AS export_tbl ORDER BY id_lpb DESC";
+        $query = $this->db->query($finalSql, $params);
+        return $query ? $query->result_array() : [];
+    }
+
+    /**
+     * =========================================================================
+     * DASHBOARD SUMMARY HUTANG PURCHASING (AGREGASI PER FAKTUR / INVOICE)
+     * =========================================================================
+     */
+
+    /**
+     * Query Agregasi Hutang Per Invoice / Faktur
+     */
+    private function build_summary_query(array $filters = [])
+    {
+        $hasSupplierTable = $this->db->table_exists('tbpo_suplier') ? 'tbpo_suplier' : ($this->db->table_exists('tbpo_supplier') ? 'tbpo_supplier' : '');
+        $hasPoTable       = $this->db->table_exists('tbpo_po');
+        $hasFpTable       = $this->db->table_exists('tblpb_faktur_pajak');
+
+        $supplierJoin = "";
+        $supplierSelect = "'-' AS kd_supplier, '-' AS nama_supplier,";
+
+        if ($hasSupplierTable === 'tbpo_suplier') {
+            $supplierSelect = "COALESCE(NULLIF(TRIM(po.kd_suplier), ''), NULLIF(TRIM(s.kd_suplier), ''), '-') AS kd_supplier,
+                               COALESCE(NULLIF(TRIM(s.nama_suplier), ''), '-') AS nama_supplier,";
+            $supplierJoin = "LEFT JOIN tbpo_suplier s ON s.kd_suplier = po.kd_suplier";
+        } elseif ($hasSupplierTable === 'tbpo_supplier') {
+            $supplierSelect = "COALESCE(NULLIF(TRIM(po.kd_supplier), ''), NULLIF(TRIM(s.kd_supplier), ''), '-') AS kd_supplier,
+                               COALESCE(NULLIF(TRIM(s.nama_supplier), ''), '-') AS nama_supplier,";
+            $supplierJoin = "LEFT JOIN tbpo_supplier s ON s.kd_supplier = po.kd_supplier";
         }
 
-        return $this->db->query($sql, $params)->result_array();
+        $poJoin = $hasPoTable ? "LEFT JOIN tbpo_po po ON po.kd_po = h.kd_po OR po.no_po = h.no_po" : "";
+        $fpJoin = $hasFpTable ? "LEFT JOIN tblpb_faktur_pajak fp ON fp.id_lpb = h.id_lpb" : "";
+
+        $fpSelect = $hasFpTable 
+            ? "MAX(fp.no_seri_fp) AS no_seri_fp, MAX(fp.tgl_terima_fp) AS tgl_terima_fp,"
+            : "NULL AS no_seri_fp, NULL AS tgl_terima_fp,";
+
+        $sql = "SELECT 
+                    COALESCE(NULLIF(TRIM(h.no_invoice), ''), 'TANPA INVOICE') AS no_invoice,
+                    MAX(h.tanggal_invoice) AS tanggal_invoice,
+                    MAX(h.tgl_riil_invoice) AS tgl_riil_invoice,
+                    MAX(h.tgl_sj) AS tgl_lpb_max,
+                    GROUP_CONCAT(DISTINCT h.nomor_lpb SEPARATOR ', ') AS daftar_lpb,
+                    GROUP_CONCAT(DISTINCT h.no_po SEPARATOR ', ') AS daftar_po,
+                    GROUP_CONCAT(DISTINCT h.nosj SEPARATOR ', ') AS daftar_sj,
+                    {$supplierSelect}
+                    COUNT(DISTINCT d.id_detail_lpb) AS total_item,
+                    SUM(COALESCE(d.qty_diterima, 0)) AS total_qty,
+                    SUM(COALESCE(d.dpp, 0)) AS total_dpp,
+                    SUM(COALESCE(d.ppn_11, 0)) AS total_ppn_11,
+                    SUM(COALESCE(d.dpp_nilai_lain, 0)) AS total_dpp_nilai_lain,
+                    SUM(COALESCE(d.ppn_12, 0)) AS total_ppn_12,
+                    SUM(COALESCE(d.dpp_nilai_lain, 0) + COALESCE(d.ppn_12, 0)) AS total_jumlah_hutang,
+                    {$fpSelect}
+                    MAX(h.status_lpb) AS status_lpb_code,
+                    CASE 
+                        WHEN MAX(h.status_lpb) = 2 THEN 'POSTED'
+                        WHEN MAX(h.status_lpb) = 0 THEN 'VOID'
+                        ELSE 'UNPOST'
+                    END AS status_lpb_text,
+                    -- Aging Invoice
+                    CASE 
+                        WHEN MAX(COALESCE(h.tgl_riil_invoice, h.tanggal_invoice)) IS NULL THEN 'Belum Diterima'
+                        WHEN DATEDIFF(CURRENT_DATE, MAX(COALESCE(h.tgl_riil_invoice, h.tanggal_invoice))) BETWEEN 0 AND 15 THEN '0 - 15 Hari'
+                        WHEN DATEDIFF(CURRENT_DATE, MAX(COALESCE(h.tgl_riil_invoice, h.tanggal_invoice))) BETWEEN 16 AND 30 THEN '16 - 30 Hari'
+                        WHEN DATEDIFF(CURRENT_DATE, MAX(COALESCE(h.tgl_riil_invoice, h.tanggal_invoice))) BETWEEN 31 AND 45 THEN '31 - 45 Hari'
+                        WHEN DATEDIFF(CURRENT_DATE, MAX(COALESCE(h.tgl_riil_invoice, h.tanggal_invoice))) BETWEEN 46 AND 60 THEN '46 - 60 Hari'
+                        ELSE '> 60 Hari'
+                    END AS aging_invoice_category
+                FROM tb_lpb h
+                LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
+                {$poJoin}
+                {$supplierJoin}
+                {$fpJoin}
+                GROUP BY COALESCE(NULLIF(TRIM(h.no_invoice), ''), 'TANPA INVOICE'), s.kd_suplier";
+
+        return $sql;
+    }
+
+    /**
+     * Memuat data Summary Hutang Per Faktur untuk DataTables
+     */
+    public function get_summary_hutang_data(array $filters = [], $search = '', $start = 0, $length = 25, $orderCol = 0, $orderDir = 'desc')
+    {
+        $baseSql = $this->build_summary_query($filters);
+
+        $searchClause = "";
+        if (!empty($search)) {
+            $escapedSearch = $this->db->escape_like_str($search);
+            $searchClause = " HAVING (
+                no_invoice LIKE '%{$escapedSearch}%' OR
+                daftar_po LIKE '%{$escapedSearch}%' OR
+                daftar_lpb LIKE '%{$escapedSearch}%' OR
+                daftar_sj LIKE '%{$escapedSearch}%' OR
+                nama_supplier LIKE '%{$escapedSearch}%' OR
+                no_seri_fp LIKE '%{$escapedSearch}%'
+            )";
+        }
+
+        $finalSql = "SELECT * FROM ({$baseSql}) AS sum_tbl WHERE 1=1 {$searchClause} ORDER BY total_jumlah_hutang DESC LIMIT {$start}, {$length}";
+
+        $query = $this->db->query($finalSql);
+        return $query ? $query->result_array() : [];
+    }
+
+    /**
+     * Menghitung total data summary hutang per faktur
+     */
+    public function get_summary_hutang_total_records(array $filters = [])
+    {
+        $baseSql = $this->build_summary_query($filters);
+        $countSql = "SELECT COUNT(*) as total FROM ({$baseSql}) AS sum_count";
+        $query = $this->db->query($countSql);
+        $row = $query->row();
+        return $row ? (int)$row->total : 0;
     }
 }

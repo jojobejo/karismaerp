@@ -4085,12 +4085,14 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
-        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
-            : "'-' AS checker_name";
-        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
-            : "'' AS checker_by";
+        $checkerValueExpr = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-')"
+            : "'-'";
+        $checkerSelect = "{$checkerValueExpr} AS checker_name";
+        $checkerByValueExpr = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '')"
+            : "''";
+        $checkerBySelect = "{$checkerByValueExpr} AS checker_by";
         $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
             ? "h.checker_at"
             : "NULL AS checker_at";
@@ -4107,7 +4109,6 @@ FROM (
             $checkerGroup .= ",
                 h.checker_at";
         }
-
         $sql = "SELECT
                 h.id_lpb,
                 h.kd_po,
@@ -4653,7 +4654,7 @@ FROM (
         return "(CASE
                     WHEN {$satuanExpr} = 'box' THEN 'box'
                     WHEN {$satuanExpr} IN ('kg', 'kgs', 'kilogram') THEN 'kg'
-                    WHEN {$satuanExpr} IN ('ltr', 'lt', 'liter', 'litre', 'l') THEN 'ltr'
+                    WHEN {$satuanExpr} IN ('ltr', 'lt', 'liter', 'litre', 'l', 'lr') THEN 'ltr'
                     WHEN {$satuanExpr} IN ('pcs', 'pc', 'piece') THEN 'pcs'
                     ELSE 'pcs'
                 END)";
@@ -4674,19 +4675,29 @@ FROM (
     public function detail_po_received($nopo, $kdsup)
     {
         $dimensiExpr = $this->po_conversion_factor_expr('a', 'pb');
+        $unitKeyExpr = $this->po_unit_key_expr('a');
         $isiExpr = "COALESCE(NULLIF(pb.isi, 0), NULLIF(a.isi, 0), 0)";
         $kemasanExpr = "COALESCE(NULLIF(pb.kemasan, 0), NULLIF(a.kemasan, 0), 0)";
+        $taxRateExpr = "COALESCE(NULLIF(po.tax, 0), 11)";
         $qtyOrderKecilExpr = "(CASE
                     WHEN COALESCE(a.qty_kecil, 0) > 0 THEN COALESCE(a.qty_kecil, 0)
                     ELSE COALESCE(a.qty, 0) * {$dimensiExpr}
                 END)";
-        $qtyOrderBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN COALESCE(a.qty, 0) * {$isiExpr} ELSE 0 END)";
-        $qtyOrderKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $qtyOrderBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyOrderKecilExpr} / {$dimensiExpr} ELSE COALESCE(a.qty, 0) END)";
+        $qtyOrderKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyOrderKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END) ELSE 0 END)";
         $qtyDiterimaKecilExpr = "COALESCE(r.qty_diterima, 0)";
         $qtyInKecilExpr = "(COALESCE(r.qty_diterima, 0) + COALESCE(tmp.qty_in, 0))";
         $qtyDiterimaBaseExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
-        $qtyDiterimaBoxExpr = "(CASE WHEN {$isiExpr} > 0 THEN {$qtyDiterimaBaseExpr} * {$isiExpr} ELSE 0 END)";
-        $qtyDiterimaKemasanExpr = "(CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END)";
+        $qtyDiterimaBoxExpr = "(CASE WHEN {$dimensiExpr} > 0 THEN {$qtyDiterimaKecilExpr} / {$dimensiExpr} ELSE {$qtyDiterimaKecilExpr} END)";
+        $qtyDiterimaKemasanExpr = "(CASE WHEN {$unitKeyExpr} IN ('kg', 'ltr') THEN (CASE WHEN {$kemasanExpr} > 0 THEN {$qtyDiterimaKecilExpr} / ({$kemasanExpr} / 1000) ELSE 0 END) ELSE 0 END)";
+        $hargaSatuanExcludeExpr = "COALESCE(NULLIF(a.harga_satuan_kecil_exclude, 0), NULLIF(a.harga_satuan_exclude, 0), NULLIF(a.hrg_satuan, 0), 0)";
+        $hargaSatuanIncludeExpr = "(CASE
+                    WHEN LOWER(COALESCE(NULLIF(TRIM(a.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude')) = 'include'
+                        THEN COALESCE(NULLIF(a.harga_satuan_kecil, 0), NULLIF(a.hrg_satuan, 0), 0)
+                    WHEN {$taxRateExpr} > 0
+                        THEN {$hargaSatuanExcludeExpr} + (({$taxRateExpr} / 100) * {$hargaSatuanExcludeExpr})
+                    ELSE {$hargaSatuanExcludeExpr}
+                END)";
 
         $sql = "SELECT 
                 a.id_det_po AS id,
@@ -4700,9 +4711,12 @@ FROM (
                 a.satuan,
                 {$qtyOrderKecilExpr} AS qty_order_pcs,
                 {$qtyOrderBoxExpr} AS qty_order_box,
-                {$qtyOrderKemasanExpr} AS qty_order_kg,
-                {$qtyOrderKemasanExpr} AS qty_order_ltr,
+                CASE WHEN {$unitKeyExpr} = 'kg' THEN {$qtyOrderKemasanExpr} ELSE 0 END AS qty_order_kg,
+                CASE WHEN {$unitKeyExpr} = 'ltr' THEN {$qtyOrderKemasanExpr} ELSE 0 END AS qty_order_ltr,
                 a.hrg_satuan,
+                {$hargaSatuanIncludeExpr} AS harga_satuan_include,
+                {$hargaSatuanExcludeExpr} AS harga_satuan_exclude,
+                LOWER(COALESCE(NULLIF(TRIM(a.keterangan_harga_ppn), ''), NULLIF(TRIM(po.keterangan_harga_ppn), ''), 'exclude')) AS keterangan_harga_ppn,
                 a.hrg_total AS harga_total,
                 CASE
                     WHEN {$dimensiExpr} > 0
@@ -4712,8 +4726,8 @@ FROM (
                 COALESCE(r.qty_diterima, 0) AS qty_kecil_diterima,
                 {$qtyDiterimaKecilExpr} AS qty_diterima_pcs,
                 {$qtyDiterimaBoxExpr} AS qty_diterima_box,
-                {$qtyDiterimaKemasanExpr} AS qty_diterima_kg,
-                {$qtyDiterimaKemasanExpr} AS qty_diterima_ltr,
+                CASE WHEN {$unitKeyExpr} = 'kg' THEN {$qtyDiterimaKemasanExpr} ELSE 0 END AS qty_diterima_kg,
+                CASE WHEN {$unitKeyExpr} = 'ltr' THEN {$qtyDiterimaKemasanExpr} ELSE 0 END AS qty_diterima_ltr,
                 {$qtyInKecilExpr} AS qty_in,
                 CASE
                     WHEN {$dimensiExpr} > 0
@@ -4734,6 +4748,9 @@ FROM (
                 ON b.kode_barang = a.kd_barang
             LEFT JOIN {$this->po_barang_conversion_join('pb')}
                 ON pb.kode_barang = a.kd_barang
+            LEFT JOIN tbpo_po po
+                ON po.no_po = a.no_po
+                AND po.kd_po = a.kd_po
             LEFT JOIN (
                 SELECT 
                     h.no_po,
@@ -4814,12 +4831,14 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
-        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
-            : "'-' AS checker_name";
-        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
-            : "'' AS checker_by";
+        $checkerValueExpr = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-')"
+            : "'-'";
+        $checkerSelect = "{$checkerValueExpr} AS checker_name";
+        $checkerByValueExpr = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '')"
+            : "''";
+        $checkerBySelect = "{$checkerByValueExpr} AS checker_by";
         $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
             ? "h.checker_at"
             : "NULL AS checker_at";
@@ -4969,12 +4988,14 @@ FROM (
             ? ",
                 h.status_lpb"
             : "";
-        $checkerSelect = $this->db->field_exists('checker_name', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-') AS checker_name"
-            : "'-' AS checker_name";
-        $checkerBySelect = $this->db->field_exists('checker_by', 'tb_lpb')
-            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '') AS checker_by"
-            : "'' AS checker_by";
+        $checkerValueExpr = $this->db->field_exists('checker_name', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_name), ''), '-')"
+            : "'-'";
+        $checkerSelect = "{$checkerValueExpr} AS checker_name";
+        $checkerByValueExpr = $this->db->field_exists('checker_by', 'tb_lpb')
+            ? "COALESCE(NULLIF(TRIM(h.checker_by), ''), '')"
+            : "''";
+        $checkerBySelect = "{$checkerByValueExpr} AS checker_by";
         $checkerAtSelect = $this->db->field_exists('checker_at', 'tb_lpb')
             ? "h.checker_at"
             : "NULL AS checker_at";
@@ -4991,6 +5012,12 @@ FROM (
             $checkerGroup .= ",
                 h.checker_at";
         }
+        $inputerSelect = ($this->db->table_exists('tb_lpb_log') && $this->db->field_exists('dilakukan_oleh', 'tb_lpb_log'))
+            ? "COALESCE(NULLIF(TRIM(create_log.dilakukan_oleh), ''), NULLIF(TRIM({$checkerByValueExpr}), ''), '-') AS nama_inputer"
+            : "COALESCE(NULLIF(TRIM({$checkerByValueExpr}), ''), '-') AS nama_inputer";
+        $purchasingSelect = $this->db->field_exists('harga_verified_by', 'tb_lpb_detail')
+            ? "COALESCE(NULLIF(TRIM(GROUP_CONCAT(DISTINCT NULLIF(d.harga_verified_by, '') ORDER BY d.harga_verified_by SEPARATOR ', ')), ''), '-') AS nama_purchasing"
+            : "'-' AS nama_purchasing";
 
         $sql = "SELECT
                 h.id_lpb,
@@ -5008,6 +5035,9 @@ FROM (
                 {$checkerSelect},
                 {$checkerBySelect},
                 {$checkerAtSelect},
+                {$checkerValueExpr} AS nama_checker,
+                {$inputerSelect},
+                {$purchasingSelect},
                 h.gudang_id,
                 COALESCE(g.nama_gudang, '-') AS nama_gudang,
                 h.keterangan,
@@ -5018,6 +5048,14 @@ FROM (
             FROM tb_lpb h
             LEFT JOIN tb_lpb_detail d ON d.id_lpb = h.id_lpb
             LEFT JOIN tb_gudang g ON g.id_gudang = h.gudang_id
+            LEFT JOIN (
+                SELECT
+                    id_lpb,
+                    MAX(dilakukan_oleh) AS dilakukan_oleh
+                FROM tb_lpb_log
+                WHERE action_type IN ('CREATE_LPB', 'CREATE_LPB_MANUAL')
+                GROUP BY id_lpb
+            ) create_log ON create_log.id_lpb = h.id_lpb
             WHERE h.id_lpb = ?
             GROUP BY
                 h.id_lpb,
@@ -5037,6 +5075,7 @@ FROM (
                 {$nomorLpbGroup}
                 {$statusLpbGroup}
                 {$checkerGroup}
+                , create_log.dilakukan_oleh
             LIMIT 1";
 
         return $this->append_lpb_operational_alerts_to_row($this->db->query($sql, [$id_lpb])->row_array());
@@ -6464,6 +6503,9 @@ FROM (
 
     public function get_tmp_po_received_posting_rows($no_po, $kd_suplier)
     {
+        $no_po = trim(urldecode((string) $no_po));
+        $kd_suplier = trim(urldecode((string) $kd_suplier));
+
         $this->db->select('
             t.id_tmp_recieved,
             t.kd_po,
@@ -6480,11 +6522,16 @@ FROM (
         $this->db->from('tb_tmp_po_received t');
         $this->db->join(
             'tbpo_detail_po pp',
-            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang AND pp.kd_suplier = t.kd_suplier',
+            'pp.kd_po = t.kd_po AND pp.kd_barang = t.kd_barang',
             'inner'
         );
         $this->db->where('pp.no_po', $no_po);
-        $this->db->where('t.kd_suplier', $kd_suplier);
+        if ($kd_suplier !== '') {
+            $this->db->group_start();
+            $this->db->where('t.kd_suplier', $kd_suplier);
+            $this->db->or_where('pp.kd_suplier', $kd_suplier);
+            $this->db->group_end();
+        }
         $this->db->order_by('t.id_tmp_recieved', 'ASC');
 
         return $this->db->get()->result_array();
@@ -8301,12 +8348,15 @@ FROM (
                 $totalHarga = (float) ($row['qty_diterima'] ?? 0) * $hargaSatuan;
             }
 
+            $normalizedExpired = $this->_normalizeDate($row['expired_date'] ?? '');
+            $stockNoLot = trim((string) ($row['no_lot'] ?? ''));
+
             $detailInsert = [
                 'id_lpb'        => $idLpb,
                 'kd_barang'     => $row['kd_barang'],
                 'qty_diterima'  => $row['qty_diterima'],
-                'no_lot'        => $row['no_lot'],
-                'expired_date'  => $row['expired_date'],
+                'no_lot'        => $stockNoLot !== '' ? $stockNoLot : null,
+                'expired_date'  => $normalizedExpired,
                 'input_at'      => date('Y-m-d H:i:s')
             ];
 
@@ -8327,8 +8377,8 @@ FROM (
 
             $batchInsert = [
                 'id_detail_lpb' => $idDetailLpb,
-                'no_lot'        => $row['no_lot'],
-                'expired_date'  => $row['expired_date'],
+                'no_lot'        => $stockNoLot !== '' ? $stockNoLot : null,
+                'expired_date'  => $normalizedExpired,
                 'qty'           => $row['qty_diterima']
             ];
 
