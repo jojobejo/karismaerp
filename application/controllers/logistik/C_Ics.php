@@ -2727,6 +2727,7 @@ class C_Ics extends CI_Controller
 
         $records = [];
         foreach ($headers as $header) {
+            $header = $this->M_Logistik->get_lpb_record_header((int) $header['id_lpb']) ?: $header;
             $records[] = [
                 'header' => $header,
                 'rows'   => $this->M_Logistik->get_lpb_record_detail_rows((int) $header['id_lpb'])

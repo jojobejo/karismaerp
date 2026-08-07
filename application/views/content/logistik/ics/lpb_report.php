@@ -186,8 +186,8 @@
                                     <thead class="bg-navy text-white text-center">
                                         <tr>
                                             <th rowspan="2" class="align-middle">#</th>
-                                            <th colspan="4" class="bg-primary text-white border-bottom-0">Data Purchase Order (PO)</th>
                                             <th colspan="6" class="bg-secondary text-white border-bottom-0">Data LPB & Surat Jalan</th>
+                                            <th colspan="4" class="bg-primary text-white border-bottom-0">Data Purchase Order (PO)</th>
                                             <th colspan="4" class="bg-dark text-white border-bottom-0">Invoice & Pembayaran</th>
                                             <th colspan="3" class="bg-info text-white border-bottom-0">Data Supplier</th>
                                             <th colspan="14" class="bg-teal text-white border-bottom-0">Data Barang, Konversi & Batch</th>
@@ -196,11 +196,6 @@
                                             <th colspan="4" class="bg-purple text-white border-bottom-0">Lead Time & Aging</th>
                                         </tr>
                                         <tr class="bg-light text-dark text-center small font-weight-bold">
-                                            <!-- PO -->
-                                            <th>Tgl PO</th>
-                                            <th>No PO</th>
-                                            <th>Tgl Perubahan</th>
-                                            <th>TOP (Hari)</th>
                                             <!-- LPB -->
                                             <th>Tgl LPB</th>
                                             <th>No LPB</th>
@@ -208,6 +203,11 @@
                                             <th>Sumber</th>
                                             <th>Status LPB</th>
                                             <th>No SJ</th>
+                                            <!-- PO -->
+                                            <th>Tgl PO</th>
+                                            <th>No PO</th>
+                                            <th>Tgl Perubahan</th>
+                                            <th>TOP (Hari)</th>
                                             <!-- Invoice -->
                                             <th>No Invoice</th>
                                             <th>Tgl Invoice</th>
@@ -386,11 +386,6 @@
                         }, 
                         className: 'text-center' 
                     },
-                    // PO Data
-                    { data: 'tgl_po', defaultContent: '-' },
-                    { data: 'no_po', defaultContent: '-' },
-                    { data: 'tgl_perubahan_po', defaultContent: '-' },
-                    { data: 'top_days', render: function(val) { return val ? val + ' Hari' : '-'; }, className: 'text-center' },
                     // LPB Data
                     { data: 'tgl_lpb', defaultContent: '-' },
                     { data: 'nomor_lpb', defaultContent: '-' },
@@ -415,6 +410,11 @@
                         className: 'text-center'
                     },
                     { data: 'nosj', defaultContent: '-' },
+                    // PO Data
+                    { data: 'tgl_po', defaultContent: '-' },
+                    { data: 'no_po', defaultContent: '-' },
+                    { data: 'tgl_perubahan_po', defaultContent: '-' },
+                    { data: 'top_days', render: function(val) { return val ? val + ' Hari' : '-'; }, className: 'text-center' },
                     // Invoice Data
                     { data: 'no_invoice', defaultContent: '-' },
                     { data: 'tanggal_invoice', defaultContent: '-' },

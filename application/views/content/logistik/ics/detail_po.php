@@ -332,9 +332,10 @@
                                         <th class="text-center align-middle" rowspan="2">Kode Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Nama Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Order</th>
-                                        <th class="text-center" colspan="2">Qty Order</th>
+                                        <th class="text-center" colspan="3">Qty Order</th>
+                                        <th class="text-center" colspan="2">Harga Satuan</th>
                                         <th class="text-center align-middle" rowspan="2">Qty In</th>
-                                        <th class="text-center" colspan="3">Qty Diterima</th>
+                                        <th class="text-center" colspan="4">Qty Diterima</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
                                         <?php if (!$isPurchasingDetailPo) : ?>
                                             <th class="text-center align-middle" rowspan="2">Status</th>
@@ -344,9 +345,13 @@
                                     </tr>
                                     <tr>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg/Ltr</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
+                                        <th class="text-center">Include</th>
+                                        <th class="text-center">Exclude</th>
                                         <th class="text-center">Box</th>
-                                        <th class="text-center">Kg/Ltr</th>
+                                        <th class="text-center">Kg</th>
+                                        <th class="text-center">Ltr</th>
                                         <th class="text-center">Qty Kecil</th>
                                     </tr>
                                 </thead>
@@ -360,9 +365,13 @@
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_kecil'] ?? 0) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center"><?= $formatQtyPo($row['qty_order_ltr'] ?? 0, 2) ?></td>
+                                                <td class="text-right js-harga-include"><?= 'Rp ' . number_format((float) ($row['harga_satuan_include'] ?? 0), 2, ',', '.') ?></td>
+                                                <td class="text-right js-harga-exclude"><?= 'Rp ' . number_format((float) ($row['harga_satuan_exclude'] ?? 0), 2, ',', '.') ?></td>
                                                 <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
+                                                <td class="text-center js-qty-diterima-ltr"><?= $formatQtyPo($row['qty_diterima_ltr'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kecil"><?= $formatQtyPo($row['qty_kecil_diterima'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-sisa"><?= $formatQtyPo($row['qty_kecil_sisa'] ?? 0) ?></td>
                                                 <?php if (!$isPurchasingDetailPo) : ?>
@@ -395,7 +404,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="<?= $isPurchasingDetailPo ? 11 : 14 ?>" class="text-center text-muted">
+                                            <td colspan="<?= $isPurchasingDetailPo ? 16 : 19 ?>" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -970,8 +979,11 @@
                     var badgeClass = getStatusBadgeClass(statusBarang);
 
                     detailRow.find('.js-qty-in').text(formatNumber(row.qty_in));
+                    detailRow.find('.js-harga-include').text(formatCurrency(row.harga_satuan_include));
+                    detailRow.find('.js-harga-exclude').text(formatCurrency(row.harga_satuan_exclude));
                     detailRow.find('.js-qty-diterima-box').text(formatNumber(row.qty_diterima_box));
                     detailRow.find('.js-qty-diterima-kg').text(formatNumber(row.qty_diterima_kg));
+                    detailRow.find('.js-qty-diterima-ltr').text(formatNumber(row.qty_diterima_ltr));
                     detailRow.find('.js-qty-diterima-kecil').text(formatNumber(row.qty_kecil_diterima));
                     detailRow.find('.js-qty-sisa').text(formatNumber(row.qty_kecil_sisa));
                     detailRow.find('.js-status-badge')
@@ -1021,6 +1033,13 @@
             function formatNumber(value) {
                 return new Intl.NumberFormat('id-ID', {
                     minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                }).format(parseFloat(value) || 0);
+            }
+
+            function formatCurrency(value) {
+                return 'Rp ' + new Intl.NumberFormat('id-ID', {
+                    minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 }).format(parseFloat(value) || 0);
             }

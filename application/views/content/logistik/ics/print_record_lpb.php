@@ -134,6 +134,18 @@
                     <td class="header-label">Keterangan</td>
                     <td><?= htmlspecialchars($header['keterangan'] ?? '-') ?></td>
                 </tr>
+                <tr>
+                    <td class="header-label">Nama Checker</td>
+                    <td><?= htmlspecialchars($header['nama_checker'] ?? $header['checker_name'] ?? '-') ?></td>
+                    <td class="header-label">Nama Inputer</td>
+                    <td><?= htmlspecialchars($header['nama_inputer'] ?? '-') ?></td>
+                </tr>
+                <tr>
+                    <td class="header-label">Nama Purchasing</td>
+                    <td><?= htmlspecialchars($header['nama_purchasing'] ?? '-') ?></td>
+                    <td class="header-label">Waktu Checker</td>
+                    <td><?= htmlspecialchars($header['checker_at'] ?? '-') ?></td>
+                </tr>
             </table>
 
             <table class="detail-table">
