@@ -98,8 +98,7 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => '127.0.0.1',
-	'port' => 3308,
+		'hostname' => 'localhost',
 	'username' => 'root',
 	'password' => '',
 	'database' => 'kiucoid_karismaerp_local',
