@@ -245,6 +245,17 @@ $route['keuangan/kas_masuk/delete']                     = 'keuangan/C_KasMasuk/d
 $route['keuangan/kas_masuk/terbilang_ajax']             = 'keuangan/C_KasMasuk/terbilang_ajax';
 $route['keuangan/kas_masuk/accounts_lookup']             = 'keuangan/C_KasMasuk/accounts_lookup';
 $route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/print_receipt/$1';
+
+// KASIR - Transaksi Kas Harian
+$route['keuangan/kasir']                                = 'keuangan/C_Kasir/index';
+$route['keuangan/kasir/simpan_transaksi']               = 'keuangan/C_Kasir/simpan_transaksi';
+$route['keuangan/kasir/hapus_transaksi']                = 'keuangan/C_Kasir/hapus_transaksi';
+$route['keuangan/kasir/get_transaksi']                  = 'keuangan/C_Kasir/get_transaksi';
+$route['keuangan/kasir/set_saldo']                      = 'keuangan/C_Kasir/set_saldo';
+$route['keuangan/kasir/get_saldo']                      = 'keuangan/C_Kasir/get_saldo';
+$route['keuangan/kasir/tambah_pilihan']                 = 'keuangan/C_Kasir/tambah_pilihan';
+$route['keuangan/kasir/hapus_pilihan']                  = 'keuangan/C_Kasir/hapus_pilihan';
+
 $route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
 $route['keuangan/jurnal/pembelian']                 = 'keuangan/C_Keuangan/jurnal_pembelian';
 $route['keuangan/jurnal/penjualan']                 = 'keuangan/C_Keuangan/jurnal_penjualan';

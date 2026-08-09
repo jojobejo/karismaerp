@@ -138,7 +138,6 @@ class C_Laporan extends CI_Controller
         $all_products_data = [];
         
         foreach ($products as $prod) {
-            // Fetch IN transactions
             $in_query = "SELECT l.tgl_sj AS tanggal, l.nomor_lpb AS referensi, ld.qty_diterima AS qty, ld.harga_satuan AS harga, l.gudang_id, 'IN' AS type, b.satuan
                          FROM tb_lpb l
                          JOIN tb_lpb_detail ld ON l.id_lpb = ld.id_lpb
@@ -150,6 +149,22 @@ class C_Laporan extends CI_Controller
                 $params_in[] = $id_gudang;
             }
             $in_tx = $this->db->query($in_query, $params_in)->result_array();
+
+            // Fetch IN transactions from Retur Penjualan
+            $retur_query = "SELECT r.tanggal_retur AS tanggal, r.no_retur AS referensi, rd.qty_retur AS qty, rd.harga_satuan AS harga, r.gudang_id, 'IN' AS type, b.satuan
+                            FROM tbrp_retur_penjualan_header r
+                            JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
+                            JOIN tbpo_barang b ON rd.nama_barang = b.nama_barang
+                            WHERE b.kode_barang = ? AND r.status_retur NOT IN ('ditolak', 'batal')";
+            $params_retur = [$prod['kode_barang']];
+            if ($id_gudang && $id_gudang !== 'all') {
+                $retur_query .= " AND r.gudang_id = ?";
+                $params_retur[] = $id_gudang;
+            }
+            $retur_tx = $this->db->query($retur_query, $params_retur)->result_array();
+
+            // Merge all IN transactions
+            $in_tx = array_merge($in_tx, $retur_tx);
 
             // Fetch OUT transactions from sales invoices (tbso_faktur_detail)
             $out_query = "SELECT f.tanggal_faktur AS tanggal, f.no_faktur AS referensi, fd.qty, fd.hrg_satuan AS harga, f.gudang_id, 'OUT' AS type, b.satuan
