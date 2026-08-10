@@ -576,21 +576,86 @@ $(document).ready(function() {
 
     function disableForm() {
         $('#form-kas-keluar').data('disabled', true);
-        $('#form-kas-keluar input, #form-kas-keluar select').prop('disabled', true);
+        $('#form-kas-keluar input, #form-kas-keluar select, #form-kas-keluar textarea').prop('disabled', true);
         $('#btn-tambah-baris, #btn-hapus-baris, #btn-rekam-draft, #btn-rekam').hide();
+        $('#btn-buka-ulang, #btn-rekam-ulang').show();
     }
 
-    // Submit handler
-    $('#btn-rekam').click(function() {
-        $('#form-kas-keluar').append('<input type="hidden" name="post_now" value="1">');
+    function enableForm() {
+        $('#form-kas-keluar').data('disabled', false);
+        $('#form-kas-keluar input, #form-kas-keluar select, #form-kas-keluar textarea').prop('disabled', false);
+        $('#total_amount_display').prop('disabled', true);
+        $('#btn-tambah-baris, #btn-hapus-baris, #btn-rekam-draft, #btn-rekam').show();
+    }
+
+    // Button Buka Ulang Handler (Unpost/Reopen for editing)
+    $('#btn-buka-ulang').click(function() {
+        enableForm();
+        alert('Form telah dibuka kembali. Anda sekarang dapat mengedit transaksi ini dan mengklik Rekam atau Rekam Draft.');
     });
 
-    $('#btn-rekam-draft').click(function() {
+    // Button Rekam Ulang Handler (Duplicate/Create New from Template)
+    $('#btn-rekam-ulang').click(function() {
+        $('#id_kas_keluar').val('');
+        enableForm();
+        
+        $.ajax({
+            url: "<?= base_url('keuangan/kas_keluar/ref_no_ajax') ?>",
+            type: "GET",
+            dataType: "json",
+            success: function(res) {
+                if (res.success && res.ref_no) {
+                    $('#no_referensi').val(res.ref_no);
+                }
+            }
+        });
+        
+        alert('Form telah disiapkan sebagai transaksi baru. Silakan sesuaikan data lalu klik Rekam atau Rekam Draft.');
+    });
+
+    // Submit handlers
+    $('#btn-rekam').click(function(e) {
+        e.preventDefault();
+        if ($('input[name="post_now"]').length === 0) {
+            $('#form-kas-keluar').append('<input type="hidden" name="post_now" value="1">');
+        }
+        $('#form-kas-keluar').submit();
+    });
+
+    $('#btn-rekam-draft').click(function(e) {
+        e.preventDefault();
         $('input[name="post_now"]').remove();
+        $('#form-kas-keluar').submit();
     });
 
     $('#form-kas-keluar').submit(function(e) {
         e.preventDefault();
+
+        let idAkunKas = $('#id_akun_kas').val();
+        let penerima = $.trim($('#penerima').val());
+        let noRef = $.trim($('#no_referensi').val());
+
+        if (!idAkunKas || !penerima || !noRef) {
+            alert('Mohon lengkapi semua kolom bertanda bintang (*).');
+            return false;
+        }
+
+        let hasValidDetail = false;
+        $('.detail-id-akun').each(function() {
+            let idAkun = $(this).val();
+            let nilaiRow = parseFloat($(this).closest('tr').find('.detail-nilai').val()) || 0;
+            if (idAkun && nilaiRow > 0) {
+                hasValidDetail = true;
+            }
+        });
+
+        if (!hasValidDetail) {
+            alert('Minimal harus ada 1 alokasi dana dengan akun valid dan nilai lebih dari nol.');
+            return false;
+        }
+        
+        let btnRekam = $('#btn-rekam, #btn-rekam-draft');
+        btnRekam.prop('disabled', true);
         
         let formData = $(this).serialize();
 
@@ -600,12 +665,17 @@ $(document).ready(function() {
             data: formData,
             dataType: "json",
             success: function(res) {
+                btnRekam.prop('disabled', false);
                 if (res.success) {
                     alert(res.message);
                     window.location.href = "<?= base_url('keuangan/kas_keluar') ?>";
                 } else {
-                    alert(res.message);
+                    alert(res.message || 'Gagal menyimpan transaksi.');
                 }
+            },
+            error: function(xhr, status, err) {
+                btnRekam.prop('disabled', false);
+                alert('Terjadi kesalahan koneksi/server saat menyimpan transaksi.');
             }
         });
     });

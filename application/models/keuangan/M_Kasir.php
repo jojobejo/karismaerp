@@ -7,6 +7,79 @@ defined('BASEPATH') or exit('No direct script access allowed');
  */
 class M_Kasir extends CI_Model
 {
+    public function __construct()
+    {
+        parent::__construct();
+        $this->_check_tables();
+    }
+
+    /**
+     * Memastikan tabel pendukung kasir otomatis dibuat jika belum ada di database
+     */
+    private function _check_tables()
+    {
+        if (!$this->db->table_exists('tbkeu_kasir_saldo')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbkeu_kasir_saldo` (
+                  `id` int(11) NOT NULL AUTO_INCREMENT,
+                  `id_akun` int(11) NOT NULL,
+                  `kode_akun` varchar(50) DEFAULT NULL,
+                  `nama_akun` varchar(150) DEFAULT NULL,
+                  `is_aktif` tinyint(1) NOT NULL DEFAULT 1,
+                  `created_by` varchar(100) DEFAULT NULL,
+                  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+                  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+
+        if (!$this->db->table_exists('tbkeu_transaksi_kasir')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbkeu_transaksi_kasir` (
+                  `id` int(11) NOT NULL AUTO_INCREMENT,
+                  `no_transaksi` varchar(50) NOT NULL,
+                  `tanggal` date NOT NULL,
+                  `jenis_transaksi` varchar(20) NOT NULL,
+                  `pilihan` varchar(150) DEFAULT NULL,
+                  `nominal` decimal(15,2) NOT NULL DEFAULT 0.00,
+                  `keterangan` text DEFAULT NULL,
+                  `id_user` int(11) DEFAULT NULL,
+                  `id_saldo_kasir` int(11) DEFAULT NULL,
+                  `nama_user` varchar(150) DEFAULT NULL,
+                  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        }
+
+        if (!$this->db->table_exists('tbkeu_kasir_pilihan')) {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS `tbkeu_kasir_pilihan` (
+                  `id` int(11) NOT NULL AUTO_INCREMENT,
+                  `nama_pilihan` varchar(150) NOT NULL,
+                  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+
+            $default_pilihan = [
+                'Setor Bank',
+                'Tarik Tunai',
+                'Operasional Kasir',
+                'Pengeluaran Kecil',
+                'Penerimaan Kasir',
+                'Lain-lain'
+            ];
+            foreach ($default_pilihan as $p) {
+                $this->db->insert('tbkeu_kasir_pilihan', [
+                    'nama_pilihan' => $p,
+                    'created_at'   => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
+    }
+
     // =====================================================
     // AKUN KAS
     // =====================================================
@@ -91,7 +164,7 @@ class M_Kasir extends CI_Model
     /** Set akun untuk saldo kasir (nonaktifkan yang lama) */
     public function set_saldo_kasir($id_akun, $kode_akun, $nama_akun, $created_by = null)
     {
-        $this->db->beginTrans();
+        $this->db->trans_begin();
         try {
             // Nonaktifkan semua saldo kasir yang lama
             $this->db->update('tbkeu_kasir_saldo', ['is_aktif' => 0]);
@@ -118,10 +191,14 @@ class M_Kasir extends CI_Model
                 ]);
             }
 
-            $this->db->transCommit();
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                return false;
+            }
+            $this->db->trans_commit();
             return true;
         } catch (Exception $e) {
-            $this->db->transRollback();
+            $this->db->trans_rollback();
             return false;
         }
     }

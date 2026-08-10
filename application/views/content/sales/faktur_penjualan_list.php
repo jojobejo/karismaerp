@@ -1,4 +1,10 @@
 <?php /* views/content/sales/faktur_penjualan_list.php */ ?>
+<body class="hold-transition sidebar-mini sidebar-collapse">
+<div class="wrapper">
+
+    <?php $this->load->view('partial/main/navbar') ?>
+    <?php $this->load->view('partial/main/sidebar') ?>
+
 <div class="content-wrapper">
     <div class="content-header">
         <div class="container-fluid">
@@ -31,7 +37,12 @@
 
             <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h3 class="card-title m-0">Semua Faktur Penjualan</h3>
+                    <h3 class="card-title font-weight-bold pt-1 m-0">Semua Faktur Penjualan</h3>
+                    <div class="card-tools float-right">
+                        <a href="<?= base_url('faktur_penjualan/activity_log') ?>" class="btn btn-sm btn-light text-primary font-weight-bold shadow-sm">
+                            <i class="fas fa-history mr-1"></i> Activity Log Edit
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form method="get" action="<?= base_url('faktur_penjualan') ?>" class="form-inline mb-4">
@@ -60,6 +71,7 @@
                                     <th>Tanggal</th>
                                     <th>Customer</th>
                                     <th>Sales</th>
+                                    <th class="text-right">Total Faktur</th>
                                     <th>Status</th>
                                     <th class="text-center"><i class="fas fa-cog"></i></th>
                                 </tr>
@@ -70,8 +82,11 @@
                                     <td class="text-center"><?= $i + 1 ?></td>
                                     <td><strong><?= htmlspecialchars($f['no_faktur']) ?></strong></td>
                                     <td><?= date('d/m/Y', strtotime($f['tanggal_faktur'])) ?></td>
-                                    <td><?= htmlspecialchars($f['master_customer_name'] ?: $f['customer_name']) ?></td>
-                                    <td><?= htmlspecialchars($f['so_salesman'] ?: $f['salesman']) ?></td>
+                                    <td><?= htmlspecialchars($f['master_customer_name'] ?: ($f['customer_name'] ?? '-')) ?></td>
+                                    <td><?= htmlspecialchars($f['salesman'] ?: ($f['master_sales_name'] ?? '-')) ?></td>
+                                    <td class="text-right font-weight-bold">
+                                        Rp <?= number_format((float)($f['total_faktur'] ?? 0), 2, ',', '.') ?>
+                                    </td>
                                     <td>
                                         <?php if ($f['status'] === 'confirmed'): ?>
                                             <span class="badge badge-info">Confirmed</span>
@@ -83,9 +98,12 @@
                                             <span class="badge badge-secondary"><?= $f['status'] ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center">
-                                        <a href="<?= base_url('faktur_penjualan/edit_qty/' . $f['id_faktur']) ?>" class="btn btn-xs btn-warning" title="Edit Qty (Retur Revisi)">
-                                            <i class="fas fa-edit"></i> Edit Qty
+                                    <td class="text-center" style="white-space: nowrap;">
+                                        <a href="<?= base_url('faktur_penjualan/edit_qty/' . $f['id_faktur'] . '?mode=qty') ?>" class="btn btn-xs btn-warning mr-1" title="Edit Qty (Kuantitas)">
+                                            <i class="fas fa-cubes"></i> Edit Qty
+                                        </a>
+                                        <a href="<?= base_url('faktur_penjualan/edit_qty/' . $f['id_faktur'] . '?mode=harga') ?>" class="btn btn-xs btn-info" title="Edit Total Harga">
+                                            <i class="fas fa-tag"></i> Edit Harga
                                         </a>
                                     </td>
                                 </tr>
@@ -99,6 +117,7 @@
         </div>
     </section>
 </div>
+</div> <!-- /.wrapper -->
 <script>
 $(document).ready(function() {
     $('#table-faktur').DataTable({

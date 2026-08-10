@@ -31,7 +31,7 @@
                     <div class="page-title-row">
                         <div class="page-title-left">
                             <a href="<?= base_url('dashboard') ?>" class="page-home-btn" title="Dashboard"><i class="fas fa-home"></i></a>
-                            <h1 class="page-title">Penjualan (Keuangan)</h1>
+                            <h1 class="page-title">Jurnal Penjualan (Keuangan)</h1>
                         </div>
                     </div>
 

@@ -235,6 +235,7 @@ $route['keuangan/kas_keluar/save']                      = 'keuangan/C_KasKeluar/
 $route['keuangan/kas_keluar/delete']                    = 'keuangan/C_KasKeluar/delete';
 $route['keuangan/kas_keluar/terbilang_ajax']            = 'keuangan/C_KasKeluar/terbilang_ajax';
 $route['keuangan/kas_keluar/accounts_lookup']            = 'keuangan/C_KasKeluar/accounts_lookup';
+$route['keuangan/kas_keluar/ref_no_ajax']                 = 'keuangan/C_KasKeluar/ref_no_ajax';
 $route['keuangan/kas_keluar/print_receipt/(:num)']      = 'keuangan/C_KasKeluar/print_receipt/$1';
 $route['keuangan/kas_masuk']                            = 'keuangan/C_KasMasuk/index';
 $route['keuangan/kas_masuk/get_data']                   = 'keuangan/C_KasMasuk/get_data';
@@ -244,6 +245,7 @@ $route['keuangan/kas_masuk/save']                       = 'keuangan/C_KasMasuk/s
 $route['keuangan/kas_masuk/delete']                     = 'keuangan/C_KasMasuk/delete';
 $route['keuangan/kas_masuk/terbilang_ajax']             = 'keuangan/C_KasMasuk/terbilang_ajax';
 $route['keuangan/kas_masuk/accounts_lookup']             = 'keuangan/C_KasMasuk/accounts_lookup';
+$route['keuangan/kas_masuk/ref_no_ajax']                 = 'keuangan/C_KasMasuk/ref_no_ajax';
 $route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/print_receipt/$1';
 
 // KASIR - Transaksi Kas Harian
@@ -976,3 +978,10 @@ $route['hrd/penilaian_lingkungan/locations/delete'] = 'hrd/C_Hrd/delete_hrd_loca
 $route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings';
 $route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
 $route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
+
+// Faktur Penjualan
+$route['faktur_penjualan']                         = 'sales/C_FakturPenjualan/index';
+$route['faktur_penjualan/activity_log']            = 'sales/C_FakturPenjualan/activity_log';
+$route['faktur_penjualan/edit_qty/(:any)']         = 'sales/C_FakturPenjualan/edit_qty/$1';
+$route['faktur_penjualan/update_qty/(:any)']       = 'sales/C_FakturPenjualan/update_qty/$1';
+

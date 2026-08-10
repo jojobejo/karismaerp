@@ -184,6 +184,14 @@ class C_KasKeluar extends CI_Controller
             ->set_output(json_encode(['success' => false, 'message' => 'Gagal menghapus transaksi.']));
     }
 
+    public function ref_no_ajax()
+    {
+        $ref = $this->M_KasKeluar->generate_ref_no();
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(['success' => true, 'ref_no' => $ref]));
+    }
+
     public function terbilang_ajax()
     {
         $amount = (float)$this->input->post('amount');
