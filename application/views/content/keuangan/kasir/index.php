@@ -109,10 +109,11 @@
                                     <input type="month" id="filterBulan" class="form-control form-control-sm" value="<?= $bulan ?>" style="width:150px;">
                                 </div>
                                 <!-- Filter Jenis -->
-                                <select id="filterJenis" class="form-control form-control-sm d-inline-block mr-2" style="width:130px;">
+                                <select id="filterJenis" class="form-control form-control-sm d-inline-block mr-2" style="width:150px;">
                                     <option value="">Semua</option>
-                                    <option value="kas_masuk">Kas Masuk</option>
-                                    <option value="kas_keluar">Kas Keluar</option>
+                                    <option value="kas_masuk" <?= ($filter_jenis ?? '') === 'kas_masuk' ? 'selected' : '' ?>>Kas Masuk</option>
+                                    <option value="kas_keluar" <?= ($filter_jenis ?? '') === 'kas_keluar' ? 'selected' : '' ?>>Kas Keluar</option>
+                                    <option value="penyelesaian_um" <?= ($filter_jenis ?? '') === 'penyelesaian_um' ? 'selected' : '' ?>>Penyelesaian UM</option>
                                 </select>
                                 <button class="btn btn-sm btn-info mr-1" onclick="loadTransaksi()">
                                     <i class="fas fa-search"></i>
@@ -121,9 +122,14 @@
                                 <button class="btn btn-sm btn-success mr-1" onclick="openModal('kas_masuk')">
                                     <i class="fas fa-plus mr-1"></i> Kas Masuk
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="openModal('kas_keluar')">
+                                <button class="btn btn-sm btn-danger mr-1" onclick="openModal('kas_keluar')">
                                     <i class="fas fa-minus mr-1"></i> Kas Keluar
                                 </button>
+                                <!-- Tombol Laporan Mutasi -->
+                                <a href="<?= site_url('keuangan/kasir/report_mutasi?tanggal_awal=' . date('Y-m-01') . '&tanggal_akhir=' . date('Y-m-d')) ?>"
+                                   class="btn btn-sm btn-warning" title="Laporan Mutasi Kas Harian">
+                                    <i class="fas fa-book-open mr-1"></i> Laporan Mutasi
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -140,7 +146,7 @@
                                         <th class="text-right">Nominal</th>
                                         <th>Keterangan</th>
                                         <th>Input Oleh</th>
-                                        <th class="text-center" style="width:70px;">Aksi</th>
+                                        <th class="text-center" style="width:130px; white-space:nowrap;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bodyTransaksi">
@@ -152,22 +158,41 @@
                                         <td class="text-center">
                                             <?php if ($t['jenis_transaksi'] === 'kas_masuk'): ?>
                                                 <span class="badge badge-success"><i class="fas fa-arrow-down mr-1"></i>Kas Masuk</span>
-                                            <?php else: ?>
+                                            <?php elseif ($t['jenis_transaksi'] === 'kas_keluar'): ?>
                                                 <span class="badge badge-danger"><i class="fas fa-arrow-up mr-1"></i>Kas Keluar</span>
+                                                <?php if ($t['is_settled'] == 1): ?>
+                                                    <br><span class="badge badge-secondary mt-1" style="font-size:9px;"><i class="fas fa-check mr-1"></i>Sudah Diselesaikan</span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="badge badge-warning"><i class="fas fa-sync mr-1"></i>Peny. UM</span>
                                             <?php endif; ?>
                                         </td>
                                         <td><?= htmlspecialchars($t['pilihan']) ?></td>
                                         <td class="text-right font-weight-bold">
-                                            <span class="<?= $t['jenis_transaksi'] === 'kas_masuk' ? 'text-success' : 'text-danger' ?>">
-                                                Rp <?= number_format($t['nominal'], 0, ',', '.') ?>
-                                            </span>
+                                            <?php if ($t['jenis_transaksi'] === 'penyelesaian_um'): ?>
+                                                <span class="text-danger d-block">Keluar: Rp <?= number_format($t['nominal'], 0, ',', '.') ?></span>
+                                                <span class="text-success d-block">Masuk: Rp <?= number_format($t['nominal_kembali'], 0, ',', '.') ?></span>
+                                            <?php else: ?>
+                                                <span class="<?= $t['jenis_transaksi'] === 'kas_masuk' ? 'text-success' : 'text-danger' ?>">
+                                                    Rp <?= number_format($t['nominal'], 0, ',', '.') ?>
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                         <td><?= htmlspecialchars($t['keterangan'] ?? '-') ?></td>
                                         <td><small><?= htmlspecialchars($t['nama_user'] ?? '-') ?></small></td>
-                                        <td class="text-center">
-                                            <button class="btn btn-xs btn-danger" onclick="hapusTransaksi(<?= $t['id'] ?>)" title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <td class="text-center align-middle" style="white-space:nowrap;">
+                                            <div class="d-inline-flex justify-content-center align-items-center">
+                                                <?php if ($t['jenis_transaksi'] === 'kas_keluar' && $t['is_settled'] == 0): ?>
+                                                    <button class="btn btn-xs btn-success mr-1" 
+                                                            onclick="openModalKasMasukRef(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['no_transaksi'])) ?>', '<?= htmlspecialchars(addslashes($t['pilihan'])) ?>', '<?= htmlspecialchars(addslashes($t['keterangan'] ?? '')) ?>', <?= $t['nominal'] ?>)" 
+                                                            title="Input Kas Masuk dari Kas Keluar ini">
+                                                        <i class="fas fa-plus-circle"></i> Kas Masuk
+                                                    </button>
+                                                <?php endif; ?>
+                                                <button class="btn btn-xs btn-danger" onclick="hapusTransaksi(<?= $t['id'] ?>)" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -197,16 +222,22 @@
                 <input type="hidden" id="inputJenis">
                 
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
                             <label class="small font-weight-bold text-secondary">Tanggal Transaksi *</label>
                             <input type="date" id="inputTanggal" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group mb-3">
-                            <label class="small font-weight-bold text-secondary">Nominal Transaksi (Rp) *</label>
+                            <label class="small font-weight-bold text-secondary" id="lblNominal">Nominal Transaksi (Rp) *</label>
                             <input type="text" id="inputNominal" class="form-control form-control-sm text-right font-weight-bold" style="font-size:1.1rem;" placeholder="0" oninput="formatNominal(this)">
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="colNominalKembali" style="display:none;">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Sisa / Kembalian (Rp) *</label>
+                            <input type="text" id="inputNominalKembali" class="form-control form-control-sm text-right font-weight-bold" style="font-size:1.1rem; color:green;" placeholder="0" oninput="formatNominal(this)">
                         </div>
                     </div>
                 </div>
@@ -275,6 +306,61 @@
     </div>
 </div>
 
+<!-- ============ MODAL KAS MASUK DARI KAS KELUAR ============ -->
+<div class="modal fade" id="modalKasMasukRef" tabindex="-1">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header py-2 bg-success text-white">
+                <h5 class="modal-title font-weight-bold">
+                    <i class="fas fa-plus-circle mr-1"></i> Input Kas Masuk (Pengembalian Kas Keluar)
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body py-3">
+                <input type="hidden" id="kmRefId">
+                <input type="hidden" id="kmRefNominalTotal">
+                <!-- Info transaksi asal -->
+                <div class="alert alert-info py-2 mb-3" style="font-size:12px;">
+                    <strong><i class="fas fa-info-circle mr-1"></i> Transaksi Kas Keluar Asal:</strong><br>
+                    <span class="text-monospace font-weight-bold" id="kmRefInfoNoTrx"></span><br>
+                    <span class="text-dark" id="kmRefInfoUraian"></span><br>
+                    <span class="text-muted small" id="kmRefInfoKet"></span>
+                    <hr class="my-1">
+                    <strong>Total Kas Keluar Awal: <span class="text-danger" id="kmRefInfoNominal"></span></strong>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Tanggal Kas Masuk *</label>
+                            <input type="date" id="kmRefTanggal" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label class="small font-weight-bold text-secondary">Nominal Kas Masuk (Rp) *</label>
+                            <input type="text" id="kmRefNominal" class="form-control form-control-sm text-right font-weight-bold"
+                                   style="font-size:1.1rem; color:green;" placeholder="0"
+                                   oninput="formatNominal(this)">
+                            <small class="text-muted">Nominal uang kas yang masuk/diterima kembali</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="small font-weight-bold text-secondary">Keterangan / Catatan (Opsional)</label>
+                    <input type="text" id="kmRefKeterangan" class="form-control form-control-sm"
+                           placeholder="Contoh: Terima sisa UM / Pengembalian BBM...">
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-secondary btn-sm px-4" data-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success btn-sm px-4 font-weight-bold" onclick="simpanKasMasukRef()" id="btnSimpanKMRef">
+                    <i class="fas fa-save mr-1"></i> Simpan Kas Masuk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ============ MODAL SET SALDO KASIR (hanya keuangan) ============ -->
 <?php if ($isKeuangan): ?>
 <div class="modal fade" id="modalSetSaldo" tabindex="-1">
@@ -316,14 +402,18 @@
 // ============================================================
 function openModal(jenis) {
     $('#inputJenis').val(jenis);
+    $('#colNominalKembali').hide();
+    $('#lblNominal').text('Nominal Transaksi (Rp) *');
+    $('#inputNominalKembali').val('');
+
     if (jenis === 'kas_masuk') {
-        $('#modalHeader').removeClass('bg-danger').addClass('bg-info');
+        $('#modalHeader').removeClass('bg-danger bg-warning').addClass('bg-info');
         $('#modalTitle').html('<i class="fas fa-arrow-down mr-1"></i> Input Kas Masuk');
-        $('#btnSimpan').removeClass('btn-danger').addClass('btn-info');
-    } else {
-        $('#modalHeader').removeClass('bg-info').addClass('bg-danger');
+        $('#btnSimpan').removeClass('btn-danger btn-warning').addClass('btn-info');
+    } else if (jenis === 'kas_keluar') {
+        $('#modalHeader').removeClass('bg-info bg-warning').addClass('bg-danger');
         $('#modalTitle').html('<i class="fas fa-arrow-up mr-1"></i> Input Kas Keluar');
-        $('#btnSimpan').removeClass('btn-info').addClass('btn-danger');
+        $('#btnSimpan').removeClass('btn-info btn-warning').addClass('btn-danger');
     }
     $('#inputNominal').val('');
     $('#inputKeterangan').val('');
@@ -346,11 +436,15 @@ function simpanTransaksi() {
     var pilihan   = $('#inputPilihan').val();
     var nominalRaw = $('#inputNominal').val().replace(/\./g, '').replace(',', '.');
     var nominal   = parseFloat(nominalRaw);
+    var nominalKembaliRaw = $('#inputNominalKembali').val().replace(/\./g, '').replace(',', '.');
     var keterangan = $('#inputKeterangan').val();
     var tanggal   = $('#inputTanggal').val();
 
     if (!pilihan) { Swal.fire('Perhatian', 'Pilih kategori transaksi terlebih dahulu!', 'warning'); return; }
     if (!nominal || nominal <= 0) { Swal.fire('Perhatian', 'Nominal harus lebih dari 0!', 'warning'); return; }
+    if (jenis === 'penyelesaian_um' && (!nominalKembaliRaw || parseFloat(nominalKembaliRaw) < 0)) {
+        Swal.fire('Perhatian', 'Sisa kembalian tidak valid!', 'warning'); return;
+    }
 
     $('#btnSimpan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
 
@@ -358,6 +452,7 @@ function simpanTransaksi() {
         jenis_transaksi: jenis,
         pilihan: pilihan,
         nominal: nominalRaw,
+        nominal_kembali: nominalKembaliRaw,
         keterangan: keterangan,
         tanggal: tanggal
     }, function(res) {
@@ -449,6 +544,59 @@ function loadTransaksi() {
     if (!bulan) return;
 
     window.location.href = "<?= base_url('keuangan/kasir') ?>?bulan=" + bulan + (jenis ? '&jenis=' + jenis : '');
+}
+
+// ============================================================
+// Modal Kas Masuk (Pengembalian dari Kas Keluar)
+// ============================================================
+function openModalKasMasukRef(id, noTrx, uraian, keterangan, nominal) {
+    $('#kmRefId').val(id);
+    $('#kmRefNominalTotal').val(nominal);
+    $('#kmRefInfoNoTrx').text(noTrx);
+    $('#kmRefInfoUraian').text(uraian);
+    $('#kmRefInfoKet').text(keterangan || '');
+    $('#kmRefInfoNominal').text('Rp ' + parseInt(nominal).toLocaleString('id-ID'));
+    $('#kmRefNominal').val('');
+    $('#kmRefKeterangan').val('');
+    $('#kmRefTanggal').val('<?= date('Y-m-d') ?>');
+    $('#modalKasMasukRef').modal('show');
+}
+
+function simpanKasMasukRef() {
+    var idRef       = $('#kmRefId').val();
+    var nominalRaw  = $('#kmRefNominal').val().replace(/\./g, '').replace(',', '.') || '0';
+    var nominal     = parseFloat(nominalRaw) || 0;
+    var tanggal     = $('#kmRefTanggal').val();
+    var keterangan  = $('#kmRefKeterangan').val();
+
+    if (!tanggal) { Swal.fire('Perhatian', 'Tanggal Kas Masuk harus diisi!', 'warning'); return; }
+    if (nominal <= 0) {
+        Swal.fire('Perhatian', 'Nominal Kas Masuk harus lebih besar dari 0!', 'warning');
+        return;
+    }
+
+    $('#btnSimpanKMRef').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
+
+    $.post("<?= base_url('keuangan/kasir/selesaikan_um') ?>", {
+        id_ref:     idRef,
+        nominal:    nominalRaw,
+        tanggal:    tanggal,
+        keterangan: keterangan
+    }, function(res) {
+        $('#btnSimpanKMRef').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Kas Masuk');
+        if (res.status === 'success') {
+            $('#modalKasMasukRef').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: 'Kas Masuk Berhasil Disimpan!',
+                html: 'No Transaksi: <b>' + res.no_transaksi + '</b>',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => location.reload());
+        } else {
+            Swal.fire('Gagal', res.message, 'error');
+        }
+    }, 'json');
 }
 
 $(document).ready(function() {

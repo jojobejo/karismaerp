@@ -579,7 +579,7 @@ class M_SalesOrder extends CI_Model
         if (!empty($filter['customer_id'])) $this->db->where('c.id', $filter['customer_id']);
         if (!empty($filter['create_by']))   $this->db->where('so.create_by', $filter['create_by']);
 
-        $this->db->group_by('so.id_so');
+        $this->db->group_by(['so.id_so', 'c.nama_customer', 'c.regional', 'c.kd_rute']);
         $this->db->order_by('so.tanggal_transaksi', 'DESC');
         $this->db->order_by('so.id_so', 'DESC');
 
@@ -635,7 +635,7 @@ class M_SalesOrder extends CI_Model
             );
         }
 
-        $this->db->group_by('so.id_so');
+        $this->db->group_by(['so.id_so', 'c.nama_customer', 'c.nama_kios', 'c.regional', 'c.kd_rute']);
         $this->db->having('total_qty_siap_faktur >', 0);
         $this->db->order_by('so.update_at', 'DESC');
         $this->db->order_by('so.tanggal_transaksi', 'DESC');

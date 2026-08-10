@@ -240,6 +240,42 @@ class M_Kasir extends CI_Model
         return $this->db->where('id', (int)$id)->delete('tbkeu_transaksi_kasir');
     }
 
+    /** Ambil satu transaksi berdasarkan ID */
+    public function get_transaksi_by_id($id)
+    {
+        return $this->db
+            ->where('id', (int)$id)
+            ->get('tbkeu_transaksi_kasir')
+            ->row_array();
+    }
+
+    /**
+     * Simpan penyelesaian UM dan tandai transaksi kas_keluar asal sebagai settled.
+     * Menggunakan transaksi database agar atomik.
+     */
+    public function selesaikan_um($data, $id_ref)
+    {
+        $this->db->trans_begin();
+        try {
+            // Simpan record penyelesaian_um baru
+            $this->db->insert('tbkeu_transaksi_kasir', $data);
+
+            // Tandai transaksi kas_keluar asal sebagai sudah diselesaikan
+            $this->db->where('id', (int)$id_ref)
+                     ->update('tbkeu_transaksi_kasir', ['is_settled' => 1]);
+
+            if ($this->db->trans_status() === FALSE) {
+                $this->db->trans_rollback();
+                return false;
+            }
+            $this->db->trans_commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            return false;
+        }
+    }
+
     /**
      * Ambil transaksi berdasarkan bulan (format: Y-m)
      * Opsional filter jenis: kas_masuk | kas_keluar | '' (semua)
@@ -260,7 +296,7 @@ class M_Kasir extends CI_Model
         ";
         $params = [$bulan];
 
-        if (in_array($jenis, ['kas_masuk', 'kas_keluar'], true)) {
+        if (in_array($jenis, ['kas_masuk', 'kas_keluar', 'penyelesaian_um'], true)) {
             $sql .= " AND t.jenis_transaksi = ?";
             $params[] = $jenis;
         }
@@ -270,16 +306,37 @@ class M_Kasir extends CI_Model
         return $this->db->query($sql, $params)->result_array();
     }
 
-    /** Hitung total kas masuk atau kas keluar pada bulan tertentu */
+    /** Hitung total kas masuk atau kas keluar pada bulan tertentu (termasuk penyelesaian_um) */
     public function total_bulan($bulan, $jenis)
     {
-        $row = $this->db->query("
-            SELECT COALESCE(SUM(nominal), 0) AS total
-            FROM tbkeu_transaksi_kasir
-            WHERE DATE_FORMAT(tanggal, '%Y-%m') = ?
-              AND jenis_transaksi = ?
-        ", [$bulan, $jenis])->row();
+        // Karena nilai $jenis berasal dari PHP (bukan user input langsung), aman menggunakan perbandingan literal
+        if ($jenis === 'kas_masuk') {
+            $sql = "
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN jenis_transaksi = 'kas_masuk' THEN nominal
+                        WHEN jenis_transaksi = 'penyelesaian_um' THEN nominal_kembali
+                        ELSE 0
+                    END
+                ), 0) AS total
+                FROM tbkeu_transaksi_kasir
+                WHERE DATE_FORMAT(tanggal, '%Y-%m') = ?
+            ";
+        } else {
+            $sql = "
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN jenis_transaksi = 'kas_keluar' THEN nominal
+                        WHEN jenis_transaksi = 'penyelesaian_um' THEN nominal
+                        ELSE 0
+                    END
+                ), 0) AS total
+                FROM tbkeu_transaksi_kasir
+                WHERE DATE_FORMAT(tanggal, '%Y-%m') = ?
+            ";
+        }
 
+        $row = $this->db->query($sql, [$bulan])->row();
         return (float)($row->total ?? 0);
     }
 
@@ -294,5 +351,122 @@ class M_Kasir extends CI_Model
             ->order_by('nama_pilihan', 'ASC')
             ->get('tbkeu_kasir_pilihan')
             ->result_array();
+    }
+
+    // =====================================================
+    // REPORT MUTASI KASIR
+    // =====================================================
+
+    /**
+     * Ambil data mutasi kasir berdasarkan rentang tanggal.
+     * Menghitung saldo berjalan (running balance) per baris.
+     * Kas masuk = Debit, Kas keluar = Kredit.
+     */
+    public function get_mutasi_kasir($tanggal_awal, $tanggal_akhir, $id_saldo_kasir = null)
+    {
+        $sql = "
+            SELECT
+                t.*,
+                ref.no_transaksi AS ref_no_transaksi,
+                ref.pilihan AS ref_pilihan,
+                ref.nominal AS ref_nominal,
+                DATE_FORMAT(t.tanggal, '%d/%m/%Y') AS tanggal_fmt,
+                DATE_FORMAT(t.created_at, '%H:%i') AS jam_input,
+                CASE 
+                    WHEN t.jenis_transaksi = 'kas_masuk' THEN t.nominal 
+                    WHEN t.jenis_transaksi = 'penyelesaian_um' THEN t.nominal_kembali
+                    ELSE 0 
+                END AS debit,
+                CASE 
+                    WHEN t.jenis_transaksi = 'kas_keluar' THEN t.nominal 
+                    WHEN t.jenis_transaksi = 'kas_masuk' AND t.id_ref IS NOT NULL THEN COALESCE(ref.nominal, 0)
+                    WHEN t.jenis_transaksi = 'penyelesaian_um' THEN t.nominal
+                    ELSE 0 
+                END AS kredit
+            FROM tbkeu_transaksi_kasir t
+            LEFT JOIN tbkeu_transaksi_kasir ref ON ref.id = t.id_ref
+            WHERE t.tanggal BETWEEN ? AND ?
+        ";
+        $params = [$tanggal_awal, $tanggal_akhir];
+
+        if (!empty($id_saldo_kasir)) {
+            $sql .= " AND t.id_saldo_kasir = ?";
+            $params[] = $id_saldo_kasir;
+        }
+
+        $sql .= " ORDER BY t.tanggal ASC, t.id ASC";
+
+        $rows = $this->db->query($sql, $params)->result_array();
+        return $rows;
+    }
+
+    /**
+     * Hitung saldo kasir sebelum tanggal tertentu (saldo awal periode report).
+     * Digunakan sebagai titik awal running balance.
+     */
+    public function get_saldo_awal_periode($tanggal_awal, $id_saldo_kasir = null)
+    {
+        $sql = "
+            SELECT
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_masuk' THEN nominal 
+                                  WHEN jenis_transaksi = 'penyelesaian_um' THEN nominal_kembali
+                                  ELSE 0 END), 0) AS total_debit,
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_keluar' THEN nominal 
+                                  WHEN jenis_transaksi = 'penyelesaian_um' THEN nominal
+                                  ELSE 0 END), 0) AS total_kredit
+            FROM tbkeu_transaksi_kasir
+            WHERE tanggal < ?
+        ";
+        $params = [$tanggal_awal];
+
+        if (!empty($id_saldo_kasir)) {
+            $sql .= " AND id_saldo_kasir = ?";
+            $params[] = $id_saldo_kasir;
+        }
+
+        $row = $this->db->query($sql, $params)->row();
+        $total_debit  = (float)($row->total_debit  ?? 0);
+        $total_kredit = (float)($row->total_kredit ?? 0);
+        return $total_debit - $total_kredit;
+    }
+
+    /**
+     * Hitung total debit & kredit dalam periode yang dipilih.
+     */
+    public function get_total_periode($tanggal_awal, $tanggal_akhir, $id_saldo_kasir = null)
+    {
+        $sql = "
+            SELECT
+                COALESCE(SUM(
+                    CASE 
+                        WHEN t.jenis_transaksi = 'kas_masuk' THEN t.nominal 
+                        WHEN t.jenis_transaksi = 'penyelesaian_um' THEN t.nominal_kembali
+                        ELSE 0 
+                    END
+                ), 0) AS total_debit,
+                COALESCE(SUM(
+                    CASE 
+                        WHEN t.jenis_transaksi = 'kas_keluar' THEN t.nominal 
+                        WHEN t.jenis_transaksi = 'kas_masuk' AND t.id_ref IS NOT NULL THEN COALESCE(ref.nominal, 0)
+                        WHEN t.jenis_transaksi = 'penyelesaian_um' THEN t.nominal
+                        ELSE 0 
+                    END
+                ), 0) AS total_kredit
+            FROM tbkeu_transaksi_kasir t
+            LEFT JOIN tbkeu_transaksi_kasir ref ON ref.id = t.id_ref
+            WHERE t.tanggal BETWEEN ? AND ?
+        ";
+        $params = [$tanggal_awal, $tanggal_akhir];
+
+        if (!empty($id_saldo_kasir)) {
+            $sql .= " AND t.id_saldo_kasir = ?";
+            $params[] = $id_saldo_kasir;
+        }
+
+        $row = $this->db->query($sql, $params)->row();
+        return [
+            'total_debit'  => (float)($row->total_debit  ?? 0),
+            'total_kredit' => (float)($row->total_kredit ?? 0),
+        ];
     }
 }

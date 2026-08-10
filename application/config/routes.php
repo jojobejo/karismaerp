@@ -257,6 +257,9 @@ $route['keuangan/kasir/set_saldo']                      = 'keuangan/C_Kasir/set_
 $route['keuangan/kasir/get_saldo']                      = 'keuangan/C_Kasir/get_saldo';
 $route['keuangan/kasir/tambah_pilihan']                 = 'keuangan/C_Kasir/tambah_pilihan';
 $route['keuangan/kasir/hapus_pilihan']                  = 'keuangan/C_Kasir/hapus_pilihan';
+$route['keuangan/kasir/report_mutasi']                  = 'keuangan/C_Kasir/report_mutasi';
+$route['keuangan/kasir/print_mutasi']                   = 'keuangan/C_Kasir/print_mutasi';
+$route['keuangan/kasir/selesaikan_um']                  = 'keuangan/C_Kasir/selesaikan_um';
 
 $route['keuangan/jurnal']                           = 'keuangan/C_Keuangan/jurnal';
 $route['keuangan/jurnal/pembelian']                 = 'keuangan/C_Keuangan/jurnal_pembelian';
