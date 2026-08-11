@@ -26,13 +26,19 @@ class M_Kasir extends CI_Model
                   `kode_akun` varchar(50) DEFAULT NULL,
                   `nama_akun` varchar(150) DEFAULT NULL,
                   `is_aktif` tinyint(1) NOT NULL DEFAULT 1,
+                  `status` varchar(20) NOT NULL DEFAULT 'APPROVED',
                   `created_by` varchar(100) DEFAULT NULL,
                   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
                   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                   PRIMARY KEY (`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+        } else {
+            if (!$this->db->field_exists('status', 'tbkeu_kasir_saldo')) {
+                $this->db->query("ALTER TABLE `tbkeu_kasir_saldo` ADD COLUMN `status` varchar(20) NOT NULL DEFAULT 'APPROVED' AFTER `is_aktif`");
+            }
         }
+
 
         if (!$this->db->table_exists('tbkeu_transaksi_kasir')) {
             $this->db->query("
@@ -43,14 +49,46 @@ class M_Kasir extends CI_Model
                   `jenis_transaksi` varchar(20) NOT NULL,
                   `pilihan` varchar(150) DEFAULT NULL,
                   `nominal` decimal(15,2) NOT NULL DEFAULT 0.00,
+                  `nominal_kembali` decimal(15,2) NOT NULL DEFAULT 0.00,
                   `keterangan` text DEFAULT NULL,
                   `id_user` int(11) DEFAULT NULL,
                   `id_saldo_kasir` int(11) DEFAULT NULL,
+                  `id_ref` int(11) DEFAULT NULL,
+                  `is_settled` tinyint(1) NOT NULL DEFAULT 0,
                   `nama_user` varchar(150) DEFAULT NULL,
                   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
                   PRIMARY KEY (`id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+        } else {
+            // Skema migrasi otomatis: Tambahkan kolom yang kurang jika tabel sudah ada sebelumnya
+            if (!$this->db->field_exists('pilihan', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `pilihan` varchar(150) DEFAULT NULL");
+            }
+            if (!$this->db->field_exists('nominal', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `nominal` decimal(15,2) NOT NULL DEFAULT 0.00");
+            }
+            if (!$this->db->field_exists('nominal_kembali', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `nominal_kembali` decimal(15,2) NOT NULL DEFAULT 0.00");
+            }
+            if (!$this->db->field_exists('keterangan', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `keterangan` text DEFAULT NULL");
+            }
+            if (!$this->db->field_exists('id_user', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `id_user` int(11) DEFAULT NULL");
+            }
+            if (!$this->db->field_exists('id_saldo_kasir', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `id_saldo_kasir` int(11) DEFAULT NULL");
+            }
+            if (!$this->db->field_exists('id_ref', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `id_ref` int(11) DEFAULT NULL");
+            }
+            if (!$this->db->field_exists('is_settled', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `is_settled` tinyint(1) NOT NULL DEFAULT 0");
+            }
+            if (!$this->db->field_exists('nama_user', 'tbkeu_transaksi_kasir')) {
+                $this->db->query("ALTER TABLE `tbkeu_transaksi_kasir` ADD COLUMN `nama_user` varchar(150) DEFAULT NULL");
+            }
         }
 
         if (!$this->db->table_exists('tbkeu_kasir_pilihan')) {
@@ -161,7 +199,36 @@ class M_Kasir extends CI_Model
             ->row();
     }
 
-    /** Set akun untuk saldo kasir (nonaktifkan yang lama) */
+    /** Ambil request saldo yang masih pending */
+    public function get_pending_request()
+    {
+        return $this->db
+            ->where('status', 'PENDING')
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get('tbkeu_kasir_saldo')
+            ->row();
+    }
+
+    /** Kasir meminta saldo ke Keuangan */
+    public function request_saldo($created_by = null)
+    {
+        // Pastikan tidak ada request pending sebelumnya agar tidak dobel
+        $this->db->where('status', 'PENDING')->delete('tbkeu_kasir_saldo');
+
+        return $this->db->insert('tbkeu_kasir_saldo', [
+            'id_akun'    => 0,
+            'kode_akun'  => null,
+            'nama_akun'  => null,
+            'is_aktif'   => 0,
+            'status'     => 'PENDING',
+            'created_by' => $created_by,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /** Set akun untuk saldo kasir (nonaktifkan yang lama, setujui request) */
     public function set_saldo_kasir($id_akun, $kode_akun, $nama_akun, $created_by = null)
     {
         $this->db->trans_begin();
@@ -169,12 +236,16 @@ class M_Kasir extends CI_Model
             // Nonaktifkan semua saldo kasir yang lama
             $this->db->update('tbkeu_kasir_saldo', ['is_aktif' => 0]);
 
+            // Hapus request yang pending jika ada
+            $this->db->where('status', 'PENDING')->delete('tbkeu_kasir_saldo');
+
             // Cek apakah akun sudah pernah didaftarkan
             $exists = $this->db->where('id_akun', $id_akun)->count_all_results('tbkeu_kasir_saldo');
 
             if ($exists > 0) {
                 $this->db->where('id_akun', $id_akun)->update('tbkeu_kasir_saldo', [
                     'is_aktif'   => 1,
+                    'status'     => 'APPROVED',
                     'kode_akun'  => $kode_akun,
                     'nama_akun'  => $nama_akun,
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -185,6 +256,7 @@ class M_Kasir extends CI_Model
                     'kode_akun'  => $kode_akun,
                     'nama_akun'  => $nama_akun,
                     'is_aktif'   => 1,
+                    'status'     => 'APPROVED',
                     'created_by' => $created_by,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),

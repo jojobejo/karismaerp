@@ -107,12 +107,12 @@ function fmt_rp($angka) {
                         <?= date('d/m/Y', strtotime($tanggal_awal)) ?> s/d <?= date('d/m/Y', strtotime($tanggal_akhir)) ?>
                     </small>
                 </span>
-                <span class="badge bg-primary"><?= count($transaksi) ?> transaksi</span>
+                <span class="badge bg-primary"><?= count($transaksi) ?> transaksi</span>    
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered table-sm mb-0" id="tbl-mutasi">
-                        <thead class="table-dark text-center" style="font-size:12px;">
+                        <thead class="text-center" style="font-size:12px;">
                             <tr>
                                 <th class="py-2" style="width:50px;">No</th>
                                 <th class="py-2" style="width:100px;">Tanggal</th>
@@ -125,17 +125,17 @@ function fmt_rp($angka) {
                         </thead>
                         <tbody style="font-size:12px;">
                             <!-- Baris Saldo Awal -->
-                            <tr class="table-light fw-bold">
-                                <td colspan="3" class="text-center text-muted">-</td>
+                            <tr class="fw-bold">
+                                <td colspan="3" class="text-center">-</td>
                                 <td>Saldo Awal Periode</td>
                                 <td class="text-end"><?= fmt_rp($saldo_awal) ?></td>
-                                <td class="text-center text-muted">-</td>
-                                <td class="text-end text-primary"><?= number_format($saldo_awal, 0, ',', '.') ?></td>
+                                <td class="text-center">-</td>
+                                <td class="text-end"><?= number_format($saldo_awal, 0, ',', '.') ?></td>
                             </tr>
 
                             <?php if (empty($transaksi)): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center py-4">
                                         <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                         Tidak ada transaksi pada periode ini.
                                     </td>
@@ -149,53 +149,44 @@ function fmt_rp($angka) {
                                     if ($row['tanggal'] !== $last_date):
                                         $last_date = $row['tanggal'];
                                 ?>
-                                    <tr class="table-secondary">
-                                        <td colspan="7" class="fw-bold ps-3 py-1" style="font-size:11px; color:#555;">
+                                    <tr>
+                                        <td colspan="7" class="fw-bold ps-3 py-1" style="font-size:11px;">
                                             <i class="fas fa-calendar-day me-1"></i>
                                             <?= date('l, d F Y', strtotime($row['tanggal'])) ?>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
-                                <?php 
-                                    $rowClass = '';
-                                    if ($row['jenis_transaksi'] === 'kas_masuk') $rowClass = 'table-success bg-opacity-10';
-                                    elseif ($row['jenis_transaksi'] === 'penyelesaian_um') $rowClass = 'table-warning bg-opacity-10';
-                                ?>
-                                <tr class="<?= $rowClass ?>">
+                                
+                                <tr>
                                     <td class="text-center"><?= $no++ ?></td>
                                     <td class="text-center"><?= htmlspecialchars($row['tanggal_fmt']) ?></td>
                                     <td class="text-center">
-                                        <?php 
-                                            $badgeClass = 'bg-danger';
-                                            if ($row['jenis_transaksi'] === 'kas_masuk') $badgeClass = 'bg-success';
-                                            elseif ($row['jenis_transaksi'] === 'penyelesaian_um') $badgeClass = 'bg-warning text-dark';
-                                        ?>
-                                        <span class="badge <?= $badgeClass ?> fw-normal" style="font-size:10px;">
+                                        <span class="fw-normal" style="font-size:11px;">
                                             <?= htmlspecialchars($row['no_transaksi']) ?>
                                         </span>
                                         <?php if ($row['jenis_transaksi'] === 'kas_keluar' && !empty($row['is_settled'])): ?>
-                                            <br><span class="badge bg-secondary fw-normal mt-1" style="font-size:9px;" title="Sudah diinput Kas Masuk">
-                                                <i class="fas fa-check"></i> Selesai
+                                            <br><span class="fw-normal mt-1" style="font-size:10px;" title="Sudah diinput Kas Masuk">
+                                                (Selesai)
                                             </span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="fw-semibold"><?= htmlspecialchars($row['pilihan'] ?? '-') ?></div>
                                         <?php if (!empty($row['id_ref'])): ?>
-                                            <small class="text-success fw-bold"><i class="fas fa-link me-1"></i>Kas Masuk (Ref: <?= htmlspecialchars($row['ref_no_transaksi'] ?? '') ?>)</small>
+                                            <small class="fw-bold"><i class="fas fa-link me-1"></i>Kas Masuk (Ref: <?= htmlspecialchars($row['ref_no_transaksi'] ?? '') ?>)</small>
                                         <?php endif; ?>
                                         <?php if (!empty($row['keterangan'])): ?>
-                                            <small class="text-muted d-block"><?= htmlspecialchars($row['keterangan']) ?></small>
+                                            <small class="d-block"><?= htmlspecialchars($row['keterangan']) ?></small>
                                         <?php endif; ?>
-                                        <small class="text-muted d-block"><?= htmlspecialchars($row['nama_user'] ?? '') ?></small>
+                                        <small class="d-block"><?= htmlspecialchars($row['nama_user'] ?? '') ?></small>
                                     </td>
-                                    <td class="text-end <?= $row['debit'] > 0 ? 'text-success fw-semibold' : 'text-muted' ?>">
+                                    <td class="text-end <?= $row['debit'] > 0 ? 'fw-semibold' : '' ?>">
                                         <?= $row['debit'] > 0 ? fmt_rp($row['debit']) : '-' ?>
                                     </td>
-                                    <td class="text-end <?= $row['kredit'] > 0 ? 'text-danger fw-semibold' : 'text-muted' ?>">
+                                    <td class="text-end <?= $row['kredit'] > 0 ? 'fw-semibold' : '' ?>">
                                         <?= $row['kredit'] > 0 ? fmt_rp($row['kredit']) : '-' ?>
                                     </td>
-                                    <td class="text-end fw-bold text-primary">
+                                    <td class="text-end fw-bold">
                                         <?= number_format($row['saldo_berjalan'], 0, ',', '.') ?>
                                     </td>
                                 </tr>
@@ -204,11 +195,11 @@ function fmt_rp($angka) {
                             <?php endif; ?>
 
                             <!-- Baris Total -->
-                            <tr class="table-dark fw-bold text-white">
+                            <tr class="fw-bold">
                                 <td colspan="4" class="text-end">SALDO KAS BUKU</td>
-                                <td class="text-end text-success"><?= number_format($total_debit, 0, ',', '.') ?></td>
-                                <td class="text-end text-danger"><?= number_format($total_kredit, 0, ',', '.') ?></td>
-                                <td class="text-end text-warning fs-6"><?= number_format($saldo_akhir, 0, ',', '.') ?></td>
+                                <td class="text-end"><?= number_format($total_debit, 0, ',', '.') ?></td>
+                                <td class="text-end"><?= number_format($total_kredit, 0, ',', '.') ?></td>
+                                <td class="text-end fs-6"><?= number_format($saldo_akhir, 0, ',', '.') ?></td>
                             </tr>
                         </tbody>
                     </table>

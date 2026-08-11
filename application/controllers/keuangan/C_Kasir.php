@@ -39,8 +39,9 @@ class C_Kasir extends CI_Controller
         $data['bln']            = $bln;
         $data['filter_jenis']   = $jenis;
 
-        // Saldo kasir aktif
+        // Saldo kasir aktif & pending request
         $data['saldo_kasir']    = $this->M_Kasir->get_saldo_kasir_aktif();
+        $data['pending_request']= $this->M_Kasir->get_pending_request();
 
         // Hitung saldo aktual dari jurnal
         $data['saldo_aktual']   = 0;
@@ -55,8 +56,16 @@ class C_Kasir extends CI_Controller
         // List transaksi bulan ini (dengan filter jenis jika ada)
         $data['transaksi']      = $this->M_Kasir->get_transaksi_bulan($bulan, $jenis);
 
-        // Akun kas untuk pilihan saldo
-        $data['akun_kas']       = $this->M_Kasir->get_akun_kas();
+        // Akun kas untuk pilihan saldo (hanya 11010 Q kas dan 11030 A kas)
+        $akun_kas_all = $this->M_Kasir->get_akun_kas();
+        $filtered_akun = [];
+        foreach ($akun_kas_all as $ak) {
+            if (in_array($ak->kode_akun, ['11010', '11030'])) {
+                $ak->saldo = $this->M_Kasir->hitung_saldo_akun($ak->id_akun);
+                $filtered_akun[] = $ak;
+            }
+        }
+        $data['akun_kas'] = $filtered_akun;
 
         // Pilihan kategori transaksi
         $data['pilihan_list']   = $this->M_Kasir->get_all_pilihan();
@@ -93,8 +102,8 @@ class C_Kasir extends CI_Controller
 
         // Generate nomor transaksi
         $prefix   = 'PUM';
-        if ($jenis === 'kas_masuk') $prefix = 'KMK';
-        else if ($jenis === 'kas_keluar') $prefix = 'KKR';
+        if ($jenis === 'kas_masuk') $prefix = 'KM';
+        else if ($jenis === 'kas_keluar') $prefix = 'KK';
         
         $no_transaksi = $this->M_Kasir->generate_no_transaksi($prefix, $tanggal);
 
@@ -140,11 +149,12 @@ class C_Kasir extends CI_Controller
     // =====================================================
     public function selesaikan_um()
     {
-        $id_ref     = (int)$this->input->post('id_ref');
-        $nominalRaw = $this->input->post('nominal') ?: $this->input->post('nominal_kembali');
-        $nominal    = (float)str_replace(['.', ','], ['', '.'], (string)$nominalRaw);
-        $keterangan = trim((string)$this->input->post('keterangan'));
-        $tanggal    = $this->input->post('tanggal') ?: date('Y-m-d');
+        $id_ref       = (int)$this->input->post('id_ref');
+        $nominalRaw   = $this->input->post('nominal') ?: $this->input->post('nominal_kembali');
+        $nominal      = (float)str_replace(['.', ','], ['', '.'], (string)$nominalRaw);
+        $pilihanInput = trim((string)$this->input->post('pilihan'));
+        $keterangan   = trim((string)$this->input->post('keterangan'));
+        $tanggal      = $this->input->post('tanggal') ?: date('Y-m-d');
 
         if ($id_ref <= 0) {
             echo json_encode(['status' => 'error', 'message' => 'Transaksi referensi tidak valid.']);
@@ -178,17 +188,18 @@ class C_Kasir extends CI_Controller
         $id_saldo = $this->M_Kasir->get_saldo_kasir_aktif();
         $id_saldo_kasir = $id_saldo ? $id_saldo->id : null;
 
-        $no_transaksi = $this->M_Kasir->generate_no_transaksi('KMK', $tanggal);
+        $no_transaksi = $this->M_Kasir->generate_no_transaksi('KM', $tanggal);
+        $pilihan      = $pilihanInput ?: $ref['pilihan'];
 
         // Simpan record kas_masuk dengan id_ref
         $data = [
             'no_transaksi'    => $no_transaksi,
             'tanggal'         => $tanggal,
             'jenis_transaksi' => 'kas_masuk',
-            'pilihan'         => $ref['pilihan'],   // Sama dengan pilihan transaksi Kas Keluar
+            'pilihan'         => $pilihan,
             'nominal'         => $nominal,          // Nominal Kas Masuk (debit)
             'nominal_kembali' => 0,
-            'keterangan'      => $keterangan ?: ('Terima ' . $ref['pilihan'] . ' (' . $ref['no_transaksi'] . ')'),
+            'keterangan'      => $keterangan ?: ('Terima ' . $pilihan . ' (' . $ref['no_transaksi'] . ')'),
             'id_user'         => $userId ?: null,
             'id_saldo_kasir'  => $id_saldo_kasir,
             'id_ref'          => $id_ref,
@@ -222,7 +233,17 @@ class C_Kasir extends CI_Controller
     }
 
     // =====================================================
-    // AJAX: Set Saldo Kasir (pilih akun jurnal)
+    // AJAX: Request Saldo Kasir (oleh Kasir)
+    // =====================================================
+    public function request_saldo()
+    {
+        $namaUser = (string)($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'Kasir');
+        $ok = $this->M_Kasir->request_saldo($namaUser);
+        echo json_encode(['status' => $ok ? 'success' : 'error']);
+    }
+
+    // =====================================================
+    // AJAX: Set Akun Saldo Kasir (oleh Keuangan / ADMPNJ)
     // =====================================================
     public function set_saldo()
     {

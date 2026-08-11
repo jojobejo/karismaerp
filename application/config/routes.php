@@ -251,6 +251,7 @@ $route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/p
 // KASIR - Transaksi Kas Harian
 $route['keuangan/kasir']                                = 'keuangan/C_Kasir/index';
 $route['keuangan/kasir/simpan_transaksi']               = 'keuangan/C_Kasir/simpan_transaksi';
+$route['keuangan/kasir/request_saldo']                  = 'keuangan/C_Kasir/request_saldo';
 $route['keuangan/kasir/hapus_transaksi']                = 'keuangan/C_Kasir/hapus_transaksi';
 $route['keuangan/kasir/get_transaksi']                  = 'keuangan/C_Kasir/get_transaksi';
 $route['keuangan/kasir/set_saldo']                      = 'keuangan/C_Kasir/set_saldo';

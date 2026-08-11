@@ -28,7 +28,8 @@
                     <?php
                     // Kasir TIDAK bisa mengatur saldo. Hanya admin keuangan / kiukeu / superadmin yang bisa.
                     $jobdeskUser = strtoupper((string)$this->session->userdata('jobdesk'));
-                    $isKeuangan  = in_array($jobdeskUser, ['ADMINKEU','ADMINKEUTC','KIUKEU','ADMIN'], true) 
+                    $is_admpnj   = ($jobdeskUser === 'ADMPNJ');
+                    $isKeuangan  = in_array($jobdeskUser, ['ADMINKEU','ADMINKEUTC','KIUKEU','ADMIN', 'ADMPNJ'], true) 
                                    || $this->session->userdata('username') === 'admin';
                     ?>
 
@@ -53,11 +54,20 @@
                                         <i class="fas fa-university mr-1"></i><?= htmlspecialchars($saldo_kasir->kode_akun . ' - ' . $saldo_kasir->nama_akun) ?>
                                     </small>
                                 <?php else: ?>
-                                    <span class="info-box-number text-danger h6 mb-0">Belum Diatur</span>
-                                    <?php if ($isKeuangan): ?>
-                                        <small><a href="javascript:void(0)" onclick="$('#modalSetSaldo').modal('show')">Atur Akun Saldo</a></small>
+                                    <?php if (!empty($pending_request)): ?>
+                                        <span class="info-box-number text-warning h6 mb-0">Request Saldo Pending</span>
+                                        <?php if ($isKeuangan): ?>
+                                            <small><a href="javascript:void(0)" onclick="$('#modalSetSaldo').modal('show')" class="text-primary font-weight-bold">Beri Saldo (Approve)</a></small>
+                                        <?php else: ?>
+                                            <small class="text-muted">Menunggu Persetujuan ADMPNJ...</small>
+                                        <?php endif; ?>
                                     <?php else: ?>
-                                        <small class="text-muted">Hubungi Bagian Keuangan</small>
+                                        <span class="info-box-number text-danger h6 mb-0">Belum Diatur</span>
+                                        <?php if ($isKeuangan): ?>
+                                            <small><a href="javascript:void(0)" onclick="$('#modalSetSaldo').modal('show')">Atur Akun Saldo</a></small>
+                                        <?php else: ?>
+                                            <small><a href="javascript:void(0)" onclick="requestSaldo()" class="text-primary font-weight-bold">Request Saldo ke ADMPNJ</a></small>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -118,6 +128,7 @@
                                 <button class="btn btn-sm btn-info mr-1" onclick="loadTransaksi()">
                                     <i class="fas fa-search"></i>
                                 </button>
+                                <?php if (!$is_admpnj): ?>
                                 <!-- Tombol Input Baru -->
                                 <button class="btn btn-sm btn-success mr-1" onclick="openModal('kas_masuk')">
                                     <i class="fas fa-plus mr-1"></i> Kas Masuk
@@ -125,6 +136,7 @@
                                 <button class="btn btn-sm btn-danger mr-1" onclick="openModal('kas_keluar')">
                                     <i class="fas fa-minus mr-1"></i> Kas Keluar
                                 </button>
+                                <?php endif; ?>
                                 <!-- Tombol Laporan Mutasi -->
                                 <a href="<?= site_url('keuangan/kasir/report_mutasi?tanggal_awal=' . date('Y-m-01') . '&tanggal_akhir=' . date('Y-m-d')) ?>"
                                    class="btn btn-sm btn-warning" title="Laporan Mutasi Kas Harian">
@@ -160,9 +172,7 @@
                                                 <span class="badge badge-success"><i class="fas fa-arrow-down mr-1"></i>Kas Masuk</span>
                                             <?php elseif ($t['jenis_transaksi'] === 'kas_keluar'): ?>
                                                 <span class="badge badge-danger"><i class="fas fa-arrow-up mr-1"></i>Kas Keluar</span>
-                                                <?php if ($t['is_settled'] == 1): ?>
-                                                    <br><span class="badge badge-secondary mt-1" style="font-size:9px;"><i class="fas fa-check mr-1"></i>Sudah Diselesaikan</span>
-                                                <?php endif; ?>
+
                                             <?php else: ?>
                                                 <span class="badge badge-warning"><i class="fas fa-sync mr-1"></i>Peny. UM</span>
                                             <?php endif; ?>
@@ -341,7 +351,22 @@
                             <input type="text" id="kmRefNominal" class="form-control form-control-sm text-right font-weight-bold"
                                    style="font-size:1.1rem; color:green;" placeholder="0"
                                    oninput="formatNominal(this)">
-                            <small class="text-muted">Nominal uang kas yang masuk/diterima kembali</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="small font-weight-bold text-secondary">Pilihan Kategori *</label>
+                    <div class="input-group input-group-sm">
+                        <select id="kmRefPilihan" class="form-control form-control-sm select2-pilihan">
+                            <option value="">-- Pilih Kategori --</option>
+                            <?php foreach ($pilihan_list as $p): ?>
+                                <option value="<?= htmlspecialchars($p['nama_pilihan']) ?>"><?= htmlspecialchars($p['nama_pilihan']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" title="Tambah pilihan kategori baru" onclick="$('#modalPilihan').modal('show')">
+                                <i class="fas fa-plus mr-1"></i> Kategori Baru
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -379,7 +404,8 @@
                         <?php foreach ($akun_kas as $ak): ?>
                             <option value="<?= $ak->id_akun ?>"
                                 <?= ($saldo_kasir && $saldo_kasir->id_akun == $ak->id_akun) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($ak->kode_akun . ' - ' . $ak->nama_akun) ?>
+                                <?= htmlspecialchars($ak->kode_akun . ' - ' . $ak->nama_akun) ?> 
+                                (Rp <?= number_format($ak->saldo ?? 0, 0, ',', '.') ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -507,7 +533,7 @@ function tambahPilihan() {
     $.post("<?= base_url('keuangan/kasir/tambah_pilihan') ?>", {nama_pilihan: nama}, function(res) {
         if (res.status === 'success') {
             // Tambahkan option baru ke select
-            $('#inputPilihan').append('<option value="'+res.nama_pilihan+'" selected>'+res.nama_pilihan+'</option>');
+            $('#inputPilihan, #kmRefPilihan').append('<option value="'+res.nama_pilihan+'" selected>'+res.nama_pilihan+'</option>');
             $('#modalPilihan').modal('hide');
             $('#namaPilihanBaru').val('');
             Swal.fire({icon:'success', title:'Pilihan ditambahkan!', timer:1200, showConfirmButton:false});
@@ -521,18 +547,39 @@ function tambahPilihan() {
 // Set Saldo Kasir
 // ============================================================
 function setSaldo() {
-    var id_akun = $('#selectAkunSaldo').val();
-    if (!id_akun) { Swal.fire('Perhatian', 'Pilih akun kas terlebih dahulu!', 'warning'); return; }
-
+    let id_akun = $('#selectAkunSaldo').val();
+    if (!id_akun) {
+        Swal.fire('Oops', 'Pilih akun terlebih dahulu', 'warning');
+        return;
+    }
     $.post("<?= base_url('keuangan/kasir/set_saldo') ?>", {id_akun: id_akun}, function(res) {
         if (res.status === 'success') {
             $('#modalSetSaldo').modal('hide');
-            Swal.fire({icon:'success', title:'Berhasil!', text: 'Akun saldo kasir diatur ke: ' + res.nama_akun, timer:1500, showConfirmButton:false})
-                .then(() => location.reload());
+            Swal.fire('Berhasil', 'Saldo kasir berhasil diatur/diapprove', 'success').then(() => location.reload());
         } else {
-            Swal.fire('Gagal', res.message, 'error');
+            Swal.fire('Gagal', res.message || 'Gagal mengatur saldo', 'error');
         }
     }, 'json');
+}
+
+function requestSaldo() {
+    Swal.fire({
+        title: 'Request Saldo?',
+        text: 'Anda akan mengirimkan permintaan alokasi akun kasir ke bagian Keuangan (ADMPNJ).',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Request'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post("<?= base_url('keuangan/kasir/request_saldo') ?>", {}, function(res) {
+                if (res.status === 'success') {
+                    Swal.fire('Berhasil', 'Request saldo berhasil dikirim.', 'success').then(() => location.reload());
+                } else {
+                    Swal.fire('Gagal', 'Terjadi kesalahan.', 'error');
+                }
+            }, 'json');
+        }
+    });
 }
 
 // ============================================================
@@ -557,6 +604,7 @@ function openModalKasMasukRef(id, noTrx, uraian, keterangan, nominal) {
     $('#kmRefInfoKet').text(keterangan || '');
     $('#kmRefInfoNominal').text('Rp ' + parseInt(nominal).toLocaleString('id-ID'));
     $('#kmRefNominal').val('');
+    $('#kmRefPilihan').val(uraian);
     $('#kmRefKeterangan').val('');
     $('#kmRefTanggal').val('<?= date('Y-m-d') ?>');
     $('#modalKasMasukRef').modal('show');
@@ -567,9 +615,11 @@ function simpanKasMasukRef() {
     var nominalRaw  = $('#kmRefNominal').val().replace(/\./g, '').replace(',', '.') || '0';
     var nominal     = parseFloat(nominalRaw) || 0;
     var tanggal     = $('#kmRefTanggal').val();
+    var pilihan     = $('#kmRefPilihan').val();
     var keterangan  = $('#kmRefKeterangan').val();
 
     if (!tanggal) { Swal.fire('Perhatian', 'Tanggal Kas Masuk harus diisi!', 'warning'); return; }
+    if (!pilihan) { Swal.fire('Perhatian', 'Pilih kategori terlebih dahulu!', 'warning'); return; }
     if (nominal <= 0) {
         Swal.fire('Perhatian', 'Nominal Kas Masuk harus lebih besar dari 0!', 'warning');
         return;
@@ -581,6 +631,7 @@ function simpanKasMasukRef() {
         id_ref:     idRef,
         nominal:    nominalRaw,
         tanggal:    tanggal,
+        pilihan:    pilihan,
         keterangan: keterangan
     }, function(res) {
         $('#btnSimpanKMRef').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan Kas Masuk');
