@@ -1,0 +1,14 @@
+SELECT *
+FROM `tb_kasbon`
+WHERE   (
+`id_user` = 87
+OR    (
+`status` = 'pending_atasan'
+AND `approver_1` = 'MNGSC'
+  )
+OR    (
+`status` = 'pending_penilai'
+AND `approver_2` = 'MNGSC'
+  )
+ )
+ORDER BY `id` DESC
