@@ -1,8 +1,9 @@
 <?php
 // Helper format rupiah
-function fmt_rp($angka) {
+function fmt_num($angka) {
     return $angka != 0 ? number_format((float)$angka, 0, ',', '.') : '-';
 }
+$tgl_fmt = date('d-M-y', strtotime($tanggal));
 ?>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -11,202 +12,154 @@ function fmt_rp($angka) {
     <?php $this->load->view('partial/main/sidebar') ?>
 
     <div class="content-wrapper">
-    <div class="container-fluid py-4">
+        <div class="container-fluid py-3">
 
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h4 class="mb-0 fw-bold">
-                    <i class="fas fa-book-open me-2 text-primary"></i>Report Mutasi Kasir
-                </h4>
-                <small class="text-muted">
-                    <?php if ($saldo_kasir): ?>
-                        Akun: <strong><?= htmlspecialchars($saldo_kasir->kode_akun . ' - ' . $saldo_kasir->nama_akun) ?></strong>
-                    <?php else: ?>
-                        <span class="text-warning">Akun kasir belum dikonfigurasi</span>
-                    <?php endif; ?>
-                </small>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="<?= site_url('keuangan/kasir') ?>" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i>Kembali
-                </a>
-                <a href="<?= site_url('keuangan/kasir/print_mutasi?tanggal_awal=' . $tanggal_awal . '&tanggal_akhir=' . $tanggal_akhir) ?>"
-                   target="_blank" id="btn-print"
-                   class="btn btn-success btn-sm">
-                    <i class="fas fa-print me-1"></i>Print
-                </a>
-            </div>
-        </div>
-
-        <!-- Filter Form -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body py-3">
-                <form method="get" action="<?= site_url('keuangan/kasir/report_mutasi') ?>" class="row g-2 align-items-end">
-                    <div class="col-auto">
-                        <label class="form-label small mb-1">Tanggal Awal</label>
-                        <input type="date" name="tanggal_awal" class="form-control form-control-sm"
-                               value="<?= htmlspecialchars($tanggal_awal) ?>" required>
-                    </div>
-                    <div class="col-auto">
-                        <label class="form-label small mb-1">Tanggal Akhir</label>
-                        <input type="date" name="tanggal_akhir" class="form-control form-control-sm"
-                               value="<?= htmlspecialchars($tanggal_akhir) ?>" required>
-                    </div>
-                    <div class="col-auto">
+            <!-- Baris Navigasi & Filter -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <a href="<?= site_url('keuangan/kasir') ?>" class="btn btn-outline-secondary btn-sm mr-2">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali ke Kasir
+                    </a>
+                    <h5 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-book-open text-primary mr-1"></i> Laporan Mutasi Kas Harian
+                    </h5>
+                </div>
+                <div class="d-flex align-items-center">
+                    <form method="get" action="<?= site_url('keuangan/kasir/report_mutasi') ?>" class="form-inline mr-2">
+                        <label class="mr-2 small font-weight-bold">Pilih Tanggal:</label>
+                        <input type="date" name="tanggal" class="form-control form-control-sm mr-2" value="<?= htmlspecialchars($tanggal) ?>">
                         <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fas fa-filter me-1"></i>Tampilkan
+                            <i class="fas fa-search mr-1"></i> Tampilkan
                         </button>
-                    </div>
-                    <!-- Tombol shortcut periode -->
-                    <div class="col-auto ms-2">
-                        <a href="<?= site_url('keuangan/kasir/report_mutasi?tanggal_awal=' . date('Y-m-d') . '&tanggal_akhir=' . date('Y-m-d')) ?>"
-                           class="btn btn-outline-info btn-sm">Hari Ini</a>
-                        <a href="<?= site_url('keuangan/kasir/report_mutasi?tanggal_awal=' . date('Y-m-01') . '&tanggal_akhir=' . date('Y-m-d')) ?>"
-                           class="btn btn-outline-secondary btn-sm">Bulan Ini</a>
-                    </div>
-                </form>
+                    </form>
+                    <a href="<?= site_url('keuangan/kasir/print_mutasi?tanggal=' . $tanggal) ?>" target="_blank" class="btn btn-success btn-sm font-weight-bold">
+                        <i class="fas fa-print mr-1"></i> Cetak Mutasi
+                    </a>
+                </div>
             </div>
-        </div>
 
-        <!-- Summary Card -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm text-center py-3">
-                    <div class="text-muted small mb-1">Saldo Awal Periode</div>
-                    <div class="fw-bold fs-6 text-dark">Rp <?= number_format($saldo_awal, 0, ',', '.') ?></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm text-center py-3">
-                    <div class="text-muted small mb-1">Total Kas Masuk (Debit)</div>
-                    <div class="fw-bold fs-6 text-success">Rp <?= number_format($total_debit, 0, ',', '.') ?></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm text-center py-3">
-                    <div class="text-muted small mb-1">Total Kas Keluar (Kredit)</div>
-                    <div class="fw-bold fs-6 text-danger">Rp <?= number_format($total_kredit, 0, ',', '.') ?></div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-0 shadow-sm text-center py-3" style="border-left: 4px solid #0d6efd !important;">
-                    <div class="text-muted small mb-1">Saldo Akhir</div>
-                    <div class="fw-bold fs-5 text-primary">Rp <?= number_format($saldo_akhir, 0, ',', '.') ?></div>
-                </div>
-            </div>
-        </div>
+            <!-- Tampilan Kertas Laporan Buku Harian Kas (Excel Style) -->
+            <div class="card shadow-sm border-secondary">
+                <div class="card-body p-4 bg-white" style="font-family: 'Courier New', Courier, monospace; font-size: 13px;">
+                    
+                    <!-- Header Dokumen Buku Harian -->
+                    <table class="table table-borderless table-sm mb-2" style="border-bottom: 2px solid #000;">
+                        <tr>
+                            <td style="width:25%;"><strong>Jenis Buku Harian:</strong><br>Kas/Gab</td>
+                            <td style="width:25%;"><strong>No Perk:</strong><br>102</td>
+                            <td style="width:25%;"><strong>Periode:</strong><br><?= $tgl_fmt ?></td>
+                            <td style="width:25%; text-align:right;"><strong>Halaman:</strong><br>01/</td>
+                        </tr>
+                    </table>
 
-        <!-- Tabel Mutasi -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <span class="fw-semibold">
-                    <i class="fas fa-list me-2 text-primary"></i>
-                    Daftar Mutasi Kas
-                    <small class="text-muted">
-                        <?= date('d/m/Y', strtotime($tanggal_awal)) ?> s/d <?= date('d/m/Y', strtotime($tanggal_akhir)) ?>
-                    </small>
-                </span>
-                <span class="badge bg-primary"><?= count($transaksi) ?> transaksi</span>    
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover table-bordered table-sm mb-0" id="tbl-mutasi">
-                        <thead class="text-center" style="font-size:12px;">
+                    <!-- Tabel Utama Mutasi -->
+                    <table class="table table-bordered table-sm text-dark" style="border: 1px solid #000;">
+                        <thead class="text-center bg-light" style="border-bottom: 2px solid #000;">
                             <tr>
-                                <th class="py-2" style="width:50px;">No</th>
-                                <th class="py-2" style="width:100px;">Tanggal</th>
-                                <th class="py-2" style="width:120px;">No. Transaksi</th>
-                                <th class="py-2 text-start">Uraian / Keterangan</th>
-                                <th class="py-2" style="width:140px;">Debit (Masuk)</th>
-                                <th class="py-2" style="width:140px;">Kredit (Keluar)</th>
-                                <th class="py-2" style="width:150px;">Saldo</th>
+                                <th style="width: 35px;">No</th>
+                                <th style="width: 120px;">No Bkt</th>
+                                <th>Uraian</th>
+                                <th style="width: 130px;" class="text-right">Debet</th>
+                                <th style="width: 130px;" class="text-right">Kredit</th>
+                                <th style="width: 140px;" class="text-right">Saldo</th>
                             </tr>
                         </thead>
-                        <tbody style="font-size:12px;">
-                            <!-- Baris Saldo Awal -->
-                            <tr class="fw-bold">
-                                <td colspan="3" class="text-center">-</td>
-                                <td>Saldo Awal Periode</td>
-                                <td class="text-end"><?= fmt_rp($saldo_awal) ?></td>
+                        <tbody>
+                            <?php 
+                            $no = 1;
+                            $saldo = (float)$saldo_awal;
+                            $total_debet = 0;
+                            $total_kredit = 0;
+                            ?>
+
+                            <!-- Saldo Awal -->
+                            <tr class="font-weight-bold bg-light">
                                 <td class="text-center">-</td>
-                                <td class="text-end"><?= number_format($saldo_awal, 0, ',', '.') ?></td>
+                                <td>-</td>
+                                <td><strong>Mutasi Saldo (Saldo Awal)</strong></td>
+                                <td class="text-right">-</td>
+                                <td class="text-right">-</td>
+                                <td class="text-right"><strong><?= number_format($saldo, 0, ',', '.') ?></strong></td>
                             </tr>
 
-                            <?php if (empty($transaksi)): ?>
-                                <tr>
-                                    <td colspan="7" class="text-center py-4">
-                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                        Tidak ada transaksi pada periode ini.
-                                    </td>
-                                </tr>
-                            <?php else: ?>
-                                <?php
-                                $no = 1;
-                                $last_date = '';
-                                foreach ($transaksi as $row):
-                                    // Tampilkan pemisah tanggal jika berbeda
-                                    if ($row['tanggal'] !== $last_date):
-                                        $last_date = $row['tanggal'];
+                            <!-- Sub-header 1: Kas Keluar / UM Keluar Outstanding -->
+                            <tr class="bg-light">
+                                <td colspan="6" class="font-weight-bold text-danger py-1" style="border-top: 2px solid #000; border-bottom: 1px solid #000;">
+                                    --- DAFTAR KAS KELUAR / UM KELUAR (OUTSTANDING) ---
+                                </td>
+                            </tr>
+
+                            <?php if (!empty($kas_keluar_outstanding)): ?>
+                                <?php foreach ($kas_keluar_outstanding as $kk): 
+                                    $nominal_kredit = (float)$kk['nominal'];
+                                    $saldo -= $nominal_kredit;
+                                    $total_kredit += $nominal_kredit;
                                 ?>
-                                    <tr>
-                                        <td colspan="7" class="fw-bold ps-3 py-1" style="font-size:11px;">
-                                            <i class="fas fa-calendar-day me-1"></i>
-                                            <?= date('l, d F Y', strtotime($row['tanggal'])) ?>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                                
                                 <tr>
                                     <td class="text-center"><?= $no++ ?></td>
-                                    <td class="text-center"><?= htmlspecialchars($row['tanggal_fmt']) ?></td>
-                                    <td class="text-center">
-                                        <span class="fw-normal" style="font-size:11px;">
-                                            <?= htmlspecialchars($row['no_transaksi']) ?>
-                                        </span>
-                                        <?php if ($row['jenis_transaksi'] === 'kas_keluar' && !empty($row['is_settled'])): ?>
-                                            <br><span class="fw-normal mt-1" style="font-size:10px;" title="Sudah diinput Kas Masuk">
-                                                (Selesai)
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold"><?= htmlspecialchars($row['pilihan'] ?? '-') ?></div>
-                                        <?php if (!empty($row['id_ref'])): ?>
-                                            <small class="fw-bold"><i class="fas fa-link me-1"></i>Kas Masuk (Ref: <?= htmlspecialchars($row['ref_no_transaksi'] ?? '') ?>)</small>
-                                        <?php endif; ?>
-                                        <?php if (!empty($row['keterangan'])): ?>
-                                            <small class="d-block"><?= htmlspecialchars($row['keterangan']) ?></small>
-                                        <?php endif; ?>
-                                        <small class="d-block"><?= htmlspecialchars($row['nama_user'] ?? '') ?></small>
-                                    </td>
-                                    <td class="text-end <?= $row['debit'] > 0 ? 'fw-semibold' : '' ?>">
-                                        <?= $row['debit'] > 0 ? fmt_rp($row['debit']) : '-' ?>
-                                    </td>
-                                    <td class="text-end <?= $row['kredit'] > 0 ? 'fw-semibold' : '' ?>">
-                                        <?= $row['kredit'] > 0 ? fmt_rp($row['kredit']) : '-' ?>
-                                    </td>
-                                    <td class="text-end fw-bold">
-                                        <?= number_format($row['saldo_berjalan'], 0, ',', '.') ?>
-                                    </td>
+                                    <td><small class="font-weight-bold"><?= htmlspecialchars($kk['no_transaksi']) ?></small></td>
+                                    <td><?= htmlspecialchars($kk['pilihan']) ?></td>
+                                    <td class="text-right">-</td>
+                                    <td class="text-right text-danger"><?= number_format($nominal_kredit, 0, ',', '.') ?></td>
+                                    <td class="text-right"><?= number_format($saldo, 0, ',', '.') ?></td>
                                 </tr>
-
                                 <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted font-italic py-1">Tidak ada Kas Keluar outstanding</td>
+                                </tr>
                             <?php endif; ?>
 
-                            <!-- Baris Total -->
-                            <tr class="fw-bold">
-                                <td colspan="4" class="text-end">SALDO KAS BUKU</td>
-                                <td class="text-end"><?= number_format($total_debit, 0, ',', '.') ?></td>
-                                <td class="text-end"><?= number_format($total_kredit, 0, ',', '.') ?></td>
-                                <td class="text-end fs-6"><?= number_format($saldo_akhir, 0, ',', '.') ?></td>
+                            <!-- Sub-header 2: Kas Masuk Harian -->
+                            <tr class="bg-light">
+                                <td colspan="6" class="font-weight-bold text-success py-1" style="border-top: 2px solid #000; border-bottom: 1px solid #000;">
+                                    --- DAFTAR KAS MASUK HARIAN ---
+                                </td>
+                            </tr>
+
+                            <?php if (!empty($kas_masuk_harian)): ?>
+                                <?php foreach ($kas_masuk_harian as $km): 
+                                    $nominal_debet  = (float)$km['nominal'];
+                                    $nominal_kredit = (float)($km['nominal_kredit_induk'] ?? 0);
+                                    $saldo += ($nominal_debet - $nominal_kredit);
+                                    $total_debet  += $nominal_debet;
+                                    $total_kredit += $nominal_kredit;
+                                    $no_bkt = !empty($km['no_bukti']) ? $km['no_bukti'] : $km['no_transaksi'];
+                                ?>
+                                <tr>
+                                    <td class="text-center"><?= $no++ ?></td>
+                                    <td><small class="font-weight-bold"><?= htmlspecialchars($no_bkt) ?></small></td>
+                                    <td><?= htmlspecialchars($km['pilihan']) ?></td>
+                                    <td class="text-right text-success"><?= number_format($nominal_debet, 0, ',', '.') ?></td>
+                                    <td class="text-right text-danger"><?= $nominal_kredit > 0 ? number_format($nominal_kredit, 0, ',', '.') : '-' ?></td>
+                                    <td class="text-right"><?= number_format($saldo, 0, ',', '.') ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted font-italic py-1">Tidak ada Kas Masuk pada tanggal ini</td>
+                                </tr>
+                            <?php endif; ?>
+
+                            <!-- Baris Total Footer -->
+                            <tr class="font-weight-bold bg-light" style="border-top: 2px solid #000;">
+                                <td colspan="3" class="text-right">TOTAL MUTASI:</td>
+                                <td class="text-right text-success"><?= number_format($total_debet, 0, ',', '.') ?></td>
+                                <td class="text-right text-danger"><?= number_format($total_kredit, 0, ',', '.') ?></td>
+                                <td class="text-right"><?= number_format($saldo, 0, ',', '.') ?></td>
+                            </tr>
+                            <tr class="font-weight-bold" style="border-top: 2px solid #000; background-color: #e9ecef;">
+                                <td colspan="3" class="text-right">SALDO AKHIR KAS BUKU:</td>
+                                <td colspan="3" class="text-right text-primary h6 m-0 font-weight-bold">
+                                    Rp <?= number_format($saldo, 0, ',', '.') ?>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
+
                 </div>
             </div>
+
         </div>
     </div>
 </div>
-</div>
-

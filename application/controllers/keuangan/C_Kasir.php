@@ -39,15 +39,8 @@ class C_Kasir extends CI_Controller
         $data['bln']            = $bln;
         $data['filter_jenis']   = $jenis;
 
-        // Saldo kasir aktif & pending request
-        $data['saldo_kasir']    = $this->M_Kasir->get_saldo_kasir_aktif();
-        $data['pending_request']= $this->M_Kasir->get_pending_request();
-
-        // Hitung saldo aktual dari jurnal
-        $data['saldo_aktual']   = 0;
-        if ($data['saldo_kasir']) {
-            $data['saldo_aktual'] = $this->M_Kasir->hitung_saldo_akun($data['saldo_kasir']->id_akun);
-        }
+        // Hitung saldo akumulasi kasir (Total Kas Masuk - Total Kas Keluar)
+        $data['saldo_aktual']   = $this->M_Kasir->get_saldo_kasir_akumulasi();
 
         // Total bulan ini (selalu tampilkan semua termasuk penyelesaian_um)
         $data['total_masuk']    = $this->M_Kasir->total_bulan($bulan, 'kas_masuk');
@@ -80,6 +73,7 @@ class C_Kasir extends CI_Controller
     // =====================================================
     public function simpan_transaksi()
     {
+        $id_transaksi = (int)$this->input->post('id_transaksi');
         $jenis     = $this->input->post('jenis_transaksi');
         $pilihan   = trim((string)$this->input->post('pilihan'));
         $nominal   = (float)str_replace(['.', ','], ['', '.'], (string)$this->input->post('nominal'));
@@ -100,37 +94,60 @@ class C_Kasir extends CI_Controller
         $userId   = (int)($this->session->userdata('id_karyawan') ?: $this->session->userdata('id') ?: 0);
         $namaUser = (string)($this->session->userdata('nama') ?: $this->session->userdata('username') ?: 'Kasir');
 
-        // Generate nomor transaksi
-        $prefix   = 'PUM';
-        if ($jenis === 'kas_masuk') $prefix = 'KM';
-        else if ($jenis === 'kas_keluar') $prefix = 'KK';
-        
-        $no_transaksi = $this->M_Kasir->generate_no_transaksi($prefix, $tanggal);
+        $no_transaksi = '';
+        if ($id_transaksi <= 0) {
+            $prefix   = 'PUM';
+            if ($jenis === 'kas_masuk') $prefix = 'KM';
+            else if ($jenis === 'kas_keluar') $prefix = 'KK';
+            
+            $no_transaksi = $this->M_Kasir->generate_no_transaksi($prefix, $tanggal);
+        }
 
         // Cek jika pilihan baru (belum ada di tbkeu_kasir_pilihan), simpan dulu
         $id_saldo = $this->M_Kasir->get_saldo_kasir_aktif();
         $id_saldo_kasir = $id_saldo ? $id_saldo->id : null;
 
         $data = [
-            'no_transaksi'    => $no_transaksi,
             'tanggal'         => $tanggal,
             'jenis_transaksi' => $jenis,
             'pilihan'         => $pilihan,
             'nominal'         => $nominal,
             'nominal_kembali' => $nominal_kembali,
             'keterangan'      => $keterangan,
-            'id_user'         => $userId ?: null,
-            'id_saldo_kasir'  => $id_saldo_kasir,
-            'nama_user'       => $namaUser,
-            'created_at'      => date('Y-m-d H:i:s'),
         ];
 
-        $ok = $this->M_Kasir->simpan_transaksi($data);
-
-        if ($ok) {
-            echo json_encode(['status' => 'success', 'message' => 'Transaksi berhasil disimpan.', 'no_transaksi' => $no_transaksi]);
+        if ($id_transaksi > 0) {
+            $data['updated_at'] = date('Y-m-d H:i:s');
+            $ok = $this->M_Kasir->update_transaksi($id_transaksi, $data);
+            if ($ok) {
+                echo json_encode(['status' => 'success', 'message' => 'Transaksi berhasil diupdate.']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal mengupdate transaksi.']);
+            }
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan transaksi.']);
+            $data['no_transaksi']   = $no_transaksi;
+            $data['id_user']        = $userId ?: null;
+            $data['id_saldo_kasir'] = $id_saldo_kasir;
+            $data['nama_user']      = $namaUser;
+            $data['created_at']     = date('Y-m-d H:i:s');
+            
+            $ok = $this->M_Kasir->simpan_transaksi($data);
+            if ($ok) {
+                echo json_encode(['status' => 'success', 'message' => 'Transaksi berhasil disimpan.', 'no_transaksi' => $no_transaksi]);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan transaksi.']);
+            }
+        }
+    }
+
+    public function get_transaksi_by_id()
+    {
+        $id = (int)$this->input->get('id');
+        $data = $this->M_Kasir->get_transaksi_by_id($id);
+        if ($data) {
+            echo json_encode(['status' => 'success', 'data' => $data]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Data tidak ditemukan']);
         }
     }
 
@@ -342,47 +359,17 @@ class C_Kasir extends CI_Controller
     // =====================================================
     public function report_mutasi()
     {
-        // Ambil parameter filter tanggal dari GET
-        $tanggal_awal  = $this->input->get('tanggal_awal')  ?: date('Y-m-01');
-        $tanggal_akhir = $this->input->get('tanggal_akhir') ?: date('Y-m-d');
+        $tanggal = $this->input->get('tanggal') ?: date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) $tanggal = date('Y-m-d');
 
-        // Pastikan format valid
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_awal))  $tanggal_awal  = date('Y-m-01');
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_akhir)) $tanggal_akhir = date('Y-m-d');
-
-        // Info akun kasir aktif
-        $saldo_kasir = $this->M_Kasir->get_saldo_kasir_aktif();
-        $id_saldo_kasir = $saldo_kasir ? $saldo_kasir->id : null;
-
-        // Saldo awal sebelum periode yang dipilih
-        $saldo_awal = $this->M_Kasir->get_saldo_awal_periode($tanggal_awal, $id_saldo_kasir);
-
-        // Ambil data transaksi dalam periode
-        $transaksi = $this->M_Kasir->get_mutasi_kasir($tanggal_awal, $tanggal_akhir, $id_saldo_kasir);
-
-        // Hitung total periode
-        $total_periode = $this->M_Kasir->get_total_periode($tanggal_awal, $tanggal_akhir, $id_saldo_kasir);
-
-        // Hitung running balance per baris
-        $saldo_berjalan = $saldo_awal;
-        foreach ($transaksi as &$row) {
-            $saldo_berjalan += (float)$row['debit'] - (float)$row['kredit'];
-            $row['saldo_berjalan'] = $saldo_berjalan;
-        }
-        unset($row);
-
-        $saldo_akhir = $saldo_awal + $total_periode['total_debit'] - $total_periode['total_kredit'];
+        $mutasi = $this->M_Kasir->get_mutasi_harian($tanggal);
 
         $data = [
-            'page_title'     => 'Report Mutasi Kasir',
-            'tanggal_awal'   => $tanggal_awal,
-            'tanggal_akhir'  => $tanggal_akhir,
-            'saldo_kasir'    => $saldo_kasir,
-            'saldo_awal'     => $saldo_awal,
-            'transaksi'      => $transaksi,
-            'total_debit'    => $total_periode['total_debit'],
-            'total_kredit'   => $total_periode['total_kredit'],
-            'saldo_akhir'    => $saldo_akhir,
+            'page_title'             => 'Report Mutasi Kasir Harian',
+            'tanggal'                => $tanggal,
+            'saldo_awal'             => $mutasi['saldo_awal'],
+            'kas_keluar_outstanding' => $mutasi['kas_keluar_outstanding'],
+            'kas_masuk_harian'       => $mutasi['kas_masuk_harian'],
         ];
 
         $this->load->view('partial/main/header.php', $data);
@@ -390,44 +377,19 @@ class C_Kasir extends CI_Controller
         $this->load->view('partial/main/footer.php');
     }
 
-    // =====================================================
-    // Halaman Print Mutasi Kasir (tanpa layout)
-    // =====================================================
     public function print_mutasi()
     {
-        $tanggal_awal  = $this->input->get('tanggal_awal')  ?: date('Y-m-01');
-        $tanggal_akhir = $this->input->get('tanggal_akhir') ?: date('Y-m-d');
+        $tanggal = $this->input->get('tanggal') ?: date('Y-m-d');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal)) $tanggal = date('Y-m-d');
 
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_awal))  $tanggal_awal  = date('Y-m-01');
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal_akhir)) $tanggal_akhir = date('Y-m-d');
-
-        $saldo_kasir    = $this->M_Kasir->get_saldo_kasir_aktif();
-        $id_saldo_kasir = $saldo_kasir ? $saldo_kasir->id : null;
-
-        $saldo_awal    = $this->M_Kasir->get_saldo_awal_periode($tanggal_awal, $id_saldo_kasir);
-        $transaksi     = $this->M_Kasir->get_mutasi_kasir($tanggal_awal, $tanggal_akhir, $id_saldo_kasir);
-        $total_periode = $this->M_Kasir->get_total_periode($tanggal_awal, $tanggal_akhir, $id_saldo_kasir);
-
-        // Hitung running balance per baris
-        $saldo_berjalan = $saldo_awal;
-        foreach ($transaksi as &$row) {
-            $saldo_berjalan += (float)$row['debit'] - (float)$row['kredit'];
-            $row['saldo_berjalan'] = $saldo_berjalan;
-        }
-        unset($row);
-
-        $saldo_akhir = $saldo_awal + $total_periode['total_debit'] - $total_periode['total_kredit'];
+        $mutasi = $this->M_Kasir->get_mutasi_harian($tanggal);
 
         $data = [
-            'page_title'    => 'Print Mutasi Kasir',
-            'tanggal_awal'  => $tanggal_awal,
-            'tanggal_akhir' => $tanggal_akhir,
-            'saldo_kasir'   => $saldo_kasir,
-            'saldo_awal'    => $saldo_awal,
-            'transaksi'     => $transaksi,
-            'total_debit'   => $total_periode['total_debit'],
-            'total_kredit'  => $total_periode['total_kredit'],
-            'saldo_akhir'   => $saldo_akhir,
+            'page_title'             => 'Print Mutasi Kasir Harian',
+            'tanggal'                => $tanggal,
+            'saldo_awal'             => $mutasi['saldo_awal'],
+            'kas_keluar_outstanding' => $mutasi['kas_keluar_outstanding'],
+            'kas_masuk_harian'       => $mutasi['kas_masuk_harian'],
         ];
 
         $this->load->view('content/keuangan/kasir/print_mutasi.php', $data);

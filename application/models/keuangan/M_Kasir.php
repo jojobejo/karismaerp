@@ -91,6 +91,53 @@ class M_Kasir extends CI_Model
             }
         }
 
+        $default_pilihan = [
+            'Penj Toko (A)',
+            'Penj Toko (Q)',
+            'Pelunasan PD (A)',
+            'Pelunasan PD (Q)',
+            'UM Madura Baidowi/Rosi P-8092-UG',
+            'UM Madura Aldy/Dedi P-8058-UG',
+            'UM Sby,Gresik Samhadi/Gunadi P-8178-UG',
+            'UM Prb Jefri/Fandi P-8925-GC',
+            'UM Stb Agung/Faisol P-8801-UH',
+            'UM Sukowono,Bdw Kristian/Gunawan P-8622-UG',
+            'UM Ngawi Joni Hariyanto/Imam P-8001-UG',
+            'UM Ngawi Lucky/Mifta P-8190-UG',
+            'UM Bendera Merah Putih',
+            'UM Pajak Kendaraan P-9629-UG (K23)',
+            'UM BBM P-9805-UG,P-8014-UG',
+            'UM BBM P-1334-GH, P-8731-GG',
+            'UM Satlantas Jember (K88)',
+            'Terima UM Jefri/Fandi Kendal P-8199-UG',
+            'Terima UM Agung/Faisol Lmj P-9805-UG',
+            'Terima UM Kristian/Gunawan Ambulu,Kencong P-8271-UG',
+            'Terima UM Joni Hariyanto/Edi Sempolan P-8731-GG',
+            'Pengisian Kartu E-Toll (3)',
+            'BBM P-1334-GH (Avanza)',
+            'Biaya Santunan u/Keluarga Korban',
+            'BBM P-8014-UG',
+            'UM BBM P-8731-GG,P-9805-UG',
+            'Telur=1/4 kg u/Pakan Anjing',
+            'BBM Bu Diana L-1728-BAS',
+            'Kekurangan Gaji Tunai Juli 2026',
+            'Catering Tgl 27/07 s/d 01/08',
+            'Lebih Bayar Kas',
+            'Setor Tunai BRI',
+            'PND Setor Tunai BRI',
+            'PND Bpk Tri atas Kurang Setor',
+            'Saldo Kas Buku',
+            'Saldo Kas Fisik',
+            'Selisih Kas',
+            'Setor Bank',
+            'Tarik Tunai',
+            'Operasional Kasir',
+            'Pengeluaran Kecil',
+            'Penerimaan Kasir',
+            'Lain-lain',
+            'Kas Bon'
+        ];
+
         if (!$this->db->table_exists('tbkeu_kasir_pilihan')) {
             $this->db->query("
                 CREATE TABLE IF NOT EXISTS `tbkeu_kasir_pilihan` (
@@ -101,19 +148,33 @@ class M_Kasir extends CI_Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
 
-            $default_pilihan = [
-                'Setor Bank',
-                'Tarik Tunai',
-                'Operasional Kasir',
-                'Pengeluaran Kecil',
-                'Penerimaan Kasir',
-                'Lain-lain'
-            ];
+            // Pulihkan juga opsi pilihan dari transaksi yang sudah ada jika ada
+            if ($this->db->table_exists('tbkeu_transaksi_kasir')) {
+                $trx_pilihan = $this->db->query("SELECT DISTINCT pilihan FROM tbkeu_transaksi_kasir WHERE pilihan IS NOT NULL AND pilihan != ''")->result_array();
+                foreach ($trx_pilihan as $tp) {
+                    $nama_p = trim($tp['pilihan']);
+                    if ($nama_p !== '' && !in_array($nama_p, $default_pilihan, true)) {
+                        $default_pilihan[] = $nama_p;
+                    }
+                }
+            }
+
             foreach ($default_pilihan as $p) {
                 $this->db->insert('tbkeu_kasir_pilihan', [
                     'nama_pilihan' => $p,
                     'created_at'   => date('Y-m-d H:i:s')
                 ]);
+            }
+        } else {
+            // Jika tabel sudah ada, pastikan item bawaan baru dimasukkan jika belum ada
+            $existing = array_column($this->db->select('nama_pilihan')->get('tbkeu_kasir_pilihan')->result_array(), 'nama_pilihan');
+            foreach ($default_pilihan as $p) {
+                if (!in_array($p, $existing, true)) {
+                    $this->db->insert('tbkeu_kasir_pilihan', [
+                        'nama_pilihan' => $p,
+                        'created_at'   => date('Y-m-d H:i:s')
+                    ]);
+                }
             }
         }
     }
@@ -306,6 +367,12 @@ class M_Kasir extends CI_Model
         return $this->db->insert('tbkeu_transaksi_kasir', $data);
     }
 
+    /** Update transaksi */
+    public function update_transaksi($id, $data)
+    {
+        return $this->db->where('id', (int)$id)->update('tbkeu_transaksi_kasir', $data);
+    }
+
     /** Hapus transaksi */
     public function hapus_transaksi($id)
     {
@@ -362,13 +429,16 @@ class M_Kasir extends CI_Model
         $sql = "
             SELECT t.*,
                 DATE_FORMAT(t.tanggal, '%d/%m/%Y') AS tanggal_fmt,
-                DATE_FORMAT(t.created_at, '%H:%i') AS jam_input
+                DATE_FORMAT(t.created_at, '%H:%i') AS jam_input,
+                (SELECT COALESCE(SUM(nominal), 0) FROM tbkeu_transaksi_kasir p WHERE p.id_ref = t.id) as um_masuk,
+                (SELECT DATE_FORMAT(MAX(p.tanggal), '%d/%m/%Y') FROM tbkeu_transaksi_kasir p WHERE p.id_ref = t.id) as tgl_um_masuk_fmt
             FROM tbkeu_transaksi_kasir t
             WHERE DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+              AND (t.id_ref IS NULL OR t.id_ref = 0)
         ";
         $params = [$bulan];
 
-        if (in_array($jenis, ['kas_masuk', 'kas_keluar', 'penyelesaian_um'], true)) {
+        if (in_array($jenis, ['kas_masuk', 'kas_keluar'], true)) {
             $sql .= " AND t.jenis_transaksi = ?";
             $params[] = $jenis;
         }
@@ -412,6 +482,19 @@ class M_Kasir extends CI_Model
         return (float)($row->total ?? 0);
     }
 
+    /** Hitung saldo akumulasi kasir (Total Kas Masuk - Total Kas Keluar secara real-time) */
+    public function get_saldo_kasir_akumulasi()
+    {
+        $sql = "
+            SELECT 
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_masuk' THEN nominal ELSE 0 END), 0) -
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_keluar' THEN nominal ELSE 0 END), 0) AS saldo
+            FROM tbkeu_transaksi_kasir
+        ";
+        $row = $this->db->query($sql)->row();
+        return (float)($row->saldo ?? 0);
+    }
+
     // =====================================================
     // PILIHAN KATEGORI
     // =====================================================
@@ -428,6 +511,69 @@ class M_Kasir extends CI_Model
     // =====================================================
     // REPORT MUTASI KASIR
     // =====================================================
+
+    /**
+     * Ambil data mutasi harian kasir per tanggal tertentu.
+     * Mengelompokkan Kas Keluar Outstanding (sisa > 0) di bagian atas
+     * dan Kas Masuk Harian di bagian bawah.
+     */
+    public function get_mutasi_harian($tanggal)
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$tanggal)) {
+            $tanggal = date('Y-m-d');
+        }
+
+        // 1. Saldo awal sebelum tanggal tersebut
+        $sql_awal = "
+            SELECT 
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_masuk' THEN nominal ELSE 0 END), 0) -
+                COALESCE(SUM(CASE WHEN jenis_transaksi = 'kas_keluar' THEN nominal ELSE 0 END), 0) AS saldo_awal
+            FROM tbkeu_transaksi_kasir
+            WHERE tanggal < ?
+        ";
+        $saldo_awal = (float)($this->db->query($sql_awal, [$tanggal])->row()->saldo_awal ?? 0);
+
+        // 2. Transaksi Kas Keluar Outstanding (sampai tanggal ini yang sisa > 0)
+        $sql_keluar = "
+            SELECT t.*,
+                (SELECT COALESCE(SUM(nominal), 0) FROM tbkeu_transaksi_kasir p WHERE p.id_ref = t.id) as um_masuk
+            FROM tbkeu_transaksi_kasir t
+            WHERE t.jenis_transaksi = 'kas_keluar'
+              AND (t.id_ref IS NULL OR t.id_ref = 0)
+              AND t.tanggal <= ?
+            ORDER BY t.tanggal ASC, t.id ASC
+        ";
+        $raw_keluar = $this->db->query($sql_keluar, [$tanggal])->result_array();
+
+        $kas_keluar_outstanding = [];
+        foreach ($raw_keluar as $k) {
+            $sisa = (float)$k['nominal'] - (float)$k['um_masuk'];
+            if ($sisa > 0) {
+                $k['sisa'] = $sisa;
+                $kas_keluar_outstanding[] = $k;
+            }
+        }
+
+        // 3. Transaksi Kas Masuk Harian (pada tanggal ini)
+        $sql_masuk = "
+            SELECT t.*,
+                COALESCE(ref.no_transaksi, t.no_transaksi) AS no_bukti,
+                COALESCE(ref.nominal, 0) AS nominal_kredit_induk
+            FROM tbkeu_transaksi_kasir t
+            LEFT JOIN tbkeu_transaksi_kasir ref ON ref.id = t.id_ref
+            WHERE t.jenis_transaksi = 'kas_masuk'
+              AND t.tanggal = ?
+            ORDER BY t.id ASC
+        ";
+        $kas_masuk_harian = $this->db->query($sql_masuk, [$tanggal])->result_array();
+
+        return [
+            'tanggal'                => $tanggal,
+            'saldo_awal'             => $saldo_awal,
+            'kas_keluar_outstanding' => $kas_keluar_outstanding,
+            'kas_masuk_harian'       => $kas_masuk_harian
+        ];
+    }
 
     /**
      * Ambil data mutasi kasir berdasarkan rentang tanggal.

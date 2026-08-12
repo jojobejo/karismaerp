@@ -40,36 +40,13 @@
                             <div class="info-box-content py-0">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="info-box-text font-weight-bold text-success">Saldo Kasir</span>
-                                    <?php if ($isKeuangan): ?>
-                                        <button class="btn btn-xs btn-outline-secondary" title="Atur Akun Saldo Kasir" onclick="$('#modalSetSaldo').modal('show')">
-                                            <i class="fas fa-cog"></i>
-                                        </button>
-                                    <?php endif; ?>
                                 </div>
-                                <?php if ($saldo_kasir): ?>
-                                    <span class="info-box-number text-dark h4 font-weight-bold mb-0" id="saldoAngka">
-                                        Rp <?= number_format($saldo_aktual, 0, ',', '.') ?>
-                                    </span>
-                                    <small class="text-muted truncate d-block" title="<?= htmlspecialchars($saldo_kasir->kode_akun . ' - ' . $saldo_kasir->nama_akun) ?>">
-                                        <i class="fas fa-university mr-1"></i><?= htmlspecialchars($saldo_kasir->kode_akun . ' - ' . $saldo_kasir->nama_akun) ?>
-                                    </small>
-                                <?php else: ?>
-                                    <?php if (!empty($pending_request)): ?>
-                                        <span class="info-box-number text-warning h6 mb-0">Request Saldo Pending</span>
-                                        <?php if ($isKeuangan): ?>
-                                            <small><a href="javascript:void(0)" onclick="$('#modalSetSaldo').modal('show')" class="text-primary font-weight-bold">Beri Saldo (Approve)</a></small>
-                                        <?php else: ?>
-                                            <small class="text-muted">Menunggu Persetujuan ADMPNJ...</small>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <span class="info-box-number text-danger h6 mb-0">Belum Diatur</span>
-                                        <?php if ($isKeuangan): ?>
-                                            <small><a href="javascript:void(0)" onclick="$('#modalSetSaldo').modal('show')">Atur Akun Saldo</a></small>
-                                        <?php else: ?>
-                                            <small><a href="javascript:void(0)" onclick="requestSaldo()" class="text-primary font-weight-bold">Request Saldo ke ADMPNJ</a></small>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+                                <span class="info-box-number text-dark h4 font-weight-bold mb-0" id="saldoAngka">
+                                    Rp <?= number_format($saldo_aktual, 0, ',', '.') ?>
+                                </span>
+                                <small class="text-muted truncate d-block">
+                                    <i class="fas fa-wallet mr-1"></i>Akumulasi Real-Time
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -118,13 +95,6 @@
                                     <label class="mr-1 mb-0 small">Bulan:</label>
                                     <input type="month" id="filterBulan" class="form-control form-control-sm" value="<?= $bulan ?>" style="width:150px;">
                                 </div>
-                                <!-- Filter Jenis -->
-                                <select id="filterJenis" class="form-control form-control-sm d-inline-block mr-2" style="width:150px;">
-                                    <option value="">Semua</option>
-                                    <option value="kas_masuk" <?= ($filter_jenis ?? '') === 'kas_masuk' ? 'selected' : '' ?>>Kas Masuk</option>
-                                    <option value="kas_keluar" <?= ($filter_jenis ?? '') === 'kas_keluar' ? 'selected' : '' ?>>Kas Keluar</option>
-                                    <option value="penyelesaian_um" <?= ($filter_jenis ?? '') === 'penyelesaian_um' ? 'selected' : '' ?>>Penyelesaian UM</option>
-                                </select>
                                 <button class="btn btn-sm btn-info mr-1" onclick="loadTransaksi()">
                                     <i class="fas fa-search"></i>
                                 </button>
@@ -152,53 +122,68 @@
                                     <tr>
                                         <th class="text-center" style="width:40px;">No</th>
                                         <th>No Transaksi</th>
-                                        <th>Tanggal</th>
-                                        <th>Jenis</th>
-                                        <th>Pilihan</th>
-                                        <th class="text-right">Nominal</th>
+                                        <th>Tanggal UM Keluar</th>
+                                        <th>Tanggal UM Masuk</th>
                                         <th>Keterangan</th>
-                                        <th>Input Oleh</th>
+                                        <th class="text-right">UM Keluar</th>
+                                        <th class="text-right">UM Masuk</th>
+                                        <th class="text-right">Sisa</th>
                                         <th class="text-center" style="width:130px; white-space:nowrap;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody id="bodyTransaksi">
-                                    <?php $no = 1; foreach ($transaksi as $t): ?>
+                                    <?php $no = 1; foreach ($transaksi as $t): 
+                                        $um_keluar = 0;
+                                        $um_masuk = 0;
+                                        $tgl_keluar = '-';
+                                        $tgl_masuk  = '-';
+                                        
+                                        if ($t['jenis_transaksi'] === 'kas_keluar') {
+                                            $um_keluar  = (float)$t['nominal'];
+                                            $um_masuk   = (float)($t['um_masuk'] ?? 0);
+                                            $tgl_keluar = $t['tanggal_fmt'] ?? date('d/m/Y', strtotime($t['tanggal']));
+                                            if ($um_masuk > 0 && !empty($t['tgl_um_masuk_fmt'])) {
+                                                $tgl_masuk = $t['tgl_um_masuk_fmt'];
+                                            }
+                                        } else {
+                                            $um_masuk  = (float)$t['nominal'];
+                                            $tgl_masuk = $t['tanggal_fmt'] ?? date('d/m/Y', strtotime($t['tanggal']));
+                                        }
+                                        
+                                        $sisa = $um_keluar - $um_masuk;
+                                        $is_settled = ($sisa <= 0) || ($t['is_settled'] == 1);
+                                    ?>
                                     <tr>
                                         <td class="text-center"><?= $no++ ?></td>
                                         <td><small><?= htmlspecialchars($t['no_transaksi']) ?></small></td>
-                                        <td><?= $t['tanggal_fmt'] ?? date('d/m/Y', strtotime($t['tanggal'])) ?></td>
-                                        <td class="text-center">
-                                            <?php if ($t['jenis_transaksi'] === 'kas_masuk'): ?>
-                                                <span class="badge badge-success"><i class="fas fa-arrow-down mr-1"></i>Kas Masuk</span>
-                                            <?php elseif ($t['jenis_transaksi'] === 'kas_keluar'): ?>
-                                                <span class="badge badge-danger"><i class="fas fa-arrow-up mr-1"></i>Kas Keluar</span>
-
-                                            <?php else: ?>
-                                                <span class="badge badge-warning"><i class="fas fa-sync mr-1"></i>Peny. UM</span>
-                                            <?php endif; ?>
-                                        </td>
+                                        <td><?= $tgl_keluar ?></td>
+                                        <td><?= $tgl_masuk ?></td>
                                         <td><?= htmlspecialchars($t['pilihan']) ?></td>
-                                        <td class="text-right font-weight-bold">
-                                            <?php if ($t['jenis_transaksi'] === 'penyelesaian_um'): ?>
-                                                <span class="text-danger d-block">Keluar: Rp <?= number_format($t['nominal'], 0, ',', '.') ?></span>
-                                                <span class="text-success d-block">Masuk: Rp <?= number_format($t['nominal_kembali'], 0, ',', '.') ?></span>
+                                        <td class="text-right font-weight-bold text-danger">
+                                            Rp <?= number_format($um_keluar, 0, ',', '.') ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold text-success">
+                                            Rp <?= number_format($um_masuk, 0, ',', '.') ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold <?= $sisa > 0 ? 'text-warning' : 'text-secondary' ?>">
+                                            <?php if ($um_masuk > 0): ?>
+                                                Rp <?= number_format($sisa, 0, ',', '.') ?>
                                             <?php else: ?>
-                                                <span class="<?= $t['jenis_transaksi'] === 'kas_masuk' ? 'text-success' : 'text-danger' ?>">
-                                                    Rp <?= number_format($t['nominal'], 0, ',', '.') ?>
-                                                </span>
+                                                -
                                             <?php endif; ?>
                                         </td>
-                                        <td><?= htmlspecialchars($t['keterangan'] ?? '-') ?></td>
-                                        <td><small><?= htmlspecialchars($t['nama_user'] ?? '-') ?></small></td>
                                         <td class="text-center align-middle" style="white-space:nowrap;">
                                             <div class="d-inline-flex justify-content-center align-items-center">
-                                                <?php if ($t['jenis_transaksi'] === 'kas_keluar' && $t['is_settled'] == 0): ?>
+                                                <?php if ($t['jenis_transaksi'] === 'kas_keluar' && !$is_settled): ?>
                                                     <button class="btn btn-xs btn-success mr-1" 
-                                                            onclick="openModalKasMasukRef(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['no_transaksi'])) ?>', '<?= htmlspecialchars(addslashes($t['pilihan'])) ?>', '<?= htmlspecialchars(addslashes($t['keterangan'] ?? '')) ?>', <?= $t['nominal'] ?>)" 
+                                                            onclick="openModalKasMasukRef(<?= $t['id'] ?>, '<?= htmlspecialchars(addslashes($t['no_transaksi'])) ?>', '<?= htmlspecialchars(addslashes($t['pilihan'])) ?>', '', <?= $sisa ?>)" 
                                                             title="Input Kas Masuk dari Kas Keluar ini">
-                                                        <i class="fas fa-plus-circle"></i> Kas Masuk
+                                                        <i class="fas fa-plus-circle"></i>
                                                     </button>
                                                 <?php endif; ?>
+                                                <button class="btn btn-xs btn-primary mr-1" onclick="editTransaksi(<?= $t['id'] ?>)" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
                                                 <button class="btn btn-xs btn-danger" onclick="hapusTransaksi(<?= $t['id'] ?>)" title="Hapus">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
@@ -230,6 +215,7 @@
             </div>
             <div class="modal-body py-3">
                 <input type="hidden" id="inputJenis">
+                <input type="hidden" id="idTransaksi" value="0">
                 
                 <div class="row">
                     <div class="col-md-4">
@@ -273,7 +259,7 @@
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row" style="display:none;">
                     <div class="col-md-12">
                         <div class="form-group mb-0">
                             <label class="small font-weight-bold text-secondary">Keterangan / Catatan Transaksi</label>
@@ -354,23 +340,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group mb-3">
-                    <label class="small font-weight-bold text-secondary">Pilihan Kategori *</label>
-                    <div class="input-group input-group-sm">
-                        <select id="kmRefPilihan" class="form-control form-control-sm select2-pilihan">
-                            <option value="">-- Pilih Kategori --</option>
-                            <?php foreach ($pilihan_list as $p): ?>
-                                <option value="<?= htmlspecialchars($p['nama_pilihan']) ?>"><?= htmlspecialchars($p['nama_pilihan']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" title="Tambah pilihan kategori baru" onclick="$('#modalPilihan').modal('show')">
-                                <i class="fas fa-plus mr-1"></i> Kategori Baru
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group mb-0">
+                <input type="hidden" id="kmRefPilihan">
+                <div class="form-group mb-0" style="display:none;">
                     <label class="small font-weight-bold text-secondary">Keterangan / Catatan (Opsional)</label>
                     <input type="text" id="kmRefKeterangan" class="form-control form-control-sm"
                            placeholder="Contoh: Terima sisa UM / Pengembalian BBM...">
@@ -428,7 +399,8 @@
 // ============================================================
 function openModal(jenis) {
     $('#inputJenis').val(jenis);
-    $('#colNominalKembali').hide();
+    $('#idTransaksi').val(0);
+    $('#modalTitle').text(jenis === 'kas_masuk' ? 'Input Kas Masuk' : 'Input Kas Keluar');
     $('#lblNominal').text('Nominal Transaksi (Rp) *');
     $('#inputNominalKembali').val('');
 
@@ -458,28 +430,29 @@ function formatNominal(el) {
 // Simpan Transaksi
 // ============================================================
 function simpanTransaksi() {
-    var jenis     = $('#inputJenis').val();
-    var pilihan   = $('#inputPilihan').val();
+    var id_trx  = $('#idTransaksi').val();
+    var jenis   = $('#inputJenis').val();
+    var tanggal = $('#inputTanggal').val();
+    var pilihan = $('#inputPilihan').val();
+    var ket     = $('#inputKeterangan').val();
     var nominalRaw = $('#inputNominal').val().replace(/\./g, '').replace(',', '.');
-    var nominal   = parseFloat(nominalRaw);
+    var nominal = parseFloat(nominalRaw);
     var nominalKembaliRaw = $('#inputNominalKembali').val().replace(/\./g, '').replace(',', '.');
-    var keterangan = $('#inputKeterangan').val();
-    var tanggal   = $('#inputTanggal').val();
 
-    if (!pilihan) { Swal.fire('Perhatian', 'Pilih kategori transaksi terlebih dahulu!', 'warning'); return; }
-    if (!nominal || nominal <= 0) { Swal.fire('Perhatian', 'Nominal harus lebih dari 0!', 'warning'); return; }
-    if (jenis === 'penyelesaian_um' && (!nominalKembaliRaw || parseFloat(nominalKembaliRaw) < 0)) {
-        Swal.fire('Perhatian', 'Sisa kembalian tidak valid!', 'warning'); return;
+    if (!tanggal || !pilihan || !nominal || nominal <= 0) {
+        Swal.fire('Oops', 'Silakan lengkapi form dan pastikan nominal > 0', 'warning');
+        return;
     }
 
     $('#btnSimpan').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Menyimpan...');
 
     $.post("<?= base_url('keuangan/kasir/simpan_transaksi') ?>", {
+        id_transaksi: id_trx,
         jenis_transaksi: jenis,
         pilihan: pilihan,
         nominal: nominalRaw,
         nominal_kembali: nominalKembaliRaw,
-        keterangan: keterangan,
+        keterangan: ket,
         tanggal: tanggal
     }, function(res) {
         $('#btnSimpan').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan');
@@ -494,6 +467,46 @@ function simpanTransaksi() {
         $('#btnSimpan').prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Simpan');
         Swal.fire('Error', 'Koneksi ke server gagal.', 'error');
     });
+}
+
+// ============================================================
+// Edit Transaksi
+// ============================================================
+function editTransaksi(id) {
+    $.get("<?= base_url('keuangan/kasir/get_transaksi_by_id') ?>", {id: id}, function(res) {
+        if (res.status === 'success') {
+            var data = res.data;
+            $('#idTransaksi').val(data.id);
+            $('#inputJenis').val(data.jenis_transaksi);
+            
+            var title = data.jenis_transaksi === 'kas_masuk' ? 'Edit Kas Masuk' : (data.jenis_transaksi === 'kas_keluar' ? 'Edit Kas Keluar' : 'Edit Penyelesaian UM');
+            $('#modalTitle').text(title);
+            
+            var lblNominal = 'Nominal Transaksi (Rp) *';
+            if (data.jenis_transaksi === 'kas_masuk') lblNominal = 'Nominal Masuk (Rp) *';
+            else if (data.jenis_transaksi === 'kas_keluar') lblNominal = 'Nominal Keluar (Rp) *';
+            $('#lblNominal').text(lblNominal);
+            
+            $('#inputTanggal').val(data.tanggal);
+            
+            // Format nominal ke number_format
+            var nom = parseFloat(data.nominal);
+            $('#inputNominal').val(nom.toLocaleString('id-ID'));
+            
+            // Set option
+            if ($('#inputPilihan option[value="'+data.pilihan+'"]').length === 0) {
+                $('#inputPilihan').append('<option value="'+data.pilihan+'">'+data.pilihan+'</option>');
+            }
+            $('#inputPilihan').val(data.pilihan).trigger('change');
+            $('#inputKeterangan').val(data.keterangan || '');
+            
+            $('#colNominalKembali').hide(); // tidak handle sisa di form utama
+            
+            $('#modalTransaksi').modal('show');
+        } else {
+            Swal.fire('Gagal', res.message, 'error');
+        }
+    }, 'json');
 }
 
 // ============================================================
@@ -652,6 +665,12 @@ function simpanKasMasukRef() {
 
 $(document).ready(function() {
     $('#filterBulan').on('change', function() { loadTransaksi(); });
-    $('#filterJenis').on('change', function() { loadTransaksi(); });
+
+    if ($.fn.select2) {
+        $('.select2-pilihan').select2({
+            width: '100%',
+            dropdownParent: $('#modalTransaksi')
+        });
+    }
 });
 </script>

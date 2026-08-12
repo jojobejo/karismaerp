@@ -162,6 +162,32 @@
         text-decoration: underline;
         color: var(--zahir-dark-blue);
     }
+    
+    /* Context Menu Styles */
+    .context-menu {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 4px;
+        z-index: 1000;
+        min-width: 150px;
+    }
+    .context-menu ul {
+        list-style: none;
+        padding: 5px 0;
+        margin: 0;
+    }
+    .context-menu li {
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #333;
+    }
+    .context-menu li:hover {
+        background: var(--zahir-light-bg);
+        color: var(--zahir-blue);
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -225,6 +251,48 @@
                         <button type="button" class="btn btn-zahir btn-zahir-secondary" id="btn-tutup">
                             Tutup
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu" style="display:none;">
+        <ul>
+            <li id="menu-detail-jurnal"><i class="fas fa-file-invoice-dollar mr-2"></i> Detail Jurnal</li>
+        </ul>
+    </div>
+
+    <!-- Modal Detail Jurnal -->
+    <div class="modal fade zahir-modal" id="modalDetailJurnal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2" style="border-bottom: 2px solid #333;">
+                        <div class="d-flex" style="gap: 20px; font-weight: bold; font-size: 15px;">
+                            <span id="jurnal-kode"></span>
+                            <span id="jurnal-tanggal"></span>
+                        </div>
+                        <div style="font-weight: bold; font-size: 15px;" id="jurnal-keterangan">
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-borderless" style="font-size: 13px;">
+                            <tbody id="jurnal-detail-body">
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2" style="border-top: 1px solid #ddd; font-size: 12px;">
+                        <div>
+                            Diinput oleh : <span id="jurnal-user"></span>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-primary" id="btn-print-jurnal" style="width: 80px;">Print</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" style="width: 80px;">Batal</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -311,9 +379,92 @@
 $(document).ready(function() {
     let selectedId = null;
     let selectedStatus = null;
+    let contextMenuRowId = null;
+    let contextMenuRowStatus = null;
 
     // Load data initially
     loadData();
+
+    // Hide context menu on click anywhere
+    $(document).click(function() {
+        $('#context-menu').hide();
+    });
+
+    // Right-click on row
+    $(document).on('contextmenu', '#list-kas-masuk-body tr', function(e) {
+        if ($(this).hasClass('empty-row')) return;
+        
+        e.preventDefault();
+        contextMenuRowId = $(this).data('id');
+        contextMenuRowStatus = $(this).data('status');
+        
+        // Show context menu
+        $('#context-menu').css({
+            display: "block",
+            left: e.pageX,
+            top: e.pageY
+        });
+    });
+
+    // Detail Jurnal Click
+    $('#menu-detail-jurnal').click(function() {
+        if (contextMenuRowStatus !== 'POSTED') {
+            alert('Transaksi ini belum diposting ke jurnal.');
+            return;
+        }
+
+        $.ajax({
+            url: "<?= base_url('keuangan/kas_masuk/detail_jurnal_ajax/') ?>" + contextMenuRowId,
+            type: "GET",
+            dataType: "json",
+            success: function(res) {
+                if (res.success) {
+                    let header = res.header;
+                    let details = res.details;
+                    
+                    $('#jurnal-kode').text(header.journal_type || 'CR');
+                    
+                    let dateObj = new Date(header.tanggal_transaksi);
+                    let d = String(dateObj.getDate()).padStart(2, '0');
+                    let m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                    let y = dateObj.getFullYear();
+                    $('#jurnal-tanggal').text(`${d}/${m}/${y}`);
+                    
+                    $('#jurnal-keterangan').text(header.keterangan || '-');
+                    $('#jurnal-user').text(res.user || '-');
+
+                    let html = '';
+                    details.forEach(function(row) {
+                        let isDebit = parseFloat(row.debit) > 0;
+                        let val = isDebit ? parseFloat(row.debit) : parseFloat(row.kredit);
+                        let valStr = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 6 }).format(val);
+                        
+                        let debitCol = isDebit ? valStr : '';
+                        let kreditCol = !isDebit ? valStr : '';
+
+                        html += `<tr>
+                            <td style="width: 15%;">${row.nomor_dokumen || header.nomor_jurnal}</td>
+                            <td style="width: 10%;">${row.kode_akun}</td>
+                            <td style="width: 35%;">${row.nama_akun}</td>
+                            <td style="width: 20%; text-align: right;">${debitCol}</td>
+                            <td style="width: 20%; text-align: right;">${kreditCol}</td>
+                        </tr>`;
+                    });
+                    
+                    $('#jurnal-detail-body').html(html);
+                    $('#modalDetailJurnal').modal('show');
+                } else {
+                    alert(res.message || 'Gagal memuat detail jurnal');
+                }
+            }
+        });
+    });
+
+    // Print button on detail modal
+    $('#btn-print-jurnal').click(function() {
+        // Optional implementation for print if needed
+        alert('Fitur Print Jurnal belum tersedia.');
+    });
 
     // Refresh button
     $('#btn-refresh, #link-update').click(function() {

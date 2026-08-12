@@ -237,6 +237,7 @@ $route['keuangan/kas_keluar/terbilang_ajax']            = 'keuangan/C_KasKeluar/
 $route['keuangan/kas_keluar/accounts_lookup']            = 'keuangan/C_KasKeluar/accounts_lookup';
 $route['keuangan/kas_keluar/ref_no_ajax']                 = 'keuangan/C_KasKeluar/ref_no_ajax';
 $route['keuangan/kas_keluar/print_receipt/(:num)']      = 'keuangan/C_KasKeluar/print_receipt/$1';
+$route['keuangan/kas_keluar/detail_jurnal_ajax/(:num)'] = 'keuangan/C_KasKeluar/detail_jurnal_ajax/$1';
 $route['keuangan/kas_masuk']                            = 'keuangan/C_KasMasuk/index';
 $route['keuangan/kas_masuk/get_data']                   = 'keuangan/C_KasMasuk/get_data';
 $route['keuangan/kas_masuk/form']                       = 'keuangan/C_KasMasuk/form';
@@ -247,6 +248,7 @@ $route['keuangan/kas_masuk/terbilang_ajax']             = 'keuangan/C_KasMasuk/t
 $route['keuangan/kas_masuk/accounts_lookup']             = 'keuangan/C_KasMasuk/accounts_lookup';
 $route['keuangan/kas_masuk/ref_no_ajax']                 = 'keuangan/C_KasMasuk/ref_no_ajax';
 $route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/print_receipt/$1';
+$route['keuangan/kas_masuk/detail_jurnal_ajax/(:num)']  = 'keuangan/C_KasMasuk/detail_jurnal_ajax/$1';
 
 // KASIR - Transaksi Kas Harian
 $route['keuangan/kasir']                                = 'keuangan/C_Kasir/index';

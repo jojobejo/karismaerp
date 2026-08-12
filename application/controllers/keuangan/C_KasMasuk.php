@@ -137,7 +137,7 @@ class C_KasMasuk extends CI_Controller
             'is_inclusive_tax' => $is_inclusive_tax,
             'is_giro' => $is_giro,
             'total_amount' => $total_amount,
-            'status' => $postNow ? 'POSTED' : 'DRAFT',
+            'status' => 'DRAFT', // Always save as DRAFT initially. post_to_journal will update it to POSTED
             'created_by' => $userId ?: null,
             'updated_at' => date('Y-m-d H:i:s')
         ];
@@ -154,7 +154,11 @@ class C_KasMasuk extends CI_Controller
         if ($saved_id) {
             if ($postNow) {
                 $post_result = $this->M_KasMasuk->post_to_journal($saved_id, $userId ?: null);
-                if (!$post_result['success']) {
+                if ($post_result === false) {
+                    return $this->output
+                        ->set_content_type('application/json')
+                        ->set_output(json_encode(['success' => false, 'message' => 'Transaksi sudah diposting atau tidak valid. Harap batalkan posting sebelum merekam ulang.']));
+                } elseif (!$post_result['success']) {
                     return $this->output
                         ->set_content_type('application/json')
                         ->set_output(json_encode(['success' => false, 'message' => $post_result['message']]));
@@ -223,6 +227,41 @@ class C_KasMasuk extends CI_Controller
         return $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode(['success' => true, 'data' => $rows]));
+    }
+
+    public function detail_jurnal_ajax($id_kas_masuk)
+    {
+        $this->db->select('id_jurnal, created_by');
+        $km = $this->db->where('id_kas_masuk', (int)$id_kas_masuk)->get('tbkeu_kas_masuk')->row_array();
+        if (!$km || empty($km['id_jurnal'])) {
+            return $this->output->set_content_type('application/json')->set_output(json_encode(['success' => false, 'message' => 'Jurnal belum terposting atau tidak ditemukan.']));
+        }
+        
+        $id_jurnal = $km['id_jurnal'];
+        $jurnal = $this->db->where('id_jurnal', $id_jurnal)->get('tbkeu_jurnal')->row_array();
+        
+        $this->db->select('d.*, a.kode_akun, a.nama_akun');
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+        $this->db->where('d.id_jurnal', $id_jurnal);
+        $this->db->order_by('d.nomor_baris', 'ASC');
+        $details = $this->db->get()->result_array();
+
+        // Get user name (optional)
+        $user_name = '-';
+        if (!empty($km['created_by'])) {
+            $user = $this->db->select('nama_user')->where('id', $km['created_by'])->get('tb_user')->row_array();
+            if ($user) {
+                $user_name = $user['nama_user'];
+            }
+        }
+
+        return $this->output->set_content_type('application/json')->set_output(json_encode([
+            'success' => true,
+            'header' => $jurnal,
+            'details' => $details,
+            'user' => $user_name
+        ]));
     }
 
     public function print_receipt($id)
