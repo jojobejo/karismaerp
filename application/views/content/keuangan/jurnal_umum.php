@@ -235,6 +235,32 @@
         font-weight: 700;
         color: var(--zahir-blue);
     }
+
+    /* Context Menu Styles */
+    .context-menu {
+        position: absolute;
+        background: #fff;
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 4px;
+        z-index: 1000;
+        min-width: 150px;
+    }
+    .context-menu ul {
+        list-style: none;
+        padding: 5px 0;
+        margin: 0;
+    }
+    .context-menu li {
+        padding: 8px 15px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #333;
+    }
+    .context-menu li:hover {
+        background: var(--zahir-light-bg);
+        color: var(--zahir-blue);
+    }
 </style>
 
 <?php 
@@ -388,6 +414,13 @@ $has_id = !empty($this->input->get('id'));
     </div>
 </div>
 
+<!-- Context Menu -->
+<div id="context-menu-jurnal" class="context-menu" style="display:none;">
+    <ul>
+        <li id="menu-detail-jurnal-list"><i class="fas fa-info-circle mr-2"></i> Detail Jurnal</li>
+    </ul>
+</div>
+
 <!-- MODAL: DAFTAR AKUN (PERKIRAAN) -->
 <div class="modal fade zahir-modal" id="modal-pilih-akun" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -512,6 +545,88 @@ $has_id = !empty($this->input->get('id'));
         }
 
         loadJurnalList();
+
+        // Hide context menu on click anywhere
+        $(document).click(function() {
+            $('#context-menu-jurnal').hide();
+        });
+
+        // Right-click on row -> show context menu
+        let contextMenuJurnalId = null;
+        $(document).on('contextmenu', '#list-jurnal-body tr', function(e) {
+            let id = $(this).data('id');
+            if (!id) return; // baris kosong / "Belum ada transaksi"
+
+            e.preventDefault();
+            contextMenuJurnalId = id;
+
+            $('#context-menu-jurnal').css({
+                display: "block",
+                left: e.pageX,
+                top: e.pageY
+            });
+        });
+
+        // Klik "Detail Jurnal" di context menu -> tampilkan modal perincian
+        $('#menu-detail-jurnal-list').click(function() {
+            if (!contextMenuJurnalId) return;
+            showDetailJurnalModal(contextMenuJurnalId);
+        });
+
+        function showDetailJurnalModal(idJurnal) {
+            $.ajax({
+                url: '<?= base_url("buku_besar/jurnal_umum_detail") ?>',
+                type: 'POST',
+                data: { id_jurnal: idJurnal },
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success) {
+                        let journal = res.data.journal;
+                        let details = res.data.details;
+
+                        $('#detail-ref').text(journal.nomor_jurnal || '-');
+
+                        let dateObj = new Date(journal.tanggal_transaksi);
+                        let d = String(dateObj.getDate()).padStart(2, '0');
+                        let m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                        let y = dateObj.getFullYear();
+                        $('#detail-tanggal').text(`${d}/${m}/${y}`);
+
+                        $('#detail-keterangan').text(journal.keterangan || '-');
+
+                        let statusBadge = journal.status === 'POSTED'
+                            ? '<span class="badge-status badge-status-posted">POSTED</span>'
+                            : '<span class="badge-status badge-status-draft">DRAFT</span>';
+                        $('#detail-status').html(statusBadge);
+
+                        let html = '';
+                        details.forEach(function(row) {
+                            let debitVal = parseFloat(row.debit) > 0
+                                ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(row.debit)
+                                : '';
+                            let kreditVal = parseFloat(row.kredit) > 0
+                                ? new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(row.kredit)
+                                : '';
+
+                            html += `<tr>
+                                <td>${row.kode_akun || '-'}</td>
+                                <td>${row.nama_akun || '-'}</td>
+                                <td class="text-right">${debitVal}</td>
+                                <td class="text-right">${kreditVal}</td>
+                            </tr>`;
+                        });
+
+                        $('#detail-lines-body').html(html);
+                        $('#modal-perincian').modal('show');
+                    } else {
+                        Swal.fire('Gagal!', res.message || 'Gagal memuat detail jurnal.', 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Gagal!', 'Terjadi kesalahan sistem.', 'error');
+                }
+            });
+        }
 
         // Check if there is an 'id' query parameter in the URL (e.g. from Buku Besar drilldown)
         const urlParams = new URLSearchParams(window.location.search);
