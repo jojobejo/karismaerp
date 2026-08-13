@@ -2339,6 +2339,24 @@ LEFT JOIN tb_customer c
     public function ensure_mutasi_barang_schema()
     {
         if (!$this->db->table_exists('tb_tmp_mutasi')) {
+            $sql = "CREATE TABLE IF NOT EXISTS `tb_tmp_mutasi` (
+              `id` int(11) NOT NULL AUTO_INCREMENT,
+              `nama_barang` text NOT NULL,
+              `kode_barang` varchar(50) DEFAULT NULL,
+              `kode_barang_system` varchar(50) DEFAULT NULL,
+              `exp_date` text NOT NULL,
+              `no_lot` varchar(100) DEFAULT NULL,
+              `qty` int(11) NOT NULL,
+              `satuan_id` int(11) NOT NULL,
+              `gudang_asal` int(11) DEFAULT NULL,
+              `user_inputer` varchar(25) NOT NULL,
+              `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+            $this->db->query($sql);
+        }
+
+        if (!$this->db->table_exists('tb_tmp_mutasi')) {
             return FALSE;
         }
 
@@ -3326,18 +3344,36 @@ LEFT JOIN tb_customer c
 
     public function get_tmp_mutasi_by_user($user_id)
     {
+        $this->ensure_mutasi_barang_schema();
+
+        if (!$this->db->table_exists('tb_tmp_mutasi')) {
+            return [];
+        }
+
+        $hasBarangKode = $this->db->table_exists('tbpo_barang') && $this->db->field_exists('kode_barang', 'tbpo_barang');
+        $hasBarangSystem = $this->db->table_exists('tbpo_barang') && $this->db->field_exists('kode_barang_system', 'tbpo_barang');
+
         $selectKodeBarang = $this->db->field_exists('kode_barang', 'tb_tmp_mutasi')
-            ? "COALESCE(NULLIF(a.kode_barang, ''), b.kd_barang)"
-            : "b.kd_barang";
+            ? "COALESCE(NULLIF(a.kode_barang, ''), " . ($hasBarangKode ? "b.kode_barang" : "''") . ")"
+            : ($hasBarangKode ? "b.kode_barang" : "''");
         $selectKodeSystem = $this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi')
-            ? "COALESCE(NULLIF(a.kode_barang_system, ''), b.kode_barang_system)"
-            : "b.kode_barang_system";
+            ? "COALESCE(NULLIF(a.kode_barang_system, ''), " . ($hasBarangSystem ? "b.kode_barang_system" : ($hasBarangKode ? "b.kode_barang" : "''")) . ")"
+            : ($hasBarangSystem ? "b.kode_barang_system" : ($hasBarangKode ? "b.kode_barang" : "''"));
         $selectNoLot = $this->db->field_exists('no_lot', 'tb_tmp_mutasi')
             ? "COALESCE(a.no_lot, '')"
             : "''";
         $selectGudangAsal = $this->db->field_exists('gudang_asal', 'tb_tmp_mutasi')
             ? "a.gudang_asal"
             : "NULL";
+
+        $joinConds = ["b.nama_barang = a.nama_barang"];
+        if ($this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi') && $hasBarangSystem) {
+            $joinConds[] = "b.kode_barang_system = a.kode_barang_system";
+        }
+        if ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi') && $hasBarangKode) {
+            $joinConds[] = "b.kode_barang = a.kode_barang";
+        }
+        $joinSql = implode(' OR ', $joinConds);
 
         $sql = "SELECT 
         a.id,
@@ -3352,13 +3388,10 @@ LEFT JOIN tb_customer c
         COALESCE(s.nm_satuan, CASE WHEN a.satuan_id = 1 THEN 'Btl' WHEN a.satuan_id = 2 THEN 'Pcs' WHEN a.satuan_id = 3 THEN 'Box' ELSE 'Pcs' END) AS satuan_nama,
         a.user_inputer
         FROM tb_tmp_mutasi a
-        LEFT JOIN tbpo_barang b
-            ON b.nama_barang = a.nama_barang
-            OR (" . ($this->db->field_exists('kode_barang_system', 'tb_tmp_mutasi') ? "b.kode_barang_system = a.kode_barang_system" : "1 = 0") . ")
-            OR (" . ($this->db->field_exists('kode_barang', 'tb_tmp_mutasi') ? "b.kode_barang = a.kode_barang" : "1 = 0") . ")
+        LEFT JOIN tbpo_barang b ON ({$joinSql})
         LEFT JOIN tbpo_satuan s ON s.id_satuan = a.satuan_id
         WHERE a.user_inputer = ?
-        GROUP BY a.id
+        GROUP BY a.id, a.nama_barang, a.exp_date, a.qty, a.satuan_id, a.user_inputer
         ORDER BY a.id ASC";
         return $this->db->query($sql, [$user_id])->result();
     }

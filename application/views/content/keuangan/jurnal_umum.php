@@ -680,6 +680,8 @@ $has_id = !empty($this->input->get('id'));
                             
                             details.forEach(function(line) {
                                 let rowId = rowCounter++;
+                                let debitVal = (parseFloat(line.debit) > 0) ? parseFloat(line.debit).toFixed(2) : '';
+                                let kreditVal = (parseFloat(line.kredit) > 0) ? parseFloat(line.kredit).toFixed(2) : '';
                                 let rowHtml = `<tr id="form-row-${rowId}" class="form-row-line">
                                     <td>
                                         <input type="text" class="form-control input-pilih-akun" readonly placeholder="- Pilih Akun -" style="cursor: pointer; background: #fff;" value="${line.kode_akun || ''}">
@@ -689,10 +691,10 @@ $has_id = !empty($this->input->get('id'));
                                         <input type="text" class="form-control text-nama-akun" readonly placeholder="-" style="cursor: pointer; background: #fff;" value="${line.nama_akun || ''}">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="lines[${rowId}][debit]" class="form-control text-right input-debit" value="${parseFloat(line.debit).toFixed(2)}">
+                                        <input type="number" step="0.01" min="0" name="lines[${rowId}][debit]" class="form-control text-right input-debit" value="${debitVal}" placeholder="0.00">
                                     </td>
                                     <td>
-                                        <input type="number" step="0.01" min="0" name="lines[${rowId}][kredit]" class="form-control text-right input-kredit" value="${parseFloat(line.kredit).toFixed(2)}">
+                                        <input type="number" step="0.01" min="0" name="lines[${rowId}][kredit]" class="form-control text-right input-kredit" value="${kreditVal}" placeholder="0.00">
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-link text-danger btn-remove-line" data-id="${rowId}">
@@ -827,10 +829,10 @@ $has_id = !empty($this->input->get('id'));
                     <input type="text" class="form-control text-nama-akun" readonly placeholder="-" style="cursor: pointer; background: #fff;">
                 </td>
                 <td>
-                    <input type="number" step="0.01" min="0" name="lines[${rowId}][debit]" class="form-control text-right input-debit" value="0.00">
+                    <input type="number" step="0.01" min="0" name="lines[${rowId}][debit]" class="form-control text-right input-debit" placeholder="0.00">
                 </td>
                 <td>
-                    <input type="number" step="0.01" min="0" name="lines[${rowId}][kredit]" class="form-control text-right input-kredit" value="0.00">
+                    <input type="number" step="0.01" min="0" name="lines[${rowId}][kredit]" class="form-control text-right input-kredit" placeholder="0.00">
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-link text-danger btn-remove-line" data-id="${rowId}">
@@ -887,21 +889,8 @@ $has_id = !empty($this->input->get('id'));
             renderModalAccounts($(this).val());
         });
 
-        // Select account row in modal
+        // Select account row in modal (single click to apply)
         $(document).on('click', '#pilih-akun-body tr', function() {
-            let id = $(this).data('id');
-            if(!id) return;
-            $('#pilih-akun-body tr').removeClass('selected');
-            $(this).addClass('selected');
-            selectedModalAccount = {
-                id: id,
-                kode: $(this).data('kode'),
-                nama: $(this).data('nama')
-            };
-        });
-
-        // Double click selects account
-        $(document).on('dblclick', '#pilih-akun-body tr', function() {
             let id = $(this).data('id');
             if(!id) return;
             selectedModalAccount = {
