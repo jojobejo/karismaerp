@@ -250,6 +250,21 @@ $route['keuangan/kas_masuk/ref_no_ajax']                 = 'keuangan/C_KasMasuk/
 $route['keuangan/kas_masuk/print_receipt/(:num)']       = 'keuangan/C_KasMasuk/print_receipt/$1';
 $route['keuangan/kas_masuk/detail_jurnal_ajax/(:num)']  = 'keuangan/C_KasMasuk/detail_jurnal_ajax/$1';
 
+// PENYESUAIAN BARANG (Penyesuaian Persediaan)
+$route['persediaan/penyesuaian_barang']                            = 'keuangan/C_PenyesuaianBarang/index';
+$route['persediaan/penyesuaian_barang/get_data']                   = 'keuangan/C_PenyesuaianBarang/get_data';
+$route['persediaan/penyesuaian_barang/form']                       = 'keuangan/C_PenyesuaianBarang/form';
+$route['persediaan/penyesuaian_barang/form/(:num)']                = 'keuangan/C_PenyesuaianBarang/form/$1';
+$route['persediaan/penyesuaian_barang/save']                       = 'keuangan/C_PenyesuaianBarang/save';
+$route['persediaan/penyesuaian_barang/delete']                     = 'keuangan/C_PenyesuaianBarang/delete';
+$route['persediaan/penyesuaian_barang/unpost']                     = 'keuangan/C_PenyesuaianBarang/unpost';
+$route['persediaan/penyesuaian_barang/ref_no_ajax']                = 'keuangan/C_PenyesuaianBarang/ref_no_ajax';
+$route['persediaan/penyesuaian_barang/barang_lookup']              = 'keuangan/C_PenyesuaianBarang/barang_lookup';
+$route['persediaan/penyesuaian_barang/accounts_lookup']            = 'keuangan/C_PenyesuaianBarang/accounts_lookup';
+$route['persediaan/penyesuaian_barang/gudang_lookup']              = 'keuangan/C_PenyesuaianBarang/gudang_lookup';
+$route['persediaan/penyesuaian_barang/detail_jurnal_ajax/(:num)']  = 'keuangan/C_PenyesuaianBarang/detail_jurnal_ajax/$1';
+$route['persediaan/penyesuaian_barang/print_receipt/(:num)']       = 'keuangan/C_PenyesuaianBarang/print_receipt/$1';
+
 // KASIR - Transaksi Kas Harian
 $route['keuangan/kasir']                                = 'keuangan/C_Kasir/index';
 $route['keuangan/kasir/simpan_transaksi']               = 'keuangan/C_Kasir/simpan_transaksi';
