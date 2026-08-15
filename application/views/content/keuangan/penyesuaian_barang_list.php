@@ -375,7 +375,6 @@
                             <col style="width: 180px;">
                             <col style="width: auto;">
                             <col style="width: 180px;">
-                            <col style="width: 70px;">
                         </colgroup>
                         <thead>
                             <tr>
@@ -383,12 +382,11 @@
                                 <th>Referensi</th>
                                 <th>Keterangan</th>
                                 <th style="text-align:right">Nilai</th>
-                                <th style="text-align:center">✔</th>
                             </tr>
                         </thead>
                         <tbody id="pbTableBody">
                             <tr>
-                                <td colspan="5" class="empty-state">
+                                <td colspan="4" class="empty-state">
                                     <i class="fas fa-inbox"></i><br>
                                     Memuat data...
                                 </td>
@@ -399,13 +397,13 @@
 
                 <!-- Toolbar Bawah Full Width & Di Bawah Layar -->
                 <div class="pb-bottom-bar">
-                    <button class="btn-zahir btn-zahir-success" onclick="doNew()"><i class="fas fa-plus"></i> Baru</button>
-                    <button class="btn-zahir btn-zahir-danger" onclick="doDelete()" id="btnDelete" disabled><i class="fas fa-trash"></i> Hapus</button>
-                    <button class="btn-zahir btn-zahir-warning" onclick="doUnpost()" id="btnUnpost" disabled><i class="fas fa-undo"></i> Unpost</button>
+                    <button class="btn-zahir btn-zahir-primary" onclick="doNew()">Baru</button>
+                    <button class="btn-zahir btn-zahir-primary" onclick="doDelete()" id="btnDelete" disabled>Hapus</button>
+                    <button class="btn-zahir btn-zahir-primary" onclick="doUnpost()" id="btnUnpost" disabled>Unpost</button>
                     <div class="pb-bottom-right">
-                        <button class="btn-zahir btn-zahir-info" onclick="doPerincian()" id="btnPerincian" disabled><i class="fas fa-eye"></i> Perincian</button>
-                        <button class="btn-zahir btn-zahir-primary" onclick="doPrint()" id="btnPrint" disabled><i class="fas fa-print"></i> Cetak</button>
-                        <button class="btn-zahir btn-zahir-secondary" onclick="doClose()"><i class="fas fa-times"></i> Tutup</button>
+                        <button class="btn-zahir btn-zahir-primary" onclick="doPerincian()" id="btnPerincian" disabled>Perincian</button>
+                        <button class="btn-zahir btn-zahir-primary" onclick="doPrint()" id="btnPrint" disabled>Cetak</button>
+                        <button class="btn-zahir btn-zahir-primary" onclick="doClose()">Tutup</button>
                     </div>
                 </div>
             </div>
@@ -539,26 +537,27 @@ function loadData() {
         }
     }, 'json').fail(function() {
         $('#loadingOverlay').addClass('hidden');
-        $('#pbTableBody').html('<tr><td colspan="5" class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>Gagal memuat data</td></tr>');
+        $('#pbTableBody').html('<tr><td colspan="4" class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>Gagal memuat data</td></tr>');
     });
 }
 
 // Render baris tabel
 function renderTable(data) {
     if (!data || data.length === 0) {
-        $('#pbTableBody').html('<tr><td colspan="5" class="empty-state"><i class="fas fa-inbox"></i><br>Tidak ada data</td></tr>');
+        $('#pbTableBody').html('<tr><td colspan="4" class="empty-state"><i class="fas fa-inbox"></i><br>Tidak ada data</td></tr>');
         return;
     }
 
     var html = '';
     $.each(data, function(i, row) {
         var isPosted = row.status === 'POSTED';
+        var checkIcon = isPosted ? ' <i class="fas fa-check" style="font-size: 13px; margin-left: 8px; color: #1e293b;"></i>' : '';
+
         html += '<tr data-id="' + row.id_penyesuaian + '" onclick="selectRow(this, ' + row.id_penyesuaian + ')" ondblclick="openEdit(' + row.id_penyesuaian + ')">';
         html += '<td>' + row.tanggal_formatted + '</td>';
         html += '<td>' + escHtml(row.no_referensi) + '</td>';
         html += '<td title="' + escAttr(row.keterangan || '') + '">' + escHtml(row.keterangan || '') + '</td>';
-        html += '<td style="text-align:right">' + row.nilai_formatted + '</td>';
-        html += '<td style="text-align:center">' + (isPosted ? '<i class="fas fa-check status-posted"></i>' : '<span class="status-draft">Draft</span>') + '</td>';
+        html += '<td style="text-align:right">' + row.nilai_formatted + checkIcon + '</td>';
         html += '</tr>';
     });
 

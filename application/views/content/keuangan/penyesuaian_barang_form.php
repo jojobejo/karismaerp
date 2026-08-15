@@ -311,82 +311,172 @@
     .btn-zahir-teal { background: #17a2b8; color: #fff; }
     .btn-zahir-teal:hover:not(:disabled) { background: #138496; color: #fff; }
 
-    /* Modal Lookup */
-    .lookup-modal .modal-header {
-        background: var(--zahir-blue);
-        color: #fff;
-        padding: 10px 16px;
+    /* Zahir Style Lookup Modal (Sesuai Desain Asli) */
+    .zahir-lookup-modal .modal-dialog {
+        width: 820px;
+        max-width: calc(100vw - 40px);
+        margin: 60px auto 30px auto;
     }
 
-    .lookup-modal .modal-title {
-        font-size: 16px;
-        font-weight: 600;
+    .zahir-lookup-modal .modal-content {
+        border-radius: 3px;
+        border: 1px solid #c8d1d9;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+        background: #fff;
+        overflow: hidden;
     }
 
-    .lookup-search {
-        padding: 10px 16px;
+    .zahir-lookup-modal .modal-header {
+        background: #fff;
+        border-bottom: none;
+        padding: 16px 20px 10px 20px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        border-bottom: 1px solid #e2e8f0;
+        justify-content: space-between;
     }
 
-    .lookup-search input {
-        flex: 1;
-        font-size: 13px;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        padding: 6px 10px;
-        height: 34px;
+    .zahir-lookup-modal .modal-title {
+        color: #222;
+        font-size: 20px;
+        font-weight: 500;
+        margin: 0;
+        letter-spacing: -0.2px;
     }
 
-    .lookup-table {
+    .zahir-modal-search {
+        position: relative;
+        width: 240px;
+    }
+
+    .zahir-modal-search input {
         width: 100%;
-        border-collapse: collapse;
+        height: 30px;
+        padding: 4px 28px 4px 10px;
+        font-size: 13px;
+        border: 1px solid #d4d8db;
+        border-radius: 2px;
+        background: #fdfdfd;
+        outline: none;
+        transition: border 0.2s;
     }
 
-    .lookup-table thead th {
-        background: #f1f5f9;
-        padding: 8px 12px;
+    .zahir-modal-search input:focus {
+        border-color: #0f769f;
+        background: #fff;
+    }
+
+    .zahir-modal-search i {
+        position: absolute;
+        right: 8px;
+        top: 8px;
         font-size: 12px;
-        font-weight: 600;
-        color: #334155;
-        border-bottom: 2px solid #cbd5e1;
+        color: #a0aab2;
+        pointer-events: none;
+    }
+
+    .zahir-lookup-scroll {
+        height: 380px;
+        min-height: 380px;
+        max-height: 380px;
+        overflow-y: scroll;
+        border-top: 1px solid #d8dee4;
+        border-bottom: 1px solid #d8dee4;
+        margin: 0 20px;
+        background: #fff;
+    }
+
+    .zahir-lookup-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin: 0;
+    }
+
+    .zahir-lookup-table thead th {
+        background-color: #0f769f !important;
+        color: #fff !important;
+        font-weight: 500;
+        font-size: 13px;
+        padding: 8px 12px;
+        border: none;
         position: sticky;
         top: 0;
-        z-index: 1;
+        z-index: 2;
+        text-align: left;
     }
 
-    .lookup-table tbody td {
-        font-size: 12px;
-        padding: 8px 12px;
-        border-bottom: 1px solid #eef2f5;
+    .zahir-lookup-table thead th.text-right {
+        text-align: right;
+    }
+
+    .zahir-lookup-table tbody tr {
         cursor: pointer;
+        user-select: none;
+        transition: background 0.1s;
+    }
+
+    .zahir-lookup-table tbody tr:nth-child(odd) {
+        background-color: #ffffff;
+    }
+
+    .zahir-lookup-table tbody tr:nth-child(even) {
+        background-color: #f0f3f6;
+    }
+
+    .zahir-lookup-table tbody tr:hover {
+        background-color: #e2f2fc;
+    }
+
+    .zahir-lookup-table tbody tr.selected {
+        background-color: #62bbed !important;
+        color: #fff !important;
+    }
+
+    .zahir-lookup-table tbody tr.selected td {
+        color: #fff !important;
+        font-weight: 500;
+    }
+
+    .zahir-lookup-table tbody td {
+        padding: 8px 12px;
+        font-size: 13px;
+        color: #333;
+        border: none;
+        vertical-align: middle;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .lookup-table tbody tr:hover td {
-        background: #e3f2fd;
-    }
-
-    .lookup-table tbody tr.selected td {
-        background: #90caf9;
-        font-weight: 600;
-    }
-
-    .lookup-scroll {
-        max-height: 350px;
-        overflow-y: auto;
-    }
-
-    .lookup-bottom {
-        padding: 10px 16px;
+    .zahir-lookup-footer {
+        padding: 14px 20px 16px 20px;
         display: flex;
-        gap: 8px;
-        justify-content: center;
-        border-top: 1px solid #e2e8f0;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+    }
+
+    .btn-zahir-action {
+        background-color: #0f769f;
+        color: #fff;
+        border: none;
+        border-radius: 2px;
+        padding: 5px 18px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        min-width: 65px;
+        transition: background 0.2s;
+    }
+
+    .btn-zahir-action:hover {
+        background-color: #0b5a7a;
+        color: #fff;
+    }
+
+    .btn-zahir-action:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 </style>
 
@@ -419,79 +509,80 @@
                     </div>
                     <div class="form-row-zahir">
                         <label>Keterangan :</label>
-                        <input type="text" id="keterangan" class="form-control-zahir" style="width:380px"
-                               value="<?= htmlspecialchars($header ? $header['keterangan'] : 'Penyesuaian Persediaan') ?>" />
+                        <input type="text" id="keterangan" class="form-control-zahir memo-input" style="width:400px"
+                               value="<?= $header ? htmlspecialchars($header['keterangan']) : 'Penyesuaian Persediaan' ?>" />
                     </div>
-                    <div class="form-row-zahir">
-                        <label>Dari Gudang :</label>
-                        <div class="gudang-group">
-                            <select id="gudangDari" class="form-control-zahir gudang-select">
-                                <option value="">-- Pilih --</option>
-                                <?php foreach ($gudangs as $g): ?>
-                                    <option value="<?= $g['id_gudang'] ?>"
-                                        <?= ($header && $header['id_gudang_dari'] == $g['id_gudang']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($g['nama_gudang']) ?>
+                    <?php $daftar_gudang = !empty($gudang_list) ? $gudang_list : (!empty($gudangs) ? $gudangs : []); ?>
+                    <div class="form-row-zahir" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="width: 110px; margin: 0;">Dari Gudang <span style="color:#d9534f; font-weight:bold;">*</span> :</label>
+                            <select id="gudangDari" class="form-control-zahir select-gudang" style="width:200px" required>
+                                <option value="">-- Pilih Gudang --</option>
+                                <?php foreach ($daftar_gudang as $gd): ?>
+                                    <option value="<?= $gd['id_gudang'] ?>"
+                                        <?= ($header && $header['id_gudang_dari'] == $gd['id_gudang']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($gd['nama_gudang']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <button class="btn-lookup-small" title="Pilih gudang"><i class="fas fa-th"></i></button>
                         </div>
-                    </div>
-                    <div class="form-row-zahir">
-                        <label>Ke Gudang :</label>
-                        <div class="gudang-group">
-                            <select id="gudangKe" class="form-control-zahir gudang-select">
-                                <option value="">-- Pilih --</option>
-                                <?php foreach ($gudangs as $g): ?>
-                                    <option value="<?= $g['id_gudang'] ?>"
-                                        <?= ($header && $header['id_gudang_ke'] == $g['id_gudang']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($g['nama_gudang']) ?>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label style="width: auto; margin: 0;">Ke Gudang :</label>
+                            <select id="gudangKe" class="form-control-zahir select-gudang" style="width:200px">
+                                <option value="">-- Pilih (Opsional) --</option>
+                                <?php foreach ($daftar_gudang as $gd): ?>
+                                    <option value="<?= $gd['id_gudang'] ?>"
+                                        <?= ($header && $header['id_gudang_ke'] == $gd['id_gudang']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($gd['nama_gudang']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <button class="btn-lookup-small" title="Pilih gudang"><i class="fas fa-th"></i></button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Area Grid Tabel Detail Transaksi -->
-                <div class="form-grid-section">
-                    <table class="grid-table" id="detailGrid">
-                        <colgroup>
-                            <col style="width: 170px;">
-                            <col style="width: auto;">
-                            <col style="width: 130px;">
-                            <col style="width: 100px;">
-                            <col style="width: 220px;">
-                            <col style="width: 45px;">
-                        </colgroup>
+                <!-- Grid Detail Transaksi -->
+                <div class="table-container">
+                    <table class="grid-table" id="gridTable">
                         <thead>
                             <tr>
-                                <th>Kode Barang</th>
-                                <th>Nama Barang</th>
-                                <th style="text-align:right">Jumlah</th>
-                                <th>Satuan</th>
-                                <th>Akun Penyesuaian</th>
-                                <th style="text-align:center">#</th>
+                                <th style="width: 160px;">Kode</th>
+                                <th style="width: auto;">Nama Barang</th>
+                                <th style="width: 120px; text-align:right">Jumlah</th>
+                                <th style="width: 100px;">Satuan</th>
+                                <th style="width: 240px;">Akun</th>
+                                <th style="width: 45px; text-align:center">#</th>
                             </tr>
                         </thead>
                         <tbody id="gridBody">
-                            <!-- Baris input dinamis di-render via JS -->
+                            <!-- Diisi secara dinamis via JS -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Bottom Bar Sticky di Bawah -->
+                <!-- Petunjuk Zahir -->
+                <div style="padding: 8px 20px; font-size: 12px; color: #475569;">
+                    Perhatian : Jumlah Barang harus <strong>NEGATIF</strong> jika dikeluarkan !!
+                </div>
+
+                <!-- Form Bottom Actions -->
                 <div class="form-bottom-bar">
                     <div class="form-bottom-left">
-                        <label><input type="checkbox" id="chkCetak" /> Cetak</label>
-                        <label><input type="checkbox" id="chkPosting" checked /> Posting</label>
-                        <label><input type="checkbox" id="chkKembali" /> Kembali ke Awal</label>
+                        <button type="button" class="btn-zahir btn-zahir-primary" onclick="delActiveOrLastRow()" style="min-width: 100px;">Hapus Baris</button>
                     </div>
-                    <div class="form-bottom-right">
+                    <div class="form-bottom-right" style="display: flex; align-items: center; gap: 12px;">
+                        <label style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="chkCetak" />
+                            <span>Cetak</span>
+                        </label>
+                        <label style="margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="chkPosting" checked />
+                            <span>Posting</span>
+                        </label>
                         <button type="button" class="btn-zahir btn-zahir-teal" onclick="addNewRow()"><i class="fas fa-plus"></i> Tambah Baris</button>
-                        <button type="button" class="btn-zahir btn-zahir-primary" onclick="doRekam()"><i class="fas fa-save"></i> Rekam</button>
-                        <button type="button" class="btn-zahir btn-zahir-secondary" onclick="doBatal()"><i class="fas fa-times"></i> Batal</button>
+                        <button type="button" class="btn-zahir btn-zahir-secondary" onclick="doBatal()">Batal</button>
+                        <button type="button" class="btn-zahir btn-zahir-secondary" onclick="doRekamDraft()">Rekam Draft</button>
+                        <button type="button" class="btn-zahir btn-zahir-primary" onclick="doRekam()">Rekam</button>
                     </div>
                 </div>
             </div>
@@ -499,87 +590,91 @@
     </div>
 </div>
 
-<!-- Modal Lookup Barang -->
-<div class="modal fade lookup-modal" id="modalBarang" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+<!-- Modal Lookup Barang (Data Persediaan) Sesuai Desain Zahir -->
+<div class="modal fade zahir-lookup-modal" id="modalBarang" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" style="max-width: 820px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-boxes mr-2"></i> Data Barang Persediaan</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <h5 class="modal-title">Data Persediaan</h5>
+                <div class="zahir-modal-search">
+                    <input type="text" id="searchBarang" placeholder="" />
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
-            <div class="lookup-search">
-                <input type="text" id="searchBarang" placeholder="Ketik kode / nama barang..." />
-                <button class="btn-zahir btn-zahir-primary" onclick="loadBarangLookup()"><i class="fas fa-search"></i> Cari</button>
-            </div>
-            <div class="lookup-scroll">
-                <table class="lookup-table" id="tableLookupBarang">
+            <div class="zahir-lookup-scroll">
+                <table class="zahir-lookup-table" id="tableLookupBarang">
                     <colgroup>
-                        <col style="width: 140px;">
-                        <col style="width: auto;">
-                        <col style="width: 90px;">
-                        <col style="width: 110px;">
-                        <col style="width: 110px;">
-                        <col style="width: 110px;">
-                        <col style="width: 140px;">
-                        <col style="width: 180px;">
+                        <col style="width: 25%;">
+                        <col style="width: 60%;">
+                        <col style="width: 15%;">
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>No. Barang</th>
+                            <th>Kode</th>
                             <th>Deskripsi</th>
-                            <th>Sat.</th>
-                            <th style="text-align:right">Tersedia</th>
-                            <th style="text-align:right">Dipesan</th>
-                            <th style="text-align:right">Total</th>
-                            <th>Kelompok</th>
-                            <th>Gudang</th>
+                            <th class="text-right">Tersedia</th>
                         </tr>
                     </thead>
                     <tbody id="bodyLookupBarang">
-                        <tr><td colspan="8" class="text-center text-muted" style="padding:20px;">Memuat data...</td></tr>
+                        <tr><td colspan="3" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <div class="lookup-bottom">
-                <button class="btn-zahir btn-zahir-primary" id="btnPilihBarang" disabled onclick="pilihBarang()"><i class="fas fa-check"></i> Pilih</button>
-                <button class="btn-zahir btn-zahir-secondary" data-dismiss="modal">Batal</button>
+            <div class="zahir-lookup-footer">
+                <div>
+                    <button type="button" class="btn-zahir-action" onclick="alert('Pilih baris terlebih dahulu')">Hapus</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-zahir-action" onclick="window.open(BASE + 'master_barang', '_blank')">Baru</button>
+                    <button type="button" class="btn-zahir-action" onclick="alert('Fitur edit master barang')">Edit</button>
+                    <button type="button" class="btn-zahir-action" onclick="loadBarangLookup()">Update</button>
+                    <button type="button" class="btn-zahir-action" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn-zahir-action" id="btnPilihBarang" disabled onclick="pilihBarang()">OK</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Lookup Akun -->
-<div class="modal fade lookup-modal" id="modalAkun" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+<!-- Modal Lookup Akun (Daftar Akun (Perkiraan)) Sesuai Desain Zahir -->
+<div class="modal fade zahir-lookup-modal" id="modalAkun" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" style="max-width: 820px;">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-list-alt mr-2"></i> Daftar Akun Perkiraan</h5>
-                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                <h5 class="modal-title">Daftar Akun (Perkiraan)</h5>
+                <div class="zahir-modal-search">
+                    <input type="text" id="searchAkun" placeholder="" />
+                    <i class="fas fa-search"></i>
+                </div>
             </div>
-            <div class="lookup-search">
-                <input type="text" id="searchAkun" placeholder="Ketik kode / nama akun..." />
-                <button class="btn-zahir btn-zahir-primary" onclick="loadAkunLookup()"><i class="fas fa-search"></i> Cari</button>
-            </div>
-            <div class="lookup-scroll">
-                <table class="lookup-table" id="tableLookupAkun">
+            <div class="zahir-lookup-scroll">
+                <table class="zahir-lookup-table" id="tableLookupAkun">
                     <colgroup>
-                        <col style="width: 150px;">
-                        <col style="width: auto;">
+                        <col style="width: 30%;">
+                        <col style="width: 70%;">
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>Kode Akun</th>
+                            <th>Kode</th>
                             <th>Nama Akun</th>
                         </tr>
                     </thead>
                     <tbody id="bodyLookupAkun">
-                        <tr><td colspan="2" class="text-center text-muted" style="padding:20px;">Memuat data...</td></tr>
+                        <tr><td colspan="2" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <div class="lookup-bottom">
-                <button class="btn-zahir btn-zahir-primary" id="btnPilihAkun" disabled onclick="pilihAkun()"><i class="fas fa-check"></i> Pilih</button>
-                <button class="btn-zahir btn-zahir-secondary" data-dismiss="modal">Batal</button>
+            <div class="zahir-lookup-footer">
+                <div>
+                    <button type="button" class="btn-zahir-action" onclick="alert('Pilih baris terlebih dahulu')">Hapus</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-zahir-action" onclick="alert('Fitur tambah akun')">Baru</button>
+                    <button type="button" class="btn-zahir-action" onclick="alert('Fitur edit akun')">Edit</button>
+                    <button type="button" class="btn-zahir-action" onclick="loadAkunLookup()">Update</button>
+                    <button type="button" class="btn-zahir-action" data-dismiss="modal">Batal</button>
+                    <button type="button" class="btn-zahir-action" id="btnPilihAkun" disabled onclick="pilihAkun()">OK</button>
+                </div>
             </div>
         </div>
     </div>
@@ -699,6 +794,11 @@ function delRow(btn) {
 
 // Buka Modal Lookup Barang
 function openLookupBarang(idx) {
+    if (!$('#gudangDari').val()) {
+        alert('Silakan pilih Dari Gudang terlebih dahulu sebelum memilih barang.');
+        $('#gudangDari').focus();
+        return;
+    }
     activeRowIdx = idx;
     selectedLookupBarang = null;
     $('#btnPilihBarang').prop('disabled', true);
@@ -707,39 +807,38 @@ function openLookupBarang(idx) {
     loadBarangLookup();
 }
 
-// Muat data barang
+// Muat data barang (Data Persediaan: Kode, Deskripsi, Tersedia)
 function loadBarangLookup() {
     var search = $('#searchBarang').val();
     var gudang_id = $('#gudangDari').val();
 
-    $('#bodyLookupBarang').html('<tr><td colspan="8" class="text-center text-muted" style="padding:20px;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data barang...</td></tr>');
+    $('#bodyLookupBarang').html('<tr><td colspan="3" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data...</td></tr>');
 
     $.get(BASE + 'persediaan/penyesuaian_barang/barang_lookup', {
         search: search,
         gudang_id: gudang_id
     }, function(res) {
         if (!res.success || !res.data.length) {
-            $('#bodyLookupBarang').html('<tr><td colspan="8" class="text-center text-muted" style="padding:20px;">Tidak ada data barang.</td></tr>');
+            $('#bodyLookupBarang').html('<tr><td colspan="3" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;">Tidak ada data barang.</td></tr>');
             return;
         }
 
         var html = '';
         $.each(res.data, function(i, b) {
+            var kd = b.kd_barang || b.kode || '';
+            var nm = b.nama_barang || b.deskripsi || '';
+            var tersedia = formatStockNumber(b.tersedia);
+
             html += '<tr data-json="' + escAttr(JSON.stringify(b)) + '" onclick="selectLookupBarang(this)" ondblclick="pilihBarang()">';
-            html += '<td>' + escHtml(b.kd_barang) + '</td>';
-            html += '<td>' + escHtml(b.nama_barang) + '</td>';
-            html += '<td>' + escHtml(b.satuan || '') + '</td>';
-            html += '<td style="text-align:right">' + formatNumber(b.tersedia) + '</td>';
-            html += '<td style="text-align:right">' + formatNumber(b.dipesan) + '</td>';
-            html += '<td style="text-align:right">' + formatNumber(b.total) + '</td>';
-            html += '<td>' + escHtml(b.kelompok || '-') + '</td>';
-            html += '<td>' + escHtml(b.nama_gudang || '-') + '</td>';
+            html += '<td>' + escHtml(kd) + '</td>';
+            html += '<td>' + escHtml(nm) + '</td>';
+            html += '<td style="text-align:right">' + escHtml(tersedia) + '</td>';
             html += '</tr>';
         });
 
         $('#bodyLookupBarang').html(html);
     }, 'json').fail(function() {
-        $('#bodyLookupBarang').html('<tr><td colspan="8" class="text-center text-muted" style="padding:20px;">Gagal memuat barang.</td></tr>');
+        $('#bodyLookupBarang').html('<tr><td colspan="3" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;">Gagal memuat barang.</td></tr>');
     });
 }
 
@@ -753,10 +852,14 @@ function selectLookupBarang(tr) {
 function pilihBarang() {
     if (!selectedLookupBarang || activeRowIdx === null) return;
 
+    var kd = selectedLookupBarang.kd_barang || selectedLookupBarang.kode || '';
+    var nm = selectedLookupBarang.nama_barang || selectedLookupBarang.deskripsi || '';
+    var sat = selectedLookupBarang.satuan || '';
+
     var tr = $('#gridBody tr[data-idx="' + activeRowIdx + '"]');
-    tr.find('.input-kd-barang').val(selectedLookupBarang.kd_barang);
-    tr.find('.input-nm-barang').val(selectedLookupBarang.nama_barang);
-    tr.find('.input-satuan').val(selectedLookupBarang.satuan || '');
+    tr.find('.input-kd-barang').val(kd);
+    tr.find('.input-nm-barang').val(nm);
+    tr.find('.input-satuan').val(sat);
 
     // Auto-fill Akun Penyesuaian jika barang punya mapping akun default
     if (selectedLookupBarang.id_akun && !tr.find('.input-id-akun').val()) {
@@ -782,27 +885,27 @@ function openLookupAkun(idx) {
 function loadAkunLookup() {
     var search = $('#searchAkun').val();
 
-    $('#bodyLookupAkun').html('<tr><td colspan="2" class="text-center text-muted" style="padding:20px;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat akun...</td></tr>');
+    $('#bodyLookupAkun').html('<tr><td colspan="2" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;"><i class="fas fa-spinner fa-spin mr-1"></i> Memuat data...</td></tr>');
 
     $.get(BASE + 'persediaan/penyesuaian_barang/accounts_lookup', {
         search: search
     }, function(res) {
         if (!res.success || !res.data.length) {
-            $('#bodyLookupAkun').html('<tr><td colspan="2" class="text-center text-muted" style="padding:20px;">Tidak ada akun.</td></tr>');
+            $('#bodyLookupAkun').html('<tr><td colspan="2" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;">Tidak ada data akun.</td></tr>');
             return;
         }
 
         var html = '';
         $.each(res.data, function(i, a) {
             html += '<tr data-json="' + escAttr(JSON.stringify(a)) + '" onclick="selectLookupAkun(this)" ondblclick="pilihAkun()">';
-            html += '<td><strong>' + escHtml(a.kode_akun) + '</strong></td>';
+            html += '<td>' + escHtml(a.kode_akun) + '</td>';
             html += '<td>' + escHtml(a.nama_akun) + '</td>';
             html += '</tr>';
         });
 
         $('#bodyLookupAkun').html(html);
     }, 'json').fail(function() {
-        $('#bodyLookupAkun').html('<tr><td colspan="2" class="text-center text-muted" style="padding:20px;">Gagal memuat akun.</td></tr>');
+        $('#bodyLookupAkun').html('<tr><td colspan="2" style="height: 320px; text-align: center; vertical-align: middle; color: #64748b;">Gagal memuat akun.</td></tr>');
     });
 }
 
@@ -828,10 +931,17 @@ function doRekam() {
     var refNo = $('#refNo').val();
     var tanggal = $('#tanggal').val();
     var keterangan = $('#keterangan').val();
+    var gudangDari = $('#gudangDari').val();
     var postNow = $('#chkPosting').is(':checked');
 
     if (!tanggal) {
         alert('Tanggal harus diisi.');
+        return;
+    }
+
+    if (!gudangDari) {
+        alert('Gudang Asal (Dari Gudang) wajib dipilih.');
+        $('#gudangDari').focus();
         return;
     }
 
@@ -890,6 +1000,20 @@ function doRekam() {
     });
 }
 
+function doRekamDraft() {
+    $('#chkPosting').prop('checked', false);
+    doRekam();
+}
+
+function delActiveOrLastRow() {
+    var $rows = $('#gridBody tr');
+    if ($rows.length > 1) {
+        $rows.last().remove();
+    } else {
+        $rows.first().find('input').val('');
+    }
+}
+
 function doBatal() {
     if (confirm('Batal dan kembali ke daftar?')) {
         window.location.href = BASE + 'persediaan/penyesuaian_barang';
@@ -910,6 +1034,14 @@ function escAttr(str) {
 function formatNumber(val) {
     var num = parseFloat(val) || 0;
     return num.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatStockNumber(val) {
+    var num = parseFloat(val) || 0;
+    if (Math.floor(num) === num) {
+        return num.toLocaleString('id-ID');
+    }
+    return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 </script>
 </body>

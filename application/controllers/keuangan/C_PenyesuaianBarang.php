@@ -45,7 +45,7 @@ class C_PenyesuaianBarang extends CI_Controller
 
         foreach ($rows as &$row) {
             $row['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal']));
-            $row['nilai_formatted'] = 'Rp ' . number_format($row['total_nilai'], 2, ',', '.');
+            $row['nilai_formatted'] = 'Rp ' . number_format((float)$row['total_nilai'], 6, '.', '');
         }
 
         return $this->output
@@ -60,7 +60,8 @@ class C_PenyesuaianBarang extends CI_Controller
     {
         $data['page_title'] = 'Penyesuaian Persediaan';
         $data['id'] = $id;
-        $data['gudangs'] = $this->M_PenyesuaianBarang->lookup_gudang();
+        $data['gudang_list'] = $this->M_PenyesuaianBarang->lookup_gudang();
+        $data['gudangs'] = $data['gudang_list'];
         $data['header'] = null;
         $data['next_ref'] = $this->M_PenyesuaianBarang->generate_ref_no();
 
@@ -97,6 +98,12 @@ class C_PenyesuaianBarang extends CI_Controller
             return $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode(['success' => false, 'message' => 'Nomor referensi dan tanggal wajib diisi.']));
+        }
+
+        if (empty($id_gudang_dari)) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Gudang (Dari Gudang) wajib dipilih.']));
         }
 
         // Parse detail baris
@@ -297,9 +304,21 @@ class C_PenyesuaianBarang extends CI_Controller
 
         // Ambil nama user
         $user_name = '-';
-        if (!empty($pb['created_by'])) {
-            $user = $this->db->select('nama_user')->where('id', $pb['created_by'])->get('tb_user')->row_array();
-            if ($user) $user_name = $user['nama_user'];
+        $userId = !empty($pb['created_by']) ? (int)$pb['created_by'] : (!empty($jurnal['created_by']) ? (int)$jurnal['created_by'] : 0);
+        if ($userId > 0) {
+            $karyawan = $this->db->select('nm_karyawan, username')->where('id', $userId)->get('tb_karyawan')->row_array();
+            if ($karyawan && !empty($karyawan['nm_karyawan'])) {
+                $user_name = $karyawan['nm_karyawan'];
+            } else if ($karyawan && !empty($karyawan['username'])) {
+                $user_name = $karyawan['username'];
+            } else {
+                $user = $this->db->select('nama_user, username')->where('id', $userId)->get('tb_user')->row_array();
+                if ($user && !empty($user['nama_user'])) {
+                    $user_name = $user['nama_user'];
+                } else if ($user && !empty($user['username'])) {
+                    $user_name = $user['username'];
+                }
+            }
         }
 
         return $this->output->set_content_type('application/json')->set_output(json_encode([

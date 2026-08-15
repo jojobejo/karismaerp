@@ -148,10 +148,9 @@ class M_PenyesuaianBarang extends CI_Model
 
         $this->db->trans_start();
 
-        // Siapkan baris jurnal dari detail (Double-Entry Seimbang)
-        $lines = [];
-        $total_debit = 0;
-        $total_kredit = 0;
+        // Siapkan baris jurnal dari detail (Agregasi / Pengelompokan per Akun seperti di Zahir)
+        $grouped_debits = [];
+        $grouped_kredits = [];
         $total_nilai_transaksi = 0;
 
         foreach ($data['details'] as $detail) {
@@ -172,9 +171,8 @@ class M_PenyesuaianBarang extends CI_Model
             $akun_persediaan = $this->get_item_inventory_account($kd_barang);
             $id_akun_persediaan = (int)$akun_persediaan['id_akun'];
 
-            // Jika akun form sama dengan akun persediaan, fallback akun form tetap dipakai
+            // Jika akun form sama dengan akun persediaan, fallback akun form ke HPP
             if ($id_akun_form === $id_akun_persediaan) {
-                // Cari akun HPP/Beban default
                 $akun_hpp = $this->get_item_cogs_account($kd_barang);
                 if (!empty($akun_hpp['id_akun'])) {
                     $id_akun_form = (int)$akun_hpp['id_akun'];
@@ -182,47 +180,50 @@ class M_PenyesuaianBarang extends CI_Model
             }
 
             if ($jumlah < 0) {
-                // Barang KELUAR:
-                // DEBIT Akun Beban / HPP (Akun Form)
-                $lines[] = [
-                    'id_akun'        => $id_akun_form,
-                    'keterangan'     => 'Penyesuaian keluar: ' . $detail['nm_barang'] . ' (' . abs($jumlah) . ' @ ' . number_format($hpp, 2) . ')',
-                    'debit'          => $nominal,
-                    'kredit'         => 0,
-                    'nomor_dokumen'  => $data['no_referensi']
-                ];
-                $total_debit += $nominal;
+                // Barang KELUAR: DEBIT Akun Beban/HPP, KREDIT Akun Persediaan
+                if (!isset($grouped_debits[$id_akun_form])) $grouped_debits[$id_akun_form] = 0;
+                $grouped_debits[$id_akun_form] += $nominal;
 
-                // KREDIT Akun Persediaan
-                $lines[] = [
-                    'id_akun'        => $id_akun_persediaan,
-                    'keterangan'     => 'Persediaan keluar: ' . $detail['nm_barang'],
-                    'debit'          => 0,
-                    'kredit'         => $nominal,
-                    'nomor_dokumen'  => $data['no_referensi']
-                ];
-                $total_kredit += $nominal;
+                if (!isset($grouped_kredits[$id_akun_persediaan])) $grouped_kredits[$id_akun_persediaan] = 0;
+                $grouped_kredits[$id_akun_persediaan] += $nominal;
             } else {
-                // Barang MASUK:
-                // DEBIT Akun Persediaan
+                // Barang MASUK: DEBIT Akun Persediaan, KREDIT Akun Beban/HPP
+                if (!isset($grouped_debits[$id_akun_persediaan])) $grouped_debits[$id_akun_persediaan] = 0;
+                $grouped_debits[$id_akun_persediaan] += $nominal;
+
+                if (!isset($grouped_kredits[$id_akun_form])) $grouped_kredits[$id_akun_form] = 0;
+                $grouped_kredits[$id_akun_form] += $nominal;
+            }
+        }
+
+        // Susun baris jurnal hasil konsolidasi per akun (Semua Debit di awal, lalu Kredit)
+        $lines = [];
+        $total_debit = 0;
+        $total_kredit = 0;
+
+        foreach ($grouped_debits as $id_akun => $val) {
+            if ($val > 0) {
                 $lines[] = [
-                    'id_akun'        => $id_akun_persediaan,
-                    'keterangan'     => 'Persediaan masuk: ' . $detail['nm_barang'],
-                    'debit'          => $nominal,
+                    'id_akun'        => $id_akun,
+                    'keterangan'     => $data['keterangan'] ?: 'Penyesuaian Persediaan',
+                    'debit'          => $val,
                     'kredit'         => 0,
                     'nomor_dokumen'  => $data['no_referensi']
                 ];
-                $total_debit += $nominal;
+                $total_debit += $val;
+            }
+        }
 
-                // KREDIT Akun Form (Akun Beban / Selisih)
+        foreach ($grouped_kredits as $id_akun => $val) {
+            if ($val > 0) {
                 $lines[] = [
-                    'id_akun'        => $id_akun_form,
-                    'keterangan'     => 'Penyesuaian masuk: ' . $detail['nm_barang'] . ' (' . abs($jumlah) . ' @ ' . number_format($hpp, 2) . ')',
+                    'id_akun'        => $id_akun,
+                    'keterangan'     => $data['keterangan'] ?: 'Penyesuaian Persediaan',
                     'debit'          => 0,
-                    'kredit'         => $nominal,
+                    'kredit'         => $val,
                     'nomor_dokumen'  => $data['no_referensi']
                 ];
-                $total_kredit += $nominal;
+                $total_kredit += $val;
             }
         }
 
@@ -491,7 +492,8 @@ class M_PenyesuaianBarang extends CI_Model
 
     /**
      * Lookup barang persediaan untuk modal popup
-     * Menampilkan seluruh master persediaan barang aktif beserta qty tersedia dari tberp_stock_batch & default akun
+     * Menampilkan master persediaan barang aktif beserta data stok (tersedia, dipesan, total),
+     * kelompok barang/dagang, nama gudang, dan default akun persediaan.
      */
     public function lookup_barang($search = '', $gudang_id = null)
     {
@@ -503,33 +505,55 @@ class M_PenyesuaianBarang extends CI_Model
         $stockSubquery = "(
             SELECT 
                 sb.kd_barang,
-                SUM(COALESCE(sb.qty_on_hand, 0) - COALESCE(sb.qty_reserved, 0)) AS qty_tersedia
+                " . (!empty($gudang_id) ? "MIN(sb.gudang_id) as gudang_id," : "NULL as gudang_id,") . "
+                SUM(COALESCE(sb.qty_on_hand, 0) - COALESCE(sb.qty_reserved, 0)) AS qty_tersedia,
+                SUM(COALESCE(sb.qty_reserved, 0)) AS qty_dipesan,
+                SUM(COALESCE(sb.qty_on_hand, 0)) AS qty_total
             FROM tberp_stock_batch sb
             {$gudangFilter}
             GROUP BY sb.kd_barang
         )";
 
-        $this->db->select('mb.kode_barang as kode, mb.nm_barang as deskripsi, mb.satuan,
-            COALESCE(stk.qty_tersedia, 0) as tersedia,
-            a.id_akun, a.kode_akun, a.nama_akun');
-        $this->db->from('tb_master_barang mb');
-        $this->db->join("{$stockSubquery} stk", 'stk.kd_barang = mb.kode_barang', 'left');
-        $this->db->join('tbpo_barang_akun ba', 'ba.kode_barang = mb.kode_barang', 'left');
-        $this->db->join('tbkeu_akun a', 'a.kode_akun = ba.kode_akun_persediaan', 'left');
+        $this->db->select("
+            pb.kode_barang AS kd_barang,
+            pb.kode_barang AS kode,
+            pb.nama_barang AS nama_barang,
+            pb.nama_barang AS deskripsi,
+            pb.satuan AS satuan,
+            COALESCE(stk.qty_tersedia, 0) AS tersedia,
+            COALESCE(stk.qty_dipesan, 0) AS dipesan,
+            COALESCE(stk.qty_total, 0) AS total,
+            COALESCE(kd.DESKRIPSI, pb.kelompok_barang, '-') AS kelompok,
+            " . (!empty($gudang_id) ? "COALESCE(g.nama_gudang, '-') AS nama_gudang," : "'-' AS nama_gudang,") . "
+            COALESCE(a.id_akun, a2.id_akun) AS id_akun,
+            COALESCE(a.kode_akun, a2.kode_akun) AS kode_akun,
+            COALESCE(a.nama_akun, a2.nama_akun) AS nama_akun
+        ", false);
 
-        $this->db->where('mb.status', 1);
-        $this->db->where('mb.kode_barang IS NOT NULL');
-        $this->db->where('mb.kode_barang !=', '');
+        $this->db->from('tbpo_barang pb');
+        $this->db->join("{$stockSubquery} stk", 'stk.kd_barang = pb.kode_barang', 'left');
+        $this->db->join('tbkeu_kelompok_dagang kd', 'CAST(kd.NOINDEX AS CHAR) = pb.kelompok_dagang', 'left');
+        if (!empty($gudang_id)) {
+            $this->db->join('tb_gudang g', 'g.id_gudang = stk.gudang_id', 'left');
+        }
+        $this->db->join('tbkeu_akun a', 'a.kode_akun = pb.kode_akun_persediaan', 'left');
+        $this->db->join('tbpo_barang_akun ba', 'ba.kode_barang = pb.kode_barang', 'left');
+        $this->db->join('tbkeu_akun a2', 'a2.kode_akun = ba.kode_akun_persediaan', 'left');
+
+        $this->db->where("(pb.is_active = 'T' OR pb.is_active = '1' OR pb.is_active IS NULL)", null, false);
+        $this->db->where('pb.kode_barang IS NOT NULL');
+        $this->db->where('pb.kode_barang !=', '');
 
         if (!empty($search)) {
             $this->db->group_start();
-            $this->db->like('mb.kode_barang', $search);
-            $this->db->or_like('mb.nm_barang', $search);
+            $this->db->like('pb.kode_barang', $search);
+            $this->db->or_like('pb.nama_barang', $search);
+            $this->db->or_like('kd.DESKRIPSI', $search);
+            $this->db->or_like('pb.kelompok_barang', $search);
             $this->db->group_end();
         }
 
-        $this->db->group_by(['mb.kode_barang', 'mb.nm_barang', 'mb.satuan', 'stk.qty_tersedia', 'a.id_akun', 'a.kode_akun', 'a.nama_akun']);
-        $this->db->order_by('mb.kode_barang', 'ASC');
+        $this->db->order_by('pb.kode_barang', 'ASC');
         $this->db->limit(300);
 
         return $this->db->get()->result_array();
