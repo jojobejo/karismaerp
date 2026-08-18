@@ -260,6 +260,7 @@ $route['persediaan/penyesuaian_barang/delete']                     = 'keuangan/C
 $route['persediaan/penyesuaian_barang/unpost']                     = 'keuangan/C_PenyesuaianBarang/unpost';
 $route['persediaan/penyesuaian_barang/ref_no_ajax']                = 'keuangan/C_PenyesuaianBarang/ref_no_ajax';
 $route['persediaan/penyesuaian_barang/barang_lookup']              = 'keuangan/C_PenyesuaianBarang/barang_lookup';
+$route['persediaan/penyesuaian_barang/lot_lookup']                 = 'keuangan/C_PenyesuaianBarang/lot_lookup';
 $route['persediaan/penyesuaian_barang/accounts_lookup']            = 'keuangan/C_PenyesuaianBarang/accounts_lookup';
 $route['persediaan/penyesuaian_barang/gudang_lookup']              = 'keuangan/C_PenyesuaianBarang/gudang_lookup';
 $route['persediaan/penyesuaian_barang/detail_jurnal_ajax/(:num)']  = 'keuangan/C_PenyesuaianBarang/detail_jurnal_ajax/$1';

@@ -118,6 +118,22 @@ class M_PenyesuaianBarang extends CI_Model
 
         $baris = 1;
         foreach ($details as $detail) {
+            $lotDataJson = null;
+            if (!empty($detail['lots']) && is_array($detail['lots'])) {
+                $lotDataJson = json_encode($detail['lots']);
+            } elseif (!empty($detail['lot_data'])) {
+                $lotDataJson = is_string($detail['lot_data']) ? $detail['lot_data'] : json_encode($detail['lot_data']);
+            }
+
+            $no_lot = !empty($detail['no_lot']) ? trim($detail['no_lot']) : '';
+            $expired_date = !empty($detail['expired_date']) && $detail['expired_date'] !== '0000-00-00' ? $detail['expired_date'] : null;
+
+            // Jika ada multi-lot, ambil no_lot pertama sebagai representasi utama
+            if (empty($no_lot) && !empty($detail['lots']) && is_array($detail['lots']) && count($detail['lots']) > 0) {
+                $no_lot = trim($detail['lots'][0]['no_lot'] ?? '');
+                $expired_date = !empty($detail['lots'][0]['expired_date']) ? $detail['lots'][0]['expired_date'] : null;
+            }
+
             $this->db->insert('tbkeu_penyesuaian_barang_detail', [
                 'id_penyesuaian' => $id,
                 'kd_barang'      => $detail['kd_barang'],
@@ -125,6 +141,9 @@ class M_PenyesuaianBarang extends CI_Model
                 'jumlah'         => $detail['jumlah'],
                 'satuan'         => $detail['satuan'] ?? '',
                 'id_akun'        => $detail['id_akun'] ?? null,
+                'no_lot'         => $no_lot,
+                'expired_date'   => $expired_date,
+                'lot_data'       => $lotDataJson,
                 'nomor_baris'    => $baris++
             ]);
         }
@@ -352,33 +371,77 @@ class M_PenyesuaianBarang extends CI_Model
 
             $tipe = $jumlah > 0 ? 'ADJIN' : 'ADJOUT';
 
-            // Insert ke tberp_stock_ledger
-            $this->db->insert('tberp_stock_ledger', [
-                'kd_barang'    => $detail['kd_barang'],
-                'gudang_id'    => $gudang_id,
-                'no_lot'       => '',
-                'expired_date' => null,
-                'qty'          => abs($jumlah),
-                'tipe'         => $tipe,
-                'ref_no'       => $data['no_referensi'],
-                'ref_type'     => 'PENYESUAIAN',
-                'created_at'   => date('Y-m-d H:i:s')
-            ]);
+            // Cek apakah ada rincian multi-lot
+            $lots = [];
+            if (!empty($detail['lot_data'])) {
+                $decoded = is_string($detail['lot_data']) ? json_decode($detail['lot_data'], true) : $detail['lot_data'];
+                if (is_array($decoded) && count($decoded) > 0) {
+                    $lots = $decoded;
+                }
+            }
 
-            // Update qty_on_hand di stock_batch (jika ada)
-            $batch = $this->db->where('kd_barang', $detail['kd_barang'])
-                ->where('gudang_id', $gudang_id)
-                ->order_by('id', 'DESC')
-                ->limit(1)
-                ->get('tberp_stock_batch')
-                ->row_array();
+            if (empty($lots)) {
+                // Single lot fallback
+                $lots[] = [
+                    'no_lot'       => $detail['no_lot'] ?? '',
+                    'expired_date' => !empty($detail['expired_date']) && $detail['expired_date'] !== '0000-00-00' ? $detail['expired_date'] : null,
+                    'jumlah'       => $jumlah
+                ];
+            }
 
-            if ($batch) {
-                $new_qty = (float)$batch['qty_on_hand'] + $jumlah;
-                $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                    'qty_on_hand' => $new_qty,
-                    'update_at'   => date('Y-m-d H:i:s')
+            foreach ($lots as $lotItem) {
+                $lotQty = isset($lotItem['jumlah']) ? (float)$lotItem['jumlah'] : $jumlah;
+                if ($lotQty == 0) continue;
+
+                $lotTipe = $lotQty > 0 ? 'ADJIN' : 'ADJOUT';
+                $no_lot = trim($lotItem['no_lot'] ?? '');
+                $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
+
+                // Insert ke tberp_stock_ledger
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $detail['kd_barang'],
+                    'gudang_id'    => $gudang_id,
+                    'no_lot'       => $no_lot,
+                    'expired_date' => $expired_date,
+                    'qty'          => abs($lotQty),
+                    'tipe'         => $lotTipe,
+                    'ref_no'       => $data['no_referensi'],
+                    'ref_type'     => 'PENYESUAIAN',
+                    'created_at'   => date('Y-m-d H:i:s')
                 ]);
+
+                // Update qty_on_hand di stock_batch
+                $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
+                    ->where('gudang_id', $gudang_id);
+                
+                if ($no_lot !== '') {
+                    $batchQuery->where('no_lot', $no_lot);
+                }
+                if ($expired_date) {
+                    $batchQuery->where('expired_date', $expired_date);
+                }
+
+                $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
+
+                if ($batch) {
+                    $new_qty = (float)$batch['qty_on_hand'] + $lotQty;
+                    $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
+                        'qty_on_hand' => $new_qty,
+                        'update_at'   => date('Y-m-d H:i:s')
+                    ]);
+                } else {
+                    // Jika batch belum ada dan penyesuaian menambah stok, buat batch baru
+                    $this->db->insert('tberp_stock_batch', [
+                        'kd_barang'    => $detail['kd_barang'],
+                        'gudang_id'    => (string)$gudang_id,
+                        'no_lot'       => $no_lot,
+                        'expired_date' => $expired_date ?: '1000-01-01',
+                        'qty_on_hand'  => $lotQty,
+                        'qty_reserved' => 0,
+                        'created_at'   => date('Y-m-d H:i:s'),
+                        'update_at'    => date('Y-m-d H:i:s')
+                    ]);
+                }
             }
         }
     }
@@ -412,19 +475,42 @@ class M_PenyesuaianBarang extends CI_Model
                 $jumlah = (float)$detail['jumlah'];
                 if ($jumlah == 0) continue;
 
-                $batch = $this->db->where('kd_barang', $detail['kd_barang'])
-                    ->where('gudang_id', $gudang_id)
-                    ->order_by('id', 'DESC')
-                    ->limit(1)
-                    ->get('tberp_stock_batch')
-                    ->row_array();
+                $lots = [];
+                if (!empty($detail['lot_data'])) {
+                    $decoded = is_string($detail['lot_data']) ? json_decode($detail['lot_data'], true) : $detail['lot_data'];
+                    if (is_array($decoded) && count($decoded) > 0) $lots = $decoded;
+                }
+                if (empty($lots)) {
+                    $lots[] = [
+                        'no_lot'       => $detail['no_lot'] ?? '',
+                        'expired_date' => !empty($detail['expired_date']) && $detail['expired_date'] !== '0000-00-00' ? $detail['expired_date'] : null,
+                        'jumlah'       => $jumlah
+                    ];
+                }
 
-                if ($batch) {
-                    $new_qty = (float)$batch['qty_on_hand'] - $jumlah;
-                    $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                        'qty_on_hand' => $new_qty,
-                        'update_at'   => date('Y-m-d H:i:s')
-                    ]);
+                foreach ($lots as $lotItem) {
+                    $lotQty = isset($lotItem['jumlah']) ? (float)$lotItem['jumlah'] : $jumlah;
+                    $no_lot = trim($lotItem['no_lot'] ?? '');
+                    $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
+
+                    $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
+                        ->where('gudang_id', $gudang_id);
+                    if ($no_lot !== '') {
+                        $batchQuery->where('no_lot', $no_lot);
+                    }
+                    if ($expired_date) {
+                        $batchQuery->where('expired_date', $expired_date);
+                    }
+
+                    $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
+
+                    if ($batch) {
+                        $new_qty = (float)$batch['qty_on_hand'] - $lotQty;
+                        $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
+                            'qty_on_hand' => $new_qty,
+                            'update_at'   => date('Y-m-d H:i:s')
+                        ]);
+                    }
                 }
             }
         }
@@ -463,19 +549,42 @@ class M_PenyesuaianBarang extends CI_Model
             $jumlah = (float)$detail['jumlah'];
             if ($jumlah == 0) continue;
 
-            $batch = $this->db->where('kd_barang', $detail['kd_barang'])
-                ->where('gudang_id', $gudang_id)
-                ->order_by('id', 'DESC')
-                ->limit(1)
-                ->get('tberp_stock_batch')
-                ->row_array();
+            $lots = [];
+            if (!empty($detail['lot_data'])) {
+                $decoded = is_string($detail['lot_data']) ? json_decode($detail['lot_data'], true) : $detail['lot_data'];
+                if (is_array($decoded) && count($decoded) > 0) $lots = $decoded;
+            }
+            if (empty($lots)) {
+                $lots[] = [
+                    'no_lot'       => $detail['no_lot'] ?? '',
+                    'expired_date' => !empty($detail['expired_date']) && $detail['expired_date'] !== '0000-00-00' ? $detail['expired_date'] : null,
+                    'jumlah'       => $jumlah
+                ];
+            }
 
-            if ($batch) {
-                $new_qty = (float)$batch['qty_on_hand'] - $jumlah;
-                $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                    'qty_on_hand' => $new_qty,
-                    'update_at'   => date('Y-m-d H:i:s')
-                ]);
+            foreach ($lots as $lotItem) {
+                $lotQty = isset($lotItem['jumlah']) ? (float)$lotItem['jumlah'] : $jumlah;
+                $no_lot = trim($lotItem['no_lot'] ?? '');
+                $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
+
+                $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
+                    ->where('gudang_id', $gudang_id);
+                if ($no_lot !== '') {
+                    $batchQuery->where('no_lot', $no_lot);
+                }
+                if ($expired_date) {
+                    $batchQuery->where('expired_date', $expired_date);
+                }
+
+                $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
+
+                if ($batch) {
+                    $new_qty = (float)$batch['qty_on_hand'] - $lotQty;
+                    $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
+                        'qty_on_hand' => $new_qty,
+                        'update_at'   => date('Y-m-d H:i:s')
+                    ]);
+                }
             }
         }
 
@@ -488,6 +597,83 @@ class M_PenyesuaianBarang extends CI_Model
 
         $this->db->trans_complete();
         return $this->db->trans_status();
+    }
+
+    /**
+     * Lookup lot barang persediaan untuk modal popup Data Lot Barang
+     * Menampilkan daftar lot ID, Tanggal Expired, dan Qty Tersedia
+     */
+    public function lookup_lot_barang($kd_barang, $gudang_id = null, $search = '')
+    {
+        if (empty($kd_barang)) {
+            return [];
+        }
+
+        // 1. Ambil lot dari tberp_stock_batch
+        $this->db->select("
+            sb.no_lot,
+            sb.expired_date,
+            SUM(CASE WHEN sb.gudang_id = " . (!empty($gudang_id) ? $this->db->escape($gudang_id) : "sb.gudang_id") . " 
+                     THEN (COALESCE(sb.qty_on_hand, 0) - COALESCE(sb.qty_reserved, 0)) 
+                     ELSE 0 
+                END) AS qty_tersedia,
+            SUM(COALESCE(sb.qty_on_hand, 0)) AS qty_total
+        ", false);
+        $this->db->from('tberp_stock_batch sb');
+        $this->db->where('sb.kd_barang', $kd_barang);
+        $this->db->where('sb.no_lot IS NOT NULL');
+        $this->db->where('sb.no_lot !=', '');
+
+        if (!empty($search)) {
+            $this->db->group_start();
+            $this->db->like('sb.no_lot', $search);
+            $this->db->or_like('sb.expired_date', $search);
+            $this->db->group_end();
+        }
+
+        $this->db->group_by(['sb.no_lot', 'sb.expired_date']);
+        $this->db->order_by('qty_tersedia', 'DESC');
+        $this->db->order_by('sb.expired_date', 'ASC');
+        $this->db->order_by('sb.no_lot', 'ASC');
+
+        $rows = $this->db->get()->result_array();
+
+        // 2. Fallback: jika di stock_batch tidak ditemukan lot, cek dari tb_lpb_batch
+        if (empty($rows)) {
+            $this->db->select("
+                lb.no_lot,
+                lb.expired_date,
+                0 AS qty_tersedia,
+                0 AS qty_total
+            ");
+            $this->db->from('tb_lpb_batch lb');
+            $this->db->join('tb_lpb_detail ld', 'ld.id_detail = lb.id_detail_lpb', 'inner');
+            $this->db->where('ld.kode_barang', $kd_barang);
+            $this->db->where('lb.no_lot IS NOT NULL');
+            $this->db->where('lb.no_lot !=', '');
+
+            if (!empty($search)) {
+                $this->db->group_start();
+                $this->db->like('lb.no_lot', $search);
+                $this->db->or_like('lb.expired_date', $search);
+                $this->db->group_end();
+            }
+
+            $this->db->group_by(['lb.no_lot', 'lb.expired_date']);
+            $this->db->order_by('lb.expired_date', 'ASC');
+            $this->db->limit(100);
+            $rows = $this->db->get()->result_array();
+        }
+
+        foreach ($rows as &$r) {
+            $r['expired_date_formatted'] = (!empty($r['expired_date']) && $r['expired_date'] !== '0000-00-00' && $r['expired_date'] !== '1000-01-01')
+                ? date('d/m/Y', strtotime($r['expired_date']))
+                : '-';
+            $qtyFloat = (float)$r['qty_tersedia'];
+            $r['tersedia_formatted'] = (floor($qtyFloat) == $qtyFloat) ? (string)$qtyFloat : (string)round($qtyFloat, 3);
+        }
+
+        return $rows;
     }
 
     /**
@@ -506,7 +692,7 @@ class M_PenyesuaianBarang extends CI_Model
             SELECT 
                 sb.kd_barang,
                 " . (!empty($gudang_id) ? "MIN(sb.gudang_id) as gudang_id," : "NULL as gudang_id,") . "
-                SUM(COALESCE(sb.qty_on_hand, 0) - COALESCE(sb.qty_reserved, 0)) AS qty_tersedia,
+                SUM(COALESCE(sb.qty_on_hand - sb.qty_reserved, 0)) AS qty_tersedia,
                 SUM(COALESCE(sb.qty_reserved, 0)) AS qty_dipesan,
                 SUM(COALESCE(sb.qty_on_hand, 0)) AS qty_total
             FROM tberp_stock_batch sb

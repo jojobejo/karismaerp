@@ -3884,10 +3884,7 @@ FROM (
             COALESCE(rcv.total_barang_diterima, 0) AS total_barang_diterima,
             po.total_qty_order,
             COALESCE(rcv.total_qty_diterima, 0) AS total_qty_diterima,
-            CASE
-                WHEN rcv.input_terakhir IS NULL OR rcv.input_terakhir = '' THEN '-'
-                ELSE rcv.input_terakhir
-            END AS input_terakhir,
+            COALESCE(DATE_FORMAT(rcv.input_terakhir, '%Y-%m-%d %H:%i:%s'), '-') AS input_terakhir,
             CASE
                 WHEN po.total_qty_order <= 0 THEN 0
                 WHEN COALESCE(rcv.total_qty_diterima, 0) >= po.total_qty_order THEN 100

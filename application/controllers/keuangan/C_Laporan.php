@@ -138,7 +138,7 @@ class C_Laporan extends CI_Controller
         $all_products_data = [];
         
         foreach ($products as $prod) {
-            $in_query = "SELECT l.tgl_sj AS tanggal, l.nomor_lpb AS referensi, ld.qty_diterima AS qty, ld.harga_satuan AS harga, l.gudang_id, 'IN' AS type, b.satuan
+            $in_query = "SELECT l.tgl_sj AS tanggal, l.nomor_lpb AS referensi, ld.qty_diterima AS qty, ld.harga_satuan AS harga, l.gudang_id, 'IN' AS type, 'PJ ' AS ref_prefix, b.satuan
                          FROM tb_lpb l
                          JOIN tb_lpb_detail ld ON l.id_lpb = ld.id_lpb
                          JOIN tbpo_barang b ON ld.kd_barang = b.kode_barang
@@ -151,10 +151,10 @@ class C_Laporan extends CI_Controller
             $in_tx = $this->db->query($in_query, $params_in)->result_array();
 
             // Fetch IN transactions from Retur Penjualan
-            $retur_query = "SELECT r.tanggal_retur AS tanggal, r.no_retur AS referensi, rd.qty_retur AS qty, rd.harga_satuan AS harga, r.gudang_id, 'IN' AS type, b.satuan
+            $retur_query = "SELECT r.tanggal_retur AS tanggal, r.no_retur AS referensi, rd.qty_retur AS qty, rd.harga_satuan AS harga, r.gudang_id, 'IN' AS type, 'RJ ' AS ref_prefix, b.satuan
                             FROM tbrp_retur_penjualan_header r
                             JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
-                            JOIN tbpo_barang b ON rd.nama_barang = b.nama_barang
+                            JOIN tbpo_barang b ON (TRIM(LOWER(rd.nama_barang)) = TRIM(LOWER(b.nama_barang)))
                             WHERE b.kode_barang = ? AND r.status_retur NOT IN ('ditolak', 'batal')";
             $params_retur = [$prod['kode_barang']];
             if ($id_gudang && $id_gudang !== 'all') {
@@ -167,7 +167,7 @@ class C_Laporan extends CI_Controller
             $in_tx = array_merge($in_tx, $retur_tx);
 
             // Fetch OUT transactions from sales invoices (tbso_faktur_detail)
-            $out_query = "SELECT f.tanggal_faktur AS tanggal, f.no_faktur AS referensi, fd.qty, fd.hrg_satuan AS harga, f.gudang_id, 'OUT' AS type, b.satuan
+            $out_query = "SELECT f.tanggal_faktur AS tanggal, f.no_faktur AS referensi, fd.qty, fd.hrg_satuan AS harga, f.gudang_id, 'OUT' AS type, 'SJ ' AS ref_prefix, b.satuan
                           FROM tbso_faktur_penjualan f
                           JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
                           JOIN tbpo_barang b ON fd.kd_barang = b.kode_barang
@@ -240,9 +240,10 @@ class C_Laporan extends CI_Controller
                     $opening_balance['saldo_nilai'] = $nilai_saldo;
                 } else if (strtotime($tx_date) <= strtotime($end_date)) {
                     // Transaction falls inside filter period
+                    $refPrefix = $tx['ref_prefix'] ?? ($tx['type'] === 'IN' ? 'PJ ' : 'SJ ');
                     $row = [
                         'tanggal' => $tx['tanggal'],
-                        'referensi' => ($tx['type'] === 'IN' ? 'PJ ' : 'SJ ') . $tx['referensi'],
+                        'referensi' => $refPrefix . $tx['referensi'],
                         'unit' => $tx['satuan'],
                         'masuk_qty' => 0.0,
                         'masuk_harga' => 0.0,

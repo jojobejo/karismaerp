@@ -117,11 +117,14 @@ class C_PenyesuaianBarang extends CI_Controller
 
                 $total_nilai += abs($jumlah);
                 $details[] = [
-                    'kd_barang' => trim($line['kd_barang']),
-                    'nm_barang' => trim($line['nm_barang'] ?? ''),
-                    'jumlah'    => $jumlah,
-                    'satuan'    => trim($line['satuan'] ?? ''),
-                    'id_akun'   => !empty($line['id_akun']) ? (int)$line['id_akun'] : null,
+                    'kd_barang'    => trim($line['kd_barang']),
+                    'nm_barang'    => trim($line['nm_barang'] ?? ''),
+                    'jumlah'       => $jumlah,
+                    'satuan'       => trim($line['satuan'] ?? ''),
+                    'id_akun'      => !empty($line['id_akun']) ? (int)$line['id_akun'] : null,
+                    'no_lot'       => trim($line['no_lot'] ?? ''),
+                    'expired_date' => !empty($line['expired_date']) ? trim($line['expired_date']) : null,
+                    'lot_data'     => !empty($line['lot_data']) ? (is_array($line['lot_data']) ? json_encode($line['lot_data']) : $line['lot_data']) : (!empty($line['lots']) ? json_encode($line['lots']) : null),
                 ];
             }
         }
@@ -235,6 +238,22 @@ class C_PenyesuaianBarang extends CI_Controller
         $gudang_id = $this->input->get('gudang_id', true);
 
         $rows = $this->M_PenyesuaianBarang->lookup_barang($search, $gudang_id);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(['success' => true, 'data' => $rows]));
+    }
+
+    /**
+     * AJAX: Lookup lot barang persediaan
+     */
+    public function lot_lookup()
+    {
+        $kd_barang = $this->input->get('kd_barang', true);
+        $gudang_id = $this->input->get('gudang_id', true);
+        $search    = $this->input->get('search', true);
+
+        $rows = $this->M_PenyesuaianBarang->lookup_lot_barang($kd_barang, $gudang_id, $search);
 
         return $this->output
             ->set_content_type('application/json')
