@@ -379,11 +379,11 @@ $route['stock/batches']                             = 'stock/C_Stock/batches';
 $route['stock/ledger']                              = 'stock/C_Stock/ledger';
 $route['stock/reconciliation']                      = 'stock/C_Stock/reconciliation';
 $route['stock/sync']                                = 'stock/C_Stock/sync';
-$route['stock/buffer']                                = 'stock/C_Stock/buffer';
-$route['stock/buffer/summary']                        = 'stock/C_Stock/buffer_summary';
-$route['stock/buffer/items']                          = 'stock/C_Stock/buffer_items';
-$route['stock/buffer/export']                         = 'stock/C_Stock/buffer_export';
-$route['stock/buffer/update-minimum']                 = 'stock/C_Stock/buffer_update_min';
+$route['stock/buffer']                              = 'stock/C_Stock/buffer';
+$route['stock/buffer/summary']                      = 'stock/C_Stock/buffer_summary';
+$route['stock/buffer/items']                        = 'stock/C_Stock/buffer_items';
+$route['stock/buffer/export']                       = 'stock/C_Stock/buffer_export';
+$route['stock/buffer/update-minimum']               = 'stock/C_Stock/buffer_update_min';
 
 
 // MASTER BARANG
@@ -1006,4 +1006,3 @@ $route['faktur_penjualan']                         = 'sales/C_FakturPenjualan/in
 $route['faktur_penjualan/activity_log']            = 'sales/C_FakturPenjualan/activity_log';
 $route['faktur_penjualan/edit_qty/(:any)']         = 'sales/C_FakturPenjualan/edit_qty/$1';
 $route['faktur_penjualan/update_qty/(:any)']       = 'sales/C_FakturPenjualan/update_qty/$1';
-
