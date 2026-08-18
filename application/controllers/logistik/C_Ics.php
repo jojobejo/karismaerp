@@ -696,13 +696,13 @@ class C_Ics extends CI_Controller
         $data['can_lpb_report'] = $this->can_access_lpb_report();
         $data['is_data_lpb_page'] = TRUE;
         $data['is_admlpb_user'] = $this->is_admlpb_user();
-        $data['lpb_panel_mode'] = 'logistik';
+        $data['lpb_panel_mode'] = 'both';
         $data['show_logistik_panel'] = TRUE;
-        $data['show_purchasing_panel'] = FALSE;
+        $data['show_purchasing_panel'] = TRUE;
         $data['hide_lpb_supplier_code'] = TRUE;
         $data['hide_lpb_last_input'] = TRUE;
         $data['lpb'] = $this->M_Logistik->get_lpb($date1, $date2);
-        $data['lpb_purchasing'] = [];
+        $data['lpb_purchasing'] = $this->M_Logistik->get_lpb_purchasing_view($date1, $date2);
         $data['date1'] = $date1;
         $data['date2'] = $date2;
         $data['sync_api_url'] = '';

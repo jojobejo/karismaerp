@@ -16,7 +16,7 @@ $isAdmlpbUser = !empty($is_admlpb_user);
 $hideSupplierCode = !empty($hide_lpb_supplier_code);
 $hideLastInput = !empty($hide_lpb_last_input);
 $lpbTableColspan = 10 - ($hideSupplierCode ? 1 : 0) - ($hideLastInput ? 1 : 0);
-$showPanelTabs = !$isDataLpbPage && $showLogistikPanel && $showPurchasingPanel;
+$showPanelTabs = $showLogistikPanel && $showPurchasingPanel;
 $logistikPanelClass = $showPanelTabs ? 'tab-pane fade show active' : '';
 $purchasingPanelClass = $showPanelTabs ? 'tab-pane fade' : '';
 $panelTitle = $isDataLpbPage
@@ -24,8 +24,42 @@ $panelTitle = $isDataLpbPage
     : ($showPurchasingPanel && !$showLogistikPanel
     ? 'Data LPB Purchasing'
     : ($isAdminPo ? 'Data PO Invoice Pending' : 'Data LPB (Laporan Penerimaan Barang)'));
+
+$formatDate = function ($dateStr) {
+    $dateStr = trim((string) $dateStr);
+    if ($dateStr === '' || $dateStr === '-' || $dateStr === '0000-00-00' || $dateStr === '0000-00-00 00:00:00') {
+        return '-';
+    }
+    $timestamp = strtotime($dateStr);
+    return $timestamp ? date('d/m/Y', $timestamp) : $dateStr;
+};
 ?>
 <style>
+    .table tbody tr.table-warning td,
+    .table-hover tbody tr.table-warning:hover td {
+        background-color: #fff9db !important;
+    }
+
+    .table tbody tr.table-success td,
+    .table-hover tbody tr.table-success:hover td {
+        background-color: #e6fcf5 !important;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 14px;
+        font-weight: 600;
+        color: #495057;
+        padding: 10px 20px;
+        border-radius: 8px 8px 0 0;
+        transition: all .2s ease;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        border-bottom: 3px solid #007bff;
+        background-color: #fff;
+    }
     .sync-summary-card {
         border: 0;
         border-radius: 12px;
@@ -288,12 +322,12 @@ $panelTitle = $isDataLpbPage
                                 <ul class="nav nav-tabs mb-3" id="poPanelTabs" role="tablist">
                                     <li class="nav-item">
                                         <a class="nav-link active" id="logistik-tab" data-toggle="tab" href="#logistik-panel" role="tab" aria-controls="logistik-panel" aria-selected="true">
-                                            <i class="fas fa-warehouse mr-1"></i> Logistik
+                                            <i class="fas fa-file-invoice mr-1"></i> Data PO
                                         </a>
                                     </li>
                                     <li class="nav-item">
                                         <a class="nav-link" id="purchasing-tab" data-toggle="tab" href="#purchasing-panel" role="tab" aria-controls="purchasing-panel" aria-selected="false">
-                                            <i class="fas fa-shopping-cart mr-1"></i> Purchasing
+                                            <i class="fas fa-clipboard-list mr-1"></i> Data LPB
                                         </a>
                                     </li>
                                 </ul>
@@ -302,20 +336,18 @@ $panelTitle = $isDataLpbPage
                                 <div class="<?= $showPanelTabs ? 'tab-content' : '' ?>"<?= $showPanelTabs ? ' id="poPanelTabsContent"' : '' ?>>
                                     <?php if ($showLogistikPanel) : ?>
                                     <div class="<?= $logistikPanelClass ?>" id="logistik-panel" role="tabpanel" aria-labelledby="logistik-tab">
-                                        <?php if ($isDataLpbPage) : ?>
-                                            <div class="lpb-filter-toolbar mb-3" id="lpbStatusFilter">
-                                                <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="belum">
-                                                    <i class="fas fa-times mr-1"></i> Belum
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="partial">
-                                                    <i class="fas fa-clock mr-1"></i> Partial
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="done">
-                                                    <i class="fas fa-check mr-1"></i> Done
-                                                </button>
-                                            </div>
-                                        <?php endif; ?>
+                                        <div class="lpb-filter-toolbar mb-3" id="lpbStatusFilter">
+                                            <button type="button" class="btn btn-primary btn-sm active" data-filter="all">Semua</button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="belum">
+                                                <i class="fas fa-times mr-1"></i> Belum
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="partial">
+                                                <i class="fas fa-clock mr-1"></i> Partial
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-filter="done">
+                                                <i class="fas fa-check mr-1"></i> Done
+                                            </button>
+                                        </div>
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-hover" id="idtb_ics_po">
                                         <thead class="thead-dark text-center">
@@ -372,7 +404,7 @@ $panelTitle = $isDataLpbPage
                                                 ?>
                                                     <tr class="<?= $rowClass ?>" data-lpb-status="<?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?>">
                                                         <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
-                                                        <td><?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?></td>
+                                                        <td data-order="<?= htmlspecialchars($row['tgl_transaksi'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_transaksi'] ?? '')) ?></td>
                                                         <?php if (!$hideSupplierCode) : ?>
                                                         <td><?= htmlspecialchars($row['kdsupp'] ?? '') ?></td>
                                                         <?php endif; ?>
@@ -488,15 +520,15 @@ $panelTitle = $isDataLpbPage
                                                                 : 'Belum ada jurnal LPB POSTED aktif';
                                                         ?>
                                                         <tr data-has-invoice="<?= $hasInvoice ? '1' : '0' ?>" data-has-faktur="<?= $hasFaktur ? '1' : '0' ?>" data-is-verified="<?= $isVerified ? '1' : '0' ?>" data-has-sales="<?= $hasSalesTransaction ? '1' : '0' ?>">
-                                                            <td><?= htmlspecialchars($row['tgl_lpb'] ?? '-') ?></td>
+                                                            <td data-order="<?= htmlspecialchars($row['tgl_lpb'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_lpb'] ?? '')) ?></td>
                                                             <td>
                                                                 <a href="<?= $detailUrl ?>" class="font-weight-bold" target="_blank">
                                                                     <?= htmlspecialchars($row['nomor_lpb'] ?? '-') ?>
                                                                 </a>
                                                             </td>
-                                                            <td><?= htmlspecialchars($row['tgl_po'] ?? '-') ?></td>
+                                                            <td data-order="<?= htmlspecialchars($row['tgl_po'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_po'] ?? '')) ?></td>
                                                             <td><?= htmlspecialchars($row['no_po'] ?? '') ?></td>
-                                                            <td><?= htmlspecialchars($tglSjValue) ?></td>
+                                                            <td data-order="<?= htmlspecialchars($row['tgl_sj'] ?? '') ?>"><?= htmlspecialchars($formatDate($row['tgl_sj'] ?? '')) ?></td>
                                                             <td><?= htmlspecialchars($row['nosj'] ?? '-') ?></td>
                                                             <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
                                                             <td><?= htmlspecialchars($hasFaktur ? $fakturValue : '-') ?></td>
@@ -558,8 +590,11 @@ $panelTitle = $isDataLpbPage
 
     <script>
         $(document).ready(function() {
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+                $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust().responsive.recalc();
+            });
+
             <?php if ($showLogistikPanel) : ?>
-            <?php if ($isDataLpbPage) : ?>
             var lpbStatusFilter = 'all';
 
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
@@ -574,7 +609,6 @@ $panelTitle = $isDataLpbPage
                 var $row = $(settings.aoData[dataIndex].nTr);
                 return String($row.data('lpb-status')) === lpbStatusFilter;
             });
-            <?php endif; ?>
 
             var lpbTable = $('#idtb_ics_po').DataTable({
                 responsive: true,
@@ -602,7 +636,6 @@ $panelTitle = $isDataLpbPage
                 }
             });
 
-            <?php if ($isDataLpbPage) : ?>
             $('#lpbStatusFilter').on('click', 'button[data-filter]', function() {
                 lpbStatusFilter = $(this).data('filter') || 'all';
                 $('#lpbStatusFilter button[data-filter]')
@@ -613,7 +646,6 @@ $panelTitle = $isDataLpbPage
                     .addClass('btn-primary active');
                 lpbTable.draw();
             });
-            <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($showPurchasingPanel) : ?>
