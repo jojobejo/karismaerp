@@ -475,12 +475,9 @@ $(document).ready(function() {
     });
 
     $(document).on('click', '#lookup-akun-body tr', function() {
-        $('#lookup-akun-body tr').removeClass('selected');
-        $(this).addClass('selected');
-    });
-
-    $(document).on('dblclick', '#lookup-akun-body tr', function() {
-        confirmAccountSelection($(this));
+        if ($(this).data('id')) {
+            confirmAccountSelection($(this));
+        }
     });
 
     $('#btn-confirm-akun').click(function() {

@@ -4444,7 +4444,8 @@ class C_Ics extends CI_Controller
 
     public function ajax_list_tmp_mutasi()
     {
-        $user_id = $this->session->userdata('nik');
+        $this->M_Ics->ensure_mutasi_barang_schema();
+        $user_id = $this->session->userdata('nik') ?: $this->session->userdata('user_id') ?: $this->session->userdata('username') ?: 'system';
         $data = $this->M_Ics->get_tmp_mutasi_by_user($user_id);
 
         echo json_encode($data);
