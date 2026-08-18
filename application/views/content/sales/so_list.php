@@ -142,16 +142,6 @@
                         <i class="fas fa-map-marked-alt"></i> SO per Rute
                     </a>
                 </div>
-                <div class="col-auto">
-                    <a href="<?= base_url('checker') ?>" class="btn btn-warning">
-                        <i class="fas fa-warehouse"></i> Activity Warehouse
-                    </a>
-                </div>
-                <div class="col-auto">
-                    <a href="<?= base_url('retur_penjualan') ?>" class="btn btn-danger">
-                        <i class="fas fa-undo-alt"></i> Retur Penjualan
-                    </a>
-                </div>
                 <?php if ($is_manager_sc): ?>
                 <div class="col-auto" id="colPanelApproval" style="display: none;">
                     <button type="button" class="btn btn-warning text-dark font-weight-bold btn-shake-notification" id="btnBukaPanelApproval">

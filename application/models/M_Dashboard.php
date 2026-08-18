@@ -70,6 +70,7 @@ class M_Dashboard extends CI_Model
                 'description' => 'Pintu masuk operasional gudang, ICS, distribusi, dan stockopname.',
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
+                    $this->menu('Activity Warehouse', 'checker', 'fas fa-warehouse', 'orange', 'Akses aktivitas bongkar muat dan loading barang gudang / checker.'),
                     $this->menu('Data All Barang', 'ics/by_allbarang', 'fas fa-boxes', 'blue', 'Pantau seluruh stok barang ICS lintas gudang dalam satu pintu data.'),
                     $this->menu('Data By Expired Date', 'ics/by_expdate', 'fas fa-calendar-alt', 'orange', 'Lihat barang berdasarkan tanggal expired untuk prioritas kontrol stok.'),
                     $this->menu('Data DO', 'ics/icsdo', 'fas fa-truck-loading', 'slate', 'Masuk ke data Delivery Order dan arus keluar barang.'),

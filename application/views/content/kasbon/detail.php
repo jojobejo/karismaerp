@@ -17,6 +17,23 @@ $st = $status_map[$kasbon['status']] ?? ['label' => ucfirst($kasbon['status']), 
     <?php $this->load->view('partial/main/navbar') ?>
     <?php $this->load->view('partial/main/sidebar') ?>
 
+    <style>
+        .timeline > div > .timeline-item {
+            border-radius: 6px !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+            border: 1px solid #e9ecef !important;
+        }
+        .timeline > div > .timeline-item > .timeline-header {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 10px 12px;
+        }
+        .timeline > div > .timeline-item > .timeline-body {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+    </style>
+
     <div class="content-wrapper">
         <div class="content-header">
             <div class="container-fluid">
@@ -40,7 +57,7 @@ $st = $status_map[$kasbon['status']] ?? ['label' => ucfirst($kasbon['status']), 
 
                 <?php foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls): ?>
                     <?php if ($msg = $this->session->flashdata($key)): ?>
-                        <div class="alert alert-<?= $cls ?> alert-dismissible fade show">
+                        <div class="alert alert-<?= $cls ?> alert-dismissible fade show shadow-sm">
                             <i class="fas fa-<?= $key === 'success' ? 'check-circle' : 'exclamation-circle' ?> mr-1"></i>
                             <?= $msg ?>
                             <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
@@ -51,57 +68,57 @@ $st = $status_map[$kasbon['status']] ?? ['label' => ucfirst($kasbon['status']), 
                 <div class="row">
                     <!-- Kolom Kiri: Info Kasbon -->
                     <div class="col-md-7">
-                        <div class="card card-outline card-success">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-file-alt mr-2"></i>
+                        <div class="card card-outline card-success shadow-sm">
+                            <div class="card-header bg-white py-3">
+                                <h3 class="card-title font-weight-bold text-dark m-0">
+                                    <i class="fas fa-file-alt mr-2 text-success"></i>
                                     Informasi Pengajuan
                                 </h3>
                                 <div class="card-tools">
-                                    <span class="badge badge-<?= $st['color'] ?> badge-pill px-3 py-2" style="font-size:13px;">
+                                    <span class="badge badge-<?= $st['color'] ?> px-3 py-2" style="font-size:13px; border-radius: 20px;">
                                         <i class="fas fa-<?= $st['icon'] ?> mr-1"></i>
                                         <?= $st['label'] ?>
                                     </span>
                                 </div>
                             </div>
                             <div class="card-body p-0">
-                                <table class="table table-sm table-borderless mb-0">
+                                <table class="table table-sm table-hover mb-0" style="font-size:14px;">
                                     <tbody>
                                         <tr class="border-bottom">
-                                            <th style="width:40%;background:#f8f9fa;padding:12px 16px;" class="text-muted">No Kas Bon</th>
-                                            <td style="padding:12px 16px;"><strong class="text-primary"><?= htmlspecialchars($kasbon['no_kasbon']) ?></strong></td>
+                                            <th style="width:35%;background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">No Kas Bon</th>
+                                            <td style="padding:12px 16px;" class="align-middle"><strong class="text-primary" style="font-size:15px;"><?= htmlspecialchars($kasbon['no_kasbon']) ?></strong></td>
                                         </tr>
                                         <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Nama Pemohon</th>
-                                            <td style="padding:12px 16px;"><i class="fas fa-user mr-1 text-muted"></i> <?= htmlspecialchars($kasbon['nama_pemohon']) ?></td>
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Nama Pemohon</th>
+                                            <td style="padding:12px 16px;" class="align-middle"><i class="fas fa-user mr-2 text-secondary"></i> <strong><?= htmlspecialchars($kasbon['nama_pemohon']) ?></strong></td>
                                         </tr>
                                         <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Tanggal Pengajuan</th>
-                                            <td style="padding:12px 16px;"><i class="fas fa-calendar mr-1 text-muted"></i> <?= date('d F Y', strtotime($kasbon['tanggal_pengajuan'])) ?></td>
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Tanggal Pengajuan</th>
+                                            <td style="padding:12px 16px;" class="align-middle"><i class="fas fa-calendar-alt mr-2 text-secondary"></i> <?= date('d F Y', strtotime($kasbon['tanggal_pengajuan'])) ?></td>
                                         </tr>
                                         <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Nominal</th>
-                                            <td style="padding:12px 16px;"><strong class="text-success" style="font-size:18px;">Rp <?= number_format($kasbon['nominal'], 0, ',', '.') ?></strong></td>
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Nominal Kas Bon</th>
+                                            <td style="padding:12px 16px;" class="align-middle"><strong class="text-success" style="font-size:18px;">Rp <?= number_format($kasbon['nominal'], 0, ',', '.') ?></strong></td>
                                         </tr>
                                         <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Keterangan / Keperluan</th>
-                                            <td style="padding:12px 16px;"><?= nl2br(htmlspecialchars($kasbon['keterangan'])) ?></td>
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Keterangan / Keperluan</th>
+                                            <td style="padding:12px 16px;" class="align-middle"><?= nl2br(htmlspecialchars($kasbon['keterangan'])) ?></td>
                                         </tr>
                                         <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Jenis Workflow</th>
-                                            <td style="padding:12px 16px;">
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Tipe Approval Workflow</th>
+                                            <td style="padding:12px 16px;" class="align-middle">
                                                 <?php
                                                     $wt = $kasbon['workflow_type'] ?? '-';
                                                     $wt_label = ['IT' => 'IT (Atasan → Kasir)', 'KEUANGAN_SALES' => 'Keuangan/Sales (Penilai 1 → Penilai 2 → Kasir)', 'DEFAULT' => 'Default (Atasan → Kasir)'];
-                                                    echo '<span class="badge badge-light border">' . ($wt_label[$wt] ?? $wt) . '</span>';
+                                                    echo '<span class="badge badge-light border px-2 py-1">' . ($wt_label[$wt] ?? $wt) . '</span>';
                                                 ?>
                                             </td>
                                         </tr>
-                                        <tr class="border-bottom">
-                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted">Lampiran</th>
-                                            <td style="padding:12px 16px;">
+                                        <tr>
+                                            <th style="background:#f8f9fa;padding:12px 16px;" class="text-muted align-middle">Lampiran Dokumen</th>
+                                            <td style="padding:12px 16px;" class="align-middle">
                                                 <?php if (!empty($kasbon['lampiran'])): ?>
-                                                    <a href="<?= base_url('assets/uploads/kasbon/' . htmlspecialchars($kasbon['lampiran'])) ?>" target="_blank" class="btn btn-sm btn-info">
+                                                    <a href="<?= base_url('assets/uploads/kasbon/' . htmlspecialchars($kasbon['lampiran'])) ?>" target="_blank" class="btn btn-sm btn-info shadow-sm">
                                                         <i class="fas fa-paperclip mr-1"></i> Lihat Lampiran
                                                     </a>
                                                 <?php else: ?>
@@ -115,40 +132,40 @@ $st = $status_map[$kasbon['status']] ?? ['label' => ucfirst($kasbon['status']), 
                         </div>
 
                         <!-- Tombol Aksi -->
-                        <div class="d-flex align-items-center mb-4" style="gap:10px;">
-                            <a href="<?= base_url('C_Kasbon') ?>" class="btn btn-secondary">
+                        <div class="d-flex align-items-center mb-4 flex-wrap" style="gap:10px;">
+                            <a href="<?= base_url('C_Kasbon') ?>" class="btn btn-secondary shadow-sm">
                                 <i class="fas fa-arrow-left mr-1"></i> Kembali ke Daftar
                             </a>
 
                             <?php if ($can_approve): ?>
-                                <button onclick="approveKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>')" class="btn btn-success">
+                                <button onclick="approveKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>')" class="btn btn-success shadow-sm">
                                     <i class="fas fa-check mr-1"></i> Setujui Pengajuan Ini
                                 </button>
-                                <button onclick="rejectKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>')" class="btn btn-danger">
+                                <button onclick="rejectKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>')" class="btn btn-danger shadow-sm">
                                     <i class="fas fa-times mr-1"></i> Tolak Pengajuan Ini
                                 </button>
                             <?php endif; ?>
 
                             <?php if ($can_cair): ?>
-                                <button onclick="cairkanKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>', <?= $kasbon['nominal'] ?>)" class="btn btn-primary">
+                                <button onclick="cairkanKasbon(<?= $kasbon['id'] ?>, '<?= htmlspecialchars($kasbon['no_kasbon']) ?>', <?= $kasbon['nominal'] ?>)" class="btn btn-primary shadow-sm">
                                     <i class="fas fa-money-bill-wave mr-1"></i> Cairkan Uang
                                 </button>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Kolom Kanan: Timeline Approval -->
+                    <!-- Kolom Kanan: Status Approval -->
                     <div class="col-md-5">
-                        <div class="card card-outline card-primary">
-                            <div class="card-header">
-                                <h3 class="card-title"><i class="fas fa-history mr-2"></i> Timeline Persetujuan</h3>
+                        <div class="card card-outline card-primary shadow-sm">
+                            <div class="card-header bg-primary text-white py-3">
+                                <h3 class="card-title font-weight-bold m-0"><i class="fas fa-tasks mr-2"></i> Status Approval</h3>
                             </div>
-                            <div class="card-body">
+                            <div class="card-body bg-light">
                                 <div class="timeline timeline-inverse">
 
                                     <!-- Pengajuan dibuat -->
                                     <div class="time-label">
-                                        <span class="bg-success"><?= date('d M Y', strtotime($kasbon['tanggal_pengajuan'])) ?></span>
+                                        <span class="bg-success px-3 py-1"><?= date('d M Y', strtotime($kasbon['tanggal_pengajuan'])) ?></span>
                                     </div>
                                     <div>
                                         <i class="fas fa-file-alt bg-success"></i>
