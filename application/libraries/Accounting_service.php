@@ -255,6 +255,11 @@ class Accounting_service
         $payload['journal_type'] = 'JU';
         $payload['status'] = 'DRAFT';
 
+        if (empty($payload['source_id']) && !empty($payload['nomor_jurnal'])) {
+            $payload['source_id'] = $payload['nomor_jurnal'];
+            $payload['source_no'] = $payload['nomor_jurnal'];
+        }
+
         return $this->create_journal($payload, $userId, false);
     }
 
@@ -1128,6 +1133,11 @@ class Accounting_service
             return $this->fail('Nomor jurnal gagal dibuat.', ['JOURNAL_NUMBER_FAILED']);
         }
 
+        if (empty($normalized['source_id']) && ($normalized['source_type'] === 'MANUAL' || $normalized['posting_event'] === 'MANUAL_JOURNAL')) {
+            $normalized['source_id'] = $nomor;
+            $normalized['source_no'] = $nomor;
+        }
+
         // Counter nomor di atas mengunci dan menserialkan proses insert. Cek
         // ulang setelah lock untuk menutup race dua request event sumber sama.
         $existing = $this->existing_journal_for($normalized);
@@ -1333,7 +1343,8 @@ class Accounting_service
         }
 
         if (!empty($payload['source_module']) && !empty($payload['source_type'])
-            && !empty($payload['source_id']) && !empty($payload['posting_event'])) {
+            && !empty($payload['source_id']) && !empty($payload['posting_event'])
+            && $payload['source_type'] !== 'MANUAL' && $payload['posting_event'] !== 'MANUAL_JOURNAL') {
             return $this->CI->db
                 ->where('source_module', $payload['source_module'])
                 ->where('source_type', $payload['source_type'])

@@ -516,9 +516,11 @@ $has_id = !empty($this->input->get('id'));
         
         // Load Jurnal List
         function loadJurnalList() {
+            let searchVal = $('#search-input').val();
             $.ajax({
                 url: '<?= base_url("buku_besar/jurnal_umum_list") ?>',
                 type: 'GET',
+                data: { search: searchVal },
                 dataType: 'json',
                 success: function(res) {
                     if (res.success) {
@@ -543,6 +545,10 @@ $has_id = !empty($this->input->get('id'));
                 }
             });
         }
+
+        $('#search-input').on('keyup input', function() {
+            loadJurnalList();
+        });
 
         loadJurnalList();
 
@@ -947,12 +953,26 @@ $has_id = !empty($this->input->get('id'));
             }
         }
 
+        function fetchNextRef() {
+            $.ajax({
+                url: '<?= base_url("buku_besar/jurnal_umum_next_ref") ?>',
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success && res.next_ref) {
+                        $('#form-ref').val(res.next_ref);
+                    }
+                }
+            });
+        }
+
         function clearForm() {
             $('#form-lines-body').empty();
             $('#form-keterangan').val('Jurnal Umum');
             $('#form-tanggal').val('<?= date("Y-m-d") ?>');
             rowCounter = 0;
             calculateFormTotals();
+            fetchNextRef();
         }
 
         $('#btn-clear-form').click(function() {
