@@ -29,7 +29,7 @@ class C_ReturPenjualan extends CI_Controller
 
         // Batasi akses hanya ke jobdesk yang diperbolehkan di DB
         $jobdesk = strtoupper((string)($this->session->userdata('jobdesk') ?? ''));
-        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
+        $allowed_jobdesks = ['SC', 'MANAGERSC', 'ADMRETUR', 'KADEPSC', 'ADMLPB2', 'LOGISTIC', 'LOGISTIK', 'COLLECTION', 'KASIR', 'ADMIN', 'ADMSTOCK', 'ADMPNJ', 'KADEPUB', 'MANAGERACC', 'MANAGERSE', 'DIREKTUROP', 'DIREKTURUTAMA', 'KIUKEU', 'KEUANGAN'];
         if (!in_array($jobdesk, $allowed_jobdesks)) {
             show_error('Akses ditolak. Anda tidak memiliki izin untuk mengakses modul Retur Penjualan.', 403);
         }
@@ -84,7 +84,7 @@ class C_ReturPenjualan extends CI_Controller
     /** Admin Penjualan */
     private function _isAdmstock()
     {
-        return $this->_isJobdesk(['ADMSTOCK', 'ADMIN']);
+        return $this->_isJobdesk(['ADMSTOCK', 'ADMPNJ', 'ADMIN']);
     }
 
     /** Kepala Departemen SC */
@@ -391,17 +391,25 @@ class C_ReturPenjualan extends CI_Controller
         $alasan_lainlain    = $this->input->post('alasan_lainlain') ?: '';
 
         $rows = [];
+        $kd_barang_post = $this->input->post('kd_barang') ?: [];
         foreach ($nama_barang as $i => $nb) {
             if (empty($nb)) continue;
             $exp_val = !empty($expired_date[$i]) ? $expired_date[$i] : null;
+            $kb = !empty($kd_barang_post[$i]) ? $kd_barang_post[$i] : '';
+            if (empty($kb)) {
+                $mb = $this->db->get_where('tbpo_barang', ['nama_barang' => $nb])->row_array();
+                $kb = $mb ? $mb['kode_barang'] : '';
+            }
+
             $rows[] = [
                 'id_spr'                    => $id_spr,
                 'no_urut'                   => $i + 1,
+                'kd_barang'                 => $kb,
                 'nama_barang'               => $nb,
                 'no_faktur'                 => $no_faktur[$i] ?? '',
                 'no_batch'                  => $no_batch[$i]  ?? '',
                 'expired_date'              => $exp_val,
-                'harga'                     => (float) str_replace(',', '', ($harga[$i] ?? 0)),
+                'harga'                     => (float) str_replace(',', '.', str_replace(['Rp', 'rp', ' ', '.'], '', (string)($harga[$i] ?? 0))),
                 'qty'                       => (float) ($qty[$i] ?? 0),
                 'alasan_brg_bermasalah'     => $alasan_brg,
                 'alasan_brg_bermasalah_opt' => $alasan_brg_opt,
@@ -445,10 +453,11 @@ class C_ReturPenjualan extends CI_Controller
 
         $results = array_map(function($r) {
             return [
-                'id'     => $r['nama_barang'],
-                'text'   => '[' . $r['kd_barang'] . '] ' . $r['nama_barang'],
-                'satuan' => $r['satuan'],
-                'harga'  => (float) $r['hpp'],
+                'id'        => $r['nama_barang'],
+                'kd_barang' => $r['kd_barang'],
+                'text'      => '[' . $r['kd_barang'] . '] ' . $r['nama_barang'],
+                'satuan'    => $r['satuan'],
+                'harga'     => (float) $r['hpp'],
             ];
         }, $rows);
 
@@ -1213,6 +1222,7 @@ class C_ReturPenjualan extends CI_Controller
                 'id_retur'      => $id_retur,
                 'id_spr_detail' => (int)($id_spr_detail[$i] ?? 0),
                 'no_urut'       => $i + 1,
+                'kd_barang'     => $kb,
                 'nama_barang'   => $nb,
                 'satuan'        => $satuan_arr[$i] ?? '',
                 'no_faktur'     => $no_faktur_arr[$i] ?? '',
@@ -1528,7 +1538,10 @@ class C_ReturPenjualan extends CI_Controller
         }
 
         $id_faktur_potong    = $this->input->post('id_faktur_potong');
-        $nominal_potongan    = (float)$this->input->post('nominal_potongan');
+        $raw_potongan        = (string)$this->input->post('nominal_potongan');
+        $clean_potongan      = str_replace(['Rp', 'rp', ' ', '.'], '', $raw_potongan);
+        $clean_potongan      = str_replace(',', '.', $clean_potongan);
+        $nominal_potongan    = (float)$clean_potongan;
         $catatan_collection  = $this->input->post('catatan_collection');
         $user                = $this->_getUser();
 

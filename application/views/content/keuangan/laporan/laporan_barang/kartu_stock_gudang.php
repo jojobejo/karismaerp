@@ -387,8 +387,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function formatNumber(num) {
         var p = parseFloat(num);
-        if (isNaN(p)) return '0.00';
-        return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (isNaN(p)) return '0,00';
+        return p.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function formatDate(str) {
@@ -402,10 +402,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!str) return '-';
         var d = new Date(str);
         if (isNaN(d)) return str;
-        var months = ['July','August','September','October','November','December','January','February','March','April','May','June'];
-        // Format to Indonesian standard or English depending on design
-        var monthsEN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-        return d.getDate() + ' ' + monthsEN[d.getMonth()] + ' ' + d.getFullYear();
+        var monthsID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        return d.getDate() + ' ' + monthsID[d.getMonth()] + ' ' + d.getFullYear();
     }
 
     // Modal Opening Triggers

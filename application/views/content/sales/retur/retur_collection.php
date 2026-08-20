@@ -117,7 +117,7 @@
                                 <div class="input-group">
                                     <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
                                     <?php $max_potong = $retur['status_retur'] === 'selesai' ? $retur['sisa_saldo_retur'] : $total_retur; ?>
-                                    <input type="number" step="0.01" name="nominal_potongan" id="nominal_potongan" class="form-control" max="<?= $max_potong ?>" required placeholder="Masukkan nominal (parsial/full)">
+                                    <input type="text" name="nominal_potongan" id="nominal_potongan" class="form-control" data-max="<?= $max_potong ?>" required placeholder="Masukkan nominal (contoh: 1.000.000)">
                                 </div>
                                 <small class="text-muted" id="nominal_hint">Maksimal pemotongan saldo retur: Rp <?= number_format($max_potong, 0, ',', '.') ?></small>
                                 <input type="hidden" id="max_saldo_retur" value="<?= $max_potong ?>">
@@ -208,6 +208,47 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function formatRupiahInput(val) {
+        if (val === null || val === undefined) return '';
+        var clean = val.toString().replace(/[^0-9,]/g, '');
+        var parts = clean.split(',');
+        var integerPart = parts[0].replace(/^0+(?=\d)/, '');
+        if (integerPart === '') integerPart = parts[0] === '0' ? '0' : '';
+        var decimalPart = parts.length > 1 ? ',' + parts[1].substring(0, 2) : '';
+        var formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        if (formattedInt === '' && decimalPart !== '') formattedInt = '0';
+        return formattedInt + decimalPart;
+    }
+
+    function parseRupiahNumber(val) {
+        if (!val) return 0;
+        var str = val.toString().replace(/\./g, '').replace(',', '.');
+        var num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
+    }
+
+    var nominalInput = document.getElementById('nominal_potongan');
+    if (nominalInput) {
+        nominalInput.addEventListener('input', function() {
+            var cursorPosition = this.selectionStart;
+            var originalLength = this.value.length;
+            var formatted = formatRupiahInput(this.value);
+            this.value = formatted;
+            var newLength = formatted.length;
+            var newPos = Math.max(0, cursorPosition + (newLength - originalLength));
+            this.setSelectionRange(newPos, newPos);
+
+            var max = parseFloat($(this).data('max'));
+            if (isNaN(max)) {
+                max = parseFloat($('#max_saldo_retur').val()) || 0;
+            }
+            var val = parseRupiahNumber($(this).val());
+            if (val > max && max > 0) {
+                $(this).val(formatRupiahInput(max));
+            }
+        });
+    }
+
     $('.btn-pilih-faktur').on('click', function() {
         var idFaktur = $(this).data('id');
         var noFaktur = $(this).data('no');
@@ -220,22 +261,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update max input & hint
         var maxInput = Math.min(sisaTagihan, maxSaldoRetur);
-        $('#nominal_potongan').attr('max', maxInput);
+        $('#nominal_potongan').data('max', maxInput);
         $('#nominal_hint').html('Maksimal pemotongan: Rp ' + maxInput.toLocaleString('id-ID') + ' (Terkecil antara Saldo Retur & Sisa Tagihan)');
         
-        $('#modalFaktur').modal('hide');
-    });
+        // Jika belum diisi atau melebihi batas, isi dengan nilai maksimal
+        var currentVal = parseRupiahNumber($('#nominal_potongan').val());
+        if (currentVal <= 0 || currentVal > maxInput) {
+            $('#nominal_potongan').val(formatRupiahInput(maxInput));
+        }
 
-    // Validasi real-time agar input nominal tidak melebihi maksimal (sisa saldo retur / sisa tagihan)
-    $('#nominal_potongan').on('input', function() {
-        var max = parseFloat($(this).attr('max'));
-        if (isNaN(max)) {
-            max = parseFloat($('#max_saldo_retur').val());
-        }
-        var val = parseFloat($(this).val());
-        if (val > max) {
-            $(this).val(max);
-        }
+        $('#modalFaktur').modal('hide');
     });
 
     // Update max saldo retur jika ada retur yang dicentang
@@ -261,16 +296,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (selectedSisa > 0) {
             var currentMaxInput = Math.min(selectedSisa, newMax);
-            $('#nominal_potongan').attr('max', currentMaxInput);
+            $('#nominal_potongan').data('max', currentMaxInput);
             $('#nominal_hint').html('Maksimal pemotongan: Rp ' + currentMaxInput.toLocaleString('id-ID') + ' (Terkecil antara Saldo Terpilih & Sisa Tagihan)');
             
             // Validasi ulang nilai input jika melebihi batas baru
-            var currentVal = parseFloat($('#nominal_potongan').val()) || 0;
+            var currentVal = parseRupiahNumber($('#nominal_potongan').val());
             if (currentVal > currentMaxInput) {
-                $('#nominal_potongan').val(currentMaxInput);
+                $('#nominal_potongan').val(formatRupiahInput(currentMaxInput));
             }
         } else {
-            $('#nominal_potongan').attr('max', newMax);
+            $('#nominal_potongan').data('max', newMax);
             $('#nominal_hint').html('Maksimal pemotongan saldo retur gabungan: Rp ' + newMax.toLocaleString('id-ID'));
         }
     }

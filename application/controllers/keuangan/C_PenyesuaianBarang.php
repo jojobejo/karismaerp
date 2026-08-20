@@ -100,10 +100,10 @@ class C_PenyesuaianBarang extends CI_Controller
                 ->set_output(json_encode(['success' => false, 'message' => 'Nomor referensi dan tanggal wajib diisi.']));
         }
 
-        if (empty($id_gudang_dari)) {
+        if (empty($id_gudang_dari) || empty($id_gudang_ke)) {
             return $this->output
                 ->set_content_type('application/json')
-                ->set_output(json_encode(['success' => false, 'message' => 'Gudang (Dari Gudang) wajib dipilih.']));
+                ->set_output(json_encode(['success' => false, 'message' => 'Dari Gudang dan Ke Gudang wajib dipilih.']));
         }
 
         // Parse detail baris

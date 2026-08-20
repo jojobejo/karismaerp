@@ -512,27 +512,30 @@
                         <input type="text" id="keterangan" class="form-control-zahir memo-input" style="width:400px"
                                value="<?= $header ? htmlspecialchars($header['keterangan']) : 'Penyesuaian Persediaan' ?>" />
                     </div>
-                    <?php $daftar_gudang = !empty($gudang_list) ? $gudang_list : (!empty($gudangs) ? $gudangs : []); ?>
+                    <?php 
+                    $daftar_gudang = !empty($gudang_list) ? $gudang_list : (!empty($gudangs) ? $gudangs : []);
+                    $first_gudang_id = !empty($daftar_gudang) ? $daftar_gudang[0]['id_gudang'] : '';
+                    ?>
                     <div class="form-row-zahir" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <label style="width: 110px; margin: 0;">Dari Gudang <span style="color:#d9534f; font-weight:bold;">*</span> :</label>
                             <select id="gudangDari" class="form-control-zahir select-gudang" style="width:200px" required>
                                 <option value="">-- Pilih Gudang --</option>
                                 <?php foreach ($daftar_gudang as $gd): ?>
-                                    <option value="<?= $gd['id_gudang'] ?>"
-                                        <?= ($header && $header['id_gudang_dari'] == $gd['id_gudang']) ? 'selected' : '' ?>>
+                                    <?php $selected_dari = $header ? ($header['id_gudang_dari'] == $gd['id_gudang']) : ($gd['id_gudang'] == 2 || $gd['id_gudang'] == $first_gudang_id); ?>
+                                    <option value="<?= $gd['id_gudang'] ?>" <?= $selected_dari ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($gd['nama_gudang']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <label style="width: auto; margin: 0;">Ke Gudang :</label>
-                            <select id="gudangKe" class="form-control-zahir select-gudang" style="width:200px">
-                                <option value="">-- Pilih (Opsional) --</option>
+                            <label style="width: auto; margin: 0;">Ke Gudang <span style="color:#d9534f; font-weight:bold;">*</span> :</label>
+                            <select id="gudangKe" class="form-control-zahir select-gudang" style="width:200px" required>
+                                <option value="">-- Pilih Gudang --</option>
                                 <?php foreach ($daftar_gudang as $gd): ?>
-                                    <option value="<?= $gd['id_gudang'] ?>"
-                                        <?= ($header && $header['id_gudang_ke'] == $gd['id_gudang']) ? 'selected' : '' ?>>
+                                    <?php $selected_ke = $header ? ($header['id_gudang_ke'] == $gd['id_gudang']) : ($gd['id_gudang'] == 2 || $gd['id_gudang'] == $first_gudang_id); ?>
+                                    <option value="<?= $gd['id_gudang'] ?>" <?= $selected_ke ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($gd['nama_gudang']) ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -1402,6 +1405,13 @@ function doRekam() {
     if (!gudangDari) {
         alert('Gudang Asal (Dari Gudang) wajib dipilih.');
         $('#gudangDari').focus();
+        return;
+    }
+
+    var gudangKe = $('#gudangKe').val();
+    if (!gudangKe) {
+        alert('Gudang Tujuan (Ke Gudang) wajib dipilih.');
+        $('#gudangKe').focus();
         return;
     }
 

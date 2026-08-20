@@ -412,11 +412,12 @@
                                 <select class="form-control form-control-sm select2-barang" name="nama_barang[]">
                                     <option value=""></option>
                                 </select>
+                                <input type="hidden" name="kd_barang[]" class="field-kd-barang">
                             </td>
                             <td><input type="text" class="form-control form-control-sm" name="no_faktur[]" placeholder="No. Faktur"></td>
                             <td><input type="text" class="form-control form-control-sm" name="no_batch[]" placeholder="No. Batch / Lot"></td>
                             <td><input type="date" class="form-control form-control-sm" name="expired_date[]"></td>
-                            <td><input type="number" class="form-control form-control-sm text-right field-harga" name="harga[]" min="0" step="1" placeholder="0"></td>
+                            <td><input type="text" class="form-control form-control-sm text-right field-harga" name="harga[]" placeholder="0"></td>
                             <td><input type="number" class="form-control form-control-sm text-right" name="qty[]" min="0" step="0.001" placeholder="0"></td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-del-row" title="Hapus baris">
@@ -443,6 +444,18 @@
 $(document).ready(function () {
 
     var AJAX_BARANG_URL = '<?= base_url("retur_penjualan/ajax/search_barang") ?>';
+
+    function formatRupiahInput(val) {
+        if (val === null || val === undefined) return '';
+        var clean = val.toString().replace(/[^0-9,]/g, '');
+        var parts = clean.split(',');
+        var integerPart = parts[0].replace(/^0+(?=\d)/, '');
+        if (integerPart === '') integerPart = parts[0] === '0' ? '0' : '';
+        var decimalPart = parts.length > 1 ? ',' + parts[1].substring(0, 2) : '';
+        var formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        if (formattedInt === '' && decimalPart !== '') formattedInt = '0';
+        return formattedInt + decimalPart;
+    }
 
     // ---- Searchable customer ----
     $('#kd_customer').select2({
@@ -492,6 +505,13 @@ $(document).ready(function () {
                 return $('<span>' + item.text + '</span>');
             },
             dropdownParent: $('body')
+        }).on('select2:select', function(e) {
+            var data = e.params.data;
+            if (data && data.kd_barang) {
+                $row.find('.field-kd-barang').val(data.kd_barang);
+            }
+        }).on('select2:clear', function() {
+            $row.find('.field-kd-barang').val('');
         });
     }
 
@@ -506,6 +526,7 @@ $(document).ready(function () {
         var tmpl = $('#rowTemplate tbody tr.item-row').clone();
         // Reset nilai select2 template agar tidak duplikat id
         tmpl.find('.select2-barang').val('');
+        tmpl.find('.field-kd-barang').val('');
         $('#rowContainer').append(tmpl);
         renumberRows();
         bindRowEvents(tmpl);
@@ -517,10 +538,14 @@ $(document).ready(function () {
         if (item.nama_barang) {
             tmpl.find('.select2-barang').append(new Option(item.nama_barang, item.nama_barang, true, true));
         }
+        if (item.kd_barang) {
+            tmpl.find('.field-kd-barang').val(item.kd_barang);
+        }
         tmpl.find('input[name="no_faktur[]"]').val(item.no_faktur || '');
         tmpl.find('input[name="no_batch[]"]').val(item.no_batch || '');
         tmpl.find('input[name="expired_date[]"]').val(item.expired_date || '');
-        tmpl.find('input[name="harga[]"]').val(item.harga || '');
+        var hrgVal = item.harga ? parseFloat(item.harga) : 0;
+        tmpl.find('input[name="harga[]"]').val(hrgVal > 0 ? formatRupiahInput(hrgVal) : '');
         tmpl.find('input[name="qty[]"]').val(item.qty || '');
         $('#rowContainer').append(tmpl);
         renumberRows();
@@ -529,6 +554,16 @@ $(document).ready(function () {
     }
 
     function bindRowEvents($row) {
+        $row.find('.field-harga').on('input', function() {
+            var cursorPosition = this.selectionStart;
+            var originalLength = this.value.length;
+            var formatted = formatRupiahInput(this.value);
+            this.value = formatted;
+            var newLength = formatted.length;
+            var newPos = Math.max(0, cursorPosition + (newLength - originalLength));
+            this.setSelectionRange(newPos, newPos);
+        });
+
         $row.find('.btn-del-row').on('click', function() {
             if ($('#rowContainer .item-row').length > 1) {
                 // Destroy select2 sebelum hapus

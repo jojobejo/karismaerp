@@ -172,12 +172,14 @@ class M_PenyesuaianBarang extends CI_Model
         $grouped_kredits = [];
         $total_nilai_transaksi = 0;
 
+        $gudang_id = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
+
         foreach ($data['details'] as $detail) {
             $jumlah = (float)$detail['jumlah'];
             if ($jumlah == 0 || empty($detail['id_akun'])) continue;
 
             $kd_barang = $detail['kd_barang'];
-            $hpp = $this->get_item_hpp($kd_barang);
+            $hpp = $this->get_item_hpp($kd_barang, $gudang_id);
             $nominal = round(abs($jumlah) * $hpp, 2);
             if ($nominal <= 0) $nominal = round(abs($jumlah) * 1, 2);
 
@@ -289,21 +291,123 @@ class M_PenyesuaianBarang extends CI_Model
     }
 
     /**
-     * Ambil HPP barang dari master
+     * Ambil HPP barang dari perhitungan Kartu Stok Gudang (Moving Average)
+     * Mengikuti kalkulasi laporan kartu stok gudang (IN: LPB & Retur, OUT: Faktur)
      */
-    public function get_item_hpp($kd_barang)
+    public function get_item_hpp($kd_barang, $id_gudang = null)
     {
-        $stmt = $this->db->select('hpp')->where('kd_barang', $kd_barang)->limit(1)->get('tb_master_barang_all')->row_array();
-        if ($stmt && (float)$stmt['hpp'] > 0) {
-            return (float)$stmt['hpp'];
+        $kd_barang = trim((string)$kd_barang);
+        if ($kd_barang === '') {
+            return 0.0;
         }
 
-        $soStmt = $this->db->select('hrg_pokok')->where('kd_barang', $kd_barang)->where('hrg_pokok >', 0)->order_by('id', 'DESC')->limit(1)->get('tbso_sales_order_detail')->row_array();
-        if ($soStmt && (float)$soStmt['hrg_pokok'] > 0) {
-            return (float)$soStmt['hrg_pokok'];
+        // 1. Ambil transaksi IN dari Penerimaan Barang (LPB)
+        $in_query = "SELECT l.tgl_sj AS tanggal, ld.qty_diterima AS qty, ld.harga_satuan AS harga, 'IN' AS type
+                     FROM tb_lpb l
+                     JOIN tb_lpb_detail ld ON l.id_lpb = ld.id_lpb
+                     WHERE ld.kd_barang = ? AND l.status_lpb = 1";
+        $params_in = [$kd_barang];
+        if (!empty($id_gudang)) {
+            $in_query .= " AND l.gudang_id = ?";
+            $params_in[] = $id_gudang;
+        }
+        $in_tx = $this->db->query($in_query, $params_in)->result_array();
+
+        // 2. Ambil transaksi IN dari Retur Penjualan
+        $retur_query = "SELECT r.tanggal_retur AS tanggal, rd.qty_retur AS qty, rd.harga_satuan AS harga, 'IN' AS type
+                        FROM tbrp_retur_penjualan_header r
+                        JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
+                        JOIN tbpo_barang b ON (TRIM(LOWER(rd.nama_barang)) = TRIM(LOWER(b.nama_barang)))
+                        WHERE b.kode_barang = ? AND r.status_retur NOT IN ('ditolak', 'batal')";
+        $params_retur = [$kd_barang];
+        if (!empty($id_gudang)) {
+            $retur_query .= " AND r.gudang_id = ?";
+            $params_retur[] = $id_gudang;
+        }
+        $retur_tx = $this->db->query($retur_query, $params_retur)->result_array();
+
+        $all_in = array_merge($in_tx, $retur_tx);
+
+        // 3. Ambil transaksi OUT dari Faktur Penjualan
+        $out_query = "SELECT f.tanggal_faktur AS tanggal, fd.qty, fd.hrg_satuan AS harga, 'OUT' AS type
+                      FROM tbso_faktur_penjualan f
+                      JOIN tbso_faktur_detail fd ON f.id_faktur = fd.id_faktur
+                      WHERE fd.kd_barang = ? AND f.status NOT IN ('draft', 'cancelled')";
+        $params_out = [$kd_barang];
+        if (!empty($id_gudang)) {
+            $out_query .= " AND f.gudang_id = ?";
+            $params_out[] = $id_gudang;
+        }
+        $out_tx = $this->db->query($out_query, $params_out)->result_array();
+
+        $txs = array_merge($all_in, $out_tx);
+
+        if (!empty($txs)) {
+            usort($txs, function($a, $b) {
+                $t1 = strtotime($a['tanggal'] ?? '1970-01-01');
+                $t2 = strtotime($b['tanggal'] ?? '1970-01-01');
+                if ($t1 === $t2) {
+                    return (($a['type'] ?? 'IN') === 'IN') ? -1 : 1;
+                }
+                return $t1 < $t2 ? -1 : 1;
+            });
+
+            $qty_saldo = 0.0;
+            $nilai_saldo = 0.0;
+            $average_hpp = 0.0;
+
+            foreach ($txs as $tx) {
+                $qty = (float)$tx['qty'];
+                $harga = (float)$tx['harga'];
+
+                if ($tx['type'] === 'IN') {
+                    $qty_saldo += $qty;
+                    $nilai_saldo += ($qty * $harga);
+                    if ($qty_saldo > 0) {
+                        $average_hpp = $nilai_saldo / $qty_saldo;
+                    }
+                } else {
+                    $qty_saldo -= $qty;
+                    $nilai_saldo -= ($qty * $average_hpp);
+                }
+            }
+
+            if ($average_hpp > 0) {
+                return (float)$average_hpp;
+            }
         }
 
-        return 20000.0;
+        // Fallback jika belum ada pergerakan di kartu stok:
+        // Cek harga pembelian terakhir di LPB detail
+        $last_lpb = $this->db->select('harga_satuan')
+            ->from('tb_lpb_detail')
+            ->where('kd_barang', $kd_barang)
+            ->where('harga_satuan >', 0)
+            ->order_by('id_detail', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row_array();
+        if ($last_lpb && (float)$last_lpb['harga_satuan'] > 0) {
+            return (float)$last_lpb['harga_satuan'];
+        }
+
+        // Cek tb_barang_hpp_average
+        if ($this->db->table_exists('tb_barang_hpp_average')) {
+            $hppRow = $this->db->select('hpp_avg_dpp')->where('kd_barang', $kd_barang)->limit(1)->get('tb_barang_hpp_average')->row_array();
+            if ($hppRow && (float)$hppRow['hpp_avg_dpp'] > 0) {
+                return (float)$hppRow['hpp_avg_dpp'];
+            }
+        }
+
+        // Cek tbso_sales_order_detail
+        if ($this->db->table_exists('tbso_sales_order_detail')) {
+            $soStmt = $this->db->select('hrg_pokok')->where('kd_barang', $kd_barang)->where('hrg_pokok >', 0)->order_by('id', 'DESC')->limit(1)->get('tbso_sales_order_detail')->row_array();
+            if ($soStmt && (float)$soStmt['hrg_pokok'] > 0) {
+                return (float)$soStmt['hrg_pokok'];
+            }
+        }
+
+        return 0.0;
     }
 
     /**
@@ -648,7 +752,7 @@ class M_PenyesuaianBarang extends CI_Model
             ");
             $this->db->from('tb_lpb_batch lb');
             $this->db->join('tb_lpb_detail ld', 'ld.id_detail = lb.id_detail_lpb', 'inner');
-            $this->db->where('ld.kode_barang', $kd_barang);
+            $this->db->where('ld.kd_barang', $kd_barang);
             $this->db->where('lb.no_lot IS NOT NULL');
             $this->db->where('lb.no_lot !=', '');
 

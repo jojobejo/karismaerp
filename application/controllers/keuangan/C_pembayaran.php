@@ -275,8 +275,9 @@ class C_pembayaran extends CI_Controller
         $no_bg = trim((string)$this->input->post('no_bg', true));
         $nama_bank = trim((string)$this->input->post('nama_bank', true));
         $keterangan = trim((string)$this->input->post('keterangan', true));
-        $cara_pembayaran_faktur = strtolower(trim((string)$this->input->post('cara_pembayaran_faktur', true)));
-        $is_pending = ($cara_pembayaran_faktur === 'bg');
+        $is_bg_checked = !empty($this->input->post('is_bg', true));
+        $is_pending = ($is_bg_checked || $metode_pembayaran === 'bg');
+        $cara_pembayaran_faktur = $is_pending ? 'bg' : strtolower(trim((string)($faktur['cara_pembayaran'] ?? 'cash')));
 
         if ($is_pending && $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur'])) {
             $this->session->set_flashdata('warning', 'Masih ada pembayaran yang belum cair. Klik Bayar lalu tekan tombol BG Sudah Cair.');
@@ -284,7 +285,7 @@ class C_pembayaran extends CI_Controller
         }
 
         if ($is_pending && empty($tanggal_bg_cair)) {
-            $this->session->set_flashdata('error', 'Tanggal cair wajib diisi jika cara pembayaran faktur adalah BG.');
+            $this->session->set_flashdata('error', 'Tanggal cair wajib diisi jika pembayaran adalah BG.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
@@ -332,7 +333,6 @@ class C_pembayaran extends CI_Controller
                 }
             }
 
-            $cara_pembayaran_faktur = strtolower(trim((string)$this->input->post('cara_pembayaran_faktur', true)));
             if (!empty($cara_pembayaran_faktur) && in_array($cara_pembayaran_faktur, ['cash', 'transfer', 'bg', 'tempo'], true)) {
                 $this->M_pembayaran->update_cara_pembayaran($faktur['id_faktur'], $cara_pembayaran_faktur);
             }

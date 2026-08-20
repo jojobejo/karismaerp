@@ -622,20 +622,49 @@ class M_Journal extends CI_Model
             $item_val = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             if ($item_val <= 0) continue;
 
-            $this->db->select('b.kode_barang, b.kode_akun_retur_penjualan, b.kode_akun_persediaan, b.kode_akun_harga_pokok, fd.hrg_pokok, g.DESKRIPSI');
+            // Prioritaskan kd_barang dari detail retur atau faktur asal
+            $kd_barang_item = !empty($d['kd_barang']) ? trim($d['kd_barang']) : '';
+            if (empty($kd_barang_item) && !empty($d['no_faktur'])) {
+                $fd_row = $this->db->get_where('tbso_faktur_detail', [
+                    'no_faktur' => $d['no_faktur'],
+                    'nama_barang' => $d['nama_barang']
+                ])->row_array();
+                if ($fd_row && !empty($fd_row['kd_barang'])) {
+                    $kd_barang_item = $fd_row['kd_barang'];
+                }
+            }
+
+            $this->db->select('b.kode_barang, b.nama_barang, b.kelompok_dagang, 
+                               COALESCE(ba.kode_akun_retur_penjualan, b.kode_akun_retur_penjualan) AS kode_akun_retur_penjualan,
+                               COALESCE(ba.kode_akun_persediaan, b.kode_akun_persediaan) AS kode_akun_persediaan,
+                               COALESCE(ba.kode_akun_harga_pokok, b.kode_akun_harga_pokok) AS kode_akun_harga_pokok,
+                               fd.hrg_pokok, g.DESKRIPSI');
             $this->db->from('tbpo_barang b');
+            $this->db->join('tbpo_barang_akun ba', 'ba.kode_barang = b.kode_barang', 'left');
             $this->db->join('tbso_faktur_detail fd', 'fd.kd_barang = b.kode_barang AND fd.no_faktur = ' . $this->db->escape($d['no_faktur']), 'left');
             $this->db->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left');
-            $this->db->where('b.nama_barang', $d['nama_barang']);
+
+            if (!empty($kd_barang_item)) {
+                $this->db->where('b.kode_barang', $kd_barang_item);
+            } else {
+                $this->db->where('b.nama_barang', $d['nama_barang']);
+            }
             $prod = $this->db->get()->row_array();
 
             $kode_akun_retur = $prod ? trim($prod['kode_akun_retur_penjualan']) : '';
             $desc = $prod ? strtoupper(trim($prod['DESKRIPSI'])) : '';
+            $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
 
             $is_bkp = false;
-            if (stripos($desc, 'BKPS') !== false) {
+            if ($prod && (int)$prod['kelompok_dagang'] === 2) {
+                $is_bkp = true;
+            } elseif ($kode_akun_retur === '41014') {
+                $is_bkp = true;
+            } elseif (stripos($desc, 'BKPS') !== false) {
                 $is_bkp = false;
             } elseif (stripos($desc, 'BKP') !== false) {
+                $is_bkp = true;
+            } elseif ($prefix === 'Q' && stripos($desc, 'BKPS') === false) {
                 $is_bkp = true;
             } else {
                 if (strpos(strtolower($d['nama_barang']), 'jasa') !== false) {
@@ -643,7 +672,7 @@ class M_Journal extends CI_Model
                 }
             }
 
-            // Tax calculation
+            // Tax calculation (DPP + PPN 11% untuk BKP)
             $dpp = $item_val;
             $ppn = 0;
             if ($is_bkp) {
@@ -651,8 +680,30 @@ class M_Journal extends CI_Model
                 $ppn = round($item_val - $dpp, 2);
             }
 
-            // Resolve ID Akun
-            $id_akun_retur = isset($akun_map[$kode_akun_retur]) ? $akun_map[$kode_akun_retur] : 310; // fallback
+            // Resolve ID Akun Retur Penjualan langsung dari Master Barang
+            $id_akun_retur = 0;
+            if (!empty($kode_akun_retur)) {
+                if (isset($akun_map[$kode_akun_retur])) {
+                    $id_akun_retur = $akun_map[$kode_akun_retur];
+                } else {
+                    $aRow = $this->db->get_where('tbkeu_akun', ['kode_akun' => $kode_akun_retur])->row_array();
+                    if ($aRow) {
+                        $id_akun_retur = $aRow['id_akun'];
+                    }
+                }
+            }
+
+            // Fallback jika belum tersetting di master barang
+            if ($id_akun_retur <= 0) {
+                $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
+                if ($prefix === 'Q') {
+                    $id_akun_retur = $is_bkp ? (isset($akun_map['41014']) ? $akun_map['41014'] : 310) : (isset($akun_map['41015']) ? $akun_map['41015'] : 311);
+                } elseif ($prefix === 'A') {
+                    $id_akun_retur = isset($akun_map['41034']) ? $akun_map['41034'] : 316;
+                } else {
+                    $id_akun_retur = 310;
+                }
+            }
 
             if (!isset($grouped_retur[$id_akun_retur])) {
                 $grouped_retur[$id_akun_retur] = 0;
@@ -668,27 +719,29 @@ class M_Journal extends CI_Model
             }
             $cost_total = round((float)$d['qty_retur'] * $cost_unit, 2);
 
-            $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
-            $kode_persediaan = '';
-            $kode_hpp = '';
+            // Ambil akun persediaan dan HPP dari Master Barang
+            $kode_persediaan = $prod && !empty($prod['kode_akun_persediaan']) ? trim($prod['kode_akun_persediaan']) : '';
+            $kode_hpp = $prod && !empty($prod['kode_akun_harga_pokok']) ? trim($prod['kode_akun_harga_pokok']) : '';
 
-            if ($prefix === 'Q') {
-                if ($is_bkp) {
-                    $kode_persediaan = '14010';
-                    $kode_hpp = '51010';
+            if (empty($kode_persediaan)) {
+                $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
+                if ($prefix === 'Q') {
+                    $kode_persediaan = $is_bkp ? '14010' : '14011';
+                } elseif ($prefix === 'A') {
+                    $kode_persediaan = '14031';
                 } else {
-                    $kode_persediaan = '14011';
-                    $kode_hpp = '51011';
+                    $kode_persediaan = '14010';
                 }
-            } elseif ($prefix === 'Z') {
-                $kode_persediaan = '14011';
-                $kode_hpp = '51011';
-            } elseif ($prefix === 'A') {
-                $kode_persediaan = '14031';
-                $kode_hpp = '51031';
-            } else {
-                $kode_persediaan = $prod && !empty($prod['kode_akun_persediaan']) ? $prod['kode_akun_persediaan'] : '14010';
-                $kode_hpp = $prod && !empty($prod['kode_akun_harga_pokok']) ? $prod['kode_akun_harga_pokok'] : '51010';
+            }
+            if (empty($kode_hpp)) {
+                $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
+                if ($prefix === 'Q') {
+                    $kode_hpp = $is_bkp ? '51010' : '51011';
+                } elseif ($prefix === 'A') {
+                    $kode_hpp = '51031';
+                } else {
+                    $kode_hpp = '51010';
+                }
             }
 
             $id_persediaan = isset($akun_map[$kode_persediaan]) ? $akun_map[$kode_persediaan] : 0;

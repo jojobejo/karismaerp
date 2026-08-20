@@ -332,28 +332,20 @@ $default_metode = '';
                                         </select>
                                     </div>
 
-                                    <div class="form-group">
-                                        <label>Cara Pembayaran Faktur <span class="text-danger">*</span></label>
-                                        <select name="cara_pembayaran_faktur" class="form-control" required <?= $is_validasi_kasir_mode ? 'readonly style="pointer-events: none;"' : '' ?>>
+                                    <div class="form-group mb-3">
+                                        <div class="custom-control custom-checkbox">
                                             <?php
-                                            $current_cp = strtolower(trim((string)($faktur['cara_pembayaran'] ?? '')));
-                                            if ($is_validasi_kasir_mode) {
-                                                $current_cp = 'cash';
-                                            } elseif ($is_bg_cair_mode && !empty($pending_bg['cara_pembayaran'])) {
-                                                $current_cp = strtolower(trim((string)$pending_bg['cara_pembayaran']));
-                                            }
-                                            $cp_options = ['cash' => 'Cash', 'transfer' => 'Transfer', 'bg' => 'BG', 'tempo' => 'Tempo'];
-                                            foreach ($cp_options as $cpKey => $cpLabel):
+                                            $is_bg_checked = $is_bg_cair_mode || (strtolower(trim((string)($faktur['cara_pembayaran'] ?? ''))) === 'bg');
                                             ?>
-                                                <option value="<?= $cpKey ?>" <?= $current_cp === $cpKey ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($cpLabel) ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <small class="text-muted">Gunakan pilihan ini untuk mengubah cara pembayaran faktur jika diperlukan.</small>
+                                            <input type="checkbox" class="custom-control-input" id="check_is_bg" name="is_bg" value="1" <?= $is_bg_checked ? 'checked' : '' ?> <?= $is_validasi_kasir_mode ? 'disabled' : '' ?>>
+                                            <label class="custom-control-label font-weight-bold" for="check_is_bg">
+                                                <i class="fas fa-money-check mr-1 text-primary"></i> BG (Bilyet Giro / Cek)
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Centang jika pembayaran ini menggunakan BG / Cek.</small>
                                     </div>
 
-                                    <div class="row" id="no_bg_nama_bank_group" style="<?= (!$is_bg_cair_mode && $current_cp !== 'bg' && $default_metode !== 'bg') ? 'display:none;' : '' ?>">
+                                    <div class="row" id="no_bg_nama_bank_group" style="<?= (!$is_bg_checked && $default_metode !== 'bg') ? 'display:none;' : '' ?>">
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label>No. BG / Cek</label>
@@ -384,15 +376,16 @@ $default_metode = '';
                                         } elseif ($is_bg_cair_mode) {
                                             $max_bayar += (float)($pending_bg['jumlah_pembayaran'] ?? 0);
                                         }
+                                        $raw_bayar = $is_validasi_kasir_mode ? (float)$validasi_kasir['jumlah_pembayaran'] : ($is_bg_cair_mode ? (float)$pending_bg['jumlah_pembayaran'] : (float)$faktur['sisa_tagihan']);
+                                        $display_bayar = number_format($raw_bayar, 0, ',', '.');
                                         ?>
-                                        <input type="number" name="jumlah_pembayaran" id="jumlah_pembayaran" class="form-control" min="1"
-                                               max="<?= $max_bayar ?>" step="0.01" required
-                                               value="<?= $is_validasi_kasir_mode ? (float)$validasi_kasir['jumlah_pembayaran'] : ($is_bg_cair_mode ? (float)$pending_bg['jumlah_pembayaran'] : (float)$faktur['sisa_tagihan']) ?>">
+                                        <input type="text" name="jumlah_pembayaran" id="jumlah_pembayaran" class="form-control input-currency" required
+                                               value="<?= htmlspecialchars($display_bayar) ?>">
                                         <small class="text-muted">Maksimal Rp <?= number_format($max_bayar, 0, ',', '.') ?></small>
                                     </div>
                                     <div class="form-group" <?= $is_bg_cair_mode ? 'style="display:none;"' : '' ?>>
                                         <label>Jumlah Diskon</label>
-                                        <input type="number" name="jumlah_diskon" id="jumlah_diskon" class="form-control" min="0" step="0.01" value="0">
+                                        <input type="text" name="jumlah_diskon" id="jumlah_diskon" class="form-control input-currency" value="0">
                                     </div>
                                     <div class="form-group" id="tanggal_bg_cair_group" style="<?= (!$is_bg_cair_mode && $default_metode !== 'bg') ? 'display:none' : '' ?>">
                                         <label>Tanggal BG Cair <span class="text-danger">*</span></label>
@@ -579,24 +572,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    var checkBg = document.getElementById('check_is_bg');
     var metode = document.getElementById('metode_pembayaran');
     var bgGroup = document.getElementById('tanggal_bg_cair_group');
     var returGroup = document.getElementById('saldo_retur_group');
     var jumlahInput = document.querySelector('input[name="jumlah_pembayaran"]');
     var sisaTagihan = <?= (float)$faktur['sisa_tagihan'] ?>;
     var saldoRetur = <?= (float)$saldo_retur ?>;
-    var caraBayarFaktur = document.querySelector('select[name="cara_pembayaran_faktur"]');
 
     if (!metode) return;
 
     var bgDate = bgGroup ? bgGroup.querySelector('input[name="tanggal_bg_cair"]') : null;
-
     var bgExtraGroup = document.getElementById('no_bg_nama_bank_group');
+
+    function formatRupiahInput(val) {
+        if (val === null || val === undefined) return '';
+        var clean = val.toString().replace(/[^0-9,]/g, '');
+        var parts = clean.split(',');
+        var integerPart = parts[0].replace(/^0+(?=\d)/, '');
+        if (integerPart === '') integerPart = parts[0] === '0' ? '0' : '';
+        var decimalPart = parts.length > 1 ? ',' + parts[1].substring(0, 2) : '';
+        var formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        if (formattedInt === '' && decimalPart !== '') formattedInt = '0';
+        return formattedInt + decimalPart;
+    }
+
+    function parseRupiahNumber(val) {
+        if (!val) return 0;
+        var str = val.toString().replace(/\./g, '').replace(',', '.');
+        var num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function bindCurrencyInput(el) {
+        if (!el) return;
+        el.addEventListener('input', function() {
+            var cursorPosition = this.selectionStart;
+            var originalLength = this.value.length;
+            var formatted = formatRupiahInput(this.value);
+            this.value = formatted;
+            var newLength = formatted.length;
+            var newPos = Math.max(0, cursorPosition + (newLength - originalLength));
+            this.setSelectionRange(newPos, newPos);
+            hitungJurnal();
+        });
+    }
 
     function handleMetodeChange() {
         var val = metode.value;
-        var termVal = caraBayarFaktur ? caraBayarFaktur.value : '';
-        var isBg = (val === 'bg' || termVal === 'bg' || <?= $is_bg_cair_mode ? 'true' : 'false' ?>);
+        var isBgChecked = checkBg ? checkBg.checked : false;
+        var isBg = (val === 'bg' || isBgChecked || <?= $is_bg_cair_mode ? 'true' : 'false' ?>);
         
         // Toggle BG Group
         if (bgGroup) {
@@ -616,12 +641,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (isRetur && jumlahInput) {
                 var maxLimit = Math.min(sisaTagihan, saldoRetur);
-                jumlahInput.max = maxLimit;
-                if (parseFloat(jumlahInput.value) > maxLimit || jumlahInput.value == sisaTagihan) {
-                    jumlahInput.value = maxLimit;
+                var currentVal = parseRupiahNumber(jumlahInput.value);
+                if (currentVal > maxLimit || currentVal == sisaTagihan) {
+                    jumlahInput.value = formatRupiahInput(maxLimit);
                 }
-            } else if (jumlahInput) {
-                jumlahInput.max = sisaTagihan;
             }
         }
         
@@ -635,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (<?= $is_validasi_kasir_mode ? 'true' : 'false' ?>) {
             debitAkun = 'Q Kas';
-            amount = parseFloat(jumlahInput.value) || 0;
+            amount = parseRupiahNumber(jumlahInput ? jumlahInput.value : 0);
             refPrefix = 'KM';
         } else if (<?= $is_bg_cair_mode ? 'true' : 'false' ?>) {
             debitAkun = '<?= htmlspecialchars($pending_bg["metode_pembayaran"] ?? "") ?>';
@@ -646,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             if (!metode || !jumlahInput) return;
             var val = metode.value;
-            amount = parseFloat(jumlahInput.value) || 0;
+            amount = parseRupiahNumber(jumlahInput.value);
             
             debitAkun = val;
             if (val.toLowerCase() === 'q kas' || val.toLowerCase() === 'a kas') {
@@ -675,22 +698,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var diskonInput = document.getElementById('jumlah_diskon');
 
+    bindCurrencyInput(jumlahInput);
+    bindCurrencyInput(diskonInput);
+
     metode.addEventListener('change', handleMetodeChange);
-    if (caraBayarFaktur) {
-        caraBayarFaktur.addEventListener('change', handleMetodeChange);
-    }
-    if (jumlahInput) {
-        jumlahInput.addEventListener('input', hitungJurnal);
-    }
-    if (diskonInput) {
-        diskonInput.addEventListener('input', hitungJurnal);
+    if (checkBg) {
+        checkBg.addEventListener('change', handleMetodeChange);
     }
 
     var form = document.getElementById('formPembayaran');
     if (form) {
         form.addEventListener('submit', function(e) {
-            var bayar = parseFloat(jumlahInput.value) || 0;
-            var diskon = diskonInput ? (parseFloat(diskonInput.value) || 0) : 0;
+            var bayar = parseRupiahNumber(jumlahInput ? jumlahInput.value : 0);
+            var diskon = diskonInput ? parseRupiahNumber(diskonInput.value) : 0;
             var total = bayar + diskon;
             var maxLimit = sisaTagihan + (<?= $is_validasi_kasir_mode ? (float)($validasi_kasir['jumlah_pembayaran'] ?? 0) : ($is_bg_cair_mode ? (float)($pending_bg['jumlah_pembayaran'] ?? 0) : 0) ?>);
 

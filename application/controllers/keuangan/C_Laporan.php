@@ -151,10 +151,13 @@ class C_Laporan extends CI_Controller
             $in_tx = $this->db->query($in_query, $params_in)->result_array();
 
             // Fetch IN transactions from Retur Penjualan
-            $retur_query = "SELECT r.tanggal_retur AS tanggal, r.no_retur AS referensi, rd.qty_retur AS qty, rd.harga_satuan AS harga, r.gudang_id, 'IN' AS type, 'RJ ' AS ref_prefix, b.satuan
+            $retur_query = "SELECT r.tanggal_retur AS tanggal, r.no_retur AS referensi, rd.qty_retur AS qty, 0 AS harga, r.gudang_id, 'IN' AS type, 'RJ ' AS ref_prefix, b.satuan
                             FROM tbrp_retur_penjualan_header r
                             JOIN tbrp_retur_penjualan_detail rd ON r.id_retur = rd.id_retur
-                            JOIN tbpo_barang b ON (TRIM(LOWER(rd.nama_barang)) = TRIM(LOWER(b.nama_barang)))
+                            JOIN tbpo_barang b ON (
+                                (rd.kd_barang IS NOT NULL AND rd.kd_barang != '' AND rd.kd_barang = b.kode_barang) OR
+                                (TRIM(LOWER(rd.nama_barang)) = TRIM(LOWER(b.nama_barang)))
+                            )
                             WHERE b.kode_barang = ? AND r.status_retur NOT IN ('ditolak', 'batal')";
             $params_retur = [$prod['kode_barang']];
             if ($id_gudang && $id_gudang !== 'all') {
@@ -163,7 +166,7 @@ class C_Laporan extends CI_Controller
             }
             $retur_tx = $this->db->query($retur_query, $params_retur)->result_array();
 
-            // Merge all IN transactions
+            // Merge all IN transactions (LPB & Retur Penjualan)
             $in_tx = array_merge($in_tx, $retur_tx);
 
             // Fetch OUT transactions from sales invoices (tbso_faktur_detail)
@@ -178,6 +181,70 @@ class C_Laporan extends CI_Controller
                 $params_out[] = $id_gudang;
             }
             $out_tx = $this->db->query($out_query, $params_out)->result_array();
+
+            // Fetch OUT transactions from Retur Pembelian (Retur ke Supplier)
+            if ($this->db->table_exists('tb_retur_pembelian') && $this->db->table_exists('tb_retur_pembelian_detail')) {
+                $retur_beli_query = "SELECT rb.tanggal_retur AS tanggal, rb.no_retur_pembelian AS referensi, rbd.qty_retur AS qty, rbd.harga_satuan AS harga, rb.gudang_id, 'OUT' AS type, 'RB ' AS ref_prefix, b.satuan
+                                     FROM tb_retur_pembelian rb
+                                     JOIN tb_retur_pembelian_detail rbd ON rb.id_retur_pembelian = rbd.id_retur_pembelian
+                                     JOIN tbpo_barang b ON rbd.kd_barang = b.kode_barang
+                                     WHERE rbd.kd_barang = ? AND rb.status NOT IN ('DRAFT', 'REJECTED', 'BATAL')";
+                $params_retur_beli = [$prod['kode_barang']];
+                if ($id_gudang && $id_gudang !== 'all') {
+                    $retur_beli_query .= " AND rb.gudang_id = ?";
+                    $params_retur_beli[] = $id_gudang;
+                }
+                $retur_beli_tx = $this->db->query($retur_beli_query, $params_retur_beli)->result_array();
+                $out_tx = array_merge($out_tx, $retur_beli_tx);
+            }
+
+            // Fetch transactions from Penyesuaian Persediaan / Penyesuaian Barang (tbkeu_penyesuaian_barang)
+            $adj_query = "SELECT pb.tanggal, pb.no_referensi AS referensi, 
+                                 ABS(pbd.jumlah) AS qty, 
+                                 0 AS harga, 
+                                 pb.id_gudang_dari AS gudang_id, 
+                                 IF(pbd.jumlah > 0, 'IN', 'OUT') AS type, 
+                                 'PB ' AS ref_prefix, 
+                                 b.satuan,
+                                 pb.id_gudang_ke
+                          FROM tbkeu_penyesuaian_barang pb
+                          JOIN tbkeu_penyesuaian_barang_detail pbd ON pb.id_penyesuaian = pbd.id_penyesuaian
+                          JOIN tbpo_barang b ON pbd.kd_barang = b.kode_barang
+                          WHERE pbd.kd_barang = ? AND pb.status NOT IN ('BATAL', 'CANCEL')";
+            $params_adj = [$prod['kode_barang']];
+            $adj_tx = $this->db->query($adj_query, $params_adj)->result_array();
+
+            $adj_in_tx = [];
+            $adj_out_tx = [];
+
+            foreach ($adj_tx as $atx) {
+                $gudang_dari = !empty($atx['gudang_id']) ? (int)$atx['gudang_id'] : 0;
+                $gudang_ke   = !empty($atx['id_gudang_ke']) ? (int)$atx['id_gudang_ke'] : 0;
+
+                // 1. Gudang Asal
+                if (!$id_gudang || $id_gudang === 'all' || (string)$gudang_dari === (string)$id_gudang) {
+                    if ($atx['type'] === 'IN') {
+                        $adj_in_tx[] = $atx;
+                    } else {
+                        $adj_out_tx[] = $atx;
+                    }
+                }
+
+                // 2. Gudang Tujuan (HANYA jika transfer ke gudang berbeda dan barang keluar dari gudang asal)
+                if ($gudang_ke > 0 && $gudang_ke !== $gudang_dari && $atx['type'] === 'OUT') {
+                    if (!$id_gudang || $id_gudang === 'all' || (string)$gudang_ke === (string)$id_gudang) {
+                        $in_transfer = $atx;
+                        $in_transfer['gudang_id'] = $gudang_ke;
+                        $in_transfer['type'] = 'IN';
+                        $in_transfer['ref_prefix'] = 'TF ';
+                        $adj_in_tx[] = $in_transfer;
+                    }
+                }
+            }
+
+            // Gabungkan semua transaksi IN & OUT
+            $in_tx = array_merge($in_tx, $adj_in_tx);
+            $out_tx = array_merge($out_tx, $adj_out_tx);
 
             // Merge and sort
             $txs = array_merge($in_tx, $out_tx);
@@ -225,8 +292,9 @@ class C_Laporan extends CI_Controller
                 $tx_date = $tx['tanggal'];
 
                 if ($tx['type'] === 'IN') {
+                    $in_harga = ($harga > 0) ? $harga : $average_hpp;
                     $qty_saldo += $qty;
-                    $nilai_saldo += ($qty * $harga);
+                    $nilai_saldo += ($qty * $in_harga);
                     $average_hpp = $qty_saldo > 0 ? ($nilai_saldo / $qty_saldo) : 0.0;
                 } else {
                     $qty_saldo -= $qty;
@@ -257,12 +325,13 @@ class C_Laporan extends CI_Controller
                     ];
 
                     if ($tx['type'] === 'IN') {
+                        $in_harga = ($harga > 0) ? $harga : $average_hpp;
                         $row['masuk_qty'] = $qty;
-                        $row['masuk_harga'] = $harga;
-                        $row['masuk_nilai'] = $qty * $harga;
+                        $row['masuk_harga'] = $in_harga;
+                        $row['masuk_nilai'] = $qty * $in_harga;
                         
                         $sub_masuk_qty += $qty;
-                        $sub_masuk_nilai += ($qty * $harga);
+                        $sub_masuk_nilai += ($qty * $in_harga);
                     } else {
                         $row['keluar_qty'] = $qty;
                         $row['keluar_harga'] = $average_hpp;
