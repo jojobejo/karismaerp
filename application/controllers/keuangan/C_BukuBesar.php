@@ -54,10 +54,15 @@ class C_BukuBesar extends CI_Controller
 
     public function jurnal_umum_list()
     {
-        $search = $this->input->post('search');
+        $search = $this->input->get_post('search');
         
         $this->db->select('j.*');
         $this->db->from('tbkeu_jurnal j');
+        $this->db->group_start();
+        $this->db->where('j.source_type', 'MANUAL');
+        $this->db->or_where('j.posting_event', 'MANUAL_JOURNAL');
+        $this->db->group_end();
+
         if (!empty($search)) {
             $this->db->group_start();
             $this->db->like('j.nomor_jurnal', $search);
@@ -78,6 +83,33 @@ class C_BukuBesar extends CI_Controller
             ->set_output(json_encode(['success' => true, 'data' => $rows]));
     }
 
+    public function get_next_ref()
+    {
+        $dateStr = date('dmy');
+        $this->db->select('nomor_jurnal');
+        $this->db->like('nomor_jurnal', 'GJ-' . $dateStr, 'after');
+        $this->db->order_by('nomor_jurnal', 'DESC');
+        $this->db->limit(1);
+        $query = $this->db->get('tbkeu_jurnal');
+        
+        $next_num = 1;
+        if ($query->num_rows() > 0) {
+            $last_no = $query->row()->nomor_jurnal;
+            $parts = explode('-', $last_no);
+            if (isset($parts[1])) {
+                $seq_part = substr($parts[1], 6);
+                if (is_numeric($seq_part)) {
+                    $next_num = (int)$seq_part + 1;
+                }
+            }
+        }
+        $ref = 'GJ-' . $dateStr . sprintf('%05d', $next_num);
+
+        return $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(['success' => true, 'next_ref' => $ref]));
+    }
+
     public function jurnal_umum_store()
     {
         $post = $this->input->post();
@@ -91,6 +123,13 @@ class C_BukuBesar extends CI_Controller
             return $this->output
                 ->set_content_type('application/json')
                 ->set_output(json_encode(['success' => false, 'message' => 'Nomor referensi wajib diisi.']));
+        }
+
+        $existing = $this->db->get_where('tbkeu_jurnal', ['nomor_jurnal' => $referensi])->row();
+        if ($existing) {
+            return $this->output
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['success' => false, 'message' => 'Nomor referensi / jurnal ' . $referensi . ' sudah terdaftar. Silakan gunakan nomor referensi lain.']));
         }
 
         $lines = [];
@@ -140,6 +179,8 @@ class C_BukuBesar extends CI_Controller
             'journal_type' => 'JU',
             'source_module' => 'ACCOUNTING',
             'source_type' => 'MANUAL',
+            'source_id' => $referensi,
+            'source_no' => $referensi,
             'posting_event' => 'MANUAL_JOURNAL',
             'lines' => $lines
         ];

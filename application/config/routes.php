@@ -973,6 +973,7 @@ $route['buku_besar/jurnal_umum_list']               = 'keuangan/C_BukuBesar/jurn
 $route['buku_besar/jurnal_umum_store']              = 'keuangan/C_BukuBesar/jurnal_umum_store';
 $route['buku_besar/jurnal_umum_delete']             = 'keuangan/C_BukuBesar/jurnal_umum_delete';
 $route['buku_besar/jurnal_umum_detail']             = 'keuangan/C_BukuBesar/jurnal_umum_detail';
+$route['buku_besar/jurnal_umum_next_ref']           = 'keuangan/C_BukuBesar/get_next_ref';
 // APPROVAL EDIT HARGA SALES ORDER
 $route['sales_order/admin_sc/minta_approval_harga/(:num)']  = 'sales/C_SalesOrder/admin_sc_minta_approval_harga/$1';
 $route['sales_order/admin_sc/get_approval_status/(:num)']    = 'sales/C_SalesOrder/admin_sc_get_approval_status/$1';

@@ -44,16 +44,14 @@ class C_FakturPenjualan extends CI_Controller
             'status' => $this->input->get('status') ?: 'all'
         ];
 
-        $this->db->select('fp.*, c.nama_customer as master_customer_name, c.nama_sales as master_sales_name, COALESCE(SUM(fd.total_harga), 0) as total_faktur');
+        $this->db->select('fp.*, c.nama_customer as master_customer_name, c.nama_sales as master_sales_name, (SELECT COALESCE(SUM(fd.total_harga), 0) FROM tbso_faktur_detail fd WHERE fd.id_faktur = fp.id_faktur) as total_faktur', FALSE);
         $this->db->from('tbso_faktur_penjualan fp');
         $this->db->join('tb_customer c', 'c.kd_customer = fp.kd_customer', 'left');
-        $this->db->join('tbso_faktur_detail fd', 'fd.id_faktur = fp.id_faktur', 'left');
         $this->db->where('fp.tanggal_faktur >=', $filter['date1']);
         $this->db->where('fp.tanggal_faktur <=', $filter['date2']);
         if ($filter['status'] !== 'all') {
             $this->db->where('fp.status', $filter['status']);
         }
-        $this->db->group_by('fp.id_faktur');
         $this->db->order_by('fp.tanggal_faktur', 'DESC');
         $this->db->order_by('fp.id_faktur', 'DESC');
         $fakturs = $this->db->get()->result_array();
