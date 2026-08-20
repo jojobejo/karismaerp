@@ -317,6 +317,130 @@ class M_Journal extends CI_Model
         return $this->db->get()->result();
     }
 
+    public function accounting_purchase_return_journal_rows($search = '', $limit = 100)
+    {
+        if (!$this->accounting_journal_schema_ready() || !$this->db->table_exists('tb_retur_pembelian') || !$this->db->table_exists('tb_lpb')) {
+            return [];
+        }
+
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            j.source_no AS referensi,
+            j.source_id AS id_retur,
+            j.keterangan,
+            j.total_debit AS nilai,
+            j.status,
+            COALESCE(r.no_retur_pembelian, j.source_no, '') AS no_retur,
+            COALESCE(l.nomor_lpb, '') AS nomor_lpb,
+            COALESCE(s.nama_suplier, '') AS supplier,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tb_retur_pembelian r', 'r.id_retur_pembelian = CAST(j.source_id AS UNSIGNED)', 'left', false);
+        $this->db->join('tb_lpb l', 'l.id_lpb = r.id_lpb', 'left');
+        $this->db->join('tbpo_suplier s', 's.kd_suplier = r.kd_supplier', 'left');
+        $this->db->where('j.source_module', 'LOGISTIK');
+        $this->db->where('j.source_type', 'RETUR_PEMBELIAN');
+        $this->db->where('j.posting_event', 'PURCHASE_RETURN');
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('j.source_no', $search);
+            $this->db->or_like('j.nomor_jurnal', $search);
+            $this->db->or_like('r.no_retur_pembelian', $search);
+            $this->db->or_like('l.nomor_lpb', $search);
+            $this->db->or_like('s.nama_suplier', $search);
+            $this->db->group_end();
+        }
+        $this->db->order_by('j.tanggal_transaksi', 'DESC');
+        $this->db->order_by('j.id_jurnal', 'DESC');
+        $this->db->limit((int)$limit > 0 ? (int)$limit : 100);
+
+        return $this->db->get()->result();
+    }
+
+    public function accounting_supplier_payment_journal_rows($search = '', $limit = 100)
+    {
+        if (!$this->accounting_journal_schema_ready() || !$this->db->table_exists('tbkeu_pembayaran')) {
+            return [];
+        }
+
+        $this->db->select("
+            j.id_jurnal,
+            j.nomor_jurnal,
+            j.tanggal_transaksi,
+            j.source_no AS referensi,
+            j.source_id AS id_pembayaran,
+            j.source_type,
+            j.keterangan,
+            j.total_debit AS nilai,
+            j.status,
+            COALESCE(p.nomor_pembayaran, j.source_no, '') AS nomor_pembayaran,
+            COALESCE(s.nama_suplier, '') AS supplier,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbkeu_pembayaran p', 'p.id_jurnal = j.id_jurnal', 'left');
+        $this->db->join('tbpo_suplier s', 's.id_suplier = p.id_supplier', 'left');
+        $this->db->where('j.source_module', 'KEUANGAN');
+        $this->db->where_in('j.source_type', ['SUPPLIER_PAYMENT', 'SUPPLIER_RETURN_DEDUCTION']);
+        if ($search !== '') {
+            $this->db->group_start();
+            $this->db->like('j.source_no', $search);
+            $this->db->or_like('j.nomor_jurnal', $search);
+            $this->db->or_like('p.nomor_pembayaran', $search);
+            $this->db->or_like('s.nama_suplier', $search);
+            $this->db->or_like('j.keterangan', $search);
+            $this->db->group_end();
+        }
+        $this->db->order_by('j.tanggal_transaksi', 'DESC');
+        $this->db->order_by('j.id_jurnal', 'DESC');
+        $this->db->limit((int)$limit > 0 ? (int)$limit : 100);
+
+        return $this->db->get()->result();
+    }
+
+    public function accounting_journal_detail_with_accounts($idJurnal)
+    {
+        if (!$this->accounting_journal_schema_ready()) {
+            return null;
+        }
+
+        $this->db->select("
+            j.*,
+            jj.kode_jenis_jurnal,
+            COALESCE(NULLIF(k.nm_karyawan, ''), NULLIF(u.nama_lngkp, ''), IF(j.created_by IS NULL, '', CONCAT('User #', j.created_by))) AS created_by_name,
+            'IDR' AS kurs
+        ", false);
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbkeu_jenis_jurnal jj', 'jj.id_jenis_jurnal = j.id_jenis_jurnal', 'left');
+        $this->db->join('tb_karyawan k', 'k.id = j.created_by', 'left');
+        $this->db->join('tb_users u', 'u.id = j.created_by', 'left');
+        $this->db->where('j.id_jurnal', (int)$idJurnal);
+        $journal = $this->db->get()->row();
+        if (!$journal) {
+            return null;
+        }
+
+        $this->db->select("
+            d.*,
+            a.kode_akun,
+            COALESCE(NULLIF(a.nama_akun, ''), NULLIF(ref.nama_karismaerp, ''), NULLIF(ref.alias_karismaerp, ''), d.keterangan, '') AS nama_akun,
+            COALESCE(ref.kode_rekening_display, a.kode_akun) AS kode_rekening_display
+        ", false);
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+        $this->db->join('tbkeu_akun_karismaerp_ref ref', 'ref.id_akun = a.id_akun', 'left');
+        $this->db->where('d.id_jurnal', (int)$idJurnal);
+        $this->db->order_by('d.nomor_baris', 'ASC');
+
+        return [
+            'journal' => $journal,
+            'details' => $this->db->get()->result(),
+        ];
+    }
+
     public function accounting_sales_journal_detail($idJurnal)
     {
         if (!$this->accounting_journal_schema_ready()) {

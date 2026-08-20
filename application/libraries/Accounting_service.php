@@ -806,6 +806,131 @@ class Accounting_service
         ]);
     }
 
+    public function create_supplier_return_deduction($payload, $userId = null)
+    {
+        if (!$this->schema_ready()) {
+            return $this->fail('Schema runtime accounting belum lengkap.', ['SCHEMA_NOT_READY']);
+        }
+        if (!$this->CI->db->table_exists('tbkeu_pembayaran') || !$this->CI->db->table_exists('tbkeu_pembayaran_alokasi')) {
+            return $this->fail('Schema pembayaran supplier belum lengkap.', ['PAYMENT_SCHEMA_NOT_READY']);
+        }
+
+        $amount = $this->money($payload['amount'] ?? 0);
+        if (bccomp($amount, '0.0000', 4) <= 0) {
+            return $this->fail('Nominal potong hutang harus lebih dari nol.', ['INVALID_DEDUCTION_AMOUNT']);
+        }
+
+        $nomor = trim((string)($payload['nomor_pembayaran'] ?? $payload['source_no'] ?? ''));
+        if ($nomor === '') {
+            $nomor = 'PHS-' . date('YmdHis');
+        }
+
+        $existing = $this->CI->db
+            ->where('nomor_pembayaran', $nomor)
+            ->get('tbkeu_pembayaran')
+            ->row();
+        if ($existing) {
+            return $this->fail('Nomor potong hutang sudah digunakan.', ['DUPLICATE_PAYMENT_NUMBER']);
+        }
+
+        $debtAllocations = is_array($payload['debt_allocations'] ?? null) ? $payload['debt_allocations'] : [];
+        $returnAllocations = is_array($payload['return_allocations'] ?? null) ? $payload['return_allocations'] : [];
+        if (empty($debtAllocations) || empty($returnAllocations)) {
+            return $this->fail('Dokumen hutang dan dokumen retur wajib dipilih.', ['DEDUCTION_ALLOCATION_REQUIRED']);
+        }
+
+        $journalPayload = [
+            'tanggal_transaksi' => $payload['tanggal_pembayaran'] ?? $payload['tanggal_transaksi'] ?? date('Y-m-d'),
+            'keterangan' => trim((string)($payload['keterangan'] ?? ('Potong hutang supplier ' . $nomor))),
+            'source_module' => 'KEUANGAN',
+            'source_type' => 'SUPPLIER_RETURN_DEDUCTION',
+            'source_id' => $nomor,
+            'source_no' => $nomor,
+            'posting_event' => 'SUPPLIER_PAYMENT',
+            'idempotency_key' => trim((string)($payload['idempotency_key'] ?? ('SUPPLIER_RETURN_DEDUCTION-' . $nomor))),
+            'journal_type' => 'AUTO',
+            'amount' => $amount,
+            'lines' => $payload['lines'] ?? [],
+        ];
+
+        $this->CI->db->trans_begin();
+        $journal = $this->create_journal_inside_transaction($journalPayload, $userId, true);
+        if (!$journal['success']) {
+            $this->CI->db->trans_rollback();
+            $this->record_exception($journalPayload, $journal['message'], $journal['errors']);
+            return $journal;
+        }
+
+        $this->CI->db->insert('tbkeu_pembayaran', [
+            'payment_type' => 'SUPPLIER_PAYMENT',
+            'nomor_pembayaran' => $nomor,
+            'tanggal_pembayaran' => $journalPayload['tanggal_transaksi'],
+            'source_module' => 'KEUANGAN',
+            'source_type' => 'SUPPLIER_RETURN_DEDUCTION',
+            'source_id' => $nomor,
+            'source_no' => $nomor,
+            'id_supplier' => (int)($payload['id_supplier'] ?? 0) ?: null,
+            'amount' => $amount,
+            'allocated_amount' => $amount,
+            'unapplied_amount' => '0.0000',
+            'status' => 'POSTED',
+            'id_jurnal' => (int)($journal['data']['id_jurnal'] ?? 0) ?: null,
+            'keterangan' => $journalPayload['keterangan'],
+            'created_by' => $userId ?: null,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $idPembayaran = (int)$this->CI->db->insert_id();
+
+        $baris = 1;
+        foreach ($debtAllocations as $allocation) {
+            $amountAllocated = $this->money($allocation['amount_allocated'] ?? 0);
+            if (bccomp($amountAllocated, '0.0000', 4) <= 0) {
+                continue;
+            }
+            $this->CI->db->insert('tbkeu_pembayaran_alokasi', [
+                'id_pembayaran' => $idPembayaran,
+                'nomor_baris' => $baris++,
+                'invoice_source_module' => strtoupper(trim((string)($allocation['invoice_source_module'] ?? 'LOGISTIK'))),
+                'invoice_source_type' => strtoupper(trim((string)($allocation['invoice_source_type'] ?? 'LPB_FINAL'))),
+                'invoice_source_id' => trim((string)($allocation['invoice_source_id'] ?? '')),
+                'invoice_no' => trim((string)($allocation['invoice_no'] ?? '')),
+                'amount_allocated' => $amountAllocated,
+                'keterangan' => trim((string)($allocation['keterangan'] ?? 'Potong hutang retur pembelian')),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        foreach ($returnAllocations as $allocation) {
+            $amountAllocated = $this->money($allocation['amount_allocated'] ?? 0);
+            if (bccomp($amountAllocated, '0.0000', 4) <= 0) {
+                continue;
+            }
+            $this->CI->db->insert('tbkeu_pembayaran_alokasi', [
+                'id_pembayaran' => $idPembayaran,
+                'nomor_baris' => $baris++,
+                'invoice_source_module' => strtoupper(trim((string)($allocation['invoice_source_module'] ?? 'LOGISTIK'))),
+                'invoice_source_type' => 'RETUR_PEMBELIAN_CREDIT',
+                'invoice_source_id' => trim((string)($allocation['invoice_source_id'] ?? '')),
+                'invoice_no' => trim((string)($allocation['invoice_no'] ?? '')),
+                'amount_allocated' => $amountAllocated,
+                'keterangan' => trim((string)($allocation['keterangan'] ?? 'Sumber potong hutang retur pembelian')),
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        if ($this->CI->db->trans_status() === false) {
+            $this->CI->db->trans_rollback();
+            return $this->fail('Potong hutang retur gagal disimpan.', ['DATABASE_ERROR']);
+        }
+
+        $this->CI->db->trans_commit();
+        return $this->ok('Potong hutang retur berhasil diposting.', [
+            'id_pembayaran' => $idPembayaran,
+            'id_jurnal' => (int)($journal['data']['id_jurnal'] ?? 0),
+            'nomor_pembayaran' => $nomor,
+        ]);
+    }
+
     public function save_opening_balance($payload, $userId = null)
     {
         if (!$this->schema_ready()) {

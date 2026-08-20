@@ -423,15 +423,17 @@ class M_ReturPembelian extends CI_Model
             }
         }
 
-        $totalPayable = bcadd(bcadd($amountBkp, $vatBkp, 4), $amountBkps, 4);
         $lines = [];
-        $lines[] = $this->journal_line('21098', 'Hutang Usaha', $totalPayable, '0.0000', $idSupplier, $idGudang, $header['no_retur_pembelian']);
         if (bccomp($amountBkp, '0.0000', 4) === 1) {
-            $lines[] = $this->journal_line('14010', 'Persediaan # 1', '0.0000', $amountBkp, $idSupplier, $idGudang, $header['no_retur_pembelian']);
-            $lines[] = $this->journal_line('13017', 'PPN Masukan / PPN M Ymh Diterima', '0.0000', $vatBkp, $idSupplier, $idGudang, $header['no_retur_pembelian']);
+            $ruleCode = 'RBELI-PH-BKP';
+            $lines[] = $this->journal_line('13013', $ruleCode . ' - Piutang Non Dagang Retur Pembelian Belum Dipotong', bcadd($amountBkp, $vatBkp, 4), '0.0000', $idSupplier, $idGudang, $header['no_retur_pembelian']);
+            $lines[] = $this->journal_line('14010', $ruleCode . ' - Persediaan # 1', '0.0000', $amountBkp, $idSupplier, $idGudang, $header['no_retur_pembelian']);
+            $lines[] = $this->journal_line('13017', $ruleCode . ' - PPN Masukan / PPN M Ymh Diterima', '0.0000', $vatBkp, $idSupplier, $idGudang, $header['no_retur_pembelian']);
         }
         if (bccomp($amountBkps, '0.0000', 4) === 1) {
-            $lines[] = $this->journal_line('14011', 'Persediaan Brg Dagangan BKPS', '0.0000', $amountBkps, $idSupplier, $idGudang, $header['no_retur_pembelian']);
+            $ruleCode = 'RBELI-PH-BKPS';
+            $lines[] = $this->journal_line('13013', $ruleCode . ' - Piutang Non Dagang Retur Pembelian Belum Dipotong', $amountBkps, '0.0000', $idSupplier, $idGudang, $header['no_retur_pembelian']);
+            $lines[] = $this->journal_line('14011', $ruleCode . ' - Persediaan Brg Dagangan BKPS', '0.0000', $amountBkps, $idSupplier, $idGudang, $header['no_retur_pembelian']);
         }
 
         foreach ($lines as $line) {

@@ -1299,6 +1299,48 @@ class C_Keuangan extends CI_Controller
         $this->load->view('partial/main/footergdg.php');
     }
 
+    public function jurnal_retur_pembelian()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL RETUR PEMBELIAN';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+        $data['journal_title'] = 'Jurnal Retur Pembelian';
+        $data['journal_list_title'] = 'Daftar Jurnal Retur';
+        $data['journal_info'] = 'Klik baris untuk melihat jurnal retur pembelian.';
+        $data['journal_search_placeholder'] = 'Cari retur, LPB, supplier...';
+        $data['journal_list_endpoint'] = 'purchase-return-list';
+        $data['journal_columns'] = ['Referensi', 'Tanggal', 'LPB', 'Supplier', 'Kurs', 'Nilai'];
+        $data['journal_row_type'] = 'purchase_return';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_pembelian_related.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
+    public function jurnal_pelunasan_utang()
+    {
+        if (!$this->require_jurnal_access()) {
+            return;
+        }
+
+        $data['page_title'] = 'KARISMA - JURNAL PELUNASAN UTANG';
+        $data['schema_ready'] = $this->M_Keuangan->accounting_schema_ready();
+        $data['journal_title'] = 'Jurnal Pelunasan Utang Perusahaan';
+        $data['journal_list_title'] = 'Daftar Jurnal Pelunasan Utang Perusahaan';
+        $data['journal_info'] = 'Klik baris untuk melihat detail jurnal pembayaran supplier dan potong hutang.';
+        $data['journal_search_placeholder'] = 'Cari nomor bayar, supplier, keterangan...';
+        $data['journal_list_endpoint'] = 'supplier-payment-list';
+        $data['journal_columns'] = ['Referensi', 'Tanggal', 'Jenis', 'Supplier', 'Kurs', 'Nilai'];
+        $data['journal_row_type'] = 'supplier_payment';
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/jurnal_pembelian_related.php', $data);
+        $this->load->view('partial/main/footergdg.php');
+    }
+
     public function menu_pembelian()
     {
         if (!$this->require_jurnal_access()) {
@@ -1737,6 +1779,46 @@ class C_Keuangan extends CI_Controller
         ]);
     }
 
+    public function jurnal_purchase_return_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal retur pembelian berhasil dimuat.', [
+            'rows' => $this->M_Journal->accounting_purchase_return_journal_rows($search, 150),
+        ]);
+    }
+
+    public function jurnal_supplier_payment_list()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        if (!$this->M_Journal->accounting_journal_schema_ready()) {
+            return $this->accounting_ajax_response(false, 'Schema jurnal accounting belum tersedia.', null, [
+                'code' => 'SCHEMA_NOT_READY',
+                'details' => [],
+            ], 409);
+        }
+
+        $search = trim((string)$this->input->post('search', true));
+        return $this->accounting_ajax_response(true, 'Daftar jurnal pelunasan utang berhasil dimuat.', [
+            'rows' => $this->M_Journal->accounting_supplier_payment_journal_rows($search, 150),
+        ]);
+    }
+
     public function jurnal_purchase_list()
     {
         if (!$this->require_jurnal_access(true)) {
@@ -1791,6 +1873,25 @@ class C_Keuangan extends CI_Controller
         }
 
         return $this->accounting_ajax_response(true, 'Detail jurnal pembelian berhasil dimuat.', $detail);
+    }
+
+    public function jurnal_general_detail()
+    {
+        if (!$this->require_jurnal_access(true)) {
+            return;
+        }
+
+        $this->load->model('M_Journal');
+        $id = (int)$this->input->post('id_jurnal', true);
+        $detail = $id > 0 ? $this->M_Journal->accounting_journal_detail_with_accounts($id) : null;
+        if (!$detail) {
+            return $this->accounting_ajax_response(false, 'Jurnal tidak ditemukan.', null, [
+                'code' => 'JOURNAL_NOT_FOUND',
+                'details' => [],
+            ], 404);
+        }
+
+        return $this->accounting_ajax_response(true, 'Detail jurnal berhasil dimuat.', $detail);
     }
 
     public function jurnal_period_store()

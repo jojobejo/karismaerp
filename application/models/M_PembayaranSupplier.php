@@ -147,6 +147,64 @@ class M_PembayaranSupplier extends CI_Model
         return $ledgerRows;
     }
 
+    public function return_credit_rows($idSupplier)
+    {
+        if (!$this->schema_ready()) {
+            return [];
+        }
+
+        return $this->db->query(
+            "
+            SELECT x.*
+            FROM (
+                SELECT
+                    d.id_supplier,
+                    d.nomor_dokumen,
+                    MIN(j.tanggal_transaksi) AS tanggal_retur,
+                    MAX(j.source_id) AS source_id,
+                    MAX(j.source_no) AS source_no,
+                    MAX(j.keterangan) AS keterangan,
+                    COALESCE(SUM(d.debit), 0) AS total_retur,
+                    COALESCE(SUM(d.kredit), 0) AS total_dipotong,
+                    COALESCE(SUM(d.debit - d.kredit), 0) AS available_amount
+                FROM tbkeu_jurnal_detail d
+                INNER JOIN tbkeu_jurnal j
+                    ON j.id_jurnal = d.id_jurnal
+                   AND j.status = 'POSTED'
+                   AND j.reversed_at IS NULL
+                INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
+                WHERE a.kode_akun = '13013'
+                  AND d.id_supplier = ?
+                  AND COALESCE(d.nomor_dokumen, '') <> ''
+                GROUP BY d.id_supplier, d.nomor_dokumen
+            ) x
+            WHERE x.available_amount > 0
+            ORDER BY x.tanggal_retur ASC, x.nomor_dokumen ASC
+            ",
+            [(int)$idSupplier]
+        )->result_array();
+    }
+
+    public function selected_return_credit_rows($idSupplier, $returnNos)
+    {
+        $returnNos = array_values(array_filter(array_map('trim', (array)$returnNos), static function ($value) {
+            return $value !== '';
+        }));
+        if (empty($returnNos)) {
+            return [];
+        }
+
+        $rows = $this->return_credit_rows((int)$idSupplier);
+        $selected = [];
+        foreach ($rows as $row) {
+            if (in_array((string)$row['nomor_dokumen'], $returnNos, true)) {
+                $selected[] = $row;
+            }
+        }
+
+        return $selected;
+    }
+
     public function selected_document_rows($idSupplier, $invoiceNos)
     {
         $invoiceNos = array_values(array_filter(array_map('trim', (array)$invoiceNos), static function ($value) {
@@ -324,6 +382,106 @@ class M_PembayaranSupplier extends CI_Model
         return $result;
     }
 
+    public function post_return_deduction($payload, $userId = null)
+    {
+        $this->load->library('Accounting_service');
+
+        if (!$this->schema_ready() || !$this->accounting_service->schema_ready()) {
+            return $this->fail('Schema accounting pembayaran supplier belum lengkap.', ['SCHEMA_NOT_READY']);
+        }
+
+        $idSupplier = (int)($payload['id_supplier'] ?? 0);
+        $tanggal = $this->normalize_date($payload['tanggal_pembayaran'] ?? '');
+        $nomor = trim((string)($payload['nomor_pembayaran'] ?? ''));
+        $keterangan = trim((string)($payload['keterangan'] ?? ''));
+
+        if ($idSupplier <= 0) {
+            return $this->fail('Supplier wajib dipilih.', ['SUPPLIER_REQUIRED']);
+        }
+        if ($tanggal === '') {
+            return $this->fail('Tanggal potong hutang wajib diisi.', ['PAYMENT_DATE_REQUIRED']);
+        }
+        if ($nomor === '') {
+            $nomor = $this->generate_return_deduction_number($tanggal);
+        }
+
+        $debtAllocations = $this->normalize_allocations($payload['debt_allocations'] ?? []);
+        $returnAllocations = $this->normalize_allocations($payload['return_allocations'] ?? []);
+        if (empty($debtAllocations) || empty($returnAllocations)) {
+            return $this->fail('Dokumen hutang dan dokumen retur wajib dialokasikan.', ['ALLOCATION_REQUIRED']);
+        }
+
+        $amountDebt = '0.0000';
+        $amountReturn = '0.0000';
+        $lines = [];
+        foreach ($debtAllocations as &$allocation) {
+            $invoiceNo = $allocation['invoice_no'];
+            $allocationAmount = $this->money($allocation['amount_allocated']);
+            $outstanding = $this->current_document_outstanding($idSupplier, $invoiceNo);
+            if (bccomp($allocationAmount, $outstanding, 4) === 1) {
+                return $this->fail('Alokasi hutang ' . $invoiceNo . ' melebihi outstanding ' . $outstanding . '.', ['DEBT_EXCEEDS_OUTSTANDING']);
+            }
+            $idAkunHutang = $this->current_document_outstanding_account_id($idSupplier, $invoiceNo);
+            if ($idAkunHutang <= 0) {
+                return $this->fail('Akun hutang dokumen ' . $invoiceNo . ' tidak ditemukan.', ['DEBT_ACCOUNT_NOT_FOUND']);
+            }
+            $allocation['invoice_source_module'] = 'LOGISTIK';
+            $allocation['invoice_source_type'] = 'LPB_FINAL';
+            $amountDebt = bcadd($amountDebt, $allocationAmount, 4);
+            $lines[] = [
+                'id_akun' => $idAkunHutang,
+                'keterangan' => 'Potong hutang retur - ' . $invoiceNo,
+                'debit' => $allocationAmount,
+                'kredit' => '0.0000',
+                'id_supplier' => $idSupplier,
+                'nomor_dokumen' => $invoiceNo,
+            ];
+        }
+        unset($allocation);
+
+        $idAkunRetur = $this->account_id_by_code('13013');
+        if ($idAkunRetur <= 0) {
+            return $this->fail('Akun 13013 belum valid di COA.', ['RETURN_CREDIT_ACCOUNT_NOT_FOUND']);
+        }
+
+        foreach ($returnAllocations as &$allocation) {
+            $returnNo = $allocation['invoice_no'];
+            $allocationAmount = $this->money($allocation['amount_allocated']);
+            $available = $this->current_return_credit_available($idSupplier, $returnNo);
+            if (bccomp($allocationAmount, $available, 4) === 1) {
+                return $this->fail('Alokasi retur ' . $returnNo . ' melebihi saldo retur ' . $available . '.', ['RETURN_EXCEEDS_AVAILABLE']);
+            }
+            $allocation['invoice_source_module'] = 'LOGISTIK';
+            $allocation['invoice_source_type'] = 'RETUR_PEMBELIAN_CREDIT';
+            $amountReturn = bcadd($amountReturn, $allocationAmount, 4);
+            $lines[] = [
+                'id_akun' => $idAkunRetur,
+                'keterangan' => 'Pemakaian retur pembelian - ' . $returnNo,
+                'debit' => '0.0000',
+                'kredit' => $allocationAmount,
+                'id_supplier' => $idSupplier,
+                'nomor_dokumen' => $returnNo,
+            ];
+        }
+        unset($allocation);
+
+        if (bccomp($amountDebt, $amountReturn, 4) !== 0) {
+            return $this->fail('Total potong hutang harus sama dengan total retur yang dipakai.', ['DEDUCTION_ALLOCATION_MISMATCH']);
+        }
+
+        $supplier = $this->supplier_by_id($idSupplier);
+        return $this->accounting_service->create_supplier_return_deduction([
+            'id_supplier' => $idSupplier,
+            'nomor_pembayaran' => $nomor,
+            'tanggal_pembayaran' => $tanggal,
+            'amount' => $amountDebt,
+            'keterangan' => $keterangan !== '' ? $keterangan : 'Potong hutang retur pembelian ' . ($supplier['nama_suplier'] ?? $idSupplier),
+            'debt_allocations' => $debtAllocations,
+            'return_allocations' => $returnAllocations,
+            'lines' => $lines,
+        ], $userId);
+    }
+
     public function void_payment($idPembayaran, $reason, $userId = null)
     {
         $reason = trim((string)$reason);
@@ -469,6 +627,67 @@ class M_PembayaranSupplier extends CI_Model
         return $this->money(bcsub((string)($row['kredit'] ?? 0), (string)($row['debit'] ?? 0), 4));
     }
 
+    private function current_document_outstanding_account_id($idSupplier, $invoiceNo)
+    {
+        $row = $this->db->query(
+            "
+            SELECT d.id_akun,
+                   COALESCE(SUM(d.kredit), 0) AS kredit,
+                   COALESCE(SUM(d.debit), 0) AS debit
+            FROM tbkeu_jurnal_detail d
+            INNER JOIN tbkeu_jurnal j
+                ON j.id_jurnal = d.id_jurnal
+               AND j.status = 'POSTED'
+               AND j.reversed_at IS NULL
+            INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
+            WHERE (a.tipe_kontrol = 'HUTANG' OR a.kode_akun = '21098')
+              AND d.id_supplier = ?
+              AND d.nomor_dokumen = ?
+            GROUP BY d.id_akun
+            HAVING kredit - debit > 0
+            ORDER BY ABS(COALESCE(SUM(d.kredit),0) - COALESCE(SUM(d.debit),0)) DESC
+            LIMIT 1
+            ",
+            [(int)$idSupplier, trim((string)$invoiceNo)]
+        )->row_array();
+
+        return $row ? (int)$row['id_akun'] : 0;
+    }
+
+    private function current_return_credit_available($idSupplier, $returnNo)
+    {
+        $row = $this->db->query(
+            "
+            SELECT COALESCE(SUM(d.debit), 0) AS debit, COALESCE(SUM(d.kredit), 0) AS kredit
+            FROM tbkeu_jurnal_detail d
+            INNER JOIN tbkeu_jurnal j
+                ON j.id_jurnal = d.id_jurnal
+               AND j.status = 'POSTED'
+               AND j.reversed_at IS NULL
+            INNER JOIN tbkeu_akun a ON a.id_akun = d.id_akun
+            WHERE a.kode_akun = '13013'
+              AND d.id_supplier = ?
+              AND d.nomor_dokumen = ?
+            ",
+            [(int)$idSupplier, trim((string)$returnNo)]
+        )->row_array();
+
+        return $this->money(bcsub((string)($row['debit'] ?? 0), (string)($row['kredit'] ?? 0), 4));
+    }
+
+    private function account_id_by_code($kodeAkun)
+    {
+        $row = $this->db
+            ->select('id_akun')
+            ->where('kode_akun', trim((string)$kodeAkun))
+            ->where('tipe_akun', 'POSTING')
+            ->where('is_active', 1)
+            ->get('tbkeu_akun')
+            ->row_array();
+
+        return $row ? (int)$row['id_akun'] : 0;
+    }
+
     private function normalize_allocations($rows)
     {
         $result = [];
@@ -498,6 +717,26 @@ class M_PembayaranSupplier extends CI_Model
     {
         $period = date('Ym', strtotime($tanggal));
         $prefix = 'BYS-' . $period . '-';
+        $row = $this->db
+            ->select('nomor_pembayaran')
+            ->like('nomor_pembayaran', $prefix, 'after')
+            ->order_by('nomor_pembayaran', 'DESC')
+            ->limit(1)
+            ->get('tbkeu_pembayaran')
+            ->row_array();
+
+        $next = 1;
+        if ($row && preg_match('/(\d+)$/', $row['nomor_pembayaran'], $matches)) {
+            $next = (int)$matches[1] + 1;
+        }
+
+        return $prefix . sprintf('%05d', $next);
+    }
+
+    private function generate_return_deduction_number($tanggal)
+    {
+        $period = date('Ym', strtotime($tanggal));
+        $prefix = 'PHS-' . $period . '-';
         $row = $this->db
             ->select('nomor_pembayaran')
             ->like('nomor_pembayaran', $prefix, 'after')

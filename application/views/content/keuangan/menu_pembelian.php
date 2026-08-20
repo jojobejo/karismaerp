@@ -43,6 +43,20 @@
                                 <span class="support-card-desc">Daftar pencatatan jurnal transaksi pembelian (LPB dan PO).</span>
                             </span>
                         </a>
+                        <a href="<?= base_url('jurnal/retur-pembelian') ?>" class="report-card-link">
+                            <span class="support-card-btn">
+                                <span class="support-card-icon"><i class="fas fa-undo-alt"></i></span>
+                                <span class="support-card-title">Daftar Jurnal Retur</span>
+                                <span class="support-card-desc">Daftar jurnal retur pembelian dari route ICS retur pembelian.</span>
+                            </span>
+                        </a>
+                        <a href="<?= base_url('jurnal/pelunasan-utang') ?>" class="report-card-link">
+                            <span class="support-card-btn">
+                                <span class="support-card-icon"><i class="fas fa-money-check-alt"></i></span>
+                                <span class="support-card-title">Daftar Jurnal Pelunasan Utang Perusahaan</span>
+                                <span class="support-card-desc">Daftar pembayaran supplier dan potong hutang retur pembelian.</span>
+                            </span>
+                        </a>
                     </div>
                 </div>
             </section>

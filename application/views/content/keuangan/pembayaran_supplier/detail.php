@@ -43,7 +43,48 @@
                     <a href="<?= base_url('keuangan/pembayaran-supplier/form/' . (int)$supplier['id_suplier']) ?>" class="btn btn-success btn-sm">
                         <i class="fas fa-money-check-alt mr-1"></i>Bayar Semua Terbuka
                     </a>
+                    <?php if (!empty($return_credits)): ?>
+                        <a href="<?= base_url('keuangan/pembayaran-supplier/potong-retur/' . (int)$supplier['id_suplier']) ?>" class="btn btn-warning btn-sm">
+                            <i class="fas fa-cut mr-1"></i>Potong Hutang Retur
+                        </a>
+                    <?php endif; ?>
                 </div>
+
+                <?php if (!empty($return_credits)): ?>
+                    <div class="card card-outline card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-undo-alt mr-2"></i>Dokumen Retur Siap Potong</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover table-sm">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>No Retur</th>
+                                            <th>Tanggal</th>
+                                            <th>Keterangan</th>
+                                            <th class="text-right">Nilai Retur</th>
+                                            <th class="text-right">Sudah Dipotong</th>
+                                            <th class="text-right">Sisa Retur</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($return_credits as $credit): ?>
+                                            <tr>
+                                                <td><strong><?= htmlspecialchars($credit['nomor_dokumen']) ?></strong></td>
+                                                <td><?= !empty($credit['tanggal_retur']) ? date('d/m/Y', strtotime($credit['tanggal_retur'])) : '-' ?></td>
+                                                <td><?= htmlspecialchars($credit['keterangan'] ?? '-') ?></td>
+                                                <td class="text-right">Rp <?= number_format((float)$credit['total_retur'], 0, ',', '.') ?></td>
+                                                <td class="text-right">Rp <?= number_format((float)$credit['total_dipotong'], 0, ',', '.') ?></td>
+                                                <td class="text-right font-weight-bold text-warning">Rp <?= number_format((float)$credit['available_amount'], 0, ',', '.') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <form method="get" action="<?= base_url('keuangan/pembayaran-supplier/form/' . (int)$supplier['id_suplier']) ?>" id="formPilihDokumen">
                     <div class="card">

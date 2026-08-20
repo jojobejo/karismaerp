@@ -46,10 +46,49 @@ class C_PembayaranSupplier extends CI_Controller
             'page_title' => 'KARISMA - DETAIL HUTANG SUPPLIER',
             'supplier' => $supplier,
             'documents' => $documents,
+            'return_credits' => $this->M_PembayaranSupplier->return_credit_rows($idSupplier),
         ];
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_supplier/detail.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function form_potong_retur($idSupplier = null)
+    {
+        $idSupplier = (int)$idSupplier;
+        if ($idSupplier <= 0) {
+            $this->session->set_flashdata('error', 'Supplier tidak valid.');
+            redirect('keuangan/pembayaran-supplier');
+        }
+
+        $selectedDocs = $this->input->get('dokumen', true);
+        if (!is_array($selectedDocs)) {
+            $selectedDocs = [];
+        }
+        $selectedReturns = $this->input->get('retur', true);
+        if (!is_array($selectedReturns)) {
+            $selectedReturns = [];
+        }
+
+        $documents = $this->M_PembayaranSupplier->selected_document_rows($idSupplier, $selectedDocs);
+        if (empty($documents)) {
+            $documents = $this->M_PembayaranSupplier->document_rows($idSupplier);
+        }
+        $returnCredits = $this->M_PembayaranSupplier->selected_return_credit_rows($idSupplier, $selectedReturns);
+        if (empty($returnCredits)) {
+            $returnCredits = $this->M_PembayaranSupplier->return_credit_rows($idSupplier);
+        }
+
+        $data = [
+            'page_title' => 'KARISMA - POTONG HUTANG RETUR PEMBELIAN',
+            'supplier' => $this->M_PembayaranSupplier->supplier_by_id($idSupplier),
+            'documents' => $documents,
+            'return_credits' => $returnCredits,
+        ];
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/pembayaran_supplier/form_potong_retur.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -110,6 +149,31 @@ class C_PembayaranSupplier extends CI_Controller
         redirect('keuangan/pembayaran-supplier/form/' . $idSupplier);
     }
 
+    public function post_potong_retur()
+    {
+        if (strtoupper((string)$this->input->method()) !== 'POST') {
+            show_404();
+        }
+
+        $idSupplier = (int)$this->input->post('id_supplier', true);
+        $result = $this->M_PembayaranSupplier->post_return_deduction([
+            'id_supplier' => $idSupplier,
+            'nomor_pembayaran' => trim((string)$this->input->post('nomor_pembayaran', true)),
+            'tanggal_pembayaran' => trim((string)$this->input->post('tanggal_pembayaran', true)),
+            'keterangan' => trim((string)$this->input->post('keterangan', true)),
+            'debt_allocations' => $this->posted_allocations(),
+            'return_allocations' => $this->posted_return_allocations(),
+        ], $this->user_id());
+
+        if ($result['success']) {
+            $this->session->set_flashdata('success', $result['message'] . ' Nomor: ' . html_escape($result['data']['nomor_pembayaran'] ?? '-'));
+            redirect('keuangan/pembayaran-supplier/history');
+        }
+
+        $this->session->set_flashdata('error', $result['message']);
+        redirect('keuangan/pembayaran-supplier/potong-retur/' . $idSupplier);
+    }
+
     public function history()
     {
         $keyword = trim((string)$this->input->get('q', true));
@@ -156,6 +220,31 @@ class C_PembayaranSupplier extends CI_Controller
         foreach ($invoiceNos as $index => $invoiceNo) {
             $rows[] = [
                 'invoice_no' => $invoiceNo,
+                'invoice_source_id' => $sourceIds[$index] ?? '',
+                'amount_allocated' => $amounts[$index] ?? 0,
+                'keterangan' => $notes[$index] ?? '',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function posted_return_allocations()
+    {
+        $returnNos = $this->input->post('return_no', true);
+        $sourceIds = $this->input->post('return_source_id', true);
+        $amounts = $this->input->post('return_amount_allocated', true);
+        $notes = $this->input->post('return_allocation_note', true);
+
+        $returnNos = is_array($returnNos) ? $returnNos : [];
+        $sourceIds = is_array($sourceIds) ? $sourceIds : [];
+        $amounts = is_array($amounts) ? $amounts : [];
+        $notes = is_array($notes) ? $notes : [];
+
+        $rows = [];
+        foreach ($returnNos as $index => $returnNo) {
+            $rows[] = [
+                'invoice_no' => $returnNo,
                 'invoice_source_id' => $sourceIds[$index] ?? '',
                 'amount_allocated' => $amounts[$index] ?? 0,
                 'keterangan' => $notes[$index] ?? '',
