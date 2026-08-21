@@ -43,9 +43,9 @@ class C_PenyesuaianBarang extends CI_Controller
 
         $rows = $this->M_PenyesuaianBarang->get_all($filters);
 
-        foreach ($rows as &$row) {
-            $row['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal']));
-            $row['nilai_formatted'] = 'Rp ' . number_format((float)$row['total_nilai'], 6, '.', '');
+        foreach ($rows as $k => $row) {
+            $rows[$k]['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal']));
+            $rows[$k]['nilai_formatted'] = 'Rp ' . number_format((float)$row['total_nilai'], 6, '.', '');
         }
 
         return $this->output

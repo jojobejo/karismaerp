@@ -40,9 +40,9 @@ class C_KasMasuk extends CI_Controller
 
         $rows = $this->M_KasMasuk->get_all($filters);
 
-        foreach ($rows as &$row) {
-            $row['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal']));
-            $row['nilai_formatted'] = 'Rp ' . number_format($row['total_amount'], 2, ',', '.');
+        foreach ($rows as $k => $row) {
+            $rows[$k]['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal']));
+            $rows[$k]['nilai_formatted'] = 'Rp ' . number_format($row['total_amount'], 2, ',', '.');
         }
 
         return $this->output

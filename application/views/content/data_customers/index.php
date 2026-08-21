@@ -46,14 +46,18 @@
                                     if ($label === '') $label = '— Tanpa Nama —';
                                     $phone = trim((string)($c->telp1 ?: '-'));
                                 ?>
-                                <div class="cust-item" data-id="<?= $c->id ?>"
+                                <div class="cust-item"
+                                     data-id="<?= $c->id ?>"
+                                     data-kode="<?= htmlspecialchars(strtolower($c->kd_customer)) ?>"
                                      style="display:flex; align-items:center; padding:9px 12px; border-bottom:1px solid #dee2e6; cursor:pointer; background:#fff; transition:background .15s;">
                                     <div style="width:36px; height:36px; border-radius:50%; background:#6c757d; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-right:10px; font-size:14px;">
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <div style="overflow:hidden;">
                                         <div style="font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?= htmlspecialchars($label) ?></div>
-                                        <div style="font-size:11px; color:#007bff;">Customer</div>
+                                        <?php if (!empty($c->kd_customer)): ?>
+                                        <div style="font-size:11px; color:#28a745; font-weight:600;"><?= htmlspecialchars($c->kd_customer) ?></div>
+                                        <?php endif; ?>
                                         <div style="font-size:11px; color:#6c757d;"><?= htmlspecialchars($phone) ?></div>
                                     </div>
                                 </div>
@@ -233,10 +237,12 @@
     // Filter list by search input
     // ============================================================
     $('#searchCustomer').on('input', function() {
-        var q = $(this).val().toLowerCase();
+        var q = $(this).val().toLowerCase().trim();
         $('.cust-item').each(function() {
-            var txt = $(this).text().toLowerCase();
-            $(this).toggle(txt.includes(q));
+            // Cari berdasarkan teks tampilan (nama, telp) DAN kode customer
+            var txt  = $(this).text().toLowerCase();
+            var kode = ($(this).data('kode') || '').toLowerCase();
+            $(this).toggle(txt.includes(q) || kode.includes(q));
         });
     });
 

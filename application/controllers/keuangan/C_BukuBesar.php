@@ -71,11 +71,9 @@ class C_BukuBesar extends CI_Controller
         }
         $this->db->order_by('j.tanggal_transaksi', 'DESC');
         $this->db->order_by('j.id_jurnal', 'DESC');
-        $rows = $this->db->get()->result_array();
-        
-        foreach ($rows as &$row) {
-            $row['nilai_formatted'] = 'Rp ' . number_format($row['total_debit'], 2, ',', '.');
-            $row['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal_transaksi']));
+        foreach ($rows as $k => $row) {
+            $rows[$k]['nilai_formatted'] = 'Rp ' . number_format($row['total_debit'], 2, ',', '.');
+            $rows[$k]['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal_transaksi']));
         }
 
         return $this->output
@@ -335,14 +333,10 @@ class C_BukuBesar extends CI_Controller
         if (empty($date_from)) $date_from = date('Y-m-01');
         if (empty($date_to)) $date_to = date('Y-m-d');
 
-        // Determine which accounts to query
-        $this->db->select('id_akun, kode_akun, nama_akun, saldo_normal');
-        $this->db->from('tbkeu_akun');
-        $this->db->where('tipe_akun', 'POSTING');
-        $this->db->where('is_active', 1);
-
+        // Menentukan akun mana yang akan dimuat
+        $this->db->reset_query();
         if ($filter_type === 'pencarian') {
-            // Find distinct accounts that have matching transaction descriptions or numbers
+            // Temukan id_akun unik yang sesuai dengan kata kunci keterangan atau nomor jurnal
             $this->db->select('DISTINCT(jd.id_akun) as id_akun');
             $this->db->from('tbkeu_jurnal_detail jd');
             $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = jd.id_jurnal', 'inner');
@@ -365,11 +359,18 @@ class C_BukuBesar extends CI_Controller
                     ->set_output(json_encode(['success' => true, 'data' => [], 'filters' => $_POST]));
             }
 
-            // Query only those accounts
+            // Ambil hanya akun yang cocok
+            $this->db->reset_query();
             $this->db->select('id_akun, kode_akun, nama_akun, saldo_normal');
             $this->db->from('tbkeu_akun');
+            $this->db->where('tipe_akun', 'POSTING');
+            $this->db->where('is_active', 1);
             $this->db->where_in('id_akun', $matching_ids);
         } else {
+            $this->db->select('id_akun, kode_akun, nama_akun, saldo_normal');
+            $this->db->from('tbkeu_akun');
+            $this->db->where('tipe_akun', 'POSTING');
+            $this->db->where('is_active', 1);
             if (!empty($account_from)) {
                 $this->db->where('kode_akun >=', $account_from);
             }
@@ -387,12 +388,12 @@ class C_BukuBesar extends CI_Controller
             $id_akun = $acc['id_akun'];
             $saldo_normal = strtoupper(trim((string)$acc['saldo_normal']));
 
-            // 1. Calculate Beginning Balance (Saldo Awal)
-            // For search filter, we start Saldo Awal at 0.0 unless there are dates set.
+            // 1. Hitung Saldo Awal
             $calc_sa = ($filter_type !== 'pencarian' || !empty($date_from));
             
             $saldo_awal = 0.0;
             if ($calc_sa) {
+                $this->db->reset_query();
                 $this->db->select('SUM(debit) as sa_debit, SUM(kredit) as sa_kredit, MAX(tanggal_saldo) as sa_date');
                 $this->db->from('tbkeu_saldo_awal_akun');
                 $this->db->where('id_akun', $id_akun);
@@ -403,7 +404,8 @@ class C_BukuBesar extends CI_Controller
                 $opening_kredit = $sa_query ? (float)$sa_query->sa_kredit : 0.0;
                 $sa_date = ($sa_query && !empty($sa_query->sa_date)) ? $sa_query->sa_date : '1970-01-01';
 
-                // Sum transactions from sa_date to date_from (exclusive)
+                // Jumlahkan transaksi sebelum tanggal awal
+                $this->db->reset_query();
                 $this->db->select('SUM(jd.debit) as j_debit, SUM(jd.kredit) as j_kredit');
                 $this->db->from('tbkeu_jurnal_detail jd');
                 $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = jd.id_jurnal', 'inner');
@@ -438,7 +440,8 @@ class C_BukuBesar extends CI_Controller
                 }
             }
 
-            // 2. Query mutations
+            // 2. Query mutasi transaksi
+            $this->db->reset_query();
             $this->db->select("
                 j.tanggal_transaksi as tanggal,
                 COALESCE(jj.kode_jenis_jurnal, '') as tp,
@@ -496,12 +499,12 @@ class C_BukuBesar extends CI_Controller
             $this->db->order_by('jd.id_jurnal_detail', 'ASC');
             $mutations = $this->db->get()->result_array();
 
-            // Calculate running balance
+            // Hitung running balance tanpa reference leak
             $running_balance = $saldo_awal;
             $total_debit = 0.0;
             $total_kredit = 0.0;
 
-            foreach ($mutations as &$m) {
+            foreach ($mutations as $idx => $m) {
                 $m['debit'] = (float)$m['debit'];
                 $m['kredit'] = (float)$m['kredit'];
                 $total_debit += $m['debit'];
@@ -516,6 +519,7 @@ class C_BukuBesar extends CI_Controller
                 $m['tanggal_formatted'] = date('d/m/Y', strtotime($m['tanggal']));
                 $m['debit_formatted'] = number_format($m['debit'], 2, '.', ',');
                 $m['kredit_formatted'] = number_format($m['kredit'], 2, '.', ',');
+                $mutations[$idx] = $m;
             }
 
             $saldo_akhir = $running_balance;
@@ -547,7 +551,7 @@ class C_BukuBesar extends CI_Controller
                 }
             }
 
-            // Sort flat list chronologically
+            // Urutkan daftar transaksi secara kronologis
             usort($all_mutations, function($a, $b) {
                 $dateA = strtotime($a['tanggal']);
                 $dateB = strtotime($b['tanggal']);

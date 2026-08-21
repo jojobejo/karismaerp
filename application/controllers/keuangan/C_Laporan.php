@@ -114,7 +114,40 @@ class C_Laporan extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/laporan/laporan_barang/kartu_stock_gudang.php', $data);
         $this->load->view('partial/main/footergdg.php');
+        }
+
+    // ====================================================
+    // Laporan Jurnal Transaksi
+    // ====================================================
+    public function jurnal_transaksi_report()
+    {
+        $data['page_title'] = 'KARISMA - LAPORAN JURNAL TRANSAKSI';
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/keuangan/laporan/laporan_keuangan/jurnal_transaksi.php', $data);
+        $this->load->view('partial/main/footergdg.php');
     }
+
+    public function jurnal_transaksi_data()
+    {
+        $start_date = $this->input->post('start_date', true);
+        $end_date   = $this->input->post('end_date', true);
+        $this->db->select('j.tanggal_transaksi as tanggal, j.nomor_jurnal, a.kode_akun as kd_akun, a.nama_akun, d.debit, d.kredit, j.keterangan');
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->join('tbkeu_jurnal_detail d', 'j.id_jurnal = d.id_jurnal', 'left');
+        $this->db->join('tbkeu_akun a', 'd.id_akun = a.id_akun', 'left');
+        if ($start_date) {
+            $this->db->where('j.tanggal_transaksi >=', $start_date);
+        }
+        if ($end_date) {
+            $this->db->where('j.tanggal_transaksi <=', $end_date);
+        }
+        $this->db->order_by('j.tanggal_transaksi', 'ASC');
+        $data = $this->db->get()->result_array();
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(['success' => true, 'data' => $data]));
+    }
+
 
     public function kartu_stock_gudang_data()
     {
