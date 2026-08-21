@@ -60,6 +60,7 @@ class C_SalesOrder extends CI_Controller
 
         $nama = $this->session->userdata('nm_karyawan')
              ?? $this->session->userdata('nama')
+             ?? $this->session->userdata('nama_user')
              ?? $this->session->userdata('name')
              ?? null;
 
@@ -78,12 +79,12 @@ class C_SalesOrder extends CI_Controller
 
         if ($row) {
             return [
-                'nm_karyawan' => $row['nm_karyawan'] ?? 'system',
-                'wilayah'     => $row['wilayah']     ?? '',
-                'username'    => $row['username']    ?? 'system',
+                'nm_karyawan' => $row['nm_karyawan'] ?? ($nama ?? 'system'),
+                'wilayah'     => $row['wilayah']     ?? ($wil ?? ''),
+                'username'    => $row['username']    ?? ($usn ?? 'system'),
             ];
         }
-        return ['nm_karyawan' => 'system', 'wilayah' => '', 'username' => 'system'];
+        return ['nm_karyawan' => $nama ?? 'system', 'wilayah' => $wil ?? '', 'username' => $usn ?? 'system'];
     }
 
     private function _getUsername()  { return $this->_getCurrentUser()['nm_karyawan']; }
@@ -99,20 +100,30 @@ class C_SalesOrder extends CI_Controller
 
     private function _attachPlafonToCustomers(array $customers)
     {
-        $this->load->model('M_pembayaran');
+        if (empty($customers)) {
+            return [];
+        }
+
+        $kdCustomers1000 = [];
+        foreach ($customers as $c) {
+            if (isset($c['plafon_aktif']) && (float)$c['plafon_aktif'] == 1000 && !empty($c['kd_customer'])) {
+                $kdCustomers1000[] = $c['kd_customer'];
+            }
+        }
+
+        $unpaidKdMap = [];
+        if (!empty($kdCustomers1000)) {
+            $this->load->model('M_pembayaran');
+            $unpaidKdMap = $this->M_pembayaran->get_unpaid_customer_kd_map($kdCustomers1000);
+        }
+
         foreach ($customers as &$customer) {
             $customer['plafon_aktif']      = $customer['plafon_aktif']      ?? null;
             $customer['piutang']           = null;
             $customer['plafon_status']     = null;
             $customer['plafon_updated_at'] = $customer['plafon_updated_at'] ?? null;
-            
-            $customer['has_unpaid_1000'] = false;
-            if ($customer['plafon_aktif'] !== null && (float)$customer['plafon_aktif'] == 1000) {
-                $unpaid = $this->M_pembayaran->get_unpaid_faktur_by_customer($customer['kd_customer']);
-                if (!empty($unpaid)) {
-                    $customer['has_unpaid_1000'] = true;
-                }
-            }
+            $kd = $customer['kd_customer'] ?? '';
+            $customer['has_unpaid_1000']   = isset($unpaidKdMap[$kd]);
         }
         unset($customer);
         return $customers;

@@ -254,11 +254,30 @@ class M_SalesOrder extends CI_Model
         $nama_sales = trim((string)$nama_sales);
 
         if ($nama_sales !== '' && $this->db->field_exists('nama_sales', 'tb_customer')) {
-            $this->db->where(
-                'LOWER(TRIM(nama_sales)) = ' . $this->db->escape(strtolower($nama_sales)),
-                null,
-                false
-            );
+            $names = [strtolower($nama_sales)];
+
+            // Cari mapping nama karyawan dan username dari tb_karyawan
+            $karyawan = $this->db->select('nm_karyawan, username')
+                ->where('username', $nama_sales)
+                ->or_where('nm_karyawan', $nama_sales)
+                ->get('tb_karyawan')
+                ->row();
+
+            if ($karyawan) {
+                if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
+                if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
+            }
+            $names = array_values(array_unique(array_filter($names)));
+
+            $this->db->group_start();
+            foreach ($names as $idx => $n) {
+                if ($idx === 0) {
+                    $this->db->where('LOWER(TRIM(nama_sales)) = ' . $this->db->escape($n), null, false);
+                } else {
+                    $this->db->or_where('LOWER(TRIM(nama_sales)) = ' . $this->db->escape($n), null, false);
+                }
+            }
+            $this->db->group_end();
         }
 
         return $this->db
@@ -280,14 +299,31 @@ class M_SalesOrder extends CI_Model
             return true;
         }
 
-        return $this->db
-            ->where('kd_customer', $kd_customer)
-            ->where(
-                'LOWER(TRIM(nama_sales)) = ' . $this->db->escape(strtolower($nama_sales)),
-                null,
-                false
-            )
-            ->count_all_results('tb_customer') > 0;
+        $names = [strtolower($nama_sales)];
+        $karyawan = $this->db->select('nm_karyawan, username')
+            ->where('username', $nama_sales)
+            ->or_where('nm_karyawan', $nama_sales)
+            ->get('tb_karyawan')
+            ->row();
+
+        if ($karyawan) {
+            if (!empty($karyawan->nm_karyawan)) $names[] = strtolower(trim((string)$karyawan->nm_karyawan));
+            if (!empty($karyawan->username))    $names[] = strtolower(trim((string)$karyawan->username));
+        }
+        $names = array_values(array_unique(array_filter($names)));
+
+        $this->db->where('kd_customer', $kd_customer);
+        $this->db->group_start();
+        foreach ($names as $idx => $n) {
+            if ($idx === 0) {
+                $this->db->where('LOWER(TRIM(nama_sales)) = ' . $this->db->escape($n), null, false);
+            } else {
+                $this->db->or_where('LOWER(TRIM(nama_sales)) = ' . $this->db->escape($n), null, false);
+            }
+        }
+        $this->db->group_end();
+
+        return $this->db->count_all_results('tb_customer') > 0;
     }
 
     public function get_customer($id)

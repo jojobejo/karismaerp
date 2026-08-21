@@ -6,6 +6,15 @@
         const canInfoLainEdit = <?= !empty($master_barang_access['can_info_lain_edit']) ? 'true' : 'false' ?>;
         const defaultImage = "<?= base_url('assets/images/Karisma.png') ?>";
 
+        if ($.fn.select2) {
+            $('#kd_suplier').select2({
+                theme: 'bootstrap4',
+                width: '100%',
+                placeholder: 'Pilih Supplier',
+                allowClear: true
+            });
+        }
+
         let currentId = 0;
         let currentSearch = '';
         let currentKelompokBarang = '';
@@ -153,6 +162,9 @@
             ];
 
             $(fullEditFields.join(',')).prop('disabled', !canFullEdit);
+            if ($.fn.select2) {
+                $('#kd_suplier').prop('disabled', !canFullEdit).trigger('change.select2');
+            }
             $('#panjang, #lebar, #tinggi, #berat, #isi, #kemasan').prop('disabled', !canInfoLainEdit);
         }
 
@@ -160,6 +172,11 @@
             currentId = 0;
             $('#formMasterBarangModern')[0].reset();
             $('#master_id').val('');
+            if ($.fn.select2) {
+                $('#kd_suplier').val('').trigger('change');
+            } else {
+                $('#kd_suplier').val('');
+            }
             $('.master-list-item').removeClass('active');
             $('#tab-informasi-link').tab('show');
             $('#tab-gambar img').attr('src', defaultImage);
@@ -193,7 +210,11 @@
             $('#kelompok').val(row.kelompok || '');
             $('#komposisi').val(row.komposisi || '');
             $('#grup').val(row.grup || '');
-            $('#kd_suplier').val(row.kd_suplier || '');
+            if ($.fn.select2) {
+                $('#kd_suplier').val(row.kd_suplier || '').trigger('change');
+            } else {
+                $('#kd_suplier').val(row.kd_suplier || '');
+            }
             $('#stock_minimum').val(row.stock_minimum || 0);
             $('#produk_fokus').val(row.produk_fokus || '');
             $('#panjang').val(row.panjang || 0);

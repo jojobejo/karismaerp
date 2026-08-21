@@ -348,6 +348,26 @@ class M_pembayaran extends CI_Model
         return $this->db->get_compiled_select();
     }
 
+    public function get_unpaid_customer_kd_map(array $kdList = [])
+    {
+        if (empty($kdList)) {
+            return [];
+        }
+
+        $this->_select_invoice_summary();
+        $this->db->where_in('f.kd_customer', $kdList);
+        $this->db->having('sisa_tagihan >', 0);
+        $rows = $this->db->get()->result_array();
+
+        $map = [];
+        foreach ($rows as $r) {
+            if (!empty($r['kd_customer'])) {
+                $map[$r['kd_customer']] = true;
+            }
+        }
+        return $map;
+    }
+
     public function get_unpaid_faktur_by_customer($kd_customer)
     {
         $this->_select_invoice_summary();

@@ -468,7 +468,7 @@ class M_Keuangan extends CI_Model
             " . $this->master_barang_text_select('kode_akun_retur_penjualan', '41034') . ",
             COALESCE(s.nama_suplier, '') AS nama_suplier
         ", false);
-        $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tb_suplier GROUP BY kd_suplier)';
+        $supplierSubquery = '(SELECT kd_suplier, MIN(nama_suplier) AS nama_suplier FROM tbpo_suplier GROUP BY kd_suplier)';
         $this->db->from('tbpo_barang a');
         $this->db->join($supplierSubquery . ' s', 's.kd_suplier = a.kd_suplier', 'left', false);
         if ($hasKelompokDagangColumn && $hasKelompokDagangMaster) {
@@ -707,7 +707,8 @@ class M_Keuangan extends CI_Model
     public function master_barang_supplier_options()
     {
         return $this->db->select('kd_suplier, nama_suplier')
-            ->from('tb_suplier')
+            ->from('tbpo_suplier')
+            ->group_by('kd_suplier')
             ->order_by('nama_suplier', 'ASC')
             ->get()
             ->result();

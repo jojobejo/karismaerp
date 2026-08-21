@@ -189,6 +189,14 @@ $dashboardUrl = base_url('dashboard/');
         align-items: center;
     }
 
+    .master-barang-page .select2-container {
+        width: 100% !important;
+    }
+
+    .master-barang-page .select2-container--bootstrap4 .select2-selection--single {
+        height: calc(1.5em + .75rem + 2px) !important;
+    }
+
     .master-barang-page .form-grid label,
     .master-barang-page .info-lain-grid label {
         margin: 0;
@@ -574,10 +582,10 @@ $dashboardUrl = base_url('dashboard/');
                                                  <input type="text" class="form-control" id="merk_barang" name="merk_barang">
 
                                                  <label for="kd_suplier">Supplier Utama :</label>
-                                                 <select class="form-control" id="kd_suplier" name="kd_suplier">
+                                                 <select class="form-control select2" id="kd_suplier" name="kd_suplier" style="width: 100%;">
                                                      <option value="">Pilih Supplier</option>
                                                      <?php foreach (($supplier_options ?? []) as $supplier) : ?>
-                                                         <option value="<?= html_escape($supplier->kd_suplier) ?>"><?= html_escape($supplier->nama_suplier) ?></option>
+                                                         <option value="<?= html_escape($supplier->kd_suplier) ?>"><?= html_escape($supplier->nama_suplier) ?> (<?= html_escape($supplier->kd_suplier) ?>)</option>
                                                      <?php endforeach; ?>
                                                  </select>
 
