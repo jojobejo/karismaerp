@@ -478,6 +478,147 @@ class Dca extends CI_Controller {
         $writer->save('php://output');
         exit;
     }
+
+    public function export_rincian() {
+        $tahun             = $this->input->get('tahun')             ?? date('Y');
+        $bulan             = $this->input->get('bulan')             ?? '';
+        $id_wilayah        = $this->input->get('id_wilayah')        ?? $this->get_id_wilayah_filter();
+        $status_verifikasi = $this->input->get('status_verifikasi') ?? '';
+
+        $filter = ['tahun' => $tahun];
+        if ($bulan)                        $filter['bulan']             = $bulan;
+        if ($id_wilayah)                   $filter['id_wilayah']        = $id_wilayah;
+        if ($status_verifikasi !== '')     $filter['status_verifikasi'] = (int)$status_verifikasi;
+
+        $list = $this->M_Kmt->get_dca_with_details($filter);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('DCA');
+
+        $headers = [
+            'A' => 'No',
+            'B' => 'Tanggal',
+            'C' => 'Tanggal Input',
+            'D' => 'Wilayah',
+            'E' => 'ABM',
+            'F' => 'MDO',
+            'G' => 'Tanggal kasbon',
+            'H' => 'Tanggal DCA',
+            'I' => 'Uraian',
+            'J' => 'UM',
+            'K' => 'Refund',
+            'L' => 'nama kegiatan',
+            'M' => 'daftar peserta',
+            'N' => 'Qty Bisi',
+            'O' => 'Qty 235',
+            'P' => 'Real Biaya (rincian)',
+            'Q' => 'Real Biaya',
+            'R' => 'Total',
+            'S' => 'Status Verifikasi',
+            'T' => 'Note sebelum verifikasi'
+        ];
+
+        foreach ($headers as $col => $title) {
+            $sheet->setCellValue($col . '1', $title);
+        }
+
+        $sheet->getStyle('A1:T1')->applyFromArray([
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Calibri', 'size' => 11],
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3864']],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER],
+            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => '000000']]],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(26);
+
+        $r = 2;
+        $no = 1;
+        foreach ($list as $row) {
+            $details = $row['detail'] ?? [];
+            $status_verif = ((int)$row['status_verifikasi'] === 1)
+                ? '✓ Terverifikasi (' . (!empty($row['nama_verifikator']) ? $row['nama_verifikator'] : '-') . ')'
+                : 'Belum Diverifikasi';
+
+            $tgl_dca_fmt   = !empty($row['tanggal_dca']) ? date('d/m/Y', strtotime($row['tanggal_dca'])) : '-';
+            $tgl_input_fmt = !empty($row['created_at'])  ? date('d/m/Y H:i', strtotime($row['created_at'])) : '-';
+
+            if (empty($details)) {
+                $sheet->setCellValue('A' . $r, $no);
+                $sheet->setCellValue('B' . $r, $tgl_dca_fmt);
+                $sheet->setCellValue('C' . $r, $tgl_input_fmt);
+                $sheet->setCellValue('D' . $r, $row['nama_wilayah'] ?? '-');
+                $sheet->setCellValue('E' . $r, $row['abm'] ?? '-');
+                $sheet->setCellValue('F' . $r, $row['nama_mdo'] ?? '');
+                $sheet->setCellValue('G' . $r, '');
+                $sheet->setCellValue('H' . $r, '');
+                $sheet->setCellValue('I' . $r, $row['uraian'] ?? '');
+                $sheet->setCellValue('J' . $r, (float)$row['um']);
+                $sheet->setCellValue('K' . $r, (float)$row['refund']);
+                $sheet->setCellValue('L' . $r, '');
+                $sheet->setCellValue('M' . $r, '');
+                $sheet->setCellValue('N' . $r, '');
+                $sheet->setCellValue('O' . $r, '');
+                $sheet->setCellValue('P' . $r, '');
+                $sheet->setCellValue('Q' . $r, (float)$row['real_biaya']);
+                $sheet->setCellValue('R' . $r, (float)$row['total_biaya']);
+                $sheet->setCellValue('S' . $r, $status_verif);
+                $sheet->setCellValue('T' . $r, $row['verified_notes'] ?? '');
+                $r++;
+            } else {
+                foreach ($details as $det) {
+                    $sheet->setCellValue('A' . $r, $no);
+                    $sheet->setCellValue('B' . $r, $tgl_dca_fmt);
+                    $sheet->setCellValue('C' . $r, $tgl_input_fmt);
+                    $sheet->setCellValue('D' . $r, $row['nama_wilayah'] ?? '-');
+                    $sheet->setCellValue('E' . $r, $row['abm'] ?? '-');
+                    $sheet->setCellValue('F' . $r, $row['nama_mdo'] ?? '');
+                    $sheet->setCellValue('G' . $r, !empty($det['tgl_kasbon']) && $det['tgl_kasbon'] != '0000-00-00' ? date('d/m/Y', strtotime($det['tgl_kasbon'])) : '');
+                    $sheet->setCellValue('H' . $r, !empty($det['tgl_kegiatan']) && $det['tgl_kegiatan'] != '0000-00-00' ? date('d/m/Y', strtotime($det['tgl_kegiatan'])) : $tgl_dca_fmt);
+                    $sheet->setCellValue('I' . $r, $row['uraian'] ?? '');
+                    $sheet->setCellValue('J' . $r, (float)$row['um']);
+                    $sheet->setCellValue('K' . $r, (float)$row['refund']);
+                    $sheet->setCellValue('L' . $r, $det['nama_kegiatan'] ?? '');
+                    $sheet->setCellValue('M' . $r, !empty($det['jml_peserta']) ? (int)$det['jml_peserta'] : '');
+                    $sheet->setCellValue('N' . $r, !empty($det['qty_bisi']) && (float)$det['qty_bisi'] > 0 ? (float)$det['qty_bisi'] : '');
+                    $sheet->setCellValue('O' . $r, !empty($det['qty_q235']) && (float)$det['qty_q235'] > 0 ? (float)$det['qty_q235'] : '');
+                    $sheet->setCellValue('P' . $r, (float)($det['real_biaya'] ?? 0));
+                    $sheet->setCellValue('Q' . $r, (float)$row['real_biaya']);
+                    $sheet->setCellValue('R' . $r, (float)$row['total_biaya']);
+                    $sheet->setCellValue('S' . $r, $status_verif);
+                    $sheet->setCellValue('T' . $r, $row['verified_notes'] ?? '');
+                    $r++;
+                }
+            }
+            $no++;
+        }
+
+        $lastRow = $r - 1;
+        if ($lastRow >= 2) {
+            $sheet->getStyle("A2:T{$lastRow}")->applyFromArray([
+                'font'      => ['name' => 'Calibri', 'size' => 11],
+                'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'D9D9D9']]],
+            ]);
+            $sheet->getStyle("A2:A{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("B2:C{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("G2:H{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("M2:O{$lastRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            
+            $sheet->getStyle("J2:K{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle("P2:R{$lastRow}")->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        foreach (range('A', 'T') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'DCA_KMT_Detail_Rincian_' . $tahun . ($bulan ? '_Bln'.$bulan : '') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
  
     public function rekap() {
         $tahun      = $this->input->get('tahun')      ?? date('Y');

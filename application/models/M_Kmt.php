@@ -534,6 +534,57 @@ class M_Kmt extends CI_Model {
         return $headers;
     }
     
+    public function get_dca_with_details($filter = []) {
+        $this->db->select('
+            d.id, d.tanggal_dca, d.bulan, d.tahun,
+            d.abm, d.nama_mdo, d.uraian,
+            d.um, d.refund, d.real_biaya, d.total_biaya, d.created_at,
+            d.status_verifikasi, d.verified_at, d.verified_notes,
+            w.nama_wilayah,
+            k.nm_karyawan AS nama_verifikator
+        ');
+        $this->db->from('tbkmt_dca d');
+        $this->db->join('tbkmt_wilayah w', 'w.id = d.id_wilayah', 'left');
+        $this->db->join('tb_karyawan k',   'k.id = d.verified_by', 'left');
+
+        if (!empty($filter['tahun']))             $this->db->where('d.tahun', $filter['tahun']);
+        if (!empty($filter['bulan']))             $this->db->where('d.bulan', $filter['bulan']);
+        if (!empty($filter['id_wilayah']))        $this->db->where('d.id_wilayah', $filter['id_wilayah']);
+        if (!empty($filter['abm']))               $this->db->where('d.abm', $filter['abm']);
+        if (isset($filter['status_verifikasi']) && $filter['status_verifikasi'] !== '') {
+            $this->db->where('d.status_verifikasi', (int)$filter['status_verifikasi']);
+        }
+
+        $this->db->order_by('d.tanggal_dca', 'DESC');
+        $this->db->order_by('d.id', 'DESC');
+        $headers = $this->db->get()->result_array();
+
+        if (empty($headers)) return [];
+
+        $ids = array_column($headers, 'id');
+        $this->db->select('
+            dd.id, dd.id_dca, dd.nama_kegiatan, dd.tgl_kegiatan, dd.tgl_kasbon,
+            dd.jml_peserta, dd.qty_bisi, dd.qty_q235,
+            dd.real_biaya, dd.total_biaya, dd.keterangan
+        ');
+        $this->db->from('tbkmt_dca_detail dd');
+        $this->db->where_in('dd.id_dca', $ids);
+        $this->db->order_by('dd.id_dca', 'ASC');
+        $this->db->order_by('dd.id', 'ASC');
+        $details = $this->db->get()->result_array();
+
+        $detail_map = [];
+        foreach ($details as $d) {
+            $detail_map[$d['id_dca']][] = $d;
+        }
+
+        foreach ($headers as &$h) {
+            $h['detail'] = $detail_map[$h['id']] ?? [];
+        }
+
+        return $headers;
+    }
+    
     public function get_dca_abm_list($filter = []) {
         $this->db->distinct();                    // gunakan method distinct()
         $this->db->select('abm');                 // bukan 'DISTINCT abm'
