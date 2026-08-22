@@ -65,7 +65,13 @@ class M_PenyesuaianBarang extends CI_Model
             $this->db->group_end();
         }
         if (!empty($filters['status']) && $filters['status'] !== 'Semua') {
-            $this->db->where('pb.status', $filters['status']);
+            if (strcasecmp($filters['status'], 'POSTED') === 0) {
+                $this->db->where('pb.status', 'POSTED');
+            } elseif (strcasecmp($filters['status'], 'UNPOSTED') === 0 || strcasecmp($filters['status'], 'DRAFT') === 0) {
+                $this->db->where('pb.status !=', 'POSTED');
+            } else {
+                $this->db->where('pb.status', $filters['status']);
+            }
         }
 
         $this->db->order_by('pb.tanggal', 'DESC');
@@ -109,6 +115,11 @@ class M_PenyesuaianBarang extends CI_Model
         $id = isset($data['id_penyesuaian']) ? (int)$data['id_penyesuaian'] : 0;
 
         if ($id > 0) {
+            // Jika mengedit data existing, kembalikan stok & jurnal lama terlebih dahulu
+            $existing = $this->get_by_id($id);
+            if ($existing) {
+                $this->reverse_stock_and_journal($existing);
+            }
             $this->db->where('id_penyesuaian', $id)->update('tbkeu_penyesuaian_barang', $data);
             $this->db->where('id_penyesuaian', $id)->delete('tbkeu_penyesuaian_barang_detail');
         } else {
@@ -473,9 +484,6 @@ class M_PenyesuaianBarang extends CI_Model
             $jumlah = (float)$detail['jumlah'];
             if ($jumlah == 0) continue;
 
-            $tipe = $jumlah > 0 ? 'ADJIN' : 'ADJOUT';
-
-            // Cek apakah ada rincian multi-lot
             $lots = [];
             if (!empty($detail['lot_data'])) {
                 $decoded = is_string($detail['lot_data']) ? json_decode($detail['lot_data'], true) : $detail['lot_data'];
@@ -498,7 +506,7 @@ class M_PenyesuaianBarang extends CI_Model
                 if ($lotQty == 0) continue;
 
                 $lotTipe = $lotQty > 0 ? 'ADJIN' : 'ADJOUT';
-                $no_lot = trim($lotItem['no_lot'] ?? '');
+                $no_lot = trim((string)($lotItem['no_lot'] ?? ''));
                 $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
 
                 // Insert ke tberp_stock_ledger
@@ -515,66 +523,78 @@ class M_PenyesuaianBarang extends CI_Model
                 ]);
 
                 // Update qty_on_hand di stock_batch
-                $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
-                    ->where('gudang_id', $gudang_id);
-                
-                if ($no_lot !== '') {
-                    $batchQuery->where('no_lot', $no_lot);
-                }
-                if ($expired_date) {
-                    $batchQuery->where('expired_date', $expired_date);
-                }
-
-                $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
-
-                if ($batch) {
-                    $new_qty = (float)$batch['qty_on_hand'] + $lotQty;
-                    $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                        'qty_on_hand' => $new_qty,
-                        'update_at'   => date('Y-m-d H:i:s')
-                    ]);
-                } else {
-                    // Jika batch belum ada dan penyesuaian menambah stok, buat batch baru
-                    $this->db->insert('tberp_stock_batch', [
-                        'kd_barang'    => $detail['kd_barang'],
-                        'gudang_id'    => (string)$gudang_id,
-                        'no_lot'       => $no_lot,
-                        'expired_date' => $expired_date ?: '1000-01-01',
-                        'qty_on_hand'  => $lotQty,
-                        'qty_reserved' => 0,
-                        'created_at'   => date('Y-m-d H:i:s'),
-                        'update_at'    => date('Y-m-d H:i:s')
-                    ]);
-                }
+                $this->apply_batch_qty_change($detail['kd_barang'], $gudang_id, $no_lot, $expired_date, $lotQty);
             }
         }
     }
 
     /**
-     * Hapus transaksi penyesuaian barang
-     * Jika POSTED, reverse jurnal dan stok
+     * Membalikkan perubahan stok dan menghapus jurnal yang berhubungan dengan transaksi penyesuaian
      */
-    public function delete($id)
+    private function reverse_stock_and_journal($data)
     {
-        $data = $this->get_by_id($id);
-        if (!$data) return false;
+        if (empty($data)) {
+            return;
+        }
 
-        $this->db->trans_start();
+        $refNo = $data['no_referensi'] ?? '';
+        $idJurnal = !empty($data['id_jurnal']) ? (int)$data['id_jurnal'] : 0;
+        $gudangId = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
 
-        // Jika POSTED, reverse jurnal
-        if ($data['status'] === 'POSTED' && !empty($data['id_jurnal'])) {
-            $this->load->library('Accounting_service');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_log');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_detail');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal');
+        // 1. Hapus Jurnal terkait jika ada
+        if ($idJurnal > 0) {
+            $this->db->where('id_jurnal', $idJurnal)->delete('tbkeu_jurnal_log');
+            $this->db->where('id_jurnal', $idJurnal)->delete('tbkeu_jurnal_detail');
+            $this->db->where('id_jurnal', $idJurnal)->delete('tbkeu_jurnal');
+        }
+        if (!empty($refNo)) {
+            $jurnalByRef = $this->db->select('id_jurnal')
+                ->where('source_module', 'PERSEDIAAN')
+                ->where('source_type', 'PENYESUAIAN_BARANG')
+                ->where('source_no', $refNo)
+                ->get('tbkeu_jurnal')
+                ->result_array();
+            foreach ($jurnalByRef as $jRow) {
+                $jId = (int)$jRow['id_jurnal'];
+                $this->db->where('id_jurnal', $jId)->delete('tbkeu_jurnal_log');
+                $this->db->where('id_jurnal', $jId)->delete('tbkeu_jurnal_detail');
+                $this->db->where('id_jurnal', $jId)->delete('tbkeu_jurnal');
+            }
+        }
 
-            // Reverse stok: hapus ledger entries
-            $this->db->where('ref_no', $data['no_referensi'])
+        // 2. Reverse Stok
+        // Periksa apakah ada catatan di tberp_stock_ledger untuk transaksi ini
+        $ledgerEntries = [];
+        if (!empty($refNo)) {
+            $ledgerEntries = $this->db->where('ref_no', $refNo)
+                ->where('ref_type', 'PENYESUAIAN')
+                ->get('tberp_stock_ledger')
+                ->result_array();
+        }
+
+        if (!empty($ledgerEntries)) {
+            // Reversal berdasarkan apa yang pernah dicatat di stock_ledger
+            foreach ($ledgerEntries as $ledger) {
+                $kdBarang = $ledger['kd_barang'];
+                $gId = $ledger['gudang_id'] ?: $gudangId;
+                $noLot = trim((string)($ledger['no_lot'] ?? ''));
+                $expDate = !empty($ledger['expired_date']) && $ledger['expired_date'] !== '0000-00-00' ? $ledger['expired_date'] : null;
+                $qty = (float)$ledger['qty'];
+                $tipe = $ledger['tipe']; // ADJIN (+qty) atau ADJOUT (-qty)
+
+                // Jika dulu ADJIN (menambah), sekarang kurangi (-qty)
+                // Jika dulu ADJOUT (mengurangi), sekarang tambah (+qty)
+                $qtyAdjustment = ($tipe === 'ADJIN') ? -$qty : $qty;
+
+                $this->apply_batch_qty_change($kdBarang, $gId, $noLot, $expDate, $qtyAdjustment);
+            }
+
+            // Hapus ledger entries transaksi ini
+            $this->db->where('ref_no', $refNo)
                 ->where('ref_type', 'PENYESUAIAN')
                 ->delete('tberp_stock_ledger');
-
-            // Reverse qty di stock_batch
-            $gudang_id = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
+        } elseif (($data['status'] ?? '') === 'POSTED' && !empty($data['details'])) {
+            // Fallback jika ledger tidak ditemukan tapi status POSTED
             foreach ($data['details'] as $detail) {
                 $jumlah = (float)$detail['jumlah'];
                 if ($jumlah == 0) continue;
@@ -594,30 +614,83 @@ class M_PenyesuaianBarang extends CI_Model
 
                 foreach ($lots as $lotItem) {
                     $lotQty = isset($lotItem['jumlah']) ? (float)$lotItem['jumlah'] : $jumlah;
-                    $no_lot = trim($lotItem['no_lot'] ?? '');
-                    $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
+                    $noLot = trim((string)($lotItem['no_lot'] ?? ''));
+                    $expDate = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
 
-                    $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
-                        ->where('gudang_id', $gudang_id);
-                    if ($no_lot !== '') {
-                        $batchQuery->where('no_lot', $no_lot);
-                    }
-                    if ($expired_date) {
-                        $batchQuery->where('expired_date', $expired_date);
-                    }
-
-                    $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
-
-                    if ($batch) {
-                        $new_qty = (float)$batch['qty_on_hand'] - $lotQty;
-                        $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                            'qty_on_hand' => $new_qty,
-                            'update_at'   => date('Y-m-d H:i:s')
-                        ]);
-                    }
+                    // Mengembalikan stok: dikurangi dari jumlah yang pernah ditambah/dikurang
+                    $qtyAdjustment = -$lotQty;
+                    $this->apply_batch_qty_change($detail['kd_barang'], $gudangId, $noLot, $expDate, $qtyAdjustment);
                 }
             }
         }
+    }
+
+    /**
+     * Terapkan perubahan qty pada stock batch secara cerdas (mencocokkan lot & fallback jika lot kosong)
+     */
+    private function apply_batch_qty_change($kdBarang, $gudangId, $noLot, $expDate, $qtyDiff)
+    {
+        if ($qtyDiff == 0 || empty($kdBarang)) {
+            return;
+        }
+
+        $batchQuery = $this->db->where('kd_barang', $kdBarang);
+        if (!empty($gudangId)) {
+            $batchQuery->where('gudang_id', $gudangId);
+        }
+
+        if ($noLot !== '') {
+            $batchQuery->where('no_lot', $noLot);
+        }
+        if ($expDate) {
+            $batchQuery->where('expired_date', $expDate);
+        }
+
+        $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
+
+        // Jika tidak ditemukan dan no_lot kosong, coba cari batch apapun di gudang tersebut
+        if (!$batch && $noLot === '') {
+            $fallbackQuery = $this->db->where('kd_barang', $kdBarang);
+            if (!empty($gudangId)) {
+                $fallbackQuery->where('gudang_id', $gudangId);
+            }
+            $batch = $fallbackQuery->order_by('qty_on_hand', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
+        }
+
+        if ($batch) {
+            $newQty = (float)$batch['qty_on_hand'] + $qtyDiff;
+            $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
+                'qty_on_hand' => $newQty,
+                'update_at'   => date('Y-m-d H:i:s')
+            ]);
+        } else {
+            // Buat batch baru jika belum ada
+            $this->db->insert('tberp_stock_batch', [
+                'kd_barang'    => $kdBarang,
+                'gudang_id'    => (string)($gudangId ?: '2'),
+                'no_lot'       => $noLot,
+                'expired_date' => $expDate ?: '1000-01-01',
+                'qty_on_hand'  => $qtyDiff,
+                'qty_reserved' => 0,
+                'created_at'   => date('Y-m-d H:i:s'),
+                'update_at'    => date('Y-m-d H:i:s')
+            ]);
+        }
+    }
+
+    /**
+     * Hapus transaksi penyesuaian barang
+     * Reverse jurnal dan stok (baik POSTED maupun jika ada ledger)
+     */
+    public function delete($id)
+    {
+        $data = $this->get_by_id($id);
+        if (!$data) return false;
+
+        $this->db->trans_start();
+
+        // Reverse stok dan jurnal transaksi ini
+        $this->reverse_stock_and_journal($data);
 
         // Hapus header (detail akan cascade)
         $this->db->where('id_penyesuaian', $id)->delete('tbkeu_penyesuaian_barang');
@@ -636,61 +709,8 @@ class M_PenyesuaianBarang extends CI_Model
 
         $this->db->trans_start();
 
-        // Reverse jurnal
-        if (!empty($data['id_jurnal'])) {
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_log');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_detail');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal');
-        }
-
-        // Reverse stok
-        $this->db->where('ref_no', $data['no_referensi'])
-            ->where('ref_type', 'PENYESUAIAN')
-            ->delete('tberp_stock_ledger');
-
-        $gudang_id = $data['id_gudang_dari'] ?: ($data['id_gudang_ke'] ?: null);
-        foreach ($data['details'] as $detail) {
-            $jumlah = (float)$detail['jumlah'];
-            if ($jumlah == 0) continue;
-
-            $lots = [];
-            if (!empty($detail['lot_data'])) {
-                $decoded = is_string($detail['lot_data']) ? json_decode($detail['lot_data'], true) : $detail['lot_data'];
-                if (is_array($decoded) && count($decoded) > 0) $lots = $decoded;
-            }
-            if (empty($lots)) {
-                $lots[] = [
-                    'no_lot'       => $detail['no_lot'] ?? '',
-                    'expired_date' => !empty($detail['expired_date']) && $detail['expired_date'] !== '0000-00-00' ? $detail['expired_date'] : null,
-                    'jumlah'       => $jumlah
-                ];
-            }
-
-            foreach ($lots as $lotItem) {
-                $lotQty = isset($lotItem['jumlah']) ? (float)$lotItem['jumlah'] : $jumlah;
-                $no_lot = trim($lotItem['no_lot'] ?? '');
-                $expired_date = !empty($lotItem['expired_date']) && $lotItem['expired_date'] !== '0000-00-00' ? $lotItem['expired_date'] : null;
-
-                $batchQuery = $this->db->where('kd_barang', $detail['kd_barang'])
-                    ->where('gudang_id', $gudang_id);
-                if ($no_lot !== '') {
-                    $batchQuery->where('no_lot', $no_lot);
-                }
-                if ($expired_date) {
-                    $batchQuery->where('expired_date', $expired_date);
-                }
-
-                $batch = $batchQuery->order_by('id', 'DESC')->limit(1)->get('tberp_stock_batch')->row_array();
-
-                if ($batch) {
-                    $new_qty = (float)$batch['qty_on_hand'] - $lotQty;
-                    $this->db->where('id', $batch['id'])->update('tberp_stock_batch', [
-                        'qty_on_hand' => $new_qty,
-                        'update_at'   => date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
-        }
+        // Reverse stok dan jurnal transaksi ini
+        $this->reverse_stock_and_journal($data);
 
         // Update status ke DRAFT
         $this->db->where('id_penyesuaian', $id)->update('tbkeu_penyesuaian_barang', [

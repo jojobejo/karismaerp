@@ -292,10 +292,13 @@ $has_id = !empty($this->input->get('id'));
             <div id="view-list" class="zahir-card" <?= $has_id ? 'style="display: none;"' : '' ?>>
                 <div class="buku-besar-header d-flex justify-content-between align-items-center">
                     <h2>Daftar Transaksi Jurnal</h2>
-                    <div class="d-flex align-items-center" style="gap: 12px;">
-                        <input type="text" id="search-input" class="form-control form-zahir-control" placeholder="Cari..." style="width: 240px; height: 35px; border-radius: 4px;">
-                        <button type="button" class="btn btn-sm btn-light" id="btn-refresh" title="Refresh data">
-                            <i class="fas fa-sync-alt text-dark"></i>
+                    <div class="d-flex align-items-center" style="gap: 10px;">
+                        <input type="text" id="search-input" class="form-control form-zahir-control" placeholder="Search..." style="width: 220px; height: 34px; border-radius: 4px; font-size: 13px;">
+                        <button type="button" class="btn btn-sm btn-light font-weight-bold" id="btn-refresh" title="Update data" style="font-size: 13px; height: 34px; padding: 0 14px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; color: var(--zahir-text);">
+                            <i class="fas fa-sync-alt"></i> Update
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light font-weight-bold" id="btn-filter" title="Filter data" style="font-size: 13px; height: 34px; padding: 0 14px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; color: var(--zahir-text);">
+                            <i class="fas fa-filter"></i> Filter
                         </button>
                     </div>
                 </div>
@@ -506,6 +509,73 @@ $has_id = !empty($this->input->get('id'));
     </div>
 </div>
 
+<!-- MODAL: FILTER DATA (Zahir Style) -->
+<div class="modal fade zahir-modal" id="modalFilter" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;" role="document">
+        <div class="modal-content" style="border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div class="modal-header d-flex align-items-center justify-content-between" style="background: #fff; border-bottom: none; padding: 16px 20px 0 20px;">
+                <h5 class="modal-title font-weight-bold" style="color: #1e293b; font-size: 17px;">Filter Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true" style="font-size: 22px; color: #64748b;">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 12px 20px 16px 20px;">
+                <!-- Tab Standar Zahir -->
+                <div class="mb-4">
+                    <div style="display: inline-block; background-color: var(--zahir-blue); color: #fff; font-size: 13px; font-weight: 600; padding: 6px 18px; border-radius: 4px;">
+                        Standar
+                    </div>
+                </div>
+
+                <form id="form-filter-data">
+                    <!-- Tanggal -->
+                    <div class="form-group row align-items-center mb-3">
+                        <label class="col-sm-3 col-form-label text-sm-right font-weight-500" style="font-size: 13px; color: #334155;">Tanggal :</label>
+                        <div class="col-sm-9">
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <div class="d-flex align-items-center" style="gap: 5px; flex: 1;">
+                                    <span style="font-size: 12px; color: #64748b; white-space: nowrap;">Dari :</span>
+                                    <input type="date" id="filter-date-from" class="form-control form-zahir-control" style="height: 32px; font-size: 12px; padding: 3px 6px;">
+                                </div>
+                                <div>
+                                    <button type="button" id="btn-copy-date" class="btn btn-sm btn-light" title="Terapkan tanggal yang sama pada kolom Hingga" style="height: 28px; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 4px; color: #475569; cursor: pointer; background: #f8fafc; font-weight: bold; transition: all 0.15s;">
+                                        <i class="fas fa-chevron-right" style="font-size: 11px;"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center" style="gap: 5px; flex: 1;">
+                                    <span style="font-size: 12px; color: #64748b; white-space: nowrap;">Hingga :</span>
+                                    <input type="date" id="filter-date-to" class="form-control form-zahir-control" style="height: 32px; font-size: 12px; padding: 3px 6px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-group row align-items-center mb-4">
+                        <label class="col-sm-3 col-form-label text-sm-right font-weight-500" style="font-size: 13px; color: #334155;">Status :</label>
+                        <div class="col-sm-9">
+                            <select id="filter-status" class="form-control form-zahir-control" style="height: 32px; font-size: 13px; padding: 3px 8px; width: 140px;">
+                                <option value="Semua">Semua</option>
+                                <option value="Posted">Posted</option>
+                                <option value="Unposted">Unposted</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end" style="gap: 10px; border-top: 1px solid #eef2f5; padding-top: 14px;">
+                        <button type="button" class="btn btn-zahir btn-zahir-primary" data-dismiss="modal" style="min-width: 80px; font-size: 13px; padding: 5px 14px;">
+                            <u>B</u>atal
+                        </button>
+                        <button type="button" class="btn btn-zahir btn-zahir-primary" id="btn-apply-filter" style="min-width: 80px; font-size: 13px; padding: 5px 14px;">
+                            <u>O</u>K
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function() {
@@ -514,13 +584,24 @@ $has_id = !empty($this->input->get('id'));
         let activeFormRowId = null;
         let selectedModalAccount = null;
         
+        let currentFilter = {
+            date_from: '',
+            date_to: '',
+            status: 'Semua'
+        };
+
         // Load Jurnal List
         function loadJurnalList() {
             let searchVal = $('#search-input').val();
             $.ajax({
                 url: '<?= base_url("buku_besar/jurnal_umum_list") ?>',
                 type: 'GET',
-                data: { search: searchVal },
+                data: { 
+                    search: searchVal,
+                    date_from: currentFilter.date_from,
+                    date_to: currentFilter.date_to,
+                    status: currentFilter.status
+                },
                 dataType: 'json',
                 success: function(res) {
                     if (res.success) {
@@ -547,6 +628,29 @@ $has_id = !empty($this->input->get('id'));
         }
 
         $('#search-input').on('keyup input', function() {
+            loadJurnalList();
+        });
+
+        // Copy tanggal Dari ke Hingga saat tombol > diklik
+        $('#btn-copy-date').click(function() {
+            let dateFrom = $('#filter-date-from').val();
+            if (dateFrom) {
+                $('#filter-date-to').val(dateFrom);
+            }
+        });
+
+        $('#btn-filter').click(function() {
+            $('#filter-date-from').val(currentFilter.date_from);
+            $('#filter-date-to').val(currentFilter.date_to);
+            $('#filter-status').val(currentFilter.status || 'Semua');
+            $('#modalFilter').modal('show');
+        });
+
+        $('#btn-apply-filter').click(function() {
+            currentFilter.date_from = $('#filter-date-from').val();
+            currentFilter.date_to = $('#filter-date-to').val();
+            currentFilter.status = $('#filter-status').val();
+            $('#modalFilter').modal('hide');
             loadJurnalList();
         });
 

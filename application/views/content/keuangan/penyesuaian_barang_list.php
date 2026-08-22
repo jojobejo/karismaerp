@@ -354,13 +354,9 @@
                 <!-- Toolbar Atas -->
                 <div class="pb-top-toolbar">
                     <input type="text" id="searchInput" class="search-box" placeholder="Search..." />
-                    <label style="font-size:13px; margin:0 4px 0 10px; font-weight:500;">Dari:</label>
-                    <input type="date" id="dateFrom" />
-                    <label style="font-size:13px; margin:0 4px 0 10px; font-weight:500;">Sampai:</label>
-                    <input type="date" id="dateTo" />
                     <div class="pb-top-toolbar-right">
                         <button class="btn-zahir btn-zahir-primary" onclick="loadData()"><i class="fas fa-sync-alt"></i> Update</button>
-                        <button class="btn-zahir btn-zahir-secondary" onclick="toggleFilter()"><i class="fas fa-filter"></i> Filter</button>
+                        <button class="btn-zahir btn-zahir-secondary" onclick="openFilterModal()"><i class="fas fa-filter"></i> Filter</button>
                     </div>
                 </div>
 
@@ -468,12 +464,84 @@
     </div>
 </div>
 
+<!-- Modal Filter Data (Zahir Style) -->
+<div class="modal fade zahir-modal" id="modalFilter" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 500px;" role="document">
+        <div class="modal-content" style="border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+            <div class="modal-header d-flex align-items-center justify-content-between" style="background: #fff; border-bottom: none; padding: 16px 20px 0 20px;">
+                <h5 class="modal-title font-weight-bold" style="color: #1e293b; font-size: 17px;">Filter Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="outline: none;">
+                    <span aria-hidden="true" style="font-size: 22px; color: #64748b;">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 12px 20px 16px 20px;">
+                <!-- Tab Standar Zahir -->
+                <div class="mb-4">
+                    <div style="display: inline-block; background-color: var(--zahir-blue); color: #fff; font-size: 13px; font-weight: 600; padding: 6px 18px; border-radius: 4px;">
+                        Standar
+                    </div>
+                </div>
+
+                <form id="formFilterPenyesuaian">
+                    <!-- Tanggal -->
+                    <div class="form-group row align-items-center mb-3">
+                        <label class="col-sm-3 col-form-label text-sm-right font-weight-500" style="font-size: 13px; color: #334155;">Tanggal :</label>
+                        <div class="col-sm-9">
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <div class="d-flex align-items-center" style="gap: 5px; flex: 1;">
+                                    <span style="font-size: 12px; color: #64748b; white-space: nowrap;">Dari :</span>
+                                    <input type="date" id="filterDateFrom" class="form-control form-zahir-control" style="height: 32px; font-size: 12px; padding: 3px 6px;">
+                                </div>
+                                <div>
+                                    <button type="button" id="btn-copy-date-pb" class="btn btn-sm btn-light" title="Terapkan tanggal yang sama pada kolom Hingga" style="height: 28px; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 4px; color: #475569; cursor: pointer; background: #f8fafc; font-weight: bold; transition: all 0.15s;">
+                                        <i class="fas fa-chevron-right" style="font-size: 11px;"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center" style="gap: 5px; flex: 1;">
+                                    <span style="font-size: 12px; color: #64748b; white-space: nowrap;">Hingga :</span>
+                                    <input type="date" id="filterDateTo" class="form-control form-zahir-control" style="height: 32px; font-size: 12px; padding: 3px 6px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="form-group row align-items-center mb-4">
+                        <label class="col-sm-3 col-form-label text-sm-right font-weight-500" style="font-size: 13px; color: #334155;">Status :</label>
+                        <div class="col-sm-9">
+                            <select id="filterStatus" class="form-control form-zahir-control" style="height: 32px; font-size: 13px; padding: 3px 8px; width: 140px;">
+                                <option value="Semua">Semua</option>
+                                <option value="Posted">Posted</option>
+                                <option value="Unposted">Unposted</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end" style="gap: 10px; border-top: 1px solid #eef2f5; padding-top: 14px;">
+                        <button type="button" class="btn btn-zahir btn-zahir-primary" data-dismiss="modal" style="min-width: 80px; font-size: 13px; padding: 5px 14px;">
+                            <u>B</u>atal
+                        </button>
+                        <button type="button" class="btn btn-zahir btn-zahir-primary" id="btn-apply-filter-pb" style="min-width: 80px; font-size: 13px; padding: 5px 14px;">
+                            <u>O</u>K
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 var BASE = '<?= base_url(); ?>';
 var selectedId = null;
 var selectedRow = null;
 var allData = [];
 var contextMenuId = null;
+var currentFilter = {
+    date_from: '',
+    date_to: '',
+    status: 'Semua'
+};
 
 $(document).ready(function() {
     loadData();
@@ -516,7 +584,32 @@ $(document).ready(function() {
         if (!contextMenuId) return;
         window.open(BASE + 'persediaan/penyesuaian_barang/print_receipt/' + contextMenuId, '_blank');
     });
+
+    // Copy tanggal Dari ke Hingga saat tombol > diklik
+    $(document).on('click', '#btn-copy-date-pb', function() {
+        var dateFrom = $('#filterDateFrom').val();
+        if (dateFrom) {
+            $('#filterDateTo').val(dateFrom);
+        }
+    });
+
+    // Terapkan filter saat klik OK di modal
+    $(document).on('click', '#btn-apply-filter-pb', function() {
+        currentFilter.date_from = $('#filterDateFrom').val();
+        currentFilter.date_to = $('#filterDateTo').val();
+        currentFilter.status = $('#filterStatus').val();
+        $('#modalFilter').modal('hide');
+        loadData();
+    });
 });
+
+// Buka modal filter
+function openFilterModal() {
+    $('#filterDateFrom').val(currentFilter.date_from);
+    $('#filterDateTo').val(currentFilter.date_to);
+    $('#filterStatus').val(currentFilter.status || 'Semua');
+    $('#modalFilter').modal('show');
+}
 
 // Muat data dari server
 function loadData() {
@@ -527,8 +620,9 @@ function loadData() {
 
     $.post(BASE + 'persediaan/penyesuaian_barang/get_data', {
         search: $('#searchInput').val(),
-        date_from: $('#dateFrom').val(),
-        date_to: $('#dateTo').val()
+        date_from: currentFilter.date_from,
+        date_to: currentFilter.date_to,
+        status: currentFilter.status
     }, function(res) {
         $('#loadingOverlay').addClass('hidden');
         if (res.success) {
@@ -701,11 +795,6 @@ function doPrint() {
 // Tutup (kembali ke dashboard)
 function doClose() {
     window.location.href = BASE + 'dashboard';
-}
-
-// Filter toggle
-function toggleFilter() {
-    loadData();
 }
 
 // Search enter

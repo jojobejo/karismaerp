@@ -55,6 +55,9 @@ class C_BukuBesar extends CI_Controller
     public function jurnal_umum_list()
     {
         $search = $this->input->get_post('search');
+        $date_from = $this->input->get_post('date_from');
+        $date_to = $this->input->get_post('date_to');
+        $status = $this->input->get_post('status');
         
         $this->db->select('j.*');
         $this->db->from('tbkeu_jurnal j');
@@ -62,6 +65,22 @@ class C_BukuBesar extends CI_Controller
         $this->db->where('j.source_type', 'MANUAL');
         $this->db->or_where('j.posting_event', 'MANUAL_JOURNAL');
         $this->db->group_end();
+
+        if (!empty($date_from)) {
+            $this->db->where('j.tanggal_transaksi >=', $date_from);
+        }
+        if (!empty($date_to)) {
+            $this->db->where('j.tanggal_transaksi <=', $date_to);
+        }
+        if (!empty($status) && $status !== 'Semua') {
+            if (strcasecmp($status, 'POSTED') === 0) {
+                $this->db->where('j.status', 'POSTED');
+            } elseif (strcasecmp($status, 'UNPOSTED') === 0 || strcasecmp($status, 'DRAFT') === 0) {
+                $this->db->where('j.status !=', 'POSTED');
+            } else {
+                $this->db->where('j.status', $status);
+            }
+        }
 
         if (!empty($search)) {
             $this->db->group_start();
@@ -71,6 +90,8 @@ class C_BukuBesar extends CI_Controller
         }
         $this->db->order_by('j.tanggal_transaksi', 'DESC');
         $this->db->order_by('j.id_jurnal', 'DESC');
+        $rows = $this->db->get()->result_array();
+
         foreach ($rows as $k => $row) {
             $rows[$k]['nilai_formatted'] = 'Rp ' . number_format($row['total_debit'], 2, ',', '.');
             $rows[$k]['tanggal_formatted'] = date('d/m/Y', strtotime($row['tanggal_transaksi']));
