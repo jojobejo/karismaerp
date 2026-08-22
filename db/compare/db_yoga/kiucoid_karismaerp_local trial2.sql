@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 21 Agu 2026 pada 09.00
+-- Waktu pembuatan: 22 Agu 2026 pada 07.50
 -- Versi server: 8.0.30
 -- Versi PHP: 7.4.33
 
@@ -1078,13 +1078,12 @@ CREATE TABLE `tberp_stock_batch` (
 --
 
 INSERT INTO `tberp_stock_batch` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `expired_date`, `qty_on_hand`, `qty_reserved`, `created_at`, `update_at`) VALUES
-(1, 'QPUPU16', '2', '101011', '2028-01-21', 25.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:21:09'),
+(1, 'QPUPU16', '2', '101011', '2028-01-21', 26.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:36:44'),
 (2, 'QCHAM04', '2', '101012', '2027-08-21', 140.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:09:38'),
 (3, 'QSPON081', '2', '101013', '2030-04-21', 1000.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:09:38'),
 (4, 'QROUN011', '2', '101015', '2028-04-21', 5832.000, 0.000, '2026-08-21 14:09:38', '2026-08-21 14:21:09'),
 (5, 'QTOMA06', '2', '101019', '2027-06-21', 25.000, 0.000, '2026-08-21 14:10:19', '2026-08-21 14:30:25'),
-(6, 'QPADI45', '2', '1010101', '2027-11-21', 1980.000, 0.000, '2026-08-21 14:12:10', '2026-08-21 15:50:58'),
-(7, 'APUPU20', '2', '101011', '2027-11-30', 1.000, 0.000, '2026-08-21 14:36:44', '2026-08-21 14:36:44');
+(6, 'QPADI45', '2', '1010101', '2027-11-21', 2000.000, 0.000, '2026-08-21 14:12:10', '2026-08-22 09:02:53');
 
 -- --------------------------------------------------------
 
@@ -1127,9 +1126,7 @@ INSERT INTO `tberp_stock_ledger` (`id`, `kd_barang`, `gudang_id`, `no_lot`, `exp
 (15, 'QPUPU16', '2', '101011', '2028-01-21', 25.000, 'OUT', 'SO/210826/0001', 'FAKTUR PENJUALAN', '2026-08-21 14:21:09'),
 (16, 'QROUN011', '2', '101015', '2028-04-21', 168.000, 'OUT', 'SO/210826/0001', 'FAKTUR PENJUALAN', '2026-08-21 14:21:09'),
 (17, 'QTOMA06', '2', '101019', '2027-06-21', 35.000, 'RBELI', 'RBELI-20260821-0001', 'RETUR_PEMBELIAN', '2026-08-21 14:30:25'),
-(18, 'APUPU20', '2', '101011', '2027-11-30', 1.000, 'RJUAL', 'RP/210826/0001', 'RETUR_PENJUALAN', '2026-08-21 14:36:44'),
-(19, 'QPADI45', '2', '', NULL, 10.000, 'ADJOUT', 'APB210826-01', 'PENYESUAIAN', '2026-08-21 14:44:42'),
-(20, 'QPADI45', '2', '', NULL, 10.000, 'ADJOUT', 'APB210826-01', 'PENYESUAIAN', '2026-08-21 15:47:00');
+(27, 'QPUPU16', '2', '101011', '2028-01-21', 1.000, 'RJUAL', 'RP/210826/0001', 'RETUR_PENJUALAN', '2026-08-21 14:36:44');
 
 -- --------------------------------------------------------
 
@@ -2491,11 +2488,10 @@ INSERT INTO `tbkeu_jurnal` (`id_jurnal`, `nomor_jurnal`, `id_jenis_jurnal`, `tan
 (11, 'KM-21082600001', 30, '2026-08-21', NULL, 'Penerimaan dari Rizky Jaya, CV via Q Kas', 'KEUANGAN', 'PEMBAYARAN_FAKTUR', '3', 'DINV2108260002', NULL, 'POSTED', 425000.0000, 425000.0000, NULL, NULL, 211, '2026-08-21 14:27:19', NULL, '2026-08-21 14:27:19', 211, '2026-08-21 14:27:19', NULL, NULL, NULL, NULL, NULL, 0),
 (12, 'GJ-21082600002', 1, '2026-08-21', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600002', 'GJ-21082600002', 'MANUAL_JOURNAL', 'POSTED', 500000.0000, 500000.0000, NULL, NULL, 205, '2026-08-21 14:28:35', 205, '2026-08-21 14:28:35', 205, '2026-08-21 14:28:35', NULL, NULL, NULL, NULL, NULL, 1),
 (13, 'PJ-202608-00004', 11, '2026-08-26', 26, 'Retur pembelian RBELI-20260821-0001', 'LOGISTIK', 'RETUR_PEMBELIAN', '1', 'RBELI-20260821-0001', 'PURCHASE_RETURN', 'POSTED', 1225000.0000, 1225000.0000, NULL, 'PURCHASE_RETURN-1', 0, '2026-08-21 14:30:25', 0, '2026-08-21 14:30:25', 0, '2026-08-21 14:30:25', NULL, NULL, NULL, NULL, NULL, 0),
-(14, 'RJP-21082600001', NULL, '2026-08-21', NULL, 'Retur Penjualan RP/210826/0001 (Customer: Rizky Jaya, CV)', 'SALES', 'RETUR_PENJUALAN', '1', 'RP/210826/0001', NULL, 'POSTED', 50000.0000, 50000.0000, NULL, NULL, 222, '2026-08-21 14:39:02', NULL, '2026-08-21 14:39:02', 222, '2026-08-21 14:39:02', NULL, NULL, NULL, NULL, NULL, 0),
-(15, 'APB210826-01', 12, '2026-08-21', 26, 'Penyesuaian Persediaan', 'PERSEDIAAN', 'PENYESUAIAN_BARANG', '1', 'APB210826-01', 'STOCK_ADJUSTMENT', 'POSTED', 1187500.0000, 1187500.0000, NULL, 'STOCK_ADJUSTMENT-1-APB210826-01', 205, '2026-08-21 14:44:42', 205, '2026-08-21 14:44:42', 205, '2026-08-21 14:44:42', NULL, NULL, NULL, NULL, NULL, 0),
 (16, 'B250000001', 2, '2026-08-21', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202608-00001', 'BYS-202608-00001', 'SUPPLIER_PAYMENT', 'POSTED', 100000000.0000, 100000000.0000, NULL, 'SUPPLIER_PAYMENT-BYS-202608-00001', 205, '2026-08-21 14:46:03', 205, '2026-08-21 14:46:03', 205, '2026-08-21 14:46:03', NULL, NULL, NULL, NULL, NULL, 0),
 (17, 'B250000002', 2, '2026-10-05', 26, 'Pembayaran supplier Pupuk Karya Polowijo, PT', 'KEUANGAN', 'SUPPLIER_PAYMENT', 'BYS-202610-00001', 'BYS-202610-00001', 'SUPPLIER_PAYMENT', 'POSTED', 20000000.0000, 20000000.0000, NULL, 'SUPPLIER_PAYMENT-BYS-202610-00001', 205, '2026-08-21 14:47:25', 205, '2026-08-21 14:47:25', 205, '2026-08-21 14:47:25', NULL, NULL, NULL, NULL, NULL, 0),
-(18, 'GJ-21082600003', 1, '2026-09-05', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600003', 'GJ-21082600003', 'MANUAL_JOURNAL', 'POSTED', 23529412.0000, 23529412.0000, NULL, NULL, 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', NULL, NULL, NULL, NULL, NULL, 1);
+(18, 'GJ-21082600003', 1, '2026-09-05', 26, 'Jurnal Umum', 'ACCOUNTING', 'MANUAL', 'GJ-21082600003', 'GJ-21082600003', 'MANUAL_JOURNAL', 'POSTED', 23529412.0000, 23529412.0000, NULL, NULL, 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', 205, '2026-08-21 14:50:55', NULL, NULL, NULL, NULL, NULL, 1),
+(28, 'RJP-22082600001', NULL, '2026-08-21', NULL, 'Retur Penjualan RP/210826/0001 (Customer: Rizky Jaya, CV)', 'SALES', 'RETUR_PENJUALAN', '1', 'RP/210826/0001', NULL, 'POSTED', 91441.4400, 91441.4400, NULL, NULL, 222, '2026-08-21 14:39:02', NULL, '2026-08-22 10:35:17', 222, '2026-08-21 14:39:02', NULL, NULL, NULL, NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -2556,17 +2552,18 @@ INSERT INTO `tbkeu_jurnal_detail` (`id_jurnal_detail`, `id_jurnal`, `nomor_baris
 (27, 12, 3, 461, 'Jurnal Umum', 0.0000, 425000.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600002', '2026-08-21 14:28:35', '2026-08-21 14:28:35'),
 (28, 13, 1, 207, 'RBELI-PH-BKPS - Piutang Non Dagang Retur Pembelian Belum Dipotong', 1225000.0000, 0.0000, NULL, 185, NULL, 2, NULL, NULL, 'RBELI-20260821-0001', '2026-08-21 14:30:25', '2026-08-21 14:30:25'),
 (29, 13, 2, 224, 'RBELI-PH-BKPS - Persediaan Brg Dagangan BKPS', 0.0000, 1225000.0000, NULL, 185, NULL, 2, NULL, NULL, 'RBELI-20260821-0001', '2026-08-21 14:30:25', '2026-08-21 14:30:25'),
-(30, 14, 1, 316, 'Retur Penjualan (A Retur Penjualan) - RP/210826/0001', 50000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
-(31, 14, 2, 279, 'Hutang Retur RP/210826/0001', 0.0000, 50000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
-(32, 15, 1, 308, 'Penyesuaian Persediaan', 1187500.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB210826-01', '2026-08-21 14:44:42', '2026-08-21 14:44:42'),
-(33, 15, 2, 224, 'Penyesuaian Persediaan', 0.0000, 1187500.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'APB210826-01', '2026-08-21 14:44:42', '2026-08-21 14:44:42'),
 (34, 16, 1, 190, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.0000, 100000000.0000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202608-00001', '2026-08-21 14:46:03', '2026-08-21 14:46:03'),
 (35, 16, 2, 462, 'Pembayaran supplier Pupuk Karya Polowijo, PT - 2600001', 100000000.0000, 0.0000, NULL, 276, NULL, NULL, NULL, NULL, '2600001', '2026-08-21 14:46:03', '2026-08-21 14:46:03'),
 (36, 17, 1, 95, 'Pembayaran supplier Pupuk Karya Polowijo, PT - Kas/Bank', 0.0000, 20000000.0000, NULL, 276, NULL, NULL, NULL, NULL, 'BYS-202610-00001', '2026-08-21 14:47:25', '2026-08-21 14:47:25'),
 (37, 17, 2, 462, 'Pembayaran supplier Pupuk Karya Polowijo, PT - 2600001', 20000000.0000, 0.0000, NULL, 276, NULL, NULL, NULL, NULL, '2600001', '2026-08-21 14:47:25', '2026-08-21 14:47:25'),
 (38, 18, 1, 462, 'Jurnal Umum', 20000000.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
 (39, 18, 2, 489, 'Jurnal Umum', 3529412.0000, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
-(40, 18, 3, 182, 'Jurnal Umum', 0.0000, 23529412.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55');
+(40, 18, 3, 182, 'Jurnal Umum', 0.0000, 23529412.0000, NULL, NULL, NULL, NULL, NULL, NULL, 'GJ-21082600003', '2026-08-21 14:50:55', '2026-08-21 14:50:55'),
+(53, 28, 1, 310, 'Retur Penjualan (Q Retur Penjualan BKP) - RP/210826/0001', 45045.0500, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(54, 28, 2, 280, 'PPN Retur RP/210826/0001', 4954.9500, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(55, 28, 3, 279, 'Hutang Retur RP/210826/0001', 0.0000, 50000.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(56, 28, 4, 102, 'Reversal Persediaan Retur (Persediaan # 1) - RP/210826/0001', 41441.4400, 0.0000, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02'),
+(57, 28, 5, 160, 'Reversal HPP Retur (Harga Pokok Penjualan # 1) - RP/210826/0001', 0.0000, 41441.4400, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-08-21 14:39:02', '2026-08-21 14:39:02');
 
 -- --------------------------------------------------------
 
@@ -2600,7 +2597,6 @@ INSERT INTO `tbkeu_jurnal_log` (`id_log`, `id_jurnal`, `action`, `message`, `cre
 (10, 12, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-21 14:28:35'),
 (11, 12, 'POSTED', 'Posting manual jurnal', 205, '2026-08-21 14:28:35'),
 (12, 13, 'POSTED', 'Retur pembelian RBELI-20260821-0001', 0, '2026-08-21 14:30:25'),
-(13, 15, 'POSTED', 'Penyesuaian Persediaan', 205, '2026-08-21 14:44:42'),
 (14, 16, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:46:03'),
 (15, 17, 'POSTED', 'Pembayaran supplier Pupuk Karya Polowijo, PT', 205, '2026-08-21 14:47:25'),
 (16, 18, 'DRAFT_CREATED', 'Jurnal Umum', 205, '2026-08-21 14:50:55'),
@@ -3945,7 +3941,7 @@ CREATE TABLE `tbkmt_dca` (
 
 INSERT INTO `tbkmt_dca` (`id`, `tanggal_dca`, `bulan`, `tahun`, `id_wilayah`, `nama_mdo`, `abm`, `uraian`, `um`, `refund`, `real_biaya`, `total_biaya`, `status_verifikasi`, `verified_by`, `verified_at`, `verified_notes`, `created_by`, `created_at`) VALUES
 (1, '2026-04-08', 4, '2026', 1, 'avan', 'acep', 'Multi Kegiatan', 1000000.00, 899900.00, 100100.00, 100100.00, 1, 0, '2026-04-24 04:31:11', '', NULL, '2026-04-08 09:47:25'),
-(2, '2026-04-24', 4, '2026', 1, 'oke', 'kiuabm', 'Multi Kegiatan', 1000000.00, 500000.00, 500000.00, 500000.00, 0, NULL, NULL, NULL, 0, '2026-04-24 05:30:36');
+(2, '2026-04-24', 4, '2026', 1, 'oke', 'kiuabm', 'Multi Kegiatan', 1000000.00, 500000.00, 500000.00, 500000.00, 1, 0, '2026-08-22 02:32:38', 'kurang teliti', 0, '2026-04-24 05:30:36');
 
 -- --------------------------------------------------------
 
@@ -4043,7 +4039,8 @@ CREATE TABLE `tbkmt_dca_verifikasi_log` (
 INSERT INTO `tbkmt_dca_verifikasi_log` (`id`, `id_dca`, `aksi`, `id_user`, `nama_user`, `catatan`, `created_at`) VALUES
 (1, 1, 'verifikasi', 0, '', 'lengkap', '2026-04-24 04:17:43'),
 (2, 1, 'batal_verifikasi', 0, '', 'revisi', '2026-04-24 04:23:18'),
-(3, 1, 'verifikasi', 0, '', '', '2026-04-24 04:31:11');
+(3, 1, 'verifikasi', 0, '', '', '2026-04-24 04:31:11'),
+(4, 2, 'verifikasi', 0, '', 'kurang teliti', '2026-08-22 02:32:38');
 
 -- --------------------------------------------------------
 
@@ -22775,7 +22772,7 @@ CREATE TABLE `tbrp_retur_penjualan_detail` (
 --
 
 INSERT INTO `tbrp_retur_penjualan_detail` (`id_retur_detail`, `id_retur`, `id_spr_detail`, `no_urut`, `kd_barang`, `nama_barang`, `satuan`, `no_faktur`, `no_batch`, `expired_date`, `qty_retur`, `harga_satuan`) VALUES
-(1, 1, 1, 1, 'APUPU20', 'Pupuk MagneWish Powder 10 kg', 'Zak', 'DINV2108260002', '101011', '2027-11-30', 1.000, 50000.00);
+(1, 1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'Zak', 'DINV2108260002', '101011', '2028-01-21', 1.000, 50000.00);
 
 -- --------------------------------------------------------
 
@@ -22884,7 +22881,7 @@ CREATE TABLE `tbrp_spr_detail` (
 --
 
 INSERT INTO `tbrp_spr_detail` (`id_spr_detail`, `id_spr`, `no_urut`, `kd_barang`, `nama_barang`, `no_faktur`, `no_batch`, `expired_date`, `harga`, `qty`, `alasan_brg_bermasalah`, `alasan_brg_bermasalah_opt`, `alasan_expired`, `alasan_expired_opt`, `alasan_tidak_laku`, `alasan_tes_market`, `alasan_bad_debt`, `alasan_harga_tidak_sesuai`, `alasan_spr_intern`, `alasan_lainlain`) VALUES
-(1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'DINV2108260002', '101011', '2027-11-30', 50000.00, 1.000, 1, 'not_replace', 0, '', 0, 0, 0, 0, 0, '');
+(1, 1, 1, 'QPUPU16', 'Pupuk MagneWish Powder 10 kg', 'DINV2108260002', '101011', '2028-01-21', 50000.00, 1.000, 1, 'not_replace', 0, '', 0, 0, 0, 0, 0, '');
 
 -- --------------------------------------------------------
 
@@ -89783,13 +89780,13 @@ INSERT INTO `tb_karyawan` (`id`, `nik`, `nm_karyawan`, `departemen`, `jobdesk`, 
 (55, 'QIUK11111', 'kiudir', 'DEP01', 'DIREKTURCK', 'kiudir', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (56, 'QIUK11111', 'kiuks', 'DEP01', 'KADEPKS', 'kiuks', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-14 13:20:38', 1, 'AKTIF', NULL, '2026-08-14 13:20:38', NULL),
 (57, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabm', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 2, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
-(58, 'KIUKEU', 'deva', 'KEUANGAN', 'KIUKEU', 'kiukeu', NULL, '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-12 08:38:30', 1, 'AKTIF', NULL, '2026-08-12 08:38:30', NULL),
+(58, 'KIUKEU', 'deva', 'KEUANGAN', 'ADMKEU', 'kiukeu', NULL, '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-12 08:38:30', 1, 'AKTIF', NULL, '2026-08-22 09:18:13', NULL),
 (59, 'QIUK11111', 'kiuck', 'DEP01', 'MANAGERCK', 'kiuck', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 2, 2, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (63, 'QIUK11111', 'kiuks', 'DEP01', 'KADEPKS', 'kiuks', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (65, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmjt', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 1, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (66, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmjb', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 2, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (67, 'QIUK11111', 'kiuabm', 'DEP01', 'ABM', 'kiuabmntb', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 3, 3, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
-(68, 'QIUK11111', 'Reni', 'DEP012', 'SC', 'kiuscc', 'B', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-21 14:32:31', 1, 'AKTIF', NULL, '2026-08-21 14:32:31', NULL),
+(68, 'QIUK11111', 'Reni', 'DEP012', 'SC', 'kiuscc', 'B', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-22 10:24:37', 1, 'AKTIF', NULL, '2026-08-22 10:24:37', NULL),
 (69, 'QIUK11111', 'kiuhard', 'DEP012', 'ITHARD', 'kiuhard', NULL, '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, NULL, 1, 'AKTIF', NULL, '2026-07-23 11:08:22', NULL),
 (70, 'QIUK111112', 'Ariyani', 'DEP012', 'SC', 'kiuscc2', 'C', '$2y$10$45xZ2kia/xLh8gPEYD3yLuZaGIlmkGEbe5aP8BpwcreTHJhXBPLSe', 0, 3, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-21 14:16:50', 1, 'AKTIF', NULL, '2026-08-21 14:16:50', NULL),
 (71, 'ADMINSC', 'Admin SC', 'SALES', 'ADMINSC', 'admsc', 'D', '$2y$10$zHvcqR3s7A8pErXOX30Pfe8WkNE8SrTk7EJXCNUFFdhEEEWjZg21y', 0, 0, 1, NULL, '2026-07-23 11:08:21', NULL, NULL, NULL, '2026-08-18 08:34:56', 1, 'AKTIF', NULL, '2026-08-18 08:34:56', NULL),
@@ -95824,7 +95821,14 @@ INSERT INTO `tb_login_log` (`id`, `id_karyawan`, `username`, `ip_address`, `brow
 (1009, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-21 14:38:22'),
 (1010, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-21 14:39:10'),
 (1011, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-21 15:26:42'),
-(1012, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-21 15:53:21');
+(1012, 205, 'admin', '10.10.10.68', NULL, NULL, NULL, '2026-08-21 15:53:21'),
+(1013, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 08:11:24'),
+(1014, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 08:55:47'),
+(1015, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:02:48'),
+(1016, 68, 'kiuscc', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:24:37'),
+(1017, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:24:48'),
+(1018, 222, 'dirut', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 10:44:01'),
+(1019, 205, 'admin', '127.0.0.1', NULL, NULL, NULL, '2026-08-22 12:27:41');
 
 -- --------------------------------------------------------
 
@@ -117654,7 +117658,7 @@ INSERT INTO `tb_users` (`id`, `username`, `password`, `level`, `jobdesk_hrd`, `n
 (202, 'stockopname', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Gudang Opname', 'QIUK12300001', 'ADMIN_STOCKOPNAME', 'DEP02', '', 0, 0, NULL, NULL, NULL, 'ADMIN_STOCKOPNAME', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (203, 'admics5', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 5', 'QIUK00001207', 'ADMINICS', 'DEP01', '', 5, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (204, 'admics6', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin ICS 6', 'QIUK00001208', 'ADMINICS', 'DEP01', '', 6, 0, NULL, NULL, NULL, 'ADMINICS', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-08-21 15:53:21', '2026-08-18 14:57:30', '2026-08-21 15:53:21'),
+(205, 'admin', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admin', 'QIUK11111', 'ADMIN', 'DEP01', 'A', 0, 2, '', NULL, NULL, 'ADMIN', '-', '-', 1, 'AKTIF', NULL, '2026-08-22 12:27:41', '2026-08-18 14:57:30', '2026-08-22 12:27:41'),
 (206, 'admdistribusi', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Distribusi', 'QIUK00001211', 'DISTRIBUSI', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'DISTRIBUSI', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (207, 'admlpb', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'admlpb', 'QIUK1122', 'ADMINLOGLPB', 'DEP01', '', 0, 0, '', NULL, NULL, 'ADMINLOGLPB', '-', '-', 1, 'AKTIF', NULL, '2026-08-21 14:07:58', '2026-08-18 14:57:30', '2026-08-21 14:07:58'),
 (208, 'ck1', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'nando', 'QIUK1123', 'CHECKER', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'CHECKER', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
@@ -117671,7 +117675,7 @@ INSERT INTO `tb_users` (`id`, `username`, `password`, `level`, `jobdesk_hrd`, `n
 (219, 'mngacc', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager ACC', 'QIUK_MNGACC', 'MANAGERACC', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERACC', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (220, 'mngse', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Manager SE', 'QIUK_MNGSE', 'MANAGERSE', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'MANAGERSE', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (221, 'dirop', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Operasional', 'QIUK_DIROP', 'DIREKTUROP', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTUROP', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
-(222, 'dirut', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Utama', 'QIUK_DIRUT', 'DIREKTURUTAMA', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTURUTAMA', '-', '-', 1, 'AKTIF', NULL, '2026-08-21 14:38:22', '2026-08-18 14:57:30', '2026-08-21 14:38:22'),
+(222, 'dirut', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Direktur Utama', 'QIUK_DIRUT', 'DIREKTURUTAMA', 'DEP00', '', 0, 0, NULL, NULL, NULL, 'DIREKTURUTAMA', '-', '-', 1, 'AKTIF', NULL, '2026-08-22 10:44:01', '2026-08-18 14:57:30', '2026-08-22 10:44:01'),
 (223, 'admpnj', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Admin Penjualan', 'QIUK_ADMPNJ', 'ADMPNJ', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'ADMPNJ', '-', '-', 1, 'AKTIF', NULL, '2026-08-20 11:28:25', '2026-08-18 14:57:30', '2026-08-20 11:28:25'),
 (224, 'kadepub', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'Kadep Unit Bisnis', 'QIUK_KADEPUB', 'KADEPUB', 'DEP01', '', 0, 0, NULL, NULL, NULL, 'KADEPUB', '-', '-', 1, 'AKTIF', NULL, NULL, '2026-08-18 14:57:30', '2026-08-18 14:57:30'),
 (225, 'purchasing', '$2y$10$KeBGAKJTXGYXt39wb.FZYedFST5fbIuxQ8hRcHRsYTxsauhoxyNbO', 1, NULL, 'purchasing', 'QIUK_PUR', 'admin_purchasing', 'DEP01', '', 0, 0, '', NULL, NULL, 'admin_purchasing', '-', '-', 1, 'AKTIF', NULL, '2026-08-19 12:42:54', '2026-08-18 14:57:30', '2026-08-19 12:42:54');
@@ -118584,19 +118588,19 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`, `u
 -- (Lihat di bawah untuk tampilan aktual)
 --
 CREATE TABLE `v_stockbarangnk` (
-`deskripsi` text
-,`gbr_barang` text
-,`id_brg_nk` int
-,`id_satuan` int
-,`kat_barang` varchar(25)
+`kode_barangs` varchar(25)
 ,`kode_barang` varchar(25)
-,`kode_barangs` varchar(25)
 ,`nama_barang` text
+,`deskripsi` text
+,`gbr_barang` text
 ,`nama_lokasi` text
 ,`qty_in` double
 ,`qty_out` double
 ,`qty_ready` double
+,`id_satuan` int
 ,`satuan` text
+,`id_brg_nk` int
+,`kat_barang` varchar(25)
 );
 
 --
@@ -120738,7 +120742,7 @@ ALTER TABLE `tberp_stock_batch`
 -- AUTO_INCREMENT untuk tabel `tberp_stock_ledger`
 --
 ALTER TABLE `tberp_stock_ledger`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbhrd_environment_issues`
@@ -120810,19 +120814,19 @@ ALTER TABLE `tbkeu_jenis_jurnal`
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal`
 --
 ALTER TABLE `tbkeu_jurnal`
-  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id_jurnal` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_detail`
 --
 ALTER TABLE `tbkeu_jurnal_detail`
-  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id_jurnal_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_jurnal_log`
 --
 ALTER TABLE `tbkeu_jurnal_log`
-  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id_log` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_karismaerp_import_batch`
@@ -120906,13 +120910,13 @@ ALTER TABLE `tbkeu_pembayaran_faktur`
 -- AUTO_INCREMENT untuk tabel `tbkeu_penyesuaian_barang`
 --
 ALTER TABLE `tbkeu_penyesuaian_barang`
-  MODIFY `id_penyesuaian` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id_penyesuaian` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_penyesuaian_barang_detail`
 --
 ALTER TABLE `tbkeu_penyesuaian_barang_detail`
-  MODIFY `id_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_detail` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkeu_periode_fiskal`
@@ -120978,7 +120982,7 @@ ALTER TABLE `tbkmt_dca_kegiatan`
 -- AUTO_INCREMENT untuk tabel `tbkmt_dca_verifikasi_log`
 --
 ALTER TABLE `tbkmt_dca_verifikasi_log`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT untuk tabel `tbkmt_gaji`
@@ -121800,7 +121804,7 @@ ALTER TABLE `tb_loading_lk_bck`
 -- AUTO_INCREMENT untuk tabel `tb_login_log`
 --
 ALTER TABLE `tb_login_log`
-  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1013;
+  MODIFY `id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1020;
 
 --
 -- AUTO_INCREMENT untuk tabel `tb_log_confirm_sales`
