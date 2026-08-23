@@ -122,7 +122,7 @@ class M_Dashboard extends CI_Model
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
-                    $this->menu('Faktur Penjualan', 'faktur_penjualan', 'fas fa-file-invoice-dollar', 'cyan', 'Lihat semua faktur penjualan dan edit Qty retur revisi.'),
+                    $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
                     $this->menu('Stok Online', 'stock', 'fas fa-box-open', 'teal', 'Cek stok online yang dipakai kanal sales.'),
@@ -286,6 +286,7 @@ class M_Dashboard extends CI_Model
         $menus = array();
         $seenRoutes = array();
         $adminMenus = array(
+            $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, repost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.'),
             $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.'),
             $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.'),
             $this->menu('Akses Level', 'master/akses-level', 'fas fa-key', 'orange', 'Atur level akses dan matrix permission user.'),

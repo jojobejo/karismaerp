@@ -712,10 +712,16 @@ class M_Journal extends CI_Model
             $total_ppn += $ppn;
 
             // Stock/HPP reversal calculation
-            $cost_unit = $prod && (float)$prod['hrg_pokok'] > 0 ? (float)$prod['hrg_pokok'] : 0;
+            $cost_unit = ($prod && !empty($prod['hrg_pokok'])) ? (float)$prod['hrg_pokok'] : 0;
             if ($cost_unit <= 0) {
-                $fallback_prod = $this->db->get_where('tbpo_barang', ['nama_barang' => $d['nama_barang']])->row_array();
-                $cost_unit = $fallback_prod ? (float)$fallback_prod['harga_pokok'] : 0;
+                $fallback_prod = null;
+                if ($this->db->table_exists('tb_master_barang')) {
+                    $fallback_prod = $this->db->get_where('tb_master_barang', ['nm_barang' => $d['nama_barang']])->row_array();
+                }
+                if (!$fallback_prod && $this->db->table_exists('tbpo_barang')) {
+                    $fallback_prod = $this->db->get_where('tbpo_barang', ['nama_barang' => $d['nama_barang']])->row_array();
+                }
+                $cost_unit = $fallback_prod ? (float)($fallback_prod['hpp'] ?? $fallback_prod['harga_pokok'] ?? $fallback_prod['hrg_pokok'] ?? 0) : 0;
             }
             $cost_total = round((float)$d['qty_retur'] * $cost_unit, 2);
 

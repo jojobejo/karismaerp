@@ -66,6 +66,18 @@ $route['dashboard']                                 = 'Dashboard/index';
 $route['dashboad']                                  = 'Dashboard/index';
 $route['dasboard']                                  = 'Dashboard/index';
 
+// MODUL SEMUA TRANSAKSI (ADMIN & ADMPNJ)
+$route['admin/transaksi']                                    = 'admin/C_Transaksi/index';
+$route['admin/transaksi/data']                               = 'admin/C_Transaksi/ajax_get_transactions';
+$route['admin/transaksi/detail/(:any)/(:any)']               = 'admin/C_Transaksi/ajax_get_detail/$1/$2';
+$route['admin/transaksi/journal-preview/(:any)/(:any)']      = 'admin/C_Transaksi/ajax_get_journal_preview/$1/$2';
+$route['admin/transaksi/edit-data/(:any)/(:any)']            = 'admin/C_Transaksi/ajax_get_edit_data/$1/$2';
+$route['admin/transaksi/update']                             = 'admin/C_Transaksi/ajax_update_transaction';
+$route['admin/transaksi/repost']                             = 'admin/C_Transaksi/ajax_repost_transaction';
+$route['admin/transaksi/delete']                             = 'admin/C_Transaksi/ajax_delete_transaction';
+$route['admin/transaksi/activity-logs']                      = 'admin/C_Transaksi/ajax_get_activity_logs';
+$route['transaksi']                                          = 'admin/C_Transaksi/index';
+
 // STOCKOPNAME
 $route['admin/stockopname']                        = 'admin/C_Stockopname/index';
 $route['admin/stockopname/monitoring']             = 'admin/C_Stockopname/monitoring';
@@ -1016,8 +1028,8 @@ $route['hrd/penilaian_lingkungan/ratings']         = 'hrd/C_Hrd/get_hrd_ratings'
 $route['hrd/penilaian_lingkungan/ratings/save']    = 'hrd/C_Hrd/save_hrd_rating';
 $route['hrd/penilaian_lingkungan/ratings/delete']  = 'hrd/C_Hrd/delete_hrd_rating';
 
-// Faktur Penjualan
-$route['faktur_penjualan']                         = 'sales/C_FakturPenjualan/index';
-$route['faktur_penjualan/activity_log']            = 'sales/C_FakturPenjualan/activity_log';
-$route['faktur_penjualan/edit_qty/(:any)']         = 'sales/C_FakturPenjualan/edit_qty/$1';
-$route['faktur_penjualan/update_qty/(:any)']       = 'sales/C_FakturPenjualan/update_qty/$1';
+// Faktur Penjualan (Telah dialihkan ke Modul Transaksi)
+$route['faktur_penjualan']                         = 'admin/C_Transaksi/index';
+$route['faktur_penjualan/activity_log']            = 'admin/C_Transaksi/index';
+$route['faktur_penjualan/edit_qty/(:any)']         = 'admin/C_Transaksi/index';
+$route['faktur_penjualan/update_qty/(:any)']       = 'admin/C_Transaksi/index';
