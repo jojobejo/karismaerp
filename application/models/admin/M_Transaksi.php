@@ -170,7 +170,11 @@ class M_Transaksi extends CI_Model
                         ps.created_at AS created_at
                     FROM tbkeu_pembayaran ps
                     LEFT JOIN tbpo_suplier s ON s.id_suplier = ps.id_supplier
-                    LEFT JOIN tbkeu_jurnal j ON (j.id_jurnal = ps.id_jurnal OR (j.source_module = 'KEUANGAN' AND j.source_id = CAST(ps.id_pembayaran AS CHAR)))
+                    LEFT JOIN tbkeu_jurnal j ON (
+                        (ps.id_jurnal IS NOT NULL AND ps.id_jurnal > 0 AND j.id_jurnal = ps.id_jurnal)
+                        OR (j.source_module = 'KEUANGAN' AND j.source_type = 'SUPPLIER_PAYMENT' AND (j.source_id = CAST(ps.id_pembayaran AS CHAR) OR j.source_id = ps.nomor_pembayaran OR j.source_no = ps.nomor_pembayaran))
+                        OR (j.idempotency_key = CONCAT('SUPPLIER_PAYMENT-', ps.nomor_pembayaran))
+                    )
                     WHERE ps.payment_type = 'SUPPLIER_PAYMENT' 
                       AND ps.tanggal_pembayaran >= ? AND ps.tanggal_pembayaran <= ?
                 ";

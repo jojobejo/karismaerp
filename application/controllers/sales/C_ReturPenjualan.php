@@ -1212,6 +1212,12 @@ class C_ReturPenjualan extends CI_Controller
             if (empty($nb)) continue;
 
             $kb = !empty($kd_barang_arr[$i]) ? $kd_barang_arr[$i] : '';
+            if (empty($kb) && !empty($id_spr_detail[$i])) {
+                $sprDet = $this->db->get_where('tbrp_spr_detail', ['id_spr_detail' => (int)$id_spr_detail[$i]])->row_array();
+                if ($sprDet && !empty($sprDet['kd_barang'])) {
+                    $kb = $sprDet['kd_barang'];
+                }
+            }
             if (empty($kb)) {
                 // cari kd_barang dari db jika inputnya kosong
                 $mb = $this->db->get_where('tbpo_barang', ['nama_barang' => $nb])->row_array();

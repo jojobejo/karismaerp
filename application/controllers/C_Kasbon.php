@@ -30,10 +30,28 @@ class C_Kasbon extends CI_Controller
         $data['page_title'] = 'Daftar Kas Bon';
         $data['user'] = $user;
         
-        $data['kasbon'] = $this->M_Kasbon->get_kasbon_for_user($user);
+        $data['kasbon']           = $this->M_Kasbon->get_kasbon_for_user($user);
+        $data['approval_history'] = $this->M_Kasbon->get_approval_history_for_user($user);
+        $data['is_approver']       = $this->M_Kasbon->is_approver_user($user);
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/kasbon/list.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    /**
+     * Halaman Riwayat Approval Kas Bon (khusus pengajuan yang telah disetujui / diproses sebelumnya).
+     */
+    public function history()
+    {
+        $user = $this->_getUser();
+        $data['page_title']       = 'Riwayat Approval Kas Bon';
+        $data['user']             = $user;
+        $data['approval_history'] = $this->M_Kasbon->get_approval_history_for_user($user);
+        $data['is_approver']       = $this->M_Kasbon->is_approver_user($user);
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/kasbon/history.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 

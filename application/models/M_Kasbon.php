@@ -26,13 +26,16 @@ class M_Kasbon extends CI_Model
      * Label tampilan yang ramah untuk setiap kode jobdesk approver.
      */
     public $approver_labels = [
-        'MNGSC'   => 'Manager SC',
-        'KADEPSC' => 'Kepala Departemen SC',
-        'KASIR'   => 'Kasir',
-        'SC'      => 'Staff SC',
-        'ADMSC'   => 'Admin SC',
-        'ADMIN'   => 'Admin',
-        'HRD'     => 'HRD',
+        'MNGSC'      => 'Manager SC',
+        'MANAGERSC'  => 'Manager SC',
+        'KADEPSC'    => 'Kepala Departemen SC',
+        'KADEP_SC'   => 'Kepala Departemen SC',
+        'KASIR'      => 'Kasir',
+        'SC'         => 'Staff SC',
+        'ADMSC'      => 'Admin SC',
+        'ADMINSC'    => 'Admin SC',
+        'ADMIN'      => 'Admin',
+        'HRD'        => 'HRD',
     ];
 
     public function __construct()
@@ -73,13 +76,78 @@ class M_Kasbon extends CI_Model
     }
 
     /**
+     * Normalisasi kode jobdesk ke standar singkatan.
+     */
+    public function normalize_jobdesk($jobdesk)
+    {
+        $code = strtoupper(trim((string)$jobdesk));
+        $map = [
+            'MANAGERSC'   => 'MNGSC',
+            'MANAGER_SC'  => 'MNGSC',
+            'MANAGERACC'  => 'MNGACC',
+            'MANAGER_ACC' => 'MNGACC',
+            'MANAGERSE'   => 'MNGSE',
+            'MANAGER_SE'  => 'MNGSE',
+            'MANAGERWH'   => 'MNGWH',
+            'MANAGER_WH'  => 'MNGWH',
+            'ADMINSC'     => 'ADMSC',
+            'ADMIN_SC'    => 'ADMSC',
+            'KADEP_SC'    => 'KADEPSC',
+            'KADEP_UB'    => 'KADEPUB',
+            'KADEP_KS'    => 'KADEPKS',
+        ];
+        return $map[$code] ?? $code;
+    }
+
+    /**
+     * Mengembalikan daftar alias jobdesk yang setara.
+     * Contoh: 'MANAGERSC' atau 'MNGSC' -> ['MNGSC', 'MANAGERSC', 'MANAGER_SC']
+     */
+    public function get_jobdesk_aliases($jobdesk)
+    {
+        $norm = $this->normalize_jobdesk($jobdesk);
+        $raw  = strtoupper(trim((string)$jobdesk));
+
+        $aliasMap = [
+            'MNGSC'   => ['MNGSC', 'MANAGERSC', 'MANAGER_SC', 'MANAGER SC'],
+            'MNGACC'  => ['MNGACC', 'MANAGERACC', 'MANAGER_ACC', 'MANAGER ACC'],
+            'MNGSE'   => ['MNGSE', 'MANAGERSE', 'MANAGER_SE', 'MANAGER SE'],
+            'MNGWH'   => ['MNGWH', 'MANAGERWH', 'MANAGER_WH', 'MANAGER WH'],
+            'ADMSC'   => ['ADMSC', 'ADMINSC', 'ADMIN_SC', 'ADMIN SC'],
+            'KADEPSC' => ['KADEPSC', 'KADEP_SC', 'KADEP SC'],
+            'KADEPUB' => ['KADEPUB', 'KADEP_UB', 'KADEP UB'],
+            'KADEPKS' => ['KADEPKS', 'KADEP_KS', 'KADEP KS'],
+        ];
+
+        if (isset($aliasMap[$norm])) {
+            return $aliasMap[$norm];
+        }
+
+        foreach ($aliasMap as $list) {
+            if (in_array($norm, $list) || in_array($raw, $list)) {
+                return $list;
+            }
+        }
+
+        return array_unique(array_filter([$norm, $raw]));
+    }
+
+    /**
      * Mengembalikan array rantai approver (jobdesk) untuk jobdesk pemohon tertentu.
      * Contoh: 'SC' => ['MNGSC', 'KADEPSC']
      */
     public function get_approval_chain($jobdesk_pemohon)
     {
-        $key = strtoupper(trim((string)$jobdesk_pemohon));
-        return isset($this->approval_chains[$key]) ? $this->approval_chains[$key] : [];
+        $raw = strtoupper(trim((string)$jobdesk_pemohon));
+        $norm = $this->normalize_jobdesk($raw);
+
+        if (isset($this->approval_chains[$norm])) {
+            return $this->approval_chains[$norm];
+        }
+        if (isset($this->approval_chains[$raw])) {
+            return $this->approval_chains[$raw];
+        }
+        return [];
     }
 
     /**
@@ -97,16 +165,18 @@ class M_Kasbon extends CI_Model
      */
     public function get_kasbon_for_user($user)
     {
-        $id_user = $user['id'];
-        $jobdesk = strtoupper(trim((string)$user['jobdesk']));
+        $id_user        = $user['id'];
+        $jobdesk_raw    = strtoupper(trim((string)($user['jobdesk'] ?? '')));
+        $jobdesk_norm   = $this->normalize_jobdesk($jobdesk_raw);
+        $jobdesk_aliases= $this->get_jobdesk_aliases($jobdesk_raw);
 
         // KADEPSC dan ADMIN melihat semua pengajuan kasbon
-        if (in_array($jobdesk, ['KADEPSC', 'ADMIN'])) {
+        if (in_array($jobdesk_norm, ['KADEPSC', 'ADMIN']) || in_array($jobdesk_raw, ['KADEPSC', 'ADMIN'])) {
             return $this->get_all_kasbon();
         }
 
         // KASIR melihat kasbon miliknya + semua yang berstatus approved (siap cair)
-        if ($jobdesk === 'KASIR') {
+        if ($jobdesk_norm === 'KASIR' || $jobdesk_raw === 'KASIR') {
             $this->db->select('*');
             $this->db->from('tb_kasbon');
             $this->db->group_start();
@@ -117,7 +187,7 @@ class M_Kasbon extends CI_Model
             return $this->db->get()->result_array();
         }
 
-        // User biasa: pengajuan milik sendiri + kasbon yang menunggu approval dari jobdesk ini
+        // User biasa / Approver: pengajuan milik sendiri + kasbon yang menunggu approval dari jobdesk ini
         $this->db->select('*');
         $this->db->from('tb_kasbon');
         $this->db->group_start();
@@ -125,16 +195,16 @@ class M_Kasbon extends CI_Model
         // Milik sendiri
         $this->db->where('id_user', $id_user);
 
-        // Menunggu approval stage 1 dari jobdesk ini
+        // Menunggu approval stage 1 dari jobdesk ini (cocokkan approver_1 dengan semua variasi jobdesk)
         $this->db->or_group_start();
         $this->db->where('status', 'pending_atasan');
-        $this->db->where('approver_1', $jobdesk);
+        $this->db->where_in('approver_1', $jobdesk_aliases);
         $this->db->group_end();
 
-        // Menunggu approval stage 2 dari jobdesk ini
+        // Menunggu approval stage 2 dari jobdesk ini (cocokkan approver_2 dengan semua variasi jobdesk)
         $this->db->or_group_start();
         $this->db->where('status', 'pending_penilai');
-        $this->db->where('approver_2', $jobdesk);
+        $this->db->where_in('approver_2', $jobdesk_aliases);
         $this->db->group_end();
 
         $this->db->group_end();
@@ -148,16 +218,19 @@ class M_Kasbon extends CI_Model
      */
     public function can_approve($row, $session_user)
     {
-        $jobdesk = strtoupper(trim((string)$session_user['jobdesk']));
+        $jobdesk_raw     = strtoupper(trim((string)($session_user['jobdesk'] ?? '')));
+        $jobdesk_aliases = $this->get_jobdesk_aliases($jobdesk_raw);
 
         // Stage 1: menunggu approver_1
         if ($row['status'] === 'pending_atasan') {
-            return ($jobdesk === strtoupper(trim((string)($row['approver_1'] ?? ''))));
+            $approver_1 = strtoupper(trim((string)($row['approver_1'] ?? '')));
+            return in_array($approver_1, $jobdesk_aliases);
         }
 
         // Stage 2: menunggu approver_2
         if ($row['status'] === 'pending_penilai') {
-            return ($jobdesk === strtoupper(trim((string)($row['approver_2'] ?? ''))));
+            $approver_2 = strtoupper(trim((string)($row['approver_2'] ?? '')));
+            return in_array($approver_2, $jobdesk_aliases);
         }
 
         return false;
@@ -169,7 +242,70 @@ class M_Kasbon extends CI_Model
      */
     public function can_cair($row, $session_user)
     {
-        return ($row['status'] === 'approved' && strtoupper((string)$session_user['jobdesk']) === 'KASIR');
+        $jobdesk_raw = strtoupper(trim((string)($session_user['jobdesk'] ?? '')));
+        return ($row['status'] === 'approved' && in_array($jobdesk_raw, ['KASIR']));
+    }
+
+    /**
+     * Mengecek apakah user memiliki role/kapabilitas approver (Manager, Kadep, Admin, Kasir).
+     */
+    public function is_approver_user($user)
+    {
+        $jobdesk_raw  = strtoupper(trim((string)($user['jobdesk'] ?? '')));
+        $jobdesk_norm = $this->normalize_jobdesk($jobdesk_raw);
+        $approver_roles = ['MNGSC', 'MANAGERSC', 'KADEPSC', 'KADEP_SC', 'ADMIN', 'KASIR', 'HRD', 'MNGACC', 'MANAGERACC', 'MNGSE', 'MANAGERSE', 'MNGWH', 'MANAGERWH'];
+        return in_array($jobdesk_norm, $approver_roles) || in_array($jobdesk_raw, $approver_roles);
+    }
+
+    /**
+     * Mengambil riwayat pengajuan kasbon yang pernah disetujui / ditolak / dicairkan oleh user yang sedang login.
+     */
+    public function get_approval_history_for_user($user)
+    {
+        $nama_user       = trim((string)($user['nama'] ?? ''));
+        $jobdesk_raw     = strtoupper(trim((string)($user['jobdesk'] ?? '')));
+        $jobdesk_norm    = $this->normalize_jobdesk($jobdesk_raw);
+        $jobdesk_aliases = $this->get_jobdesk_aliases($jobdesk_raw);
+
+        $this->db->select('*');
+        $this->db->from('tb_kasbon');
+        $this->db->group_start();
+
+        // 1. Berdasarkan nama user yang mencatat tindakan approval
+        if (!empty($nama_user)) {
+            $this->db->where('approved_atasan_by', $nama_user);
+            $this->db->or_where('approved_penilai_by', $nama_user);
+            $this->db->or_where('rejected_by', $nama_user);
+            $this->db->or_where('cair_by', $nama_user);
+        }
+
+        // 2. Atau jika user adalah approver stage 1 (misal MNGSC) dan kasbon sudah diproses approval tahap 1
+        if (!empty($jobdesk_aliases)) {
+            $this->db->or_group_start();
+            $this->db->where_in('approver_1', $jobdesk_aliases);
+            $this->db->where('approved_atasan_by IS NOT NULL', null, false);
+            $this->db->group_end();
+
+            // 3. Atau jika user adalah approver stage 2 (misal KADEPSC) dan kasbon sudah diproses approval tahap 2
+            $this->db->or_group_start();
+            $this->db->where_in('approver_2', $jobdesk_aliases);
+            $this->db->where('approved_penilai_by IS NOT NULL', null, false);
+            $this->db->group_end();
+        }
+
+        // 4. Khusus ADMIN: melihat semua history approval yang sudah pernah diproses
+        if (in_array($jobdesk_norm, ['ADMIN', 'KADEPSC']) || in_array($jobdesk_raw, ['ADMIN', 'KADEPSC'])) {
+            $this->db->or_group_start();
+            $this->db->where('approved_atasan_by IS NOT NULL', null, false);
+            $this->db->or_where('approved_penilai_by IS NOT NULL', null, false);
+            $this->db->or_where('rejected_by IS NOT NULL', null, false);
+            $this->db->or_where('cair_by IS NOT NULL', null, false);
+            $this->db->group_end();
+        }
+
+        $this->db->group_end();
+        $this->db->order_by('id', 'DESC');
+        return $this->db->get()->result_array();
     }
 
     public function get_all_kasbon()

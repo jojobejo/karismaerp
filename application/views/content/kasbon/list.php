@@ -102,19 +102,31 @@
                 <?php endforeach; ?>
 
                 <div class="row mb-3">
-                    <div class="col-12 text-right">
-                        <a href="<?= base_url('C_Kasbon/create') ?>" class="btn btn-primary shadow-sm">
-                            <i class="fas fa-plus mr-1"></i> Buat Pengajuan Kas Bon
-                        </a>
+                    <div class="col-12 d-flex justify-content-between align-items-center">
+                        <div>
+                            <?php if ($is_approver || !empty($approval_history)): ?>
+                                <a href="<?= base_url('C_Kasbon/history') ?>" class="btn btn-info shadow-sm">
+                                    <i class="fas fa-history mr-1"></i> Riwayat Approval
+                                    <?php if (!empty($approval_history)): ?>
+                                        <span class="badge badge-light ml-1 font-weight-bold"><?= count($approval_history) ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <a href="<?= base_url('C_Kasbon/create') ?>" class="btn btn-primary shadow-sm">
+                                <i class="fas fa-plus mr-1"></i> Buat Pengajuan Kas Bon
+                            </a>
+                        </div>
                     </div>
                 </div>
 
                 <!-- TABEL KAS BON -->
                 <div class="card card-outline card-success shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h3 class="card-title m-0 font-weight-bold"><i class="fas fa-list mr-2"></i> Daftar Pengajuan Kas Bon</h3>
-                        <div class="card-tools">
-                            <span class="badge badge-light px-3 py-1" style="font-size:12px;"><?= count($kasbon) ?> Pengajuan</span>
+                    <div class="card-header bg-success text-white clearfix">
+                        <h3 class="card-title font-weight-bold m-0 float-left"><i class="fas fa-list mr-2"></i> Daftar Pengajuan Kas Bon</h3>
+                        <div class="card-tools float-right m-0">
+                            <span class="badge badge-light px-3 py-1 font-weight-bold" style="font-size:12px;"><?= count($kasbon) ?> Pengajuan</span>
                         </div>
                     </div>
                     <div class="card-body p-3">
@@ -172,7 +184,6 @@
                                         </td>
                                         <td class="text-center align-middle">
                                             <div class="d-flex flex-column align-items-center" style="gap:4px;">
-                                                <!-- Tombol Detail selalu tampil -->
                                                 <a href="<?= base_url('C_Kasbon/detail/' . $row['id']) ?>" class="btn btn-xs btn-secondary w-100" title="Lihat Detail">
                                                     <i class="fas fa-eye"></i> Detail
                                                 </a>
