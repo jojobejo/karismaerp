@@ -429,8 +429,21 @@ class M_pembayaran extends CI_Model
 
     public function get_payment_history($id_faktur)
     {
+        if ($this->db->table_exists('tbkeu_jurnal')) {
+            return $this->db
+                ->select('p.*, MAX(j.id_jurnal) AS id_jurnal, MAX(j.nomor_jurnal) AS nomor_jurnal, MAX(j.status) AS status_jurnal')
+                ->from($this->payment_table . ' p')
+                ->join('tbkeu_jurnal j', 'j.source_module = "KEUANGAN" AND (j.source_id = CAST(p.id_pembayaran AS CHAR) OR CAST(j.source_id AS UNSIGNED) = p.id_pembayaran)', 'left')
+                ->where('p.id_faktur', (int)$id_faktur)
+                ->group_by('p.id_pembayaran')
+                ->order_by('p.tanggal_pembayaran', 'DESC')
+                ->order_by('p.id_pembayaran', 'DESC')
+                ->get()
+                ->result_array();
+        }
+
         return $this->db
-            ->where('id_faktur', $id_faktur)
+            ->where('id_faktur', (int)$id_faktur)
             ->order_by('tanggal_pembayaran', 'DESC')
             ->order_by('id_pembayaran', 'DESC')
             ->get($this->payment_table)

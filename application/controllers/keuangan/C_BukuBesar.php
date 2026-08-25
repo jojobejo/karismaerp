@@ -267,11 +267,26 @@ class C_BukuBesar extends CI_Controller
     {
         $id = (int)$this->input->post('id_jurnal');
         
+        if ($id <= 0 && $this->input->post('id_pembayaran')) {
+            $id_pembayaran = (int)$this->input->post('id_pembayaran');
+            $journal_by_pay = $this->db->where('source_module', 'KEUANGAN')
+                ->group_start()
+                    ->where('source_id', (string)$id_pembayaran)
+                    ->or_where('source_id', $id_pembayaran)
+                ->group_end()
+                ->order_by('id_jurnal', 'DESC')
+                ->get('tbkeu_jurnal')
+                ->row_array();
+            if ($journal_by_pay) {
+                $id = (int)$journal_by_pay['id_jurnal'];
+            }
+        }
+        
         $journal = $this->db->get_where('tbkeu_jurnal', ['id_jurnal' => $id])->row_array();
         if (!$journal) {
             return $this->output
                 ->set_content_type('application/json')
-                ->set_output(json_encode(['success' => false, 'message' => 'Jurnal tidak ditemukan.']));
+                ->set_output(json_encode(['success' => false, 'message' => 'Jurnal tidak ditemukan. Transaksi pembayaran ini belum tercatat pada jurnal umum.']));
         }
         
         $this->db->select('d.*, a.kode_akun, a.nama_akun');
