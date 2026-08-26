@@ -86,7 +86,6 @@ class M_SalesOrderLoby extends CI_Model
             $this->db->where('(' . $qty_col . ' - COALESCE(qty_reserved, 0)) >=', (float)$qty, false);
         } elseif ($mode === 'invoice') {
             $this->db->where($qty_col . ' >=', (float)$qty);
-            $this->db->where('qty_reserved >=', (float)$qty);
         } elseif ($mode === 'release') {
             $this->db->where('qty_reserved >', 0);
         }
@@ -398,7 +397,7 @@ class M_SalesOrderLoby extends CI_Model
 
         $exp_normalized = $this->_normalizeDate($expired_date);
 
-        $this->db->select('SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS reserved_qty');
+        $this->db->select('SUM(GREATEST(qty - COALESCE(qty_faktur, 0), 0)) AS reserved_qty', false);
         $this->db->from('tbso_sales_order_detail');
         $this->db->where('id_so', $id_so);
         $this->db->where('kd_barang', $kd_barang);
@@ -505,10 +504,10 @@ class M_SalesOrderLoby extends CI_Model
             c.nama_customer,
             c.nama_kios,
             c.regional,
-            COUNT(sd.id) AS jumlah_item,
-            COALESCE(SUM(sd.qty), 0) AS total_qty_order,
-            COALESCE(SUM(sd.qty_faktur), 0) AS total_qty_faktur,
-            COALESCE(SUM(sd.total_harga), 0) AS grand_total_so,
+            COALESCE(sd_sum.jumlah_item, 0) AS jumlah_item,
+            COALESCE(sd_sum.total_qty_order, 0) AS total_qty_order,
+            COALESCE(sd_sum.total_qty_faktur, 0) AS total_qty_faktur,
+            COALESCE(sd_sum.grand_total_so, 0) AS grand_total_so,
             fp.id_faktur,
             fp.no_faktur,
             fp.status AS status_faktur,
@@ -517,11 +516,33 @@ class M_SalesOrderLoby extends CI_Model
                 WHEN fp.id_faktur IS NOT NULL THEN 1
                 ELSE 0
             END AS is_invoiced
-        ');
+        ', false);
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
-        $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
-        $this->db->join('tbso_faktur_penjualan fp', 'fp.id_so = so.id_so', 'left');
+        $this->db->join('(
+            SELECT
+                id_so,
+                COUNT(id) AS jumlah_item,
+                SUM(qty) AS total_qty_order,
+                SUM(qty_faktur) AS total_qty_faktur,
+                SUM(total_harga) AS grand_total_so
+            FROM tbso_sales_order_detail
+            GROUP BY id_so
+        ) sd_sum', 'sd_sum.id_so = so.id_so', 'left', false);
+        $this->db->join('(
+            SELECT
+                fp_in.id_so,
+                fp_in.id_faktur,
+                fp_in.no_faktur,
+                fp_in.status,
+                fp_in.tanggal_faktur
+            FROM tbso_faktur_penjualan fp_in
+            JOIN (
+                SELECT id_so, MAX(id_faktur) AS max_id_faktur
+                FROM tbso_faktur_penjualan
+                GROUP BY id_so
+            ) latest_fp ON latest_fp.max_id_faktur = fp_in.id_faktur
+        ) fp', 'fp.id_so = so.id_so', 'left', false);
         
         // Filter khusus LOBY
         $this->db->where('so.so_source', 'LOBY');
@@ -556,7 +577,6 @@ class M_SalesOrderLoby extends CI_Model
             $this->db->group_end();
         }
 
-        $this->db->group_by('so.id_so, fp.id_faktur');
         $this->db->order_by('so.tanggal_transaksi', 'DESC');
         $this->db->order_by('so.id_so', 'DESC');
 
@@ -565,9 +585,10 @@ class M_SalesOrderLoby extends CI_Model
 
     public function get_so($id_so)
     {
-        $this->db->select('so.*, c.nama_customer, c.nama_kios, c.alamat_kios, c.regional');
+        $this->db->select('so.*, c.nama_customer, c.nama_kios, c.alamat_kios, c.regional, g.nama_gudang');
         $this->db->from('tbso_sales_order so');
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
+        $this->db->join('tb_gudang g', 'g.id_gudang = so.gudang_id', 'left');
         $this->db->where('so.id_so', $id_so);
         $this->db->where('so.so_source', 'LOBY');
         return $this->db->get()->row_array();
@@ -937,7 +958,7 @@ class M_SalesOrderLoby extends CI_Model
 
             $this->db->where('id', $stock_batch_id);
             $this->db->set($qty_col, $qty_col . ' - ' . $qty_item, false);
-            $this->db->set('qty_reserved', 'qty_reserved - ' . $qty_item, false);
+            $this->db->set('qty_reserved', 'GREATEST(COALESCE(qty_reserved, 0) - ' . (float)$qty_item . ', 0)', false);
             $this->db->set('update_at', date('Y-m-d H:i:s'));
             $this->db->update('tberp_stock_batch');
 
@@ -1022,5 +1043,178 @@ class M_SalesOrderLoby extends CI_Model
             'id_faktur' => $id_faktur,
             'no_faktur' => $no_faktur,
         ];
+    }
+
+    /**
+     * Membatalkan faktur penjualan (Unpost) untuk SO Loby:
+     * 1. Reversal jurnal akuntansi di tbkeu_jurnal & tbkeu_jurnal_detail.
+     * 2. Reversal pengurangan stok fisik pada tberp_stock_batch.
+     * 3. Menghapus data faktur penjualan (tbso_faktur_penjualan & tbso_faktur_detail).
+     * 4. Mereset qty_faktur pada detail SO menjadi 0.
+     * 5. Mengubah status SO Loby kembali menjadi 'draft'.
+     */
+    public function unpost_so($id_so, $username = '')
+    {
+        $so = $this->get_so($id_so);
+        if (!$so) {
+            return ['success' => false, 'message' => 'Data Sales Order Loby tidak ditemukan.'];
+        }
+
+        $fakturs = $this->get_faktur_by_so($id_so);
+        if (empty($fakturs)) {
+            return ['success' => false, 'message' => 'Transaksi SO Loby ini belum memiliki faktur atau belum terposting.'];
+        }
+
+        $this->db->trans_start();
+
+        $qty_col = $this->_stockQtyColumn();
+
+        foreach ($fakturs as $faktur) {
+            $id_faktur = (int)$faktur['id_faktur'];
+            $no_faktur = $faktur['no_faktur'];
+
+            // 1. Reversal Jurnal Akuntansi
+            $journals = $this->db->select('id_jurnal')
+                ->group_start()
+                    ->where_in('idempotency_key', [
+                        'SALES_INVOICE-FAKTUR-' . $no_faktur,
+                        'GOODS_ISSUE-FAKTUR-' . $no_faktur
+                    ])
+                    ->or_where('source_no', $no_faktur)
+                    ->or_where('source_id', $no_faktur)
+                ->group_end()
+                ->get('tbkeu_jurnal')
+                ->result_array();
+
+            if (!empty($journals)) {
+                $j_ids = array_column($journals, 'id_jurnal');
+                if ($this->db->table_exists('tbkeu_jurnal_log')) {
+                    $this->db->where_in('id_jurnal', $j_ids)->delete('tbkeu_jurnal_log');
+                }
+                $this->db->where_in('id_jurnal', $j_ids)->delete('tbkeu_jurnal_detail');
+                $this->db->where_in('id_jurnal', $j_ids)->delete('tbkeu_jurnal');
+            }
+
+            if ($this->db->table_exists('tbso_faktur_jurnal')) {
+                $this->db->where('id_faktur', $id_faktur)->delete('tbso_faktur_jurnal');
+            }
+
+            // 2. Reversal Stok Fisik (Kembalikan stok batch yang sempat dipotong saat faktur)
+            $faktur_details = $this->get_faktur_detail($id_faktur);
+            foreach ($faktur_details as $fd) {
+                $qty_item = (float)$fd['qty'];
+                $exp_normalized = $this->_normalizeDate($fd['expired_date'] ?? '');
+                $gudang_id = $fd['gudang_id'] ?: $so['gudang_id'];
+
+                $stock_batch_id = $this->_stockBatchIdForMovement(
+                    $fd['kd_barang'],
+                    $exp_normalized,
+                    $fd['no_lot'] ?? null,
+                    $gudang_id,
+                    0,
+                    'invoice'
+                );
+
+                if ($stock_batch_id > 0) {
+                    $this->db->where('id', $stock_batch_id);
+                    $this->db->set($qty_col, $qty_col . ' + ' . $qty_item, false);
+                    $this->db->set('qty_reserved', 'COALESCE(qty_reserved, 0) + ' . $qty_item, false);
+                    $this->db->set('update_at', date('Y-m-d H:i:s'));
+                    $this->db->update('tberp_stock_batch');
+                }
+
+                // Log reversal di ledger
+                $this->db->insert('tberp_stock_ledger', [
+                    'kd_barang'    => $fd['kd_barang'],
+                    'gudang_id'    => $gudang_id,
+                    'no_lot'       => $fd['no_lot'] ?? null,
+                    'expired_date' => $exp_normalized,
+                    'qty'          => $qty_item,
+                    'tipe'         => 'IN',
+                    'ref_no'       => $so['no_so'],
+                    'ref_type'     => 'UNPOST_FAKTUR_LOBY',
+                    'created_at'   => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // Hapus ledger OUT faktur
+            $this->db->where('ref_no', $so['no_so'])
+                ->where('ref_type', 'FAKTUR PENJUALAN LOBY')
+                ->delete('tberp_stock_ledger');
+
+            // 3. Hapus Faktur Penjualan & Detail Faktur
+            $this->db->where('id_faktur', $id_faktur)->delete('tbso_faktur_detail');
+            $this->db->where('id_faktur', $id_faktur)->delete('tbso_faktur_penjualan');
+        }
+
+        // 4. Reset Detail Sales Order
+        $this->db->where('id_so', $id_so)->update('tbso_sales_order_detail', [
+            'qty_faktur' => 0
+        ]);
+
+        // 5. Update Status SO Menjadi 'draft'
+        $this->db->where('id_so', $id_so)->update('tbso_sales_order', [
+            'status'    => 'draft',
+            'update_by' => $username ?: $so['create_by'],
+            'update_at' => date('Y-m-d H:i:s')
+        ]);
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['success' => false, 'message' => 'Gagal melakukan unpost SO Loby pada database.'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Transaksi Sales Order Loby (' . $so['no_so'] . ') berhasil di-Unpost. Faktur dibatalkan, stok dikembalikan ke kuantitas reservasi SO, dan status SO kembali menjadi Draft.'
+        ];
+    }
+
+    /**
+     * Hapus Sales Order permanen dan lepaskan qty reservasi stok jika masih aktif
+     */
+    public function delete_so($id_so, $username = '')
+    {
+        $so = $this->get_so($id_so);
+        if (!$so) {
+            return ['success' => false, 'message' => 'Data Sales Order tidak ditemukan.'];
+        }
+
+        $fakturs = $this->get_faktur_by_so($id_so);
+        if (!empty($fakturs)) {
+            return ['success' => false, 'message' => 'SO Loby yang sudah difakturkan tidak dapat dihapus. Silakan unpost terlebih dahulu.'];
+        }
+
+        $this->db->trans_start();
+
+        // Lepaskan reservasi stok jika status belum cancelled
+        if ($so['status'] !== 'cancelled') {
+            $details = $this->db->get_where('tbso_sales_order_detail', ['id_so' => $id_so])->result_array();
+            foreach ($details as $d) {
+                $outstanding = (float)$d['qty'] - (float)($d['qty_faktur'] ?? 0);
+                if ($outstanding <= 0) continue;
+
+                $this->_kurangi_reserved_batch(
+                    $so['no_so'],
+                    $d['kd_barang'],
+                    $d['expired_date'],
+                    $d['no_lot'] ?? null,
+                    $so['gudang_id'],
+                    $outstanding
+                );
+            }
+        }
+
+        $this->db->where('id_so', $id_so)->delete('tbso_sales_order_detail');
+        $this->db->where('id_so', $id_so)->delete('tbso_sales_order');
+
+        $this->db->trans_complete();
+
+        if (!$this->db->trans_status()) {
+            return ['success' => false, 'message' => 'Gagal menghapus Sales Order pada database.'];
+        }
+
+        return ['success' => true, 'message' => 'Sales Order Loby (' . $so['no_so'] . ') berhasil dihapus dan reservasi stok dikembalikan ke stok fisik gudang.'];
     }
 }

@@ -1,5 +1,5 @@
-<!-- views/content/sales/so_loby_faktur_form.php -->
-<!-- Form Proses Faktur Penjualan Loby (Zahir ERP Style) -->
+<!-- views/content/sales/so_loby_faktur_detail.php -->
+<!-- Detail Faktur Penjualan Loby (Zahir ERP Style) -->
 <style>
     :root {
         --zahir-blue: #127fad;
@@ -17,6 +17,9 @@
         font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         color: var(--zahir-text);
         padding: 20px;
+        min-height: calc(100vh - 75px);
+        display: flex;
+        flex-direction: column;
     }
 
     .zahir-card {
@@ -28,7 +31,8 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        min-height: calc(100vh - 120px);
+        flex: 1;
+        min-height: calc(100vh - 115px);
     }
 
     /* Header Title */
@@ -54,55 +58,63 @@
         gap: 10px;
     }
 
-    /* Kolom Header Form Input */
+    /* Kolom Header Form Info */
     .form-header-section {
-        padding: 18px 24px;
+        padding: 20px 24px;
         background: #f8fafc;
         border-bottom: 1px solid #eef2f5;
     }
 
-    .form-row-zahir {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
+    .info-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
     }
 
-    .form-row-zahir:last-child {
+    .info-group-box {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .info-group-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #059669;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .info-row {
+        display: flex;
+        font-size: 13px;
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+
+    .info-row:last-child {
         margin-bottom: 0;
     }
 
-    .form-row-zahir label {
-        width: 120px;
-        font-size: 13px;
+    .info-label {
+        width: 110px;
+        color: #64748b;
         font-weight: 500;
-        color: #334155;
-        margin: 0;
+        flex-shrink: 0;
     }
 
-    .form-control-zahir {
-        font-size: 13px;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        padding: 5px 10px;
-        height: 32px;
-        outline: none;
-        background: #fff;
-    }
-
-    .form-control-zahir:focus {
-        border-color: #059669;
-        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
-    }
-
-    .ref-input {
-        background-color: #f0fdf4 !important;
-        font-weight: 700;
-        color: #047857;
-    }
-
-    .date-input {
-        width: 160px;
+    .info-val {
+        color: #1e293b;
+        font-weight: 600;
+        word-break: break-word;
     }
 
     /* Area Grid / Tabel Transaksi */
@@ -197,6 +209,14 @@
     .btn-zahir-primary:hover { background: #047857; color: #fff; }
     .btn-zahir-secondary { background: #64748b; color: #fff; }
     .btn-zahir-secondary:hover { background: #475569; color: #fff; }
+    .btn-zahir-blue { background: #0284c7; color: #fff; }
+    .btn-zahir-blue:hover { background: #0369a1; color: #fff; }
+
+    @media (max-width: 991.98px) {
+        .info-summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <body class="hold-transition sidebar-mini sidebar-collapse">
@@ -209,83 +229,104 @@
     <div class="content-wrapper">
         <div class="pb-container">
 
-            <?php if ($this->session->flashdata('error')): ?>
-                <div class="alert alert-danger alert-dismissible fade show mb-3">
-                    <i class="fas fa-exclamation-circle mr-1"></i> <?= $this->session->flashdata('error') ?>
-                    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-                </div>
-            <?php endif; ?>
+            <!-- FLASH MESSAGE -->
+            <?php foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning', 'info' => 'info'] as $key => $cls): ?>
+                <?php if ($msg = $this->session->flashdata($key)): ?>
+                    <div class="alert alert-<?= $cls ?> alert-dismissible fade show mb-3">
+                        <i class="fas fa-<?= $key === 'success' ? 'check-circle' : ($key === 'error' ? 'exclamation-circle' : 'info-circle') ?> mr-1"></i>
+                        <?= $msg ?>
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                <?php endif; ?>
+            <?php endforeach; ?>
 
-            <form action="<?= base_url('sales_order_loby/simpan_faktur/' . $so['id_so']) ?>" method="post" id="form-faktur-loby" class="zahir-card">
+            <div class="zahir-card">
                 <!-- Header Banner -->
                 <div class="form-header-title">
                     <h2>
                         <i class="fas fa-file-invoice-dollar"></i> 
-                        Proses Faktur Penjualan Loby
+                        Faktur Penjualan Loby: <strong><?= html_escape($faktur['no_faktur']) ?></strong>
                     </h2>
                     <div>
-                        <span class="badge badge-light px-3 py-2 text-dark font-weight-bold" style="font-size: 12px; letter-spacing: 0.5px;">
-                            <i class="fas fa-link mr-1 text-success"></i> SO: <?= html_escape($so['no_so']) ?>
+                        <span class="badge badge-success px-3 py-2" style="font-size: 13px; letter-spacing: 0.5px; background:#047857;">
+                            <i class="fas fa-check-circle mr-1"></i> SELESAI DO
                         </span>
                     </div>
                 </div>
 
-                <!-- Form Header Info Section (2 Kolom) -->
+                <!-- Form Header Info Section (3 Kolom) -->
                 <div class="form-header-section">
-                    <div class="row">
-                        <!-- Kolom Kiri: Input Data Faktur -->
-                        <div class="col-md-6">
-                            <div class="form-row-zahir">
-                                <label>No. Faktur <span style="color:#d9534f;font-weight:bold;">*</span> :</label>
-                                <input type="text" name="no_faktur" id="no_faktur" class="form-control-zahir ref-input font-weight-bold" style="width:220px;"
-                                       value="<?= html_escape($no_faktur) ?>" required />
+                    <div class="info-summary-grid">
+                        <!-- Box 1: Data Faktur -->
+                        <div class="info-group-box">
+                            <div class="info-group-title">
+                                <i class="fas fa-file-alt"></i> Data Faktur Penjualan
                             </div>
-                            <div class="form-row-zahir">
-                                <label>Tanggal Faktur <span style="color:#d9534f;font-weight:bold;">*</span> :</label>
-                                <input type="date" name="tanggal_faktur" id="tanggal_faktur" class="form-control-zahir date-input"
-                                       value="<?= date('Y-m-d') ?>" required />
+                            <div class="info-row">
+                                <span class="info-label">No. Faktur</span>
+                                <span class="info-val" style="color: #059669; font-weight:700;"><?= html_escape($faktur['no_faktur']) ?></span>
                             </div>
-                            <div class="form-row-zahir">
-                                <label>Keterangan :</label>
-                                <input type="text" name="catatan" id="catatan" class="form-control-zahir" style="width:340px;"
-                                       value="Penjualan Langsung Loby (CASH)" />
+                            <div class="info-row">
+                                <span class="info-label">Tanggal Faktur</span>
+                                <span class="info-val"><?= date('d F Y', strtotime($faktur['tanggal_faktur'])) ?></span>
                             </div>
-                        </div>
-
-                        <!-- Kolom Kanan: Info Referensi SO -->
-                        <div class="col-md-6">
-                            <div class="form-row-zahir">
-                                <label>Customer :</label>
-                                <span class="font-weight-bold text-dark" style="font-size:13px;">
-                                    <?= html_escape($so['customer_name'] ?: ($so['nama_customer'] ?? '-')) ?> 
-                                    <span class="text-muted font-weight-normal">(<?= html_escape($so['kd_customer']) ?>)</span>
-                                </span>
-                            </div>
-                            <div class="form-row-zahir">
-                                <label>Gudang Stok :</label>
-                                <span class="font-weight-bold" style="color: #0f766e; font-size:13px;">
-                                    <?= html_escape($so['nama_gudang'] ?: 'Gudang ID: ' . $so['gudang_id']) ?>
-                                </span>
-                            </div>
-                            <div class="form-row-zahir">
-                                <label>Metode Bayar :</label>
-                                <span>
+                            <div class="info-row">
+                                <span class="info-label">Metode Bayar</span>
+                                <span class="info-val">
                                     <span class="badge badge-success px-2 py-1 font-weight-bold" style="font-size: 11px;">
                                         <i class="fas fa-money-bill-wave mr-1"></i> CASH
                                     </span>
                                 </span>
                             </div>
                         </div>
+
+                        <!-- Box 2: Referensi SO & Customer -->
+                        <div class="info-group-box">
+                            <div class="info-group-title">
+                                <i class="fas fa-user-tag"></i> Customer &amp; Referensi
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">No. SO Loby</span>
+                                <span class="info-val">
+                                    <a href="<?= base_url('sales_order_loby/detail/' . $faktur['id_so']) ?>" style="color: var(--zahir-blue); font-weight:700;">
+                                        <i class="fas fa-link mr-1"></i> <?= html_escape($so['no_so'] ?? $faktur['no_so']) ?>
+                                    </a>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Customer</span>
+                                <span class="info-val"><?= html_escape($faktur['customer_name'] ?: ($faktur['nama_customer'] ?? ($so['customer_name'] ?? '-'))) ?></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Kode / Kios</span>
+                                <span class="info-val text-muted"><?= html_escape($faktur['kd_customer']) ?> &bull; <?= html_escape($faktur['nama_kios'] ?: ($so['nama_kios'] ?? '-')) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Box 3: Lokasi Gudang & Pembuat -->
+                        <div class="info-group-box">
+                            <div class="info-group-title">
+                                <i class="fas fa-warehouse"></i> Gudang &amp; Inputer
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Gudang Stok</span>
+                                <span class="info-val" style="color: #0f766e; font-weight:700;">
+                                    <?= html_escape($so['nama_gudang'] ?: 'Gudang ' . $faktur['gudang_id']) ?>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Dibuat Oleh</span>
+                                <span class="info-val"><?= html_escape($faktur['create_by']) ?> <small class="text-muted">(<?= date('d/m/y H:i', strtotime($faktur['create_at'])) ?>)</small></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Catatan</span>
+                                <span class="info-val font-italic text-secondary"><?= html_escape($faktur['catatan'] ?: '-') ?></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Petunjuk Alur -->
-                <div style="padding: 10px 24px; background: #ecfdf5; border-bottom: 1px solid #d1fae5; font-size: 12px; color: #065f46;">
-                    <i class="fas fa-info-circle mr-1 text-success"></i> 
-                    Memproses faktur ini akan <strong>memotong stok fisik di gudang</strong> dan mencatat piutang lunas/transaksi kas masuk di modul <strong>Keuangan</strong>.
-                </div>
-
-                <!-- Grid Rincian Barang yang Difakturkan -->
+                <!-- Grid Rincian Barang Faktur -->
                 <div class="table-container">
                     <table class="grid-table">
                         <thead>
@@ -307,14 +348,15 @@
                             $grandTotal = 0;
                             $totalQty = 0;
                             $no = 1;
-                            foreach ($details as $d): 
-                                $grandTotal += (float)$d['total_harga'];
-                                $totalQty   += (float)$d['qty'];
+                            if (!empty($details)): 
+                                foreach ($details as $d): 
+                                    $grandTotal += (float)$d['total_harga'];
+                                    $totalQty   += (float)$d['qty'];
                             ?>
                                 <tr>
                                     <td style="text-align: center; color: #64748b;"><?= $no++ ?></td>
                                     <td><strong style="color: #0f766e;"><?= html_escape($d['kd_barang']) ?></strong></td>
-                                    <td><strong style="color: #1e293b;"><?= html_escape($d['nama_barang']) ?></strong></td>
+                                    <td><strong style="color: #1e293b;"><?= html_escape($d['nama_barang'] ?: ($d['master_nama_barang'] ?? '-')) ?></strong></td>
                                     <td style="text-align: center;"><span class="badge badge-light border px-2 py-1"><?= html_escape($d['no_lot'] ?: '-') ?></span></td>
                                     <td style="text-align: center; color: #475569;"><?= $d['expired_date'] ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
                                     <td style="text-align: right; font-weight: 700; color: #047857;"><?= number_format((float)$d['qty'], 0, ',', '.') ?></td>
@@ -323,7 +365,13 @@
                                     <td style="text-align: center;"><?= (float)$d['disc'] > 0 ? (float)$d['disc'] . '%' : '-' ?></td>
                                     <td style="text-align: right; font-weight: 700; color: #15803d;">Rp <?= number_format((float)$d['total_harga'], 0, ',', '.') ?></td>
                                 </tr>
-                            <?php endforeach; ?>
+                            <?php endforeach; else: ?>
+                                <tr>
+                                    <td colspan="10" style="text-align: center; padding: 24px; color: #94a3b8;">
+                                        Tidak ada data rincian barang faktur.
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                         <tfoot>
                             <tr>
@@ -338,18 +386,21 @@
 
                 <!-- Bottom Action Bar -->
                 <div class="form-bottom-bar">
-                    <div>
-                        <a href="<?= base_url('sales_order_loby/detail/' . $so['id_so']) ?>" class="btn-zahir btn-zahir-secondary">
-                            <i class="fas fa-arrow-left"></i> Batal &amp; Kembali
+                    <div style="display: flex; gap: 8px;">
+                        <a href="<?= base_url('sales_order_loby/detail/' . $faktur['id_so']) ?>" class="btn-zahir btn-zahir-secondary">
+                            <i class="fas fa-arrow-left"></i> Kembali ke Detail SO
+                        </a>
+                        <a href="<?= base_url('sales_order_loby') ?>" class="btn-zahir btn-zahir-secondary">
+                            <i class="fas fa-list"></i> Daftar SO Loby
                         </a>
                     </div>
-                    <div>
-                        <button type="submit" class="btn-zahir btn-zahir-primary" style="font-size: 14px; padding: 9px 24px;" onclick="return confirm('Konfirmasi terbitkan Faktur Penjualan Loby? Stok akan dipotong dan transaksi selesai.')">
-                            <i class="fas fa-check-circle"></i> Terbitkan Faktur &amp; Selesaikan
-                        </button>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="<?= base_url('sales_order_loby/print_faktur/' . $faktur['id_faktur']) ?>" target="_blank" class="btn-zahir btn-zahir-blue">
+                            <i class="fas fa-print"></i> Cetak Faktur (Struk/Nota)
+                        </a>
                     </div>
                 </div>
-            </form>
+            </div>
 
         </div>
     </div>

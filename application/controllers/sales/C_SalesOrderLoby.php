@@ -115,6 +115,117 @@ class C_SalesOrderLoby extends CI_Controller
     // SIMPAN SO LOBY
     // ================================================================
 
+    private function _parse_number_input($value)
+    {
+        $value = trim((string)$value);
+        if ($value === '') return 0;
+
+        $value = preg_replace('/[^\d,.\-]/', '', $value);
+        if (strpos($value, ',') !== false) {
+            $value = str_replace('.', '', $value);
+            $value = str_replace(',', '.', $value);
+        } else {
+            $value = str_replace('.', '', $value);
+        }
+
+        return (float)$value;
+    }
+
+    private function _parse_detail_post($post)
+    {
+        $details = [];
+
+        // 1. Format array paralel (dari form SO modern)
+        if (!empty($post['kd_barang']) && is_array($post['kd_barang'])) {
+            foreach ($post['kd_barang'] as $i => $kd) {
+                if (empty($kd)) continue;
+
+                $hrg         = $this->_parse_number_input($post['hrg_satuan'][$i] ?? 0);
+                $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
+                $qty_box     = (float)($post['qty_box'][$i]      ?? 0);
+                $qty_satuan  = (float)($post['qty_satuan'][$i]   ?? 0);
+                $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
+                $pajak       = (float)($post['pajak'][$i]        ?? 0);
+                $disc        = (float)($post['disc'][$i]         ?? 0);
+                $qty_kecil   = ($qty_box * $isi_per_box) + $qty_satuan;
+
+                if ($qty_kecil <= 0) continue;
+
+                $subtotal_before_disc = $hrg * $qty_kecil;
+                $subtotal_after_disc  = $subtotal_before_disc * (1 - $disc / 100);
+                $total_tax            = $subtotal_after_disc  * (1 + $pajak / 100);
+
+                $details[] = [
+                    'produk_id'            => $kd,
+                    'kd_barang'            => $kd,
+                    'nama_barang'          => $post['nama_barang'][$i]  ?? '',
+                    'qty'                  => $qty_kecil,
+                    'qty_box'              => $qty_box,
+                    'qty_satuan'           => $qty_satuan,
+                    'isi_per_box'          => $isi_per_box,
+                    'satuan'               => $post['satuan'][$i]        ?? 'PCS',
+                    'expired_date'         => $post['expired_date'][$i]  ?? '',
+                    'no_lot'               => $post['no_lot'][$i]        ?? null,
+                    'pajak'                => $pajak,
+                    'disc'                 => $disc,
+                    'subtotal_before_disc' => $subtotal_before_disc,
+                    'subtotal_after_disc'  => $subtotal_after_disc,
+                    'hrg_satuan'           => $hrg,
+                    'hrg_pokok'            => $hrg_pk,
+                    'total_harga'          => $total_tax,
+                    'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
+                    'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
+                    'create_by'            => $this->_getUsername(),
+                    'create_at'            => date('Y-m-d H:i:s'),
+                ];
+            }
+            return $details;
+        }
+
+        // 2. Format items associative (fallback)
+        if (!empty($post['items']) && is_array($post['items'])) {
+            foreach ($post['items'] as $row) {
+                $kd = trim((string)($row['kd_barang'] ?? ''));
+                $qty = (float)($row['qty'] ?? 0);
+                if (empty($kd) || $qty <= 0) continue;
+
+                $hrg         = (float)($row['hrg_satuan'] ?? 0);
+                $hrg_pk      = (float)($row['hrg_pokok'] ?? 0);
+                $disc        = (float)($row['disc'] ?? 0);
+                $pajak       = (float)($row['pajak'] ?? 0);
+                $isi_per_box = max(1, (int)($row['isi_per_box'] ?? 1));
+                $sub_b       = $qty * $hrg;
+                $sub_a       = $sub_b * (1 - ($disc / 100));
+
+                $details[] = [
+                    'produk_id'            => $kd,
+                    'kd_barang'            => $kd,
+                    'nama_barang'          => $row['nama_barang'] ?? '',
+                    'qty'                  => $qty,
+                    'qty_box'              => floor($qty / $isi_per_box),
+                    'qty_satuan'           => fmod($qty, $isi_per_box),
+                    'isi_per_box'          => $isi_per_box,
+                    'satuan'               => $row['satuan'] ?? 'PCS',
+                    'expired_date'         => $row['expired_date'] ?? '',
+                    'no_lot'               => $row['no_lot'] ?? null,
+                    'hrg_satuan'           => $hrg,
+                    'hrg_pokok'            => $hrg_pk,
+                    'disc'                 => $disc,
+                    'pajak'                => $pajak,
+                    'subtotal_before_disc' => $sub_b,
+                    'subtotal_after_disc'  => $sub_a,
+                    'total_harga'          => $sub_a,
+                    'berat_gram'           => (float)($row['berat_gram'] ?? 0),
+                    'kubikasi_m3'          => (float)($row['kubikasi_m3'] ?? 0),
+                    'create_by'            => $this->_getUsername(),
+                    'create_at'            => date('Y-m-d H:i:s'),
+                ];
+            }
+        }
+
+        return $details;
+    }
+
     public function store()
     {
         $no_so         = trim((string)$this->input->post('no_so', true));
@@ -131,70 +242,20 @@ class C_SalesOrderLoby extends CI_Controller
             return;
         }
 
-        $items = $this->input->post('items', true);
-        if (empty($items) || !is_array($items)) {
-            $this->session->set_flashdata('error', 'Daftar barang tidak boleh kosong.');
-            redirect('sales_order_loby/create');
-            return;
-        }
-
-        $details = [];
-        $total_tonase = 0;
-        $total_kubikasi = 0;
-
-        foreach ($items as $idx => $row) {
-            $kd_barang = trim((string)($row['kd_barang'] ?? ''));
-            $qty       = (float)($row['qty'] ?? 0);
-            if (empty($kd_barang) || $qty <= 0) {
-                continue;
-            }
-
-            $exp_date = trim((string)($row['expired_date'] ?? ''));
-            $no_lot   = trim((string)($row['no_lot'] ?? ''));
-
-            $hrg_satuan          = (float)($row['hrg_satuan'] ?? 0);
-            $hrg_pokok           = (float)($row['hrg_pokok'] ?? 0);
-            $disc                = (float)($row['disc'] ?? 0);
-            $pajak               = (float)($row['pajak'] ?? 0);
-            $subtotal_before     = $qty * $hrg_satuan;
-            $subtotal_after      = $subtotal_before * (1 - ($disc / 100));
-            $total_harga         = $subtotal_after;
-            $berat_gram          = (float)($row['berat_gram'] ?? 0);
-            $kubikasi_m3         = (float)($row['kubikasi_m3'] ?? 0);
-            $isi_per_box         = max(1, (int)($row['isi_per_box'] ?? 1));
-
-            $total_tonase   += $qty * ($berat_gram / 1000000);
-            $total_kubikasi += $qty * $kubikasi_m3;
-
-            $details[] = [
-                'produk_id'            => $kd_barang,
-                'kd_barang'            => $kd_barang,
-                'nama_barang'          => $row['nama_barang'] ?? '',
-                'qty'                  => $qty,
-                'qty_box'              => floor($qty / $isi_per_box),
-                'qty_satuan'           => fmod($qty, $isi_per_box),
-                'isi_per_box'          => $isi_per_box,
-                'satuan'               => $row['satuan'] ?? 'PCS',
-                'expired_date'         => $exp_date,
-                'no_lot'               => $no_lot ?: null,
-                'hrg_satuan'           => $hrg_satuan,
-                'hrg_pokok'            => $hrg_pokok,
-                'disc'                 => $disc,
-                'pajak'                => $pajak,
-                'subtotal_before_disc' => $subtotal_before,
-                'subtotal_after_disc'  => $subtotal_after,
-                'total_harga'          => $total_harga,
-                'berat_gram'           => $berat_gram,
-                'kubikasi_m3'          => $kubikasi_m3,
-                'create_by'            => $this->_getUsername(),
-                'create_at'            => date('Y-m-d H:i:s'),
-            ];
-        }
+        $post    = $this->input->post(null, true);
+        $details = $this->_parse_detail_post($post);
 
         if (empty($details)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 barang valid dengan Qty > 0.');
+            $this->session->set_flashdata('error', 'Minimal harus ada 1 item barang valid dengan Qty > 0.');
             redirect('sales_order_loby/create');
             return;
+        }
+
+        $total_tonase   = 0;
+        $total_kubikasi = 0;
+        foreach ($details as $d) {
+            $total_tonase   += (float)$d['qty'] * ((float)($d['berat_gram'] ?? 0) / 1000000);
+            $total_kubikasi += (float)$d['qty'] * (float)($d['kubikasi_m3'] ?? 0);
         }
 
         $header = [
@@ -208,6 +269,7 @@ class C_SalesOrderLoby extends CI_Controller
             'total_tonase'      => round($total_tonase, 6),
             'total_kubikasi'    => round($total_kubikasi, 6),
             'catatan'           => $catatan,
+            'cara_pembayaran'   => 'cash',
             'create_by'         => $this->_getUsername(),
         ];
 
@@ -291,64 +353,20 @@ class C_SalesOrderLoby extends CI_Controller
         $gudang_id     = trim((string)$this->input->post('gudang_id', true));
         $catatan       = trim((string)$this->input->post('catatan', true));
 
-        $items = $this->input->post('items', true);
-        if (empty($items) || !is_array($items)) {
+        $post    = $this->input->post(null, true);
+        $details = $this->_parse_detail_post($post);
+
+        if (empty($details)) {
             $this->session->set_flashdata('error', 'Daftar barang tidak boleh kosong.');
             redirect('sales_order_loby/edit/' . $id_so);
             return;
         }
 
-        $details = [];
-        $total_tonase = 0;
+        $total_tonase   = 0;
         $total_kubikasi = 0;
-
-        foreach ($items as $idx => $row) {
-            $kd_barang = trim((string)($row['kd_barang'] ?? ''));
-            $qty       = (float)($row['qty'] ?? 0);
-            if (empty($kd_barang) || $qty <= 0) {
-                continue;
-            }
-
-            $exp_date = trim((string)($row['expired_date'] ?? ''));
-            $no_lot   = trim((string)($row['no_lot'] ?? ''));
-
-            $hrg_satuan          = (float)($row['hrg_satuan'] ?? 0);
-            $hrg_pokok           = (float)($row['hrg_pokok'] ?? 0);
-            $disc                = (float)($row['disc'] ?? 0);
-            $pajak               = (float)($row['pajak'] ?? 0);
-            $subtotal_before     = $qty * $hrg_satuan;
-            $subtotal_after      = $subtotal_before * (1 - ($disc / 100));
-            $total_harga         = $subtotal_after;
-            $berat_gram          = (float)($row['berat_gram'] ?? 0);
-            $kubikasi_m3         = (float)($row['kubikasi_m3'] ?? 0);
-            $isi_per_box         = max(1, (int)($row['isi_per_box'] ?? 1));
-
-            $total_tonase   += $qty * ($berat_gram / 1000000);
-            $total_kubikasi += $qty * $kubikasi_m3;
-
-            $details[] = [
-                'produk_id'            => $kd_barang,
-                'kd_barang'            => $kd_barang,
-                'nama_barang'          => $row['nama_barang'] ?? '',
-                'qty'                  => $qty,
-                'qty_box'              => floor($qty / $isi_per_box),
-                'qty_satuan'           => fmod($qty, $isi_per_box),
-                'isi_per_box'          => $isi_per_box,
-                'satuan'               => $row['satuan'] ?? 'PCS',
-                'expired_date'         => $exp_date,
-                'no_lot'               => $no_lot ?: null,
-                'hrg_satuan'           => $hrg_satuan,
-                'hrg_pokok'            => $hrg_pokok,
-                'disc'                 => $disc,
-                'pajak'                => $pajak,
-                'subtotal_before_disc' => $subtotal_before,
-                'subtotal_after_disc'  => $subtotal_after,
-                'total_harga'          => $total_harga,
-                'berat_gram'           => $berat_gram,
-                'kubikasi_m3'          => $kubikasi_m3,
-                'create_by'            => $this->_getUsername(),
-                'create_at'            => date('Y-m-d H:i:s'),
-            ];
+        foreach ($details as $d) {
+            $total_tonase   += (float)$d['qty'] * ((float)($d['berat_gram'] ?? 0) / 1000000);
+            $total_kubikasi += (float)$d['qty'] * (float)($d['kubikasi_m3'] ?? 0);
         }
 
         $header = [
@@ -359,6 +377,7 @@ class C_SalesOrderLoby extends CI_Controller
             'total_tonase'      => round($total_tonase, 6),
             'total_kubikasi'    => round($total_kubikasi, 6),
             'catatan'           => $catatan,
+            'cara_pembayaran'   => 'cash',
             'update_by'         => $this->_getUsername(),
         ];
 
@@ -380,6 +399,37 @@ class C_SalesOrderLoby extends CI_Controller
             $this->session->set_flashdata('success', 'Sales Order Loby berhasil dibatalkan dan reservasi stok dilepas.');
         } else {
             $this->session->set_flashdata('error', 'Gagal membatalkan SO Loby.');
+        }
+        redirect('sales_order_loby');
+    }
+
+    public function delete($id_so)
+    {
+        $res = $this->M_SalesOrderLoby->delete_so($id_so, $this->_getUsername());
+        if ($res['success']) {
+            $this->session->set_flashdata('success', $res['message']);
+        } else {
+            $this->session->set_flashdata('error', $res['message']);
+        }
+        redirect('sales_order_loby');
+    }
+
+    public function unpost($id_so = null)
+    {
+        if (!$id_so) {
+            $id_so = $this->input->post('id_so', true);
+        }
+
+        $res = $this->M_SalesOrderLoby->unpost_so($id_so, $this->_getUsername());
+
+        if ($this->input->is_ajax_request()) {
+            return $this->output->set_content_type('application/json')->set_output(json_encode($res));
+        }
+
+        if ($res['success']) {
+            $this->session->set_flashdata('success', $res['message']);
+        } else {
+            $this->session->set_flashdata('error', $res['message']);
         }
         redirect('sales_order_loby');
     }
@@ -504,7 +554,7 @@ class C_SalesOrderLoby extends CI_Controller
         $data['so']         = $this->M_SalesOrderLoby->get_so($faktur['id_so']);
 
         $this->load->view('partial/main/header.php', $data);
-        $this->load->view('content/sales/faktur_detail.php', $data);
+        $this->load->view('content/sales/so_loby_faktur_detail.php', $data);
         $this->load->view('partial/main/footer.php');
     }
 
@@ -550,5 +600,78 @@ class C_SalesOrderLoby extends CI_Controller
             'status' => $barang ? 'success' : 'error',
             'data'   => $barang,
         ]);
+    }
+
+    // ================================================================
+    // DETAIL JURNAL AJAX (ZAHIR RIGHT-CLICK / POPUP)
+    // ================================================================
+
+    public function detail_jurnal_ajax($id_so)
+    {
+        $so = $this->M_SalesOrderLoby->get_so($id_so);
+        if (!$so) {
+            return $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Data Sales Order Loby tidak ditemukan.'
+            ]));
+        }
+
+        $fakturs = $this->M_SalesOrderLoby->get_faktur_by_so($id_so);
+        $no_faktur = !empty($fakturs) ? $fakturs[0]['no_faktur'] : null;
+
+        // Cari jurnal di tbkeu_jurnal
+        $this->db->select('j.*');
+        $this->db->from('tbkeu_jurnal j');
+        $this->db->group_start();
+        if ($no_faktur) {
+            $this->db->where_in('j.idempotency_key', [
+                'SALES_INVOICE-FAKTUR-' . $no_faktur,
+                'GOODS_ISSUE-FAKTUR-' . $no_faktur
+            ]);
+            $this->db->or_where('j.source_no', $no_faktur);
+            $this->db->or_where('j.source_id', $no_faktur);
+        }
+        $this->db->or_where('j.source_no', $so['no_so']);
+        $this->db->or_where('j.source_id', $so['no_so']);
+        $this->db->group_end();
+        $this->db->order_by('j.id_jurnal', 'ASC');
+        $journals = $this->db->get()->result_array();
+
+        if (empty($journals)) {
+            return $this->output->set_content_type('application/json')->set_output(json_encode([
+                'success' => false,
+                'message' => 'Jurnal belum terposting atau transaksi SO Loby ini belum memiliki faktur penjualan.'
+            ]));
+        }
+
+        $journal_ids = array_column($journals, 'id_jurnal');
+
+        $this->db->select('d.*, a.kode_akun, a.nama_akun, j.nomor_jurnal, j.tanggal_transaksi, j.keterangan AS jurnal_keterangan, j.source_type');
+        $this->db->from('tbkeu_jurnal_detail d');
+        $this->db->join('tbkeu_jurnal j', 'j.id_jurnal = d.id_jurnal', 'left');
+        $this->db->join('tbkeu_akun a', 'a.id_akun = d.id_akun', 'left');
+        $this->db->where_in('d.id_jurnal', $journal_ids);
+        $this->db->order_by('d.id_jurnal', 'ASC');
+        $this->db->order_by('d.nomor_baris', 'ASC');
+        $details = $this->db->get()->result_array();
+
+        $main_header = $journals[0];
+
+        // Format user
+        $user_name = $so['create_by'] ?: ($main_header['created_by'] ?? '-');
+        if (is_numeric($user_name)) {
+            $karyawan = $this->db->select('nm_karyawan, username')->where('id', (int)$user_name)->get('tb_karyawan')->row_array();
+            if ($karyawan) {
+                $user_name = $karyawan['nm_karyawan'] ?: $karyawan['username'];
+            }
+        }
+
+        return $this->output->set_content_type('application/json')->set_output(json_encode([
+            'success' => true,
+            'header'  => $main_header,
+            'journals'=> $journals,
+            'details' => $details,
+            'user'    => $user_name
+        ]));
     }
 }

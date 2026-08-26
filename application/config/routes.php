@@ -862,10 +862,14 @@ $route['sales_order_loby/detail/(:any)']                    = 'sales/C_SalesOrde
 $route['sales_order_loby/edit/(:any)']                      = 'sales/C_SalesOrderLoby/edit/$1';
 $route['sales_order_loby/update/(:any)']                    = 'sales/C_SalesOrderLoby/update/$1';
 $route['sales_order_loby/cancel/(:any)']                    = 'sales/C_SalesOrderLoby/cancel/$1';
+$route['sales_order_loby/delete/(:any)']                    = 'sales/C_SalesOrderLoby/delete/$1';
+$route['sales_order_loby/unpost']                           = 'sales/C_SalesOrderLoby/unpost';
+$route['sales_order_loby/unpost/(:any)']                    = 'sales/C_SalesOrderLoby/unpost/$1';
 $route['sales_order_loby/form_faktur/(:any)']               = 'sales/C_SalesOrderLoby/form_faktur/$1';
 $route['sales_order_loby/simpan_faktur/(:any)']             = 'sales/C_SalesOrderLoby/simpan_faktur/$1';
 $route['sales_order_loby/detail_faktur/(:any)']             = 'sales/C_SalesOrderLoby/detail_faktur/$1';
 $route['sales_order_loby/print_faktur/(:any)']              = 'sales/C_SalesOrderLoby/print_faktur/$1';
+$route['sales_order_loby/detail_jurnal_ajax/(:any)']        = 'sales/C_SalesOrderLoby/detail_jurnal_ajax/$1';
 $route['sales_order_loby/get_stock']                        = 'sales/C_SalesOrderLoby/get_stock';
 $route['sales_order_loby/get_barang']                       = 'sales/C_SalesOrderLoby/get_barang';
 
