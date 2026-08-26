@@ -192,9 +192,9 @@ class M_KasMasuk extends CI_Model
         // If it was posted, reverse/delete the journal
         if ($data['status'] === 'POSTED' && !empty($data['id_jurnal'])) {
             $this->load->library('Accounting_service');
+            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_log');
             $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_detail');
             $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal');
-            $this->db->where('id_jurnal', $data['id_jurnal'])->delete('tbkeu_jurnal_log');
         }
 
         $this->db->where('id_kas_masuk', $id)->delete('tbkeu_kas_masuk');

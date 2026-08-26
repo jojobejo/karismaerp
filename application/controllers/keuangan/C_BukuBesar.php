@@ -247,9 +247,11 @@ class C_BukuBesar extends CI_Controller
         }
         
         $this->db->trans_begin();
-        $this->db->where('id_jurnal', $id)->delete('tbkeu_jurnal_detail');
-        $this->db->where('id_jurnal', $id)->delete('tbkeu_jurnal');
+        // Hapus child records terlebih dahulu untuk menghindari error foreign key constraint
         $this->db->where('id_jurnal', $id)->delete('tbkeu_jurnal_log');
+        $this->db->where('id_jurnal', $id)->delete('tbkeu_jurnal_detail');
+        $this->db->where('reversal_of_journal_id', $id)->update('tbkeu_jurnal', ['reversal_of_journal_id' => null]);
+        $this->db->where('id_jurnal', $id)->delete('tbkeu_jurnal');
         
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();

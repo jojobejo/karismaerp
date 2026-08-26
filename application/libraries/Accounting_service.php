@@ -1140,7 +1140,7 @@ class Accounting_service
         return $this->ok('Status exception berhasil diperbarui.', ['id_exception' => (int)$idException, 'status' => $status]);
     }
 
-    public function reports($report, $dateFrom, $dateTo, $accountId = 0)
+    public function reports($report, $dateFrom, $dateTo, $accountId = 0, $accountGroup = '')
     {
         $report = strtolower(trim((string)$report));
         if (!$this->report_schema_ready()) {
@@ -1156,11 +1156,11 @@ class Accounting_service
         }
 
         if ($report === 'laba_rugi') {
-            return $this->report_by_statement($dateFrom, $dateTo, 'LABA_RUGI');
+            return $this->report_by_statement($dateFrom, $dateTo, 'LABA_RUGI', $accountGroup);
         }
 
         if ($report === 'neraca') {
-            return $this->report_by_statement($dateFrom, $dateTo, 'NERACA');
+            return $this->report_by_statement($dateFrom, $dateTo, 'NERACA', $accountGroup);
         }
 
         if ($report === 'piutang') {
@@ -2018,7 +2018,7 @@ class Accounting_service
         )->result();
     }
 
-    private function report_by_statement($dateFrom, $dateTo, $statement)
+    private function report_by_statement($dateFrom, $dateTo, $statement, $accountGroup = '')
     {
         $this->CI->db->select('k.id_klasifikasi, k.kode_klasifikasi, k.nama_klasifikasi, k.alias_klasifikasi, k.saldo_normal AS klasifikasi_saldo_normal, k.urutan, a.kode_akun, a.nama_akun, a.saldo_normal, COALESCE(SUM(d.debit),0) AS debit, COALESCE(SUM(d.kredit),0) AS kredit', false);
         $this->CI->db->from('tbkeu_jurnal_detail d');
@@ -2034,6 +2034,26 @@ class Accounting_service
         } else {
             $this->apply_date_range($dateFrom, $dateTo);
         }
+
+        $accountGroup = strtoupper(trim((string)$accountGroup));
+        if ($accountGroup === 'A') {
+            $this->CI->db->group_start();
+            $this->CI->db->like('a.nama_akun', 'A ', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'A-', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'A/', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'A.', 'after');
+            $this->CI->db->or_like('a.kode_akun', 'A', 'after');
+            $this->CI->db->group_end();
+        } elseif ($accountGroup === 'Q') {
+            $this->CI->db->group_start();
+            $this->CI->db->like('a.nama_akun', 'Q ', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'Q-', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'Q/', 'after');
+            $this->CI->db->or_like('a.nama_akun', 'Q.', 'after');
+            $this->CI->db->or_like('a.kode_akun', 'Q', 'after');
+            $this->CI->db->group_end();
+        }
+
         $this->CI->db->group_by('a.id_akun');
         $this->CI->db->order_by('k.urutan', 'ASC');
         $this->CI->db->order_by('a.kode_akun', 'ASC');

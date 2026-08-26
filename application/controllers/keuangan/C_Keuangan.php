@@ -1395,18 +1395,29 @@ class C_Keuangan extends CI_Controller
             $dateFrom = $type === 'laba_rugi' ? date('Y-m-01', strtotime($dateTo)) : date('Y-01-01', strtotime($dateTo));
         }
 
+        $accountGroup = strtoupper(trim((string)$this->input->get('account_group', true)));
+        if (!in_array($accountGroup, ['A', 'Q', 'ALL'], true)) {
+            $accountGroup = 'ALL';
+        }
+        $filterGroup = $accountGroup === 'ALL' ? '' : $accountGroup;
+
         $schemaReady = $this->M_Keuangan->accounting_schema_ready() && $this->M_Keuangan->accounting_journal_schema_ready();
-        $rows = $schemaReady ? $this->accounting_service->reports($type, $dateFrom, $dateTo) : [];
-        $incomeRows = $schemaReady ? $this->accounting_service->reports('laba_rugi', $dateFrom, $dateTo) : [];
+        $rows = $schemaReady ? $this->accounting_service->reports($type, $dateFrom, $dateTo, 0, $filterGroup) : [];
+        $incomeRows = $schemaReady ? $this->accounting_service->reports('laba_rugi', $dateFrom, $dateTo, 0, $filterGroup) : [];
         $prepared = $type === 'laba_rugi'
             ? $this->prepare_income_statement($rows)
             : $this->prepare_balance_sheet($rows, $incomeRows);
+
+        if ($accountGroup !== 'ALL') {
+            $prepared['audit_notes'][] = 'Filter aktif: Menampilkan data kelompok akun ' . $accountGroup . ' saja.';
+        }
 
         $data['page_title'] = $type === 'laba_rugi' ? 'KARISMA - LABA RUGI' : 'KARISMA - NERACA';
         $data['report_type'] = $type;
         $data['report_title'] = $type === 'laba_rugi' ? 'Laporan Laba Rugi' : 'Laporan Neraca';
         $data['date_from'] = $dateFrom;
         $data['date_to'] = $dateTo;
+        $data['account_group'] = $accountGroup;
         $data['schema_ready'] = $schemaReady;
         $data['sections'] = $prepared['sections'];
         $data['totals'] = $prepared['totals'];

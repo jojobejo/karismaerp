@@ -6,6 +6,8 @@ $auditNotes = isset($audit_notes) && is_array($audit_notes) ? $audit_notes : [];
 $schemaReady = !empty($schema_ready);
 $dateFrom = isset($date_from) ? $date_from : date('Y-m-01');
 $dateTo = isset($date_to) ? $date_to : date('Y-m-d');
+$accountGroup = isset($account_group) && in_array(strtoupper($account_group), ['A', 'Q', 'ALL'], true) ? strtoupper($account_group) : 'ALL';
+$groupLabel = $accountGroup === 'A' ? 'Akun A' : ($accountGroup === 'Q' ? 'Akun Q' : 'Semua Akun');
 $money = function ($value) {
     $number = (float)$value;
     $formatted = number_format(abs($number), 2, ',', '.');
@@ -23,7 +25,8 @@ $money = function ($value) {
     .jurnal-report-page .filter-panel, .jurnal-report-page .report-panel, .jurnal-report-page .audit-panel { background: #fff; border: 1px solid #d9e2ec; border-radius: 4px; overflow: hidden; margin-bottom: 14px; }
     .jurnal-report-page .panel-heading { background: #1788b8; color: #fff; padding: 12px 16px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .jurnal-report-page .panel-body { padding: 14px 16px; }
-    .jurnal-report-page .filter-grid { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)) auto; gap: 10px; align-items: end; }
+    .jurnal-report-page .active-badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 700; text-transform: uppercase; background: rgba(255,255,255,0.25); color: #fff; }
+    .jurnal-report-page .filter-grid { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) auto; gap: 12px; align-items: end; }
     .jurnal-report-page .filter-grid label { font-weight: 700; color: #3e4a59; margin-bottom: 4px; }
     .jurnal-report-page .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
     .jurnal-report-page .summary-box { border: 1px solid #d9e2ec; border-left: 4px solid #1788b8; border-radius: 4px; background: #fff; padding: 12px 14px; min-height: 88px; }
@@ -68,13 +71,18 @@ $money = function ($value) {
                     <div class="page-title-row">
                         <div class="page-title-left">
                             <a href="<?= base_url('jurnal') ?>" class="page-home-btn" title="Kembali ke Jurnal"><i class="fas fa-arrow-left"></i></a>
-                            <h1 class="page-title"><?= html_escape($report_title) ?></h1>
+                            <div>
+                                <h1 class="page-title"><?= html_escape($report_title) ?></h1>
+                                <span class="badge badge-secondary" style="font-size: 13px; margin-top: 2px;">
+                                    <i class="fas fa-filter mr-1"></i> Filter: <?= html_escape($groupLabel) ?>
+                                </span>
+                            </div>
                         </div>
                         <div class="report-actions">
-                            <a href="<?= base_url('jurnal/neraca') ?>" class="btn <?= $isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
+                            <a href="<?= base_url('jurnal/neraca?date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= $isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
                                 <i class="fas fa-balance-scale mr-1"></i> Neraca
                             </a>
-                            <a href="<?= base_url('jurnal/laba-rugi') ?>" class="btn <?= !$isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
+                            <a href="<?= base_url('jurnal/laba-rugi?date_from=' . urlencode($dateFrom) . '&date_to=' . urlencode($dateTo) . '&account_group=' . urlencode($accountGroup)) ?>" class="btn <?= !$isNeraca ? 'btn-report-primary' : 'btn-outline-primary' ?>">
                                 <i class="fas fa-chart-line mr-1"></i> Laba Rugi
                             </a>
                         </div>
@@ -89,14 +97,25 @@ $money = function ($value) {
 
                     <div class="filter-panel">
                         <div class="panel-heading">
-                            <span>Filter Laporan</span>
-                            <span class="report-meta">
+                            <div class="d-flex align-items-center gap-2">
+                                <span>Filter Laporan</span>
+                                <span class="active-badge"><?= html_escape($groupLabel) ?></span>
+                            </div>
+                            <span class="report-meta text-white-50">
                                 <?= $isNeraca ? 'Neraca per tanggal cut-off' : 'Laba rugi periode berjalan' ?>
                             </span>
                         </div>
                         <div class="panel-body">
                             <form method="get" action="<?= current_url() ?>">
                                 <div class="filter-grid">
+                                    <div>
+                                        <label for="account_group"><i class="fas fa-layer-group text-primary mr-1"></i> Pilih Kelompok Akun</label>
+                                        <select class="form-control" id="account_group" name="account_group">
+                                            <option value="ALL" <?= $accountGroup === 'ALL' ? 'selected' : '' ?>>Semua Akun (Gabungan)</option>
+                                            <option value="Q" <?= $accountGroup === 'Q' ? 'selected' : '' ?>>Akun Q</option>
+                                            <option value="A" <?= $accountGroup === 'A' ? 'selected' : '' ?>>Akun A</option>
+                                        </select>
+                                    </div>
                                     <div>
                                         <label for="date_from"><?= $isNeraca ? 'Awal Laba/Rugi Berjalan' : 'Tanggal Awal' ?></label>
                                         <input type="date" class="form-control" id="date_from" name="date_from" value="<?= html_escape($dateFrom) ?>">
