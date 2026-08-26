@@ -373,7 +373,7 @@
         </nav>
         <!-- /.sidebar-menu -->
       </div>
-    <?php elseif ($this->session->userdata('lv') == '1' && in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['SC', 'KIUSCC', 'SALESCOUNTER'], true)) : ?>
+    <?php elseif ($this->session->userdata('lv') == '1' && in_array(strtoupper((string)$this->session->userdata('jobdesk')), ['SC', 'KIUSCC', 'SALESCOUNTER', 'LOBY', 'SALESLOBY', 'ADMINLOBY'], true)) : ?>
     <div class="sidebar">
       <!-- Sidebar Menu -->
       <nav class="mt-2">
@@ -391,6 +391,14 @@
             <a href="<?php echo base_url('sales_order') ?>" class="nav-link">
               <i class="nav-icon fas fa-shopping-cart"></i>
               <p>Sales Order</p>
+            </a>
+          </li>
+
+          <!-- Sales Order Loby -->
+          <li class="nav-item">
+            <a href="<?php echo base_url('sales_order_loby') ?>" class="nav-link">
+              <i class="nav-icon fas fa-store"></i>
+              <p>Sales Order Loby</p>
             </a>
           </li>
 
@@ -616,6 +624,14 @@
                 <i class="nav-icon fas fa-file-invoice-dollar"></i>
                 <p>
                   Admin SC
+                </p>
+              </a>
+            </li>
+            <li class="nav-item">
+              <a href="<?php echo base_url('sales_order_loby') ?>" class="nav-link">
+                <i class="nav-icon fas fa-store"></i>
+                <p>
+                  Sales Order Loby
                 </p>
               </a>
             </li>

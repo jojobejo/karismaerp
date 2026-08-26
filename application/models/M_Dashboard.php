@@ -122,6 +122,7 @@ class M_Dashboard extends CI_Model
                 'menus' => array(
                     $this->menu('Kas Bon', 'C_Kasbon', 'fas fa-money-bill-wave', 'lime', 'Form pengajuan dan riwayat Kas Bon.'),
                     $this->menu('Sales Order', 'sales_order', 'fas fa-file-signature', 'blue', 'Kelola dokumen sales order dan approval.'),
+                    $this->menu('Sales Order Loby', 'sales_order_loby', 'fas fa-store', 'orange', 'Penjualan langsung / walk-in cash customer di Loby.'),
                     $this->menu('Faktur Penjualan', 'admin/transaksi', 'fas fa-file-invoice-dollar', 'cyan', 'Kelola, audit, edit kuantitas & harga faktur penjualan serta sinkronisasi jurnal.'),
                     $this->menu('Katalog Sales', 'kiu_katalog', 'fas fa-store', 'green', 'Buka katalog penjualan untuk tim sales.'),
                     $this->menu('Sales Report', 'sales_report', 'fas fa-chart-bar', 'purple', 'Pantau laporan sales counter dan aktivitas penjualan.'),
@@ -168,6 +169,9 @@ class M_Dashboard extends CI_Model
             'SALESONLINE' => 'sales',
             'SALESCOUNTER' => 'sales',
             'SC' => 'sales',
+            'LOBY' => 'sales',
+            'SALESLOBY' => 'sales',
+            'ADMINLOBY' => 'sales',
             'MNGSC' => 'sales',
             'MANAGER SC' => 'sales',
             'MANAGERSC' => 'sales',

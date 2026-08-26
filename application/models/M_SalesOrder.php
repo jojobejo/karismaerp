@@ -658,6 +658,7 @@ class M_SalesOrder extends CI_Model
         $this->db->join('tb_customer c', 'c.kd_customer = so.kd_customer', 'left');
         $this->db->join('tbso_sales_order_detail sd', 'sd.id_so = so.id_so', 'left');
         $this->db->where('so.status', 'siap_faktur');
+        $this->db->where("(so.so_source IS NULL OR so.so_source != 'LOBY')", null, false);
 
         if (!empty($filter['date1']))       $this->db->where('so.tanggal_transaksi >=', $filter['date1']);
         if (!empty($filter['date2']))       $this->db->where('so.tanggal_transaksi <=', $filter['date2']);
@@ -816,7 +817,7 @@ class M_SalesOrder extends CI_Model
         }
 
         $params = [$kd_rute];
-        $where = "WHERE so.kd_rute = ? AND so.status IN ('open', 'partial')";
+        $where = "WHERE (so.so_source IS NULL OR so.so_source != 'LOBY') AND so.kd_rute = ? AND so.status IN ('open', 'partial')";
 
         if (!empty($filter['create_by'])) {
             $where .= " AND so.create_by = ?";
@@ -876,7 +877,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_open_so_for_routing($filter = [])
     {
-        $where = "WHERE (
+        $where = "WHERE (so.so_source IS NULL OR so.so_source != 'LOBY') AND (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
@@ -948,7 +949,7 @@ class M_SalesOrder extends CI_Model
 
     public function count_open_so_for_routing($filter = [])
     {
-        $where = "WHERE (
+        $where = "WHERE (so.so_source IS NULL OR so.so_source != 'LOBY') AND (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
@@ -980,7 +981,7 @@ class M_SalesOrder extends CI_Model
 
     public function get_open_so_customer_route_options($filter = [])
     {
-        $where = "WHERE (
+        $where = "WHERE (so.so_source IS NULL OR so.so_source != 'LOBY') AND (
             (so.status = 'open' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status = 'partial' AND COALESCE(so.kd_rute, '') = '')
             OR (so.status IN ('siap_faktur', 'partial') AND COALESCE(d.total_qty_tidak_terkirim, 0) > 0)
@@ -1446,6 +1447,7 @@ class M_SalesOrder extends CI_Model
             LEFT JOIN tb_rutecs r ON r.kd_rute = COALESCE(NULLIF(so.kd_rute, ''), c.kd_rute)
             LEFT JOIN tbpo_barang mb ON mb.kode_barang = fd.kd_barang
             WHERE f.status = 'confirmed'
+            AND (f.so_source IS NULL OR f.so_source != 'LOBY')
             AND NOT EXISTS (
                 SELECT 1 FROM tb_detail_do d
                 WHERE d.kd_faktur = f.no_faktur

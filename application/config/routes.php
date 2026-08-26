@@ -854,6 +854,22 @@ $route['sales_order/admin_sc/kembalikan_so_ke_sales'] = 'sales/C_SalesOrder/kemb
 $route['sales_order/admin_sc/get_faktur_activity_log_json'] = 'sales/C_SalesOrder/get_faktur_activity_log_json';
 $route['sales_order/admin_sc/activity_log'] = 'sales/C_SalesOrder/admin_sc_activity_log';
 
+// ---- Sales Order Loby (Direct Cash Sales) ----
+$route['sales_order_loby']                                  = 'sales/C_SalesOrderLoby/index';
+$route['sales_order_loby/create']                           = 'sales/C_SalesOrderLoby/create';
+$route['sales_order_loby/store']                            = 'sales/C_SalesOrderLoby/store';
+$route['sales_order_loby/detail/(:any)']                    = 'sales/C_SalesOrderLoby/detail/$1';
+$route['sales_order_loby/edit/(:any)']                      = 'sales/C_SalesOrderLoby/edit/$1';
+$route['sales_order_loby/update/(:any)']                    = 'sales/C_SalesOrderLoby/update/$1';
+$route['sales_order_loby/cancel/(:any)']                    = 'sales/C_SalesOrderLoby/cancel/$1';
+$route['sales_order_loby/form_faktur/(:any)']               = 'sales/C_SalesOrderLoby/form_faktur/$1';
+$route['sales_order_loby/simpan_faktur/(:any)']             = 'sales/C_SalesOrderLoby/simpan_faktur/$1';
+$route['sales_order_loby/detail_faktur/(:any)']             = 'sales/C_SalesOrderLoby/detail_faktur/$1';
+$route['sales_order_loby/print_faktur/(:any)']              = 'sales/C_SalesOrderLoby/print_faktur/$1';
+$route['sales_order_loby/get_stock']                        = 'sales/C_SalesOrderLoby/get_stock';
+$route['sales_order_loby/get_barang']                       = 'sales/C_SalesOrderLoby/get_barang';
+
+
 
 // ---- Retur Penjualan (SPR) ----
 $route['retur_penjualan']                                    = 'sales/C_ReturPenjualan/index';
