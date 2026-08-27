@@ -114,7 +114,8 @@ class C_PembayaranSupplier extends CI_Controller
             'page_title' => 'KARISMA - FORM PEMBAYARAN SUPPLIER',
             'supplier' => $this->M_PembayaranSupplier->supplier_by_id($idSupplier),
             'documents' => $documents,
-            'cash_bank_accounts' => $this->M_PembayaranSupplier->cash_bank_accounts(),
+            'cash_bank_accounts' => $this->M_PembayaranSupplier->cash_bank_accounts($idSupplier),
+            'saldo_retur' => $this->M_PembayaranSupplier->get_supplier_return_balance($idSupplier),
         ];
 
         $this->load->view('partial/main/header.php', $data);

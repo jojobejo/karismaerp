@@ -99,7 +99,7 @@
             const number = parseFloat(value || 0);
             return 'Rp ' + number.toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
-                maximumFractionDigits: 5
+                maximumFractionDigits: 2
             });
         }
 

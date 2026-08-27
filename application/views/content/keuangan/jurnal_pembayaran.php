@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatMoney(num) {
         var p = parseFloat(num);
         if (isNaN(p)) return 'Rp 0';
-        return 'Rp ' + p.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+        return 'Rp ' + p.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function formatDate(str) {

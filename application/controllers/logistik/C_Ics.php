@@ -883,7 +883,7 @@ class C_Ics extends CI_Controller
 
         foreach ($kodeBarang as $index => $kode) {
             $kode = trim((string) $kode);
-            $qtyValue = (float) str_replace(',', '.', (string) ($qty[$index] ?? 0));
+            $qtyValue = $this->_parse_number_input($qty[$index] ?? 0);
 
             if ($kode === '' && $qtyValue <= 0) {
                 continue;
@@ -895,7 +895,7 @@ class C_Ics extends CI_Controller
                 'satuan' => trim((string) ($satuan[$index] ?? '')),
                 'no_lot' => trim((string) ($noLot[$index] ?? '')),
                 'expired_date' => trim((string) ($expiredDate[$index] ?? '')),
-                'harga_satuan' => (float) str_replace(',', '.', (string) ($hargaSatuan[$index] ?? 0))
+                'harga_satuan' => $this->_parse_harga_input($hargaSatuan[$index] ?? 0)
             ];
         }
 
@@ -5711,5 +5711,45 @@ class C_Ics extends CI_Controller
             'status' => $data ? true : false,
             'data'   => $data
         ]);
+    }
+
+    private function _parse_number_input($value)
+    {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+        $value = trim((string)$value);
+        if ($value === '') return 0.0;
+
+        $value = preg_replace('/[^\d,.\-]/', '', $value);
+        if ($value === '' || $value === '-') return 0.0;
+
+        if (strpos($value, '.') !== false && strpos($value, ',') !== false) {
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        } elseif (strpos($value, ',') !== false) {
+            $value = str_replace(',', '.', $value);
+        } elseif (strpos($value, '.') !== false) {
+            if (substr_count($value, '.') > 1) {
+                $value = str_replace('.', '', $value);
+            } elseif (is_numeric($value)) {
+                return (float)$value;
+            }
+        }
+
+        return (float)$value;
+    }
+
+    private function _parse_harga_input($value)
+    {
+        if (empty($value) && $value !== '0' && $value !== 0) return 0.0;
+        $raw = (string)$value;
+        $clean = str_replace(['Rp', 'rp', ' ', '.'], '', $raw);
+        $clean = str_replace(',', '.', $clean);
+        return (float)$clean;
     }
 }

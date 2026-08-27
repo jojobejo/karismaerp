@@ -198,7 +198,7 @@ if (!function_exists('hitung_durasi')) {
                                                     <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
                                                     <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
                                                     <td class="text-center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
-                                                    <td class="text-center"><?= number_format((float)$d['qty_retur'], 3) ?></td>
+                                                    <td class="text-center"><?= (float)$d['qty_retur'] == (int)$d['qty_retur'] ? number_format((float)$d['qty_retur'], 0, ',', '.') : rtrim(rtrim(number_format((float)$d['qty_retur'], 3, ',', '.'), '0'), ',') ?></td>
                                                     <td class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Rp <?= number_format((float)$d['harga_satuan'], 0, ',', '.') ?></td>
                                                     <td class="text-right <?= $hide_harga ? 'd-none' : '' ?>">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
                                                 </tr>

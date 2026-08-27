@@ -112,7 +112,7 @@ class C_PenyesuaianBarang extends CI_Controller
         if (!empty($post['details']) && is_array($post['details'])) {
             foreach ($post['details'] as $line) {
                 if (empty($line['kd_barang'])) continue;
-                $jumlah = isset($line['jumlah']) ? (float)$line['jumlah'] : 0;
+                $jumlah = isset($line['jumlah']) ? $this->_parse_number_input($line['jumlah']) : 0;
                 if ($jumlah == 0) continue;
 
                 $total_nilai += abs($jumlah);
@@ -355,5 +355,36 @@ class C_PenyesuaianBarang extends CI_Controller
             show_404();
         }
         $this->load->view('content/keuangan/penyesuaian_barang_print.php', $data);
+    }
+
+    private function _parse_number_input($value)
+    {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+        $value = trim((string)$value);
+        if ($value === '') return 0.0;
+
+        $value = preg_replace('/[^\d,.\-]/', '', $value);
+        if ($value === '' || $value === '-') return 0.0;
+
+        if (strpos($value, '.') !== false && strpos($value, ',') !== false) {
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        } elseif (strpos($value, ',') !== false) {
+            $value = str_replace(',', '.', $value);
+        } elseif (strpos($value, '.') !== false) {
+            if (substr_count($value, '.') > 1) {
+                $value = str_replace('.', '', $value);
+            } elseif (is_numeric($value)) {
+                return (float)$value;
+            }
+        }
+
+        return (float)$value;
     }
 }

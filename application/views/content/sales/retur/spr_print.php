@@ -150,7 +150,7 @@
                 <td><?= $d ? htmlspecialchars($d['nama_barang'] ?? '') : '&nbsp;' ?></td>
                 <td><?= $d ? htmlspecialchars($d['no_faktur'] ?? '') : '&nbsp;' ?></td>
                 <td><?= $d ? htmlspecialchars($d['no_batch'] ?? '') : '&nbsp;' ?></td>
-                <td class="right"><?= $d && $d['qty'] > 0 ? number_format((float)$d['qty'], 3) : '&nbsp;' ?></td>
+                <td class="right"><?= $d && $d['qty'] > 0 ? ((float)$d['qty'] == (int)$d['qty'] ? number_format((float)$d['qty'], 0, ',', '.') : rtrim(rtrim(number_format((float)$d['qty'], 3, ',', '.'), '0'), ',')) : '&nbsp;' ?></td>
                 <?php if ($i === 0): ?>
                 <td class="keterangan-cell" rowspan="<?= $min_rows ?>">
                     <?php

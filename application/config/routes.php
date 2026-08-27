@@ -881,6 +881,7 @@ $route['retur_penjualan/create']                             = 'sales/C_ReturPen
 $route['retur_penjualan/store']                              = 'sales/C_ReturPenjualan/store';
 $route['retur_penjualan/edit/(:any)']                        = 'sales/C_ReturPenjualan/edit/$1';
 $route['retur_penjualan/update/(:any)']                      = 'sales/C_ReturPenjualan/update/$1';
+$route['retur_penjualan/delete/(:any)']                      = 'sales/C_ReturPenjualan/delete/$1';
 $route['retur_penjualan/detail/(:any)']                      = 'sales/C_ReturPenjualan/detail/$1';
 $route['retur_penjualan/submit/(:any)']                      = 'sales/C_ReturPenjualan/submit/$1';
 $route['retur_penjualan/print/(:any)']                       = 'sales/C_ReturPenjualan/print_spr/$1';

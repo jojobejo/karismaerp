@@ -298,14 +298,29 @@ class C_ReturPenjualan extends CI_Controller
 
     public function edit($id_spr)
     {
-        if (!$this->_isAdmstock()) {
-            $this->_denyAccess();
+        $spr = $this->M_ReturPenjualan->get_spr($id_spr);
+        if (!$spr) {
+            $this->session->set_flashdata('error', 'SPR tidak ditemukan.');
+            redirect('retur_penjualan');
             return;
         }
 
-        $spr = $this->M_ReturPenjualan->get_spr($id_spr);
-        if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
-            $this->session->set_flashdata('error', 'SPR tidak valid atau tidak dapat diedit saat ini.');
+        $user       = $this->_getUser();
+        $is_creator = ($spr['create_by'] === $user['nama']);
+        $can_edit   = false;
+
+        if (in_array($spr['status'], ['draft', 'diajukan'], true)) {
+            if ($is_creator || $this->_isSC() || $this->_isKoorSC() || $this->_isAdmstock() || $user['jobdesk'] === 'ADMIN') {
+                $can_edit = true;
+            }
+        } elseif ($spr['status'] === 'diverifikasi_koor') {
+            if ($this->_isAdmstock() || $user['jobdesk'] === 'ADMIN') {
+                $can_edit = true;
+            }
+        }
+
+        if (!$can_edit) {
+            $this->session->set_flashdata('error', 'SPR tidak dapat diedit pada status saat ini.');
             redirect('retur_penjualan');
             return;
         }
@@ -314,7 +329,7 @@ class C_ReturPenjualan extends CI_Controller
         $data['spr']         = $spr;
         $data['no_spr']      = $spr['no_spr'];
         $data['spr_detail']  = $this->M_ReturPenjualan->get_spr_detail($id_spr);
-        $data['user']        = $this->_getUser();
+        $data['user']        = $user;
         $data['customers']   = $this->M_ReturPenjualan->get_customers();
 
         $this->load->view('partial/main/header.php', $data);
@@ -324,7 +339,7 @@ class C_ReturPenjualan extends CI_Controller
 
     public function update($id_spr)
     {
-        if (!$this->_isAdmstock() || $this->input->server('REQUEST_METHOD') !== 'POST') {
+        if ($this->input->server('REQUEST_METHOD') !== 'POST') {
             redirect('retur_penjualan');
             return;
         }
@@ -332,8 +347,27 @@ class C_ReturPenjualan extends CI_Controller
         $user = $this->_getUser();
         $spr  = $this->M_ReturPenjualan->get_spr($id_spr);
 
-        if (!$spr || $spr['status'] !== 'diverifikasi_koor') {
-            $this->session->set_flashdata('error', 'SPR tidak valid atau sudah diproses.');
+        if (!$spr) {
+            $this->session->set_flashdata('error', 'SPR tidak ditemukan.');
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $is_creator = ($spr['create_by'] === $user['nama']);
+        $can_edit   = false;
+
+        if (in_array($spr['status'], ['draft', 'diajukan'], true)) {
+            if ($is_creator || $this->_isSC() || $this->_isKoorSC() || $this->_isAdmstock() || $user['jobdesk'] === 'ADMIN') {
+                $can_edit = true;
+            }
+        } elseif ($spr['status'] === 'diverifikasi_koor') {
+            if ($this->_isAdmstock() || $user['jobdesk'] === 'ADMIN') {
+                $can_edit = true;
+            }
+        }
+
+        if (!$can_edit) {
+            $this->session->set_flashdata('error', 'SPR tidak dapat diperbarui pada status saat ini.');
             redirect('retur_penjualan');
             return;
         }
@@ -350,7 +384,7 @@ class C_ReturPenjualan extends CI_Controller
             'update_by'     => $user['nama'],
         ];
 
-        // Update header tanpa merubah status (tetap diverifikasi_koor)
+        // Update header tanpa merubah status
         $this->M_ReturPenjualan->update_spr_status($id_spr, $spr['status'], $header);
 
         // Hapus detail lama dan ganti dengan yang baru
@@ -358,10 +392,54 @@ class C_ReturPenjualan extends CI_Controller
         $this->_saveDetail($id_spr);
 
         // Record Log
-        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'edit_stock', $spr['status'], $spr['status'], $header['catatan'], $user['nama']);
+        $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'edit', $spr['status'], $spr['status'], $header['catatan'], $user['nama']);
 
         $this->session->set_flashdata('success', "Data SPR <strong>{$spr['no_spr']}</strong> berhasil diperbarui.");
-        redirect('retur_penjualan/admretur_cek/' . $id_spr);
+        
+        if ($spr['status'] === 'diverifikasi_koor') {
+            redirect('retur_penjualan/admretur_cek/' . $id_spr);
+        } else {
+            redirect('retur_penjualan/detail/' . $id_spr);
+        }
+    }
+
+    public function delete($id_spr)
+    {
+        $user = $this->_getUser();
+        $spr  = $this->M_ReturPenjualan->get_spr($id_spr);
+
+        if (!$spr) {
+            $this->session->set_flashdata('error', 'SPR tidak ditemukan.');
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $is_creator = ($spr['create_by'] === $user['nama']);
+        $can_delete = false;
+
+        // Hanya bisa hapus jika masih draft atau diajukan (belum di-approve/diverifikasi)
+        if (in_array($spr['status'], ['draft', 'diajukan'], true)) {
+            if ($is_creator || $this->_isSC() || $this->_isKoorSC() || $this->_isAdmstock() || $user['jobdesk'] === 'ADMIN') {
+                $can_delete = true;
+            }
+        }
+
+        if (!$can_delete) {
+            $this->session->set_flashdata('error', 'SPR tidak dapat dihapus karena sudah masuk proses persetujuan.');
+            redirect('retur_penjualan');
+            return;
+        }
+
+        $ok = $this->M_ReturPenjualan->delete_spr($id_spr);
+
+        if ($ok) {
+            $this->M_ReturPenjualan->record_log($spr['no_spr'], 'spr', 'delete', $spr['status'], 'deleted', 'SPR dihapus oleh user', $user['nama']);
+            $this->session->set_flashdata('success', "SPR <strong>{$spr['no_spr']}</strong> berhasil dihapus.");
+        } else {
+            $this->session->set_flashdata('error', "Gagal menghapus SPR <strong>{$spr['no_spr']}</strong>.");
+        }
+
+        redirect('retur_penjualan');
     }
 
     /**
@@ -410,7 +488,7 @@ class C_ReturPenjualan extends CI_Controller
                 'no_batch'                  => $no_batch[$i]  ?? '',
                 'expired_date'              => $exp_val,
                 'harga'                     => (float) str_replace(',', '.', str_replace(['Rp', 'rp', ' ', '.'], '', (string)($harga[$i] ?? 0))),
-                'qty'                       => (float) ($qty[$i] ?? 0),
+                'qty'                       => $this->_parseQty($qty[$i] ?? 0),
                 'alasan_brg_bermasalah'     => $alasan_brg,
                 'alasan_brg_bermasalah_opt' => $alasan_brg_opt,
                 'alasan_expired'            => $alasan_exp,
@@ -427,6 +505,44 @@ class C_ReturPenjualan extends CI_Controller
         if (!empty($rows)) {
             $this->M_ReturPenjualan->save_spr_detail($rows);
         }
+    }
+
+    private function _parseQty($val)
+    {
+        if (is_numeric($val)) {
+            return (float)$val;
+        }
+        $raw = trim((string)$val);
+        if ($raw === '') return 0.0;
+        $raw = preg_replace('/[^\d,.\-]/', '', $raw);
+        if ($raw === '' || $raw === '-') return 0.0;
+
+        if (strpos($raw, '.') !== false && strpos($raw, ',') !== false) {
+            if (strrpos($raw, ',') > strrpos($raw, '.')) {
+                $raw = str_replace('.', '', $raw);
+                $raw = str_replace(',', '.', $raw);
+            } else {
+                $raw = str_replace(',', '', $raw);
+            }
+        } elseif (strpos($raw, ',') !== false) {
+            $raw = str_replace(',', '.', $raw);
+        } elseif (strpos($raw, '.') !== false) {
+            if (substr_count($raw, '.') > 1) {
+                $raw = str_replace('.', '', $raw);
+            } elseif (is_numeric($raw)) {
+                return (float)$raw;
+            }
+        }
+        return (float) $raw;
+    }
+
+    private function _parseHarga($val)
+    {
+        if (empty($val) && $val !== '0' && $val !== 0) return 0.0;
+        $raw = (string)$val;
+        $clean = str_replace(['Rp', 'rp', ' ', '.'], '', $raw);
+        $clean = str_replace(',', '.', $clean);
+        return (float)$clean;
     }
 
     // ================================================================
@@ -1234,12 +1350,12 @@ class C_ReturPenjualan extends CI_Controller
                 'no_faktur'     => $no_faktur_arr[$i] ?? '',
                 'no_batch'      => $no_batch_arr[$i] ?? '',
                 'expired_date'  => !empty($expired_arr[$i]) ? $expired_arr[$i] : null,
-                'qty_retur'     => (float)($qty_retur[$i] ?? 0),
-                'harga_satuan'  => (float)str_replace([',', '.'], ['', '.'], ($harga_satuan[$i] ?? 0)),
+                'qty_retur'     => $this->_parseQty($qty_retur[$i] ?? 0),
+                'harga_satuan'  => $this->_parseHarga($harga_satuan[$i] ?? 0),
             ];
 
             // Insert / update ke tberp_stock_batch & tberp_stock_ledger
-            $stockQty = (float)($qty_retur[$i] ?? 0);
+            $stockQty = $this->_parseQty($qty_retur[$i] ?? 0);
             $stockNoLot = trim((string)($no_batch_arr[$i] ?? ''));
             $normalizedExpired = !empty($expired_arr[$i]) ? date('Y-m-d', strtotime($expired_arr[$i])) : null;
 
@@ -1435,8 +1551,8 @@ class C_ReturPenjualan extends CI_Controller
 
         foreach ($id_retur_det as $i => $idd) {
             $update_data = [
-                'qty_retur'    => (float)($qty_retur[$i] ?? 0),
-                'harga_satuan' => (float)str_replace(',', '', ($harga_satuan[$i] ?? 0)),
+                'qty_retur'    => $this->_parseQty($qty_retur[$i] ?? 0),
+                'harga_satuan' => $this->_parseHarga($harga_satuan[$i] ?? 0),
             ];
 
             if (isset($nama_barang_arr[$i])) {

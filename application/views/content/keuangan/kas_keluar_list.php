@@ -437,7 +437,7 @@ $(document).ready(function() {
                     details.forEach(function(row) {
                         let isDebit = parseFloat(row.debit) > 0;
                         let val = isDebit ? parseFloat(row.debit) : parseFloat(row.kredit);
-                        let valStr = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 6 }).format(val);
+                        let valStr = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
                         
                         let debitCol = isDebit ? valStr : '';
                         let kreditCol = !isDebit ? valStr : '';

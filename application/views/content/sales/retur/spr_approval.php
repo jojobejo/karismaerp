@@ -125,7 +125,7 @@
                                                         <td><?= htmlspecialchars($d['nama_barang'] ?? '-') ?></td>
                                                         <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
                                                         <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
-                                                        <td class="text-right"><?= number_format((float)$d['qty'], 3) ?></td>
+                                                        <td class="text-right"><?= (float)$d['qty'] == (int)$d['qty'] ? number_format((float)$d['qty'], 0, ',', '.') : rtrim(rtrim(number_format((float)$d['qty'], 3, ',', '.'), '0'), ',') ?></td>
                                                         <td>
                                                             <?php
                                                             $al = [];

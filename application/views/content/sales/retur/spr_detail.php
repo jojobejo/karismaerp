@@ -242,7 +242,7 @@ if (!function_exists('hitung_durasi')) {
                                                         <td><?= htmlspecialchars($d['nama_barang'] ?? '-') ?></td>
                                                         <td><?= htmlspecialchars($d['no_faktur'] ?? '-') ?></td>
                                                         <td><?= htmlspecialchars($d['no_batch'] ?? '-') ?></td>
-                                                        <td class="text-right"><?= number_format((float)$d['qty'], 3) ?></td>
+                                                        <td class="text-right"><?= (float)$d['qty'] == (int)$d['qty'] ? number_format((float)$d['qty'], 0, ',', '.') : rtrim(rtrim(number_format((float)$d['qty'], 3, ',', '.'), '0'), ',') ?></td>
                                                         <td>
                                                             <?php
                                                             $alasan_list = [];
@@ -298,6 +298,7 @@ if (!function_exists('hitung_durasi')) {
                                     <?php endif; ?>
                                     <?php
                                     $jobdesk = strtoupper((string)($user['jobdesk'] ?? $this->session->userdata('jobdesk') ?? ''));
+                                    $is_sc = in_array($jobdesk, ['SC','SALESCOUNTER','ADMIN']);
                                     $is_koor = in_array($jobdesk, ['MANAGERSC','ADMINSC','ADMIN']);
                                     $is_admretur = in_array($jobdesk, ['ADMRETUR','ADMINSTOCK','LOGISTIK','ADMIN']);
                                     $is_admpnj = in_array($jobdesk, ['ADMPNJ','ADMIN']);
@@ -310,6 +311,11 @@ if (!function_exists('hitung_durasi')) {
                                     $tindak_icon = '';
                                     $tindak_class = '';
                                     $st = $spr['status'];
+
+                                    $is_creator = ($spr['create_by'] === ($user['nama'] ?? ''));
+                                    $can_edit = (in_array($st, ['draft', 'diajukan'], true) && ($is_creator || $is_sc || $is_koor || $is_admretur || $jobdesk === 'ADMIN'))
+                                                || ($st === 'diverifikasi_koor' && ($is_admretur || $jobdesk === 'ADMIN'));
+                                    $can_delete = in_array($st, ['draft', 'diajukan'], true) && ($is_creator || $is_sc || $is_koor || $is_admretur || $jobdesk === 'ADMIN');
 
                                     if ($st === 'diajukan' && $is_koor) {
                                         $tindak_url = base_url('retur_penjualan/mngsc/verifikasi/' . $spr['id_spr']);
@@ -338,6 +344,16 @@ if (!function_exists('hitung_durasi')) {
                                         $tindak_class = 'success';
                                     }
                                     ?>
+                                    <?php if ($can_edit): ?>
+                                        <a href="<?= base_url('retur_penjualan/edit/' . $spr['id_spr']) ?>" class="btn btn-primary mr-2">
+                                            <i class="fas fa-edit"></i> Edit SPR
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if ($can_delete): ?>
+                                        <a href="<?= base_url('retur_penjualan/delete/' . $spr['id_spr']) ?>" class="btn btn-danger mr-2 btn-delete-spr" data-nospr="<?= htmlspecialchars($spr['no_spr']) ?>">
+                                            <i class="fas fa-trash"></i> Hapus SPR
+                                        </a>
+                                    <?php endif; ?>
                                     <?php if (!empty($tindak_url)): ?>
                                         <a href="<?= $tindak_url ?>" class="btn btn-<?= $tindak_class ?> mr-2">
                                             <i class="fas fa-<?= $tindak_icon ?>"></i> <?= $tindak_label ?>
@@ -522,3 +538,16 @@ if (!function_exists('hitung_durasi')) {
     </footer>
     <aside class="control-sidebar control-sidebar-dark"></aside>
 </div>
+
+<script>
+$(document).ready(function () {
+    $(document).on('click', '.btn-delete-spr', function(e) {
+        e.preventDefault();
+        var url    = $(this).attr('href');
+        var noSpr  = $(this).data('nospr');
+        if (confirm('Apakah Anda yakin ingin MENGHAPUS SPR ' + noSpr + '? Data yang dihapus tidak dapat dikembalikan.')) {
+            window.location.href = url;
+        }
+    });
+});
+</script>

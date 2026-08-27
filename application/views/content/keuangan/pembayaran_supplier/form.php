@@ -83,12 +83,24 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-group">
-                                            <label>Akun Kas/Bank</label>
-                                            <select name="id_akun_kas_bank" class="form-control select2" required>
+                                            <label>Akun Kas/Bank / Pembayaran</label>
+                                            <select name="id_akun_kas_bank" id="id_akun_kas_bank" class="form-control select2" required>
                                                 <option value="">Pilih akun</option>
-                                                <?php foreach ($cash_bank_accounts as $account): ?>
-                                                    <option value="<?= (int)$account['id_akun'] ?>">
-                                                        <?= htmlspecialchars($account['kode_akun'] . ' - ' . ($account['nama_akun'] ?: $account['tipe_kontrol'])) ?>
+                                                <?php foreach ($cash_bank_accounts as $account): 
+                                                    $isPnd = (string)$account['kode_akun'] === '13013' || strpos(strtolower((string)$account['nama_akun']), 'retur pembelian yg blm dipot') !== false;
+                                                    $disabled = '';
+                                                    $extraLabel = '';
+                                                    if ($isPnd) {
+                                                        if ((float)($saldo_retur ?? 0) <= 0) {
+                                                            $disabled = 'disabled';
+                                                            $extraLabel = ' (Tidak ada saldo retur)';
+                                                        } else {
+                                                            $extraLabel = ' (Saldo: Rp ' . number_format((float)$saldo_retur, 0, ',', '.') . ')';
+                                                        }
+                                                    }
+                                                ?>
+                                                    <option value="<?= (int)$account['id_akun'] ?>" data-is-pnd="<?= $isPnd ? '1' : '0' ?>" <?= $disabled ?>>
+                                                        <?= htmlspecialchars($account['kode_akun'] . ' - ' . ($account['nama_akun'] ?: $account['tipe_kontrol']) . $extraLabel) ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -106,6 +118,15 @@
                                         <div class="form-group">
                                             <label>Keterangan</label>
                                             <input type="text" name="keterangan" class="form-control" value="Pembayaran supplier <?= htmlspecialchars($supplier['nama_suplier'] ?? '') ?>">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row" id="saldo_retur_group" style="display: none;">
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info py-2 mb-0">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            <strong>Saldo Retur Pembelian Supplier (PND):</strong> Rp <?= number_format((float)($saldo_retur ?? 0), 0, ',', '.') ?>
+                                            <small class="d-block text-muted mt-1">Akun Q Piutang Non Dagang (Retur Pembelian yg blm dipot) akan digunakan untuk memotong saldo hutang supplier ini.</small>
                                         </div>
                                     </div>
                                 </div>
@@ -184,9 +205,24 @@ $(function () {
         $('.select2').select2({ theme: 'bootstrap4', width: '100%' });
     }
 
+    var saldoReturSupplier = <?= (float)($saldo_retur ?? 0) ?>;
+
     function money(value) {
         return 'Rp ' + Number(value || 0).toLocaleString('id-ID', { maximumFractionDigits: 0 });
     }
+
+    function checkPndAccount() {
+        var selectedOpt = $('#id_akun_kas_bank').find('option:selected');
+        var isPnd = selectedOpt.attr('data-is-pnd') == '1' || selectedOpt.text().indexOf('13013') !== -1 || selectedOpt.text().indexOf('Retur Pembelian') !== -1;
+        if (isPnd) {
+            $('#saldo_retur_group').slideDown();
+        } else {
+            $('#saldo_retur_group').slideUp();
+        }
+    }
+
+    $('#id_akun_kas_bank').on('change', checkPndAccount);
+    checkPndAccount();
 
     function refreshTotal() {
         var total = 0;
@@ -208,6 +244,17 @@ $(function () {
         if (Math.round(amount * 100) !== Math.round(total * 100)) {
             e.preventDefault();
             alert('Nominal pembayaran harus sama dengan total alokasi.');
+            return false;
+        }
+
+        var selectedOpt = $('#id_akun_kas_bank').find('option:selected');
+        var isPnd = selectedOpt.attr('data-is-pnd') == '1' || selectedOpt.text().indexOf('13013') !== -1 || selectedOpt.text().indexOf('Retur Pembelian') !== -1;
+        if (isPnd) {
+            if (amount > saldoReturSupplier) {
+                e.preventDefault();
+                alert('Nominal pembayaran dengan PND (Rp ' + amount.toLocaleString('id-ID') + ') melebihi sisa saldo retur supplier yang tersedia (Rp ' + saldoReturSupplier.toLocaleString('id-ID') + ').');
+                return false;
+            }
         }
     });
 });

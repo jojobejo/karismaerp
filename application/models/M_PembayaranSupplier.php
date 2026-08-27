@@ -225,13 +225,13 @@ class M_PembayaranSupplier extends CI_Model
         return $selected;
     }
 
-    public function cash_bank_accounts()
+    public function cash_bank_accounts($idSupplier = null)
     {
         if (!$this->db->table_exists('tbkeu_akun')) {
             return [];
         }
 
-        return $this->db
+        $accounts = $this->db
             ->select('id_akun, kode_akun, nama_akun, tipe_kontrol')
             ->where_in('tipe_kontrol', ['KAS', 'BANK'])
             ->where('tipe_akun', 'POSTING')
@@ -240,6 +240,58 @@ class M_PembayaranSupplier extends CI_Model
             ->order_by('kode_akun', 'ASC')
             ->get('tbkeu_akun')
             ->result_array();
+
+        // Ambil akun PND Q Piutang Non Dagang (Retur Pembelian yang belum dipotong)
+        $pndAccounts = $this->db
+            ->select('id_akun, kode_akun, nama_akun, tipe_kontrol')
+            ->where('kode_akun', '13013')
+            ->where('tipe_akun', 'POSTING')
+            ->where('is_active', 1)
+            ->order_by('kode_akun', 'ASC')
+            ->get('tbkeu_akun')
+            ->result_array();
+
+        if (!empty($pndAccounts)) {
+            foreach ($pndAccounts as $pnd) {
+                $exists = false;
+                foreach ($accounts as $acc) {
+                    if ((int)$acc['id_akun'] === (int)$pnd['id_akun']) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $pnd['tipe_kontrol'] = 'PND';
+                    $accounts[] = $pnd;
+                }
+            }
+        }
+
+        return $accounts;
+    }
+
+    public function get_supplier_return_balance($idSupplier)
+    {
+        $rows = $this->return_credit_rows((int)$idSupplier);
+        $total = 0;
+        foreach ($rows as $row) {
+            $total += (float)($row['available_amount'] ?? 0);
+        }
+        return $total;
+    }
+
+    public function is_pnd_account($idAkun)
+    {
+        $row = $this->db
+            ->select('id_akun, kode_akun, nama_akun')
+            ->where('id_akun', (int)$idAkun)
+            ->get('tbkeu_akun')
+            ->row_array();
+        if (!$row) {
+            return false;
+        }
+        return in_array((string)$row['kode_akun'], ['13013', '13035'], true)
+            || strpos(strtolower((string)$row['nama_akun']), 'retur pembelian yg blm dipot') !== false;
     }
 
     public function payment_rows($keyword = '', $limit = 100)
@@ -322,8 +374,16 @@ class M_PembayaranSupplier extends CI_Model
             return $this->fail('Supplier wajib dipilih.', ['SUPPLIER_REQUIRED']);
         }
         if ($idAkunKasBank <= 0 || !$this->valid_cash_bank_account($idAkunKasBank)) {
-            return $this->fail('Akun kas/bank pembayaran tidak valid.', ['CASH_BANK_ACCOUNT_INVALID']);
+            return $this->fail('Akun kas/bank/PND pembayaran tidak valid.', ['CASH_BANK_ACCOUNT_INVALID']);
         }
+
+        if ($this->is_pnd_account($idAkunKasBank)) {
+            $saldoRetur = $this->get_supplier_return_balance($idSupplier);
+            if (bccomp($amount, $this->money($saldoRetur), 4) === 1) {
+                return $this->fail('Nominal pembayaran dengan PND (Rp ' . number_format((float)$amount, 0, ',', '.') . ') melebihi sisa saldo retur pembelian supplier yang tersedia (Rp ' . number_format($saldoRetur, 0, ',', '.') . ').', ['EXCEEDS_RETURN_BALANCE']);
+            }
+        }
+
         if ($tanggal === '') {
             return $this->fail('Tanggal pembayaran wajib diisi.', ['PAYMENT_DATE_REQUIRED']);
         }
@@ -598,12 +658,26 @@ class M_PembayaranSupplier extends CI_Model
 
     private function valid_cash_bank_account($idAkun)
     {
-        return $this->db
+        $acc = $this->db
             ->where('id_akun', (int)$idAkun)
-            ->where_in('tipe_kontrol', ['KAS', 'BANK'])
             ->where('tipe_akun', 'POSTING')
             ->where('is_active', 1)
-            ->count_all_results('tbkeu_akun') > 0;
+            ->get('tbkeu_akun')
+            ->row_array();
+
+        if (!$acc) {
+            return false;
+        }
+
+        if (in_array(strtoupper((string)$acc['tipe_kontrol']), ['KAS', 'BANK'], true)) {
+            return true;
+        }
+
+        if (in_array((string)$acc['kode_akun'], ['13013', '13035'], true) || strpos(strtolower((string)$acc['nama_akun']), 'retur pembelian yg blm dipot') !== false) {
+            return true;
+        }
+
+        return false;
     }
 
     private function current_document_outstanding($idSupplier, $invoiceNo)

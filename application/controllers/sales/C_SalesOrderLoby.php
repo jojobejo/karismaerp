@@ -117,15 +117,30 @@ class C_SalesOrderLoby extends CI_Controller
 
     private function _parse_number_input($value)
     {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
         $value = trim((string)$value);
-        if ($value === '') return 0;
+        if ($value === '') return 0.0;
 
         $value = preg_replace('/[^\d,.\-]/', '', $value);
-        if (strpos($value, ',') !== false) {
-            $value = str_replace('.', '', $value);
+        if ($value === '' || $value === '-') return 0.0;
+
+        if (strpos($value, '.') !== false && strpos($value, ',') !== false) {
+            if (strrpos($value, ',') > strrpos($value, '.')) {
+                $value = str_replace('.', '', $value);
+                $value = str_replace(',', '.', $value);
+            } else {
+                $value = str_replace(',', '', $value);
+            }
+        } elseif (strpos($value, ',') !== false) {
             $value = str_replace(',', '.', $value);
-        } else {
-            $value = str_replace('.', '', $value);
+        } elseif (strpos($value, '.') !== false) {
+            if (substr_count($value, '.') > 1) {
+                $value = str_replace('.', '', $value);
+            } elseif (is_numeric($value)) {
+                return (float)$value;
+            }
         }
 
         return (float)$value;
@@ -141,12 +156,12 @@ class C_SalesOrderLoby extends CI_Controller
                 if (empty($kd)) continue;
 
                 $hrg         = $this->_parse_number_input($post['hrg_satuan'][$i] ?? 0);
-                $hrg_pk      = (float)($post['hrg_pokok'][$i]   ?? 0);
-                $qty_box     = (float)($post['qty_box'][$i]      ?? 0);
-                $qty_satuan  = (float)($post['qty_satuan'][$i]   ?? 0);
+                $hrg_pk      = $this->_parse_number_input($post['hrg_pokok'][$i]   ?? 0);
+                $qty_box     = $this->_parse_number_input($post['qty_box'][$i]      ?? 0);
+                $qty_satuan  = $this->_parse_number_input($post['qty_satuan'][$i]   ?? 0);
                 $isi_per_box = max(1, (int)($post['isi_per_box'][$i] ?? 1));
-                $pajak       = (float)($post['pajak'][$i]        ?? 0);
-                $disc        = (float)($post['disc'][$i]         ?? 0);
+                $pajak       = $this->_parse_number_input($post['pajak'][$i]        ?? 0);
+                $disc        = $this->_parse_number_input($post['disc'][$i]         ?? 0);
                 $qty_kecil   = ($qty_box * $isi_per_box) + $qty_satuan;
 
                 if ($qty_kecil <= 0) continue;
@@ -173,8 +188,8 @@ class C_SalesOrderLoby extends CI_Controller
                     'hrg_satuan'           => $hrg,
                     'hrg_pokok'            => $hrg_pk,
                     'total_harga'          => $total_tax,
-                    'berat_gram'           => (float)($post['berat_gram'][$i]  ?? 0),
-                    'kubikasi_m3'          => (float)($post['kubikasi_m3'][$i] ?? 0),
+                    'berat_gram'           => $this->_parse_number_input($post['berat_gram'][$i]  ?? 0),
+                    'kubikasi_m3'          => $this->_parse_number_input($post['kubikasi_m3'][$i] ?? 0),
                     'create_by'            => $this->_getUsername(),
                     'create_at'            => date('Y-m-d H:i:s'),
                 ];

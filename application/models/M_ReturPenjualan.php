@@ -464,6 +464,14 @@ class M_ReturPenjualan extends CI_Model
         $this->db->delete('tbrp_spr_detail', ['id_spr' => (int) $id_spr]);
     }
 
+    public function delete_spr($id_spr)
+    {
+        $id = (int)$id_spr;
+        $this->db->delete('tbrp_spr_detail', ['id_spr' => $id]);
+        $this->db->delete('tbrp_spr_header', ['id_spr' => $id]);
+        return true;
+    }
+
     /**
      * Update status SPR beserta field audit dari masing-masing tahap.
      *

@@ -70,8 +70,10 @@ class C_Kasbon extends CI_Controller
     {
         $user = $this->_getUser();
         
-        $nominal = $this->input->post('nominal');
-        $nominal = str_replace(['.', ','], '', $nominal);
+        $rawNominal = (string)$this->input->post('nominal');
+        $cleanNominal = str_replace(['Rp', 'rp', ' ', '.'], '', $rawNominal);
+        $cleanNominal = str_replace(',', '.', $cleanNominal);
+        $nominal = (float)$cleanNominal;
         
         $keterangan = $this->input->post('keterangan');
 

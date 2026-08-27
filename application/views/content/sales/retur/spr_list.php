@@ -298,13 +298,26 @@
                                                         <i class="fas fa-print"></i> Cetak
                                                     </a>
                                                 <?php endif; ?>
-                                                <?php if (in_array($st, ['draft', 'ditolak'], true) && ($row['create_by'] === ($user['nama'] ?? '') || $is_sc || $jobdesk === 'ADMIN')): ?>
+                                                <?php
+                                                $is_creator = ($row['create_by'] === ($user['nama'] ?? ''));
+                                                $can_edit = (in_array($st, ['draft', 'diajukan'], true) && ($is_creator || $is_sc || $is_koor || $is_admretur || $jobdesk === 'ADMIN'))
+                                                            || ($st === 'diverifikasi_koor' && ($is_admretur || $jobdesk === 'ADMIN'));
+                                                $can_delete = in_array($st, ['draft', 'diajukan'], true) && ($is_creator || $is_sc || $is_koor || $is_admretur || $jobdesk === 'ADMIN');
+                                                ?>
+                                                <?php if ($can_edit): ?>
                                                      <a href="<?= base_url('retur_penjualan/edit/' . $row['id_spr']) ?>"
                                                         class="btn btn-sm btn-primary" title="Edit SPR">
                                                          <i class="fas fa-edit"></i>
                                                      </a>
                                                  <?php endif; ?>
-                                                 <?php if (in_array($st, ['draft', 'ditolak'], true) && $row['create_by'] === ($user['nama'] ?? '')): ?>
+                                                 <?php if ($can_delete): ?>
+                                                     <a href="<?= base_url('retur_penjualan/delete/' . $row['id_spr']) ?>"
+                                                        class="btn btn-sm btn-danger btn-delete-spr" title="Hapus SPR"
+                                                        data-nospr="<?= htmlspecialchars($row['no_spr']) ?>">
+                                                         <i class="fas fa-trash"></i>
+                                                     </a>
+                                                 <?php endif; ?>
+                                                 <?php if ($st === 'draft' && ($is_creator || $is_sc || $jobdesk === 'ADMIN')): ?>
                                                      <a href="<?= base_url('retur_penjualan/submit/' . $row['id_spr']) ?>"
                                                         class="btn btn-sm btn-warning btn-submit-spr" title="Ajukan ke Manager SC"
                                                         data-nospr="<?= htmlspecialchars($row['no_spr']) ?>">
@@ -356,7 +369,17 @@ $(document).ready(function () {
         e.preventDefault();
         var url    = $(this).attr('href');
         var noSpr  = $(this).data('nospr');
-        if (confirm('Ajukan SPR ' + noSpr + ' ke Manager SC? Setelah diajukan tidak dapat diubah.')) {
+        if (confirm('Ajukan SPR ' + noSpr + ' ke Manager SC?')) {
+            window.location.href = url;
+        }
+    });
+
+    // Konfirmasi Hapus
+    $(document).on('click', '.btn-delete-spr', function(e) {
+        e.preventDefault();
+        var url    = $(this).attr('href');
+        var noSpr  = $(this).data('nospr');
+        if (confirm('Apakah Anda yakin ingin MENGHAPUS SPR ' + noSpr + '? Data yang dihapus tidak dapat dikembalikan.')) {
             window.location.href = url;
         }
     });

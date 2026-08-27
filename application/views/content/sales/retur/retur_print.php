@@ -143,7 +143,7 @@
                 <td><?= htmlspecialchars($d['no_faktur'] ?? '') ?></td>
                 <td><?= htmlspecialchars($d['no_batch'] ?? '') ?></td>
                 <td class="center"><?= !empty($d['expired_date']) ? date('d/m/Y', strtotime($d['expired_date'])) : '-' ?></td>
-                <td class="center"><?= number_format((float)$d['qty_retur'], 3) ?></td>
+                <td class="center"><?= (float)$d['qty_retur'] == (int)$d['qty_retur'] ? number_format((float)$d['qty_retur'], 0, ',', '.') : rtrim(rtrim(number_format((float)$d['qty_retur'], 3, ',', '.'), '0'), ',') ?></td>
                 <td class="right">Rp <?= number_format((float)$d['harga_satuan'], 0, ',', '.') ?></td>
                 <td class="right">Rp <?= number_format($subtotal, 0, ',', '.') ?></td>
             </tr>
