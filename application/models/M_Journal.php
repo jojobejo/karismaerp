@@ -676,8 +676,8 @@ class M_Journal extends CI_Model
             $dpp = $item_val;
             $ppn = 0;
             if ($is_bkp) {
-                $dpp = round($item_val / 1.11, 2);
-                $ppn = round($item_val - $dpp, 2);
+                $dpp = round($item_val / 1.11, 5);
+                $ppn = round($item_val - $dpp, 5);
             }
 
             // Resolve ID Akun Retur Penjualan langsung dari Master Barang
@@ -723,7 +723,7 @@ class M_Journal extends CI_Model
                 }
                 $cost_unit = $fallback_prod ? (float)($fallback_prod['hpp'] ?? $fallback_prod['harga_pokok'] ?? $fallback_prod['hrg_pokok'] ?? 0) : 0;
             }
-            $cost_total = round((float)$d['qty_retur'] * $cost_unit, 2);
+            $cost_total = round((float)$d['qty_retur'] * $cost_unit, 5);
 
             // Ambil akun persediaan dan HPP dari Master Barang
             $kode_persediaan = $prod && !empty($prod['kode_akun_persediaan']) ? trim($prod['kode_akun_persediaan']) : '';

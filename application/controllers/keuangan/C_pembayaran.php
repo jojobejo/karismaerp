@@ -228,6 +228,8 @@ class C_pembayaran extends CI_Controller
             ->get()
             ->result_array();
 
+        $data['akun_harta'] = $this->M_pembayaran->get_harta_accounts();
+
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/pembayaran_form.php', $data);
         $this->load->view('partial/main/footer.php');
@@ -250,16 +252,23 @@ class C_pembayaran extends CI_Controller
         $jumlah_pembayaran = $this->_normalize_amount($this->input->post('jumlah_pembayaran', true));
         $jumlah_diskon = $this->_normalize_amount($this->input->post('jumlah_diskon', true));
         $metode_pembayaran = trim((string)$this->input->post('metode_pembayaran', true));
-        $allowed_accounts = [
-            'Q Kas', 'A Kas', 'Bank', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
-            'Q Mandiri 143-00-8389898-9', 'Q BRI 300300', 'Q BRI 999300', 'Q Mandiri Giro 143 0029 298989',
-            'A BCA 1088', 'A BCA 3688', 'A BCA (Annelia)', 'A BCA (Yuanita)', 'A BCA (IB)', 'A BCA (DKS)',
-            'A BRI', 'A Mandiri', 'A Bukopin', 'A Danamon', 'A BCA 1588', 'A Mandiri 8181', 'A BRI 9305',
-            'A BCA (Yuanita Giro)', 'A BRI 8303', 'A BRI 4626-01-012498-53-4', 'A BRI 5305', 'A Deposito',
-            'Q Mandiri 8989', 'Q BRI 2567', 'Q BNI 0080', 'Q BRI 5534', 'Q CIMB Niaga', 'Q BRI 004575-56-6',
-            'Q BRI 555888-56-9', 'A BRI 8568', 'A CIMB 9100'
-        ];
-        if ($metode_pembayaran !== 'Q Hutang Non Dagang' && $metode_pembayaran !== 'bg' && !in_array($metode_pembayaran, $allowed_accounts, true)) {
+
+        // Validasi metode pembayaran secara dinamis berdasarkan akun Harta aktif di database
+        $harta_accounts = $this->M_pembayaran->get_harta_accounts();
+        $allowed_account_names = !empty($harta_accounts) ? array_column($harta_accounts, 'nama_akun') : [];
+
+        $is_valid_metode = (
+            $metode_pembayaran === 'Q Hutang Non Dagang' ||
+            $metode_pembayaran === 'bg' ||
+            in_array($metode_pembayaran, $allowed_account_names, true)
+        );
+
+        // Fallback jika ada akun aktif di master tbkeu_akun
+        if (!$is_valid_metode && !empty($metode_pembayaran) && $this->db->table_exists('tbkeu_akun')) {
+            $is_valid_metode = $this->db->where('nama_akun', $metode_pembayaran)->where('is_active', 1)->count_all_results('tbkeu_akun') > 0;
+        }
+
+        if (!$is_valid_metode) {
             $this->session->set_flashdata('error', 'Metode pembayaran tidak valid.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }

@@ -172,19 +172,19 @@ class Accounting_source_service
             $sales_revenue_lines = [];
             
             foreach ($groupRev as $id_akun => $val) {
-                $line_amt = round($val / $divFactor, 4);
+                $line_amt = round($val / $divFactor, 5);
                 $amount += $line_amt;
                 if ($id_akun > 0) {
                     $sales_revenue_lines[] = ['amount' => $line_amt, 'id_akun' => $id_akun];
                 }
             }
-            $tax = round($normal_amount - $amount, 4);
+            $tax = round($normal_amount - $amount, 5);
 
             $invoice = $this->CI->accounting_service->post_auto('SALES_INVOICE', $base + [
                 'idempotency_key' => 'SALES_INVOICE-FAKTUR-' . $noFaktur,
                 'amount' => $amount,
                 'tax' => $tax,
-                'cogs' => '0.0000',
+                'cogs' => '0.00000',
                 'is_pajak' => $is_pajak,
                 'is_bkps' => $is_bkps,
                 'is_promosi' => $is_promosi,
@@ -204,18 +204,18 @@ class Accounting_source_service
                 $cogs_lines = [];
                 $inventory_lines = [];
                 foreach ($groupCogs as $id_akun => $val) {
-                    if ($id_akun > 0) $cogs_lines[] = ['amount' => $val, 'id_akun' => $id_akun];
+                    if ($id_akun > 0) $cogs_lines[] = ['amount' => round($val, 5), 'id_akun' => $id_akun];
                 }
                 foreach ($groupInv as $id_akun => $val) {
-                    if ($id_akun > 0) $inventory_lines[] = ['amount' => $val, 'id_akun' => $id_akun];
+                    if ($id_akun > 0) $inventory_lines[] = ['amount' => round($val, 5), 'id_akun' => $id_akun];
                 }
 
                 $issue = $this->CI->accounting_service->post_auto('GOODS_ISSUE', array_merge($base, [
                     'keterangan' => 'Penyesuaian persediaan, untuk [NOMOR_JURNAL]',
                     'idempotency_key' => 'GOODS_ISSUE-FAKTUR-' . $noFaktur,
-                    'amount' => '0.0000',
-                    'tax' => '0.0000',
-                    'cogs' => $standard_cogs,
+                    'amount' => '0.00000',
+                    'tax' => '0.00000',
+                    'cogs' => round($standard_cogs, 5),
                     'cogs_lines' => $cogs_lines,
                     'inventory_lines' => $inventory_lines
                 ]), $userId);

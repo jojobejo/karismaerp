@@ -1828,11 +1828,11 @@ class Accounting_service
 
     private function line_totals($lines)
     {
-        $debit = '0.0000';
-        $kredit = '0.0000';
+        $debit = '0.00000';
+        $kredit = '0.00000';
         foreach ($lines as $line) {
-            $debit = bcadd($debit, $this->money($line['debit'] ?? 0), 4);
-            $kredit = bcadd($kredit, $this->money($line['kredit'] ?? 0), 4);
+            $debit = bcadd($debit, $this->money($line['debit'] ?? 0), 5);
+            $kredit = bcadd($kredit, $this->money($line['kredit'] ?? 0), 5);
         }
 
         return ['debit' => $debit, 'kredit' => $kredit];
@@ -1842,7 +1842,7 @@ class Accounting_service
     {
         $value = trim((string)$value);
         if ($value === '') {
-            return '0.0000';
+            return '0.00000';
         }
 
         $value = str_replace(' ', '', $value);
@@ -1858,10 +1858,10 @@ class Accounting_service
         }
 
         if (!preg_match('/^-?\d+(?:\.\d+)?$/', $value)) {
-            return '0.0000';
+            return '0.00000';
         }
 
-        return bcadd($value, '0', 4);
+        return bcadd($value, '0', 5);
     }
 
     private function normalize_date($value)

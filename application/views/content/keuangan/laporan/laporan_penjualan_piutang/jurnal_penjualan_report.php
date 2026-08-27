@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var p = parseFloat(num);
         if (isNaN(p)) return '';
         if (p === 0) return '';
-        return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
     }
 
     function formatDate(str) {

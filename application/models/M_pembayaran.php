@@ -610,4 +610,41 @@ class M_pembayaran extends CI_Model
         }
         return $success;
     }
+
+    /**
+     * Mengambil semua akun aktif dengan tipe klasifikasi Harta (Asset)
+     * dan bertipe kontrol KAS atau BANK untuk opsi Metode Pembayaran
+     *
+     * @return array
+     */
+    public function get_harta_accounts()
+    {
+        if (!$this->db->table_exists('tbkeu_akun')) {
+            return [];
+        }
+
+        $this->db->select('a.id_akun, a.kode_akun, a.nama_akun, a.tipe_kontrol');
+        $this->db->from('tbkeu_akun a');
+        if ($this->db->table_exists('tbkeu_klasifikasi_akun')) {
+            $this->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
+            $this->db->where("(a.id_klasifikasi = 1 OR LOWER(COALESCE(k.nama_klasifikasi, '')) = 'harta' OR k.kode_klasifikasi = '1')", null, false);
+        } else {
+            $this->db->where('a.id_klasifikasi', 1);
+        }
+
+        if ($this->db->field_exists('tipe_kontrol', 'tbkeu_akun')) {
+            $this->db->where_in('a.tipe_kontrol', ['KAS', 'BANK', 'kas', 'bank']);
+        }
+
+        if ($this->db->field_exists('is_active', 'tbkeu_akun')) {
+            $this->db->where('a.is_active', 1);
+        }
+        if ($this->db->field_exists('tipe_akun', 'tbkeu_akun')) {
+            $this->db->where("(a.tipe_akun != 'HEADER' OR a.tipe_akun IS NULL)", null, false);
+        }
+
+        $this->db->order_by('a.nama_akun', 'ASC');
+        return $this->db->get()->result_array();
+    }
 }
+

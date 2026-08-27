@@ -2,28 +2,38 @@
 <?php
 $pending_bg = $pending_bg ?? null;
 $is_bg_cair_mode = !empty($pending_bg);
-$allowed_names = [
-    'Q Kas', 'A Kas', 'Bank', 'Q BCA 1588', 'Q BCA On Line', 'Q Danamon', 'Q Mandiri', 'Q Deposito', 'Q BRI',
-    'Q Mandiri 143-00-8389898-9', 'Q BRI 300300', 'Q BRI 999300', 'Q Mandiri Giro 143 0029 298989',
-    'A BCA 1088', 'A BCA 3688', 'A BCA (Annelia)', 'A BCA (Yuanita)', 'A BCA (IB)', 'A BCA (DKS)',
-    'A BRI', 'A Mandiri', 'A Bukopin', 'A Danamon', 'A BCA 1588', 'A Mandiri 8181', 'A BRI 9305',
-    'A BCA (Yuanita Giro)', 'A BRI 8303', 'A BRI 4626-01-012498-53-4', 'A BRI 5305', 'A Deposito',
-    'Q Mandiri 8989', 'Q BRI 2567', 'Q BNI 0080', 'Q BRI 5534', 'Q CIMB Niaga', 'Q BRI 004575-56-6',
-    'Q BRI 555888-56-9', 'A BRI 8568', 'A CIMB 9100'
-];
-$db_accounts = $this->db->select('nama_akun')
-    ->where_in('nama_akun', $allowed_names)
-    ->get('tbkeu_akun')
-    ->result_array();
+
+// Ambil akun klasifikasi Harta dinamis dari controller atau query langsung jika belum diset
+if (!isset($akun_harta) || !is_array($akun_harta)) {
+    if ($this->db->table_exists('tbkeu_akun')) {
+        $this->db->select('a.id_akun, a.kode_akun, a.nama_akun, a.tipe_kontrol');
+        $this->db->from('tbkeu_akun a');
+        if ($this->db->table_exists('tbkeu_klasifikasi_akun')) {
+            $this->db->join('tbkeu_klasifikasi_akun k', 'k.id_klasifikasi = a.id_klasifikasi', 'left');
+            $this->db->where("(a.id_klasifikasi = 1 OR LOWER(COALESCE(k.nama_klasifikasi, '')) = 'harta' OR k.kode_klasifikasi = '1')", null, false);
+        } else {
+            $this->db->where('a.id_klasifikasi', 1);
+        }
+        if ($this->db->field_exists('tipe_kontrol', 'tbkeu_akun')) {
+            $this->db->where_in('a.tipe_kontrol', ['KAS', 'BANK', 'kas', 'bank']);
+        }
+        if ($this->db->field_exists('is_active', 'tbkeu_akun')) {
+            $this->db->where('a.is_active', 1);
+        }
+        if ($this->db->field_exists('tipe_akun', 'tbkeu_akun')) {
+            $this->db->where("(a.tipe_akun != 'HEADER' OR a.tipe_akun IS NULL)", null, false);
+        }
+        $this->db->order_by('a.nama_akun', 'ASC');
+        $akun_harta = $this->db->get()->result_array();
+    } else {
+        $akun_harta = [];
+    }
+}
 
 $metode_options = [];
-if (!empty($db_accounts)) {
-    foreach ($db_accounts as $acc) {
+if (!empty($akun_harta)) {
+    foreach ($akun_harta as $acc) {
         $metode_options[$acc['nama_akun']] = $acc['nama_akun'];
-    }
-} else {
-    foreach ($allowed_names as $name) {
-        $metode_options[$name] = $name;
     }
 }
 $metode_options['Q Hutang Non Dagang'] = 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)';
