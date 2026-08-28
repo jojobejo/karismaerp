@@ -257,8 +257,14 @@ class C_pembayaran extends CI_Controller
         $harta_accounts = $this->M_pembayaran->get_harta_accounts();
         $allowed_account_names = !empty($harta_accounts) ? array_column($harta_accounts, 'nama_akun') : [];
 
-        $is_valid_metode = (
+        $is_retur_metode = (
+            $metode_pembayaran === 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)' ||
             $metode_pembayaran === 'Q Hutang Non Dagang' ||
+            strtolower($metode_pembayaran) === 'retur'
+        );
+
+        $is_valid_metode = (
+            $is_retur_metode ||
             $metode_pembayaran === 'bg' ||
             in_array($metode_pembayaran, $allowed_account_names, true)
         );
@@ -273,7 +279,7 @@ class C_pembayaran extends CI_Controller
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
-        if ($metode_pembayaran === 'Q Hutang Non Dagang') {
+        if ($is_retur_metode) {
             $saldo_retur = $this->M_pembayaran->get_customer_saldo_retur($faktur['kd_customer']);
             if ($jumlah_pembayaran + $jumlah_diskon > $saldo_retur) {
                 $this->session->set_flashdata('error', 'Jumlah pembayaran retur dan diskon melebihi saldo retur customer.');

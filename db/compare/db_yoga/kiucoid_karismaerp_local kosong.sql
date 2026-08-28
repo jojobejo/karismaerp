@@ -10,6 +10,8 @@
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+SET FOREIGN_KEY_CHECKS = 0;
+SET UNIQUE_CHECKS = 0;
 
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -118255,7 +118257,7 @@ CREATE TABLE `v_stockbarangnk` (
 --
 DROP TABLE IF EXISTS `v_stockbarangnk`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stockbarangnk`  AS SELECT `x`.`kode_barangs` AS `kode_barangs`, `x`.`kode_barang` AS `kode_barang`, `x`.`nama_barang` AS `nama_barang`, `x`.`deskripsi` AS `deskripsi`, `x`.`gbr_barang` AS `gbr_barang`, `x`.`nama_lokasi` AS `nama_lokasi`, (coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) AS `qty_in`, (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0)) AS `qty_out`, ((coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) - (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0))) AS `qty_ready`, `x`.`id_s` AS `id_satuan`, `x`.`satuan` AS `satuan`, `x`.`id_brg_nk` AS `id_brg_nk`, `x`.`kat_barang` AS `kat_barang` FROM (select `a`.`kd_barang` AS `kode_barangs`,`a`.`kd_br_adm` AS `kode_barang`,`a`.`nama_barang` AS `nama_barang`,`a`.`descnk` AS `deskripsi`,`l`.`nama_lokasi` AS `nama_lokasi`,`b`.`id_satuan` AS `id_s`,`b`.`nm_satuan` AS `satuan`,`a`.`gbr_barang` AS `gbr_barang`,`a`.`id_brg_nk` AS `id_brg_nk`,`a`.`kat_barang` AS `kat_barang`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11512'))) AS `qty_out`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11514'))) AS `adjqty_out`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11511'))) AS `qty_in`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11513'))) AS `adjqty_in` from (((`tbpo_barang_nk` `a` join `tbpo_satuan` `b` on((`b`.`id_satuan` = `a`.`satuan`))) join `tbpo_kat_br` `c` on((`c`.`kd_kat` = `a`.`kat_barang`))) left join `tbpo_barang_nk_lokasi` `l` on((`l`.`id_lokasi` = `a`.`kd_lokasi`))) group by `a`.`kd_barang`) AS `x``x`  ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `v_stockbarangnk`  AS SELECT `x`.`kode_barangs` AS `kode_barangs`, `x`.`kode_barang` AS `kode_barang`, `x`.`nama_barang` AS `nama_barang`, `x`.`deskripsi` AS `deskripsi`, `x`.`gbr_barang` AS `gbr_barang`, `x`.`nama_lokasi` AS `nama_lokasi`, (coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) AS `qty_in`, (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0)) AS `qty_out`, ((coalesce(`x`.`qty_in`,0) + coalesce(`x`.`adjqty_in`,0)) - (coalesce(`x`.`qty_out`,0) + coalesce(`x`.`adjqty_out`,0))) AS `qty_ready`, `x`.`id_s` AS `id_satuan`, `x`.`satuan` AS `satuan`, `x`.`id_brg_nk` AS `id_brg_nk`, `x`.`kat_barang` AS `kat_barang` FROM (select `a`.`kd_barang` AS `kode_barangs`,`a`.`kd_br_adm` AS `kode_barang`,`a`.`nama_barang` AS `nama_barang`,`a`.`descnk` AS `deskripsi`,`l`.`nama_lokasi` AS `nama_lokasi`,`b`.`id_satuan` AS `id_s`,`b`.`nm_satuan` AS `satuan`,`a`.`gbr_barang` AS `gbr_barang`,`a`.`id_brg_nk` AS `id_brg_nk`,`a`.`kat_barang` AS `kat_barang`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11512'))) AS `qty_out`,(select sum(`d`.`tr_qty`) from `tbpo_transaksi` `d` where ((`d`.`kd_barang` = `a`.`kd_barang`) and (`d`.`kd_akun` = '11514'))) AS `adjqty_out`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11511'))) AS `qty_in`,(select sum(`e`.`tr_qty`) from `tbpo_transaksi` `e` where ((`e`.`kd_barang` = `a`.`kd_barang`) and (`e`.`kd_akun` = '11513'))) AS `adjqty_in` from (((`tbpo_barang_nk` `a` join `tbpo_satuan` `b` on((`b`.`id_satuan` = `a`.`satuan`))) join `tbpo_kat_br` `c` on((`c`.`kd_kat` = `a`.`kat_barang`))) left join `tbpo_barang_nk_lokasi` `l` on((`l`.`id_lokasi` = `a`.`kd_lokasi`))) group by `a`.`kd_barang`) AS `x` ;
 
 --
 -- Indexes for dumped tables
@@ -122088,6 +122090,8 @@ ALTER TABLE `tb_pengajuan_od_faktur`
 --
 ALTER TABLE `tb_surat_peringatan`
   ADD CONSTRAINT `fk_sp_user` FOREIGN KEY (`id_user`) REFERENCES `tb_users` (`id`) ON DELETE CASCADE;
+SET UNIQUE_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

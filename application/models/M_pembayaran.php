@@ -528,7 +528,12 @@ class M_pembayaran extends CI_Model
         $this->db->from($this->payment_table . ' p');
         $this->db->join('tbso_faktur_penjualan f', 'f.id_faktur = p.id_faktur');
         $this->db->where('f.kd_customer', $kd_customer);
+        $this->db->group_start();
         $this->db->where('p.metode_pembayaran', 'retur');
+        $this->db->or_where('p.metode_pembayaran', 'Q Hutang Non Dagang');
+        $this->db->or_where('p.metode_pembayaran', 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)');
+        $this->db->or_like('p.metode_pembayaran', 'Retur Penjualan yg blm dipot');
+        $this->db->group_end();
         $total_used = (float)$this->db->get()->row()->total_used;
 
         return max(0.0, $total_retur - $total_used);

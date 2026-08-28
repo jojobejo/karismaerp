@@ -2771,7 +2771,7 @@ class C_SalesOrder extends CI_Controller
     // ================================================================
     private function _parse_number_input($value)
     {
-        if (is_numeric($value)) {
+        if (is_int($value) || is_float($value)) {
             return (float)$value;
         }
         $value = trim((string)$value);
@@ -2780,20 +2780,44 @@ class C_SalesOrder extends CI_Controller
         $value = preg_replace('/[^\d,.\-]/', '', $value);
         if ($value === '' || $value === '-') return 0.0;
 
+        // Jika ada titik DAN koma (misal: "1.250.000,50" atau "1,250,000.50")
         if (strpos($value, '.') !== false && strpos($value, ',') !== false) {
             if (strrpos($value, ',') > strrpos($value, '.')) {
+                // Format ID: 1.250.000,50 -> 1250000.50
                 $value = str_replace('.', '', $value);
                 $value = str_replace(',', '.', $value);
             } else {
+                // Format EN: 1,250,000.50 -> 1250000.50
                 $value = str_replace(',', '', $value);
             }
-        } elseif (strpos($value, ',') !== false) {
-            $value = str_replace(',', '.', $value);
         } elseif (strpos($value, '.') !== false) {
+            // Hanya ada titik (misal: "95.000", "1.250.000", atau "95.5")
             if (substr_count($value, '.') > 1) {
+                // Ribuan multiple: "1.250.000" -> 1250000
                 $value = str_replace('.', '', $value);
-            } elseif (is_numeric($value)) {
-                return (float)$value;
+            } else {
+                // 1 titik: cek apakah ribuan ("95.000") atau desimal ("95.5")
+                $parts = explode('.', $value);
+                if (isset($parts[1]) && strlen($parts[1]) === 3) {
+                    // Tepat 3 digit di belakang titik -> ribuan (95.000, 5.000, 100.500)
+                    $value = $parts[0] . $parts[1];
+                } else {
+                    // Desimal pecahan (misal 95.5, 95.25)
+                }
+            }
+        } elseif (strpos($value, ',') !== false) {
+            // Hanya ada koma (misal: "95,5" atau "1,250,000" atau "95,000")
+            if (substr_count($value, ',') > 1) {
+                $value = str_replace(',', '', $value);
+            } else {
+                $parts = explode(',', $value);
+                if (isset($parts[1]) && strlen($parts[1]) === 3 && (int)$parts[1] === 0) {
+                    // Format EN ribuan: 95,000 -> 95000
+                    $value = $parts[0] . $parts[1];
+                } else {
+                    // Desimal format ID: 95,5 -> 95.5
+                    $value = str_replace(',', '.', $value);
+                }
             }
         }
 

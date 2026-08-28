@@ -418,5 +418,23 @@ class C_Laporan extends CI_Controller
                 'data' => $all_products_data
             ]));
     }
+
+    public function repost_retur_journal($id_retur = null)
+    {
+        $this->load->model('M_Journal');
+        if ($id_retur) {
+            $result = $this->M_Journal->post_jurnal_retur_penjualan((int)$id_retur);
+            echo json_encode(['success' => (bool)$result, 'id_retur' => $id_retur]);
+        } else {
+            $all = $this->db->get_where('tbrp_retur_penjualan_header', ['status_retur' => 'selesai'])->result_array();
+            $count = 0;
+            foreach ($all as $r) {
+                if ($this->M_Journal->post_jurnal_retur_penjualan((int)$r['id_retur'])) {
+                    $count++;
+                }
+            }
+            echo json_encode(['success' => true, 'processed' => $count]);
+        }
+    }
 }
 

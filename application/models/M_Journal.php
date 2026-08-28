@@ -120,7 +120,14 @@ class M_Journal extends CI_Model
         $id_jurnal = $this->db->insert_id();
 
         // Cari ID Akun Debit (berdasarkan nama metode pembayaran)
-        if (strtolower($metode) === 'retur') {
+        $is_retur_metode = (
+            strtolower($metode) === 'retur' ||
+            $metode === 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)' ||
+            $metode === 'Q Hutang Non Dagang' ||
+            stripos($metode, 'retur') !== false
+        );
+
+        if ($is_retur_metode) {
             $akun_debit = $this->db->get_where('tbkeu_akun', ['kode_akun' => '21017'])->row_array();
             if (!$akun_debit) {
                 $this->db->like('nama_akun', 'Retur Penjualan yg blm dipot');
@@ -154,11 +161,12 @@ class M_Journal extends CI_Model
             $baris = 1;
             // Baris Debit (Pembayaran)
             if ($jumlah > 0) {
+                $nama_akun_debit_label = $akun_debit ? $akun_debit['nama_akun'] : $metode;
                 $this->db->insert('tbkeu_jurnal_detail', [
                     'id_jurnal' => $id_jurnal,
                     'nomor_baris' => $baris++,
                     'id_akun' => $id_akun_debit,
-                    'keterangan' => 'Penerimaan ' . $metode,
+                    'keterangan' => 'Penerimaan ' . $nama_akun_debit_label,
                     'debit' => $jumlah,
                     'kredit' => 0
                 ]);
@@ -534,47 +542,51 @@ class M_Journal extends CI_Model
             return false;
         }
 
-        $no_retur = $retur['no_retur'];
+        $no_retur = trim($retur['no_retur']);
         $tanggal = $retur['tanggal_retur'] ?: date('Y-m-d');
-        $nomor_jurnal = $this->generate_no_jurnal('retur_penjualan', 'RJP');
 
-        // Calculate total value
-        $total_value = 0;
-        foreach ($details as $d) {
-            $total_value += (float)$d['qty_retur'] * (float)$d['harga_satuan'];
-        }
-
-        if ($total_value <= 0) {
-            return false;
-        }
-
-        $userId = (int)($this->session->userdata('id_karyawan') 
-            ?: $this->session->userdata('id') 
-            ?: $this->session->userdata('id_user') 
-            ?: 0);
-        if ($userId <= 0) {
-            $userId = null;
-        }
-
-        $jurnal_data = [
-            'nomor_jurnal' => $nomor_jurnal,
-            'tanggal_transaksi' => $tanggal,
-            'keterangan' => 'Retur Penjualan ' . $no_retur . ' (Customer: ' . $retur['nama_customer'] . ')',
-            'status' => 'POSTED',
+        // Check if journal already exists for this return
+        $existing_journal = $this->db->get_where('tbkeu_jurnal', [
             'source_module' => 'SALES',
-            'source_type' => 'RETUR_PENJUALAN',
-            'source_id' => $id_retur,
-            'source_no' => $no_retur,
-            'total_debit' => $total_value,
-            'total_kredit' => $total_value,
-            'created_by' => $userId,
-            'created_at' => date('Y-m-d H:i:s'),
-            'posted_by' => $userId,
-            'posted_at' => date('Y-m-d H:i:s')
-        ];
+            'source_type'   => 'RETUR_PENJUALAN',
+            'source_id'     => $id_retur
+        ])->row_array();
 
-        $this->db->insert('tbkeu_jurnal', $jurnal_data);
-        $id_jurnal = $this->db->insert_id();
+        if ($existing_journal) {
+            $id_jurnal = $existing_journal['id_jurnal'];
+            $nomor_jurnal = $existing_journal['nomor_jurnal'];
+            // Hapus detail lama sebelum re-insert
+            $this->db->delete('tbkeu_jurnal_detail', ['id_jurnal' => $id_jurnal]);
+        } else {
+            $nomor_jurnal = $this->generate_no_jurnal('retur_penjualan', 'RJP');
+            $userId = (int)($this->session->userdata('id_karyawan') 
+                ?: $this->session->userdata('id') 
+                ?: $this->session->userdata('id_user') 
+                ?: 0);
+            if ($userId <= 0) {
+                $userId = null;
+            }
+
+            $jurnal_data = [
+                'nomor_jurnal' => $nomor_jurnal,
+                'tanggal_transaksi' => $tanggal,
+                'keterangan' => 'Retur Penjualan ' . $no_retur . ' (Customer: ' . $retur['nama_customer'] . ')',
+                'status' => 'POSTED',
+                'source_module' => 'SALES',
+                'source_type' => 'RETUR_PENJUALAN',
+                'source_id' => $id_retur,
+                'source_no' => $no_retur,
+                'total_debit' => 0,
+                'total_kredit' => 0,
+                'created_by' => $userId,
+                'created_at' => date('Y-m-d H:i:s'),
+                'posted_by' => $userId,
+                'posted_at' => date('Y-m-d H:i:s')
+            ];
+
+            $this->db->insert('tbkeu_jurnal', $jurnal_data);
+            $id_jurnal = $this->db->insert_id();
+        }
 
         // Account IDs resolver
         // 1. Kredit (Piutang Usaha atau Hutang Non Dagang jika Refund/Biasa)
@@ -587,7 +599,7 @@ class M_Journal extends CI_Model
                 $this->db->like('nama_akun', 'Retur Penjualan yg blm dipot');
                 $akun_kredit_row = $this->db->get('tbkeu_akun')->row_array();
             }
-            $id_akun_kredit = $akun_kredit_row ? $akun_kredit_row['id_akun'] : 0;
+            $id_akun_kredit = $akun_kredit_row ? $akun_kredit_row['id_akun'] : 279;
             $keterangan_kredit = 'Hutang Retur ' . $no_retur;
         } else {
             $akun_kredit_row = $this->db->get_where('tbkeu_akun', ['kode_akun' => '13099'])->row_array();
@@ -608,7 +620,7 @@ class M_Journal extends CI_Model
         $akun_all = $this->db->get('tbkeu_akun')->result_array();
         $akun_map = [];
         foreach ($akun_all as $a) {
-            $akun_map[$a['kode_akun']] = $a['id_akun'];
+            $akun_map[$a['kode_akun']] = (int)$a['id_akun'];
         }
 
         $line_num = 1;
@@ -622,15 +634,17 @@ class M_Journal extends CI_Model
             $item_val = (float)$d['qty_retur'] * (float)$d['harga_satuan'];
             if ($item_val <= 0) continue;
 
-            // Prioritaskan kd_barang dari detail retur atau faktur asal
             $kd_barang_item = !empty($d['kd_barang']) ? trim($d['kd_barang']) : '';
-            if (empty($kd_barang_item) && !empty($d['no_faktur'])) {
+            $no_faktur_item = !empty($d['no_faktur']) ? trim($d['no_faktur']) : '';
+
+            // Prioritaskan kd_barang dari detail retur atau faktur asal
+            if (empty($kd_barang_item) && !empty($no_faktur_item)) {
                 $fd_row = $this->db->get_where('tbso_faktur_detail', [
-                    'no_faktur' => $d['no_faktur'],
-                    'nama_barang' => $d['nama_barang']
+                    'TRIM(no_faktur)' => $no_faktur_item,
+                    'nama_barang'     => $d['nama_barang']
                 ])->row_array();
                 if ($fd_row && !empty($fd_row['kd_barang'])) {
-                    $kd_barang_item = $fd_row['kd_barang'];
+                    $kd_barang_item = trim($fd_row['kd_barang']);
                 }
             }
 
@@ -641,7 +655,11 @@ class M_Journal extends CI_Model
                                fd.hrg_pokok, g.DESKRIPSI');
             $this->db->from('tbpo_barang b');
             $this->db->join('tbpo_barang_akun ba', 'ba.kode_barang = b.kode_barang', 'left');
-            $this->db->join('tbso_faktur_detail fd', 'fd.kd_barang = b.kode_barang AND fd.no_faktur = ' . $this->db->escape($d['no_faktur']), 'left');
+            if (!empty($no_faktur_item)) {
+                $this->db->join('tbso_faktur_detail fd', 'fd.kd_barang = b.kode_barang AND TRIM(fd.no_faktur) = ' . $this->db->escape($no_faktur_item), 'left');
+            } else {
+                $this->db->join('tbso_faktur_detail fd', '1=0', 'left');
+            }
             $this->db->join('tbkeu_kelompok_dagang g', 'b.kelompok_dagang = g.NOINDEX', 'left');
 
             if (!empty($kd_barang_item)) {
@@ -651,12 +669,12 @@ class M_Journal extends CI_Model
             }
             $prod = $this->db->get()->row_array();
 
-            $kode_akun_retur = $prod ? trim($prod['kode_akun_retur_penjualan']) : '';
-            $desc = $prod ? strtoupper(trim($prod['DESKRIPSI'])) : '';
+            $kode_akun_retur = $prod ? trim($prod['kode_akun_retur_penjualan'] ?? '') : '';
+            $desc = $prod ? strtoupper(trim($prod['DESKRIPSI'] ?? '')) : '';
             $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
 
             $is_bkp = false;
-            if ($prod && (int)$prod['kelompok_dagang'] === 2) {
+            if ($prod && (int)($prod['kelompok_dagang'] ?? 0) === 2) {
                 $is_bkp = true;
             } elseif ($kode_akun_retur === '41014') {
                 $is_bkp = true;
@@ -688,7 +706,7 @@ class M_Journal extends CI_Model
                 } else {
                     $aRow = $this->db->get_where('tbkeu_akun', ['kode_akun' => $kode_akun_retur])->row_array();
                     if ($aRow) {
-                        $id_akun_retur = $aRow['id_akun'];
+                        $id_akun_retur = (int)$aRow['id_akun'];
                     }
                 }
             }
@@ -697,9 +715,9 @@ class M_Journal extends CI_Model
             if ($id_akun_retur <= 0) {
                 $prefix = $prod ? strtoupper(substr($prod['kode_barang'], 0, 1)) : '';
                 if ($prefix === 'Q') {
-                    $id_akun_retur = $is_bkp ? (isset($akun_map['41014']) ? $akun_map['41014'] : 310) : (isset($akun_map['41015']) ? $akun_map['41015'] : 311);
+                    $id_akun_retur = $is_bkp ? ($akun_map['41014'] ?? 310) : ($akun_map['41015'] ?? 311);
                 } elseif ($prefix === 'A') {
-                    $id_akun_retur = isset($akun_map['41034']) ? $akun_map['41034'] : 316;
+                    $id_akun_retur = $akun_map['41034'] ?? 316;
                 } else {
                     $id_akun_retur = 310;
                 }
@@ -713,6 +731,36 @@ class M_Journal extends CI_Model
 
             // Stock/HPP reversal calculation
             $cost_unit = ($prod && !empty($prod['hrg_pokok'])) ? (float)$prod['hrg_pokok'] : 0;
+            
+            // Fallback 1: Cek dari faktur penjualan terakhir jika join awal kosong
+            if ($cost_unit <= 0 && !empty($kd_barang_item)) {
+                $last_fd = $this->db->select('hrg_pokok')
+                    ->where('kd_barang', $kd_barang_item)
+                    ->where('hrg_pokok >', 0)
+                    ->order_by('id', 'DESC')
+                    ->limit(1)
+                    ->get('tbso_faktur_detail')
+                    ->row_array();
+                if ($last_fd && (float)$last_fd['hrg_pokok'] > 0) {
+                    $cost_unit = (float)$last_fd['hrg_pokok'];
+                }
+            }
+
+            // Fallback 2: Cek dari SO detail terakhir
+            if ($cost_unit <= 0 && !empty($kd_barang_item)) {
+                $last_so = $this->db->select('hrg_pokok')
+                    ->where('kd_barang', $kd_barang_item)
+                    ->where('hrg_pokok >', 0)
+                    ->order_by('id', 'DESC')
+                    ->limit(1)
+                    ->get('tbso_sales_order_detail')
+                    ->row_array();
+                if ($last_so && (float)$last_so['hrg_pokok'] > 0) {
+                    $cost_unit = (float)$last_so['hrg_pokok'];
+                }
+            }
+
+            // Fallback 3: Master barang
             if ($cost_unit <= 0) {
                 $fallback_prod = null;
                 if ($this->db->table_exists('tb_master_barang')) {
@@ -723,6 +771,7 @@ class M_Journal extends CI_Model
                 }
                 $cost_unit = $fallback_prod ? (float)($fallback_prod['hpp'] ?? $fallback_prod['harga_pokok'] ?? $fallback_prod['hrg_pokok'] ?? 0) : 0;
             }
+
             $cost_total = round((float)$d['qty_retur'] * $cost_unit, 5);
 
             // Ambil akun persediaan dan HPP dari Master Barang

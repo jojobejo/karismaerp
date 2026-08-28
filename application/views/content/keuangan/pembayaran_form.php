@@ -36,7 +36,8 @@ if (!empty($akun_harta)) {
         $metode_options[$acc['nama_akun']] = $acc['nama_akun'];
     }
 }
-$metode_options['Q Hutang Non Dagang'] = 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)';
+$nama_akun_retur = 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)';
+$metode_options[$nama_akun_retur] = $nama_akun_retur;
 
 $default_metode = '';
 ?>
@@ -325,15 +326,15 @@ $default_metode = '';
                                         <label>Metode Pembayaran <span class="text-danger">*</span></label>
                                         <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required <?= $is_validasi_kasir_mode ? 'readonly style="pointer-events: none;"' : '' ?>>
                                             <?php
-                                            $selected_metode = $is_validasi_kasir_mode ? 'Q Kas' : ($is_bg_cair_mode ? ($pending_bg['metode_pembayaran'] ?? $default_metode) : $default_metode);
-                                            foreach ($metode_options as $value => $label):
-                                                $disabled_attr = '';
-                                                if ($value === 'Q Hutang Non Dagang' && (float)$saldo_retur <= 0) {
-                                                    $disabled_attr = 'disabled';
-                                                    $label .= ' (Tidak ada saldo)';
-                                                }
-                                                $is_selected = strtolower($selected_metode) === strtolower($value) ? 'selected' : '';
-                                            ?>
+                                             $selected_metode = $is_validasi_kasir_mode ? 'Q Kas' : ($is_bg_cair_mode ? ($pending_bg['metode_pembayaran'] ?? $default_metode) : $default_metode);
+                                             foreach ($metode_options as $value => $label):
+                                                 $disabled_attr = '';
+                                                 if (($value === $nama_akun_retur || $value === 'Q Hutang Non Dagang') && (float)$saldo_retur <= 0) {
+                                                     $disabled_attr = 'disabled';
+                                                     $label .= ' (Tidak ada saldo)';
+                                                 }
+                                                 $is_selected = strtolower($selected_metode) === strtolower($value) ? 'selected' : '';
+                                             ?>
                                                 <option value="<?= htmlspecialchars($value) ?>" <?= $is_selected ?> <?= $disabled_attr ?>>
                                                     <?= htmlspecialchars($label) ?>
                                                 </option>
@@ -646,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Toggle Retur Group
         if (returGroup) {
-            var isRetur = val === 'Q Hutang Non Dagang';
+            var isRetur = (val === 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)' || val === 'Q Hutang Non Dagang' || val.toLowerCase().indexOf('retur') !== -1);
             returGroup.style.display = isRetur ? '' : 'none';
             
             if (isRetur && jumlahInput) {
@@ -684,8 +685,8 @@ document.addEventListener('DOMContentLoaded', function() {
             debitAkun = val;
             if (val.toLowerCase() === 'q kas' || val.toLowerCase() === 'a kas') {
                 refPrefix = 'KM';
-            } else if (val === 'Q Hutang Non Dagang') {
-                debitAkun = 'Q Hutang Non Dagang';
+            } else if (val === 'Q Hutang Non Dagang' || val === 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)') {
+                debitAkun = 'Q Hutang Non Dagang (Retur Penjualan yg blm dipot)';
             } else if (val.toLowerCase() === 'bg') {
                 debitAkun = 'BG / Cek';
             }
