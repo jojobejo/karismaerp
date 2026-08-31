@@ -1449,14 +1449,16 @@ class C_Keuangan extends CI_Controller
 
         foreach ($sections as $section) {
             $name = strtolower($section['name']);
+            $code = (string)($section['code'] ?? '');
             $amount = (float)$section['total'];
-            if (strpos($name, 'atas pendapatan') !== false || strpos($name, 'hpp') !== false || strpos($name, 'cost of revenue') !== false) {
+
+            if ($code === '5' || strpos($name, 'harga pokok') !== false || strpos($name, 'atas pendapatan') !== false || strpos($name, 'hpp') !== false || strpos($name, 'cost of revenue') !== false) {
                 $totalCost += $amount;
-            } elseif (strpos($name, 'beban lain') !== false || strpos($name, 'non operasional') !== false || strpos($name, 'other expense') !== false) {
-                $totalOtherExpense += $amount;
-            } elseif (strpos($name, 'pendapatan lain') !== false || strpos($name, 'other revenue') !== false) {
+            } elseif ($code === '8' || strpos($name, 'pendapatan lain') !== false || strpos($name, 'other revenue') !== false) {
                 $totalOtherRevenue += $amount;
-            } elseif (strpos($name, 'pendapatan') !== false || strpos($name, 'revenue') !== false) {
+            } elseif ($code === '7' || $code === '9' || strpos($name, 'beban lain') !== false || strpos($name, 'non operasional') !== false || strpos($name, 'other expense') !== false) {
+                $totalOtherExpense += $amount;
+            } elseif ($code === '4' || strpos($name, 'penjualan') !== false || (strpos($name, 'pendapatan') !== false && strpos($name, 'biaya') === false && strpos($name, 'non') === false)) {
                 $totalRevenue += $amount;
             } else {
                 $totalOperatingExpense += $amount;

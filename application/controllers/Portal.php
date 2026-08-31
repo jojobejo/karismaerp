@@ -77,7 +77,13 @@ class Portal extends CI_Controller
                 'description' => 'Stock counting and inventory reconciliation.',
                 'accent' => '#14b8a6',
             ],
-        
+            [
+                'name' => 'Overdue',
+                'url' => 'https://tagpd.karismaerp.com/',
+                'icon' => 'fa-file-invoice-dollar',
+                'description' => 'Overdue Invoices & Receivables Monitoring.',
+                'accent' => '#e11d48',
+            ],
         ];
 
         $apps = array_values(array_filter($apps, function ($app) {

@@ -68,9 +68,15 @@ class M_Transaksi extends CI_Model
                         f.create_at AS created_at
                     FROM tbso_faktur_penjualan f
                     LEFT JOIN tb_customer c ON c.kd_customer = f.kd_customer
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        (j.source_module = 'SALES' AND j.source_type = 'FAKTUR_PENJUALAN' AND (j.source_id = f.no_faktur OR j.source_no = f.no_faktur))
-                        OR j.idempotency_key = CONCAT('SALES_INVOICE-FAKTUR-', f.no_faktur)
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
+                        SELECT j2.id_jurnal 
+                        FROM tbkeu_jurnal j2 
+                        WHERE (
+                            j2.idempotency_key = CONCAT('SALES_INVOICE-FAKTUR-', f.no_faktur)
+                            OR (j2.source_module = 'SALES' AND j2.source_type = 'FAKTUR_PENJUALAN' AND (j2.source_id = f.no_faktur OR j2.source_no = f.no_faktur))
+                        )
+                        ORDER BY (CASE WHEN j2.idempotency_key LIKE 'SALES_INVOICE%' THEN 1 ELSE 2 END) ASC, (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                        LIMIT 1
                     )
                     WHERE f.tanggal_faktur >= ? AND f.tanggal_faktur <= ?
                 ";
@@ -103,9 +109,15 @@ class M_Transaksi extends CI_Model
                     FROM tb_lpb l
                     LEFT JOIN tbpo_po p ON (p.kd_po = l.kd_po AND p.no_po = l.no_po)
                     LEFT JOIN tbpo_suplier s ON s.kd_suplier = p.kd_suplier
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        (j.source_module = 'LOGISTIK' AND j.source_type = 'LPB_FINAL' AND j.source_id = CAST(l.id_lpb AS CHAR))
-                        OR j.idempotency_key = CONCAT('GOODS_RECEIPT-LPB-', l.id_lpb)
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
+                        SELECT j2.id_jurnal 
+                        FROM tbkeu_jurnal j2 
+                        WHERE (
+                            (j2.source_module = 'LOGISTIK' AND j2.source_type = 'LPB_FINAL' AND j2.source_id = CAST(l.id_lpb AS CHAR))
+                            OR j2.idempotency_key = CONCAT('GOODS_RECEIPT-LPB-', l.id_lpb)
+                        )
+                        ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                        LIMIT 1
                     )
                     WHERE COALESCE(l.tgl_sj, DATE(l.input_at)) >= ? AND COALESCE(l.tgl_sj, DATE(l.input_at)) <= ?
                 ";
@@ -136,9 +148,15 @@ class M_Transaksi extends CI_Model
                         j.total_kredit AS journal_kredit,
                         pf.create_at AS created_at
                     FROM tbkeu_pembayaran_faktur pf
-                    LEFT JOIN tbso_faktur_penjualan fp ON (fp.id_faktur = pf.id_faktur OR fp.no_faktur = pf.no_faktur)
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        j.source_module = 'KEUANGAN' AND j.source_type = 'PEMBAYARAN_FAKTUR' AND j.source_id = CAST(pf.id_pembayaran AS CHAR)
+                    LEFT JOIN tbso_faktur_penjualan fp ON (
+                        CASE WHEN pf.id_faktur IS NOT NULL AND pf.id_faktur > 0 THEN fp.id_faktur = pf.id_faktur ELSE fp.no_faktur = pf.no_faktur END
+                    )
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
+                        SELECT j2.id_jurnal 
+                        FROM tbkeu_jurnal j2 
+                        WHERE j2.source_module = 'KEUANGAN' AND j2.source_type = 'PEMBAYARAN_FAKTUR' AND j2.source_id = CAST(pf.id_pembayaran AS CHAR)
+                        ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                        LIMIT 1
                     )
                     WHERE pf.tanggal_pembayaran >= ? AND pf.tanggal_pembayaran <= ?
                 ";
@@ -170,10 +188,13 @@ class M_Transaksi extends CI_Model
                         ps.created_at AS created_at
                     FROM tbkeu_pembayaran ps
                     LEFT JOIN tbpo_suplier s ON s.id_suplier = ps.id_supplier
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        (ps.id_jurnal IS NOT NULL AND ps.id_jurnal > 0 AND j.id_jurnal = ps.id_jurnal)
-                        OR (j.source_module = 'KEUANGAN' AND j.source_type = 'SUPPLIER_PAYMENT' AND (j.source_id = CAST(ps.id_pembayaran AS CHAR) OR j.source_id = ps.nomor_pembayaran OR j.source_no = ps.nomor_pembayaran))
-                        OR (j.idempotency_key = CONCAT('SUPPLIER_PAYMENT-', ps.nomor_pembayaran))
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = COALESCE(
+                        NULLIF(ps.id_jurnal, 0),
+                        (SELECT j2.id_jurnal FROM tbkeu_jurnal j2 
+                         WHERE (j2.source_module = 'KEUANGAN' AND j2.source_type = 'SUPPLIER_PAYMENT' AND (j2.source_id = CAST(ps.id_pembayaran AS CHAR) OR j2.source_id = ps.nomor_pembayaran OR j2.source_no = ps.nomor_pembayaran))
+                            OR j2.idempotency_key = CONCAT('SUPPLIER_PAYMENT-', ps.nomor_pembayaran)
+                         ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                         LIMIT 1)
                     )
                     WHERE ps.payment_type = 'SUPPLIER_PAYMENT' 
                       AND ps.tanggal_pembayaran >= ? AND ps.tanggal_pembayaran <= ?
@@ -205,8 +226,12 @@ class M_Transaksi extends CI_Model
                         j.total_kredit AS journal_kredit,
                         rp.create_at_retur AS created_at
                     FROM tbrp_retur_penjualan_header rp
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        j.source_module = 'SALES' AND j.source_type = 'RETUR_PENJUALAN' AND (j.source_no = rp.no_retur OR j.source_id = CAST(rp.id_retur AS CHAR))
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = (
+                        SELECT j2.id_jurnal 
+                        FROM tbkeu_jurnal j2 
+                        WHERE j2.source_module = 'SALES' AND j2.source_type = 'RETUR_PENJUALAN' AND (j2.source_no = rp.no_retur OR j2.source_id = CAST(rp.id_retur AS CHAR))
+                        ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                        LIMIT 1
                     )
                     WHERE rp.tanggal_retur >= ? AND rp.tanggal_retur <= ?
                 ";
@@ -239,9 +264,12 @@ class M_Transaksi extends CI_Model
                     FROM tb_retur_pembelian rb
                     LEFT JOIN tb_lpb l ON l.id_lpb = rb.id_lpb
                     LEFT JOIN tbpo_suplier s ON s.kd_suplier = rb.kd_supplier
-                    LEFT JOIN tbkeu_jurnal j ON (
-                        j.id_jurnal = rb.id_jurnal 
-                        OR (j.source_module = 'LOGISTIK' AND j.source_type = 'RETUR_PEMBELIAN' AND j.source_id = CAST(rb.id_retur_pembelian AS CHAR))
+                    LEFT JOIN tbkeu_jurnal j ON j.id_jurnal = COALESCE(
+                        NULLIF(rb.id_jurnal, 0),
+                        (SELECT j2.id_jurnal FROM tbkeu_jurnal j2 
+                         WHERE j2.source_module = 'LOGISTIK' AND j2.source_type = 'RETUR_PEMBELIAN' AND j2.source_id = CAST(rb.id_retur_pembelian AS CHAR)
+                         ORDER BY (CASE WHEN j2.status = 'POSTED' THEN 1 ELSE 2 END) ASC, j2.id_jurnal DESC
+                         LIMIT 1)
                     )
                     WHERE rb.tanggal_retur >= ? AND rb.tanggal_retur <= ?
                 ";
