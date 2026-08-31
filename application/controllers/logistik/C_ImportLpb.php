@@ -7,6 +7,7 @@ class C_ImportLpb extends CI_Controller {
         parent::__construct();
         // Memuat model M_ImportLpb
         $this->load->model('M_ImportLpb');
+        $this->load->library('permission');
         // Set zona waktu ke Asia/Jakarta
         date_default_timezone_set('Asia/Jakarta');
     }
@@ -22,11 +23,20 @@ class C_ImportLpb extends CI_Controller {
         
         $allowed_departments = ['PURCHASING', 'ADMIN ERP', 'ADMLPB', 'ADMINLOGLPB'];
         
-        if (in_array($department, $allowed_departments) || $level == 1) {
+        if ((in_array($department, $allowed_departments) || $level == 1) && $this->can_view_lpb_nominal()) {
             return true;
         }
         
         return false;
+    }
+
+    private function can_view_lpb_nominal() {
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+        $default = !(in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], true)
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], true));
+
+        return $this->permission->facility('lpb.view_nominal', $default);
     }
 
     /**
@@ -176,6 +186,11 @@ class C_ImportLpb extends CI_Controller {
      * Mengunduh file template Excel untuk Import LPB
      */
     public function download_template() {
+        if (!$this->can_access_import_lpb()) {
+            show_error('Anda tidak memiliki akses ke template import LPB.', 403, 'Akses Ditolak');
+            return;
+        }
+
         require_once APPPATH . 'libraries/PhpSpreadsheet.php';
         
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();

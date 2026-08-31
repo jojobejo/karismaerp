@@ -17,6 +17,20 @@ class Permission
         return $this->CI->permissionAksesModel->has_permission($aksesLevelId, $url, $permission);
     }
 
+    public function facility($facilityKey, $default = true)
+    {
+        $this->CI->load->model('master/M_Userfacility', 'permissionFacilityModel');
+        $userId = (int) ($this->CI->session->userdata('id_karyawan')
+            ?: $this->CI->session->userdata('id')
+            ?: $this->CI->session->userdata('id_user'));
+
+        if ($userId <= 0) {
+            return (bool) $default;
+        }
+
+        return $this->CI->permissionFacilityModel->is_allowed($userId, $facilityKey, $default);
+    }
+
     public function guard($url, $permission = 'can_view')
     {
         if (!$this->CI->session->userdata('logged_in')) {
