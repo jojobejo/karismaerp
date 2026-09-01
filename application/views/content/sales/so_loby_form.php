@@ -857,10 +857,12 @@ function addNewRow(d) {
     html += '</td>';
 
     // Qty Box
-    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + qtyBox + '" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    var qtyBoxVal = qtyBox > 0 ? qtyBox : '';
+    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + qtyBoxVal + '" placeholder="0" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Eceran
-    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + qtySat + '" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    var qtySatVal = qtySat > 0 ? qtySat : '';
+    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + qtySatVal + '" placeholder="0" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Total Pcs
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-total-pcs">' + fmtNum(qTotal,0) + '</td>';
@@ -872,7 +874,8 @@ function addNewRow(d) {
     html += '<td><input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" class="cell-input input-hrg-satuan" style="text-align:right;" value="' + (hrg > 0 ? formatHargaInput(hrg) : '') + '" placeholder="0" oninput="onHargaInput(this)" /></td>';
 
     // Disc %
-    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + disc + '" oninput="calcRow(this)" /></td>';
+    var discVal = disc > 0 ? disc : '';
+    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + discVal + '" placeholder="0" oninput="calcRow(this)" /></td>';
 
     // Subtotal
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-subtotal">' + fmtNum(sub, 0) + '</td>';
@@ -1179,12 +1182,17 @@ function pilihBarang() {
     }
     $selExp.trigger('change');
 
-    $tr.find('.input-qty-box').val(0);
-    $tr.find('.input-qty-ecer').val(0);
+    $tr.find('.input-qty-box').val('');
+    $tr.find('.input-qty-ecer').val('');
     calcRow($tr);
 
     $('#modalBarang').modal('hide');
 }
+
+// Auto select teks saat input Qty, Disc, & Harga difokuskan
+$(document).on('focus', '.input-qty-box, .input-qty-ecer, .input-disc, .input-hrg-satuan', function() {
+    this.select();
+});
 
 // Reset stok cache saat ganti gudang
 $('#gudang_id_input').on('change', function() {
