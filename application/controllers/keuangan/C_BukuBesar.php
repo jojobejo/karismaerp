@@ -26,26 +26,8 @@ class C_BukuBesar extends CI_Controller
             ->get('tbkeu_akun')
             ->result_array();
             
-        // Generate automatic reference prefix
-        $dateStr = date('dmy');
-        $this->db->select('nomor_jurnal');
-        $this->db->like('nomor_jurnal', 'GJ-' . $dateStr, 'after');
-        $this->db->order_by('nomor_jurnal', 'DESC');
-        $this->db->limit(1);
-        $query = $this->db->get('tbkeu_jurnal');
-        
-        $next_num = 1;
-        if ($query->num_rows() > 0) {
-            $last_no = $query->row()->nomor_jurnal;
-            $parts = explode('-', $last_no);
-            if (isset($parts[1])) {
-                $seq_part = substr($parts[1], 6);
-                if (is_numeric($seq_part)) {
-                    $next_num = (int)$seq_part + 1;
-                }
-            }
-        }
-        $data['next_ref'] = 'GJ-' . $dateStr . sprintf('%05d', $next_num);
+        // Generate nomor referensi otomatis berdasarkan tanggal hari ini
+        $data['next_ref'] = $this->_generate_next_ref(date('Y-m-d'));
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/keuangan/jurnal_umum.php', $data);
@@ -104,29 +86,44 @@ class C_BukuBesar extends CI_Controller
 
     public function get_next_ref()
     {
-        $dateStr = date('dmy');
-        $this->db->select('nomor_jurnal');
-        $this->db->like('nomor_jurnal', 'GJ-' . $dateStr, 'after');
-        $this->db->order_by('nomor_jurnal', 'DESC');
-        $this->db->limit(1);
-        $query = $this->db->get('tbkeu_jurnal');
-        
-        $next_num = 1;
-        if ($query->num_rows() > 0) {
-            $last_no = $query->row()->nomor_jurnal;
-            $parts = explode('-', $last_no);
-            if (isset($parts[1])) {
-                $seq_part = substr($parts[1], 6);
-                if (is_numeric($seq_part)) {
-                    $next_num = (int)$seq_part + 1;
-                }
-            }
-        }
-        $ref = 'GJ-' . $dateStr . sprintf('%05d', $next_num);
+        $tanggal = $this->input->get_post('tanggal');
+        $ref = $this->_generate_next_ref($tanggal);
 
         return $this->output
             ->set_content_type('application/json')
             ->set_output(json_encode(['success' => true, 'next_ref' => $ref]));
+    }
+
+    /**
+     * Generate nomor referensi jurnal umum berikutnya berdasarkan tanggal
+     * Format: GJ-dmyXXXXX (5 digit urut, misal: GJ-11092600051)
+     */
+    private function _generate_next_ref($tanggal = null)
+    {
+        $time = !empty($tanggal) ? strtotime($tanggal) : false;
+        $dateStr = $time ? date('dmy', $time) : date('dmy');
+        $prefix = 'GJ-' . $dateStr;
+
+        $query = $this->db->select('nomor_jurnal')
+            ->like('nomor_jurnal', $prefix, 'after')
+            ->get('tbkeu_jurnal');
+
+        $max_seq = 0;
+        foreach ($query->result() as $row) {
+            $no = $row->nomor_jurnal;
+            if (strpos($no, $prefix) === 0) {
+                $seq_part = substr($no, strlen($prefix));
+                if (is_numeric($seq_part)) {
+                    $seq = (int)$seq_part;
+                    if ($seq > $max_seq) {
+                        $max_seq = $seq;
+                    }
+                }
+            }
+        }
+
+        $next_num = $max_seq + 1;
+        return $prefix . sprintf('%05d', $next_num);
     }
 
     public function jurnal_umum_store()

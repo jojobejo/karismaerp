@@ -1,7 +1,7 @@
 <body class="hold-transition sidebar-mini sidebar-collapse">
 <?php
 $pending_bg = $pending_bg ?? null;
-$is_bg_cair_mode = !empty($pending_bg);
+$is_bg_cair_mode = !empty($is_bg_cair_mode);
 
 // Ambil akun klasifikasi Harta dinamis dari controller atau query langsung jika belum diset
 if (!isset($akun_harta) || !is_array($akun_harta)) {
@@ -267,6 +267,13 @@ $default_metode = '';
                                                             <span class="badge badge-<?= $is_bg_cair ? 'success' : 'warning' ?>">
                                                                 <?= $is_bg_cair ? 'Sudah Cair' : 'Belum Cair' ?>
                                                             </span>
+                                                            <?php if (!$is_bg_cair): ?>
+                                                                <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur'] . '?cair_bg=' . $row['id_pembayaran']) ?>"
+                                                                   class="btn btn-xs btn-outline-warning ml-1 font-weight-bold"
+                                                                   title="Klik untuk konfirmasi pencairan BG ini">
+                                                                    <i class="fas fa-check-circle"></i> Cairkan
+                                                                </a>
+                                                            <?php endif; ?>
                                                         <?php else: ?>
                                                             <span class="badge badge-success">Masuk Tagihan</span>
                                                         <?php endif; ?>
@@ -293,32 +300,34 @@ $default_metode = '';
                     </div>
 
                     <div class="col-md-7">
-                        <div class="card card-outline card-success">
+                        <div class="card card-outline <?= $is_bg_cair_mode ? 'card-warning' : 'card-success' ?>">
                             <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas <?= $is_bg_cair_mode ? 'fa-check-circle' : 'fa-plus-circle' ?> mr-1"></i>
-                                    <?= $is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran' ?>
+                                <h3 class="card-title font-weight-bold">
+                                    <i class="fas <?= $is_validasi_kasir_mode ? 'fa-cash-register' : ($is_bg_cair_mode ? 'fa-check-circle' : 'fa-plus-circle') ?> mr-1"></i>
+                                    <?= $is_validasi_kasir_mode ? 'Validasi Pembayaran Kasir' : ($is_bg_cair_mode ? 'Konfirmasi BG Sudah Cair' : 'Form Pembayaran') ?>
                                 </h3>
+                                <?php if ($is_bg_cair_mode): ?>
+                                    <div class="card-tools">
+                                        <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-xs btn-outline-secondary">
+                                            <i class="fas fa-arrow-left mr-1"></i> Batal / Form Pembayaran Baru
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <form id="formPembayaran" action="<?= $is_validasi_kasir_mode ? base_url('keuangan/pembayaran/approve_kasir/' . $validasi_kasir['id_pembayaran']) : ($is_bg_cair_mode ? base_url('keuangan/pembayaran/cair/' . $pending_bg['id_pembayaran']) : base_url('keuangan/pembayaran/simpan/' . $faktur['id_faktur'])) ?>"
                                   method="post"
                                   <?= $is_validasi_kasir_mode ? "onsubmit=\"return confirm('Validasi dan proses pembayaran kasir ini?');\"" : ($is_bg_cair_mode ? "onsubmit=\"return confirm('Tandai BG ini sudah cair dan kurangi sisa tagihan?');\"" : '') ?>>
                                 <div class="card-body">
-                                    <?php if (isset($is_lunas) && $is_lunas): ?>
+                                    <?php if (isset($is_lunas) && $is_lunas && !$is_validasi_kasir_mode && !$is_bg_cair_mode): ?>
                                         <div class="alert alert-success">
                                             <i class="fas fa-check-circle mr-1"></i>
-                                            Faktur ini sudah dibayar lunas. Anda dapat melihat riwayat pembayarannya di bawah ini.
+                                            Faktur ini sudah dibayar lunas. Anda dapat melihat riwayat pembayarannya di samping.
                                         </div>
                                     <?php endif; ?>
                                     <?php if ($is_validasi_kasir_mode): ?>
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle mr-1"></i>
                                             <strong>Validasi Pembayaran Kasir:</strong> Kasir telah menginput pembayaran ini. Silakan periksa nominal dan tanggal. Klik <strong>Simpan Validasi</strong> untuk menyetujui.
-                                        </div>
-                                    <?php elseif ($is_bg_cair_mode): ?>
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-info-circle mr-1"></i>
-                                            Pembayaran BG ini sudah dicatat. Anda dapat mengedit rincian pembayaran/BG sebelum menekan tombol <strong>BG Sudah Cair</strong> untuk memasukkannya ke total pembayaran.
                                         </div>
                                     <?php endif; ?>
                                     
@@ -346,7 +355,7 @@ $default_metode = '';
                                     <div class="form-group mb-3">
                                         <div class="custom-control custom-checkbox">
                                             <?php
-                                            $is_bg_checked = $is_bg_cair_mode || (strtolower(trim((string)($faktur['cara_pembayaran'] ?? ''))) === 'bg');
+                                            $is_bg_checked = $is_bg_cair_mode ? true : false;
                                             ?>
                                             <input type="checkbox" class="custom-control-input" id="check_is_bg" name="is_bg" value="1" <?= $is_bg_checked ? 'checked' : '' ?> <?= $is_validasi_kasir_mode ? 'disabled' : '' ?>>
                                             <label class="custom-control-label font-weight-bold" for="check_is_bg">
@@ -387,12 +396,27 @@ $default_metode = '';
                                         } elseif ($is_bg_cair_mode) {
                                             $max_bayar += (float)($pending_bg['jumlah_pembayaran'] ?? 0);
                                         }
-                                        $raw_bayar = $is_validasi_kasir_mode ? (float)$validasi_kasir['jumlah_pembayaran'] : ($is_bg_cair_mode ? (float)$pending_bg['jumlah_pembayaran'] : (float)$faktur['sisa_tagihan']);
+
+                                        if ($is_validasi_kasir_mode) {
+                                            $raw_bayar = (float)$validasi_kasir['jumlah_pembayaran'];
+                                        } elseif ($is_bg_cair_mode) {
+                                            $raw_bayar = (float)$pending_bg['jumlah_pembayaran'];
+                                        } else {
+                                            // Jika ada BG belum cair, tawarkan sisa tagihan non-BG terlebih dahulu
+                                            $bg_pending_total = (float)($faktur['total_bg_pending'] ?? 0);
+                                            $sisa_non_bg = max(0, (float)$faktur['sisa_tagihan'] - $bg_pending_total);
+                                            $raw_bayar = ($sisa_non_bg > 0) ? $sisa_non_bg : (float)$faktur['sisa_tagihan'];
+                                        }
                                         $display_bayar = number_format($raw_bayar, 0, ',', '.');
                                         ?>
                                         <input type="text" name="jumlah_pembayaran" id="jumlah_pembayaran" class="form-control input-currency" required
                                                value="<?= htmlspecialchars($display_bayar) ?>">
-                                        <small class="text-muted">Maksimal Rp <?= number_format($max_bayar, 0, ',', '.') ?></small>
+                                        <small class="text-muted">
+                                            Maksimal Rp <?= number_format($max_bayar, 0, ',', '.') ?>
+                                            <?php if (!$is_bg_cair_mode && !empty($faktur['total_bg_pending'])): ?>
+                                                <span class="text-warning ml-1">(Terdapat BG belum cair: Rp <?= number_format((float)$faktur['total_bg_pending'], 0, ',', '.') ?>)</span>
+                                            <?php endif; ?>
+                                        </small>
                                     </div>
                                     <div class="form-group" <?= $is_bg_cair_mode ? 'style="display:none;"' : '' ?>>
                                         <label>Jumlah Diskon</label>
@@ -420,14 +444,24 @@ $default_metode = '';
                                     </div>
                                 </div>
                                 <div class="card-footer text-right">
-                                    <?php if (isset($is_lunas) && $is_lunas && !$is_validasi_kasir_mode && !$is_bg_cair_mode): ?>
+                                    <?php if ($is_bg_cair_mode): ?>
+                                        <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-secondary mr-2">
+                                            <i class="fas fa-times mr-1"></i> Batal
+                                        </a>
+                                        <button type="submit" class="btn btn-warning font-weight-bold">
+                                            <i class="fas fa-check mr-1"></i> BG Sudah Cair
+                                        </button>
+                                    <?php elseif ($is_validasi_kasir_mode): ?>
+                                        <button type="submit" class="btn btn-info font-weight-bold">
+                                            <i class="fas fa-check mr-1"></i> Simpan Validasi
+                                        </button>
+                                    <?php elseif (isset($is_lunas) && $is_lunas): ?>
                                         <button type="button" class="btn btn-secondary" disabled>
                                             <i class="fas fa-ban mr-1"></i> Sudah Lunas
                                         </button>
                                     <?php else: ?>
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fas <?= $is_validasi_kasir_mode || $is_bg_cair_mode ? 'fa-check' : 'fa-save' ?> mr-1"></i>
-                                            <?= $is_validasi_kasir_mode ? 'Simpan Validasi' : ($is_bg_cair_mode ? 'BG Sudah Cair' : 'Simpan Pembayaran') ?>
+                                        <button type="submit" class="btn btn-success font-weight-bold">
+                                            <i class="fas fa-save mr-1"></i> Simpan Pembayaran
                                         </button>
                                     <?php endif; ?>
                                 </div>
@@ -712,7 +746,17 @@ document.addEventListener('DOMContentLoaded', function() {
     bindCurrencyInput(jumlahInput);
     bindCurrencyInput(diskonInput);
 
-    metode.addEventListener('change', handleMetodeChange);
+    metode.addEventListener('change', function() {
+        var val = (this.value || '').toLowerCase();
+        if (val === 'bg') {
+            if (checkBg) checkBg.checked = true;
+        } else if (!<?= $is_bg_cair_mode ? 'true' : 'false' ?>) {
+            if (checkBg && checkBg.checked) {
+                checkBg.checked = false;
+            }
+        }
+        handleMetodeChange();
+    });
     if (checkBg) {
         checkBg.addEventListener('change', handleMetodeChange);
     }

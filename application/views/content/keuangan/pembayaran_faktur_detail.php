@@ -137,7 +137,7 @@
                                     <th class="text-right">Sisa Piutang</th>
                                     <th class="text-center">Status Bayar</th>
                                     <th class="text-center">Overdue</th>
-                                    <th class="text-center">Aksi</th>
+                                    <th class="text-center" style="min-width: 150px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,10 +177,24 @@
                                             <td class="text-right font-weight-bold text-danger">Rp <?= number_format((float)$faktur['sisa_tagihan'], 0, ',', '.') ?></td>
                                             <td class="text-center"><span class="badge badge-<?= $status_class ?>"><?= htmlspecialchars($status_label) ?></span></td>
                                             <td class="text-center"><span class="badge badge-<?= $overdue_class ?>"><?= htmlspecialchars($overdue) ?></span></td>
-                                            <td class="text-center">
-                                                <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" class="btn btn-success btn-sm btn-bayar-action">
-                                                    <i class="fas fa-money-bill-wave mr-1"></i>Bayar
-                                                </a>
+                                            <td class="text-center text-nowrap">
+                                                <div class="d-inline-flex align-items-center" style="gap: 5px;">
+                                                    <?php if ((float)($faktur['total_bg_pending'] ?? 0) > 0): ?>
+                                                        <?php
+                                                        $bg_id = !empty($faktur['id_pembayaran_bg_pending']) ? $faktur['id_pembayaran_bg_pending'] : 1;
+                                                        ?>
+                                                        <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur'] . '?cair_bg=' . $bg_id) ?>" 
+                                                           class="btn btn-warning btn-sm btn-bayar-action font-weight-bold" 
+                                                           title="Konfirmasi Pencairan BG">
+                                                            <i class="fas fa-check-circle mr-1"></i>Cairkan BG
+                                                        </a>
+                                                    <?php endif; ?>
+                                                    <a href="<?= base_url('keuangan/pembayaran/bayar/' . $faktur['id_faktur']) ?>" 
+                                                       class="btn btn-success btn-sm btn-bayar-action" 
+                                                       title="Input Pembayaran Baru (Cash, Transfer, Retur, dll.)">
+                                                        <i class="fas fa-money-bill-wave mr-1"></i>Bayar
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -384,7 +398,7 @@ $(function () {
                         if (isBg) {
                             statusBadge = isBgCair 
                                 ? '<span class="badge badge-success">Sudah Cair</span>' 
-                                : '<span class="badge badge-warning">Belum Cair (Pending)</span>';
+                                : '<span class="badge badge-warning">Belum Cair</span> <a href="<?= base_url('keuangan/pembayaran/bayar/') ?>' + (item.id_faktur || activeFakturId) + '?cair_bg=' + item.id_pembayaran + '" class="btn btn-xs btn-outline-warning ml-1 font-weight-bold" title="Konfirmasi pencairan BG ini"><i class="fas fa-check-circle mr-1"></i>Cairkan</a>';
                         } else if (statusKasir === 'pending_kasir') {
                             statusBadge = '<span class="badge badge-info">Pending Kasir</span>';
                         } else {

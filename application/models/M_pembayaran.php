@@ -222,7 +222,13 @@ class M_pembayaran extends CI_Model
                         WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN (jumlah_pembayaran + jumlah_diskon)
                         ELSE 0
                     END
-                ), 0) AS total_bg_pending
+                ), 0) AS total_bg_pending,
+                MIN(
+                    CASE
+                        WHEN COALESCE(status_bg, 'not_bg') = 'pending' THEN id_pembayaran
+                        ELSE NULL
+                    END
+                ) AS id_pembayaran_bg_pending
             FROM {$this->payment_table}
             GROUP BY id_faktur
         ";
@@ -287,6 +293,7 @@ class M_pembayaran extends CI_Model
             COALESCE(ft.total_tagihan, 0) AS total_tagihan,
             COALESCE(fp.total_pembayaran, 0) AS total_pembayaran,
             COALESCE(fp.total_bg_pending, 0) AS total_bg_pending,
+            fp.id_pembayaran_bg_pending,
             GREATEST(COALESCE(ft.total_tagihan, 0) - COALESCE(fp.total_pembayaran, 0), 0) AS sisa_tagihan,
             CASE
                 WHEN COALESCE(fp.total_pembayaran, 0) >= COALESCE(ft.total_tagihan, 0)
@@ -354,15 +361,34 @@ class M_pembayaran extends CI_Model
             return [];
         }
 
-        $this->_select_invoice_summary();
-        $this->db->where_in('f.kd_customer', $kdList);
-        $this->db->having('sisa_tagihan >', 0);
-        $rows = $this->db->get()->result_array();
+        $kdFilter = array_flip($kdList);
+
+        // Jika filter customer relatif sedikit (<= 200), gunakan filter SQL langsung
+        $whereCust = '';
+        if (count($kdList) <= 200) {
+            $escaped = array_map(function($kd) {
+                return $this->db->escape($kd);
+            }, $kdList);
+            $whereCust = " AND f.kd_customer IN (" . implode(',', $escaped) . ")";
+        }
+
+        $sql = "
+            SELECT DISTINCT f.kd_customer
+            FROM tbso_faktur_penjualan f
+            JOIN (" . $this->_total_tagihan_sql() . ") ft ON ft.id_faktur = f.id_faktur
+            LEFT JOIN (" . $this->_total_pembayaran_sql() . ") fp ON fp.id_faktur = f.id_faktur
+            WHERE f.status = 'selesai_do'
+              {$whereCust}
+              AND (COALESCE(ft.total_tagihan, 0) - COALESCE(fp.total_pembayaran, 0)) > 0
+        ";
+
+        $rows = $this->db->query($sql)->result_array();
 
         $map = [];
         foreach ($rows as $r) {
-            if (!empty($r['kd_customer'])) {
-                $map[$r['kd_customer']] = true;
+            $kd = $r['kd_customer'] ?? '';
+            if ($kd !== '' && isset($kdFilter[$kd])) {
+                $map[$kd] = true;
             }
         }
         return $map;

@@ -1193,8 +1193,8 @@ class C_SalesOrder extends CI_Controller
             $customer = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
             if ($customer) {
                 $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
+                $cp     = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
                 if ($plafon !== null && (float)$plafon == 1000) {
-                    $cp = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
                     if (!in_array($cp, ['cash', 'transfer'], true)) {
                         $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 harus menggunakan pembayaran Cash atau Transfer.');
                         redirect('sales_order/create');
@@ -1214,7 +1214,8 @@ class C_SalesOrder extends CI_Controller
                 foreach ($details as $d) {
                     $grand_total += (float)$d['total_harga'];
                 }
-                if ($plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
+                // Pembayaran Cash dapat dilakukan oleh semua customer berapapun jumlah transaksinya tanpa memperdulikan plafon
+                if ($cp !== 'cash' && $plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
                     $this->session->set_flashdata(
                         'error',
                         'Grand total SO (Rp ' . number_format($grand_total, 0, ',', '.') . ') melebihi plafon customer (Rp ' . number_format($plafon, 0, ',', '.') . ').'
@@ -1486,8 +1487,8 @@ class C_SalesOrder extends CI_Controller
             $customer = $this->db->get_where('tb_customer', ['kd_customer' => $post['customer_id']])->row_array();
             if ($customer) {
                 $plafon = isset($customer['plafon_aktif']) ? (float)$customer['plafon_aktif'] : null;
+                $cp     = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
                 if ($plafon !== null && (float)$plafon == 1000) {
-                    $cp = strtolower(trim((string)($post['cara_pembayaran'] ?? '')));
                     if (!in_array($cp, ['cash', 'transfer'], true)) {
                         $this->session->set_flashdata('error', 'Customer dengan plafon 1.000 harus menggunakan pembayaran Cash atau Transfer.');
                         redirect('sales_order/edit/' . $id_so);
@@ -1507,7 +1508,8 @@ class C_SalesOrder extends CI_Controller
                 foreach ($details as $d) {
                     $grand_total += (float)$d['total_harga'];
                 }
-                if ($plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
+                // Pembayaran Cash dapat dilakukan oleh semua customer berapapun jumlah transaksinya tanpa memperdulikan plafon
+                if ($cp !== 'cash' && $plafon !== null && (float)$plafon != 1000 && $grand_total > $plafon) {
                     $this->session->set_flashdata(
                         'error',
                         'Grand total SO (Rp ' . number_format($grand_total, 0, ',', '.') . ') melebihi plafon customer (Rp ' . number_format($plafon, 0, ',', '.') . ').'

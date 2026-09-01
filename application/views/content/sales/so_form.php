@@ -1381,8 +1381,8 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         return;
     }
     var custPlafon = parsePlafonNumber(document.getElementById('customer_plafon').value);
+    var cp = ((document.getElementById('cara_pembayaran') || {}).value || '').toLowerCase().trim();
     if (custPlafon !== null && custPlafon === 1000) {
-        var cp = document.getElementById('cara_pembayaran').value;
         if (cp === 'bg' || cp === 'tempo') {
             e.preventDefault();
             salesToast('error', 'Customer dengan plafon 1.000 hanya boleh menggunakan cara pembayaran Cash atau Transfer.');
@@ -1400,7 +1400,8 @@ document.getElementById('form-so').addEventListener('submit', function(e){
         var qK  = (qB * getIsi(i)) + qE;
         grandTotal += hrg * qK * (1 - d / 100);
     });
-    if (custPlafon !== null && custPlafon !== 1000 && grandTotal > custPlafon) {
+    // Pembayaran Cash dapat dilakukan oleh semua customer berapapun jumlah transaksinya tanpa memperdulikan plafon
+    if (cp !== 'cash' && custPlafon !== null && custPlafon !== 1000 && grandTotal > custPlafon) {
         e.preventDefault();
         salesToast('error', 'Grand total SO (Rp ' + Math.round(grandTotal).toLocaleString('id-ID') + ') melebihi plafon customer (Rp ' + Math.round(custPlafon).toLocaleString('id-ID') + ').');
         return;

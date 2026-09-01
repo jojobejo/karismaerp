@@ -1057,10 +1057,12 @@ $has_id = !empty($this->input->get('id'));
             }
         }
 
-        function fetchNextRef() {
+        function fetchNextRef(customDate) {
+            let tgl = customDate || $('#form-tanggal').val() || '<?= date("Y-m-d") ?>';
             $.ajax({
                 url: '<?= base_url("buku_besar/jurnal_umum_next_ref") ?>',
                 type: 'GET',
+                data: { tanggal: tgl },
                 dataType: 'json',
                 success: function(res) {
                     if (res.success && res.next_ref) {
@@ -1070,13 +1072,21 @@ $has_id = !empty($this->input->get('id'));
             });
         }
 
+        // Ketika tanggal transaksi diubah, auto-generate no referensi baru mengikuti tanggal tersebut
+        $('#form-tanggal').on('change input', function() {
+            let selectedDate = $(this).val();
+            if (selectedDate) {
+                fetchNextRef(selectedDate);
+            }
+        });
+
         function clearForm() {
             $('#form-lines-body').empty();
             $('#form-keterangan').val('Jurnal Umum');
             $('#form-tanggal').val('<?= date("Y-m-d") ?>');
             rowCounter = 0;
             calculateFormTotals();
-            fetchNextRef();
+            fetchNextRef('<?= date("Y-m-d") ?>');
         }
 
         $('#btn-clear-form').click(function() {

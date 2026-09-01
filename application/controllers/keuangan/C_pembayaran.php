@@ -217,6 +217,27 @@ class C_pembayaran extends CI_Controller
             }
         }
 
+        // Mode konfirmasi pencairan BG hanya aktif jika diakses dengan parameter ?cair_bg=id_pembayaran
+        $cair_bg_id = $this->input->get('cair_bg');
+        $data['is_bg_cair_mode'] = false;
+        if ($cair_bg_id) {
+            $cair_bg = null;
+            if (is_numeric($cair_bg_id) && (int)$cair_bg_id > 0) {
+                $cair_bg = $this->db->get_where('tbkeu_pembayaran_faktur', [
+                    'id_pembayaran' => (int)$cair_bg_id,
+                    'id_faktur'     => (int)$faktur['id_faktur'],
+                    'status_bg'     => 'pending',
+                ])->row_array();
+            }
+            if (!$cair_bg) {
+                $cair_bg = $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur']);
+            }
+            if ($cair_bg) {
+                $data['is_bg_cair_mode'] = true;
+                $data['pending_bg']      = $cair_bg;
+            }
+        }
+
         // Fetch returns linked by Collection to this invoice
         $data['linked_returs'] = $this->db
             ->select('h.id_retur, h.no_retur, h.no_spr, h.tipe_retur, h.tanggal_retur, h.status_retur, h.catatan_collection, COALESCE(SUM(d.qty_retur * d.harga_satuan), 0) AS total_retur')
@@ -295,7 +316,7 @@ class C_pembayaran extends CI_Controller
         $cara_pembayaran_faktur = $is_pending ? 'bg' : strtolower(trim((string)($faktur['cara_pembayaran'] ?? 'cash')));
 
         if ($is_pending && $this->M_pembayaran->get_pending_bg_payment($faktur['id_faktur'])) {
-            $this->session->set_flashdata('warning', 'Masih ada pembayaran yang belum cair. Klik Bayar lalu tekan tombol BG Sudah Cair.');
+            $this->session->set_flashdata('warning', 'Masih ada pembayaran BG yang belum cair untuk faktur ini. Anda dapat melakukan pembayaran menggunakan metode lain (seperti Kas atau Transfer) atau mencairkan BG yang ada terlebih dahulu.');
             redirect('keuangan/pembayaran/bayar/' . $faktur['id_faktur']);
         }
 
