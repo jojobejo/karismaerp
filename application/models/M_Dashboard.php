@@ -292,6 +292,7 @@ class M_Dashboard extends CI_Model
         $adminMenus = array(
             $this->menu('Semua Transaksi', 'admin/transaksi', 'fas fa-exchange-alt', 'teal', 'Kelola, audit, repost, edit, dan sinkronisasi seluruh transaksi & jurnal akuntansi.'),
             $this->menu('User Management', 'master/user-management', 'fas fa-users-cog', 'dark', 'Kelola akun, level akses, status user, dan reset password.'),
+            $this->menu('Fasilitas Per User', 'master/user-facility', 'fas fa-user-lock', 'blue', 'Kelola fasilitas menu, aksi, data sensitif, cabang, gudang, dan status dokumen per user.'),
             $this->menu('Jobdesk', 'master/jobdesk', 'fas fa-briefcase', 'slate', 'Kelola master jobdesk yang dipakai rules akses aplikasi.'),
             $this->menu('Akses Level', 'master/akses-level', 'fas fa-key', 'orange', 'Atur level akses dan matrix permission user.'),
             $this->menu('Menu Aplikasi', 'master/menu', 'fas fa-bars', 'cyan', 'Kelola struktur menu dinamis aplikasi.'),

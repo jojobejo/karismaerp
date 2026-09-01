@@ -153,19 +153,19 @@ $money = function ($value) {
                     <?php else : ?>
                         <div class="summary-grid">
                             <div class="summary-box">
-                                <div class="summary-label">Total Pendapatan</div>
+                                <div class="summary-label">Total Penjualan</div>
                                 <div class="summary-value"><?= $money($totals['total_revenue'] ?? 0) ?></div>
                             </div>
                             <div class="summary-box">
-                                <div class="summary-label">Laba Kotor</div>
+                                <div class="summary-label">Laba (Rugi) Kotor</div>
                                 <div class="summary-value"><?= $money($totals['gross_profit'] ?? 0) ?></div>
                             </div>
                             <div class="summary-box">
-                                <div class="summary-label">Laba Operasional</div>
+                                <div class="summary-label">Laba (Rugi) Operasi</div>
                                 <div class="summary-value"><?= $money($totals['operating_profit'] ?? 0) ?></div>
                             </div>
                             <div class="summary-box success">
-                                <div class="summary-label">Laba Bersih</div>
+                                <div class="summary-label">Laba (Rugi) Bersih</div>
                                 <div class="summary-value"><?= $money($totals['net_income'] ?? 0) ?></div>
                             </div>
                         </div>
@@ -199,13 +199,16 @@ $money = function ($value) {
 
                                     <?php foreach ($sections as $section) : ?>
                                         <tr class="section-row">
-                                            <td><?= html_escape($section['alias'] ?: '-') ?></td>
-                                            <td <?= $isNeraca ? 'colspan="2"' : '' ?>><?= html_escape($section['name']) ?></td>
-                                            <?php if ($isNeraca) : ?>
-                                            <td class="money-cell"><?= $money($section['debit'] ?? 0) ?></td>
-                                            <td class="money-cell"><?= $money($section['kredit'] ?? 0) ?></td>
+                                            <?php if (!$isNeraca) : ?>
+                                                <td colspan="2" style="font-size: 14px; font-weight: 800;"><?= html_escape($section['name']) ?></td>
+                                                <td class="money-cell"></td>
+                                            <?php else : ?>
+                                                <td><?= html_escape($section['alias'] ?: '-') ?></td>
+                                                <td colspan="2" style="font-size: 14px; font-weight: 800;"><?= html_escape($section['name']) ?></td>
+                                                <td class="money-cell"></td>
+                                                <td class="money-cell"></td>
+                                                <td class="money-cell"></td>
                                             <?php endif; ?>
-                                            <td class="money-cell"><?= $money($section['total'] ?? 0) ?></td>
                                         </tr>
 
                                         <?php foreach ($section['rows'] as $row) : ?>
@@ -237,6 +240,20 @@ $money = function ($value) {
                                             <td colspan="<?= $isNeraca ? 5 : 2 ?>">Total <?= html_escape($section['name']) ?></td>
                                             <td class="money-cell"><?= $money($section['total'] ?? 0) ?></td>
                                         </tr>
+
+                                        <?php if (!$isNeraca && ($section['code'] === '5' || strpos(strtolower($section['name']), 'harga pokok') !== false || strpos(strtolower($section['name']), 'atas pendapatan') !== false)) : ?>
+                                            <tr class="grand-row" style="background: #e8f4fd; font-weight: 800;">
+                                                <td colspan="2">Laba (Rugi) Kotor</td>
+                                                <td class="money-cell"><?= $money($totals['gross_profit'] ?? 0) ?></td>
+                                            </tr>
+                                        <?php endif; ?>
+
+                                        <?php if (!$isNeraca && ($section['code'] === '6' || strpos(strtolower($section['name']), 'operasi') !== false)) : ?>
+                                            <tr class="grand-row" style="background: #f0f7fb; font-weight: 800;">
+                                                <td colspan="2">Laba (Rugi) Operasi</td>
+                                                <td class="money-cell"><?= $money($totals['operating_profit'] ?? 0) ?></td>
+                                            </tr>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
 
                                     <?php if ($isNeraca && !empty($sections)) : ?>
@@ -246,7 +263,7 @@ $money = function ($value) {
                                         </tr>
                                     <?php elseif (!$isNeraca && !empty($sections)) : ?>
                                         <tr class="grand-row">
-                                            <td colspan="2">Laba Bersih</td>
+                                            <td colspan="2">Laba (Rugi) Bersih</td>
                                             <td class="money-cell"><?= $money($totals['net_income'] ?? 0) ?></td>
                                         </tr>
                                     <?php endif; ?>

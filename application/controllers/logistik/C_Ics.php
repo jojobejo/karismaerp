@@ -12,7 +12,9 @@ class C_Ics extends CI_Controller
         $this->load->model('M_Keuangan');
         $this->load->model('M_ReturPembelian');
         $this->load->model('M_LpbPriceAdjustment');
+        $this->load->model('M_LpbRevisionRequest');
         $this->load->helper('stock_helper');
+        $this->load->library('permission');
         date_default_timezone_set('Asia/Jakarta');
 
         $method = $this->router->fetch_method();
@@ -664,6 +666,8 @@ class C_Ics extends CI_Controller
         $data['can_sync_po'] = $canSyncPo;
         $data['can_lpb_manual'] = $this->can_access_lpb_manual();
         $data['can_lpb_report'] = $this->can_access_lpb_report();
+        $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
+        $data['lpb_revision_badge_count'] = $this->M_LpbRevisionRequest->open_count();
         $data['lpb_panel_mode'] = $lpbPanelMode;
         $data['show_logistik_panel'] = $showLogistikPanel;
         $data['show_purchasing_panel'] = $showPurchasingPanel;
@@ -696,6 +700,8 @@ class C_Ics extends CI_Controller
         $data['can_lpb_report'] = $this->can_access_lpb_report();
         $data['is_data_lpb_page'] = TRUE;
         $data['is_admlpb_user'] = $this->is_admlpb_user();
+        $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
+        $data['lpb_revision_badge_count'] = $this->M_LpbRevisionRequest->open_count();
         $data['lpb_panel_mode'] = 'both';
         $data['show_logistik_panel'] = TRUE;
         $data['show_purchasing_panel'] = TRUE;
@@ -712,6 +718,154 @@ class C_Ics extends CI_Controller
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/icspo.php', $data);
         $this->load->view('partial/main/footer.php');
+    }
+
+    public function lpb_revision()
+    {
+        if (!$this->can_access_lpb_revision()) {
+            show_error('Akses List Revisi Harga LPB hanya untuk Purchasing, Accounting/Keuangan, IT, atau Admin.', 403, 'Akses Ditolak');
+            return;
+        }
+
+        $this->M_LpbRevisionRequest->ensure_schema();
+
+        $data['page_title'] = 'KARISMA - List Revisi Harga LPB';
+        $data['candidate_rows'] = $this->M_LpbRevisionRequest->sold_lpb_candidates(150);
+        $data['request_rows'] = $this->M_LpbRevisionRequest->rows(150);
+        $data['can_create_revision_request'] = $this->can_lpb_revision_purchasing();
+        $data['can_accounting_unpost_revision'] = $this->can_lpb_revision_accounting();
+        $data['can_purchasing_unpost_lpb'] = $this->can_lpb_revision_purchasing();
+
+        $this->load->view('partial/main/header.php', $data);
+        $this->load->view('content/logistik/ics/lpb_revision_request.php', $data);
+        $this->load->view('partial/main/footer.php');
+    }
+
+    public function ajax_lpb_revision_create()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!$this->can_lpb_revision_purchasing()) {
+            $this->json_response(['status' => false, 'message' => 'Akses create request hanya untuk Purchasing/Admin.']);
+            return;
+        }
+
+        $result = $this->M_LpbRevisionRequest->create_request(
+            (int) $this->input->post('id_lpb', true),
+            $this->input->post('alasan_revisi', true),
+            $this->active_user_name()
+        );
+
+        $this->json_response(['status' => !empty($result['success']), 'message' => $result['message'] ?? '', 'data' => $result]);
+    }
+
+    public function ajax_lpb_revision_detail()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!$this->can_access_lpb_revision()) {
+            $this->json_response(['status' => false, 'message' => 'Akses ditolak.']);
+            return;
+        }
+
+        $detail = $this->M_LpbRevisionRequest->detail((int) $this->input->get('id_request', true));
+        if (!$detail) {
+            $this->json_response(['status' => false, 'message' => 'Request revisi tidak ditemukan.']);
+            return;
+        }
+
+        $this->json_response(['status' => true, 'message' => 'Detail request berhasil dimuat.', 'data' => $detail]);
+    }
+
+    public function ajax_lpb_revision_unpost_faktur()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!$this->can_lpb_revision_accounting()) {
+            $this->json_response(['status' => false, 'message' => 'Akses unpost faktur hanya untuk Accounting/Keuangan/Admin.']);
+            return;
+        }
+
+        $result = $this->M_LpbRevisionRequest->unpost_sales_invoice(
+            (int) $this->input->post('id_request', true),
+            $this->input->post('no_faktur', true),
+            $this->active_user_name()
+        );
+
+        $this->json_response(['status' => !empty($result['success']), 'message' => $result['message'] ?? '', 'data' => $result]);
+    }
+
+    public function ajax_lpb_revision_unpost_lpb()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!$this->can_lpb_revision_purchasing()) {
+            $this->json_response(['status' => false, 'message' => 'Akses unpost LPB revisi hanya untuk Purchasing/Admin.']);
+            return;
+        }
+
+        $idRequest = (int) $this->input->post('id_request', true);
+        $keterangan = trim((string) $this->input->post('keterangan', true));
+        if ($keterangan === '') {
+            $keterangan = 'UNPOST LPB dari workflow List Revisi Harga LPB.';
+        }
+
+        $request = $this->M_LpbRevisionRequest->request_row($idRequest);
+        if (!$request) {
+            $this->json_response(['status' => false, 'message' => 'Request revisi tidak ditemukan.']);
+            return;
+        }
+        if ($request['status'] !== M_LpbRevisionRequest::STATUS_READY) {
+            $this->json_response(['status' => false, 'message' => 'Semua faktur penjualan harus di-unpost oleh Accounting sebelum LPB di-unpost.']);
+            return;
+        }
+
+        $this->M_Logistik->ensure_lpb_workflow_columns();
+        $this->db->trans_begin();
+        $saved = $this->M_Logistik->update_lpb_status((int) $request['id_lpb'], 0, $this->active_user_name(), $keterangan);
+        $marked = $saved ? $this->M_LpbRevisionRequest->mark_lpb_unposted($idRequest, $this->active_user_name()) : ['success' => false, 'message' => 'UNPOST LPB gagal disimpan.'];
+
+        if (!$saved || empty($marked['success']) || $this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            $this->json_response(['status' => false, 'message' => $marked['message'] ?? 'UNPOST LPB gagal disimpan.']);
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->reverse_active_lpb_journals((int) $request['id_lpb'], $keterangan);
+
+        $this->json_response(['status' => true, 'message' => 'LPB berhasil di-UNPOST. Purchasing dapat melakukan revisi data LPB.']);
+    }
+
+    public function ajax_lpb_revision_finish()
+    {
+        if (!$this->input->is_ajax_request()) {
+            show_404();
+        }
+        if (!$this->can_lpb_revision_purchasing()) {
+            $this->json_response(['status' => false, 'message' => 'Akses penyelesaian revisi hanya untuk Purchasing/Admin.']);
+            return;
+        }
+
+        $idRequest = (int) $this->input->post('id_request', true);
+        $request = $this->M_LpbRevisionRequest->request_row($idRequest);
+        if (!$request) {
+            $this->json_response(['status' => false, 'message' => 'Request revisi tidak ditemukan.']);
+            return;
+        }
+
+        $lpb = $this->db->select('status_lpb')->where('id_lpb', (int) $request['id_lpb'])->limit(1)->get('tb_lpb')->row_array();
+        if (!$lpb || (string) ($lpb['status_lpb'] ?? '') !== '1') {
+            $this->json_response(['status' => false, 'message' => 'LPB harus disimpan/direkam kembali menjadi POST sebelum request ditandai selesai.']);
+            return;
+        }
+
+        $result = $this->M_LpbRevisionRequest->finish_revision($idRequest, $this->active_user_name());
+        $this->json_response(['status' => !empty($result['success']), 'message' => $result['message'] ?? '', 'data' => $result]);
     }
 
     public function detail_po()
@@ -738,6 +892,7 @@ class C_Ics extends CI_Controller
         $data['is_detail_po_purchasing'] = $this->resolve_ics_po_panel_mode() === 'purchasing';
         $data['is_admlpb_user']          = $this->is_admlpb_user();
         $data['is_admin_po']             = $this->is_admin_po_jobdesk();
+        $data['can_view_lpb_nominal']    = $this->can_view_lpb_nominal();
         $data['show_checker_input']      = $data['is_admlpb_user'] || $data['is_admin_po'];
         if ($data['is_detail_po_purchasing']) {
             $lpbPoRecords = $this->M_Logistik->get_lpb_purchasing_view(null, null, $nopo, $data['kd_po'], FALSE);
@@ -790,6 +945,7 @@ class C_Ics extends CI_Controller
         $data['kd_suplier'] = $kd_suplier;
         $data['initial_id_lpb'] = (int) $this->input->get('id_lpb', TRUE);
         $data['is_admin_po'] = $this->is_admin_po_jobdesk();
+        $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['lpb_record_view_mode'] = $this->resolve_ics_po_panel_mode();
         $data['lpb_type_options'] = $this->M_Logistik->get_lpb_type_options();
         $this->M_Logistik->ensure_lpb_invoice_faktur_columns();
@@ -969,6 +1125,7 @@ class C_Ics extends CI_Controller
 
         $data['page_title'] = 'KARISMA - Laporan Digital Purchasing & LPB';
         $data['filters']    = $filters;
+        $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
 
         $this->load->view('partial/main/header.php', $data);
         $this->load->view('content/logistik/ics/lpb_report.php', $data);
@@ -1058,12 +1215,17 @@ class C_Ics extends CI_Controller
         try {
             $totalRecords = $this->M_LaporanPurchasing->get_total_records($filters);
             $rowsData     = $this->M_LaporanPurchasing->get_datatables_data($filters, $search, $start, $length, $orderCol, $orderDir);
+            $canViewNominal = $this->can_view_lpb_nominal();
+            if (!$canViewNominal) {
+                $rowsData = $this->mask_lpb_nominal_rows($rowsData);
+            }
 
             $response = [
                 "draw"            => $draw,
                 "recordsTotal"    => $totalRecords,
                 "recordsFiltered" => $search !== '' ? count($rowsData) : $totalRecords,
-                "data"            => $rowsData
+                "data"            => $rowsData,
+                "can_view_lpb_nominal" => $canViewNominal
             ];
         } catch (\Throwable $ex) {
             $response = [
@@ -1087,6 +1249,10 @@ class C_Ics extends CI_Controller
     {
         if (!$this->can_access_lpb_report()) {
             show_error('Akses dashboard summary hutang ditolak.', 403);
+            return;
+        }
+        if (!$this->can_view_lpb_nominal()) {
+            show_error('Akses dashboard summary hutang ditolak karena berisi nominal rupiah LPB.', 403);
             return;
         }
 
@@ -1116,6 +1282,13 @@ class C_Ics extends CI_Controller
                 ->set_status_header(403)
                 ->set_content_type('application/json')
                 ->set_output(json_encode(['error' => 'Akses ditolak']));
+            return;
+        }
+        if (!$this->can_view_lpb_nominal()) {
+            $this->output
+                ->set_status_header(403)
+                ->set_content_type('application/json')
+                ->set_output(json_encode(['error' => 'Akses nominal LPB ditolak']));
             return;
         }
 
@@ -1179,6 +1352,10 @@ class C_Ics extends CI_Controller
         ];
 
         $rowsData = $this->M_LaporanPurchasing->get_report_data_for_export($filters);
+        $canViewNominal = $this->can_view_lpb_nominal();
+        if (!$canViewNominal) {
+            $rowsData = $this->mask_lpb_nominal_rows($rowsData);
+        }
         $filename = 'Laporan_Digital_Purchasing_LPB_' . date('Ymd_His') . '.xlsx';
 
         if (file_exists(APPPATH . 'libraries/PhpSpreadsheet.php')) {
@@ -1237,16 +1414,16 @@ class C_Ics extends CI_Controller
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_batch'] ?? '-');
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['exp_date'] ?? '-');
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['qty_diterima'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['harga_satuan'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['total_harga'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['sales_disc'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['cbd'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['foc'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['insentif_cn'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['dpp'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['ppn_11'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['ppn_12'] ?? 0));
-                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, (float) ($row['dpp_nilai_lain'] ?? 0));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['harga_satuan'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['total_harga'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['sales_disc'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['cbd'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['foc'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['insentif_cn'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['dpp'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['ppn_11'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['ppn_12'] ?? null, $canViewNominal));
+                    $sheet->setCellValueByColumnAndRow($c++, $rowNum, $this->export_nominal_value($row['dpp_nilai_lain'] ?? null, $canViewNominal));
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['no_seri_fp'] ?? '-');
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_fp'] ?? '-');
                     $sheet->setCellValueByColumnAndRow($c++, $rowNum, $row['tgl_terima_fp'] ?? '-');
@@ -1319,16 +1496,16 @@ class C_Ics extends CI_Controller
             echo "<td>" . htmlspecialchars($row['no_batch'] ?? '-') . "</td>";
             echo "<td>" . htmlspecialchars($row['exp_date'] ?? '-') . "</td>";
             echo "<td>" . (float)($row['qty_diterima'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['harga_satuan'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['total_harga'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['sales_disc'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['cbd'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['foc'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['insentif_cn'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['dpp'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['ppn_11'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['ppn_12'] ?? 0) . "</td>";
-            echo "<td>" . (float)($row['dpp_nilai_lain'] ?? 0) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['harga_satuan'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['total_harga'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['sales_disc'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['cbd'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['foc'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['insentif_cn'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['dpp'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['ppn_11'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['ppn_12'] ?? null, $canViewNominal)) . "</td>";
+            echo "<td>" . htmlspecialchars((string) $this->export_nominal_value($row['dpp_nilai_lain'] ?? null, $canViewNominal)) . "</td>";
             echo "<td>" . htmlspecialchars($row['no_seri_fp'] ?? '-') . "</td>";
             echo "<td>" . htmlspecialchars($row['tgl_fp'] ?? '-') . "</td>";
             echo "<td>" . htmlspecialchars($row['tgl_terima_fp'] ?? '-') . "</td>";
@@ -1411,10 +1588,15 @@ class C_Ics extends CI_Controller
             return;
         }
 
+        $rows = $this->M_Logistik->get_lpb_record_detail_rows($id_lpb);
+        if (!$this->can_view_lpb_nominal()) {
+            $rows = $this->mask_lpb_nominal_rows($rows);
+        }
+
         echo json_encode([
             'status' => 'success',
             'header' => $header,
-            'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb),
+            'rows'   => $rows,
             'logs'   => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
         ]);
     }
@@ -1446,13 +1628,18 @@ class C_Ics extends CI_Controller
         }
 
         $rows = $this->M_Logistik->get_purchasing_lpb_detail_rows($id_lpb);
+        $canViewNominal = $this->can_view_lpb_nominal();
+        if (!$canViewNominal) {
+            $rows = $this->mask_lpb_nominal_rows($rows);
+        }
 
         echo json_encode([
             'status'  => 'success',
             'message' => 'Data purchasing berhasil dimuat.',
             'header'  => $this->build_purchasing_lpb_summary($header, $rows),
             'rows'    => $rows,
-            'logs'    => $this->M_Logistik->get_lpb_activity_logs($id_lpb)
+            'logs'    => $this->M_Logistik->get_lpb_activity_logs($id_lpb),
+            'can_view_lpb_nominal' => $canViewNominal
         ]);
     }
 
@@ -1565,6 +1752,158 @@ class C_Ics extends CI_Controller
             || $level === '1'
             || strpos($departemen, 'IT') !== FALSE
             || in_array($jobdesk, ['IT', 'ADMINIT', 'ADMIN IT', 'PROGRAMMER', 'DEVELOPMENT', 'ADMIN'], TRUE);
+    }
+
+    private function can_view_lpb_nominal()
+    {
+        $default = !$this->is_admlpb_nominal_restricted();
+        return $this->permission->facility('lpb.view_nominal', $default);
+    }
+
+    private function can_access_lpb_revision()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        if ($username === 'admin' || (bool) $this->session->userdata('is_admin_dashboard')) {
+            return TRUE;
+        }
+
+        if ($this->can_lpb_revision_purchasing() || $this->can_lpb_revision_accounting()) {
+            return TRUE;
+        }
+
+        return strpos($departemen, 'IT') !== FALSE
+            || in_array($jobdesk, ['IT', 'ADMINIT', 'ADMIN IT', 'PROGRAMMER', 'DEVELOPMENT'], TRUE);
+    }
+
+    private function can_lpb_revision_purchasing()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        return $username === 'admin'
+            || $username === 'admpo'
+            || strpos($departemen, 'PURCHASING') !== FALSE
+            || in_array($jobdesk, ['ADMINPURCHASING', 'ADMIN PO', 'PURCHASING'], TRUE);
+    }
+
+    private function can_lpb_revision_accounting()
+    {
+        $departemen = strtoupper(trim((string) ($this->session->userdata('departemen') ?: $this->session->userdata('departement'))));
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        return $username === 'admin'
+            || strpos($departemen, 'KEUANGAN') !== FALSE
+            || strpos($departemen, 'FINANCE') !== FALSE
+            || strpos($departemen, 'ACCOUNTING') !== FALSE
+            || in_array($jobdesk, ['ADMINKEU', 'ADMINKEUTC', 'KIUKEU', 'KEUANGAN', 'ACCOUNTING', 'FINANCE'], TRUE);
+    }
+
+    private function is_admlpb_nominal_restricted()
+    {
+        $jobdesk = strtoupper(trim((string) $this->session->userdata('jobdesk')));
+        $username = strtolower(trim((string) $this->session->userdata('username')));
+
+        return in_array($jobdesk, ['ADMLPB', 'ADMINLOGLPB', 'ADMLPB2'], TRUE)
+            || in_array($username, ['admlpb', 'adminloglpb', 'admlpb2'], TRUE);
+    }
+
+    private function reverse_active_lpb_journals($idLpb, $reason)
+    {
+        if (!$this->db->table_exists('tbkeu_jurnal')) {
+            return;
+        }
+
+        $activeJournals = $this->db->select('id_jurnal')
+            ->from('tbkeu_jurnal')
+            ->where('source_module', 'LOGISTIK')
+            ->where('source_type', 'LPB_FINAL')
+            ->where('posting_event', 'GOODS_RECEIPT')
+            ->where('source_id', (string) $idLpb)
+            ->where('status', 'POSTED')
+            ->where('reversed_at IS NULL', null, false)
+            ->get()
+            ->result_array();
+
+        if (empty($activeJournals)) {
+            return;
+        }
+
+        $this->load->library('Accounting_service');
+        foreach ($activeJournals as $jRow) {
+            $this->accounting_service->reverse_journal((int) $jRow['id_jurnal'], 'UNPOST LPB revisi harga: ' . $reason, (int) $this->session->userdata('id') ?: null);
+        }
+    }
+
+    private function lpb_nominal_fields()
+    {
+        return [
+            'harga_satuan',
+            'harga_satuan_kecil',
+            'harga_satuan_exclude',
+            'harga_satuan_sebelumnya',
+            'hrg_satuan',
+            'hrg_total',
+            'price_list_po',
+            'total_harga',
+            'total_harga_display',
+            'total_harga_exclude',
+            'total_harga_sebelumnya',
+            'grand_total_lpb',
+            'sales_disc',
+            'cbd',
+            'foc',
+            'insentif_cn',
+            'dpp',
+            'dpp_nilai_lain',
+            'ppn',
+            'ppn_11',
+            'ppn_12',
+            'jumlah_hutang',
+            'jumlah_per_faktur',
+            'nilai_persediaan',
+            'hpp',
+            'margin'
+        ];
+    }
+
+    private function mask_lpb_nominal_rows($rows)
+    {
+        $maskedRows = [];
+        foreach ((array) $rows as $row) {
+            $maskedRows[] = $this->mask_lpb_nominal_row($row);
+        }
+        return $maskedRows;
+    }
+
+    private function mask_lpb_nominal_row($row)
+    {
+        foreach ($this->lpb_nominal_fields() as $field) {
+            if (is_array($row) && array_key_exists($field, $row)) {
+                $row[$field] = null;
+            } elseif (is_object($row) && property_exists($row, $field)) {
+                $row->{$field} = null;
+            }
+        }
+
+        if (is_array($row)) {
+            $row['nominal_hidden'] = 1;
+            $row['harga_status_text'] = !empty($row['harga_terverifikasi']) ? 'Harga tersedia' : 'Menunggu accounting';
+        } elseif (is_object($row)) {
+            $row->nominal_hidden = 1;
+            $row->harga_status_text = !empty($row->harga_terverifikasi) ? 'Harga tersedia' : 'Menunggu accounting';
+        }
+
+        return $row;
+    }
+
+    private function export_nominal_value($value, $canViewNominal)
+    {
+        return $canViewNominal ? (float) ($value ?? 0) : 'TERSEMBUNYI';
     }
 
     private function rupiah($value)
@@ -2426,6 +2765,35 @@ class C_Ics extends CI_Controller
         }
 
         $this->M_Logistik->ensure_lpb_workflow_columns();
+        $salesBlockers = $this->M_Logistik->get_lpb_sales_unpost_blockers($id_lpb);
+        if (!empty($salesBlockers)) {
+            $fakturList = [];
+            foreach ($salesBlockers as $row) {
+                $noFaktur = trim((string) ($row['no_faktur'] ?? ''));
+                if ($noFaktur !== '' && !in_array($noFaktur, $fakturList, true)) {
+                    $fakturList[] = $noFaktur;
+                }
+            }
+
+            $sampleFaktur = array_slice($fakturList, 0, 5);
+            $extraCount = max(count($fakturList) - count($sampleFaktur), 0);
+            $message = 'LPB tidak dapat di-UNPOST karena barang batch sudah terjual pada faktur penjualan aktif';
+            if (!empty($sampleFaktur)) {
+                $message .= ': ' . implode(', ', $sampleFaktur);
+                if ($extraCount > 0) {
+                    $message .= ' +' . $extraCount . ' faktur lainnya';
+                }
+            }
+            $message .= '. Unpost faktur penjualan barang tersebut terlebih dahulu, lalu ulangi UNPOST LPB.';
+
+            $this->json_response([
+                'status'  => 'error',
+                'message' => $message,
+                'html'    => ''
+            ]);
+            return;
+        }
+
         $this->db->trans_begin();
         $saved = $this->M_Logistik->update_lpb_status($id_lpb, 0, $this->active_user_name(), $keterangan);
 
@@ -2698,10 +3066,13 @@ class C_Ics extends CI_Controller
 
         $data['page_title'] = 'Print LPB #' . $id_lpb;
         $data['print_mode'] = 'single';
+        $data['can_view_lpb_nominal'] = $this->can_view_lpb_nominal();
         $data['records'] = [
             [
                 'header' => $header,
-                'rows'   => $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+                'rows'   => $data['can_view_lpb_nominal']
+                    ? $this->M_Logistik->get_lpb_record_detail_rows($id_lpb)
+                    : $this->mask_lpb_nominal_rows($this->M_Logistik->get_lpb_record_detail_rows($id_lpb))
             ]
         ];
 
@@ -2726,11 +3097,13 @@ class C_Ics extends CI_Controller
         }
 
         $records = [];
+        $canViewNominal = $this->can_view_lpb_nominal();
         foreach ($headers as $header) {
             $header = $this->M_Logistik->get_lpb_record_header((int) $header['id_lpb']) ?: $header;
+            $rows = $this->M_Logistik->get_lpb_record_detail_rows((int) $header['id_lpb']);
             $records[] = [
                 'header' => $header,
-                'rows'   => $this->M_Logistik->get_lpb_record_detail_rows((int) $header['id_lpb'])
+                'rows'   => $canViewNominal ? $rows : $this->mask_lpb_nominal_rows($rows)
             ];
         }
 
@@ -2739,6 +3112,7 @@ class C_Ics extends CI_Controller
         $data['kd_po']      = $kd_po;
         $data['no_po']      = $no_po !== '' ? $no_po : ($headers[0]['no_po'] ?? '-');
         $data['records']    = $records;
+        $data['can_view_lpb_nominal'] = $canViewNominal;
 
         $this->load->view('content/logistik/ics/print_record_lpb.php', $data);
     }
@@ -5165,6 +5539,11 @@ class C_Ics extends CI_Controller
 
     public function retur_pembelian_adjustment()
     {
+        if (!$this->can_view_lpb_nominal()) {
+            show_error('Akses adjustment harga LPB ditolak karena berisi nominal rupiah.', 403, 'Akses Ditolak');
+            return;
+        }
+
         $data['page_title'] = 'KARISMA - LOGISTIK';
         $this->M_LpbPriceAdjustment->ensure_schema();
         $data['adjustment_rows'] = $this->M_LpbPriceAdjustment->rows(100);
@@ -5179,6 +5558,9 @@ class C_Ics extends CI_Controller
     {
         if (!$this->input->is_ajax_request()) {
             show_404();
+        }
+        if (!$this->can_view_lpb_nominal()) {
+            return $this->json_response([]);
         }
 
         $rows = $this->M_LpbPriceAdjustment->lpb_options($this->input->get('term', true));
@@ -5206,6 +5588,10 @@ class C_Ics extends CI_Controller
         if (!$this->input->is_ajax_request()) {
             show_404();
         }
+        if (!$this->can_view_lpb_nominal()) {
+            $this->json_response(['status' => false, 'message' => 'Akses nominal LPB ditolak.', 'rows' => []]);
+            return;
+        }
 
         $idLpb = (int)$this->input->get('id_lpb', true);
         if ($idLpb <= 0) {
@@ -5226,6 +5612,10 @@ class C_Ics extends CI_Controller
     {
         if (!$this->input->is_ajax_request()) {
             show_404();
+        }
+        if (!$this->can_view_lpb_nominal()) {
+            $this->json_response(['status' => false, 'message' => 'Akses nominal LPB ditolak.']);
+            return;
         }
 
         $detailsRaw = $this->input->post('details', false);

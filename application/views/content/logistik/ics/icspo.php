@@ -11,6 +11,8 @@ $showLogistikPanel = !isset($show_logistik_panel) || !empty($show_logistik_panel
 $showPurchasingPanel = !isset($show_purchasing_panel) || !empty($show_purchasing_panel);
 $canLpbManual = !empty($can_lpb_manual);
 $canLpbReport = !empty($can_lpb_report);
+$lpbRevisionBadgeCount = isset($lpb_revision_badge_count) ? (int) $lpb_revision_badge_count : 0;
+$canViewLpbNominal = !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal);
 $isDataLpbPage = !empty($is_data_lpb_page);
 $isAdmlpbUser = !empty($is_admlpb_user);
 $hideSupplierCode = !empty($hide_lpb_supplier_code);
@@ -274,6 +276,12 @@ $formatDate = function ($dateStr) {
                                         </a>
                                     </div>
                                     <?php endif; ?>
+                                    <div class="col-md-2 col-sm-6 mb-2">
+                                        <a class="btn btn-danger btn-block" href="<?= base_url('ics/lpb_revision') ?>">
+                                            <i class="fas fa-exclamation-triangle"></i> List Revisi Harga LPB
+                                            <span class="badge badge-light ml-1"><?= $lpbRevisionBadgeCount ?></span>
+                                        </a>
+                                    </div>
                                     <?php if ($canSyncPo && $showLpbActions) : ?>
                                         <div class="col-md-2 col-sm-6 mb-2">
                                             <a class="btn btn-success btn-block" href="<?= base_url('data_lpb_zahir') ?>">
@@ -478,7 +486,11 @@ $formatDate = function ($dateStr) {
                                                         <th>No Invoice</th>
                                                         <th>No FP</th>
                                                         <th>Suplier</th>
+                                                        <?php if ($canViewLpbNominal) : ?>
                                                         <th class="text-right">Grand Total</th>
+                                                        <?php else : ?>
+                                                        <th class="text-center">Status Harga</th>
+                                                        <?php endif; ?>
                                                         <th class="text-center">Status Data</th>
                                                         <th class="text-center">Satatus Barang</th>
                                                     </tr>
@@ -533,7 +545,15 @@ $formatDate = function ($dateStr) {
                                                             <td><?= htmlspecialchars($hasInvoice ? $invoiceValue : '-') ?></td>
                                                             <td><?= htmlspecialchars($hasFaktur ? $fakturValue : '-') ?></td>
                                                             <td><?= htmlspecialchars($row['nama_suplier'] ?? '-') ?></td>
+                                                            <?php if ($canViewLpbNominal) : ?>
                                                             <td class="text-right"><?= 'Rp ' . number_format((float) ($row['grand_total_lpb'] ?? 0), 0, ',', '.') ?></td>
+                                                            <?php else : ?>
+                                                            <td class="text-center">
+                                                                <span class="badge <?= $isVerified ? 'badge-success' : 'badge-warning' ?> px-2 py-1">
+                                                                    <?= $isVerified ? 'Harga tersedia' : 'Menunggu accounting' ?>
+                                                                </span>
+                                                            </td>
+                                                            <?php endif; ?>
                                                             <td class="text-center">
                                                                 <div class="lpb-status-actions">
                                                                     <button type="button" class="btn btn-sm <?= $invoiceBtnClass ?>" title="<?= $hasInvoice ? 'Invoice sudah ada' : 'Invoice belum ada' ?>">

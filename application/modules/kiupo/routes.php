@@ -337,6 +337,12 @@ $route['ics/retur/pembelian/delete_detail']         = 'logistik/C_Ics/ajax_retur
 $route['ics/retur/pembelian/adjustment/lpb_select2'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_select2';
 $route['ics/retur/pembelian/adjustment/lpb_detail'] = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_lpb_detail';
 $route['ics/retur/pembelian/adjustment/post']       = 'logistik/C_Ics/ajax_retur_pembelian_adjustment_post';
+$route['ics/lpb_revision']                          = 'logistik/C_Ics/lpb_revision';
+$route['ics/lpb_revision/create']                   = 'logistik/C_Ics/ajax_lpb_revision_create';
+$route['ics/lpb_revision/detail']                   = 'logistik/C_Ics/ajax_lpb_revision_detail';
+$route['ics/lpb_revision/unpost_faktur']            = 'logistik/C_Ics/ajax_lpb_revision_unpost_faktur';
+$route['ics/lpb_revision/unpost_lpb']               = 'logistik/C_Ics/ajax_lpb_revision_unpost_lpb';
+$route['ics/lpb_revision/finish']                   = 'logistik/C_Ics/ajax_lpb_revision_finish';
 
 // MUTASI BARANG GUDANG
 $route['ics/mutasi_barang']                         = 'logistik/C_Ics/mutasi_barang';

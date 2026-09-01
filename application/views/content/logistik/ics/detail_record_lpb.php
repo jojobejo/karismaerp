@@ -1055,6 +1055,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
         $(function() {
             var kdPo = '<?= htmlspecialchars($kd_po ?? '', ENT_QUOTES) ?>';
             var canManagePoInvoice = <?= !empty($is_admin_po) ? 'true' : 'false' ?>;
+            var canViewLpbNominal = <?= !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal) ? 'true' : 'false' ?>;
             var showLpbListPanel = <?= $showLpbListPanel ? 'true' : 'false' ?>;
             var showPrePoAdjustmentPanel = false;
             var allRows = [];
@@ -1098,10 +1099,17 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             }
 
             function formatRupiah(value) {
+                if (!canViewLpbNominal) {
+                    return 'Harga tersedia';
+                }
                 return 'Rp ' + new Intl.NumberFormat('id-ID', {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0
                 }).format(parseFloat(value) || 0);
+            }
+
+            function formatNominalStatus(row) {
+                return '<span class="badge badge-light border">' + escHtml((row || {}).harga_status_text || 'Harga tersedia') + '</span>';
             }
 
             function formatDateId(value) {
@@ -1531,11 +1539,15 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                     buildTh('Qty Satuan', 'text-center', 'colspan="2"');
 
                 if (options.priceColumns) {
-                    html += buildTh('Harga Satuan', 'text-right', 'rowspan="2"') +
-                        buildTh('DPP', 'text-right', 'rowspan="2"') +
-                        buildTh('DPP Nilai Lain', 'text-right', 'rowspan="2"') +
-                        buildTh('PPN', 'text-right', 'rowspan="2"') +
-                        buildTh('Total Harga', 'text-right', 'rowspan="2"');
+                    if (canViewLpbNominal) {
+                        html += buildTh('Harga Satuan', 'text-right', 'rowspan="2"') +
+                            buildTh('DPP', 'text-right', 'rowspan="2"') +
+                            buildTh('DPP Nilai Lain', 'text-right', 'rowspan="2"') +
+                            buildTh('PPN', 'text-right', 'rowspan="2"') +
+                            buildTh('Total Harga', 'text-right', 'rowspan="2"');
+                    } else {
+                        html += buildTh('Status Harga', 'text-center', 'rowspan="2" colspan="5"');
+                    }
                 }
 
                 if (options.actionRight) {
@@ -1708,7 +1720,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             }
 
             function renderGrandTotalHarga(rows, shouldShow) {
-                if (!shouldShow || !rows || rows.length === 0) {
+                if (!canViewLpbNominal || !shouldShow || !rows || rows.length === 0) {
                     $('#lpbGrandTotalHargaWrap').hide();
                     $('#lpbTotalDpp').text(formatRupiah(0));
                     $('#lpbGrandTotalHarga').text(formatRupiah(0));
@@ -1977,7 +1989,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
 
             function renderPurchasingTable(rows) {
                 selectedPurchasingRows = rows || [];
-                var canEditPrice = isSelectedLpbUnpost();
+                var canEditPrice = isSelectedLpbUnpost() && canViewLpbNominal;
                 var colCount = 12 + (canEditPrice ? 1 : 0);
                 setLpbDetailTableHead({
                     priceColumns: true,
@@ -2029,6 +2041,14 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         '</td>'
                     ) : '';
 
+                    var nominalCells = canViewLpbNominal
+                        ? '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatRupiah(dppAktif)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatRupiah(dppNilaiLainAktif)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatRupiah(ppnAktif)) + '</td>' +
+                            '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>'
+                        : '<td class="text-center" colspan="5">' + formatNominalStatus(row) + '</td>';
+
                     tbody.append(
                         '<tr>' +
                         '<td>' + escHtml(row.kd_barang || '-') + '</td>' +
@@ -2038,11 +2058,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_in || 0)) + '</td>' +
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_box || 0)) + '</td>' +
                         '<td class="text-center">' + escHtml(formatNumber(row.qty_satuan_kg_ltr || 0)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(hargaSatuanAktif)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(dppAktif)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(dppNilaiLainAktif)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(ppnAktif)) + '</td>' +
-                        '<td class="text-right">' + escHtml(formatRupiah(totalHargaAktif)) + '</td>' +
+                        nominalCells +
                         actionColumn +
                         '</tr>'
                     );
@@ -2077,7 +2093,7 @@ $showLpbListPanel = $lpbRecordViewMode === 'logistik';
             }
 
             function updateBulkAcceptButton() {
-                if (!selectedPurchasingRows || selectedPurchasingRows.length === 0) {
+                if (!canViewLpbNominal || !selectedPurchasingRows || selectedPurchasingRows.length === 0) {
                     $('#lpbPurchasingVerifyActions').hide();
                     return;
                 }

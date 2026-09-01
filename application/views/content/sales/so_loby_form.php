@@ -858,11 +858,11 @@ function addNewRow(d) {
 
     // Qty Box
     var qtyBoxVal = qtyBox > 0 ? qtyBox : '';
-    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + qtyBoxVal + '" placeholder="0" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="1" min="0" name="qty_box[]" class="cell-input input-qty-box" style="text-align:right;" value="' + qtyBoxVal + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Eceran
     var qtySatVal = qtySat > 0 ? qtySat : '';
-    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + qtySatVal + '" placeholder="0" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="1" min="0" name="qty_satuan[]" class="cell-input input-qty-ecer" style="text-align:right;" value="' + qtySatVal + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" onchange="calcRow(this)" /></td>';
 
     // Total Pcs
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-total-pcs">' + fmtNum(qTotal,0) + '</td>';
@@ -871,11 +871,11 @@ function addNewRow(d) {
     html += '<td style="text-align:center;"><input type="text" name="satuan[]" class="cell-input input-satuan" style="text-align:center;" value="' + escAttr(sat) + '" readonly /></td>';
 
     // Harga Satuan
-    html += '<td><input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" class="cell-input input-hrg-satuan" style="text-align:right;" value="' + (hrg > 0 ? formatHargaInput(hrg) : '') + '" placeholder="0" oninput="onHargaInput(this)" /></td>';
+    html += '<td><input type="text" inputmode="numeric" autocomplete="off" name="hrg_satuan[]" class="cell-input input-hrg-satuan" style="text-align:right;" value="' + (hrg > 0 ? formatHargaInput(hrg) : '') + '" placeholder="0" onfocus="this.select()" oninput="onHargaInput(this)" /></td>';
 
     // Disc %
     var discVal = disc > 0 ? disc : '';
-    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + discVal + '" placeholder="0" oninput="calcRow(this)" /></td>';
+    html += '<td><input type="number" step="0.01" min="0" max="100" name="disc[]" class="cell-input input-disc" style="text-align:center;" value="' + discVal + '" placeholder="0" onfocus="this.select()" oninput="calcRow(this)" /></td>';
 
     // Subtotal
     html += '<td style="text-align:right;padding-right:8px;font-weight:600;" class="cell-subtotal">' + fmtNum(sub, 0) + '</td>';

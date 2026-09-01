@@ -276,6 +276,8 @@
 
                     <?php
                     $isPurchasingDetailPo = !empty($is_detail_po_purchasing);
+                    $canViewPoPrice = !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal);
+                    $detailPoColumnCount = ($isPurchasingDetailPo ? 15 : 18) - ($canViewPoPrice ? 0 : 2);
                     $totalOrder = 0;
                     $totalReceived = 0;
                     $totalLpbRecord = 0;
@@ -333,7 +335,9 @@
                                         <th class="text-center align-middle" rowspan="2">Nama Barang</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Order</th>
                                         <th class="text-center" colspan="3">Qty Order</th>
-                                        <th class="text-center" colspan="2">Harga Satuan</th>
+                                        <?php if ($canViewPoPrice) : ?>
+                                            <th class="text-center" colspan="2">Harga Satuan</th>
+                                        <?php endif; ?>
                                         <th class="text-center align-middle" rowspan="2">Qty In</th>
                                         <th class="text-center" colspan="4">Qty Diterima</th>
                                         <th class="text-center align-middle" rowspan="2">Qty Sisa</th>
@@ -347,8 +351,10 @@
                                         <th class="text-center">Box</th>
                                         <th class="text-center">Kg</th>
                                         <th class="text-center">Ltr</th>
-                                        <th class="text-center">Include</th>
-                                        <th class="text-center">Exclude</th>
+                                        <?php if ($canViewPoPrice) : ?>
+                                            <th class="text-center">Include</th>
+                                            <th class="text-center">Exclude</th>
+                                        <?php endif; ?>
                                         <th class="text-center">Box</th>
                                         <th class="text-center">Kg</th>
                                         <th class="text-center">Ltr</th>
@@ -366,8 +372,10 @@
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_kg'] ?? 0, 2) ?></td>
                                                 <td class="text-center"><?= $formatQtyPo($row['qty_order_ltr'] ?? 0, 2) ?></td>
-                                                <td class="text-right js-harga-include"><?= 'Rp ' . number_format((float) ($row['harga_satuan_include'] ?? 0), 2, ',', '.') ?></td>
-                                                <td class="text-right js-harga-exclude"><?= 'Rp ' . number_format((float) ($row['harga_satuan_exclude'] ?? 0), 2, ',', '.') ?></td>
+                                                <?php if ($canViewPoPrice) : ?>
+                                                    <td class="text-right js-harga-include"><?= 'Rp ' . number_format((float) ($row['harga_satuan_include'] ?? 0), 2, ',', '.') ?></td>
+                                                    <td class="text-right js-harga-exclude"><?= 'Rp ' . number_format((float) ($row['harga_satuan_exclude'] ?? 0), 2, ',', '.') ?></td>
+                                                <?php endif; ?>
                                                 <td class="text-center js-qty-in"><?= $formatQtyPo($row['qty_in'] ?? 0) ?></td>
                                                 <td class="text-center js-qty-diterima-box"><?= $formatQtyPo($row['qty_diterima_box'] ?? 0, 2) ?></td>
                                                 <td class="text-center js-qty-diterima-kg"><?= $formatQtyPo($row['qty_diterima_kg'] ?? 0, 2) ?></td>
@@ -404,7 +412,7 @@
                                         <?php endforeach; ?>
                                     <?php else : ?>
                                         <tr>
-                                            <td colspan="<?= $isPurchasingDetailPo ? 16 : 19 ?>" class="text-center text-muted">
+                                            <td colspan="<?= $detailPoColumnCount ?>" class="text-center text-muted">
                                                 <i class="fas fa-inbox mr-1"></i> Belum ada barang diterima untuk PO ini
                                             </td>
                                         </tr>
@@ -824,7 +832,7 @@
                 ],
                 columnDefs: isPurchasingDetailPo ? [] : [{
                     orderable: false,
-                    targets: [12, 13]
+                    targets: [-1, -2, -3]
                 }],
                 language: {
                     search: "Cari:",

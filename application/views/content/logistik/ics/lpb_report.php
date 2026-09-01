@@ -78,18 +78,22 @@
                                 <a href="<?= base_url('ics/lpb_manual') ?>" class="btn btn-primary btn-sm rounded-pill shadow-sm">
                                     <i class="fas fa-plus-circle mr-1"></i> Input LPB Manual
                                 </a>
+                                <?php if (!isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal)) : ?>
                                 <a href="<?= base_url('ics/summary_hutang') ?>" class="btn btn-outline-success btn-sm rounded-pill shadow-sm">
                                     <i class="fas fa-calculator mr-1"></i> Summary Hutang Per Faktur
                                 </a>
+                                <?php endif; ?>
                                 <a href="<?= base_url('ics/icspo') ?>" class="btn btn-outline-secondary btn-sm rounded-pill">
                                     <i class="fas fa-arrow-left mr-1"></i> Data LPB Logistik
                                 </a>
                                 <a href="<?= base_url('ics/lpb_report/export_excel') ?>" id="btnExportExcel" class="btn btn-success btn-sm rounded-pill shadow-sm">
                                     <i class="fas fa-file-excel mr-1"></i> Export Excel
                                 </a>
+                                <?php if (!isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal)) : ?>
                                 <a href="<?= base_url('ics/import_lpb') ?>" class="btn btn-info btn-sm rounded-pill shadow-sm">
                                     <i class="fas fa-file-import mr-1"></i> Import Excel Purchasing
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -298,8 +302,13 @@
 
     <script>
         $(document).ready(function() {
+            var canViewLpbNominal = <?= !isset($can_view_lpb_nominal) || !empty($can_view_lpb_nominal) ? 'true' : 'false' ?>;
+
             // Helper Formatter
             function formatCurrency(val) {
+                if (!canViewLpbNominal) {
+                    return '<span class="badge badge-light border">Harga tersedia</span>';
+                }
                 var num = parseFloat(val) || 0;
                 return 'Rp ' + num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
             }
@@ -359,7 +368,9 @@
                             var countLtPo = 0;
 
                             json.data.forEach(function(row) {
-                                grandTotal += parseFloat(row.jumlah_hutang || row.total_harga || 0);
+                                if (canViewLpbNominal) {
+                                    grandTotal += parseFloat(row.jumlah_hutang || row.total_harga || 0);
+                                }
                                 if (!row.tgl_terima_fp || row.aging_fp_category === 'Belum Diterima') {
                                     pendingFp++;
                                 }
@@ -370,7 +381,7 @@
                             });
 
                             $('#boxTotalLpb').text(totalRecords.toLocaleString('id-ID'));
-                            $('#boxNilaiTotal').text(formatCurrency(grandTotal));
+                            $('#boxNilaiTotal').html(canViewLpbNominal ? formatCurrency(grandTotal) : 'Tersembunyi');
                             $('#boxPendingFp').text(pendingFp.toLocaleString('id-ID'));
                             var avgLt = countLtPo > 0 ? (sumLtPo / countLtPo).toFixed(1) + ' Hari' : '-';
                             $('#boxLeadTime').text(avgLt);
